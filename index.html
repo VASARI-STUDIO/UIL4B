@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en-AU" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VISARI STUDIO — Web Design Toolkit</title>
+<meta name="description" content="Internal design toolkit for Visari Studio. Colour, typography, icons, image tools, and prompt library.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:wght@700&family=Sora:wght@400;600;700&family=Fraunces:wght@400;700&family=Bricolage+Grotesque:wght@400;700&family=Source+Sans+3:wght@400;600&family=Commissioner:wght@400;500&family=Inter+Tight:wght@400;500&family=Outfit:wght@400;600;700&family=Manrope:wght@400;600;700&family=General+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<div class="ov" id="ov" onclick="closeM()"></div>
+
+<div class="app">
+
+<div class="mob"><button onclick="toggleM()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)">VISARI STUDIO</span></div>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar" id="sidebar">
+  <div class="sb-brand"><h2>VISARI STUDIO</h2><p>Web Design Toolkit</p></div>
+
+  <div class="nav-g">Colour</div>
+  <button class="nl on" data-s="palette" onclick="go('palette')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="7.5" r="1.5" fill="currentColor"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/><circle cx="16" cy="13" r="1.5" fill="currentColor"/></svg>Palette Builder</button>
+  <button class="nl" data-s="tints" onclick="go('tints')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="0"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>Tint Generator</button>
+  <button class="nl" data-s="gradients" onclick="go('gradients')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="0"/><path d="M3 3l18 18"/></svg>Gradients</button>
+  <button class="nl" data-s="contrast" onclick="go('contrast')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20z" fill="currentColor"/></svg>Contrast Checker</button>
+
+  <div class="nav-g">Typography</div>
+  <button class="nl" data-s="typescale" onclick="go('typescale')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Type Scale</button>
+  <button class="nl" data-s="fontpairs" onclick="go('fontpairs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 20h16"/><path d="M7 4v16"/><path d="M17 4v16"/><path d="M7 12h10"/></svg>Font Matcher</button>
+
+  <div class="nav-g">Components</div>
+  <button class="nl" data-s="buttons" onclick="go('buttons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="8" width="18" height="8" rx="0"/></svg>Button Catalogue</button>
+  <button class="nl" data-s="layouts" onclick="go('layouts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="0"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>Section Layouts</button>
+  <button class="nl" data-s="icons" onclick="go('icons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Icon Library</button>
+
+  <div class="nav-g">Tools</div>
+  <button class="nl" data-s="imgconvert" onclick="go('imgconvert')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Image Converter</button>
+  <button class="nl" data-s="prompts" onclick="go('prompts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l-4 4 4 4 4-4-4-4z"/><path d="M3 12l4 4 4-4-4-4-4 4z"/><path d="M12 12l4 4 4-4-4-4-4 4z"/><path d="M12 12l-4 4-4-4 4-4 4 4z"/></svg>Prompt Library</button>
+
+  <div class="nav-g">Links</div>
+  <a class="nl" href="https://framer.university" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Framer University</a>
+  <a class="nl" href="https://fonts.google.com" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Fonts</a>
+  <a class="nl" href="https://labs.google/fx/tools/image-fx" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Image FX</a>
+
+  <div class="sb-footer">
+    <div class="theme-row">
+      <span id="tl">Dark</span>
+      <button class="switch" id="sw" onclick="toggleTheme()"></button>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+<!-- PALETTE -->
+<div class="sec on" id="sec-palette">
+  <div class="sec-h"><h1>Palette Builder</h1><p>Build brand palettes with colour harmony relationships. Click any swatch to copy hex.</p></div>
+  <div class="sub">
+    <div class="row mb"><input type="color" id="bCol" value="#6366f1" onchange="updPal()"><input type="text" id="bHex" value="#6366f1" style="width:86px;font-family:var(--mono);font-size:10px" onchange="document.getElementById('bCol').value=this.value;updPal()">
+    <button class="btn btn-s" onclick="setH('complement')">Complement</button><button class="btn btn-s" onclick="setH('analogous')">Analogous</button><button class="btn btn-s" onclick="setH('triadic')">Triadic</button><button class="btn btn-s" onclick="setH('split')">Split</button><button class="btn btn-s" onclick="setH('tetradic')">Tetradic</button></div>
+    <div class="swatch-strip" id="palStrip"></div>
+    <div id="palCss" style="margin-top:16px"></div>
+  </div>
+  <div class="sub"><h2>Starter Palettes</h2><p class="d">Click to load.</p><div class="cg c3" id="starters"></div></div>
+</div>
+
+<!-- TINTS -->
+<div class="sec" id="sec-tints">
+  <div class="sec-h"><h1>Tint Generator</h1><p>Generate tint scales from 0 (white) to 1000 (black). Your base colour sits at 500. Adjust saturation to taste. Click any cell to copy.</p></div>
+  <div id="tintContainer"></div>
+  <div style="margin-bottom:16px"><button class="btn" onclick="addTint()">+ Add colour</button></div>
+  <div id="tintCssOut" style="margin-bottom:40px"></div>
+</div>
+
+<!-- GRADIENTS -->
+<div class="sec" id="sec-gradients">
+  <div class="sec-h"><h1>Gradients</h1><p>Build custom gradients or grab presets. Click any to copy CSS.</p></div>
+  <div class="sub"><h2>Custom</h2>
+    <div class="row mb"><input type="color" id="g1" value="#6366f1" onchange="updG()"><input type="color" id="g2" value="#ec4899" onchange="updG()"><select id="gD" onchange="updG()" style="width:110px"><option value="to right">→ Right</option><option value="to left">← Left</option><option value="to bottom">↓ Down</option><option value="135deg">135°</option><option value="45deg">45°</option></select><button class="btn btn-s" onclick="copyText(document.getElementById('gC').textContent)">Copy CSS</button></div>
+    <div class="grad-preview" id="gP"></div><div class="code" id="gC" onclick="copyText(this.textContent)"></div>
+  </div>
+  <div class="sub"><h2>Presets</h2><div class="grad-presets" id="gPresets"></div></div>
+</div>
+
+<!-- CONTRAST -->
+<div class="sec" id="sec-contrast">
+  <div class="sec-h"><h1>Contrast Checker</h1><p>WCAG 2.1 contrast compliance.</p></div>
+  <div class="sub">
+    <div class="row mb"><label style="font-size:10px;color:var(--t2)">Foreground</label><input type="color" id="cF" value="#ffffff" onchange="chkC()"><input type="text" id="cFh" value="#ffffff" style="width:76px;font-family:var(--mono);font-size:10px" onchange="document.getElementById('cF').value=this.value;chkC()"><label style="font-size:10px;color:var(--t2);margin-left:6px">Background</label><input type="color" id="cB" value="#18181b" onchange="chkC()"><input type="text" id="cBh" value="#18181b" style="width:76px;font-family:var(--mono);font-size:10px" onchange="document.getElementById('cB').value=this.value;chkC()"><button class="btn btn-s" onclick="swC()">⇄ Swap</button></div>
+    <div class="card" id="cPrev"><div style="font-size:22px;font-weight:700;margin-bottom:3px;letter-spacing:-0.02em" id="cS1">Sample Heading</div><div style="font-size:13px" id="cS2">The quick brown fox jumps over the lazy dog.</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px" id="cRes"></div>
+  </div>
+</div>
+
+<!-- TYPE SCALE -->
+<div class="sec" id="sec-typescale">
+  <div class="sec-h"><h1>Type Scale</h1><p>Modular type scale calculator.</p></div>
+  <div class="sub">
+    <div class="row mb"><label style="font-size:10px;color:var(--t2)">Base (px)</label><input type="number" id="tsB" value="16" min="8" max="32" style="width:60px" onchange="genTS()"><label style="font-size:10px;color:var(--t2)">Ratio</label>
+    <select id="tsR" onchange="genTS()"><option value="1.125">Major Second (1.125)</option><option value="1.200">Minor Third (1.200)</option><option value="1.250" selected>Major Third (1.250)</option><option value="1.333">Perfect Fourth (1.333)</option><option value="1.500">Perfect Fifth (1.500)</option><option value="1.618">Golden Ratio (1.618)</option></select></div>
+    <div class="card" id="tsOut"></div>
+    <div id="tsCss" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- FONT MATCHER -->
+<div class="sec" id="sec-fontpairs">
+  <div class="sec-h"><h1>Font Matcher</h1><p>Pick a heading font and get body font suggestions. Click any pairing to copy the Google Fonts import URL.</p></div>
+  <div class="sub">
+    <div class="row mb">
+      <label style="font-size:10px;color:var(--t2)">Heading font</label>
+      <select id="fpSelect" onchange="updateFontMatch()" style="width:220px">
+        <option value="Playfair Display">Playfair Display</option>
+        <option value="Sora">Sora</option>
+        <option value="Fraunces">Fraunces</option>
+        <option value="Bricolage Grotesque">Bricolage Grotesque</option>
+        <option value="Outfit">Outfit</option>
+        <option value="Manrope">Manrope</option>
+        <option value="Instrument Sans">Instrument Sans</option>
+      </select>
+    </div>
+    <div class="cg c2" id="fpG"></div>
+  </div>
+</div>
+
+<!-- BUTTONS -->
+<div class="sec" id="sec-buttons">
+  <div class="sec-h"><h1>Button Catalogue</h1><p>Reusable button styles. Click code to copy CSS.</p></div>
+  <div class="sub"><div class="btn-cat" id="btnG"></div></div>
+</div>
+
+<!-- LAYOUTS -->
+<div class="sec" id="sec-layouts">
+  <div class="sec-h"><h1>Section Layouts</h1><p>Common responsive section patterns with CSS. Click code to copy.</p></div>
+  <div class="sub"><div class="cg c2" id="layG"></div></div>
+</div>
+
+<!-- ICONS -->
+<div class="sec" id="sec-icons">
+  <div class="sec-h"><h1>Icon Library</h1><p>250+ icons from Tabler, Lucide, Iconoir, Heroicons, and Simple Icons. Click to copy SVG.</p></div>
+  <div class="sub">
+    <input type="text" id="iSrch" placeholder="Search icons..." style="width:100%;max-width:340px;margin-bottom:10px" oninput="fltI()">
+    <div class="pt-ts" id="iCats" style="margin-bottom:14px"></div>
+    <div class="ig" id="iG"></div>
+    <p class="d" style="margin-top:16px"><span id="iCount">0</span> icons</p>
+  </div>
+</div>
+
+<!-- IMAGE CONVERTER -->
+<div class="sec" id="sec-imgconvert">
+  <div class="sec-h"><h1>Image Converter</h1><p>Convert, compress, and resize images in your browser. Nothing gets uploaded.</p></div>
+  <div class="sub">
+    <div id="imgDropZone" style="border:2px dashed var(--border);padding:40px 20px;text-align:center;cursor:pointer;transition:border-color .2s" onclick="document.getElementById('imgFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--t0)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';handleImgFiles(event.dataTransfer.files)">
+      <p style="font-size:13px;color:var(--t1);margin-bottom:4px">Drop images here or click to browse</p>
+      <p style="font-size:10px;color:var(--t2)">PNG, JPG, GIF, BMP, SVG, WebP, AVIF</p>
+      <input type="file" id="imgFileInput" multiple accept="image/*" style="display:none" onchange="handleImgFiles(this.files)">
+    </div>
+  </div>
+  <div class="sub" id="imgControls" style="display:none">
+    <h2>Output Settings</h2>
+    <div class="row mb" style="gap:16px;flex-wrap:wrap;margin-top:12px">
+      <div><label style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);display:block;margin-bottom:4px">Format</label><select id="imgFormat" onchange="debouncedImgPreview()" style="width:140px"><option value="image/webp">WebP</option><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/avif">AVIF</option></select></div>
+      <div><label style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);display:block;margin-bottom:4px">Quality</label><div style="display:flex;align-items:center;gap:8px"><input type="range" id="imgQuality" min="1" max="100" value="80" style="width:160px" oninput="document.getElementById('imgQualNum').value=this.value;debouncedImgPreview()"><input type="number" id="imgQualNum" min="1" max="100" value="80" style="width:52px;text-align:center" oninput="var v=Math.max(1,Math.min(100,parseInt(this.value)||80));document.getElementById('imgQuality').value=v;debouncedImgPreview()"><span style="font-size:10px;color:var(--t2)">%</span></div></div>
+      <div><label style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);display:block;margin-bottom:4px">Max Width (0 = original)</label><input type="number" id="imgMaxWidth" value="0" min="0" max="8000" style="width:100px" onchange="debouncedImgPreview()"></div>
+    </div>
+    <div style="margin-top:16px"><button class="btn" onclick="convertAllImages()" style="padding:8px 20px;font-size:12px;font-weight:600">Convert & Download All</button><button class="btn" onclick="clearImages()" style="margin-left:8px">Clear</button></div>
+  </div>
+  <div class="sub" id="imgResults" style="display:none"><h2>Preview</h2><div id="imgList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px"></div></div>
+</div>
+
+<!-- PROMPT LIBRARY -->
+<div class="sec" id="sec-prompts">
+  <div class="sec-h"><h1>Prompt Library</h1><p>Save your AI image generation prompts with output previews. Data stays in your browser's local storage. Use with <a href="https://labs.google/fx/tools/image-fx" target="_blank">Google Image FX</a> or any generator.</p></div>
+  <div class="sub">
+    <h2>Add Prompt</h2>
+    <div style="display:grid;gap:10px;margin-top:12px">
+      <textarea id="promptText" placeholder="Enter your prompt..." style="font-family:var(--font);font-size:12px;padding:10px;border:1px solid var(--border);background:var(--bg-1);color:var(--t0);resize:vertical;min-height:80px;outline:none"></textarea>
+      <div class="row">
+        <label style="font-size:10px;color:var(--t2)">Output image (optional)</label>
+        <input type="file" id="promptImg" accept="image/*" style="font-size:11px">
+      </div>
+      <div class="row">
+        <label style="font-size:10px;color:var(--t2)">Tags</label>
+        <input type="text" id="promptTags" placeholder="e.g. hero, product, texture" style="width:240px">
+      </div>
+      <div><button class="btn" onclick="savePrompt()" style="padding:6px 16px">Save Prompt</button></div>
+    </div>
+  </div>
+  <div class="sub">
+    <h2>Saved Prompts</h2>
+    <input type="text" id="promptSearch" placeholder="Search prompts..." style="width:100%;max-width:300px;margin-bottom:12px" oninput="renderPrompts()">
+    <div id="promptGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px"></div>
+    <p class="d" id="promptEmpty" style="margin-top:12px">No prompts saved yet.</p>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script src="icons-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
