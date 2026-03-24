@@ -1,43 +1,42 @@
 # VISARI STUDIO — Web Design Toolkit
 
-Internal design toolkit for Visari Studio. Colour, typography, icons, image tools, and prompt library — all in the browser, no external dependencies.
+Internal design toolkit for Visari Studio.
 
 ## Features
 
-- **Palette Builder** — colour harmony generator with 5 modes
-- **Tint Generator** — 0–1000 scale with saturation control
-- **Gradients** — custom builder + 11 curated presets
-- **Contrast Checker** — WCAG 2.1 AA/AAA compliance
-- **Type Scale** — modular scale calculator with 6 ratio presets
-- **Font Matcher** — pick a heading font, get body suggestions
-- **Button Catalogue** — 8 reusable button styles with CSS
-- **Section Layouts** — 6 common responsive patterns
-- **Icon Library** — 250+ icons from Tabler, Lucide, Iconoir, Heroicons, Simple Icons
-- **Image Converter** — convert/compress/resize locally (WebP, PNG, JPEG, AVIF)
-- **Prompt Library** — save AI image prompts with output previews (localStorage)
+- **Palette Builder** — colour harmony with 5 modes, large swatches, CSS export
+- **Tint Generator** — 50–950 scale, perceived/linear modes, anchor control, Framer JSON export
+- **Gradient Tool** — custom builder with live preview + presets
+- **Contrast Checker** — WCAG 2.1 with wireframe preview and compliance report
+- **Type Scale** — modular scale with 6 ratio presets
+- **Font Matcher** — heading → body font suggestions
+- **Button Catalogue** — 8 reusable button styles
+- **Section Layouts** — 6 responsive patterns
+- **Icon Library** — 250+ icons from 5 packs
+- **Image Converter** — local convert/compress/resize (WebP, PNG, JPEG, AVIF)
+- **Prompt Library** — AI image prompts with output previews (localStorage)
 
-## Hosting on GitHub Pages
+## Deploy to GitHub Pages
 
-1. Push this repo to GitHub
-2. Go to **Settings → Pages**
-3. Set source to **Deploy from a branch** → `main` → `/ (root)`
-4. Your toolkit will be live at `https://yourusername.github.io/repo-name`
+1. Push to GitHub
+2. Settings → Pages → Deploy from branch → `main` / `root`
+3. Live at `https://yourusername.github.io/repo-name`
 
 ## Files
 
 ```
 index.html      — main page
-style.css       — all styles
-app.js          — application logic
-icons-data.js   — embedded icon SVG data
-README.md       — this file
+style.css       — styles
+app.js          — logic
+icons-data.js   — icon SVG data
+favicon.svg     — favicon
+LICENSE          — MIT
+.gitignore
+README.md
 ```
 
-## Tech
-
-Single-page app. No build step, no frameworks, no npm. Just HTML + CSS + JS.
-Dark/light theme. Fully responsive. Works offline once loaded.
+No build step. No frameworks. No npm. HTML + CSS + JS.
 
 ## Licence
 
-Internal use — Visari Studio.
+MIT — Visari Studio 2026.

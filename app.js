@@ -24,27 +24,134 @@ function cRat(h1,h2){var c1=h2rgb(h1),c2=h2rgb(h2);var l1=lum(c1[0],c1[1],c1[2])
 
 // ── Palette ──
 var harm='complement';
-function setH(t){harm=t;updPal()}
+var HARMS=['complement','analogous','triadic','split','tetradic'];
+var HARM_LABELS={'complement':'Complementary','analogous':'Analogous','triadic':'Triadic','split':'Split Complementary','tetradic':'Tetradic'};
+var ROLES=['PRIMARY','CONTAINER','ACCENT','SUBTLE','DEEP'];
+function setH(t){harm=t;document.querySelectorAll('#harmBtns .harm-opt').forEach(function(b){b.classList.toggle('on',b.dataset.h===t)});updPal()}
+function initHarmBtns(){$('harmBtns').innerHTML=HARMS.map(function(h){return'<button class="harm-opt'+(h===harm?' on':'')+'" data-h="'+h+'" onclick="setH(\''+h+'\')" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:'+(h===harm?'var(--accent-bg)':'transparent')+';color:'+(h===harm?'var(--accent)':'var(--t1)')+';font-size:12px;font-weight:'+(h===harm?'600':'400')+';cursor:pointer;width:100%;text-align:left;font-family:var(--font);transition:all .15s">'+HARM_LABELS[h]+'</button>'}).join('')}
+function randomPal(){var hex=hsl2h(Math.floor(Math.random()*360),50+Math.floor(Math.random()*40),40+Math.floor(Math.random()*20));$('bCol').value=hex;$('bHex').value=hex;updPal()}
 function genHarm(hex,type){var hs=h2hsl(hex),h=hs[0],s=hs[1],l=hs[2];var c=[hex];switch(type){case'complement':c.push(hsl2h(h+180,s,l),hsl2h(h,Math.max(s-20,10),Math.min(l+30,90)),hsl2h(h+180,Math.max(s-20,10),Math.min(l+30,90)),hsl2h(h,s,Math.max(l-25,10)));break;case'analogous':c.push(hsl2h(h-30,s,l),hsl2h(h+30,s,l),hsl2h(h-15,Math.max(s-15,10),Math.min(l+20,90)),hsl2h(h+15,Math.max(s-15,10),Math.min(l+20,90)));break;case'triadic':c.push(hsl2h(h+120,s,l),hsl2h(h+240,s,l),hsl2h(h,Math.max(s-25,10),Math.min(l+25,90)),hsl2h(h+120,Math.max(s-25,10),Math.min(l+25,90)));break;case'split':c.push(hsl2h(h+150,s,l),hsl2h(h+210,s,l),hsl2h(h,s,Math.min(l+30,90)),hsl2h(h+180,s,Math.max(l-20,10)));break;case'tetradic':c.push(hsl2h(h+90,s,l),hsl2h(h+180,s,l),hsl2h(h+270,s,l));break}return c}
-function updPal(){var hex=$('bCol').value;$('bHex').value=hex;var c=genHarm(hex,harm);$('palStrip').innerHTML=c.map(function(x){return'<div class="sw" style="background:'+x+'" onclick="copyText(\''+x+'\')"><span class="sw-l">'+x+'</span></div>'}).join('');$('palCss').innerHTML='<div class="code-l">CSS Variables</div><div class="code" onclick="copyText(this.textContent)">:root {\n'+c.map(function(x,i){return'  --colour-'+(i+1)+': '+x+';'}).join('\n')+'\n}</div>'}
+function updPal(){var hex=$('bCol').value;$('bHex').value=hex;var c=genHarm(hex,harm);
+var cols=c.length;
+$('palSwatches').innerHTML='<div class="pal-grid" style="grid-template-columns:repeat('+cols+',1fr)">'+c.map(function(x,i){var hsl=h2hsl(x);var textCol=hsl[2]>55?'rgba(0,0,0,.85)':'rgba(255,255,255,.9)';var role=ROLES[i]||'SWATCH '+(i+1);return'<div class="pal-swatch" style="background:'+x+';color:'+textCol+'" onclick="copyText(\''+x+'\')"><div class="role">'+role+'</div><div class="hex">'+x+'</div></div>'}).join('')+'</div>';
+$('palCss').innerHTML='<div class="code" onclick="copyText(this.textContent)" style="font-size:11px">:root {\n'+c.map(function(x,i){return'  --p-'+ROLES[i].toLowerCase()+': '+x+';'}).join('\n')+'\n}</div>';
+initHarmBtns()}
 var starters=[{n:'Midnight',c:['#0f0f23','#1a1a3e','#4a4a8a','#8888cc','#ccccff']},{n:'Forest',c:['#1a2e1a','#2d5a2d','#4a8c4a','#7bc47b','#c8f0c8']},{n:'Ember',c:['#2d1b0e','#8b4513','#d2691e','#f4a460','#ffe4c4']},{n:'Ocean',c:['#0a1628','#1e3a5f','#3a7bd5','#63b3ed','#bee3f8']},{n:'Plum',c:['#1a0a1a','#4a154b','#7c3085','#b660cd','#e8b4f8']},{n:'Slate',c:['#0f1419','#1e2630','#384250','#6b7b8d','#b0bec5']}];
 function ldStarters(){$('starters').innerHTML=starters.map(function(p){return'<div class="card" style="cursor:pointer;padding:10px" onclick="document.getElementById(\'bCol\').value=\''+p.c[2]+'\';document.getElementById(\'bHex\').value=\''+p.c[2]+'\';updPal()"><div style="display:flex;overflow:hidden;margin-bottom:6px">'+p.c.map(function(c){return'<div style="flex:1;height:28px;background:'+c+'"></div>'}).join('')+'</div><div style="font-size:11px;font-weight:600">'+p.n+'</div></div>'}).join('')}
 
-// ── Tints ──
-var tints=[{hex:'#6366f1',sat:0}];
-var T_LABELS=['0','50','100','200','300','400','500','600','700','800','900','950','1000'];
-var T_LIGHT=[100,97,93,85,75,62,50,38,28,18,10,6,0];
-function genTintScale(cfg){var hs=h2hsl(cfg.hex),h=hs[0],s=hs[1];var sat=Math.max(0,Math.min(100,s+cfg.sat));return T_LIGHT.map(function(l){return hsl2h(h,l===100||l===0?0:sat,l)})}
-function renderTints(){$('tintContainer').innerHTML=tints.map(function(cfg,idx){var scale=genTintScale(cfg);return'<div class="tint-row"><div class="row mb"><input type="color" value="'+cfg.hex+'" style="width:28px;height:24px" onchange="tints['+idx+'].hex=this.value;renderTints()"><input type="text" value="'+cfg.hex+'" style="width:76px;font-family:var(--mono);font-size:10px" onchange="tints['+idx+'].hex=this.value;renderTints()"><label style="font-size:9px;color:var(--t2);margin-left:8px">Saturation</label><input type="range" min="-30" max="30" value="'+cfg.sat+'" style="width:120px" oninput="tints['+idx+'].sat=+this.value;renderTints()"><span style="font-family:var(--mono);font-size:9px;color:var(--t2);min-width:28px">'+(cfg.sat>0?'+':'')+cfg.sat+'</span>'+(idx>0?'<button class="btn btn-s" onclick="tints.splice('+idx+',1);renderTints()">Remove</button>':'')+'</div><div style="display:grid;grid-template-columns:repeat(13,1fr);gap:2px;margin-bottom:4px">'+scale.map(function(c,i){return'<div class="tint-cell" style="background:'+c+'" onclick="copyText(\''+c+'\')"><div class="tip">'+T_LABELS[i]+': '+c+'</div></div>'}).join('')+'</div><div style="display:grid;grid-template-columns:repeat(13,1fr);gap:2px">'+T_LABELS.map(function(l){return'<span style="font-size:7px;font-family:var(--mono);color:var(--t3);text-align:center">'+l+'</span>'}).join('')+'</div></div>'}).join('');var css=':root {\n';tints.forEach(function(cfg,idx){var scale=genTintScale(cfg);var nm='colour-'+(idx+1);scale.forEach(function(c,i){css+='  --'+nm+'-'+T_LABELS[i]+': '+c+';\n'})});css+='}';$('tintCssOut').innerHTML='<div class="code-l">CSS Variables</div><div class="code" onclick="copyText(this.textContent)">'+css+'</div>'}
-function addTint(){tints.push({hex:hsl2h(Math.floor(Math.random()*360),65,50),sat:0});renderTints()}
+// ── Tints (advanced) ──
+var T_LABELS=['50','100','200','300','400','500','600','700','800','900','950'];
+// Linear lightness stops (0=darkest, 100=lightest)
+var T_LINEAR=[97,93,85,75,62,50,38,28,18,10,5];
+// Perceived lightness (accounts for human vision weighting)
+var T_PERCEIVED=[98,95,88,78,66,53,40,30,20,12,6];
+var tints=[{hex:'#6366f1',anchor:5,hueShift:0,satMin:0,satMax:0,lMin:5,lMax:98,mode:'perceived'}];
+
+function genTintScale(cfg){
+  var hs=h2hsl(cfg.hex),h=hs[0],s=hs[1];
+  var stops=cfg.mode==='perceived'?T_PERCEIVED:T_LINEAR;
+  var anchorL=stops[cfg.anchor]; // lightness at anchor point
+  return stops.map(function(defaultL,i){
+    // Remap lightness to configured min/max range
+    var t=(defaultL-stops[stops.length-1])/(stops[0]-stops[stops.length-1]); // 0=dark, 1=light
+    var newL=cfg.lMin+t*(cfg.lMax-cfg.lMin);
+    // Hue shift (more at light end)
+    var newH=h+cfg.hueShift*t;
+    // Saturation shift at extremes
+    var distFromMid=Math.abs(t-0.5)*2;
+    var satShift=cfg.satMax*t+cfg.satMin*(1-t);
+    var newS=Math.max(0,Math.min(100,s+satShift));
+    // Endpoints are desaturated
+    if(i===0||i===stops.length-1) newS=Math.max(0,newS*0.3);
+    return hsl2h(newH,Math.round(newS),Math.round(Math.max(0,Math.min(100,newL))));
+  });
+}
+
+var _tintTimer=null;
+function debouncedTints(){clearTimeout(_tintTimer);_tintTimer=setTimeout(renderTints,80)}
+
+function renderTints(){
+  $('tintContainer').innerHTML=tints.map(function(cfg,idx){
+    var scale=genTintScale(cfg);
+    var anchorLabels=['50','100','200','300','400','500','600','700','800','900','950'];
+    return '<div class="tint-row">'+
+      '<div class="row mb" style="gap:12px">'+
+        '<input type="color" value="'+cfg.hex+'" style="width:32px;height:28px" onchange="tints['+idx+'].hex=this.value;document.getElementById(\'tHex'+idx+'\').value=this.value;renderTints()">'+
+        '<input type="text" id="tHex'+idx+'" value="'+cfg.hex+'" style="width:80px;font-family:var(--mono);font-size:10px" onchange="tints['+idx+'].hex=this.value;renderTints()">'+
+        '<label style="font-size:9px;color:var(--t2)">Anchor</label>'+
+        '<select style="width:70px" onchange="tints['+idx+'].anchor=+this.value;renderTints()">'+anchorLabels.map(function(l,i){return'<option value="'+i+'"'+(i===cfg.anchor?' selected':'')+'>'+l+'</option>'}).join('')+'</select>'+
+        '<label style="font-size:9px;color:var(--t2)">Mode</label>'+
+        '<select style="width:90px" onchange="tints['+idx+'].mode=this.value;renderTints()"><option value="perceived"'+(cfg.mode==='perceived'?' selected':'')+'>Perceived</option><option value="linear"'+(cfg.mode==='linear'?' selected':'')+'>Linear</option></select>'+
+        (idx>0?'<button class="btn btn-s" onclick="tints.splice('+idx+',1);renderTints()">Remove</button>':'')+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(11,1fr);gap:8px;margin-bottom:16px">'+scale.map(function(c,i){var hsl=h2hsl(c);var textCol=hsl[2]>55?'rgba(0,0,0,.7)':'rgba(255,255,255,.7)';var isAnchor=i===cfg.anchor;return'<div style="text-align:center"><div class="tint-swatch" style="background:'+c+'" onclick="copyText(\''+c+'\')"><span class="stop-label" style="color:'+textCol+'">'+T_LABELS[i]+'</span></div><div class="tint-info"><div class="hex">'+c+'</div>'+(isAnchor?'<div class="tint-base-tag">Base</div>':'<div class="lval">L: '+hsl[2]+'%</div>')+'</div></div>'}).join('')+'</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+        '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Lightness Max <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+cfg.lMax+'</span></label><input type="range" min="60" max="100" value="'+cfg.lMax+'" oninput="tints['+idx+'].lMax=+this.value;debouncedTints()"></div>'+
+        '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Lightness Min <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+cfg.lMin+'</span></label><input type="range" min="0" max="20" value="'+cfg.lMin+'" oninput="tints['+idx+'].lMin=+this.value;debouncedTints()"></div>'+
+        '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Hue Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.hueShift>0?'+':'')+cfg.hueShift+'°</span></label><input type="range" min="-30" max="30" value="'+cfg.hueShift+'" oninput="tints['+idx+'].hueShift=+this.value;debouncedTints()"></div>'+
+        '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Sat Shift (light end) <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.satMax>0?'+':'')+cfg.satMax+'</span></label><input type="range" min="-30" max="30" value="'+cfg.satMax+'" oninput="tints['+idx+'].satMax=+this.value;debouncedTints()"></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function addTint(){tints.push({hex:hsl2h(Math.floor(Math.random()*360),65,50),anchor:5,hueShift:0,satMin:0,satMax:0,lMin:5,lMax:98,mode:'perceived'});renderTints()}
+
+function buildTintData(){
+  var result={};
+  tints.forEach(function(cfg,idx){
+    var scale=genTintScale(cfg);
+    var name='colour-'+(idx+1);
+    var obj={};
+    T_LABELS.forEach(function(l,i){obj[l]=scale[i]});
+    result[name]=obj;
+  });
+  return result;
+}
+
+function exportTintCSS(){
+  var data=buildTintData();
+  var css=':root {\n';
+  Object.keys(data).forEach(function(name){
+    var stops=data[name];
+    Object.keys(stops).forEach(function(k){css+='  --'+name+'-'+k+': '+stops[k]+';\n'});
+  });
+  css+='}';
+  copyText(css);
+  $('tintExportOut').innerHTML='<div class="code-l">CSS Variables (copied)</div><div class="code">'+css+'</div>';
+}
+
+function exportTintJSON(){
+  var data=buildTintData();
+  // Framer-compatible JSON format
+  var json=JSON.stringify(data,null,2);
+  copyText(json);
+  $('tintExportOut').innerHTML='<div class="code-l">Framer JSON (copied)</div><div class="code">'+json.replace(/</g,'&lt;')+'</div>';
+}
 
 // ── Gradients ──
 var gPre=[{n:'Indigo Rose',css:'linear-gradient(135deg,#667eea,#764ba2)'},{n:'Peach',css:'linear-gradient(to right,#ee9ca7,#ffdde1)'},{n:'Aqua',css:'linear-gradient(to right,#1a2980,#26d0ce)'},{n:'Celestial',css:'linear-gradient(to right,#c33764,#1d2671)'},{n:'Relay',css:'linear-gradient(to right,#3a1c71,#d76d77,#ffaf7b)'},{n:'Sublime',css:'linear-gradient(to right,#fc5c7d,#6a82fb)'},{n:'Flare',css:'linear-gradient(to right,#f12711,#f5af19)'},{n:'Moonlit',css:'linear-gradient(to right,#0f2027,#203a43,#2c5364)'},{n:'Frost',css:'linear-gradient(to right,#000428,#004e92)'},{n:'Emerald',css:'linear-gradient(to right,#348f50,#56b4d3)'},{n:'Velvet',css:'linear-gradient(to right,#da4453,#89216b)'}];
-function updG(){var c1=$('g1').value,c2=$('g2').value,d=$('gD').value,css='linear-gradient('+d+', '+c1+', '+c2+')';$('gP').style.background=css;$('gC').textContent='background: '+css+';'}
+function updG(){var c1=$('g1').value,c2=$('g2').value,d=$('gD').value,css='linear-gradient('+d+', '+c1+', '+c2+')';$('gP').style.background=css;$('gC').textContent='background: '+css+';';$('gAngleTag').textContent=d}
 function ldGrad(){$('gPresets').innerHTML=gPre.map(function(g){return'<div class="grad-p" style="background:'+g.css+'" onclick="copyText(\'background: '+g.css+';\')" ><div class="tip">'+g.n+'</div></div>'}).join('')}
 
 // ── Contrast ──
-function chkC(){var fg=$('cF').value,bg=$('cB').value;$('cFh').value=fg;$('cBh').value=bg;$('cPrev').style.background=bg;$('cPrev').style.color=fg;$('cS1').style.color=fg;$('cS2').style.color=fg;var r=cRat(fg,bg),v=r.toFixed(2),aaN=r>=4.5,aaL=r>=3,aaaN=r>=7,aaaL=r>=4.5;$('cRes').innerHTML='<div class="card" style="text-align:center"><div class="cr-val">'+v+':1</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Contrast Ratio</div></div><div class="card"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><div><div style="font-size:9px;color:var(--t2);margin-bottom:2px">AA Normal</div><span class="tag '+(aaN?'tag-pass':'tag-fail')+'">'+(aaN?'PASS':'FAIL')+'</span></div><div><div style="font-size:9px;color:var(--t2);margin-bottom:2px">AA Large</div><span class="tag '+(aaL?'tag-pass':'tag-fail')+'">'+(aaL?'PASS':'FAIL')+'</span></div><div><div style="font-size:9px;color:var(--t2);margin-bottom:2px">AAA Normal</div><span class="tag '+(aaaN?'tag-pass':'tag-fail')+'">'+(aaaN?'PASS':'FAIL')+'</span></div><div><div style="font-size:9px;color:var(--t2);margin-bottom:2px">AAA Large</div><span class="tag '+(aaaL?'tag-pass':'tag-fail')+'">'+(aaaL?'PASS':'FAIL')+'</span></div></div></div>'}
+function chkC(){
+  var fg=$('cF').value,bg=$('cB').value;
+  $('cFh').value=fg;$('cBh').value=bg;
+  var prev=$('cPrev');prev.style.background=bg;prev.style.color=fg;
+  var btn=$('cBtn');if(btn){btn.style.background=fg;btn.style.color=bg}
+  var ghost=$('cBtnGhost');if(ghost){ghost.style.borderColor=fg;ghost.style.color=fg}
+  var r=cRat(fg,bg),v=r.toFixed(1),aaN=r>=4.5,aaL=r>=3,aaaN=r>=7,aaaL=r>=4.5;
+  $('cRatio').textContent=v+':1';
+  // Luminance info
+  var fgRgb=h2rgb(fg),bgRgb=h2rgb(bg);
+  var fgL=lum(fgRgb[0],fgRgb[1],fgRgb[2]).toFixed(3);
+  var bgL=lum(bgRgb[0],bgRgb[1],bgRgb[2]).toFixed(3);
+  var lumEl=$('cLumInfo');if(lumEl)lumEl.textContent='FG: '+fgL+' \u00b7 BG: '+bgL;
+  // Compliance rows
+  var rows=[['WCAG AA','Normal Text',aaN],['WCAG AA','Large Text',aaL],['WCAG AAA','Normal Text',aaaN],['WCAG AAA','Large Text',aaaL]];
+  $('cRes').innerHTML=rows.map(function(r){return'<div class="compliance-row"><div><div class="label">'+r[0]+'</div><div class="sublabel">'+r[1]+'</div></div><span class="tag '+(r[2]?'tag-pass':'tag-fail')+'">'+(r[2]?'PASS \u2713':'FAIL')+'</span></div>'}).join('');
+}
 function swC(){var f=$('cF').value,b=$('cB').value;$('cF').value=b;$('cB').value=f;chkC()}
 
 // ── Type Scale ──
@@ -113,7 +220,7 @@ function deletePrompt(id){var prompts=getPrompts().filter(function(p){return p.i
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded',function(){
-  updPal();ldStarters();renderTints();updG();ldGrad();chkC();
+  initHarmBtns();updPal();ldStarters();renderTints();updG();ldGrad();chkC();
   genTS();updateFontMatch();
   ldBtns();ldLay();ldIcons();
   renderPrompts();
