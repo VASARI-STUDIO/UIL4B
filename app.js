@@ -74,25 +74,52 @@ function renderTints(){
   $('tintContainer').innerHTML=tints.map(function(cfg,idx){
     var scale=genTintScale(cfg);
     var anchorLabels=['50','100','200','300','400','500','600','700','800','900','950'];
-    return '<div class="tint-row">'+
-      '<div class="row mb" style="gap:12px">'+
-        '<input type="color" value="'+cfg.hex+'" style="width:32px;height:28px" onchange="tints['+idx+'].hex=this.value;document.getElementById(\'tHex'+idx+'\').value=this.value;renderTints()">'+
-        '<input type="text" id="tHex'+idx+'" value="'+cfg.hex+'" style="width:80px;font-family:var(--mono);font-size:10px" onchange="tints['+idx+'].hex=this.value;renderTints()">'+
-        '<label style="font-size:9px;color:var(--t2)">Anchor</label>'+
-        '<select style="width:70px" onchange="tints['+idx+'].anchor=+this.value;renderTints()">'+anchorLabels.map(function(l,i){return'<option value="'+i+'"'+(i===cfg.anchor?' selected':'')+'>'+l+'</option>'}).join('')+'</select>'+
-        '<label style="font-size:9px;color:var(--t2)">Mode</label>'+
-        '<select style="width:90px" onchange="tints['+idx+'].mode=this.value;renderTints()"><option value="perceived"'+(cfg.mode==='perceived'?' selected':'')+'>Perceived</option><option value="linear"'+(cfg.mode==='linear'?' selected':'')+'>Linear</option></select>'+
-        (idx>0?'<button class="btn btn-s" onclick="tints.splice('+idx+',1);renderTints()">Remove</button>':'')+
-      '</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(11,1fr);gap:8px;margin-bottom:16px">'+scale.map(function(c,i){var hsl=h2hsl(c);var textCol=hsl[2]>55?'rgba(0,0,0,.7)':'rgba(255,255,255,.7)';var isAnchor=i===cfg.anchor;return'<div style="text-align:center"><div class="tint-swatch" style="background:'+c+'" onclick="copyText(\''+c+'\')"><span class="stop-label" style="color:'+textCol+'">'+T_LABELS[i]+'</span></div><div class="tint-info"><div class="hex">'+c+'</div>'+(isAnchor?'<div class="tint-base-tag">Base</div>':'<div class="lval">L: '+hsl[2]+'%</div>')+'</div></div>'}).join('')+'</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
-        '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Lightness Max <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+cfg.lMax+'</span></label><input type="range" min="60" max="100" value="'+cfg.lMax+'" oninput="tints['+idx+'].lMax=+this.value;debouncedTints()"></div>'+
-        '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Lightness Min <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+cfg.lMin+'</span></label><input type="range" min="0" max="20" value="'+cfg.lMin+'" oninput="tints['+idx+'].lMin=+this.value;debouncedTints()"></div>'+
-        '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Hue Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.hueShift>0?'+':'')+cfg.hueShift+'°</span></label><input type="range" min="-30" max="30" value="'+cfg.hueShift+'" oninput="tints['+idx+'].hueShift=+this.value;debouncedTints()"></div>'+
-        '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Sat Shift (light end) <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.satMax>0?'+':'')+cfg.satMax+'</span></label><input type="range" min="-30" max="30" value="'+cfg.satMax+'" oninput="tints['+idx+'].satMax=+this.value;debouncedTints()"></div>'+
-      '</div>'+
+
+    // Segmented control bar (matching mockup)
+    var segBar='<div class="seg-bar" style="grid-template-columns:1.2fr 1fr 1.5fr 1fr;margin-bottom:24px">'+
+      '<div class="seg-cell"><div class="seg-label">Base Colour</div><div class="row" style="gap:6px"><input type="color" value="'+cfg.hex+'" style="width:36px;height:32px" onchange="tints['+idx+'].hex=this.value;renderTints()"><input type="text" value="'+cfg.hex+'" style="width:90px;font-family:var(--mono);font-size:12px" onchange="tints['+idx+'].hex=this.value;renderTints()"></div></div>'+
+      '<div class="seg-cell"><div class="seg-label">Anchor Position</div><select style="width:100%" onchange="tints['+idx+'].anchor=+this.value;renderTints()">'+anchorLabels.map(function(l,i){return'<option value="'+i+'"'+(i===cfg.anchor?' selected':'')+'>'+l+'</option>'}).join('')+'</select></div>'+
+      '<div class="seg-cell"><div class="seg-label">Luminance Spread</div><div style="display:flex;align-items:center;gap:8px"><input type="range" min="60" max="100" value="'+cfg.lMax+'" style="flex:1" oninput="tints['+idx+'].lMax=+this.value;debouncedTints()"><span style="font-family:var(--mono);font-size:11px;color:var(--t1);min-width:30px">'+cfg.lMax+'%</span></div></div>'+
+      '<div class="seg-cell"><div class="seg-label">Mode</div><select style="width:100%" onchange="tints['+idx+'].mode=this.value;renderTints()"><option value="perceived"'+(cfg.mode==='perceived'?' selected':'')+'>Perceived</option><option value="linear"'+(cfg.mode==='linear'?' selected':'')+'>Linear</option></select></div>'+
     '</div>';
+
+    // Header with copy button
+    var header='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="font-size:18px;font-weight:700;letter-spacing:-0.02em">Tints & Shades</h2><button class="btn-link" onclick="copyTintScale('+idx+')">Copy Scale</button>'+(idx>0?'<button class="btn btn-s" style="margin-left:8px" onclick="tints.splice('+idx+',1);renderTints()">Remove</button>':'')+'</div>';
+
+    // Large rounded swatches
+    var swatches='<div style="display:grid;grid-template-columns:repeat(11,1fr);gap:8px;margin-bottom:24px">'+scale.map(function(c,i){
+      var hsl=h2hsl(c);var textCol=hsl[2]>55?'rgba(0,0,0,.75)':'rgba(255,255,255,.75)';var isAnchor=i===cfg.anchor;
+      return'<div style="text-align:center"><div class="tint-swatch" style="background:'+c+'" onclick="copyText(\''+c+'\')"><span class="stop-label" style="color:'+textCol+'">'+T_LABELS[i]+'</span></div><div class="tint-info"><div class="hex">'+c+'</div>'+(isAnchor?'<div class="tint-base-tag">Selected Base</div>':'<div class="lval">L: '+hsl[2]+'%</div>')+'</div></div>';
+    }).join('')+'</div>';
+
+    // Technical Spectrum table
+    var specTable='<div class="card" style="padding:24px;margin-bottom:20px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><h2 style="font-size:18px;font-weight:700;letter-spacing:-0.02em">Technical Spectrum</h2><p style="font-size:12px;color:var(--t2);margin-top:2px">Detailed HSL and contrast breakdowns for production usage.</p></div><button class="btn" onclick="exportTintJSON()">JSON Export</button></div>'+
+      '<table class="spec-table"><thead><tr><th>Stop</th><th>Preview</th><th>Hex</th><th>HSL</th><th>Contrast</th><th>Actions</th></tr></thead><tbody>'+
+      scale.map(function(c,i){
+        var hsl=h2hsl(c);var ratio=cRat(c,'#000000');var ratioW=cRat(c,'#ffffff');
+        var bestRatio=Math.max(ratio,ratioW);var ratioLabel=bestRatio.toFixed(1);
+        var isAnchor=i===cfg.anchor;
+        var passClass=bestRatio>=4.5?'tag-pass':'tag-fail';
+        var passLabel=bestRatio>=4.5?ratioLabel+' AA':ratioLabel+' FAIL';
+        return'<tr class="'+(isAnchor?'base-row':'')+'"><td style="font-family:var(--mono);font-weight:600;'+(isAnchor?'color:var(--accent)':'')+'">'+T_LABELS[i]+'</td><td><span class="swatch-sm" style="background:'+c+'"></span></td><td style="font-family:var(--mono)">'+c+'</td><td style="font-family:var(--mono);color:var(--t1);'+(isAnchor?'color:var(--accent)':'')+'">'+hsl[0]+', '+hsl[1]+'%, '+hsl[2]+'%</td><td><span class="tag '+passClass+'" style="font-size:9px">'+passLabel+'</span></td><td><button class="btn btn-s" onclick="copyText(\''+c+'\')" style="padding:2px 8px;font-size:9px">Copy</button></td></tr>';
+      }).join('')+
+      '</tbody></table></div>';
+
+    // Advanced controls (collapsed feel)
+    var controls='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid var(--border)">'+
+      '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Lightness Min <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+cfg.lMin+'</span></label><input type="range" min="0" max="20" value="'+cfg.lMin+'" oninput="tints['+idx+'].lMin=+this.value;debouncedTints()"></div>'+
+      '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Hue Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.hueShift>0?'+':'')+cfg.hueShift+'\u00b0</span></label><input type="range" min="-30" max="30" value="'+cfg.hueShift+'" oninput="tints['+idx+'].hueShift=+this.value;debouncedTints()"></div>'+
+      '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Saturation Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.satMax>0?'+':'')+cfg.satMax+'</span></label><input type="range" min="-30" max="30" value="'+cfg.satMax+'" oninput="tints['+idx+'].satMax=+this.value;debouncedTints()"></div>'+
+    '</div>';
+
+    return segBar + header + swatches + specTable + controls;
   }).join('');
+}
+
+function copyTintScale(idx){
+  var scale=genTintScale(tints[idx]);
+  var out=T_LABELS.map(function(l,i){return l+': '+scale[i]}).join('\n');
+  copyText(out);
 }
 
 function addTint(){tints.push({hex:hsl2h(Math.floor(Math.random()*360),65,50),anchor:5,hueShift:0,satMin:0,satMax:0,lMin:5,lMax:98,mode:'perceived'});renderTints()}
@@ -147,11 +174,80 @@ function chkC(){
   var fgRgb=h2rgb(fg),bgRgb=h2rgb(bg);
   var fgL=lum(fgRgb[0],fgRgb[1],fgRgb[2]).toFixed(3);
   var bgL=lum(bgRgb[0],bgRgb[1],bgRgb[2]).toFixed(3);
-  var lumEl=$('cLumInfo');if(lumEl)lumEl.textContent='FG: '+fgL+' \u00b7 BG: '+bgL;
-  // Compliance rows
-  var rows=[['WCAG AA','Normal Text',aaN],['WCAG AA','Large Text',aaL],['WCAG AAA','Normal Text',aaaN],['WCAG AAA','Large Text',aaaL]];
-  $('cRes').innerHTML=rows.map(function(r){return'<div class="compliance-row"><div><div class="label">'+r[0]+'</div><div class="sublabel">'+r[1]+'</div></div><span class="tag '+(r[2]?'tag-pass':'tag-fail')+'">'+(r[2]?'PASS \u2713':'FAIL')+'</span></div>'}).join('');
+  var lumEl=$('cLumInfo');if(lumEl)lumEl.innerHTML='Luminance (FG): '+fgL+'<br>Luminance (BG): '+bgL;
+  // Compliance rows with fix buttons
+  var rows=[
+    ['WCAG AA','Normal Text',4.5,aaN],
+    ['WCAG AA','Large Text',3,aaL],
+    ['WCAG AAA','Normal Text',7,aaaN],
+    ['WCAG AAA','Large Text',4.5,aaaL]
+  ];
+  $('cRes').innerHTML=rows.map(function(row){
+    var pass=row[3];
+    var fixBtn=pass?'':'<button class="btn btn-s" style="margin-left:8px;font-size:9px;padding:4px 10px" onclick="fixContrast('+row[2]+')">Fix</button>';
+    return'<div class="compliance-row"><div><div class="label">'+row[0]+'</div><div class="sublabel">'+row[1]+'</div></div><div style="display:flex;align-items:center"><span class="tag '+(pass?'tag-pass':'tag-fail')+'">'+(pass?'PASS \u2713':'FAIL')+'</span>'+fixBtn+'</div></div>';
+  }).join('');
+
+  // Suggested adjustments bar — generate 3 alternatives that meet AAA
+  var suggestEl=$('cSuggest');
+  var swatchesEl=$('cSuggestSwatches');
+  if(!aaaN && suggestEl && swatchesEl){
+    var fgHsl=h2hsl(fg);
+    var suggestions=[];
+    var targets=[7,4.5,3];
+    for(var t=0;t<targets.length;t++){
+      var lo2,hi2;var isDk=parseFloat(bgL)<0.5;
+      if(isDk){lo2=fgHsl[2];hi2=100}else{lo2=0;hi2=fgHsl[2]}
+      var best=fg;
+      for(var j=0;j<30;j++){
+        var mid=(lo2+hi2)/2;
+        var test=hsl2h(fgHsl[0],fgHsl[1],Math.round(mid));
+        var rat=cRat(test,bg);
+        if(rat>=targets[t]){best=test;if(isDk)hi2=mid;else lo2=mid}else{if(isDk)lo2=mid;else hi2=mid}
+      }
+      if(suggestions.indexOf(best)===-1)suggestions.push(best);
+    }
+    suggestEl.style.display='flex';
+    swatchesEl.innerHTML=suggestions.map(function(c){
+      return'<div class="suggest-swatch" style="background:'+c+'" onclick="document.getElementById(\'cF\').value=\''+c+'\';document.getElementById(\'cFh\').value=\''+c+'\';chkC()" title="'+c+'"></div>';
+    }).join('');
+  }else if(suggestEl){
+    suggestEl.style.display='none';
+  }
 }
+
+// Auto-fix: adjust FG lightness to achieve target contrast ratio against current BG
+function fixContrast(targetRatio){
+  var bg=$('cB').value;
+  var fg=$('cF').value;
+  var fgHsl=h2hsl(fg);
+  var h=fgHsl[0],s=fgHsl[1],l=fgHsl[2];
+  var bgRgb=h2rgb(bg);
+  var bgLum=lum(bgRgb[0],bgRgb[1],bgRgb[2]);
+  var isDarkBg=bgLum<0.5;
+
+  // Binary search for the right lightness
+  var lo,hi;
+  if(isDarkBg){lo=l;hi=100}else{lo=0;hi=l}
+  var bestHex=fg;
+  for(var i=0;i<30;i++){
+    var mid=(lo+hi)/2;
+    var testHex=hsl2h(h,s,Math.round(mid));
+    var ratio=cRat(testHex,bg);
+    if(ratio>=targetRatio){
+      bestHex=testHex;
+      if(isDarkBg){hi=mid}else{lo=mid}
+    }else{
+      if(isDarkBg){lo=mid}else{hi=mid}
+    }
+  }
+  // Apply
+  $('cF').value=bestHex;
+  $('cFh').value=bestHex;
+  chkC();
+  toast('Adjusted to '+bestHex);
+}
+
 function swC(){var f=$('cF').value,b=$('cB').value;$('cF').value=b;$('cB').value=f;chkC()}
 
 // ── Type Scale ──
