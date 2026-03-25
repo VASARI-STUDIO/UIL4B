@@ -32,6 +32,9 @@
   <div class="nav-g">Tools</div>
   <button class="nl" data-s="imgconvert" onclick="go('imgconvert')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Image Converter</button>
   <button class="nl" data-s="prompts" onclick="go('prompts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l-4 4 4 4 4-4-4-4z"/><path d="M3 12l4 4 4-4-4-4z"/><path d="M12 12l4 4 4-4-4-4z"/><path d="M12 12l-4 4-4-4 4-4z"/></svg>Prompt Library</button>
+  <div class="nav-g">Knowledge</div>
+  <button class="nl" data-s="docs" onclick="go('docs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Documentation</button>
+
   <div class="nav-g">Links</div>
   <a class="nl" href="https://framer.university" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Framer University</a>
   <a class="nl" href="https://fonts.google.com" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Fonts</a>
@@ -47,7 +50,7 @@
   <div class="sec-h"><h1>Palette Builder</h1><p>Generate harmonious colour systems for your interfaces using advanced colour theory models.</p></div>
 
   <!-- Two-column: controls left, swatches right -->
-  <div style="display:grid;grid-template-columns:360px 1fr;gap:20px;margin-bottom:28px">
+  <div class="split-tool" style="display:grid;grid-template-columns:360px 1fr;gap:20px;margin-bottom:28px">
     <div>
       <div class="card" style="margin-bottom:10px">
         <div class="sl">Base Signature</div>
@@ -91,10 +94,10 @@
   <div class="grad-big" id="gP"><div class="grad-tags"><span class="grad-tag" id="gTypeTag">linear-gradient</span><span class="grad-tag" id="gAngleTag">135deg</span></div></div>
 
   <!-- Stops + Properties split -->
-  <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:40px">
+  <div class="grad-split" style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:40px">
     <div class="card">
       <div class="sl">Gradient Stops</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="c2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
         <div><div class="seg-label">Start Colour</div><input type="color" id="g1" value="#6366f1" onchange="updG()" style="width:100%;height:40px"></div>
         <div><div class="seg-label">End Colour</div><input type="color" id="g2" value="#ec4899" onchange="updG()" style="width:100%;height:40px"></div>
       </div>
@@ -118,7 +121,7 @@
 <div class="sec" id="sec-contrast">
   <div class="sec-h"><h1>Contrast Checker</h1><p>Validate your colour combinations against Web Content Accessibility Guidelines (WCAG) to ensure maximum legibility and inclusion.</p></div>
 
-  <div style="display:grid;grid-template-columns:380px 1fr;gap:20px;margin-bottom:24px">
+  <div class="split-tool" style="display:grid;grid-template-columns:380px 1fr;gap:20px;margin-bottom:24px">
     <!-- Left: colour pickers + compliance -->
     <div>
       <div class="card" style="margin-bottom:10px">
@@ -140,7 +143,7 @@
     <div>
       <div id="cPrev" style="border-radius:14px;overflow:hidden;border:1px solid var(--border)">
         <div style="padding:48px 36px 36px;text-align:center">
-          <div id="cH1" style="font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1.1;margin-bottom:14px">The future of<br>design is<br>accessible.</div>
+          <div id="cH1" style="font-size:clamp(24px,5vw,44px);font-weight:700;letter-spacing:-0.04em;line-height:1.1;margin-bottom:14px">The future of<br>design is<br>accessible.</div>
           <div id="cS2" style="font-size:14px;line-height:1.65;opacity:.75;max-width:400px;margin:0 auto">Good design is not just what it looks like and feels like. Design is how it works for everyone.</div>
           <div style="margin-top:22px;display:flex;gap:10px;justify-content:center">
             <div id="cBtn" style="padding:12px 28px;font-size:13px;font-weight:600;border-radius:8px">Primary CTA</div>
@@ -148,7 +151,7 @@
           </div>
         </div>
         <!-- Interface cards row -->
-        <div style="padding:0 36px 28px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="c2" style="padding:0 36px 28px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div style="padding:18px;border:1px solid rgba(128,128,128,.15);border-radius:10px">
             <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">Interface Elements</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font-size:9px;padding:4px 10px;border:1px solid;border-radius:5px;opacity:.6">Navigation</span><span style="font-size:9px;padding:4px 10px;border:1px solid;border-radius:5px;opacity:.6">Interface</span><span style="font-size:9px;padding:4px 10px;border:1px solid;border-radius:5px;opacity:.3">Disabled</span></div>
@@ -174,7 +177,7 @@
   <div class="sec-h"><h1>Font Studio</h1><p>A high-precision typographic playground. Mathematically derive your type scales, preview font pairings, and test responsive character rendering in real-time.</p></div>
 
   <!-- Two-column: type scale left, library + combos right -->
-  <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;margin-bottom:40px">
+  <div class="font-layout" style="display:grid;grid-template-columns:1fr 320px;gap:20px;margin-bottom:40px">
     <div>
       <!-- Type Scale Generator -->
       <div class="card" style="margin-bottom:16px">
@@ -254,6 +257,234 @@
   <div class="sec-h"><h1>Prompt Library</h1><p>Save your AI image generation prompts with output previews. Use with <a href="https://labs.google/fx/tools/flow" target="_blank">Google Flow</a> or <a href="https://stitch.withgoogle.com/?pli=1" target="_blank">Google Stitch</a>.</p></div>
   <div class="sub"><div class="sl">Add Prompt</div><div class="card" style="margin-top:10px"><div style="display:grid;gap:10px"><textarea id="promptText" placeholder="Enter your prompt..." style="min-height:80px;resize:vertical"></textarea><div class="row"><label style="font-size:10px;color:var(--t2)">Output image</label><input type="file" id="promptImg" accept="image/*" style="font-size:11px"></div><div class="row"><label style="font-size:10px;color:var(--t2)">Tags</label><input type="text" id="promptTags" placeholder="e.g. hero, product, texture" style="width:240px"></div><div><button class="btn btn-accent" onclick="savePrompt()">Save Prompt</button></div></div></div></div>
   <div class="sub"><div class="sl">Saved Prompts</div><input type="text" id="promptSearch" placeholder="Search prompts..." style="width:100%;max-width:300px;margin:10px 0 14px" oninput="renderPrompts()"><div id="promptGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div><p class="d" id="promptEmpty" style="margin-top:12px">No prompts saved yet.</p></div>
+</div>
+
+<!-- ═══ DOCUMENTATION ═══ -->
+<div class="sec" id="sec-docs">
+  <div class="sec-h"><h1>Documentation</h1><p>Reference guides and principles to keep your thinking sharp. Click any topic to expand.</p></div>
+
+  <!-- DOC 1: Web Design Principles -->
+  <div class="doc-group">
+    <button class="doc-toggle" onclick="toggleDoc(this)">
+      <span class="doc-toggle-icon">+</span>
+      <div><div class="doc-title">Web Design Principles</div><div class="doc-desc">Psychology-driven principles for premium, high-converting websites.</div></div>
+    </button>
+    <div class="doc-body">
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> The Halo Effect (First Impressions)</button>
+        <div class="doc-sub-body">
+          <p>Users form a lasting opinion of your entire brand within the first 50 milliseconds of seeing your website. This is the Halo Effect — a single positive first impression colours how people perceive everything that follows.</p>
+          <p>A site that looks professional and polished makes visitors assume the product or service behind it is equally high quality, even before they read a single word. Conversely, a dated or cluttered design creates immediate distrust.</p>
+          <h4>How to apply this</h4>
+          <ul>
+            <li>Lead with a strong hero section — clean layout, clear value proposition, high-quality imagery</li>
+            <li>Typography and spacing should feel intentional from the first viewport</li>
+            <li>Remove anything that doesn't directly support the first impression (clutter, stock badges, excessive navigation)</li>
+            <li>Load speed matters — if the page takes more than 2–3 seconds, the first impression is "slow" regardless of design</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Cognitive Load & Cognitive Fluency</button>
+        <div class="doc-sub-body">
+          <p>Cognitive load is the mental effort required to process information on your page. Cognitive fluency is the ease with which the brain processes what it sees. When fluency is high (easy to process), users perceive the content as more trustworthy and the experience as more pleasant.</p>
+          <p>Every extra element, colour, font, or animation adds cognitive load. Premium sites feel effortless because they ruthlessly reduce unnecessary complexity.</p>
+          <h4>How to apply this</h4>
+          <ul>
+            <li>Limit yourself to 2 typefaces maximum (1 heading, 1 body)</li>
+            <li>Use a restricted colour palette — 1 primary, 1 accent, 2–3 neutrals</li>
+            <li>Break information into scannable chunks with generous whitespace</li>
+            <li>Use visual hierarchy (size, weight, contrast) to guide the eye — the user should never have to "figure out" where to look</li>
+            <li>Remove any UI element that doesn't directly serve the user's goal on that page</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Micro Interactions & The Peak-End Rule</button>
+        <div class="doc-sub-body">
+          <p>The Peak-End Rule states that people judge an experience based on its most intense moment (the peak) and the final moment (the end), not the average of every moment. Micro interactions — small, delightful animations and feedback responses — create those peak moments.</p>
+          <p>A smooth hover state, a satisfying button click animation, or a slick page transition can elevate a "good" site to a "premium" one. These details signal craft and care.</p>
+          <h4>How to apply this</h4>
+          <ul>
+            <li>Add subtle hover effects on interactive elements (buttons, cards, links)</li>
+            <li>Use smooth scroll behaviour and page transitions</li>
+            <li>Animate elements into view on scroll (fade up, scale in) — but keep it restrained</li>
+            <li>Make the CTA moment feel special — a button that responds to hover/press with spring physics feels premium</li>
+            <li>End the experience well — a clean footer, a thank-you animation on form submit, a smooth exit transition</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> How Top Brands Apply This Psychology</button>
+        <div class="doc-sub-body">
+          <h4>Apple — Premium Simplicity</h4>
+          <p>Apple's website is the masterclass in cognitive fluency. One product per viewport, massive whitespace, minimal copy. The Halo Effect is engineered through slow-reveal scroll animations and cinema-quality product photography. Every pixel serves the first impression.</p>
+          <h4>Luxury Brands & White Space</h4>
+          <p>Brands like Chanel, Hermès, and Cartier use extreme whitespace as a design strategy. The emptiness itself communicates exclusivity — it says "we don't need to fill space with noise to get your attention." This reduces cognitive load to almost zero.</p>
+          <h4>Stripe & Figma — Clarity for Complex Products</h4>
+          <p>Stripe and Figma both sell complex technical products but their sites feel effortless. They achieve this through progressive disclosure (showing only what's needed at each step), clean typography hierarchies, and micro interactions that make abstract concepts tangible (like Stripe's animated gradient mesh or Figma's interactive demos).</p>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> 3-Step Framework for Premium Websites</button>
+        <div class="doc-sub-body">
+          <h4>Step 1 — Engineer the First Impression</h4>
+          <p>Design your hero section first. It should communicate who you are, what you do, and why someone should care — in under 3 seconds. Use a single strong headline, one supporting line, and one clear CTA. Remove everything else.</p>
+          <h4>Step 2 — Reduce Cognitive Load</h4>
+          <p>Audit every element on the page and ask: does this serve the user's primary goal? If not, remove it or move it deeper. Simplify navigation to 5–7 items max. Use consistent spacing tokens. Let whitespace do the heavy lifting.</p>
+          <h4>Step 3 — Add Micro Interactions</h4>
+          <p>Once the structure is clean and the content is clear, layer in small moments of delight. Hover states on buttons and cards. Smooth scroll-triggered reveals. A loading transition that feels intentional. These are the details that separate amateur from professional.</p>
+          <div class="card" style="margin-top:16px;background:var(--accent-bg);border-color:var(--accent)">
+            <p style="font-size:13px;color:var(--accent);font-weight:600">Final Takeaway: Users don't remember features — they remember how a site made them feel. Engineer feeling through first impressions, simplicity, and micro-moments of delight.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DOC 2: Social Media Marketing -->
+  <div class="doc-group">
+    <button class="doc-toggle" onclick="toggleDoc(this)">
+      <span class="doc-toggle-icon">+</span>
+      <div><div class="doc-title">Social Media Marketing (Instagram)</div><div class="doc-desc">Content strategy, posting cadence, caption templates, and growth tactics for Instagram.</div></div>
+    </button>
+    <div class="doc-body">
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Content Pillars & Strategy</button>
+        <div class="doc-sub-body">
+          <p>Structure all Instagram content around core pillars so every post serves a specific marketing goal. Recommended pillars for a design agency:</p>
+          <ul>
+            <li><strong>Promotional</strong> — Showcase templates, new launches, offers. Use high-quality mockups. CTA: "Link in bio." KPIs: link clicks, conversions.</li>
+            <li><strong>Free-Value Resources</strong> — Downloadable assets, guides, checklists. Builds goodwill and captures emails. KPIs: downloads, email sign-ups, saves/shares.</li>
+            <li><strong>Case Studies</strong> — Before/after client stories showing real results. KPIs: engagement, click-throughs, inbound inquiries.</li>
+            <li><strong>Testimonials & UGC</strong> — Client quotes, reviews, user-generated content. Social proof builds trust. KPIs: conversion lift, profile visits.</li>
+            <li><strong>Behind-the-Scenes</strong> — Design process, team, office life. Humanises the brand. KPIs: comments, story replies, follower growth.</li>
+            <li><strong>Tips & Tutorials</strong> — Actionable design tips, UX trends, quick how-tos. Positions agency as expert. KPIs: saves, shares, comments.</li>
+            <li><strong>Reels/Shorts</strong> — 15–30 second videos. Algorithm favours Reels for reach. Strong hook in first 3 seconds. KPIs: views, follower growth, profile visits.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Posting Cadence</button>
+        <div class="doc-sub-body">
+          <p>Aim for 2–3 feed posts per week (images, carousels, or Reels) plus daily Stories. This balances consistency with quality.</p>
+          <h4>Recommended weekly rhythm</h4>
+          <ul>
+            <li><strong>Monday</strong> — Promotional or case study post</li>
+            <li><strong>Thursday</strong> — Tips/tutorial carousel or Reel</li>
+            <li><strong>Weekend</strong> — Behind-the-scenes or testimonial</li>
+            <li><strong>Daily</strong> — Stories (polls, Q&As, quick updates, process clips)</li>
+          </ul>
+          <p>Alternate pillars throughout the month so the feed stays varied. Avoid posting the same pillar twice in a row.</p>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Caption Templates</button>
+        <div class="doc-sub-body">
+          <p>Every caption should have three parts: a hook (first line), value or story (middle), and a clear CTA (end). Always include "Link in bio" or "DM us" where relevant.</p>
+          <h4>Short — Invite Request</h4>
+          <p><em>"Need a website refresh? We just opened slots for new projects this month — DM us your ideas or check the link in bio to see our portfolio!"</em></p>
+          <h4>Long — Free Offer</h4>
+          <p><em>"Is your site mobile-friendly? We've put together a FREE Quick Check Guide to help you find out. Download via link in bio and let us know your biggest takeaway! (P.S. Ready to build your own site? Just reply or DM us!)"</em></p>
+          <h4>Short — Tip/Lead</h4>
+          <p><em>"Pro Tip: Light-coloured CTAs get 20% more clicks. Try it on your homepage and tell us what happens."</em></p>
+          <h4>Long — Case Study</h4>
+          <p><em>"From drab to fab — swipe to see how we transformed [Client]'s old site into a sleek experience that doubled their leads. Interested in a redesign? Drop us a message or click the link in bio."</em></p>
+          <h4>Short — Testimonial</h4>
+          <p><em>"'They made our site pop — and sales jumped 30%!' — Amy, happy client. Ready for results like this? DM us or hit the link in bio."</em></p>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Carousel & Reel Scripts</button>
+        <div class="doc-sub-body">
+          <h4>Carousel — "5 UX Tips for Small Businesses"</h4>
+          <p>Slide 1: Title with engaging graphic. Slides 2–5: One tip per slide with icon/diagram. Slide 6: CTA — "Want more? Check our bio for a free UX checklist!"</p>
+          <h4>Reel — "Before/After Transformation" (15–30s)</h4>
+          <p>Shot 1 (0–2s): Old site with text "Before: Dated!" Shot 2 (2–8s): New design reveal "After: Modern and Fast!" Shot 3 (8–15s): Feature highlight with text animation. End: Logo + "Get your site makeover — link in bio!"</p>
+          <h4>Carousel — "Client Success Story"</h4>
+          <p>Slide 1: Client logo + headline. Slide 2: Challenge. Slide 3: Solution. Slide 4: Results with stats. Slide 5: Client quote + CTA.</p>
+          <h4>Reel — "Quick Design Tip" (12s)</h4>
+          <p>Scene 1: On-screen text hook. Scene 2: Visual demo. Scene 3: Example screenshot. End: "Follow for daily tips!"</p>
+          <h4>Carousel — "Do's and Don'ts"</h4>
+          <p>Alternate slides between good and bad practices with clear visuals. End with CTA: "Need help? We can design it right — DM us!"</p>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Growth Tactics & Budget Scenarios</button>
+        <div class="doc-sub-body">
+          <h4>Organic ($0/month)</h4>
+          <p>Post consistently with quality visuals and relevant hashtags (mix popular + niche). Use interactive Story stickers (polls, questions). Reply quickly to all comments and DMs. Partner with complementary brands or micro-influencers for cross-promotion. Expected growth: 5–15% monthly follower increase.</p>
+          <h4>Small Budget ($200/month)</h4>
+          <p>Run 1–2 boosted posts or Story ads targeting lookalike audiences. Focus on small business owners and entrepreneurs. Use carousel or video ads showcasing top templates. Expected: 100–500 link clicks, 100–300 new followers per month.</p>
+          <h4>Medium Budget ($1000/month)</h4>
+          <p>Mix of feed ads and Reels ads (video typically has cheaper CPM). Segment into 3–4 campaigns: brand awareness, template downloads, content promotion. Hire 1–2 mid-tier influencers (10–50K followers) in entrepreneurship or tech niches. Expected: 500–1000+ new followers per month, dozens of qualified leads.</p>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Metrics & A/B Testing</button>
+        <div class="doc-sub-body">
+          <p>Track these key metrics weekly:</p>
+          <ul>
+            <li><strong>Follower Growth</strong> — New followers per week, measured after campaigns</li>
+            <li><strong>Reach & Impressions</strong> — Unique accounts seeing posts; growth indicates content discovery</li>
+            <li><strong>Engagement Rate</strong> — (Likes + Comments + Shares + Saves) / Impressions. Industry average 1–3%</li>
+            <li><strong>Profile CTR</strong> — How often users tap the profile link. High CTR means strong CTAs</li>
+            <li><strong>Leads</strong> — Email sign-ups, DM inquiries, form submissions</li>
+          </ul>
+          <h4>A/B test ideas</h4>
+          <ul>
+            <li>Image post vs carousel vs Reel on similar topics — compare reach and engagement</li>
+            <li>Short vs detailed captions — measure saves and comments</li>
+            <li>"Link in bio" vs "DM us" vs "Visit our website" — track which generates more action</li>
+            <li>Broad vs niche hashtag sets — compare reach and follower quality</li>
+            <li>Morning vs evening posting — use Insights to find peak engagement windows</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> DM Outreach Templates</button>
+        <div class="doc-sub-body">
+          <h4>New Follower Intro</h4>
+          <p><em>"Hi [Name]! Thanks for following. I'm [Your Name] from [Agency]. I noticed you're interested in [design/websites]. We recently launched some free templates that could help your business — feel free to DM any time!"</em></p>
+          <h4>After Engagement</h4>
+          <p><em>"Hey [Name], thanks for liking our post on [topic]. I noticed you're working on [detail from their profile]. If you ever need design help or a template suggestion, let me know — happy to chat! Our free [resource] might be useful (link in bio)."</em></p>
+          <h4>Inbound Inquiry Response</h4>
+          <p><em>"Hi [Name], thanks for reaching out about a website redesign! I'd love to learn more — could you share what platforms you use or what style you're after? In the meantime, check out examples here [link]."</em></p>
+          <p>Always personalise, reference something relevant to them, and end with a gentle CTA.</p>
+        </div>
+      </div>
+
+      <div class="doc-sub">
+        <button class="doc-sub-toggle" onclick="toggleDoc(this)"><span class="doc-toggle-icon">+</span> Lead-Capture Workflow</button>
+        <div class="doc-sub-body">
+          <p>The funnel from Instagram to conversion:</p>
+          <ol>
+            <li>Follower sees post with CTA → taps link in bio</li>
+            <li>Landing page offers free resource or consultation booking</li>
+            <li>User submits email/details → enters CRM or leads database</li>
+            <li>Simultaneously: DM conversations are handled by staff, converted to consultations</li>
+            <li>Follow-up via email or phone → nurture toward sale</li>
+          </ol>
+          <p>Keep the bio link short, include a CTA in your bio text, and always reiterate "link in bio" in post captions.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 </main>

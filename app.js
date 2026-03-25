@@ -100,7 +100,7 @@ function renderTints(){
     var header='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="font-size:18px;font-weight:700;letter-spacing:-0.02em">Tints & Shades</h2><button class="btn-link" onclick="copyTintScale('+idx+')">Copy Scale</button>'+(idx>0?'<button class="btn btn-s" style="margin-left:8px" onclick="tints.splice('+idx+',1);renderTints()">Remove</button>':'')+'</div>';
 
     // Large rounded swatches
-    var swatches='<div style="display:grid;grid-template-columns:repeat(11,1fr);gap:8px;margin-bottom:24px">'+scale.map(function(c,i){
+    var swatches='<div class="tint-grid" style="display:grid;grid-template-columns:repeat(11,1fr);gap:8px;margin-bottom:24px">'+scale.map(function(c,i){
       var hsl=h2hsl(c);var textCol=hsl[2]>55?'rgba(0,0,0,.75)':'rgba(255,255,255,.75)';var isAnchor=i===cfg.anchor;
       return'<div style="text-align:center"><div class="tint-swatch" style="background:'+c+'" onclick="copyText(\''+c+'\')"><span class="stop-label" style="color:'+textCol+'">'+T_LABELS[i]+'</span></div><div class="tint-info"><div class="hex">'+c+'</div>'+(isAnchor?'<div class="tint-base-tag">Selected Base</div>':'<div class="lval">L: '+hsl[2]+'%</div>')+'</div></div>';
     }).join('')+'</div>';
@@ -119,7 +119,7 @@ function renderTints(){
       '</tbody></table></div>';
 
     // Advanced controls (collapsed feel)
-    var controls='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid var(--border)">'+
+    var controls='<div class="c3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid var(--border)">'+
       '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Lightness Min <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+cfg.lMin+'</span></label><input type="range" min="0" max="20" value="'+cfg.lMin+'" oninput="tints['+idx+'].lMin=+this.value;debouncedTints()"></div>'+
       '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Hue Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.hueShift>0?'+':'')+cfg.hueShift+'\u00b0</span></label><input type="range" min="-30" max="30" value="'+cfg.hueShift+'" oninput="tints['+idx+'].hueShift=+this.value;debouncedTints()"></div>'+
       '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Saturation Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.satMax>0?'+':'')+cfg.satMax+'</span></label><input type="range" min="-30" max="30" value="'+cfg.satMax+'" oninput="tints['+idx+'].satMax=+this.value;debouncedTints()"></div>'+
@@ -425,6 +425,13 @@ function setPrompts(p){localStorage.setItem('vs-prompts',JSON.stringify(p))}
 function savePrompt(){var text=$('promptText').value.trim();if(!text){toast('Enter a prompt first');return}var tags=$('promptTags').value.trim();var fileInput=$('promptImg');var prompt={id:Date.now(),text:text,tags:tags,img:'',date:new Date().toLocaleDateString('en-AU')};if(fileInput.files&&fileInput.files[0]){var reader=new FileReader();reader.onload=function(e){prompt.img=e.target.result;var prompts=getPrompts();prompts.unshift(prompt);setPrompts(prompts);$('promptText').value='';$('promptTags').value='';fileInput.value='';renderPrompts();toast('Prompt saved')};reader.readAsDataURL(fileInput.files[0])}else{var prompts=getPrompts();prompts.unshift(prompt);setPrompts(prompts);$('promptText').value='';$('promptTags').value='';renderPrompts();toast('Prompt saved')}}
 function renderPrompts(){var prompts=getPrompts();var q=($('promptSearch').value||'').toLowerCase();var filtered=prompts.filter(function(p){return!q||p.text.toLowerCase().indexOf(q)!==-1||(p.tags||'').toLowerCase().indexOf(q)!==-1});$('promptEmpty').style.display=filtered.length?'none':'block';$('promptGrid').innerHTML=filtered.map(function(p){return'<div class="prompt-card">'+(p.img?'<img src="'+p.img+'" alt="Output">':'<div style="width:100%;height:80px;background:var(--bg-2);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:10px;color:var(--t2)">No image</div>')+'<div class="prompt-text" onclick="copyText(this.textContent)">'+p.text.replace(/</g,'&lt;')+'</div><div style="display:flex;justify-content:space-between;align-items:center"><div class="prompt-meta">'+(p.tags?p.tags+' · ':'')+p.date+'</div><button class="btn btn-s" onclick="deletePrompt('+p.id+')">Delete</button></div></div>'}).join('')}
 function deletePrompt(id){var prompts=getPrompts().filter(function(p){return p.id!==id});setPrompts(prompts);renderPrompts();toast('Deleted')}
+
+// ── Documentation toggles ──
+function toggleDoc(btn){
+  btn.classList.toggle('open');
+  var body=btn.nextElementSibling;
+  if(body){body.classList.toggle('open')}
+}
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded',function(){
