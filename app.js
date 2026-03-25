@@ -100,14 +100,14 @@ function renderTints(){
     var header='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="font-size:18px;font-weight:700;letter-spacing:-0.02em">Tints & Shades</h2><button class="btn-link" onclick="copyTintScale('+idx+')">Copy Scale</button>'+(idx>0?'<button class="btn btn-s" style="margin-left:8px" onclick="tints.splice('+idx+',1);renderTints()">Remove</button>':'')+'</div>';
 
     // Large rounded swatches
-    var swatches='<div class="tint-grid" style="display:grid;grid-template-columns:repeat(11,1fr);gap:8px;margin-bottom:24px">'+scale.map(function(c,i){
+    var swatches='<div class="tint-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(72px,calc(100%/4)),1fr));gap:8px;margin-bottom:24px">'+scale.map(function(c,i){
       var hsl=h2hsl(c);var textCol=hsl[2]>55?'rgba(0,0,0,.75)':'rgba(255,255,255,.75)';var isAnchor=i===cfg.anchor;
       return'<div style="text-align:center"><div class="tint-swatch" style="background:'+c+'" onclick="copyText(\''+c+'\')"><span class="stop-label" style="color:'+textCol+'">'+T_LABELS[i]+'</span></div><div class="tint-info"><div class="hex">'+c+'</div>'+(isAnchor?'<div class="tint-base-tag">Selected Base</div>':'<div class="lval">L: '+hsl[2]+'%</div>')+'</div></div>';
     }).join('')+'</div>';
 
     // Technical Spectrum table
-    var specTable='<div class="card" style="padding:24px;margin-bottom:20px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><h2 style="font-size:18px;font-weight:700;letter-spacing:-0.02em">Technical Spectrum</h2><p style="font-size:12px;color:var(--t2);margin-top:2px">Detailed HSL and contrast breakdowns for production usage.</p></div><button class="btn" onclick="exportTintJSON()">JSON Export</button></div>'+
-      '<table class="spec-table"><thead><tr><th>Stop</th><th>Preview</th><th>Hex</th><th>HSL</th><th>Contrast</th><th>Actions</th></tr></thead><tbody>'+
+    var specTable='<div class="card" style="padding:24px;margin-bottom:20px"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:4px"><div><h2 style="font-size:18px;font-weight:700;letter-spacing:-0.02em">Technical Spectrum</h2><p style="font-size:12px;color:var(--t2);margin-top:2px">Detailed HSL and contrast breakdowns for production usage.</p></div><button class="btn" onclick="exportTintJSON()">JSON Export</button></div>'+
+      '<div class="spec-table-wrap"><table class="spec-table"><thead><tr><th>Stop</th><th>Preview</th><th>Hex</th><th>HSL</th><th>Contrast</th><th>Actions</th></tr></thead><tbody>'+
       scale.map(function(c,i){
         var hsl=h2hsl(c);var ratio=cRat(c,'#000000');var ratioW=cRat(c,'#ffffff');
         var bestRatio=Math.max(ratio,ratioW);var ratioLabel=bestRatio.toFixed(1);
@@ -116,13 +116,13 @@ function renderTints(){
         var passLabel=bestRatio>=4.5?ratioLabel+' AA':ratioLabel+' FAIL';
         return'<tr class="'+(isAnchor?'base-row':'')+'"><td style="font-family:var(--mono);font-weight:600;'+(isAnchor?'color:var(--accent)':'')+'">'+T_LABELS[i]+'</td><td><span class="swatch-sm" style="background:'+c+'"></span></td><td style="font-family:var(--mono)">'+c+'</td><td style="font-family:var(--mono);color:var(--t1);'+(isAnchor?'color:var(--accent)':'')+'">'+hsl[0]+', '+hsl[1]+'%, '+hsl[2]+'%</td><td><span class="tag '+passClass+'" style="font-size:9px">'+passLabel+'</span></td><td><button class="btn btn-s" onclick="copyText(\''+c+'\')" style="padding:2px 8px;font-size:9px">Copy</button></td></tr>';
       }).join('')+
-      '</tbody></table></div>';
+      '</tbody></table></div></div>';
 
     // Advanced controls (collapsed feel)
-    var controls='<div class="c3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid var(--border)">'+
-      '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Lightness Min <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+cfg.lMin+'</span></label><input type="range" min="0" max="20" value="'+cfg.lMin+'" oninput="tints['+idx+'].lMin=+this.value;debouncedTints()"></div>'+
-      '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Hue Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.hueShift>0?'+':'')+cfg.hueShift+'\u00b0</span></label><input type="range" min="-30" max="30" value="'+cfg.hueShift+'" oninput="tints['+idx+'].hueShift=+this.value;debouncedTints()"></div>'+
-      '<div><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Saturation Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.satMax>0?'+':'')+cfg.satMax+'</span></label><input type="range" min="-30" max="30" value="'+cfg.satMax+'" oninput="tints['+idx+'].satMax=+this.value;debouncedTints()"></div>'+
+    var controls='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid var(--border)">'+
+      '<div style="flex:1;min-width:180px"><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Lightness Min <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+cfg.lMin+'</span></label><input type="range" min="0" max="20" value="'+cfg.lMin+'" oninput="tints['+idx+'].lMin=+this.value;debouncedTints()"></div>'+
+      '<div style="flex:1;min-width:180px"><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Hue Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.hueShift>0?'+':'')+cfg.hueShift+'\u00b0</span></label><input type="range" min="-30" max="30" value="'+cfg.hueShift+'" oninput="tints['+idx+'].hueShift=+this.value;debouncedTints()"></div>'+
+      '<div style="flex:1;min-width:180px"><label style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);display:flex;justify-content:space-between">Saturation Shift <span style="font-family:var(--mono);font-weight:500;color:var(--t1)">'+(cfg.satMax>0?'+':'')+cfg.satMax+'</span></label><input type="range" min="-30" max="30" value="'+cfg.satMax+'" oninput="tints['+idx+'].satMax=+this.value;debouncedTints()"></div>'+
     '</div>';
 
     return segBar + header + swatches + specTable + controls;

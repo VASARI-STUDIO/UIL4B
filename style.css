@@ -25,7 +25,7 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--bg-4) transparent}
-body{font-family:var(--font);background:var(--bg-0);color:var(--t0);line-height:1.6;-webkit-font-smoothing:antialiased;transition:background .35s,color .35s}
+body{font-family:var(--font);background:var(--bg-0);color:var(--t0);line-height:1.6;-webkit-font-smoothing:antialiased;transition:background .35s,color .35s;overflow-x:hidden}
 ::selection{background:var(--accent);color:#fff}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg-4);border-radius:3px}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
@@ -52,7 +52,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .switch.on::after{transform:translateX(18px)}
 
 /* ═══ Main ═══ */
-.main{padding:56px 64px 120px;max-width:1140px}
+.main{padding:56px 64px 120px;max-width:1140px;overflow-x:hidden}
 .sec{display:none;animation:fadeUp .3s ease}.sec.on{display:block}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .sec-h{margin-bottom:48px}
@@ -130,7 +130,8 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 .tint-base-tag{font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
 
 /* ═══ Spectrum Table ═══ */
-.spec-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+.spec-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
+.spec-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px;min-width:600px}
 .spec-table th{text-align:left;padding:12px 14px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);border-bottom:1px solid var(--border)}
 .spec-table td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
 .spec-table tr:last-child td{border-bottom:none}
