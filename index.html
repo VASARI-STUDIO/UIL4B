@@ -18,28 +18,47 @@
 
 <nav class="sidebar" id="sidebar">
   <div class="sb-brand"><h2>Visari Studio</h2><p>Web Design Toolkit</p></div>
-  <div class="nav-g">Core Tools</div>
-  <button class="nl on" data-s="palette" onclick="go('palette')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="7.5" r="1.5" fill="currentColor"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/><circle cx="16" cy="13" r="1.5" fill="currentColor"/></svg>Palette Builder</button>
-  <button class="nl" data-s="tints" onclick="go('tints')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>Tint Generator</button>
-  <button class="nl" data-s="gradients" onclick="go('gradients')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 3l18 18"/></svg>Gradient Tool</button>
-  <button class="nl" data-s="contrast" onclick="go('contrast')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20z" fill="currentColor"/></svg>Contrast Checker</button>
-  <div class="nav-g">Typography</div>
-  <button class="nl" data-s="fonts" onclick="go('fonts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Font Studio</button>
-  <div class="nav-g">Components</div>
-  <button class="nl" data-s="buttons" onclick="go('buttons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="8" width="18" height="8" rx="2"/></svg>Buttons</button>
-  <button class="nl" data-s="layouts" onclick="go('layouts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>Layouts</button>
-  <button class="nl" data-s="icons" onclick="go('icons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Icon Library</button>
-  <div class="nav-g">Tools</div>
-  <button class="nl" data-s="imgconvert" onclick="go('imgconvert')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Image Converter</button>
-  <button class="nl" data-s="prompts" onclick="go('prompts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l-4 4 4 4 4-4-4-4z"/><path d="M3 12l4 4 4-4-4-4z"/><path d="M12 12l4 4 4-4-4-4z"/><path d="M12 12l-4 4-4-4 4-4z"/></svg>Prompt Library</button>
-  <div class="nav-g">Knowledge</div>
-  <button class="nl" data-s="docs" onclick="go('docs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Documentation</button>
 
-  <div class="nav-g">Links</div>
-  <a class="nl" href="https://framer.university" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Framer University</a>
-  <a class="nl" href="https://fonts.google.com" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Fonts</a>
-  <a class="nl" href="https://labs.google/fx/tools/flow" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Flow</a>
-  <a class="nl" href="https://stitch.withgoogle.com/?pli=1" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Stitch</a>
+  <div class="nav-g nav-g-toggle" onclick="toggleNavGroup(this)"><span class="nav-g-arrow">▸</span> Core Tools</div>
+  <div class="nav-sub open">
+    <button class="nl on" data-s="palette" onclick="go('palette')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="7.5" r="1.5" fill="currentColor"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/><circle cx="16" cy="13" r="1.5" fill="currentColor"/></svg>Palette Builder</button>
+    <button class="nl" data-s="tints" onclick="go('tints')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>Tint Generator</button>
+    <button class="nl" data-s="gradients" onclick="go('gradients')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 3l18 18"/></svg>Gradient Tool</button>
+    <button class="nl" data-s="contrast" onclick="go('contrast')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20z" fill="currentColor"/></svg>Contrast Checker</button>
+  </div>
+
+  <div class="nav-g nav-g-toggle" onclick="toggleNavGroup(this)"><span class="nav-g-arrow">▸</span> Typography</div>
+  <div class="nav-sub open">
+    <button class="nl" data-s="fonts" onclick="go('fonts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Font Studio</button>
+  </div>
+
+  <div class="nav-g nav-g-toggle" onclick="toggleNavGroup(this)"><span class="nav-g-arrow">▸</span> Components</div>
+  <div class="nav-sub open">
+    <button class="nl" data-s="buttons" onclick="go('buttons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="8" width="18" height="8" rx="2"/></svg>Buttons</button>
+    <button class="nl" data-s="layouts" onclick="go('layouts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>Layouts</button>
+    <button class="nl" data-s="icons" onclick="go('icons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Icon Library</button>
+  </div>
+
+  <div class="nav-g nav-g-toggle" onclick="toggleNavGroup(this)"><span class="nav-g-arrow">▸</span> Tools</div>
+  <div class="nav-sub open">
+    <button class="nl" data-s="imgconvert" onclick="go('imgconvert')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Image Converter</button>
+    <button class="nl" data-s="prompts" onclick="go('prompts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l-4 4 4 4 4-4-4-4z"/><path d="M3 12l4 4 4-4-4-4z"/><path d="M12 12l4 4 4-4-4-4z"/><path d="M12 12l-4 4-4-4 4-4z"/></svg>Prompt Library</button>
+  </div>
+
+  <div class="nav-g nav-g-toggle" onclick="toggleNavGroup(this)"><span class="nav-g-arrow">▸</span> Knowledge</div>
+  <div class="nav-sub">
+    <button class="nl" data-s="docs-design" onclick="go('docs-design')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Web Design Principles</button>
+    <button class="nl" data-s="docs-social" onclick="go('docs-social')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Social Media Marketing</button>
+  </div>
+
+  <div class="nav-g nav-g-toggle" onclick="toggleNavGroup(this)"><span class="nav-g-arrow">▸</span> Links</div>
+  <div class="nav-sub">
+    <a class="nl" href="https://framer.university" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Framer University</a>
+    <a class="nl" href="https://fonts.google.com" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Fonts</a>
+    <a class="nl" href="https://labs.google/fx/tools/flow" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Flow</a>
+    <a class="nl" href="https://stitch.withgoogle.com/?pli=1" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Google Stitch</a>
+  </div>
+
   <div class="sb-footer"><div class="theme-row"><span id="tl">Dark</span><button class="switch" id="sw" onclick="toggleTheme()"></button></div></div>
 </nav>
 
@@ -240,8 +259,16 @@
 
 <!-- ═══ ICONS ═══ -->
 <div class="sec" id="sec-icons">
-  <div class="sec-h"><h1>Icon Library</h1><p>250+ icons from Tabler, Lucide, Iconoir, Heroicons, and Simple Icons. Click to copy SVG.</p></div>
-  <div class="sub"><input type="text" id="iSrch" placeholder="Search icons..." style="width:100%;max-width:340px;margin-bottom:12px" oninput="fltI()"><div class="pt-ts" id="iCats" style="margin-bottom:14px"></div><div class="ig" id="iG"></div><p class="d" style="margin-top:16px"><span id="iCount">0</span> icons</p></div>
+  <div class="sec-h"><h1>Icon Library</h1><p>Search thousands of icons across major open-source packs. Type to search live via Iconify, or browse the embedded collection offline.</p></div>
+  <div class="sub">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:flex-end">
+      <div style="flex:1;min-width:200px"><div class="seg-label">Search</div><input type="text" id="iSrch" placeholder="Search icons... (e.g. arrow, cart, user)" style="width:100%" oninput="debounceIconSearch()"></div>
+      <div style="min-width:140px"><div class="seg-label">Pack</div><select id="iPackFilter" style="width:100%" onchange="debounceIconSearch()"><option value="">All packs</option><option value="tabler">Tabler</option><option value="lucide">Lucide</option><option value="iconoir">Iconoir</option><option value="heroicons">Heroicons</option><option value="simple-icons">Simple Icons</option><option value="ph">Phosphor</option><option value="mdi">Material Design</option><option value="ri">Remix</option></select></div>
+    </div>
+    <div class="pt-ts" id="iCats" style="margin-bottom:14px"></div>
+    <div class="ig" id="iG"></div>
+    <p class="d" style="margin-top:16px"><span id="iCount">0</span> icons · <span id="iMode">Embedded library</span></p>
+  </div>
 </div>
 
 <!-- ═══ IMAGE CONVERTER ═══ -->
@@ -259,16 +286,10 @@
   <div class="sub"><div class="sl">Saved Prompts</div><input type="text" id="promptSearch" placeholder="Search prompts..." style="width:100%;max-width:300px;margin:10px 0 14px" oninput="renderPrompts()"><div id="promptGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:12px"></div><p class="d" id="promptEmpty" style="margin-top:12px">No prompts saved yet.</p></div>
 </div>
 
-<!-- ═══ DOCUMENTATION ═══ -->
-<div class="sec" id="sec-docs">
-  <div class="sec-h"><h1>Documentation</h1><p>Reference guides and principles to keep your thinking sharp. Click any topic to expand.</p></div>
-
-  <!-- DOC 1: Web Design Principles -->
-  <div class="doc-group">
-    <button class="doc-toggle" onclick="toggleDoc(this)">
-      <span class="doc-toggle-icon">+</span>
-      <div><div class="doc-title">Web Design Principles</div><div class="doc-desc">Psychology-driven principles for premium, high-converting websites.</div></div>
-    </button>
+<!-- ═══ WEB DESIGN PRINCIPLES ═══ -->
+<div class="sec" id="sec-docs-design">
+  <div class="sec-h"><h1>Web Design Principles</h1><p>Psychology-driven principles for premium, high-converting websites. Click any section to expand.</p></div>
+  <div class="doc-body open">
     <div class="doc-body">
 
       <div class="doc-sub">
@@ -348,12 +369,13 @@
     </div>
   </div>
 
-  <!-- DOC 2: Social Media Marketing -->
-  <div class="doc-group">
-    <button class="doc-toggle" onclick="toggleDoc(this)">
-      <span class="doc-toggle-icon">+</span>
-      <div><div class="doc-title">Social Media Marketing (Instagram)</div><div class="doc-desc">Content strategy, posting cadence, caption templates, and growth tactics for Instagram.</div></div>
-    </button>
+  </div>
+</div>
+
+<!-- ═══ SOCIAL MEDIA MARKETING ═══ -->
+<div class="sec" id="sec-docs-social">
+  <div class="sec-h"><h1>Social Media Marketing</h1><p>Content strategy, posting cadence, caption templates, and growth tactics for Instagram.</p></div>
+  <div class="doc-body open">
     <div class="doc-body">
 
       <div class="doc-sub">
@@ -485,6 +507,8 @@
     </div>
   </div>
 
+
+  </div>
 </div>
 
 </main>
