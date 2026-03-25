@@ -24,8 +24,7 @@
   <button class="nl" data-s="gradients" onclick="go('gradients')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 3l18 18"/></svg>Gradient Tool</button>
   <button class="nl" data-s="contrast" onclick="go('contrast')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20z" fill="currentColor"/></svg>Contrast Checker</button>
   <div class="nav-g">Typography</div>
-  <button class="nl" data-s="typescale" onclick="go('typescale')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Type Scale</button>
-  <button class="nl" data-s="fontpairs" onclick="go('fontpairs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 20h16"/><path d="M7 4v16"/><path d="M17 4v16"/><path d="M7 12h10"/></svg>Font Matcher</button>
+  <button class="nl" data-s="fonts" onclick="go('fonts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Font Studio</button>
   <div class="nav-g">Components</div>
   <button class="nl" data-s="buttons" onclick="go('buttons')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="8" width="18" height="8" rx="2"/></svg>Buttons</button>
   <button class="nl" data-s="layouts" onclick="go('layouts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>Layouts</button>
@@ -95,11 +94,11 @@
   <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:40px">
     <div class="card">
       <div class="sl">Gradient Stops</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:14px">
-        <div><div class="seg-label">Colour Start</div><input type="color" id="g1" value="#6366f1" onchange="updG()" style="width:100%;height:40px"></div>
-        <div><div class="seg-label">Colour End</div><input type="color" id="g2" value="#ec4899" onchange="updG()" style="width:100%;height:40px"></div>
-        <div><div class="seg-label">Direction</div><select id="gD" onchange="updG()" style="width:100%"><option value="135deg">135°</option><option value="to right">→ Right</option><option value="to left">← Left</option><option value="to bottom">↓ Down</option><option value="45deg">45°</option><option value="to bottom right">↘ Diagonal</option></select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+        <div><div class="seg-label">Start Colour</div><input type="color" id="g1" value="#6366f1" onchange="updG()" style="width:100%;height:40px"></div>
+        <div><div class="seg-label">End Colour</div><input type="color" id="g2" value="#ec4899" onchange="updG()" style="width:100%;height:40px"></div>
       </div>
+      <div style="margin-top:14px"><div class="seg-label">Angle</div><div style="display:flex;align-items:center;gap:10px"><input type="range" id="gAngle" min="0" max="360" value="135" style="flex:1" oninput="updG()"><input type="number" id="gAngleNum" min="0" max="360" value="135" style="width:56px;text-align:center" oninput="document.getElementById('gAngle').value=this.value;updG()"><span style="font-size:10px;color:var(--t2)">°</span></div></div>
     </div>
     <div>
       <div class="card" style="margin-bottom:12px">
@@ -170,16 +169,58 @@
   </div>
 </div>
 
-<!-- ═══ TYPE SCALE ═══ -->
-<div class="sec" id="sec-typescale">
-  <div class="sec-h"><h1>Type Scale</h1><p>Modular type scale calculator.</p></div>
-  <div class="sub"><div class="row mb"><label style="font-size:10px;color:var(--t2)">Base (px)</label><input type="number" id="tsB" value="16" min="8" max="32" style="width:60px" onchange="genTS()"><label style="font-size:10px;color:var(--t2)">Ratio</label><select id="tsR" onchange="genTS()"><option value="1.125">Major Second (1.125)</option><option value="1.200">Minor Third (1.200)</option><option value="1.250" selected>Major Third (1.250)</option><option value="1.333">Perfect Fourth (1.333)</option><option value="1.500">Perfect Fifth (1.500)</option><option value="1.618">Golden Ratio (1.618)</option></select></div><div class="card" id="tsOut"></div><div id="tsCss" style="margin-top:16px"></div></div>
-</div>
+<!-- ═══ FONT STUDIO ═══ -->
+<div class="sec" id="sec-fonts">
+  <div class="sec-h"><h1>Font Studio</h1><p>A high-precision typographic playground. Mathematically derive your type scales, preview font pairings, and test responsive character rendering in real-time.</p></div>
 
-<!-- ═══ FONT MATCHER ═══ -->
-<div class="sec" id="sec-fontpairs">
-  <div class="sec-h"><h1>Font Matcher</h1><p>Pick a heading font and get body font suggestions. Click any pairing to copy the Google Fonts import URL.</p></div>
-  <div class="sub"><div class="row mb"><label style="font-size:10px;color:var(--t2)">Heading font</label><select id="fpSelect" onchange="updateFontMatch()" style="width:220px"><option value="Playfair Display">Playfair Display</option><option value="Sora">Sora</option><option value="Fraunces">Fraunces</option><option value="Bricolage Grotesque">Bricolage Grotesque</option><option value="Outfit">Outfit</option><option value="Manrope">Manrope</option><option value="Instrument Sans">Instrument Sans</option></select></div><div class="cg c2" id="fpG"></div></div>
+  <!-- Two-column: type scale left, library + combos right -->
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;margin-bottom:40px">
+    <div>
+      <!-- Type Scale Generator -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="sl" style="margin:0">Type Scale Generator</div>
+          <div class="row" style="gap:8px"><select id="tsR" onchange="genTS()" style="width:180px"><option value="1.125">Major Second (1.125)</option><option value="1.200">Minor Third (1.200)</option><option value="1.250" selected>Major Third (1.250)</option><option value="1.333">Perfect Fourth (1.333)</option><option value="1.500">Perfect Fifth (1.500)</option><option value="1.618">Golden Ratio (1.618)</option></select></div>
+        </div>
+        <div id="tsOut"></div>
+      </div>
+
+      <!-- Specimen render -->
+      <div style="margin-top:16px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">Specimen Render</div>
+        <p style="font-size:12px;color:var(--t2);margin-bottom:12px">Testing responsiveness and character spacing at extreme scales.</p>
+        <div style="font-size:clamp(60px,10vw,120px);font-weight:700;letter-spacing:-0.05em;line-height:.9;color:var(--t0);opacity:.15;overflow:hidden;white-space:nowrap">ARCHITECTU</div>
+      </div>
+    </div>
+
+    <!-- Right sidebar -->
+    <div>
+      <!-- Base size + ratio pills -->
+      <div class="row" style="gap:8px;margin-bottom:16px">
+        <div class="card" style="padding:10px 16px;flex:1;text-align:center"><div style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)">Base Size</div><div style="font-size:16px;font-weight:700;margin-top:2px"><input type="number" id="tsB" value="16" min="8" max="48" style="width:50px;text-align:center;font-size:16px;font-weight:700;border:none;background:none;color:var(--t0);padding:0" onchange="genTS()">px</div></div>
+        <div class="card" style="padding:10px 16px;flex:1;text-align:center"><div style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">Ratio</div><div style="font-size:16px;font-weight:700;margin-top:2px" id="tsRatioDisplay">1.250</div></div>
+      </div>
+
+      <!-- Font Library -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="sl" style="margin:0;font-size:9px">Library</div></div>
+        <div id="fontLibrary"></div>
+      </div>
+
+      <!-- Combinations -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="sl" style="margin:0;font-size:9px">Combinations</div><button class="btn btn-s" onclick="updateFontMatch()">↻</button></div>
+        <div id="fpG"></div>
+      </div>
+
+      <!-- Quick CSS -->
+      <div class="card" style="background:var(--accent);border-color:var(--accent);color:#fff">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;opacity:.7">Quick CSS</div>
+        <div id="tsCss" style="margin-bottom:10px"></div>
+        <button class="btn" onclick="copyTsToken()" style="width:100%;justify-content:center;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2);color:#fff">Copy Token</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ BUTTONS ═══ -->
@@ -204,7 +245,7 @@
 <div class="sec" id="sec-imgconvert">
   <div class="sec-h"><h1>Image Converter</h1><p>Convert, compress, and resize images in your browser. Nothing gets uploaded.</p></div>
   <div class="sub"><div id="imgDropZone" style="border:2px dashed var(--border);border-radius:14px;padding:44px 20px;text-align:center;cursor:pointer;transition:border-color .2s" onclick="document.getElementById('imgFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';handleImgFiles(event.dataTransfer.files)"><p style="font-size:14px;color:var(--t1);margin-bottom:4px">Drop images here or click to browse</p><p style="font-size:11px;color:var(--t2)">PNG, JPG, GIF, BMP, SVG, WebP, AVIF</p><input type="file" id="imgFileInput" multiple accept="image/*" style="display:none" onchange="handleImgFiles(this.files)"></div></div>
-  <div class="sub" id="imgControls" style="display:none"><div class="sl">Output Settings</div><div class="row mb" style="gap:16px;flex-wrap:wrap;margin-top:12px"><div><div class="seg-label">Format</div><select id="imgFormat" onchange="debouncedImgPreview()" style="width:140px"><option value="image/webp">WebP</option><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/avif">AVIF</option></select></div><div><div class="seg-label">Quality</div><div style="display:flex;align-items:center;gap:8px"><input type="range" id="imgQuality" min="1" max="100" value="80" style="width:160px" oninput="document.getElementById('imgQualNum').value=this.value;debouncedImgPreview()"><input type="number" id="imgQualNum" min="1" max="100" value="80" style="width:52px;text-align:center" oninput="var v=Math.max(1,Math.min(100,parseInt(this.value)||80));document.getElementById('imgQuality').value=v;debouncedImgPreview()"><span style="font-size:10px;color:var(--t2)">%</span></div></div><div><div class="seg-label">Max Width (0 = original)</div><input type="number" id="imgMaxWidth" value="0" min="0" max="8000" style="width:100px" onchange="debouncedImgPreview()"></div></div><div style="margin-top:16px"><button class="btn" onclick="convertAllImages()">Convert & Download All</button><button class="btn" onclick="clearImages()" style="margin-left:8px">Clear</button></div></div>
+  <div class="sub" id="imgControls" style="display:none"><div class="sl">Output Settings</div><div class="row mb" style="gap:16px;flex-wrap:wrap;margin-top:12px"><div><div class="seg-label">Format</div><select id="imgFormat" onchange="debouncedImgPreview()" style="width:140px"><option value="image/webp">WebP</option><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/avif">AVIF</option></select></div><div><div class="seg-label">Quality</div><div style="display:flex;align-items:center;gap:8px"><input type="range" id="imgQuality" min="1" max="100" value="80" style="width:160px" oninput="document.getElementById('imgQualNum').value=this.value;debouncedImgPreview()"><input type="number" id="imgQualNum" min="1" max="100" value="80" style="width:64px;text-align:center;padding-right:2px" oninput="var v=Math.max(1,Math.min(100,parseInt(this.value)||80));document.getElementById('imgQuality').value=v;debouncedImgPreview()"><span style="font-size:11px;color:var(--t1);flex-shrink:0">%</span></div></div><div><div class="seg-label">Max Width (0 = original)</div><input type="number" id="imgMaxWidth" value="0" min="0" max="8000" style="width:100px" onchange="debouncedImgPreview()"></div></div><div style="margin-top:16px"><button class="btn" onclick="convertAllImages()">Convert & Download All</button><button class="btn" onclick="clearImages()" style="margin-left:8px">Clear</button></div></div>
   <div class="sub" id="imgResults" style="display:none"><div class="sl">Preview</div><div id="imgList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px"></div></div>
 </div>
 

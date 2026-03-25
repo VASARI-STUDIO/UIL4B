@@ -48,22 +48,35 @@ var T_PERCEIVED=[98,95,88,78,66,53,40,30,20,12,6];
 var tints=[{hex:'#6366f1',anchor:5,hueShift:0,satMin:0,satMax:0,lMin:5,lMax:98,mode:'perceived'}];
 
 function genTintScale(cfg){
-  var hs=h2hsl(cfg.hex),h=hs[0],s=hs[1];
+  var hs=h2hsl(cfg.hex),h=hs[0],s=hs[1],baseL=hs[2];
   var stops=cfg.mode==='perceived'?T_PERCEIVED:T_LINEAR;
-  var anchorL=stops[cfg.anchor]; // lightness at anchor point
+  var n=stops.length;
+  var ai=cfg.anchor; // anchor index
+
   return stops.map(function(defaultL,i){
-    // Remap lightness to configured min/max range
-    var t=(defaultL-stops[stops.length-1])/(stops[0]-stops[stops.length-1]); // 0=dark, 1=light
-    var newL=cfg.lMin+t*(cfg.lMax-cfg.lMin);
+    var newL;
+    if(i===ai){
+      // Anchor stop gets exact base lightness
+      newL=baseL;
+    }else if(i<ai){
+      // Lighter than anchor — interpolate from baseL up to lMax
+      var t=1-(i/ai); // 0 at anchor, 1 at lightest
+      newL=baseL+t*(cfg.lMax-baseL);
+    }else{
+      // Darker than anchor — interpolate from baseL down to lMin
+      var t=(i-ai)/(n-1-ai); // 0 at anchor, 1 at darkest
+      newL=baseL-t*(baseL-cfg.lMin);
+    }
+    newL=Math.max(0,Math.min(100,newL));
     // Hue shift (more at light end)
-    var newH=h+cfg.hueShift*t;
-    // Saturation shift at extremes
-    var distFromMid=Math.abs(t-0.5)*2;
-    var satShift=cfg.satMax*t+cfg.satMin*(1-t);
+    var tNorm=(n-1-i)/(n-1); // 0=dark, 1=light
+    var newH=h+cfg.hueShift*tNorm;
+    // Saturation shift
+    var satShift=cfg.satMax*tNorm+cfg.satMin*(1-tNorm);
     var newS=Math.max(0,Math.min(100,s+satShift));
-    // Endpoints are desaturated
-    if(i===0||i===stops.length-1) newS=Math.max(0,newS*0.3);
-    return hsl2h(newH,Math.round(newS),Math.round(Math.max(0,Math.min(100,newL))));
+    // Desaturate extremes
+    if(i===0||i===n-1) newS=Math.max(0,newS*0.3);
+    return hsl2h(newH,Math.round(newS),Math.round(newL));
   });
 }
 
@@ -157,9 +170,16 @@ function exportTintJSON(){
 }
 
 // ── Gradients ──
-var gPre=[{n:'Indigo Rose',css:'linear-gradient(135deg,#667eea,#764ba2)'},{n:'Peach',css:'linear-gradient(to right,#ee9ca7,#ffdde1)'},{n:'Aqua',css:'linear-gradient(to right,#1a2980,#26d0ce)'},{n:'Celestial',css:'linear-gradient(to right,#c33764,#1d2671)'},{n:'Relay',css:'linear-gradient(to right,#3a1c71,#d76d77,#ffaf7b)'},{n:'Sublime',css:'linear-gradient(to right,#fc5c7d,#6a82fb)'},{n:'Flare',css:'linear-gradient(to right,#f12711,#f5af19)'},{n:'Moonlit',css:'linear-gradient(to right,#0f2027,#203a43,#2c5364)'},{n:'Frost',css:'linear-gradient(to right,#000428,#004e92)'},{n:'Emerald',css:'linear-gradient(to right,#348f50,#56b4d3)'},{n:'Velvet',css:'linear-gradient(to right,#da4453,#89216b)'}];
-function updG(){var c1=$('g1').value,c2=$('g2').value,d=$('gD').value,css='linear-gradient('+d+', '+c1+', '+c2+')';$('gP').style.background=css;$('gC').textContent='background: '+css+';';$('gAngleTag').textContent=d}
-function ldGrad(){$('gPresets').innerHTML=gPre.map(function(g){return'<div class="grad-p" style="background:'+g.css+'" onclick="copyText(\'background: '+g.css+';\')" ><div class="tip">'+g.n+'</div></div>'}).join('')}
+var gPre=[{n:'Indigo Rose',css:'linear-gradient(135deg,#667eea,#764ba2)'},{n:'Peach',css:'linear-gradient(135deg,#ee9ca7,#ffdde1)'},{n:'Aqua',css:'linear-gradient(135deg,#1a2980,#26d0ce)'},{n:'Celestial',css:'linear-gradient(135deg,#c33764,#1d2671)'},{n:'Relay',css:'linear-gradient(135deg,#3a1c71,#d76d77,#ffaf7b)'},{n:'Sublime',css:'linear-gradient(135deg,#fc5c7d,#6a82fb)'},{n:'Flare',css:'linear-gradient(135deg,#f12711,#f5af19)'},{n:'Moonlit',css:'linear-gradient(135deg,#0f2027,#203a43,#2c5364)'},{n:'Frost',css:'linear-gradient(135deg,#000428,#004e92)'},{n:'Emerald',css:'linear-gradient(135deg,#348f50,#56b4d3)'},{n:'Velvet',css:'linear-gradient(135deg,#da4453,#89216b)'}];
+function updG(){
+  var c1=$('g1').value,c2=$('g2').value,angle=$('gAngle').value;
+  var css='linear-gradient('+angle+'deg, '+c1+', '+c2+')';
+  $('gP').style.background=css;
+  $('gC').textContent='background: '+css+';';
+  $('gAngleTag').textContent=angle+'\u00b0';
+  $('gAngleNum').value=angle;
+}
+function ldGrad(){$('gPresets').innerHTML=gPre.map(function(g){return'<div class="grad-p" style="background:'+g.css+'" onclick="copyText(\'background: '+g.css+';\')" title="'+g.n+'"></div>'}).join('')}
 
 // ── Contrast ──
 function chkC(){
@@ -184,8 +204,12 @@ function chkC(){
   ];
   $('cRes').innerHTML=rows.map(function(row){
     var pass=row[3];
-    var fixBtn=pass?'':'<button class="btn btn-s" style="margin-left:8px;font-size:9px;padding:4px 10px" onclick="fixContrast('+row[2]+')">Fix</button>';
-    return'<div class="compliance-row"><div><div class="label">'+row[0]+'</div><div class="sublabel">'+row[1]+'</div></div><div style="display:flex;align-items:center"><span class="tag '+(pass?'tag-pass':'tag-fail')+'">'+(pass?'PASS \u2713':'FAIL')+'</span>'+fixBtn+'</div></div>';
+    var fixBtns='';
+    if(!pass){
+      fixBtns='<button class="btn btn-s" style="margin-left:8px;font-size:9px;padding:4px 10px" onclick="fixContrast('+row[2]+')">Fix FG</button>';
+      fixBtns+='<button class="btn btn-s" style="margin-left:4px;font-size:9px;padding:4px 10px" onclick="fixContrastBG('+row[2]+')">Fix BG</button>';
+    }
+    return'<div class="compliance-row"><div><div class="label">'+row[0]+'</div><div class="sublabel">'+row[1]+'</div></div><div style="display:flex;align-items:center"><span class="tag '+(pass?'tag-pass':'tag-fail')+'">'+(pass?'PASS \u2713':'FAIL')+'</span>'+fixBtns+'</div></div>';
   }).join('');
 
   // Suggested adjustments bar — generate 3 alternatives that meet AAA
@@ -248,22 +272,110 @@ function fixContrast(targetRatio){
   toast('Adjusted to '+bestHex);
 }
 
+// Auto-fix BG: adjust BG lightness to achieve target contrast ratio while keeping FG
+function fixContrastBG(targetRatio){
+  var fg=$('cF').value;
+  var bg=$('cB').value;
+  var bgHsl=h2hsl(bg);
+  var h=bgHsl[0],s=bgHsl[1],l=bgHsl[2];
+  var fgRgb=h2rgb(fg);
+  var fgLum=lum(fgRgb[0],fgRgb[1],fgRgb[2]);
+  var isFgLight=fgLum>0.5;
+
+  // Binary search — if FG is light, push BG darker; if FG is dark, push BG lighter
+  var lo,hi;
+  if(isFgLight){lo=0;hi=l}else{lo=l;hi=100}
+  var bestHex=bg;
+  for(var i=0;i<30;i++){
+    var mid=(lo+hi)/2;
+    var testHex=hsl2h(h,s,Math.round(mid));
+    var ratio=cRat(fg,testHex);
+    if(ratio>=targetRatio){
+      bestHex=testHex;
+      if(isFgLight){lo=mid}else{hi=mid}
+    }else{
+      if(isFgLight){hi=mid}else{lo=mid}
+    }
+  }
+  $('cB').value=bestHex;
+  $('cBh').value=bestHex;
+  chkC();
+  toast('Background adjusted to '+bestHex);
+}
+
 function swC(){var f=$('cF').value,b=$('cB').value;$('cF').value=b;$('cB').value=f;chkC()}
 
 // ── Type Scale ──
-function genTS(){var base=parseFloat($('tsB').value),ratio=parseFloat($('tsR').value);var nms=['xs','sm','base','lg','xl','2xl','3xl','4xl','5xl'],exps=[-2,-1,0,1,2,3,4,5,6];var css=':root {\n';$('tsOut').innerHTML=exps.map(function(e,i){var s=(base*Math.pow(ratio,e)).toFixed(1);css+='  --text-'+nms[i]+': '+s+'px;\n';return'<div class="ts-row"><div class="ts-meta">'+nms[i]+'<br>'+s+'px</div><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:'+s+'px;font-weight:'+(e>=3?600:400)+'">The quick brown fox</div></div>'}).reverse().join('');css+='}';$('tsCss').innerHTML='<div class="code-l">CSS Variables</div><div class="code" onclick="copyText(this.textContent)">'+css+'</div>'}
+var FONT_LIB=[
+  {name:'Instrument Sans',cat:'Sans',w:'400;500;600;700'},
+  {name:'Inter Tight',cat:'Sans',w:'400;500'},
+  {name:'IBM Plex Mono',cat:'Mono',w:'400;500'},
+  {name:'Fraunces',cat:'Serif',w:'400;700'},
+  {name:'Playfair Display',cat:'Serif',w:'700'},
+  {name:'Sora',cat:'Sans',w:'400;600;700'},
+  {name:'Outfit',cat:'Sans',w:'400;600;700'},
+  {name:'Bricolage Grotesque',cat:'Sans',w:'400;700'},
+  {name:'Manrope',cat:'Sans',w:'400;600;700'},
+  {name:'Commissioner',cat:'Sans',w:'400;500'},
+  {name:'Source Sans 3',cat:'Sans',w:'400;600'},
+];
+var selectedFont='Instrument Sans';
+
+function ldFontLib(){
+  $('fontLibrary').innerHTML=FONT_LIB.map(function(f){
+    var isActive=f.name===selectedFont;
+    return'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;margin-bottom:2px;cursor:pointer;border:1px solid '+(isActive?'var(--accent)':'transparent')+';background:'+(isActive?'var(--accent-bg)':'transparent')+'" onclick="selectedFont=\''+f.name+'\';ldFontLib();genTS();updateFontMatch()"><div><div style="font-size:12px;font-weight:600">'+f.name+'</div><div style="font-size:16px;font-family:\''+f.name+'\',sans-serif;margin-top:2px;color:var(--t1)">Abc 123</div></div><span style="font-size:9px;color:'+(isActive?'var(--accent)':'var(--t3)')+';font-family:var(--mono)">'+f.cat+'</span></div>';
+  }).join('');
+}
+
+function genTS(){
+  var base=parseFloat($('tsB').value),ratio=parseFloat($('tsR').value);
+  $('tsRatioDisplay').textContent=ratio.toFixed(3);
+  var nms=['xs','sm','base','lg','xl','2xl','3xl','4xl','display'],exps=[-2,-1,0,1,2,3,4,5,6];
+  var labels=['Small','Body','Base','Large','XL','2XL','Headline 2','Headline 1','Display Large'];
+  var css='';
+  $('tsOut').innerHTML=exps.map(function(e,i){
+    var s=(base*Math.pow(ratio,e)).toFixed(1);
+    var w=e>=3?700:e>=1?600:400;
+    css+='  --text-'+nms[i]+': '+s+'px;\n';
+    return'<div class="ts-row"><div class="ts-meta">'+s+'px</div><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:'+s+'px;font-weight:'+w+';font-family:\''+selectedFont+'\',sans-serif">'+labels[i]+'</div></div>';
+  }).reverse().join('');
+  $('tsCss').innerHTML='<div style="font-family:var(--mono);font-size:10px;line-height:1.7;opacity:.8;white-space:pre">font-family: \''+selectedFont+'\';\nfont-weight: 700;\nfont-size: '+(base*Math.pow(ratio,6)).toFixed(1)+'px;\nletter-spacing: -0.04em;\nline-height: 0.9;</div>';
+}
+
+function copyTsToken(){
+  var base=parseFloat($('tsB').value),ratio=parseFloat($('tsR').value);
+  var css=':root {\n';
+  var nms=['xs','sm','base','lg','xl','2xl','3xl','4xl','display'],exps=[-2,-1,0,1,2,3,4,5,6];
+  exps.forEach(function(e,i){css+='  --text-'+nms[i]+': '+(base*Math.pow(ratio,e)).toFixed(1)+'px;\n'});
+  css+='}';
+  copyText(css);
+}
 
 // ── Font Matcher ──
 var fontDB={
-  'Playfair Display':{w:700,cat:'serif',pairs:['Source Sans 3','DM Sans','Instrument Sans','Commissioner']},
-  'Sora':{w:700,cat:'sans',pairs:['DM Sans','Inter Tight','Commissioner','Source Sans 3']},
+  'Playfair Display':{w:700,cat:'serif',pairs:['Source Sans 3','Inter Tight','Commissioner','Instrument Sans']},
+  'Sora':{w:700,cat:'sans',pairs:['Inter Tight','Commissioner','Source Sans 3','Instrument Sans']},
   'Fraunces':{w:700,cat:'serif',pairs:['Commissioner','Instrument Sans','Inter Tight','Source Sans 3']},
-  'Bricolage Grotesque':{w:700,cat:'sans',pairs:['Inter Tight','Source Sans 3','Commissioner','DM Sans']},
-  'Outfit':{w:700,cat:'sans',pairs:['DM Sans','Source Sans 3','Commissioner','Instrument Sans']},
-  'Manrope':{w:700,cat:'sans',pairs:['Inter Tight','Source Sans 3','DM Sans','Commissioner']},
-  'Instrument Sans':{w:700,cat:'sans',pairs:['Source Sans 3','Commissioner','Inter Tight','DM Sans']},
+  'Bricolage Grotesque':{w:700,cat:'sans',pairs:['Inter Tight','Source Sans 3','Commissioner','Instrument Sans']},
+  'Outfit':{w:700,cat:'sans',pairs:['Source Sans 3','Commissioner','Instrument Sans','Inter Tight']},
+  'Manrope':{w:700,cat:'sans',pairs:['Inter Tight','Source Sans 3','Commissioner','Instrument Sans']},
+  'Instrument Sans':{w:700,cat:'sans',pairs:['Source Sans 3','Commissioner','Inter Tight','Fraunces']},
+  'Inter Tight':{w:500,cat:'sans',pairs:['Playfair Display','Fraunces','Source Sans 3','Commissioner']},
+  'Commissioner':{w:500,cat:'sans',pairs:['Playfair Display','Fraunces','Outfit','Sora']},
+  'Source Sans 3':{w:600,cat:'sans',pairs:['Playfair Display','Fraunces','Outfit','Bricolage Grotesque']},
+  'IBM Plex Mono':{w:500,cat:'mono',pairs:['Inter Tight','Instrument Sans','Outfit','Sora']},
 };
-function updateFontMatch(){var heading=$('fpSelect').value;var db=fontDB[heading];if(!db)return;$('fpG').innerHTML=db.pairs.map(function(body){var imp=heading.replace(/ /g,'+')+':wght@'+db.w+'&family='+body.replace(/ /g,'+')+':wght@400;500';var url='https://fonts.googleapis.com/css2?family='+imp+'&display=swap';return'<div class="card fp" onclick="copyText(\''+url+'\')"><div class="fp-h" style="font-family:\''+heading+'\','+db.cat+';font-weight:'+db.w+';font-size:24px">The quick brown fox</div><div class="fp-b" style="font-family:\''+body+'\',sans-serif">Pack my box with five dozen liquor jugs. How vexingly quick daft zebras jump.</div><div class="fp-m">'+heading+' + '+body+' · Click to copy import</div></div>'}).join('')}
+
+function updateFontMatch(){
+  var heading=selectedFont;
+  var db=fontDB[heading];
+  if(!db){$('fpG').innerHTML='<div style="font-size:11px;color:var(--t2)">No pairings for this font.</div>';return}
+  $('fpG').innerHTML=db.pairs.slice(0,3).map(function(body){
+    var url='https://fonts.googleapis.com/css2?family='+heading.replace(/ /g,'+')+':wght@'+db.w+'&family='+body.replace(/ /g,'+')+':wght@400;500&display=swap';
+    return'<div style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="copyText(\''+url+'\')"><div style="font-size:8px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Heading</div><div style="font-family:\''+heading+'\','+db.cat+';font-size:18px;font-weight:'+db.w+';margin-bottom:6px">'+heading+'</div><div style="font-size:8px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Body</div><div style="font-family:\''+body+'\',sans-serif;font-size:14px;color:var(--t1)">'+body+'</div></div>';
+  }).join('');
+}
 
 // ── Buttons ──
 function ldBtns(){var b=[
@@ -317,7 +429,7 @@ function deletePrompt(id){var prompts=getPrompts().filter(function(p){return p.i
 // ── Init ──
 document.addEventListener('DOMContentLoaded',function(){
   initHarmBtns();updPal();ldStarters();renderTints();updG();ldGrad();chkC();
-  genTS();updateFontMatch();
+  ldFontLib();genTS();updateFontMatch();
   ldBtns();ldLay();ldIcons();
   renderPrompts();
 });

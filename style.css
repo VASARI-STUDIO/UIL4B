@@ -149,11 +149,12 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;hei
 .grad-p:hover{border-color:var(--accent);transform:translateY(-2px)}
 
 /* ─── Icons ─── */
-.ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:4px}
-.ic{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 6px;border-radius:10px;cursor:pointer;transition:all var(--t);border:1px solid transparent}
-.ic:hover{background:var(--hover-bg);border-color:var(--border)}
-.ic svg{width:22px;height:22px;stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
-.ic span{font-size:8px;color:var(--t2);text-align:center;font-family:var(--mono)}
+.ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:3px}
+.ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 8px 12px;border-radius:10px;cursor:pointer;transition:all var(--t);border:1px solid transparent;min-height:80px}
+.ic:hover{background:var(--bg-2);border-color:var(--border)}
+.ic:active{transform:scale(.95)}
+.ic svg{width:24px;height:24px;stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.ic span{font-size:8.5px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.2;word-break:break-all}
 
 /* ─── Type scale ─── */
 .ts-row{display:flex;align-items:baseline;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)}
