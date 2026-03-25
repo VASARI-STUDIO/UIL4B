@@ -54,7 +54,7 @@
     <div>
       <div class="card" style="margin-bottom:10px">
         <div class="sl">Base Signature</div>
-        <div class="row" style="margin-top:10px;gap:10px"><input type="color" id="bCol" value="#6366f1" onchange="updPal()" style="width:56px;height:46px"><input type="text" id="bHex" value="#6366f1" style="width:130px;font-family:var(--mono);font-size:14px" onchange="this.value=this.value.startsWith('#')?this.value:'#'+this.value;document.getElementById('bCol').value=this.value;updPal()"></div>
+        <div class="row" style="margin-top:10px;gap:10px"><input type="color" id="bCol" value="#6366f1" onchange="updPal()" style="width:56px;height:46px"><input type="text" id="bHex" value="#6366f1" style="width:130px;max-width:100%;font-family:var(--mono);font-size:14px" onchange="this.value=this.value.startsWith('#')?this.value:'#'+this.value;document.getElementById('bCol').value=this.value;updPal()"></div>
         <button class="btn btn-s" style="margin-top:10px" onclick="randomPal()">Random</button>
       </div>
       <div class="card" style="margin-bottom:10px">
@@ -97,9 +97,9 @@
   <div class="grad-split" style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:40px">
     <div class="card">
       <div class="sl">Gradient Stops</div>
-      <div class="c2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
-        <div><div class="seg-label">Start Colour</div><input type="color" id="g1" value="#6366f1" onchange="updG()" style="width:100%;height:40px"></div>
-        <div><div class="seg-label">End Colour</div><input type="color" id="g2" value="#ec4899" onchange="updG()" style="width:100%;height:40px"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:14px">
+        <div style="flex:1;min-width:120px"><div class="seg-label">Start Colour</div><input type="color" id="g1" value="#6366f1" onchange="updG()" style="width:100%;height:40px"></div>
+        <div style="flex:1;min-width:120px"><div class="seg-label">End Colour</div><input type="color" id="g2" value="#ec4899" onchange="updG()" style="width:100%;height:40px"></div>
       </div>
       <div style="margin-top:14px"><div class="seg-label">Angle</div><div style="display:flex;align-items:center;gap:10px"><input type="range" id="gAngle" min="0" max="360" value="135" style="flex:1" oninput="updG()"><input type="number" id="gAngleNum" min="0" max="360" value="135" style="width:56px;text-align:center" oninput="document.getElementById('gAngle').value=this.value;updG()"><span style="font-size:10px;color:var(--t2)">°</span></div></div>
     </div>
@@ -126,11 +126,11 @@
     <div>
       <div class="card" style="margin-bottom:10px">
         <div class="sl" style="font-size:9px">Foreground Colour</div>
-        <div class="row" style="margin-top:8px;gap:8px"><input type="color" id="cF" value="#c0c1ff" onchange="chkC()" style="width:56px;height:46px"><input type="text" id="cFh" value="#c0c1ff" style="flex:1;font-family:var(--mono);font-size:14px" onchange="document.getElementById('cF').value=this.value;chkC()"></div>
+        <div class="row" style="margin-top:8px;gap:8px"><input type="color" id="cF" value="#c0c1ff" onchange="chkC()" style="width:56px;height:46px"><input type="text" id="cFh" value="#c0c1ff" style="flex:1;min-width:0;font-family:var(--mono);font-size:14px" onchange="document.getElementById('cF').value=this.value;chkC()"></div>
       </div>
       <div class="card" style="margin-bottom:10px">
         <div class="sl" style="font-size:9px">Background Colour</div>
-        <div class="row" style="margin-top:8px;gap:8px"><input type="color" id="cB" value="#131313" onchange="chkC()" style="width:56px;height:46px"><input type="text" id="cBh" value="#131313" style="flex:1;font-family:var(--mono);font-size:14px" onchange="document.getElementById('cB').value=this.value;chkC()"></div>
+        <div class="row" style="margin-top:8px;gap:8px"><input type="color" id="cB" value="#131313" onchange="chkC()" style="width:56px;height:46px"><input type="text" id="cBh" value="#131313" style="flex:1;min-width:0;font-family:var(--mono);font-size:14px" onchange="document.getElementById('cB').value=this.value;chkC()"></div>
       </div>
       <button class="btn" onclick="swC()" style="width:100%;justify-content:center;margin-bottom:14px">⇄ Swap Colours</button>
       <div class="card">
@@ -142,7 +142,7 @@
     <!-- Right: wireframe preview -->
     <div>
       <div id="cPrev" style="border-radius:14px;overflow:hidden;border:1px solid var(--border)">
-        <div style="padding:48px 36px 36px;text-align:center">
+        <div style="padding:clamp(20px,5vw,48px) clamp(16px,4vw,36px) clamp(16px,4vw,36px);text-align:center">
           <div id="cH1" style="font-size:clamp(24px,5vw,44px);font-weight:700;letter-spacing:-0.04em;line-height:1.1;margin-bottom:14px">The future of<br>design is<br>accessible.</div>
           <div id="cS2" style="font-size:14px;line-height:1.65;opacity:.75;max-width:400px;margin:0 auto">Good design is not just what it looks like and feels like. Design is how it works for everyone.</div>
           <div style="margin-top:22px;display:flex;gap:10px;justify-content:center">
@@ -151,7 +151,7 @@
           </div>
         </div>
         <!-- Interface cards row -->
-        <div class="c2" style="padding:0 36px 28px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="c2" style="padding:0 clamp(16px,4vw,36px) clamp(16px,3vw,28px);display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div style="padding:18px;border:1px solid rgba(128,128,128,.15);border-radius:10px">
             <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">Interface Elements</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font-size:9px;padding:4px 10px;border:1px solid;border-radius:5px;opacity:.6">Navigation</span><span style="font-size:9px;padding:4px 10px;border:1px solid;border-radius:5px;opacity:.6">Interface</span><span style="font-size:9px;padding:4px 10px;border:1px solid;border-radius:5px;opacity:.3">Disabled</span></div>
@@ -199,8 +199,8 @@
     <!-- Right sidebar -->
     <div>
       <!-- Base size + ratio pills -->
-      <div class="row" style="gap:8px;margin-bottom:16px">
-        <div class="card" style="padding:10px 16px;flex:1;text-align:center"><div style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)">Base Size</div><div style="font-size:16px;font-weight:700;margin-top:2px"><input type="number" id="tsB" value="16" min="8" max="48" style="width:50px;text-align:center;font-size:16px;font-weight:700;border:none;background:none;color:var(--t0);padding:0" onchange="genTS()">px</div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+        <div class="card" style="padding:10px 16px;flex:1;min-width:100px;text-align:center"><div style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)">Base Size</div><div style="font-size:16px;font-weight:700;margin-top:2px"><input type="number" id="tsB" value="16" min="8" max="48" style="width:50px;text-align:center;font-size:16px;font-weight:700;border:none;background:none;color:var(--t0);padding:0" onchange="genTS()">px</div></div>
         <div class="card" style="padding:10px 16px;flex:1;text-align:center"><div style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">Ratio</div><div style="font-size:16px;font-weight:700;margin-top:2px" id="tsRatioDisplay">1.250</div></div>
       </div>
 
@@ -248,15 +248,15 @@
 <div class="sec" id="sec-imgconvert">
   <div class="sec-h"><h1>Image Converter</h1><p>Convert, compress, and resize images in your browser. Nothing gets uploaded.</p></div>
   <div class="sub"><div id="imgDropZone" style="border:2px dashed var(--border);border-radius:14px;padding:44px 20px;text-align:center;cursor:pointer;transition:border-color .2s" onclick="document.getElementById('imgFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';handleImgFiles(event.dataTransfer.files)"><p style="font-size:14px;color:var(--t1);margin-bottom:4px">Drop images here or click to browse</p><p style="font-size:11px;color:var(--t2)">PNG, JPG, GIF, BMP, SVG, WebP, AVIF</p><input type="file" id="imgFileInput" multiple accept="image/*" style="display:none" onchange="handleImgFiles(this.files)"></div></div>
-  <div class="sub" id="imgControls" style="display:none"><div class="sl">Output Settings</div><div class="row mb" style="gap:16px;flex-wrap:wrap;margin-top:12px"><div><div class="seg-label">Format</div><select id="imgFormat" onchange="debouncedImgPreview()" style="width:140px"><option value="image/webp">WebP</option><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/avif">AVIF</option></select></div><div><div class="seg-label">Quality</div><div style="display:flex;align-items:center;gap:8px"><input type="range" id="imgQuality" min="1" max="100" value="80" style="width:160px" oninput="document.getElementById('imgQualNum').value=this.value;debouncedImgPreview()"><input type="number" id="imgQualNum" min="1" max="100" value="80" style="width:64px;text-align:center;padding-right:2px" oninput="var v=Math.max(1,Math.min(100,parseInt(this.value)||80));document.getElementById('imgQuality').value=v;debouncedImgPreview()"><span style="font-size:11px;color:var(--t1);flex-shrink:0">%</span></div></div><div><div class="seg-label">Max Width (0 = original)</div><input type="number" id="imgMaxWidth" value="0" min="0" max="8000" style="width:100px" onchange="debouncedImgPreview()"></div></div><div style="margin-top:16px"><button class="btn" onclick="convertAllImages()">Convert & Download All</button><button class="btn" onclick="clearImages()" style="margin-left:8px">Clear</button></div></div>
-  <div class="sub" id="imgResults" style="display:none"><div class="sl">Preview</div><div id="imgList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px"></div></div>
+  <div class="sub" id="imgControls" style="display:none"><div class="sl">Output Settings</div><div style="display:flex;flex-wrap:wrap;gap:20px;margin-top:12px"><div style="min-width:120px"><div class="seg-label">Format</div><select id="imgFormat" onchange="debouncedImgPreview()" style="width:100%;max-width:140px"><option value="image/webp">WebP</option><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/avif">AVIF</option></select></div><div style="flex:1;min-width:200px"><div class="seg-label">Quality</div><div style="display:flex;align-items:center;gap:8px"><input type="range" id="imgQuality" min="1" max="100" value="80" style="flex:1;min-width:80px" oninput="document.getElementById('imgQualNum').value=this.value;debouncedImgPreview()"><input type="number" id="imgQualNum" min="1" max="100" value="80" style="width:64px;text-align:center;padding-right:2px" oninput="var v=Math.max(1,Math.min(100,parseInt(this.value)||80));document.getElementById('imgQuality').value=v;debouncedImgPreview()"><span style="font-size:11px;color:var(--t1);flex-shrink:0">%</span></div></div><div style="min-width:100px"><div class="seg-label">Max Width (0 = original)</div><input type="number" id="imgMaxWidth" value="0" min="0" max="8000" style="width:100%;max-width:100px" onchange="debouncedImgPreview()"></div></div><div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px"><button class="btn" onclick="convertAllImages()">Convert & Download All</button><button class="btn" onclick="clearImages()">Clear</button></div></div>
+  <div class="sub" id="imgResults" style="display:none"><div class="sl">Preview</div><div id="imgList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr));gap:10px;margin-top:12px"></div></div>
 </div>
 
 <!-- ═══ PROMPT LIBRARY ═══ -->
 <div class="sec" id="sec-prompts">
   <div class="sec-h"><h1>Prompt Library</h1><p>Save your AI image generation prompts with output previews. Use with <a href="https://labs.google/fx/tools/flow" target="_blank">Google Flow</a> or <a href="https://stitch.withgoogle.com/?pli=1" target="_blank">Google Stitch</a>.</p></div>
   <div class="sub"><div class="sl">Add Prompt</div><div class="card" style="margin-top:10px"><div style="display:grid;gap:10px"><textarea id="promptText" placeholder="Enter your prompt..." style="min-height:80px;resize:vertical"></textarea><div class="row"><label style="font-size:10px;color:var(--t2)">Output image</label><input type="file" id="promptImg" accept="image/*" style="font-size:11px"></div><div class="row"><label style="font-size:10px;color:var(--t2)">Tags</label><input type="text" id="promptTags" placeholder="e.g. hero, product, texture" style="width:240px"></div><div><button class="btn btn-accent" onclick="savePrompt()">Save Prompt</button></div></div></div></div>
-  <div class="sub"><div class="sl">Saved Prompts</div><input type="text" id="promptSearch" placeholder="Search prompts..." style="width:100%;max-width:300px;margin:10px 0 14px" oninput="renderPrompts()"><div id="promptGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div><p class="d" id="promptEmpty" style="margin-top:12px">No prompts saved yet.</p></div>
+  <div class="sub"><div class="sl">Saved Prompts</div><input type="text" id="promptSearch" placeholder="Search prompts..." style="width:100%;max-width:300px;margin:10px 0 14px" oninput="renderPrompts()"><div id="promptGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:12px"></div><p class="d" id="promptEmpty" style="margin-top:12px">No prompts saved yet.</p></div>
 </div>
 
 <!-- ═══ DOCUMENTATION ═══ -->
