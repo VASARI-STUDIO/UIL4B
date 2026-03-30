@@ -4,11 +4,34 @@ export default function IconLibrary({ onCopy }) {
   const [query, setQuery] = useState('')
   const [icons, setIcons] = useState([])
   const [mode, setMode] = useState('Embedded')
-  const [activeCat, setActiveCat] = useState('all')
+  const [activeCat] = useState('all')
   const [pack, setPack] = useState('')
   const [count, setCount] = useState(0)
   const timer = useRef(null)
   const cdnOk = useRef(null)
+
+  const renderLocal = useCallback((q, packFilter) => {
+    const localIcons = window.icons || []
+    const PACKS = window.PACKS || {}
+    const pm = { tabler: 'T', lucide: 'L', iconoir: 'I', heroicons: 'H', 'simple-icons': 'S' }
+    const pc = pm[packFilter] || ''
+    q = (q || '').toLowerCase()
+    const filtered = localIcons.filter(i =>
+      (activeCat === 'all' || i.c === activeCat) &&
+      (!packFilter || i.p === pc) &&
+      (!q || i.n.indexOf(q) !== -1 || i.c.indexOf(q) !== -1)
+    )
+    setIcons(filtered.map(i => ({
+      id: i.n,
+      name: i.n,
+      pack: PACKS[i.p] || i.p,
+      d: i.d,
+      filled: i.p === 'S',
+      cdn: false
+    })))
+    setCount(filtered.length)
+    setMode(cdnOk.current === false ? 'Offline' : 'Embedded')
+  }, [activeCat])
 
   const doSearch = useCallback((q, packFilter) => {
     q = (q || '').trim()
@@ -42,32 +65,7 @@ export default function IconLibrary({ onCopy }) {
         cdnOk.current = false
         renderLocal(q, packFilter)
       })
-  }, [])
-
-  const renderLocal = useCallback((q, packFilter) => {
-    // Use embedded icons from window if available
-    const localIcons = window.icons || []
-    const CATS = window.CATS || {}
-    const PACKS = window.PACKS || {}
-    const pm = { tabler: 'T', lucide: 'L', iconoir: 'I', heroicons: 'H', 'simple-icons': 'S' }
-    const pc = pm[packFilter] || ''
-    q = (q || '').toLowerCase()
-    const filtered = localIcons.filter(i =>
-      (activeCat === 'all' || i.c === activeCat) &&
-      (!packFilter || i.p === pc) &&
-      (!q || i.n.indexOf(q) !== -1 || i.c.indexOf(q) !== -1)
-    )
-    setIcons(filtered.map(i => ({
-      id: i.n,
-      name: i.n,
-      pack: PACKS[i.p] || i.p,
-      d: i.d,
-      filled: i.p === 'S',
-      cdn: false
-    })))
-    setCount(filtered.length)
-    setMode(cdnOk.current === false ? 'Offline' : 'Embedded')
-  }, [activeCat])
+  }, [renderLocal])
 
   const debounceSearch = useCallback((q, p) => {
     clearTimeout(timer.current)
