@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { contrastRatio, hexToRgb, hexToHsl, hslToHex, luminance, fixForeground, fixBackground } from '../utils/colors'
 
-export default function ContrastChecker({ onCopy }) {
+export default function ContrastChecker() {
   const [fg, setFg] = useState('#c0c1ff')
   const [bg, setBg] = useState('#131313')
 

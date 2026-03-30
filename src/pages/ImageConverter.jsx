@@ -7,14 +7,14 @@ function formatBytes(b) {
   return (b / 1048576).toFixed(1) + ' MB'
 }
 
+const EXT_MAP = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/avif': 'avif' }
+
 export default function ImageConverter({ toast }) {
   const [originals, setOriginals] = useState([])
   const [format, setFormat] = useState('image/webp')
   const [quality, setQuality] = useState(80)
   const [maxWidth, setMaxWidth] = useState(0)
   const fileInputRef = useRef(null)
-
-  const EXT_MAP = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/avif': 'avif' }
 
   const handleFiles = useCallback((files) => {
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -173,7 +173,6 @@ export default function ImageConverter({ toast }) {
                 if (!orig) return null
                 const ext = EXT_MAP[format] || 'webp'
                 const preview = getPreview(orig)
-                const sc = preview.savings > 0 ? 'color:#16a34a' : 'color:#dc2626'
                 const bn = orig.name.replace(/\.[^.]+$/, '')
                 return (
                   <div key={idx} className="card" style={{ padding: 10 }}>

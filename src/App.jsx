@@ -47,7 +47,7 @@ export default function App() {
             <Route path="/palette" element={<PaletteBuilder onCopy={copy} />} />
             <Route path="/tints" element={<TintGenerator onCopy={copy} />} />
             <Route path="/gradients" element={<GradientTool onCopy={copy} />} />
-            <Route path="/contrast" element={<ContrastChecker onCopy={copy} />} />
+            <Route path="/contrast" element={<ContrastChecker />} />
             <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
             <Route path="/fontpairs" element={<FontMatcher onCopy={copy} />} />
             <Route path="/buttons" element={<ButtonCatalogue onCopy={copy} />} />
