@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { generateHarmony, textColorForBg, hexToHsl, hslToHex } from '../utils/colors'
+import { generateHarmony, textColorForBg, hslToHex } from '../utils/colors'
 
 const HARMS = ['complement', 'analogous', 'triadic', 'split', 'tetradic']
 const HARM_LABELS = { complement: 'Complementary', analogous: 'Analogous', triadic: 'Triadic', split: 'Split Complementary', tetradic: 'Tetradic' }
