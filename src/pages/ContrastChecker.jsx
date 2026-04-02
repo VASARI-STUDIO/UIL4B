@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { contrastRatio, hexToRgb, hexToHsl, hslToHex, luminance, fixForeground, fixBackground } from '../utils/colors'
+import { contrastRatio, hexToRgb, hexToHsl, hslToHex, luminance } from '../utils/colors'
 
 export default function ContrastChecker() {
   const [fg, setFg] = useState('#c0c1ff')
@@ -12,10 +12,10 @@ export default function ContrastChecker() {
   const bgLum = luminance(bgRgb[0], bgRgb[1], bgRgb[2])
 
   const checks = [
-    { label: 'WCAG AA', sub: 'Normal Text', target: 4.5 },
-    { label: 'WCAG AA', sub: 'Large Text', target: 3 },
-    { label: 'WCAG AAA', sub: 'Normal Text', target: 7 },
-    { label: 'WCAG AAA', sub: 'Large Text', target: 4.5 },
+    { label: 'WCAG AA', sub: 'NORMAL TEXT', target: 4.5 },
+    { label: 'WCAG AA', sub: 'LARGE TEXT', target: 3 },
+    { label: 'WCAG AAA', sub: 'NORMAL TEXT', target: 7 },
+    { label: 'WCAG AAA', sub: 'LARGE TEXT', target: 4.5 },
   ]
 
   const suggestions = useMemo(() => {
@@ -42,34 +42,34 @@ export default function ContrastChecker() {
   const swap = () => { const tmp = fg; setFg(bg); setBg(tmp) }
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Contrast Checker</h1>
-        <p>Validate colour combinations against WCAG for maximum legibility.</p>
+        <p>Validate your color combinations against Web Content Accessibility Guidelines (WCAG) to ensure maximum legibility and inclusion.</p>
       </div>
 
       <div className="split" style={{ marginBottom: 24 }}>
         <div className="side">
           <div className="card" style={{ marginBottom: 10 }}>
-            <div className="sl">Foreground Colour</div>
+            <div className="sl">Foreground Color</div>
             <div className="row" style={{ marginTop: 6 }}>
               <input type="color" value={fg} onChange={e => setFg(e.target.value)} />
               <input type="text" value={fg} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)' }} onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) setFg(e.target.value) }} />
             </div>
           </div>
           <div className="card" style={{ marginBottom: 10 }}>
-            <div className="sl">Background Colour</div>
+            <div className="sl">Background Color</div>
             <div className="row" style={{ marginTop: 6 }}>
               <input type="color" value={bg} onChange={e => setBg(e.target.value)} />
               <input type="text" value={bg} style={{ flex: 1, minWidth: 0, fontFamily: 'var(--mono)' }} onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) setBg(e.target.value) }} />
             </div>
           </div>
           <button className="btn" onClick={swap} style={{ width: '100%', justifyContent: 'center', marginBottom: 10 }}>
-            &#8644; Swap Colours
+            &#8644; Swap Colors
           </button>
           <div className="card">
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>Compliance</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14 }}>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>Compliance Report</span>
               <div className="cr-val">{ratio.toFixed(1)}:1</div>
             </div>
             {checks.map((row, i) => {
@@ -80,16 +80,10 @@ export default function ContrastChecker() {
                     <div className="label">{row.label}</div>
                     <div className="sublabel">{row.sub}</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span className={`tag ${pass ? 'tag-pass' : 'tag-fail'}`}>
                       {pass ? 'PASS \u2713' : 'FAIL'}
                     </span>
-                    {!pass && (
-                      <>
-                        <button className="btn btn-s" style={{ marginLeft: 6 }} onClick={() => setFg(fixForeground(fg, bg, row.target))}>Fix FG</button>
-                        <button className="btn btn-s" style={{ marginLeft: 4 }} onClick={() => setBg(fixBackground(fg, bg, row.target))}>Fix BG</button>
-                      </>
-                    )}
                   </div>
                 </div>
               )
@@ -99,29 +93,33 @@ export default function ContrastChecker() {
 
         <div>
           <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: bg, color: fg }}>
-            <div style={{ padding: 'clamp(20px,4vw,44px) clamp(16px,3vw,32px)', textAlign: 'center' }}>
-              <div style={{ fontSize: 'clamp(24px,4vw,40px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 12 }}>
-                The future of<br />design is accessible.
+            <div style={{ padding: 'clamp(24px,4vw,48px) clamp(20px,3vw,36px)', textAlign: 'center' }}>
+              <div style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 14 }}>
+                The future of<br />design is <span style={{ color: fg }}>accessible</span>.
               </div>
-              <div style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.75, maxWidth: 380, margin: '0 auto' }}>
-                Good design is not just what it looks like. Design is how it works for everyone.
+              <div style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.7, maxWidth: 380, margin: '0 auto' }}>
+                Good design is not just what it looks like and feels like. Design is how it works for everyone.
               </div>
-              <div style={{ marginTop: 18, display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <div style={{ padding: '10px 22px', fontSize: 12, fontWeight: 600, borderRadius: 8, background: fg, color: bg }}>Primary CTA</div>
-                <div style={{ padding: '10px 22px', fontSize: 12, borderRadius: 8, border: `1px solid ${fg}`, color: fg, opacity: 0.5 }}>Ghost Action</div>
+              <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <div style={{ padding: '10px 24px', fontSize: 12, fontWeight: 600, borderRadius: 8, background: fg, color: bg }}>Primary CTA</div>
+                <div style={{ padding: '10px 24px', fontSize: 12, borderRadius: 8, border: `1px solid ${fg}`, color: fg }}>Ghost Action</div>
               </div>
             </div>
-            <div style={{ padding: '0 clamp(16px,3vw,32px) clamp(16px,3vw,24px)', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ flex: 1, minWidth: 140, padding: 14, border: '1px solid rgba(128,128,128,.15)', borderRadius: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 8 }}>Interface</div>
+            <div style={{ padding: '0 clamp(20px,3vw,36px) clamp(20px,3vw,30px)', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 140, padding: 16, border: '1px solid rgba(128,128,128,.15)', borderRadius: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>Interface Elements</div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 9, padding: '3px 8px', border: '1px solid', borderRadius: 4, opacity: 0.6 }}>Nav</span>
-                  <span style={{ fontSize: 9, padding: '3px 8px', border: '1px solid', borderRadius: 4, opacity: 0.3 }}>Disabled</span>
+                  <span style={{ fontSize: 9, padding: '4px 10px', border: '1px solid', borderRadius: 4, opacity: 0.6 }}>Navigation</span>
+                  <span style={{ fontSize: 9, padding: '4px 10px', border: '1px solid', borderRadius: 4, opacity: 0.6 }}>Interface</span>
+                  <span style={{ fontSize: 9, padding: '4px 10px', border: '1px solid', borderRadius: 4, opacity: 0.3 }}>Disabled</span>
                 </div>
               </div>
-              <div style={{ flex: 1, minWidth: 140, padding: 14, border: '1px solid rgba(128,128,128,.15)', borderRadius: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 8 }}>Luminance</div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.6 }}>FG: {fgLum.toFixed(3)}<br />BG: {bgLum.toFixed(3)}</div>
+              <div style={{ flex: 1, minWidth: 140, padding: 16, border: '1px solid rgba(128,128,128,.15)', borderRadius: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>Visual Simulation</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.6 }}>
+                  LUMINANCE (FG): {fgLum.toFixed(3)}<br />
+                  LUMINANCE (BG): {bgLum.toFixed(3)}
+                </div>
               </div>
             </div>
           </div>
@@ -130,9 +128,14 @@ export default function ContrastChecker() {
 
       {suggestions.length > 0 && (
         <div className="suggest-bar">
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>Suggested Adjustments</div>
-            <div style={{ fontSize: 11, color: 'var(--t2)' }}>Tones that meet AAA with your background.</div>
+          <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Suggested Adjustments</div>
+              <div style={{ fontSize: 11, color: 'var(--t2)' }}>We've found {suggestions.length} similar tones that would meet AAA standards with your current background.</div>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {suggestions.map(c => (

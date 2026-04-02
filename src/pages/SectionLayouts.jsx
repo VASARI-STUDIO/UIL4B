@@ -9,7 +9,7 @@ const LAYOUTS = [
 
 export default function SectionLayouts({ onCopy }) {
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Section Layouts</h1>
         <p>Common responsive section patterns.</p>

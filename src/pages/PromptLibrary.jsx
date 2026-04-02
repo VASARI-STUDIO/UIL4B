@@ -50,7 +50,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   )
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Prompt Library</h1>
         <p>Save AI image generation prompts with output previews.</p>
