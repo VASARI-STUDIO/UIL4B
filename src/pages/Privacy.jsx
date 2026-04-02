@@ -1,6 +1,6 @@
 export default function Privacy() {
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Privacy Policy</h1>
         <p>Last updated: March 2026</p>

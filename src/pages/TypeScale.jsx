@@ -34,7 +34,7 @@ export default function TypeScale({ onCopy }) {
   }, [base, ratio])
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Type Scale</h1>
         <p>Modular type scale calculator.</p>

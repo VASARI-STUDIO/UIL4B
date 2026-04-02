@@ -28,7 +28,7 @@ export default function Settings({ toast }) {
   }
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Settings</h1>
         <p>Manage your preferences, account, and data.</p>
