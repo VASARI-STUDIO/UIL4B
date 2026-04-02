@@ -37,9 +37,9 @@ export default function Settings({ toast }) {
       <div className="sub">
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Appearance</h2>
         <div className="card">
-          <div className="sw-row">
-            <span style={{ fontSize: 13 }}>Theme: {theme === 'dark' ? 'Dark' : 'Light'}</span>
-            <button className={`switch${theme === 'light' ? ' on' : ''}`} onClick={toggleTheme} aria-label="Toggle theme" />
+          <div className="toggle-row">
+            <span>Theme: {theme === 'dark' ? 'Dark' : 'Light'}</span>
+            <button className={`toggle-switch${theme === 'light' ? ' on' : ''}`} onClick={toggleTheme} aria-label="Toggle theme" />
           </div>
         </div>
       </div>
@@ -49,7 +49,7 @@ export default function Settings({ toast }) {
           <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Account</h2>
           <div className="card" style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-              <div className="sb-user-avatar" style={{ width: 48, height: 48, fontSize: 18 }}>
+              <div className="avatar-circle" style={{ width: 48, height: 48, fontSize: 18 }}>
                 {userProfile?.photoURL ? (
                   <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
                 ) : (
