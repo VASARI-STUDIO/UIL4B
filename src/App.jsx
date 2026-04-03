@@ -6,6 +6,7 @@ import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 
+import Dashboard from './pages/Dashboard'
 import PaletteBuilder from './pages/PaletteBuilder'
 import TintGenerator from './pages/TintGenerator'
 import GradientTool from './pages/GradientTool'
@@ -44,8 +45,9 @@ export default function App() {
 
         <main className="main">
           <Routes>
-            <Route path="/" element={<Navigate to="/palette" replace />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/palette" element={<PaletteBuilder onCopy={copy} />} />
+            <Route path="/projects" element={<Dashboard />} />
             <Route path="/tints" element={<TintGenerator onCopy={copy} />} />
             <Route path="/gradients" element={<GradientTool onCopy={copy} />} />
             <Route path="/contrast" element={<ContrastChecker />} />
@@ -65,7 +67,7 @@ export default function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/resources" element={<Resources />} />
-            <Route path="*" element={<Navigate to="/palette" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

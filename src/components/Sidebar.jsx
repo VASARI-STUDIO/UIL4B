@@ -2,23 +2,12 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const NAV_ITEMS = [
+  { to: '/', label: 'Dashboard', icon: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></> },
   { to: '/palette', label: 'Palette Builder', icon: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="7.5" r="1.5" fill="currentColor"/><circle cx="8" cy="14" r="1.5" fill="currentColor"/><circle cx="16" cy="14" r="1.5" fill="currentColor"/></> },
-  { to: '/tints', label: 'Tint Generator', icon: <><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></> },
-  { to: '/gradients', label: 'Gradient Tool', icon: <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 3l18 18"/></> },
-  { to: '/contrast', label: 'Contrast Checker', icon: <><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20z" fill="currentColor"/></> },
-  { to: '/resources', label: 'Resources', icon: <><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></> },
-]
-
-const MORE_ITEMS = [
-  { to: '/typescale', label: 'Type Scale' },
-  { to: '/fontpairs', label: 'Font Matcher' },
-  { to: '/buttons', label: 'Buttons' },
-  { to: '/layouts', label: 'Layouts' },
-  { to: '/icons', label: 'Icon Library' },
-  { to: '/imgconvert', label: 'Image Converter' },
-  { to: '/prompts', label: 'Prompt Library' },
-  { to: '/docs-design', label: 'Design Principles' },
-  { to: '/docs-social', label: 'Social Marketing' },
+  { to: '/tints', label: 'Tint Generator', icon: <><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></> },
+  { to: '/typescale', label: 'Type Scale', icon: <><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></> },
+  { to: '/projects', label: 'Projects', icon: <><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 8h20"/></> },
+  { to: '/resources', label: 'Assets', icon: <><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M12 22V12"/><path d="M2 7v10l10 5"/><path d="M22 7v10l-10 5"/></> },
 ]
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -30,9 +19,16 @@ export default function Sidebar({ isOpen, onClose }) {
       <nav className={`sidebar${isOpen ? ' open' : ''}`} id="sidebar">
         {/* Brand */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-text">
-            <span className="sidebar-brand-name">Design Toolkit</span>
-            <span className="sidebar-brand-sub">Professional Suite</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--accent-bg)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h6"/>
+              </svg>
+            </div>
+            <div className="sidebar-brand-text">
+              <span className="sidebar-brand-name">Vasari</span>
+              <span className="sidebar-brand-sub">Obsidian Toolkit</span>
+            </div>
           </div>
         </div>
 
@@ -42,30 +38,16 @@ export default function Sidebar({ isOpen, onClose }) {
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.to === '/'}
               className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
               onClick={onClose}
             >
               <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 {item.icon}
               </svg>
-              <span className="nav-item-label">{item.label}</span>
+              <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>{item.label}</span>
             </NavLink>
           ))}
-
-          {MORE_ITEMS.length > 0 && (
-            <div className="nav-more-section">
-              {MORE_ITEMS.map(item => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) => `nav-item nav-item-sub${isActive ? ' active' : ''}`}
-                  onClick={onClose}
-                >
-                  <span className="nav-item-label">{item.label}</span>
-                </NavLink>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Footer */}
@@ -74,13 +56,13 @@ export default function Sidebar({ isOpen, onClose }) {
             <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
             </svg>
-            <span className="nav-item-label">Settings</span>
+            <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Settings</span>
           </NavLink>
-          <NavLink to="/docs-design" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
+          <NavLink to="/feedback" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
             <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+              <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
-            <span className="nav-item-label">Docs</span>
+            <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Support</span>
           </NavLink>
 
           {user ? (
