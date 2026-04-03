@@ -25,12 +25,12 @@ export default function Dashboard() {
         {/* Palette Builder — large card */}
         <NavLink to="/palette" className="dash-card dash-card-lg" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 4, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><circle cx="12" cy="7.5" r="1.5" fill="var(--accent)"/><circle cx="8" cy="14" r="1.5" fill="var(--accent)"/><circle cx="16" cy="14" r="1.5" fill="var(--accent)"/>
               </svg>
             </div>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 6 }}>Proprietary Algorithm</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 3 }}>Proprietary Algorithm</span>
           </div>
           <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Palette Builder</h2>
           <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.6, marginBottom: 20, maxWidth: 400 }}>
@@ -38,14 +38,14 @@ export default function Dashboard() {
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
             {['#9b7cff', '#6b5ce7', '#ff7eb3', '#c4c4c4', '#888'].map(c => (
-              <div key={c} style={{ width: 40, height: 40, borderRadius: 8, background: c }} />
+              <div key={c} style={{ width: 40, height: 40, borderRadius: 4, background: c }} />
             ))}
           </div>
         </NavLink>
 
         {/* Tint Generator */}
         <NavLink to="/tints" className="dash-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 4, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
             </svg>
@@ -75,7 +75,7 @@ export default function Dashboard() {
         <NavLink to="/projects" className="dash-card" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h3 style={{ fontSize: 18, fontWeight: 700 }}>Projects Library</h3>
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 28, height: 28, borderRadius: 3, background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 8h20"/>
               </svg>
@@ -112,7 +112,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <NavLink to="/docs-design" className="btn btn-s" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 10, fontWeight: 700 }}>Documentation</NavLink>
           <button className="btn btn-s" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 10, fontWeight: 700 }}>Export Library</button>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--card)', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 3, border: '1px solid var(--border)', background: 'var(--card)', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: 'pulse 2s infinite' }} />
             <span style={{ color: 'var(--accent)' }}>Live Technical Feed: Active</span>
           </span>
@@ -138,7 +138,7 @@ function ProjectRow({ name, date }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 28, height: 28, borderRadius: 3, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/>
           </svg>

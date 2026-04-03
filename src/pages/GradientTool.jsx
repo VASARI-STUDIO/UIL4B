@@ -17,7 +17,7 @@ const PRESETS = [
 const TYPES = ['Linear', 'Radial', 'Conic']
 
 export default function GradientTool({ onCopy }) {
-  const [color1, setColor1] = useState('#6366f1')
+  const [color1, setColor1] = useState('#a855f7')
   const [color2, setColor2] = useState('#ec4899')
   const [angle, setAngle] = useState(135)
   const [type, setType] = useState('Linear')
@@ -103,7 +103,7 @@ export default function GradientTool({ onCopy }) {
             <div className="seg-label">Presets</div>
             <div className="grad-presets" style={{ marginTop: 4 }}>
               {PRESETS.slice(0, 4).map(g => (
-                <div key={g.n} className="grad-p" style={{ background: g.css, height: 56, borderRadius: 10 }} onClick={() => onCopy(`background: ${g.css};`)} title={g.n} />
+                <div key={g.n} className="grad-p" style={{ background: g.css, height: 56, borderRadius: 4 }} onClick={() => onCopy(`background: ${g.css};`)} title={g.n} />
               ))}
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function GradientTool({ onCopy }) {
           { icon: '\u21BA', title: 'Version History', desc: 'Undo and browse previous edits' },
         ].map(f => (
           <div key={f.title} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 16 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{f.icon}</div>
+            <div style={{ width: 40, height: 40, borderRadius: 4, background: 'var(--bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{f.icon}</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{f.title}</div>
               <div style={{ fontSize: 11, color: 'var(--t2)' }}>{f.desc}</div>
