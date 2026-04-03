@@ -48,7 +48,7 @@ export default function Login({ toast }) {
   }
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="auth-container">
         <div className="auth-card card">
           <div className="auth-header">

@@ -13,7 +13,7 @@ export default function Feedback({ toast }) {
   }
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Feedback</h1>
         <p>Help us improve Visari Studio. Share bugs, feature requests, or general feedback.</p>

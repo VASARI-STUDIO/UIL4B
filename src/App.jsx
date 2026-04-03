@@ -25,6 +25,7 @@ import Community from './pages/Community'
 import Feedback from './pages/Feedback'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import Resources from './pages/Resources'
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/feedback" element={<Feedback toast={toast} />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/resources" element={<Resources />} />
             <Route path="*" element={<Navigate to="/palette" replace />} />
           </Routes>
         </main>
