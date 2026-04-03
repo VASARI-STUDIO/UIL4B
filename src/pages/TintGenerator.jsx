@@ -1,131 +1,151 @@
 import { useState, useCallback } from 'react'
-import { generateTintScale, T_LABELS, hexToHsl, hslToHex, textColorForBg } from '../utils/colors'
-
-const ANCHOR_LABELS = T_LABELS
+import { generateTintScale, T_LABELS, hexToHsl, textColorForBg, contrastRatio } from '../utils/colors'
 
 export default function TintGenerator({ onCopy }) {
-  const [tints, setTints] = useState([
-    { hex: '#6366f1', anchor: 5, hueShift: 0, satMin: 0, satMax: 0, lMin: 5, lMax: 98, mode: 'perceived' }
-  ])
+  const [baseHex, setBaseHex] = useState('#6366f1')
+  const [steps, setSteps] = useState(11)
+  const [lMax, setLMax] = useState(98)
+  const [anchor] = useState(5)
+  const [mode, setMode] = useState('perceived')
 
-  const updateTint = useCallback((idx, key, value) => {
-    setTints(prev => prev.map((t, i) => i === idx ? { ...t, [key]: value } : t))
-  }, [])
+  const cfg = { hex: baseHex, anchor, hueShift: 0, satMin: 0, satMax: 0, lMin: 5, lMax, mode }
+  const scale = generateTintScale(cfg)
 
-  const addTint = useCallback(() => {
-    setTints(prev => [...prev, {
-      hex: hslToHex(Math.floor(Math.random() * 360), 65, 50),
-      anchor: 5, hueShift: 0, satMin: 0, satMax: 0, lMin: 5, lMax: 98, mode: 'perceived'
-    }])
-  }, [])
-
-  const removeTint = useCallback((idx) => {
-    setTints(prev => prev.filter((_, i) => i !== idx))
-  }, [])
-
-  const buildTintData = useCallback(() => {
-    const result = {}
-    tints.forEach((cfg, idx) => {
-      const scale = generateTintScale(cfg)
-      const name = `colour-${idx + 1}`
-      const obj = {}
-      T_LABELS.forEach((l, i) => { obj[l] = scale[i] })
-      result[name] = obj
-    })
-    return result
-  }, [tints])
-
-  const exportCSS = useCallback(() => {
-    const data = buildTintData()
+  const buildCSS = useCallback(() => {
     let css = ':root {\n'
-    Object.entries(data).forEach(([name, stops]) => {
-      Object.entries(stops).forEach(([k, v]) => { css += `  --${name}-${k}: ${v};\n` })
-    })
+    scale.forEach((c, i) => { css += `  --color-${T_LABELS[i]}: ${c};\n` })
     css += '}'
-    onCopy(css)
-  }, [buildTintData, onCopy])
+    return css
+  }, [scale])
 
-  const exportJSON = useCallback(() => {
-    const data = buildTintData()
-    onCopy(JSON.stringify(data, null, 2))
-  }, [buildTintData, onCopy])
+  const buildJSON = useCallback(() => {
+    const obj = {}
+    scale.forEach((c, i) => { obj[T_LABELS[i]] = c })
+    return JSON.stringify(obj, null, 2)
+  }, [scale])
 
   return (
-    <div className="sec on">
-      <div className="sec-h">
-        <h1>Tint Generator</h1>
-        <p>Create mathematically perfect colour scales. Expand a single hex into a full spectrum of utility values.</p>
+    <div className="sec">
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
+        Toolkit / Core Tools
+      </div>
+      <div className="sec-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h1>Tint Generator</h1>
+          <p>Create mathematically perfect monolithic scales for your design system. Expand a single base hex into a full spectrum of utility values.</p>
+        </div>
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', flexShrink: 0 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 8, background: baseHex }} />
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Base Hex</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 600 }}>{baseHex}</div>
+          </div>
+        </div>
       </div>
 
-      {tints.map((cfg, idx) => {
-        const scale = generateTintScale(cfg)
-        return (
-          <div key={idx} className="tint-row" style={{ marginBottom: 32 }}>
-            <div className="tint-top-controls" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 12px', alignItems: 'center', marginBottom: 12 }}>
-              <input type="color" value={cfg.hex} style={{ width: 32, height: 28 }} onChange={e => updateTint(idx, 'hex', e.target.value)} />
-              <input type="text" value={cfg.hex} style={{ width: 80, fontFamily: 'var(--mono)', fontSize: 10 }} onChange={e => updateTint(idx, 'hex', e.target.value)} />
-              <label style={{ fontSize: 9, color: 'var(--t2)' }}>Anchor</label>
-              <select style={{ width: 70 }} value={cfg.anchor} onChange={e => updateTint(idx, 'anchor', +e.target.value)}>
-                {ANCHOR_LABELS.map((l, i) => <option key={l} value={i}>{l}</option>)}
-              </select>
-              <label style={{ fontSize: 9, color: 'var(--t2)' }}>Mode</label>
-              <select style={{ width: 90 }} value={cfg.mode} onChange={e => updateTint(idx, 'mode', e.target.value)}>
-                <option value="perceived">Perceived</option>
-                <option value="linear">Linear</option>
-              </select>
-              {idx > 0 && <button className="btn btn-s" onClick={() => removeTint(idx)}>Remove</button>}
-            </div>
+      {/* Controls seg-bar */}
+      <div className="seg-bar" style={{ marginBottom: 32 }}>
+        <div className="seg-cell">
+          <div className="seg-label">Base Color</div>
+          <div className="row" style={{ gap: 6 }}>
+            <input type="color" value={baseHex} onChange={e => setBaseHex(e.target.value)} style={{ width: 32, height: 28, padding: 2 }} />
+            <input type="text" value={baseHex} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 12 }} onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) setBaseHex(e.target.value) }} />
+          </div>
+        </div>
+        <div className="seg-cell">
+          <div className="seg-label">Steps Count</div>
+          <div className="row" style={{ gap: 8 }}>
+            <input type="range" min="5" max="15" value={steps} onChange={e => setSteps(+e.target.value)} style={{ flex: 1 }} />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, minWidth: 20, textAlign: 'right' }}>{steps}</span>
+          </div>
+        </div>
+        <div className="seg-cell">
+          <div className="seg-label">Luminance Spread</div>
+          <div className="row" style={{ gap: 8 }}>
+            <input type="range" min="60" max="100" value={lMax} onChange={e => setLMax(+e.target.value)} style={{ flex: 1 }} />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, minWidth: 30, textAlign: 'right' }}>{lMax}%</span>
+          </div>
+        </div>
+        <div className="seg-cell">
+          <div className="seg-label">Format</div>
+          <select value={mode} onChange={e => setMode(e.target.value)} style={{ width: '100%' }}>
+            <option value="perceived">HEX Codes</option>
+            <option value="linear">Linear</option>
+          </select>
+        </div>
+      </div>
 
-            <div className="tint-grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(11, 1fr)', gap: 8, marginBottom: 16 }}>
+      {/* Tints & Shades */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Tints & Shades</h2>
+          <button className="btn btn-s" style={{ color: 'var(--accent)', borderColor: 'var(--accent)' }} onClick={() => onCopy(buildCSS())}>Copy Scale</button>
+        </div>
+        <div className="tint-grid-responsive" style={{ display: 'grid', gridTemplateColumns: `repeat(${scale.length}, 1fr)`, gap: 8 }}>
+          {scale.map((c, i) => {
+            const hsl = hexToHsl(c)
+            const isAnchor = i === anchor
+            return (
+              <div key={i} style={{ textAlign: 'center' }}>
+                <div className="tint-swatch" style={{ background: c }} onClick={() => onCopy(c)}>
+                  <span className="stop-label" style={{ color: textColorForBg(c) }}>{T_LABELS[i]}</span>
+                </div>
+                <div className="tint-info">
+                  <div className="hex">{c}</div>
+                  {isAnchor ? <div className="tint-base-tag">Selected Base</div> : <div className="lval">L: {hsl[2]}%</div>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Technical Spectrum Table */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Technical Spectrum</h3>
+            <p style={{ fontSize: 12, color: 'var(--t2)' }}>Detailed HSL and RGB breakdowns for production usage.</p>
+          </div>
+          <button className="btn btn-s" onClick={() => onCopy(buildJSON())}>JSON Export</button>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {['Stop', 'Preview', 'Hex', 'HSL', 'Contrast', 'Actions'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
               {scale.map((c, i) => {
                 const hsl = hexToHsl(c)
-                const isAnchor = i === cfg.anchor
+                const cr = contrastRatio(c, '#ffffff')
+                const isAnchor = i === anchor
                 return (
-                  <div key={i} style={{ textAlign: 'center' }}>
-                    <div className="tint-swatch" style={{ background: c }} onClick={() => onCopy(c)}>
-                      <span className="stop-label" style={{ color: textColorForBg(c) }}>{T_LABELS[i]}</span>
-                    </div>
-                    <div className="tint-info">
-                      <div className="hex">{c}</div>
-                      {isAnchor ? <div className="tint-base-tag">Base</div> : <div className="lval">L: {hsl[2]}%</div>}
-                    </div>
-                  </div>
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: isAnchor ? 'var(--accent-bg)' : 'transparent' }}>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 600, color: isAnchor ? 'var(--accent)' : 'var(--t0)' }}>{T_LABELS[i]}</td>
+                    <td style={{ padding: '10px 12px' }}><div style={{ width: 24, height: 24, borderRadius: 6, background: c }} /></td>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>{c}</td>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: isAnchor ? 'var(--accent)' : 'var(--t1)' }}>{hsl[0]}, {hsl[1]}%, {hsl[2]}%</td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <span className={`tag ${cr >= 4.5 ? 'tag-pass' : 'tag-fail'}`}>{cr.toFixed(1)}{cr >= 4.5 ? ' AA' : ' FAIL'}</span>
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <button className="btn btn-s" style={{ padding: '3px 8px' }} onClick={() => onCopy(c)}>Copy</button>
+                    </td>
+                  </tr>
                 )
               })}
-            </div>
-
-            <div className="tint-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {[
-                { label: 'Lightness Max', key: 'lMax', min: 60, max: 100 },
-                { label: 'Lightness Min', key: 'lMin', min: 0, max: 20 },
-                { label: 'Hue Shift', key: 'hueShift', min: -30, max: 30, suffix: '°', showSign: true },
-                { label: 'Sat Shift (light end)', key: 'satMax', min: -30, max: 30, showSign: true },
-              ].map(ctrl => (
-                <div key={ctrl.key}>
-                  <label style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', display: 'flex', justifyContent: 'space-between' }}>
-                    {ctrl.label}
-                    <span style={{ fontFamily: 'var(--mono)', fontWeight: 500, color: 'var(--t1)' }}>
-                      {ctrl.showSign && cfg[ctrl.key] > 0 ? '+' : ''}{cfg[ctrl.key]}{ctrl.suffix || ''}
-                    </span>
-                  </label>
-                  <input type="range" min={ctrl.min} max={ctrl.max} value={cfg[ctrl.key]} onChange={e => updateTint(idx, ctrl.key, +e.target.value)} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      })}
-
-      <div style={{ margin: '16px 0 40px' }}>
-        <button className="btn" onClick={addTint}>+ Add Colour</button>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="sub">
-        <div className="sl">Export</div>
-        <div className="row" style={{ gap: 8, marginTop: 8 }}>
-          <button className="btn" onClick={exportCSS}>Copy CSS Variables</button>
-          <button className="btn" onClick={exportJSON}>Copy Framer JSON</button>
-        </div>
+      <div className="row" style={{ gap: 8, marginBottom: 40 }}>
+        <button className="btn" onClick={() => onCopy(buildCSS())}>Copy CSS Variables</button>
+        <button className="btn" onClick={() => onCopy(buildJSON())}>Copy JSON</button>
       </div>
     </div>
   )

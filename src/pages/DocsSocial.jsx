@@ -14,7 +14,7 @@ function DocSection({ title, children }) {
 
 export default function DocsSocial() {
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Social Media Marketing</h1>
         <p>Instagram strategy, posting cadence, templates, and growth tactics.</p>

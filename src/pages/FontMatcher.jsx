@@ -15,7 +15,7 @@ export default function FontMatcher({ onCopy }) {
   const db = FONT_DB[heading]
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Font Matcher</h1>
         <p>Pick a heading font and get body suggestions. Click to copy the Google Fonts import URL.</p>
