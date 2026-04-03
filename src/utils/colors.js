@@ -60,8 +60,9 @@ export function contrastRatio(hex1, hex2) {
 }
 
 export function textColorForBg(hex) {
-  const hsl = hexToHsl(hex)
-  return hsl[2] > 55 ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)'
+  const rgb = hexToRgb(hex)
+  const lum = luminance(rgb[0], rgb[1], rgb[2])
+  return lum > 0.179 ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)'
 }
 
 export function generateHarmony(hex, type) {
@@ -104,7 +105,8 @@ export function generateHarmony(hex, type) {
       colors.push(
         hslToHex(h + 90, s, l),
         hslToHex(h + 180, s, l),
-        hslToHex(h + 270, s, l)
+        hslToHex(h + 270, s, l),
+        hslToHex(h, s, Math.max(l - 25, 10))
       )
       break
     case 'monochromatic':
@@ -140,7 +142,7 @@ export function generateTintScale(cfg) {
     const newH = h + cfg.hueShift * tNorm
     let satShift = cfg.satMax * tNorm + cfg.satMin * (1 - tNorm)
     let newS = Math.max(0, Math.min(100, s + satShift))
-    if (i === 0 || i === n - 1) newS = Math.max(0, newS * 0.3)
+    if (i === 0 || i === n - 1) newS = Math.max(0, newS * 0.5)
     return hslToHex(newH, Math.round(newS), Math.round(newL))
   })
 }
