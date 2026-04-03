@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { generateHarmony, textColorForBg, hslToHex, hexToHsl, contrastRatio } from '../utils/colors'
 
 const HARMS = ['complement', 'analogous', 'triadic', 'monochromatic']
@@ -33,6 +33,7 @@ const STARTERS = [
 export default function PaletteBuilder({ onCopy }) {
   const [baseColor, setBaseColor] = useState('#6366f1')
   const [harmony, setHarmony] = useState('complement')
+  const colorRef = useRef(null)
 
   const colors = generateHarmony(baseColor, harmony)
   const ratio = contrastRatio(baseColor, '#ffffff')
@@ -46,71 +47,92 @@ export default function PaletteBuilder({ onCopy }) {
 
   return (
     <div className="sec">
+      {/* Hero */}
       <div className="sec-h">
         <h1>Refine your vision with <span style={{ color: 'var(--accent)' }}>algorithmic</span> precision.</h1>
         <p>The Palette Builder uses advanced color theory models to generate harmonious systems for enterprise interfaces.</p>
       </div>
 
+      {/* Main split: controls left, swatches right */}
       <div className="split" style={{ marginBottom: 32 }}>
+        {/* Single left card with all controls */}
         <div className="side">
-          <div className="card" style={{ marginBottom: 10 }}>
-            <div className="sl">Base Signature</div>
-            <div className="row" style={{ marginTop: 8 }}>
-              <input type="color" value={baseColor} onChange={e => setBaseColor(e.target.value)} />
-              <input
-                type="text"
-                value={baseColor}
-                style={{ width: 120, fontFamily: 'var(--mono)' }}
-                onChange={e => {
-                  let v = e.target.value
-                  if (!v.startsWith('#')) v = '#' + v
-                  if (/^#[0-9a-f]{6}$/i.test(v)) setBaseColor(v)
-                }}
-              />
+          <div className="card" style={{ padding: 0 }}>
+            {/* Base Signature */}
+            <div style={{ padding: '22px 22px 18px' }}>
+              <div className="sl">Base Signature</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                <div
+                  onClick={() => colorRef.current?.click()}
+                  style={{
+                    width: 48, height: 48, borderRadius: 10, background: baseColor,
+                    cursor: 'pointer', border: '1px solid var(--border)', flexShrink: 0
+                  }}
+                />
+                <input ref={colorRef} type="color" value={baseColor} onChange={e => setBaseColor(e.target.value)} style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />
+                <input
+                  type="text"
+                  value={baseColor}
+                  style={{ width: 120, fontFamily: 'var(--mono)', textTransform: 'uppercase' }}
+                  onChange={e => {
+                    let v = e.target.value
+                    if (!v.startsWith('#')) v = '#' + v
+                    if (/^#[0-9a-f]{6}$/i.test(v)) setBaseColor(v)
+                  }}
+                />
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginTop: 8 }}>{getColorName(baseColor)}</div>
             </div>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginTop: 8 }}>{getColorName(baseColor)}</div>
-          </div>
 
-          <div className="card" style={{ marginBottom: 10 }}>
-            <div className="sl">Harmony Logic</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
-              {HARMS.map(h => (
-                <button key={h} className={`harm-opt${harmony === h ? ' on' : ''}`} onClick={() => setHarmony(h)}>
-                  {HARM_LABELS[h]}{harmony === h ? ' \u2714' : '\u203A'}
-                </button>
-              ))}
+            {/* Harmony Logic */}
+            <div style={{ padding: '18px 22px', borderTop: '1px solid var(--border)' }}>
+              <div className="sl">Harmony Logic</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                {HARMS.map(h => (
+                  <button key={h} className={`harm-opt${harmony === h ? ' on' : ''}`} onClick={() => setHarmony(h)}>
+                    {HARM_LABELS[h]}{harmony === h ? ' \u2714' : '\u203A'}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="card" style={{ marginBottom: 10 }}>
-            <div className="sl">Contrast Filter</div>
-            <div className="row" style={{ marginTop: 6 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>WCAG {ratio.toFixed(1)} AA</span>
-              <span className={`tag ${ratio >= 4.5 ? 'tag-pass' : 'tag-fail'}`}>{ratio >= 4.5 ? 'PASSED' : 'FAIL'}</span>
+            {/* Contrast Filter */}
+            <div style={{ padding: '18px 22px 22px', borderTop: '1px solid var(--border)' }}>
+              <div className="sl">Contrast Filter</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--inp)' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>WCAG {ratio.toFixed(1)} AA</span>
+                <span className={`tag ${ratio >= 4.5 ? 'tag-pass' : 'tag-fail'}`}>{ratio >= 4.5 ? 'PASSED' : 'FAIL'}</span>
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Palette swatches */}
         <div>
           <div className="pal-grid">
             {colors.map((color, i) => (
               <div key={i} className="pal-swatch" style={{ background: color, color: textColorForBg(color) }} onClick={() => onCopy(color)}>
                 <div className="role">{ROLES[i] || `SWATCH ${i + 1}`}</div>
-                <div className="hex">{color}</div>
+                <div className="hex">{color.toUpperCase()}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
+      {/* CSS Variables + Interface Context */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px,100%), 1fr))', gap: 12, marginBottom: 48 }}>
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>CSS Variables</span>
-            <button className="btn btn-s" onClick={() => onCopy(cssVars)} style={{ gap: 4 }}>Copy</button>
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>CSS Variables</span>
+            <button className="btn btn-s" onClick={() => onCopy(cssVars)} style={{ gap: 4, fontSize: 10, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy
+            </button>
           </div>
           <div className="code" onClick={() => onCopy(cssVars)}>{cssVars}</div>
         </div>
+
         <div className="card" style={{ display: 'flex', gap: 20, overflow: 'hidden' }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
@@ -137,8 +159,20 @@ export default function PaletteBuilder({ onCopy }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 48 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
+      {/* Starter Systems */}
+      <div style={{ marginBottom: 48, position: 'relative' }}>
+        {/* FAB + button */}
+        <button
+          onClick={randomPalette}
+          style={{
+            position: 'absolute', top: 0, right: 0, width: 48, height: 48, borderRadius: '50%',
+            background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer',
+            fontSize: 24, fontWeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 16px var(--accent-glow)', transition: 'all var(--t)', zIndex: 2
+          }}
+        >+</button>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16, paddingRight: 60 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Curation</div>
             <h2 style={{ fontSize: 24, fontWeight: 700 }}>Starter Systems</h2>
