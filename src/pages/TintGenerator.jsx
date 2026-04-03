@@ -133,7 +133,7 @@ export default function TintGenerator({ onCopy }) {
 
         {/* Tint Grid */}
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
             {scale.map((c, i) => {
               const isCore = i === anchor
               return (
@@ -170,9 +170,9 @@ export default function TintGenerator({ onCopy }) {
           <h3 style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 20 }}>Harmonic Pairs</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {harmonics.map((pair, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-2)', borderRadius: 10, cursor: 'pointer' }} onClick={() => onCopy(pair.hex)}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-2)', borderRadius: 4, cursor: 'pointer' }} onClick={() => onCopy(pair.hex)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 6, background: pair.hex }} />
+                  <div style={{ width: 28, height: 28, borderRadius: 3, background: pair.hex }} />
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 500 }}>{pair.name} {pair.hex.toUpperCase()}</span>
                 </div>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{pair.match}% MATCH</span>
@@ -215,7 +215,7 @@ export default function TintGenerator({ onCopy }) {
         <div style={{ fontSize: 12, color: 'var(--t2)' }}>
           Powered by <span style={{ fontWeight: 800, color: 'var(--t0)', textTransform: 'uppercase' }}>Obsidian Core</span>
         </div>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, background: 'var(--card)', border: '1px solid var(--border)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 4, background: 'var(--card)', border: '1px solid var(--border)' }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Live Sync</span>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)' }}>Node 04</span>
