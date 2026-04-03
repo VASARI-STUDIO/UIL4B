@@ -31,7 +31,7 @@ const STARTERS = [
 ]
 
 export default function PaletteBuilder({ onCopy }) {
-  const [baseColor, setBaseColor] = useState('#6366f1')
+  const [baseColor, setBaseColor] = useState('#a855f7')
   const [harmony, setHarmony] = useState('complement')
   const colorRef = useRef(null)
 
@@ -65,7 +65,7 @@ export default function PaletteBuilder({ onCopy }) {
                 <div
                   onClick={() => colorRef.current?.click()}
                   style={{
-                    width: 48, height: 48, borderRadius: 10, background: baseColor,
+                    width: 48, height: 48, borderRadius: 4, background: baseColor,
                     cursor: 'pointer', border: '1px solid var(--border)', flexShrink: 0
                   }}
                 />
@@ -99,7 +99,7 @@ export default function PaletteBuilder({ onCopy }) {
             {/* Contrast Filter */}
             <div style={{ padding: '18px 22px 22px', borderTop: '1px solid var(--border)' }}>
               <div className="sl">Contrast Filter</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--inp)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, padding: '8px 14px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--inp)' }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>WCAG {ratio.toFixed(1)} AA</span>
                 <span className={`tag ${ratio >= 4.5 ? 'tag-pass' : 'tag-fail'}`}>{ratio >= 4.5 ? 'PASSED' : 'FAIL'}</span>
               </div>
@@ -144,8 +144,8 @@ export default function PaletteBuilder({ onCopy }) {
               Preview how your harmony translates to functional components like buttons, alerts, and navigation shells.
             </p>
             <div className="row" style={{ gap: 8 }}>
-              <button style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: colors[0] || 'var(--accent)', color: textColorForBg(colors[0] || '#6366f1'), fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Active State</button>
-              <button style={{ padding: '8px 18px', borderRadius: 8, border: `1px solid ${colors[0] || 'var(--accent)'}`, background: 'transparent', color: colors[0] || 'var(--accent)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Outline</button>
+              <button style={{ padding: '8px 18px', borderRadius: 4, border: 'none', background: colors[0] || 'var(--accent)', color: textColorForBg(colors[0] || '#a855f7'), fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Active State</button>
+              <button style={{ padding: '8px 18px', borderRadius: 4, border: `1px solid ${colors[0] || 'var(--accent)'}`, background: 'transparent', color: colors[0] || 'var(--accent)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Outline</button>
             </div>
           </div>
           <div style={{ width: 140, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8, opacity: 0.5 }}>
@@ -153,7 +153,7 @@ export default function PaletteBuilder({ onCopy }) {
             <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-4)', width: '80%' }} />
             <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-4)', width: '90%' }} />
             <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-4)', width: '60%' }} />
-            <div style={{ height: 24, borderRadius: 6, background: colors[0] || 'var(--accent)', width: '65%', marginTop: 4, opacity: 0.7 }} />
+            <div style={{ height: 24, borderRadius: 3, background: colors[0] || 'var(--accent)', width: '65%', marginTop: 4, opacity: 0.7 }} />
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: colors[1] || 'var(--accent)', alignSelf: 'flex-end', marginTop: -20, opacity: 0.8 }} />
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function PaletteBuilder({ onCopy }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
           {STARTERS.map(p => (
             <div key={p.n} className="card" style={{ cursor: 'pointer', padding: 14 }} onClick={() => setBaseColor(p.c[2])}>
-              <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', marginBottom: 10, height: 40 }}>
+              <div style={{ display: 'flex', borderRadius: 4, overflow: 'hidden', marginBottom: 10, height: 40 }}>
                 {p.c.map(c => <div key={c} style={{ flex: 1, background: c }} />)}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>

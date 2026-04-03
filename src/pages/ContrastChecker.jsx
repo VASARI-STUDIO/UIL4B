@@ -92,7 +92,7 @@ export default function ContrastChecker() {
         </div>
 
         <div>
-          <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: bg, color: fg }}>
+          <div style={{ borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)', background: bg, color: fg }}>
             <div style={{ padding: 'clamp(24px,4vw,48px) clamp(20px,3vw,36px)', textAlign: 'center' }}>
               <div style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 14 }}>
                 The future of<br />design is <span style={{ color: fg }}>accessible</span>.
@@ -101,12 +101,12 @@ export default function ContrastChecker() {
                 Good design is not just what it looks like and feels like. Design is how it works for everyone.
               </div>
               <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <div style={{ padding: '10px 24px', fontSize: 12, fontWeight: 600, borderRadius: 8, background: fg, color: bg }}>Primary CTA</div>
-                <div style={{ padding: '10px 24px', fontSize: 12, borderRadius: 8, border: `1px solid ${fg}`, color: fg }}>Ghost Action</div>
+                <div style={{ padding: '10px 24px', fontSize: 12, fontWeight: 600, borderRadius: 4, background: fg, color: bg }}>Primary CTA</div>
+                <div style={{ padding: '10px 24px', fontSize: 12, borderRadius: 4, border: `1px solid ${fg}`, color: fg }}>Ghost Action</div>
               </div>
             </div>
             <div style={{ padding: '0 clamp(20px,3vw,36px) clamp(20px,3vw,30px)', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ flex: 1, minWidth: 140, padding: 16, border: '1px solid rgba(128,128,128,.15)', borderRadius: 10 }}>
+              <div style={{ flex: 1, minWidth: 140, padding: 16, border: '1px solid rgba(128,128,128,.15)', borderRadius: 4 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>Interface Elements</div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 9, padding: '4px 10px', border: '1px solid', borderRadius: 4, opacity: 0.6 }}>Navigation</span>
@@ -114,7 +114,7 @@ export default function ContrastChecker() {
                   <span style={{ fontSize: 9, padding: '4px 10px', border: '1px solid', borderRadius: 4, opacity: 0.3 }}>Disabled</span>
                 </div>
               </div>
-              <div style={{ flex: 1, minWidth: 140, padding: 16, border: '1px solid rgba(128,128,128,.15)', borderRadius: 10 }}>
+              <div style={{ flex: 1, minWidth: 140, padding: 16, border: '1px solid rgba(128,128,128,.15)', borderRadius: 4 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>Visual Simulation</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.6 }}>
                   LUMINANCE (FG): {fgLum.toFixed(3)}<br />
