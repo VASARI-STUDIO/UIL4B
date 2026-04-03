@@ -1,6 +1,6 @@
 export default function Community() {
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Community</h1>
         <p>Connect with other designers and developers using Visari Studio.</p>

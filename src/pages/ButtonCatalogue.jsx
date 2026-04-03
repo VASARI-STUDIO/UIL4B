@@ -23,7 +23,7 @@ function cssStringToObject(css) {
 
 export default function ButtonCatalogue({ onCopy }) {
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Button Catalogue</h1>
         <p>Reusable button styles. Click code to copy CSS.</p>

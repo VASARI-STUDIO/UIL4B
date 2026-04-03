@@ -14,7 +14,7 @@ function DocSection({ title, children }) {
 
 export default function DocsDesign() {
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Web Design Principles</h1>
         <p>Psychology-driven principles for premium, high-converting websites.</p>

@@ -107,6 +107,14 @@ export function generateHarmony(hex, type) {
         hslToHex(h + 270, s, l)
       )
       break
+    case 'monochromatic':
+      colors.push(
+        hslToHex(h, s, Math.min(l + 20, 90)),
+        hslToHex(h, Math.max(s - 15, 10), Math.min(l + 35, 95)),
+        hslToHex(h, Math.max(s - 10, 10), Math.max(l - 20, 10)),
+        hslToHex(h, s, Math.max(l - 35, 5))
+      )
+      break
   }
   return colors
 }
