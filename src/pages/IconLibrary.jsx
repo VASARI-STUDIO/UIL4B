@@ -105,7 +105,7 @@ export default function IconLibrary({ onCopy }) {
   }
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Icon Library</h1>
         <p>Search thousands of icons across major open-source packs via Iconify, or browse the embedded collection offline.</p>

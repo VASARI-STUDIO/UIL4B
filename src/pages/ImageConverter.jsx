@@ -113,7 +113,7 @@ export default function ImageConverter({ toast }) {
   }, [format, quality, getCanvas])
 
   return (
-    <div className="sec on">
+    <div className="sec">
       <div className="sec-h">
         <h1>Image Converter</h1>
         <p>Convert, compress, and resize images locally. Nothing gets uploaded.</p>
