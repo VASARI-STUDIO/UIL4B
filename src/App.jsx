@@ -18,6 +18,8 @@ import SectionLayouts from './pages/SectionLayouts'
 import IconLibrary from './pages/IconLibrary'
 import ImageConverter from './pages/ImageConverter'
 import PromptLibrary from './pages/PromptLibrary'
+import PromptToJson from './pages/PromptToJson'
+import ImageToJson from './pages/ImageToJson'
 import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
 import Login from './pages/Login'
@@ -58,6 +60,8 @@ export default function App() {
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
+            <Route path="/prompt-to-json" element={<PromptToJson onCopy={copy} />} />
+            <Route path="/image-to-json" element={<ImageToJson onCopy={copy} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
             <Route path="/login" element={<Login toast={toast} />} />
