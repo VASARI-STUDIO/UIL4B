@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useSearchParams, Link } from 'react-router-dom'
 import { generateTintScale, T_LABELS, hexToHsl, hslToHex, textColorForBg } from '../utils/colors'
+import { usePalette } from '../contexts/PaletteContext'
 
 function getHarmonicPairs(hex) {
   const [h, s, l] = hexToHsl(hex)
@@ -9,13 +11,24 @@ function getHarmonicPairs(hex) {
   ]
 }
 
+const HEX_RE = /^#[0-9a-f]{6}$/i
+
 export default function TintGenerator({ onCopy }) {
+  const [searchParams] = useSearchParams()
+  const { palette } = usePalette()
   const [baseHex, setBaseHex] = useState('#cc97ff')
   const [lumBias, setLumBias] = useState(82)
   const [satDecay, setSatDecay] = useState(12)
   const [oled, setOled] = useState(true)
   const [anchor] = useState(5)
   const mode = 'perceived'
+
+  // Pick up ?seed= from URL on mount
+  useEffect(() => {
+    const seed = searchParams.get('seed')
+    if (seed && HEX_RE.test(seed)) setBaseHex(seed)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const cfg = { hex: baseHex, anchor, hueShift: 0, satMin: 0, satMax: 0, lMin: oled ? 3 : 5, lMax: lumBias + 16, mode }
   const scale = generateTintScale(cfg)
@@ -81,19 +94,19 @@ export default function TintGenerator({ onCopy }) {
       </div>
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 40 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
         <button className="btn" onClick={() => onCopy(buildJSON())} style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 700 }}>Export JSON</button>
         <button className="btn btn-accent" onClick={() => onCopy(buildCSS())} style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 700 }}>Push to Figma</button>
       </div>
 
-      {/* Controls + Grid split */}
-      <div className="split" style={{ marginBottom: 40 }}>
-        <div className="side" style={{ flex: '0 0 340px' }}>
+      {/* Controls + Vertical Tint Column */}
+      <div className="split" style={{ marginBottom: 40, alignItems: 'flex-start' }}>
+        <div className="side" style={{ flex: '0 0 340px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Generator Controls */}
           <div className="card" style={{ padding: 0 }}>
             <div style={{ padding: '22px 22px 16px' }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 24 }}>Generator Controls</h3>
 
-              {/* Luminance Bias */}
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Luminance Bias</span>
@@ -102,7 +115,6 @@ export default function TintGenerator({ onCopy }) {
                 <input type="range" min="50" max="100" value={lumBias} onChange={e => setLumBias(+e.target.value)} style={{ width: '100%' }} />
               </div>
 
-              {/* Saturation Decay */}
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Saturation Decay</span>
@@ -111,14 +123,12 @@ export default function TintGenerator({ onCopy }) {
                 <input type="range" min="0" max="50" value={satDecay} onChange={e => setSatDecay(+e.target.value)} style={{ width: '100%' }} />
               </div>
 
-              {/* OLED Optimization */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>OLED Optimization</span>
                 <button className={`toggle-switch${oled ? ' on' : ''}`} onClick={() => setOled(!oled)} />
               </div>
             </div>
 
-            {/* Status */}
             <div style={{ padding: '16px 22px', borderTop: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
@@ -129,34 +139,110 @@ export default function TintGenerator({ onCopy }) {
               </p>
             </div>
           </div>
+
+          {/* Import from Palette Builder */}
+          <div className="card" style={{ padding: '18px 22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h3 style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' }}>From Palette Builder</h3>
+              <Link to="/palette" style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', fontFamily: 'var(--mono)' }}>Open &rarr;</Link>
+            </div>
+            {palette.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.6 }}>
+                No palette saved yet. Generate one in <Link to="/palette">Palette Builder</Link> and it will appear here.
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(palette.length, 5)}, 1fr)`, gap: 6 }}>
+                {palette.map((c, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setBaseHex(c)}
+                    title={`Use ${c.toUpperCase()}`}
+                    style={{
+                      background: c,
+                      height: 56,
+                      border: baseHex.toLowerCase() === c.toLowerCase() ? '2px solid var(--accent)' : '1px solid var(--border)',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      padding: '0 0 6px',
+                    }}
+                  >
+                    <span style={{ fontSize: 8, fontFamily: 'var(--mono)', fontWeight: 700, color: textColorForBg(c) }}>
+                      {c.toUpperCase().replace('#', '')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Tint Grid */}
+        {/* Vertical Tint Column */}
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
             {scale.map((c, i) => {
               const isCore = i === anchor
+              const [h, s, l] = hexToHsl(c)
               return (
                 <div
                   key={i}
                   onClick={() => onCopy(c)}
                   style={{
-                    background: c,
-                    padding: '16px 10px 10px',
-                    minHeight: 80,
                     display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
+                    alignItems: 'stretch',
                     cursor: 'pointer',
-                    position: 'relative',
+                    borderBottom: i < scale.length - 1 ? '1px solid var(--border)' : 'none',
+                    background: 'var(--card)',
+                    borderLeft: isCore ? '3px solid var(--accent)' : '3px solid transparent',
+                    transition: 'background var(--t)',
                   }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--hvr)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--card)'}
                 >
-                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: textColorForBg(c), opacity: 0.6 }}>
-                    {isCore ? 'SEED' : `${String(i + 1).padStart(2, '0')}`}
-                  </span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, color: textColorForBg(c) }}>
-                    {c.toUpperCase()}
-                  </span>
+                  {/* Swatch */}
+                  <div style={{
+                    width: 220,
+                    background: c,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 18px',
+                    flexShrink: 0,
+                  }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: textColorForBg(c), opacity: 0.65 }}>
+                      {isCore ? 'SEED' : `STEP ${String(i + 1).padStart(2, '0')}`}
+                    </span>
+                    {isCore && (
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: textColorForBg(c), padding: '2px 8px', border: `1px solid ${textColorForBg(c)}`, borderRadius: 3, opacity: 0.8 }}>BASE</span>
+                    )}
+                  </div>
+
+                  {/* Meta */}
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', gap: 16, minWidth: 0 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700, color: 'var(--t0)' }}>
+                        {c.toUpperCase()}
+                      </span>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)' }}>
+                        hsl({h}, {s}%, {l}%)
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                        {T_LABELS[i]}
+                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onCopy(c) }}
+                        className="btn btn-s"
+                        style={{ padding: '4px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )
             })}
@@ -204,22 +290,6 @@ export default function TintGenerator({ onCopy }) {
             <div style={{ fontSize: 13, fontWeight: 600 }}>OKLCH Adaptive</div>
           </div>
         </div>
-      </div>
-
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 4 }}>API Endpoint</div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t1)' }}>https://api.vasari.io/v2/tints</div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ fontSize: 12, color: 'var(--t2)' }}>
-          Powered by <span style={{ fontWeight: 800, color: 'var(--t0)', textTransform: 'uppercase' }}>Obsidian Core</span>
-        </div>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 4, background: 'var(--card)', border: '1px solid var(--border)' }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Live Sync</span>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)' }}>Node 04</span>
-        </span>
       </div>
     </div>
   )
