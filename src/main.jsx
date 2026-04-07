@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { PaletteProvider } from './contexts/PaletteContext'
 import './styles/global.css'
 
 createRoot(document.getElementById('root')).render(
@@ -11,7 +12,9 @@ createRoot(document.getElementById('root')).render(
     <HashRouter>
       <ThemeProvider>
         <AuthProvider>
-          <App />
+          <PaletteProvider>
+            <App />
+          </PaletteProvider>
         </AuthProvider>
       </ThemeProvider>
     </HashRouter>

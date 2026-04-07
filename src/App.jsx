@@ -28,7 +28,7 @@ import Community from './pages/Community'
 import Feedback from './pages/Feedback'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
-import Resources from './pages/Resources'
+import CategoryDashboard from './pages/CategoryDashboard'
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -48,8 +48,12 @@ export default function App() {
         <main className="main">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/color" element={<CategoryDashboard categoryId="color" />} />
+            <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
+            <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
+            <Route path="/components" element={<CategoryDashboard categoryId="components" />} />
+            <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
             <Route path="/palette" element={<PaletteBuilder onCopy={copy} />} />
-            <Route path="/projects" element={<Dashboard />} />
             <Route path="/tints" element={<TintGenerator onCopy={copy} />} />
             <Route path="/gradients" element={<GradientTool onCopy={copy} />} />
             <Route path="/contrast" element={<ContrastChecker />} />
@@ -70,7 +74,6 @@ export default function App() {
             <Route path="/feedback" element={<Feedback toast={toast} />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="/resources" element={<Resources />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
