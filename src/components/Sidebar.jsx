@@ -58,11 +58,11 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className={`sidebar-overlay${isOpen ? ' visible' : ''}`} onClick={onClose} />
       <nav className={`sidebar${isOpen ? ' open' : ''}`} id="sidebar">
         {/* Brand */}
-        <div className="sidebar-brand">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 4, background: 'var(--accent-bg)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /><path d="M3 9h6" />
+        <NavLink to="/" className="sidebar-brand" onClick={onClose}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+            <div style={{ width: 30, height: 30, borderRadius: 6, background: 'linear-gradient(135deg, var(--accent), var(--accent-strong))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px var(--accent-glow)', flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 22 12 2l10 20" /><path d="M7 18h10" />
               </svg>
             </div>
             <div className="sidebar-brand-text">
@@ -70,7 +70,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <span className="sidebar-brand-sub">Obsidian Toolkit</span>
             </div>
           </div>
-        </div>
+        </NavLink>
 
         {/* Primary Navigation */}
         <div className="sidebar-nav">

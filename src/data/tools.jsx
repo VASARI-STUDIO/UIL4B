@@ -134,14 +134,6 @@ export const TOOLS = [
     keywords: ['image', 'convert', 'compress', 'resize', 'webp', 'png', 'jpg'],
   },
   {
-    id: 'image-to-json',
-    label: 'Image to JSON',
-    path: '/image-to-json',
-    category: 'imagery',
-    description: 'Reverse engineer reference images into prompt JSON.',
-    keywords: ['image', 'json', 'reverse', 'prompt', 'ai', 'analysis'],
-  },
-  {
     id: 'prompt-to-json',
     label: 'Prompt to JSON',
     path: '/prompt-to-json',

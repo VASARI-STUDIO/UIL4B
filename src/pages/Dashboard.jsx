@@ -1,91 +1,171 @@
 import { NavLink } from 'react-router-dom'
-import { CATEGORIES, TOOLS, toolsByCategory } from '../data/tools'
+import { CATEGORIES, TOOLS, toolsByCategory, getCategory } from '../data/tools'
+import { useWorkspace } from '../contexts/WorkspaceContext'
+import { useAuth } from '../contexts/AuthContext'
 
-export default function Dashboard() {
+function PinIcon({ filled }) {
   return (
-    <div className="sec">
-      {/* Hero */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 24, marginBottom: 40 }}>
-        <div>
-          <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 800, letterSpacing: '-.04em', lineHeight: 1, marginBottom: 12, textTransform: 'uppercase' }}>
-            Systems Overview
-          </h1>
-          <p style={{ fontSize: 15, color: 'var(--t1)', maxWidth: 500, lineHeight: 1.7 }}>
-            Orchestrate your creative workflow through the Obsidian architecture. Real-time synchronization active.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-          <StatBlock label="Categories" value={String(CATEGORIES.length)} />
-          <StatBlock label="Tools Online" value={String(TOOLS.length)} dot />
-          <StatBlock label="System Uptime" value="99.9%" />
-        </div>
-      </div>
-
-      {/* Category Bento Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 14, marginBottom: 40 }}>
-        {CATEGORIES.map((cat, idx) => {
-          const tools = toolsByCategory(cat.id)
-          return (
-            <NavLink key={cat.id} to={cat.path} className="dash-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', minHeight: 200 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 4, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                    {cat.icon}
-                  </svg>
-                </div>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 3, fontFamily: 'var(--mono)' }}>
-                  0{idx + 1} / {tools.length} TOOLS
-                </span>
-              </div>
-              <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{cat.label}</h2>
-              <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.6, marginBottom: 16, flex: 1 }}>{cat.description}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                {tools.slice(0, 3).map(t => (
-                  <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--t2)', fontFamily: 'var(--mono)' }}>
-                    <span>{t.label}</span>
-                    <span>&rarr;</span>
-                  </div>
-                ))}
-                {tools.length > 3 && (
-                  <div style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)', marginTop: 4 }}>+{tools.length - 3} more</div>
-                )}
-              </div>
-            </NavLink>
-          )
-        })}
-      </div>
-
-      {/* Footer Bar */}
-      <div className="dash-footer">
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Cloud Node: Sydney-01</span>
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--t3)' }} />
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>V2.5.0-Stable</span>
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <NavLink to="/docs" className="btn btn-s" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 10, fontWeight: 700 }}>Documentation</NavLink>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 3, border: '1px solid var(--border)', background: 'var(--card)', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: 'pulse 2s infinite' }} />
-            <span style={{ color: 'var(--accent)' }}>Live Technical Feed: Active</span>
-          </span>
-        </div>
-      </div>
-    </div>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 17v5" />
+      <path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
+    </svg>
   )
 }
 
-function StatBlock({ label, value, dot }) {
+function ToolTile({ tool }) {
+  const { pinned, togglePinned } = useWorkspace()
+  const cat = getCategory(tool.category)
+  const isPinned = pinned.includes(tool.id)
+
   return (
-    <div>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-        {dot && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e' }} />}
-        {value}
+    <NavLink to={tool.path} className="tool-tile">
+      <div className="tool-tile-head">
+        <div className="tool-tile-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            {cat?.icon}
+          </svg>
+        </div>
+        <button
+          type="button"
+          className={`tool-tile-pin${isPinned ? ' pinned' : ''}`}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePinned(tool.id) }}
+          aria-label={isPinned ? `Unpin ${tool.label}` : `Pin ${tool.label}`}
+        >
+          <PinIcon filled={isPinned} />
+        </button>
+      </div>
+      <div className="tool-tile-label">{tool.label}</div>
+      <div className="tool-tile-desc">{tool.description}</div>
+      <div className="tool-tile-cat">{cat?.label}</div>
+    </NavLink>
+  )
+}
+
+export default function Dashboard() {
+  const { user, userProfile } = useAuth()
+  const { recent, pinned } = useWorkspace()
+
+  const greeting = (() => {
+    const h = new Date().getHours()
+    if (h < 5) return 'Working late'
+    if (h < 12) return 'Good morning'
+    if (h < 18) return 'Good afternoon'
+    return 'Good evening'
+  })()
+
+  const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'maker'
+
+  const pinnedTools = pinned.map(id => TOOLS.find(t => t.id === id)).filter(Boolean)
+  const recentTools = recent
+    .map(id => TOOLS.find(t => t.id === id))
+    .filter(Boolean)
+    .filter(t => !pinned.includes(t.id))
+    .slice(0, 4)
+
+  return (
+    <div className="sec">
+      {/* Hero */}
+      <div style={{ marginBottom: 36 }}>
+        <span className="hero-eyebrow">
+          <span className="dot" /> All systems operational
+        </span>
+        <h1 className="hero-title">
+          {greeting}, <em>{firstName}</em>.
+        </h1>
+        <p className="hero-sub">
+          Your design toolkit, end to end. Search any tool with{' '}
+          <kbd style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 3, padding: '2px 6px' }}>⌘K</kbd>
+          {' '}or browse below.
+        </p>
+      </div>
+
+      {/* Quick stats */}
+      <div className="qstats">
+        <div className="qstat">
+          <span className="qstat-label">Tools online</span>
+          <span className="qstat-value"><span className="dot" />{TOOLS.length}</span>
+        </div>
+        <div className="qstat">
+          <span className="qstat-label">Categories</span>
+          <span className="qstat-value">{CATEGORIES.length}</span>
+        </div>
+        <div className="qstat">
+          <span className="qstat-label">Pinned</span>
+          <span className="qstat-value">{pinned.length}</span>
+        </div>
+        <div className="qstat">
+          <span className="qstat-label">Recent</span>
+          <span className="qstat-value">{recent.length}</span>
+        </div>
+      </div>
+
+      {/* Pinned (only if any) */}
+      {pinnedTools.length > 0 && (
+        <>
+          <div className="section-h">
+            <h2><span className="num">01</span> Pinned</h2>
+            <span className="meta">{pinnedTools.length} {pinnedTools.length === 1 ? 'tool' : 'tools'}</span>
+          </div>
+          <div className="tile-grid">
+            {pinnedTools.map(t => <ToolTile key={t.id} tool={t} />)}
+          </div>
+        </>
+      )}
+
+      {/* Recent */}
+      {recentTools.length > 0 && (
+        <>
+          <div className="section-h">
+            <h2><span className="num">{pinnedTools.length > 0 ? '02' : '01'}</span> Recently used</h2>
+            <span className="meta">last {recentTools.length}</span>
+          </div>
+          <div className="tile-grid">
+            {recentTools.map(t => <ToolTile key={t.id} tool={t} />)}
+          </div>
+        </>
+      )}
+
+      {/* All tools by category */}
+      {CATEGORIES.map((cat, idx) => {
+        const tools = toolsByCategory(cat.id)
+        const sectionNum = String(
+          (pinnedTools.length > 0 ? 1 : 0) + (recentTools.length > 0 ? 1 : 0) + idx + 1
+        ).padStart(2, '0')
+        return (
+          <div key={cat.id}>
+            <div className="section-h">
+              <h2>
+                <span className="num">{sectionNum}</span>
+                {cat.label}
+              </h2>
+              <NavLink to={cat.path} className="meta" style={{ textDecoration: 'none' }}>
+                View category &rarr;
+              </NavLink>
+            </div>
+            <div className="tile-grid">
+              {tools.map(t => <ToolTile key={t.id} tool={t} />)}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Footer */}
+      <div className="dash-footer" style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ok)' }} />
+            v2.5 · Stable
+          </span>
+          <NavLink to="/docs" style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', textDecoration: 'none' }}>
+            Documentation &rarr;
+          </NavLink>
+          <NavLink to="/feedback" style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', textDecoration: 'none' }}>
+            Send feedback &rarr;
+          </NavLink>
+        </div>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t3)' }}>
+          Vasari Obsidian Toolkit
+        </span>
       </div>
     </div>
   )

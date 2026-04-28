@@ -5,6 +5,7 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { PaletteProvider } from './contexts/PaletteContext'
+import { WorkspaceProvider } from './contexts/WorkspaceContext'
 import './styles/global.css'
 
 createRoot(document.getElementById('root')).render(
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')).render(
       <ThemeProvider>
         <AuthProvider>
           <PaletteProvider>
-            <App />
+            <WorkspaceProvider>
+              <App />
+            </WorkspaceProvider>
           </PaletteProvider>
         </AuthProvider>
       </ThemeProvider>
