@@ -5,15 +5,16 @@ import { TOOLS } from '../data/tools'
 const RECENT_KEY = 'vs-recent-tools'
 const PINNED_KEY = 'vs-pinned-tools'
 const MAX_RECENT = 6
+const DEFAULT_PINNED = ['palette', 'tints', 'contrast', 'typescale', 'buttons', 'icons']
 
 const WorkspaceContext = createContext()
 
-function loadList(key) {
+function loadList(key, fallback = []) {
   try {
     const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : []
+    return raw ? JSON.parse(raw) : fallback
   } catch {
-    return []
+    return fallback
   }
 }
 
@@ -27,7 +28,7 @@ function saveList(key, list) {
 
 export function WorkspaceProvider({ children }) {
   const [recent, setRecent] = useState(() => loadList(RECENT_KEY))
-  const [pinned, setPinned] = useState(() => loadList(PINNED_KEY))
+  const [pinned, setPinned] = useState(() => loadList(PINNED_KEY, DEFAULT_PINNED))
   const location = useLocation()
 
   const trackVisit = useCallback((toolId) => {
