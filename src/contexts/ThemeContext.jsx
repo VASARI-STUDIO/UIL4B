@@ -2,9 +2,18 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const ThemeContext = createContext()
 
+const CURRENT_DEFAULT = 'light'
+const VERSION_KEY = 'vs-t-v'
+const THEME_VERSION = '2'
+
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('vs-t') || 'light'
+    if (localStorage.getItem(VERSION_KEY) !== THEME_VERSION) {
+      localStorage.setItem(VERSION_KEY, THEME_VERSION)
+      localStorage.setItem('vs-t', CURRENT_DEFAULT)
+      return CURRENT_DEFAULT
+    }
+    return localStorage.getItem('vs-t') || CURRENT_DEFAULT
   })
 
   useEffect(() => {
