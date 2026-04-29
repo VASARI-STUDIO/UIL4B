@@ -65,7 +65,9 @@ export default function Dashboard() {
   return (
     <div className="sec">
       {/* Hero */}
-      <div style={{ marginBottom: 36 }}>
+      <div className="hero-section">
+        <div className="hero-glow" />
+        <div className="hero-glow-2" />
         <span className="hero-eyebrow">
           <span className="dot" /> All systems operational
         </span>
@@ -74,7 +76,7 @@ export default function Dashboard() {
         </h1>
         <p className="hero-sub">
           Your design toolkit, end to end. Search any tool with{' '}
-          <kbd style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 3, padding: '2px 6px' }}>⌘K</kbd>
+          <kbd style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 6, padding: '2px 7px' }}>⌘K</kbd>
           {' '}or browse below.
         </p>
       </div>
@@ -150,10 +152,10 @@ export default function Dashboard() {
       })}
 
       {/* Footer */}
-      <div className="dash-footer" style={{ marginTop: 24 }}>
+      <div className="dash-footer" style={{ marginTop: 28 }}>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ok)' }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ok)', boxShadow: '0 0 10px rgba(52,211,153,.4)' }} />
             v2.5 · Stable
           </span>
           <NavLink to="/docs" style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', textDecoration: 'none' }}>
