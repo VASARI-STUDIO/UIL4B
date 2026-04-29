@@ -65,40 +65,45 @@ export function textColorForBg(hex) {
   return lum > 0.179 ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)'
 }
 
+function soften(s, factor) { return Math.max(10, Math.round(s * factor)) }
+function lShift(l, delta) { return Math.max(5, Math.min(95, l + delta)) }
+
 export function generateHarmony(hex, type) {
   const [h, s, l] = hexToHsl(hex)
   const colors = [hex]
+  const headroom = 95 - l
+  const depth = l - 5
   switch (type) {
     case 'complement':
       colors.push(
         hslToHex(h + 180, s, l),
-        hslToHex(h, Math.max(s - 20, 10), Math.min(l + 30, 90)),
-        hslToHex(h + 180, Math.max(s - 20, 10), Math.min(l + 30, 90)),
-        hslToHex(h, s, Math.max(l - 25, 10))
+        hslToHex(h, soften(s, .7), lShift(l, headroom * .5)),
+        hslToHex(h + 180, soften(s, .7), lShift(l, headroom * .5)),
+        hslToHex(h, s, lShift(l, -depth * .5))
       )
       break
     case 'analogous':
       colors.push(
         hslToHex(h - 30, s, l),
         hslToHex(h + 30, s, l),
-        hslToHex(h - 15, Math.max(s - 15, 10), Math.min(l + 20, 90)),
-        hslToHex(h + 15, Math.max(s - 15, 10), Math.min(l + 20, 90))
+        hslToHex(h - 15, soften(s, .75), lShift(l, headroom * .35)),
+        hslToHex(h + 15, soften(s, .75), lShift(l, headroom * .35))
       )
       break
     case 'triadic':
       colors.push(
         hslToHex(h + 120, s, l),
         hslToHex(h + 240, s, l),
-        hslToHex(h, Math.max(s - 25, 10), Math.min(l + 25, 90)),
-        hslToHex(h + 120, Math.max(s - 25, 10), Math.min(l + 25, 90))
+        hslToHex(h, soften(s, .65), lShift(l, headroom * .45)),
+        hslToHex(h + 120, soften(s, .65), lShift(l, headroom * .45))
       )
       break
     case 'split':
       colors.push(
         hslToHex(h + 150, s, l),
         hslToHex(h + 210, s, l),
-        hslToHex(h, s, Math.min(l + 30, 90)),
-        hslToHex(h + 180, s, Math.max(l - 20, 10))
+        hslToHex(h, s, lShift(l, headroom * .5)),
+        hslToHex(h + 180, s, lShift(l, -depth * .4))
       )
       break
     case 'tetradic':
@@ -106,15 +111,15 @@ export function generateHarmony(hex, type) {
         hslToHex(h + 90, s, l),
         hslToHex(h + 180, s, l),
         hslToHex(h + 270, s, l),
-        hslToHex(h, s, Math.max(l - 25, 10))
+        hslToHex(h, soften(s, .8), lShift(l, -depth * .45))
       )
       break
     case 'monochromatic':
       colors.push(
-        hslToHex(h, s, Math.min(l + 20, 90)),
-        hslToHex(h, Math.max(s - 15, 10), Math.min(l + 35, 95)),
-        hslToHex(h, Math.max(s - 10, 10), Math.max(l - 20, 10)),
-        hslToHex(h, s, Math.max(l - 35, 5))
+        hslToHex(h, s, lShift(l, headroom * .4)),
+        hslToHex(h, soften(s, .7), lShift(l, headroom * .7)),
+        hslToHex(h, soften(s, .85), lShift(l, -depth * .4)),
+        hslToHex(h, s, lShift(l, -depth * .7))
       )
       break
   }

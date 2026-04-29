@@ -3,15 +3,31 @@ import { useNavigate } from 'react-router-dom'
 import { generateHarmony, textColorForBg, hslToHex } from '../utils/colors'
 import { usePalette } from '../contexts/PaletteContext'
 
-const HARMS = ['complement', 'analogous', 'triadic', 'monochromatic']
-const HARM_LABELS = { complement: 'Complementary', analogous: 'Analogous Focus', triadic: 'Triadic Spread', monochromatic: 'Monochromatic' }
+const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic']
+const HARM_LABELS = {
+  analogous: 'Analogous',
+  complement: 'Complementary',
+  triadic: 'Triadic',
+  split: 'Split Complementary',
+  tetradic: 'Tetradic',
+  monochromatic: 'Monochromatic',
+}
+const HARM_DESC = {
+  analogous: 'Adjacent hues for a cohesive, harmonious feel.',
+  complement: 'Opposite hues for maximum contrast and energy.',
+  triadic: 'Three evenly spaced hues for vibrant balance.',
+  split: 'Base + two hues flanking the complement.',
+  tetradic: 'Four hues at 90° intervals for rich variety.',
+  monochromatic: 'Single hue, varied lightness and saturation.',
+}
 const ROLES = ['PRIMARY', 'CONTAINER', 'ACCENT', 'SUBTLE', 'DEEP']
 const ROLE_DESC = ['Main Brand Anchor', 'Surface Accent', 'High Visibility', 'Muted Backdrop', 'Absolute Foundation']
 
 const STARTERS = [
-  { n: 'Neon Monolith', d: 'High-contrast UI for developer-centric dashboards.', c: ['#6b7cff', '#3a3f6b', '#cfcc45'] },
-  { n: 'Glass Prism', d: 'Soft tonal shifts optimized for immersive editorial layouts.', c: ['#4fa8d5', '#6b8cff', '#555'] },
-  { n: 'Shadow Tech', d: 'Ultra-dark foundations for military-grade security interfaces.', c: ['#666', '#a855f7'] },
+  { n: 'Neon Monolith', d: 'High-contrast UI for developer dashboards.', c: '#6b7cff', h: 'complement' },
+  { n: 'Glass Prism', d: 'Soft tonal shifts for editorial layouts.', c: '#4fa8d5', h: 'analogous' },
+  { n: 'Ember Core', d: 'Warm, energetic palette for creative brands.', c: '#f97316', h: 'triadic' },
+  { n: 'Arctic Depth', d: 'Cool, professional tones for enterprise.', c: '#0ea5e9', h: 'monochromatic' },
 ]
 
 export default function PaletteBuilder({ onCopy }) {
@@ -85,15 +101,19 @@ export default function PaletteBuilder({ onCopy }) {
 
           <div style={{ padding: '0 22px 18px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 10 }}>Harmony Logic</div>
-            <select
-              value={harmony}
-              onChange={e => setHarmony(e.target.value)}
-              style={{ width: '100%', fontSize: 13, fontWeight: 500 }}
-            >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {HARMS.map(h => (
-                <option key={h} value={h}>{HARM_LABELS[h]}</option>
+                <button
+                  key={h}
+                  type="button"
+                  className={`harm-opt${harmony === h ? ' on' : ''}`}
+                  onClick={() => setHarmony(h)}
+                  style={{ padding: '8px 12px', fontSize: 12 }}
+                >
+                  {HARM_LABELS[h]}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           <div style={{ padding: '8px 22px 22px' }}>
@@ -185,31 +205,26 @@ export default function PaletteBuilder({ onCopy }) {
           Curated foundations for specialized industry vertical logic.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px,100%), 1fr))', gap: 14 }}>
-          {STARTERS.map(p => (
-            <div key={p.n} className="card" style={{ cursor: 'pointer', padding: 0, overflow: 'hidden' }} onClick={randomPalette}>
-              {/* Abstract dark image area */}
-              <div style={{
-                height: 140, background: `linear-gradient(135deg, #0a0a0f 0%, ${p.c[0]}22 50%, #0a0a0f 100%)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
-              }}>
-                <div style={{
-                  width: 60, height: 60, borderRadius: '50%',
-                  background: `radial-gradient(circle, ${p.c[0]}44 0%, transparent 70%)`,
-                  filter: 'blur(8px)'
-                }} />
-              </div>
-              <div style={{ padding: '12px 16px 16px' }}>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                  {p.c.map((c, ci) => (
-                    <div key={ci} style={{ width: 16, height: 16, borderRadius: '50%', background: c }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px,100%), 1fr))', gap: 12 }}>
+          {STARTERS.map(p => {
+            const preview = generateHarmony(p.c, p.h)
+            return (
+              <div key={p.n} className="card-i" style={{ cursor: 'pointer', padding: 0, overflow: 'hidden' }} onClick={() => { setBaseColor(p.c); setHarmony(p.h) }}>
+                <div style={{ display: 'flex', height: 48 }}>
+                  {preview.map((c, ci) => (
+                    <div key={ci} style={{ flex: 1, background: c }} />
                   ))}
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{p.n}</div>
-                <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.5 }}>{p.d}</p>
+                <div style={{ padding: '12px 14px 14px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>{p.n}</div>
+                  <p style={{ fontSize: 11, color: 'var(--t2)', lineHeight: 1.45, marginBottom: 6 }}>{p.d}</p>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, color: 'var(--accent)', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+                    {HARM_LABELS[p.h]} · {p.c.toUpperCase()}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
