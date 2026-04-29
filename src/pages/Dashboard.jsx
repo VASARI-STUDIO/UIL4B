@@ -41,16 +41,6 @@ const CAT_ILLUSTRATIONS = {
       <rect x="14" y="66" width="14" height="3" rx="1.5" fill="rgba(139,92,246,.07)" />
     </svg>
   ),
-  components: (
-    <svg viewBox="0 0 80 80" fill="none" className="cat-card-art">
-      <rect x="10" y="14" width="24" height="24" rx="5" fill="rgba(139,92,246,.1)" stroke="rgba(139,92,246,.15)" strokeWidth="1" />
-      <rect x="40" y="14" width="24" height="24" rx="5" fill="rgba(59,130,246,.08)" stroke="rgba(59,130,246,.12)" strokeWidth="1" />
-      <rect x="10" y="44" width="24" height="24" rx="5" fill="rgba(236,72,153,.06)" stroke="rgba(236,72,153,.1)" strokeWidth="1" />
-      <rect x="40" y="44" width="24" height="24" rx="5" fill="rgba(52,211,153,.06)" stroke="rgba(52,211,153,.1)" strokeWidth="1" />
-      <circle cx="22" cy="26" r="4" fill="rgba(139,92,246,.2)" />
-      <rect x="47" y="23" width="10" height="6" rx="3" fill="rgba(59,130,246,.18)" />
-    </svg>
-  ),
   documentation: (
     <svg viewBox="0 0 80 80" fill="none" className="cat-card-art">
       <rect x="16" y="10" width="40" height="52" rx="4" fill="rgba(139,92,246,.05)" stroke="rgba(139,92,246,.12)" strokeWidth="1.5" />
