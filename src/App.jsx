@@ -14,6 +14,7 @@ import GradientTool from './pages/GradientTool'
 import ContrastChecker from './pages/ContrastChecker'
 import TypeScale from './pages/TypeScale'
 import FontMatcher from './pages/FontMatcher'
+import IconLibrary from './pages/IconLibrary'
 import ImageConverter from './pages/ImageConverter'
 import PromptLibrary from './pages/PromptLibrary'
 import PromptToJson from './pages/PromptToJson'
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/contrast" element={<ContrastChecker />} />
             <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
             <Route path="/fontpairs" element={<FontMatcher onCopy={copy} />} />
+            <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
             <Route path="/prompt-to-json" element={<PromptToJson onCopy={copy} />} />

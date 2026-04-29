@@ -110,6 +110,16 @@ export const TOOLS = [
     keywords: ['font', 'pair', 'pairing', 'typography', 'google fonts'],
   },
 
+  // Icons
+  {
+    id: 'icons',
+    label: 'Icon Library',
+    path: '/icons',
+    category: 'imagery',
+    description: 'Search thousands of icons by type with Iconify API.',
+    keywords: ['icon', 'svg', 'symbol', 'iconify', 'search'],
+  },
+
   // Imagery
   {
     id: 'imgconvert',
