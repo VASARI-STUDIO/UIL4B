@@ -1,5 +1,7 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { generateHarmony, textColorForBg, hslToHex } from '../utils/colors'
+import { usePalette } from '../contexts/PaletteContext'
 
 const HARMS = ['complement', 'analogous', 'triadic', 'monochromatic']
 const HARM_LABELS = { complement: 'Complementary', analogous: 'Analogous Focus', triadic: 'Triadic Spread', monochromatic: 'Monochromatic' }
@@ -16,8 +18,19 @@ export default function PaletteBuilder({ onCopy }) {
   const [baseColor, setBaseColor] = useState('#d0bcff')
   const [harmony, setHarmony] = useState('analogous')
   const colorRef = useRef(null)
+  const navigate = useNavigate()
+  const { savePalette } = usePalette()
 
   const colors = generateHarmony(baseColor, harmony)
+
+  useEffect(() => {
+    savePalette(colors)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseColor, harmony])
+
+  const sendToTints = (hex) => {
+    navigate(`/tints?seed=${encodeURIComponent(hex)}`)
+  }
 
   const randomPalette = useCallback(() => {
     const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
@@ -96,11 +109,16 @@ export default function PaletteBuilder({ onCopy }) {
 
         {/* CSS Variables Output */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 8 }}>
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t2)' }}>CSS Variables Output</span>
-            <button className="btn btn-s" onClick={() => onCopy(cssVars)} style={{ padding: '3px 8px' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-s" onClick={() => sendToTints(colors[0])} style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 10, fontWeight: 700 }} title="Open Tint Generator with primary color">
+                Send to Tints &rarr;
+              </button>
+              <button className="btn btn-s" onClick={() => onCopy(cssVars)} style={{ padding: '3px 8px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
           </div>
           <div className="code" onClick={() => onCopy(cssVars)} style={{ fontSize: 12, lineHeight: 1.8 }}>{cssVars}</div>
         </div>
