@@ -14,9 +14,6 @@ import GradientTool from './pages/GradientTool'
 import ContrastChecker from './pages/ContrastChecker'
 import TypeScale from './pages/TypeScale'
 import FontMatcher from './pages/FontMatcher'
-import ButtonCatalogue from './pages/ButtonCatalogue'
-import SectionLayouts from './pages/SectionLayouts'
-import IconLibrary from './pages/IconLibrary'
 import ImageConverter from './pages/ImageConverter'
 import PromptLibrary from './pages/PromptLibrary'
 import PromptToJson from './pages/PromptToJson'
@@ -65,7 +62,6 @@ export default function App() {
             <Route path="/color" element={<CategoryDashboard categoryId="color" />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
             <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
-            <Route path="/components" element={<CategoryDashboard categoryId="components" />} />
             <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
             <Route path="/palette" element={<PaletteBuilder onCopy={copy} />} />
             <Route path="/tints" element={<TintGenerator onCopy={copy} />} />
@@ -73,9 +69,6 @@ export default function App() {
             <Route path="/contrast" element={<ContrastChecker />} />
             <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
             <Route path="/fontpairs" element={<FontMatcher onCopy={copy} />} />
-            <Route path="/buttons" element={<ButtonCatalogue onCopy={copy} />} />
-            <Route path="/layouts" element={<SectionLayouts onCopy={copy} />} />
-            <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
             <Route path="/prompt-to-json" element={<PromptToJson onCopy={copy} />} />

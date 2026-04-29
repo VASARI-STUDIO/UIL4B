@@ -42,20 +42,6 @@ export const CATEGORIES = [
     ),
   },
   {
-    id: 'components',
-    label: 'Components',
-    path: '/components',
-    description: 'Buttons, layouts and icons for fast prototyping.',
-    icon: (
-      <>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </>
-    ),
-  },
-  {
     id: 'documentation',
     label: 'Documentation',
     path: '/docs',
@@ -140,32 +126,6 @@ export const TOOLS = [
     category: 'imagery',
     description: 'Structure natural language prompts into JSON.',
     keywords: ['prompt', 'json', 'midjourney', 'stable diffusion', 'ai'],
-  },
-
-  // Components
-  {
-    id: 'buttons',
-    label: 'Button Catalogue',
-    path: '/buttons',
-    category: 'components',
-    description: 'Button styles with copy-ready CSS.',
-    keywords: ['button', 'cta', 'component'],
-  },
-  {
-    id: 'layouts',
-    label: 'Section Layouts',
-    path: '/layouts',
-    category: 'components',
-    description: 'Responsive section and grid templates.',
-    keywords: ['layout', 'section', 'grid', 'flex', 'responsive'],
-  },
-  {
-    id: 'icons',
-    label: 'Icon Library',
-    path: '/icons',
-    category: 'components',
-    description: 'Searchable icon set with copy-as-SVG.',
-    keywords: ['icon', 'svg', 'symbol'],
   },
 
   // Documentation
