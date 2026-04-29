@@ -12,17 +12,18 @@ export default function CategoryDashboard({ categoryId }) {
   return (
     <div className="sec">
       {/* Hero */}
-      <div style={{ marginBottom: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 32, height: 2, background: 'var(--accent)' }} />
+      <div className="hero-section" style={{ marginBottom: 40 }}>
+        <div className="hero-glow" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, position: 'relative', zIndex: 1 }}>
+          <div style={{ width: 32, height: 2, background: 'var(--accent)', borderRadius: 1, boxShadow: '0 0 12px var(--accent-glow)' }} />
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
             {tools.length} {tools.length === 1 ? 'tool' : 'tools'}
           </span>
         </div>
-        <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 800, letterSpacing: '-.04em', lineHeight: 1, marginBottom: 12, textTransform: 'uppercase' }}>
+        <h1 className="hero-title" style={{ textTransform: 'uppercase' }}>
           {cat.label}
         </h1>
-        <p style={{ fontSize: 15, color: 'var(--t1)', maxWidth: 600, lineHeight: 1.7 }}>
+        <p className="hero-sub">
           {cat.description}
         </p>
       </div>
@@ -33,20 +34,20 @@ export default function CategoryDashboard({ categoryId }) {
           <NavLink
             key={tool.id}
             to={tool.path}
-            className="dash-card"
+            className="card-i"
             style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', minHeight: 180 }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 4, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-s)', background: 'var(--accent-bg)', border: '1px solid rgba(167,139,250,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   {cat.icon}
                 </svg>
               </div>
-              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 3 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '4px 10px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-s)' }}>
                 {cat.label}
               </span>
             </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{tool.label}</h3>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, letterSpacing: '-.01em' }}>{tool.label}</h3>
             <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.6, flex: 1 }}>{tool.description}</p>
             <div style={{ marginTop: 16, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
               Open Tool &rarr;
