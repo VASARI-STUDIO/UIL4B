@@ -99,15 +99,39 @@ export default function Dashboard() {
 
   return (
     <div className="dash">
-      {/* Hero — compact */}
+      {/* Hero — mesh gradient */}
       <div className="dash-hero">
-        <div className="hero-glow" />
+        <div className="hero-mesh">
+          <div className="hero-mesh-orb hero-mesh-orb-1" />
+          <div className="hero-mesh-orb hero-mesh-orb-2" />
+          <div className="hero-mesh-orb hero-mesh-orb-3" />
+        </div>
         <h1 className="dash-hero-title">
           {greeting}, <em>{firstName}</em>
         </h1>
         <p className="dash-hero-sub">
           Pick up where you left off, or explore a category below.
         </p>
+      </div>
+
+      {/* Stats strip */}
+      <div className="qstats">
+        <div className="qstat">
+          <span className="qstat-label">Tools</span>
+          <span className="qstat-value">{TOOLS.length}</span>
+        </div>
+        <div className="qstat">
+          <span className="qstat-label">Pinned</span>
+          <span className="qstat-value">{pinnedTools.length}</span>
+        </div>
+        <div className="qstat">
+          <span className="qstat-label">Categories</span>
+          <span className="qstat-value">{CATEGORIES.length}</span>
+        </div>
+        <div className="qstat">
+          <span className="qstat-label">Status</span>
+          <span className="qstat-value"><span className="dot" /> Online</span>
+        </div>
       </div>
 
       {/* Pinned tools */}
