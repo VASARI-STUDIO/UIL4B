@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { generateTintScale, T_LABELS, hexToHsl, hslToHex, textColorForBg } from '../utils/colors'
 import { usePalette } from '../contexts/PaletteContext'
@@ -13,6 +13,7 @@ export default function TintGenerator({ onCopy }) {
   const [satDecay, setSatDecay] = useState(12)
   const [oled, setOled] = useState(true)
   const [anchor] = useState(5)
+  const colorRef = useRef(null)
   const mode = 'perceived'
 
   // Pick up ?seed= from URL on mount
@@ -70,16 +71,30 @@ export default function TintGenerator({ onCopy }) {
           </p>
         </div>
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', flexShrink: 0 }}>
+          <div
+            onClick={() => colorRef.current?.click()}
+            style={{ width: 40, height: 40, borderRadius: 4, background: baseHex, cursor: 'pointer', border: '1px solid var(--border)', flexShrink: 0 }}
+            title="Pick a color"
+          />
+          <input ref={colorRef} type="color" value={baseHex} onChange={e => setBaseHex(e.target.value)} style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />
           <div>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Current Seed</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{baseHex.toUpperCase()}</div>
+            <input
+              type="text"
+              value={baseHex.toUpperCase()}
+              style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', padding: 0, outline: 'none', width: 90 }}
+              onChange={e => {
+                let v = e.target.value
+                if (!v.startsWith('#')) v = '#' + v
+                if (/^#[0-9a-f]{6}$/i.test(v)) setBaseHex(v)
+              }}
+            />
           </div>
           <button onClick={randomSeed} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t1)', transition: 'all var(--t)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/>
             </svg>
           </button>
-          <input type="color" value={baseHex} onChange={e => setBaseHex(e.target.value)} style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />
         </div>
       </div>
 
