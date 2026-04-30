@@ -32,7 +32,7 @@ export const CATEGORIES = [
     id: 'imagery',
     label: 'Imagery',
     path: '/imagery',
-    description: 'Convert images, extract prompts, structure prompt JSON.',
+    description: 'Icons, image tools, and prompt structuring.',
     icon: (
       <>
         <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -42,24 +42,10 @@ export const CATEGORIES = [
     ),
   },
   {
-    id: 'components',
-    label: 'Components',
-    path: '/components',
-    description: 'Buttons, layouts and icons for fast prototyping.',
-    icon: (
-      <>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </>
-    ),
-  },
-  {
     id: 'documentation',
     label: 'Documentation',
     path: '/docs',
-    description: 'Design principles and marketing references.',
+    description: 'Design principles, marketing references, and external resources.',
     icon: (
       <>
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -78,7 +64,7 @@ export const TOOLS = [
     label: 'Palette Builder',
     path: '/palette',
     category: 'color',
-    description: 'Generate harmonised five-tone color systems.',
+    description: 'Generate harmonised color systems with brand palettes.',
     keywords: ['palette', 'color', 'harmony', 'theme', 'brand'],
   },
   {
@@ -126,6 +112,14 @@ export const TOOLS = [
 
   // Imagery
   {
+    id: 'icons',
+    label: 'Icon Library',
+    path: '/icons',
+    category: 'imagery',
+    description: 'Search thousands of icons via Iconify API.',
+    keywords: ['icon', 'svg', 'symbol', 'iconify'],
+  },
+  {
     id: 'imgconvert',
     label: 'Image Converter',
     path: '/imgconvert',
@@ -140,32 +134,6 @@ export const TOOLS = [
     category: 'imagery',
     description: 'Structure natural language prompts into JSON.',
     keywords: ['prompt', 'json', 'midjourney', 'stable diffusion', 'ai'],
-  },
-
-  // Components
-  {
-    id: 'buttons',
-    label: 'Button Catalogue',
-    path: '/buttons',
-    category: 'components',
-    description: 'Button styles with copy-ready CSS.',
-    keywords: ['button', 'cta', 'component'],
-  },
-  {
-    id: 'layouts',
-    label: 'Section Layouts',
-    path: '/layouts',
-    category: 'components',
-    description: 'Responsive section and grid templates.',
-    keywords: ['layout', 'section', 'grid', 'flex', 'responsive'],
-  },
-  {
-    id: 'icons',
-    label: 'Icon Library',
-    path: '/icons',
-    category: 'components',
-    description: 'Searchable icon set with copy-as-SVG.',
-    keywords: ['icon', 'svg', 'symbol'],
   },
 
   // Documentation
@@ -184,6 +152,14 @@ export const TOOLS = [
     category: 'documentation',
     description: 'Social media and marketing best practices.',
     keywords: ['social', 'marketing', 'content', 'documentation'],
+  },
+  {
+    id: 'resources',
+    label: 'External Resources',
+    path: '/resources',
+    category: 'documentation',
+    description: 'Curated links to fonts, colors, AI tools, and inspiration.',
+    keywords: ['resources', 'links', 'external', 'google fonts', 'tailwind', 'framer', 'awwwards'],
   },
 ]
 

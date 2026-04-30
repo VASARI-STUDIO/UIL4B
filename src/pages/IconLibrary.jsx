@@ -1,4 +1,6 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+
+const API_LIMIT = 999
 
 export default function IconLibrary({ onCopy }) {
   const [query, setQuery] = useState('')
@@ -9,6 +11,7 @@ export default function IconLibrary({ onCopy }) {
   const [count, setCount] = useState(0)
   const timer = useRef(null)
   const cdnOk = useRef(null)
+  const didInit = useRef(false)
 
   const renderLocal = useCallback((q, packFilter) => {
     const localIcons = window.icons || []
@@ -44,7 +47,7 @@ export default function IconLibrary({ onCopy }) {
       return
     }
     const pfx = packFilter ? `prefix=${packFilter}&` : ''
-    fetch(`https://api.iconify.design/search?${pfx}query=${encodeURIComponent(q)}&limit=80`, {
+    fetch(`https://api.iconify.design/search?${pfx}query=${encodeURIComponent(q)}&limit=${API_LIMIT}`, {
       signal: AbortSignal.timeout(4000)
     })
       .then(r => r.json())
@@ -65,6 +68,24 @@ export default function IconLibrary({ onCopy }) {
         cdnOk.current = false
         renderLocal(q, packFilter)
       })
+  }, [renderLocal])
+
+  useEffect(() => {
+    if (didInit.current) return
+    didInit.current = true
+    fetch(`https://api.iconify.design/search?query=arrow&limit=${API_LIMIT}`, { signal: AbortSignal.timeout(4000) })
+      .then(r => r.json())
+      .then(d => {
+        cdnOk.current = true
+        if (d.icons?.length) {
+          setIcons(d.icons.map(id => { const [p, name] = id.split(':'); return { id, pack: p, name, cdn: true } }))
+          setCount(d.icons.length)
+          setMode('Live via Iconify')
+        } else {
+          renderLocal('', '')
+        }
+      })
+      .catch(() => { cdnOk.current = false; renderLocal('', '') })
   }, [renderLocal])
 
   const debounceSearch = useCallback((q, p) => {

@@ -14,14 +14,13 @@ import GradientTool from './pages/GradientTool'
 import ContrastChecker from './pages/ContrastChecker'
 import TypeScale from './pages/TypeScale'
 import FontMatcher from './pages/FontMatcher'
-import ButtonCatalogue from './pages/ButtonCatalogue'
-import SectionLayouts from './pages/SectionLayouts'
 import IconLibrary from './pages/IconLibrary'
 import ImageConverter from './pages/ImageConverter'
 import PromptLibrary from './pages/PromptLibrary'
 import PromptToJson from './pages/PromptToJson'
 import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
+import ExternalResources from './pages/ExternalResources'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
 import Community from './pages/Community'
@@ -65,7 +64,6 @@ export default function App() {
             <Route path="/color" element={<CategoryDashboard categoryId="color" />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
             <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
-            <Route path="/components" element={<CategoryDashboard categoryId="components" />} />
             <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
             <Route path="/palette" element={<PaletteBuilder onCopy={copy} />} />
             <Route path="/tints" element={<TintGenerator onCopy={copy} />} />
@@ -73,14 +71,13 @@ export default function App() {
             <Route path="/contrast" element={<ContrastChecker />} />
             <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
             <Route path="/fontpairs" element={<FontMatcher onCopy={copy} />} />
-            <Route path="/buttons" element={<ButtonCatalogue onCopy={copy} />} />
-            <Route path="/layouts" element={<SectionLayouts onCopy={copy} />} />
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
             <Route path="/prompt-to-json" element={<PromptToJson onCopy={copy} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
+            <Route path="/resources" element={<ExternalResources />} />
             <Route path="/login" element={<Login toast={toast} />} />
             <Route path="/settings" element={<Settings toast={toast} />} />
             <Route path="/community" element={<Community />} />
