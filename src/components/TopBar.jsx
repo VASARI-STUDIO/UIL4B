@@ -33,15 +33,6 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
       </div>
 
       <div className="topbar-right">
-        <nav className="topbar-tabs">
-          <NavLink to="/community" className={({ isActive }) => `topbar-tab${isActive ? ' active' : ''}`}>
-            Community
-          </NavLink>
-          <NavLink to="/feedback" className={({ isActive }) => `topbar-tab${isActive ? ' active' : ''}`}>
-            Feedback
-          </NavLink>
-        </nav>
-
         <button
           className="topbar-icon-btn"
           onClick={toggleTheme}
