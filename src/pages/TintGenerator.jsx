@@ -3,14 +3,6 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { generateTintScale, T_LABELS, hexToHsl, hslToHex, textColorForBg } from '../utils/colors'
 import { usePalette } from '../contexts/PaletteContext'
 
-function getHarmonicPairs(hex) {
-  const [h, s, l] = hexToHsl(hex)
-  return [
-    { name: 'Soft Rose', hex: hslToHex((h + 150) % 360, Math.min(s + 10, 100), Math.min(l + 20, 90)), match: 84 },
-    { name: 'Royal Amethyst', hex: hslToHex((h + 30) % 360, s, l), match: 98 },
-  ]
-}
-
 const HEX_RE = /^#[0-9a-f]{6}$/i
 
 export default function TintGenerator({ onCopy }) {
@@ -30,10 +22,8 @@ export default function TintGenerator({ onCopy }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const cfg = { hex: baseHex, anchor, hueShift: 0, satMin: 0, satMax: 0, lMin: oled ? 3 : 5, lMax: lumBias + 16, mode }
+  const cfg = { hex: baseHex, anchor, hueShift: 0, satMin: -satDecay, satMax: satDecay / 2, lMin: oled ? 3 : 5, lMax: lumBias, mode }
   const scale = generateTintScale(cfg)
-
-  const harmonics = getHarmonicPairs(baseHex)
 
   const buildCSS = useCallback(() => {
     let css = ':root {\n'
@@ -96,7 +86,7 @@ export default function TintGenerator({ onCopy }) {
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
         <button className="btn" onClick={() => onCopy(buildJSON())} style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 700 }}>Export JSON</button>
-        <button className="btn btn-accent" onClick={() => onCopy(buildCSS())} style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 700 }}>Push to Figma</button>
+        <button className="btn btn-accent" onClick={() => onCopy(buildCSS())} style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 700 }}>Copy CSS</button>
       </div>
 
       {/* Controls + Vertical Tint Column */}
@@ -250,23 +240,8 @@ export default function TintGenerator({ onCopy }) {
         </div>
       </div>
 
-      {/* Harmonic Pairs + Tailwind Config */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px,100%), 1fr))', gap: 14, marginBottom: 40 }}>
-        <div className="card">
-          <h3 style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 20 }}>Harmonic Pairs</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {harmonics.map((pair, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-2)', borderRadius: 4, cursor: 'pointer' }} onClick={() => onCopy(pair.hex)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 3, background: pair.hex }} />
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 500 }}>{pair.name} {pair.hex.toUpperCase()}</span>
-                </div>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{pair.match}% MATCH</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
+      {/* Tailwind Config */}
+      <div style={{ marginBottom: 40 }}>
         <div className="card" style={{ position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' }}>Tailwind Config Map</h3>
@@ -278,19 +253,6 @@ export default function TintGenerator({ onCopy }) {
         </div>
       </div>
 
-      {/* Footer meta */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24, marginBottom: 32 }}>
-        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 4 }}>Engine Status</div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>Stable Distribution</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 4 }}>Color Space</div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>OKLCH Adaptive</div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
