@@ -86,7 +86,7 @@ export default function Settings({ toast }) {
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Privacy & Legal</h2>
         <div className="card">
           <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.6, marginBottom: 12 }}>
-            Visari Studio complies with the Australian Privacy Act 1988 and Australian Privacy Principles (APPs).
+            Vasari Obsidian complies with the Australian Privacy Act 1988 and Australian Privacy Principles (APPs).
             Your data is processed in Australia (Sydney region) where applicable.
           </p>
           <ul style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.8, paddingLeft: 20, marginBottom: 14 }}>

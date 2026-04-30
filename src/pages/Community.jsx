@@ -3,7 +3,7 @@ export default function Community() {
     <div className="sec">
       <div className="sec-h">
         <h1>Community</h1>
-        <p>Connect with other designers and developers using Visari Studio.</p>
+        <p>Connect with other designers and developers using Vasari Obsidian.</p>
       </div>
       <div className="card" style={{ textAlign: 'center', padding: '60px 24px' }}>
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" strokeWidth="1.5" style={{ marginBottom: 16 }}>

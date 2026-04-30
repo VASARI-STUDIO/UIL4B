@@ -49,7 +49,7 @@ export default function Login({ toast }) {
         <div className="auth-card card">
           <div className="auth-header">
             <h1>{resetMode ? 'Reset Password' : isSignup ? 'Create Account' : 'Welcome Back'}</h1>
-            <p>{resetMode ? 'Enter your email to receive a reset link.' : isSignup ? 'Sign up to save your work and access all features.' : 'Sign in to your Visari Studio account.'}</p>
+            <p>{resetMode ? 'Enter your email to receive a reset link.' : isSignup ? 'Sign up to save your work and access all features.' : 'Sign in to your Vasari Obsidian account.'}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">

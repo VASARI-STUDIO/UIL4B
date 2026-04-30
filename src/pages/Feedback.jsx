@@ -16,7 +16,7 @@ export default function Feedback({ toast }) {
     <div className="sec">
       <div className="sec-h">
         <h1>Feedback</h1>
-        <p>Help us improve Visari Studio. Share bugs, feature requests, or general feedback.</p>
+        <p>Help us improve Vasari Obsidian. Share bugs, feature requests, or general feedback.</p>
       </div>
       <div className="card" style={{ maxWidth: 600 }}>
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
