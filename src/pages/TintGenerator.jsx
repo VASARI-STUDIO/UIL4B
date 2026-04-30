@@ -91,7 +91,7 @@ export default function TintGenerator({ onCopy }) {
 
       {/* Controls + Vertical Tint Column */}
       <div className="split" style={{ marginBottom: 40, alignItems: 'flex-start' }}>
-        <div className="side" style={{ flex: '0 0 340px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="side" style={{ flex: '0 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Generator Controls */}
           <div className="card" style={{ padding: 0 }}>
             <div style={{ padding: '22px 22px 16px' }}>

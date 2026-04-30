@@ -144,7 +144,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .avatar-circle img{width:100%;height:100%;object-fit:cover}
 
 /* ─── Main ─── */
-.main{flex:1;min-width:0;padding:clamp(20px,4vw,56px) clamp(16px,5vw,64px) clamp(40px,8vw,100px);max-width:1400px;width:100%}
+.main{flex:1;min-width:0;padding:clamp(20px,4vw,56px) clamp(16px,5vw,64px) clamp(40px,8vw,100px);max-width:1400px;width:100%;overflow-x:hidden}
 .sec{animation:fadeUp .25s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
 .sec-h{margin-bottom:40px}
@@ -170,7 +170,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .split{display:flex;gap:20px;flex-wrap:wrap}
 .split>*{flex:1 1 300px;min-width:0}
-.split>.side{flex:0 0 360px}
+.split>.side{flex:0 1 360px;min-width:0}
 
 /* ─── Buttons ─── */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:var(--radius);font-size:12px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--glass-border);background:rgba(255,255,255,.04);color:var(--t0);transition:all .2s;text-decoration:none!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -333,7 +333,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;hei
 .dash-section-header h2{font-size:16px;font-weight:700;letter-spacing:-.01em}
 .dash-section-meta{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t2);letter-spacing:.06em;text-transform:uppercase}
 .dash-empty{font-size:13px;color:var(--t2);padding:20px;text-align:center;border:1px dashed var(--border);border-radius:var(--radius)}
-.dash-tools-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dash-tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:8px}
 .tool-mini{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius);border:1px solid var(--glass-border);background:var(--card);backdrop-filter:blur(var(--glass-blur));-webkit-backdrop-filter:blur(var(--glass-blur));text-decoration:none!important;color:inherit;transition:all .18s;cursor:pointer}
 .tool-mini:hover{border-color:var(--bh);background:var(--hvr);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
 .tool-mini-icon{width:32px;height:32px;border-radius:var(--radius-s);background:var(--accent-bg);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}

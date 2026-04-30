@@ -131,7 +131,7 @@ export default function PaletteBuilder({ onCopy }) {
       </div>
 
       {/* Configuration + CSS Output */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 380px) 1fr', gap: 14, marginBottom: 48 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(min(260px,100%), 380px) minmax(0, 1fr)', gap: 14, marginBottom: 48 }}>
         {/* Configuration */}
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '18px 22px 14px' }}>
@@ -221,7 +221,7 @@ export default function PaletteBuilder({ onCopy }) {
       {/* System Tones */}
       <div style={{ marginBottom: 48 }}>
         <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 20 }}>System Tones</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(allColors.length, 6)}, 1fr)`, gap: 8, position: 'relative' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(min(140px, 100%), 1fr))`, gap: 8, position: 'relative' }}>
           {colors.map((color, i) => (
             <div
               key={`h-${i}`}
