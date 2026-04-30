@@ -9,7 +9,7 @@ export default function Privacy() {
       <div className="card" style={{ maxWidth: 720, lineHeight: 1.8 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>1. About This Policy</h3>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>
-          Visari Studio (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is committed to protecting your personal information in accordance with the
+          Vasari Obsidian (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is committed to protecting your personal information in accordance with the
           Australian Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs). This policy explains how we collect,
           use, disclose, and protect your personal information.
         </p>

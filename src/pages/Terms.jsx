@@ -9,8 +9,8 @@ export default function Terms() {
       <div className="card" style={{ maxWidth: 720, lineHeight: 1.8 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>1. Acceptance</h3>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>
-          By using Visari Studio Web Design Toolkit (&quot;the Service&quot;), you agree to these Terms of Service.
-          The Service is provided by Visari Studio, an Australian-based business. These terms are governed by the
+          By using Vasari Obsidian Web Design Toolkit (&quot;the Service&quot;), you agree to these Terms of Service.
+          The Service is provided by Vasari Obsidian, an Australian-based business. These terms are governed by the
           laws of Australia.
         </p>
 
@@ -31,7 +31,7 @@ export default function Terms() {
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>4. Intellectual Property</h3>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>
           Designs, palettes, gradients, and other outputs you create using the Service belong to you.
-          The Service itself, including its code, design, and documentation, is owned by Visari Studio
+          The Service itself, including its code, design, and documentation, is owned by Vasari Obsidian
           and protected under Australian copyright law.
         </p>
 
@@ -47,7 +47,7 @@ export default function Terms() {
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>6. Limitation of Liability</h3>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>
           The Service is provided &quot;as is&quot; without warranties of any kind, except as required by Australian Consumer Law.
-          To the maximum extent permitted by law, Visari Studio is not liable for any indirect, incidental,
+          To the maximum extent permitted by law, Vasari Obsidian is not liable for any indirect, incidental,
           or consequential damages arising from your use of the Service.
         </p>
 
