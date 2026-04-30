@@ -20,6 +20,7 @@ import PromptLibrary from './pages/PromptLibrary'
 import PromptToJson from './pages/PromptToJson'
 import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
+import ExternalResources from './pages/ExternalResources'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
 import Community from './pages/Community'
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/prompt-to-json" element={<PromptToJson onCopy={copy} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
+            <Route path="/resources" element={<ExternalResources />} />
             <Route path="/login" element={<Login toast={toast} />} />
             <Route path="/settings" element={<Settings toast={toast} />} />
             <Route path="/community" element={<Community />} />
