@@ -60,6 +60,14 @@ export const CATEGORIES = [
 export const TOOLS = [
   // Color Studio
   {
+    id: 'color-studio',
+    label: 'Color Studio',
+    path: '/color-studio',
+    category: 'color',
+    description: 'Complete color system builder with palette, tints, contrast, and gradients.',
+    keywords: ['color', 'studio', 'palette', 'tint', 'contrast', 'gradient', 'system'],
+  },
+  {
     id: 'palette',
     label: 'Palette Builder',
     path: '/palette',
