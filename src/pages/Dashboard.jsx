@@ -99,13 +99,8 @@ export default function Dashboard() {
 
   return (
     <div className="dash">
-      {/* Hero — mesh gradient */}
+      {/* Hero */}
       <div className="dash-hero">
-        <div className="hero-mesh">
-          <div className="hero-mesh-orb hero-mesh-orb-1" />
-          <div className="hero-mesh-orb hero-mesh-orb-2" />
-          <div className="hero-mesh-orb hero-mesh-orb-3" />
-        </div>
         <h1 className="dash-hero-title">
           {greeting}, <em>{firstName}</em>
         </h1>

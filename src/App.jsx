@@ -8,6 +8,7 @@ import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 
 import Dashboard from './pages/Dashboard'
+import ColorStudio from './pages/ColorStudio'
 import PaletteBuilder from './pages/PaletteBuilder'
 import TintGenerator from './pages/TintGenerator'
 import GradientTool from './pages/GradientTool'
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
             <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
             <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
+            <Route path="/color-studio" element={<ColorStudio onCopy={copy} />} />
             <Route path="/palette" element={<PaletteBuilder onCopy={copy} />} />
             <Route path="/tints" element={<TintGenerator onCopy={copy} />} />
             <Route path="/gradients" element={<GradientTool onCopy={copy} />} />
