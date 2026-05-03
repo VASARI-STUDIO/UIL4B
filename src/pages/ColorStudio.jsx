@@ -83,6 +83,45 @@ function CopyIcon({ size = 12 }) {
   )
 }
 
+const LT = { bg: '#ffffff', surface: '#f9f6f1', surfaceAlt: '#eee9e0', border: '#eee9e0', borderStrong: '#e2dcd2', text: '#1a1814', textMuted: '#5c5650', textFaint: '#8a847e', textGhost: '#b8b2aa', card: '#ffffff', inputBg: '#ffffff' }
+const DK = { bg: '#1e1c18', surface: '#161412', surfaceAlt: '#28251f', border: '#353028', borderStrong: '#423c32', text: '#f3efe8', textMuted: '#a8a29e', textFaint: '#706b64', textGhost: '#4a453e', card: '#1e1c18', inputBg: '#28251f' }
+
+function PreviewBtn({ children, bg, color, border, hoverBg, hoverBorder, style = {} }) {
+  const [hover, setHover] = useState(false)
+  const [active, setActive] = useState(false)
+  const base = { padding: '8px 20px', borderRadius: 8, border: border || 'none', background: bg, color, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all .15s ease', transform: active ? 'scale(.97)' : hover ? 'translateY(-1px)' : 'none', opacity: active ? .9 : 1, boxShadow: hover && !active ? '0 2px 8px rgba(0,0,0,.1)' : 'none', ...style }
+  if (hover && hoverBg) base.background = hoverBg
+  if (hover && hoverBorder) base.border = hoverBorder
+  return <button style={base} onMouseEnter={() => setHover(true)} onMouseLeave={() => { setHover(false); setActive(false) }} onMouseDown={() => setActive(true)} onMouseUp={() => setActive(false)}>{children}</button>
+}
+
+function PreviewNavItem({ label, isActive, activeBg, activeColor, idleBg, idleColor, hoverBg }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ padding: '7px 16px', borderRadius: 6, fontSize: 12, fontWeight: isActive ? 600 : 400, cursor: 'pointer', transition: 'all .15s ease', background: isActive ? activeBg : hover ? (hoverBg || 'rgba(128,128,128,.08)') : (idleBg || 'transparent'), color: isActive ? activeColor : idleColor }}
+    >{label}</div>
+  )
+}
+
+function PreviewTableRow({ children, bg, hoverBg, style = {} }) {
+  const [hover, setHover] = useState(false)
+  return <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ ...style, background: hover ? hoverBg : bg, transition: 'background .12s ease', cursor: 'default' }}>{children}</div>
+}
+
+function PreviewToast({ icon, msg, accentColor, iconBg, iconColor, bg, border, textColor }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6, borderRadius: 8, background: bg, border: `1px solid ${border}`, borderLeft: `3px solid ${accentColor}`, transition: 'all .15s ease', transform: hover ? 'translateX(2px)' : 'none', cursor: 'default' }}
+    >
+      <div style={{ width: 22, height: 22, borderRadius: 6, background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{icon}</div>
+      <span style={{ fontSize: 12, color: textColor, flex: 1 }}>{msg}</span>
+      <ContrastBadge fg={iconColor} bg={iconBg} />
+    </div>
+  )
+}
+
 function ContrastBadge({ fg, bg }) {
   const ratio = contrastRatio(fg, bg)
   const pass = ratio >= 4.5
@@ -440,353 +479,356 @@ export default function ColorStudio({ onCopy }) {
       <section style={{ marginBottom: 48 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>UI Preview</h2>
         <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20, lineHeight: 1.6 }}>
-          See your palette in context. Inline contrast ratios show WCAG compliance.
+          See your palette in context. Every component shown in light and dark mode with interactive states and WCAG contrast ratios.
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px,100%),1fr))', gap: 14 }}>
-          {/* Card Preview — Light */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: 20, background: previewBg, color: '#1a1814', borderRadius: 'var(--radius) var(--radius) 0 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e' }}>Card Component</span>
-                <ContrastBadge fg={primary} bg={previewBg} />
-              </div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6, color: '#1a1814' }}>Dashboard Overview</h3>
-              <p style={{ fontSize: 13, color: '#5c5650', lineHeight: 1.6, marginBottom: 16 }}>
-                Your design system is ready. Review the metrics below and export when satisfied.
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: primary, color: textColorForBg(primary), fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                  Get Started
-                </button>
-                <button style={{ padding: '8px 20px', borderRadius: 8, border: `1px solid ${secondary}`, background: 'transparent', color: secondary, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
-                  Learn More
-                </button>
-              </div>
-            </div>
-            <div style={{ padding: '10px 20px', background: '#f9f6f1', borderTop: '1px solid #eee9e0', display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#8a847e' }}>
-              <span>Light theme</span>
-              <ContrastBadge fg="#1a1814" bg={previewBg} />
-            </div>
-          </div>
-
-          {/* Card Preview — Dark */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: 20, background: previewDarkBg, color: '#f3efe8', borderRadius: 'var(--radius) var(--radius) 0 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#706b64' }}>Card Component</span>
-                <ContrastBadge fg={primary} bg={previewDarkBg} />
-              </div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6, color: '#f3efe8' }}>Analytics Report</h3>
-              <p style={{ fontSize: 13, color: '#a8a29e', lineHeight: 1.6, marginBottom: 16 }}>
-                Track performance metrics and identify trends in your design system usage.
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: primary, color: textColorForBg(primary), fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                  View Report
-                </button>
-                <button style={{ padding: '8px 20px', borderRadius: 8, border: `1px solid ${secondary}`, background: 'transparent', color: secondary, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
-                  Export
-                </button>
-              </div>
-            </div>
-            <div style={{ padding: '10px 20px', background: '#161412', borderTop: '1px solid #28251f', display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#706b64' }}>
-              <span>Dark theme</span>
-              <ContrastBadge fg="#f3efe8" bg={previewDarkBg} />
-            </div>
-          </div>
-
-          {/* Nav Bar Preview */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: 14, background: previewBg }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e', marginBottom: 10 }}>Navigation</div>
-              <div style={{ display: 'flex', gap: 4, background: '#eee9e0', borderRadius: 8, padding: 4 }}>
-                <div style={{ padding: '7px 16px', borderRadius: 6, background: primary, color: textColorForBg(primary), fontSize: 12, fontWeight: 600 }}>Dashboard</div>
-                <div style={{ padding: '7px 16px', borderRadius: 6, fontSize: 12, color: '#5c5650' }}>Projects</div>
-                <div style={{ padding: '7px 16px', borderRadius: 6, fontSize: 12, color: '#5c5650' }}>Settings</div>
-              </div>
-              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-                <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
-              </div>
-            </div>
-          </div>
-
-          {/* Form Preview */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: 14, background: previewBg }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e', marginBottom: 10 }}>Form Elements</div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#5c5650', marginBottom: 4 }}>Email Address</label>
-              <div style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2dcd2', background: '#fff', fontSize: 13, color: '#b8b2aa', marginBottom: 12 }}>user@example.com</div>
-              <button style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: primary, color: textColorForBg(primary), fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                Submit
-              </button>
-              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-                <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
-              </div>
-            </div>
-          </div>
-
-          {/* Alert Previews */}
-          <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 10 }}>Alerts</div>
-            {['success', 'warning', 'error', 'info'].map(state => {
-              const shade = STATE_PRESETS[state][stateColors[state]].shades
-              return (
-                <div key={state} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: shade[0], border: `1px solid ${shade[2]}`, marginBottom: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: shade[5], flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: shade[8], fontWeight: 500, flex: 1, textTransform: 'capitalize' }}>{state} alert message</span>
-                  <ContrastBadge fg={shade[8]} bg={shade[0]} />
+          {/* ── Card Component ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ padding: 20, background: t.bg, color: t.text }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint }}>Card Component</span>
+                  <ContrastBadge fg={primary} bg={t.bg} />
                 </div>
-              )
-            })}
-          </div>
-
-          {/* Stats Card */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: 14, background: previewBg }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e', marginBottom: 10 }}>Stats Widget</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { label: 'Revenue', value: '$12.4k', trend: '+12%', color: primary },
-                  { label: 'Users', value: '3,842', trend: '+8%', color: secondary },
-                  { label: 'Conversion', value: '2.4%', trend: '-3%', color: accent },
-                  { label: 'Avg. Time', value: '4:32', trend: '+5%', color: allColors[3] || primary },
-                ].map(s => (
-                  <div key={s.label} style={{ padding: 12, background: '#fff', borderRadius: 8, border: '1px solid #eee9e0' }}>
-                    <div style={{ fontSize: 10, color: '#8a847e', fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1814', marginBottom: 2 }}>{s.value}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: s.trend.startsWith('+') ? '#16a34a' : '#dc2626' }}>{s.trend}</span>
-                      <div style={{ width: 16, height: 3, borderRadius: 2, background: s.color, opacity: .6 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Badges & Tags */}
-          <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Badges & Tags</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {allColors.map((c, i) => (
-                <span key={i} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: c, color: textColorForBg(c) }}>
-                  {ROLES[i] || `Tag ${i + 1}`}
-                </span>
-              ))}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {allColors.map((c, i) => (
-                <span key={i} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 500, border: `1px solid ${c}`, color: c, background: 'transparent' }}>
-                  Outline {i + 1}
-                </span>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-              {allColors.map((c, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
-                  <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{c.toUpperCase()}</span>
-                  <ContrastBadge fg={c} bg={previewBg} />
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6, color: t.text }}>Dashboard Overview</h3>
+                <p style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
+                  Your design system is ready. Review the metrics below and export when satisfied.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <PreviewBtn bg={primary} color={textColorForBg(primary)}>Get Started</PreviewBtn>
+                  <PreviewBtn bg="transparent" color={secondary} border={`1px solid ${secondary}`} hoverBg={`${secondary}12`}>Learn More</PreviewBtn>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Profile / Avatar Card */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ height: 56, background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />
-            <div style={{ padding: '0 16px 16px', position: 'relative' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%', background: primary, color: textColorForBg(primary),
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700,
-                border: '3px solid var(--card)', marginTop: -24, marginBottom: 10,
-              }}>A</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>Alex Morgan</div>
-              <div style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 10 }}>Senior Product Designer</div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${primary}18`, color: primary }}>Design</span>
-                <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${secondary}18`, color: secondary }}>Systems</span>
-                <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${accent}18`, color: accent }}>Research</span>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button style={{ flex: 1, padding: '7px', borderRadius: 8, border: 'none', background: primary, color: textColorForBg(primary), fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Follow</button>
-                <button style={{ flex: 1, padding: '7px', borderRadius: 8, border: `1px solid var(--border)`, background: 'var(--card)', color: 'var(--t0)', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Message</button>
+              <div style={{ padding: '10px 20px', background: t.surface, borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', fontSize: 10, color: t.textFaint }}>
+                <span>{t === LT ? 'Light' : 'Dark'}</span>
+                <ContrastBadge fg={t.text} bg={t.bg} />
               </div>
             </div>
-          </div>
+          ))}
 
-          {/* Pricing Card */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: 20, background: previewBg }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e', marginBottom: 8 }}>Pricing Card</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: primary, color: textColorForBg(primary) }}>PRO</span>
-                <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-                <span style={{ fontSize: 32, fontWeight: 800, color: '#1a1814' }}>$29</span>
-                <span style={{ fontSize: 13, color: '#8a847e' }}>/month</span>
-              </div>
-              {['Unlimited projects', 'Priority support', 'Custom branding', 'API access'].map(f => (
-                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: `${STATE_PRESETS.success[stateColors.success].shades[1]}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 10, color: STATE_PRESETS.success[stateColors.success].shades[6], fontWeight: 700 }}>&#10003;</span>
-                  </div>
-                  <span style={{ fontSize: 12, color: '#5c5650' }}>{f}</span>
+          {/* ── Navigation ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ padding: 14, background: t.bg }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint }}>Navigation</span>
+                  <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
                 </div>
-              ))}
-              <button style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: primary, color: textColorForBg(primary), fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 14 }}>
-                Get Started
-              </button>
-            </div>
-          </div>
-
-          {/* Table / List Preview */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px', background: previewBg }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e' }}>Data Table</span>
-                <ContrastBadge fg="#1a1814" bg={previewBg} />
-              </div>
-              <div style={{ borderRadius: 8, border: '1px solid #eee9e0', overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 80px', padding: '8px 12px', background: '#eee9e0', fontSize: 10, fontWeight: 700, color: '#5c5650', letterSpacing: '.04em', textTransform: 'uppercase' }}>
-                  <span>Name</span><span>Status</span><span>Role</span><span></span>
+                <div style={{ display: 'flex', gap: 4, background: t.surfaceAlt, borderRadius: 8, padding: 4 }}>
+                  <PreviewNavItem label="Dashboard" isActive activeBg={primary} activeColor={textColorForBg(primary)} idleColor={t.textMuted} />
+                  <PreviewNavItem label="Projects" isActive={false} activeBg={primary} activeColor={textColorForBg(primary)} idleColor={t.textMuted} hoverBg={`${t.border}`} />
+                  <PreviewNavItem label="Settings" isActive={false} activeBg={primary} activeColor={textColorForBg(primary)} idleColor={t.textMuted} hoverBg={`${t.border}`} />
                 </div>
-                {[
-                  { name: 'Sarah Chen', status: 'Active', role: 'Admin', stateKey: 'success' },
-                  { name: 'James Wilson', status: 'Pending', role: 'Editor', stateKey: 'warning' },
-                  { name: 'Eva Martinez', status: 'Inactive', role: 'Viewer', stateKey: 'error' },
-                ].map((row, ri) => {
-                  const stShade = STATE_PRESETS[row.stateKey][stateColors[row.stateKey]].shades
+              </div>
+              <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
+            </div>
+          ))}
+
+          {/* ── Form Elements ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ padding: 14, background: t.bg }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint }}>Form Elements</span>
+                  <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
+                </div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 4 }}>Email Address</label>
+                <div style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${t.borderStrong}`, background: t.inputBg, fontSize: 13, color: t.textGhost, marginBottom: 12 }}>user@example.com</div>
+                <PreviewBtn bg={primary} color={textColorForBg(primary)} style={{ width: '100%', justifyContent: 'center' }}>Submit</PreviewBtn>
+              </div>
+              <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
+            </div>
+          ))}
+
+          {/* ── Alerts ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ padding: 14, background: t.bg }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint, display: 'block', marginBottom: 10 }}>Alerts</span>
+                {['success', 'warning', 'error', 'info'].map(state => {
+                  const shade = STATE_PRESETS[state][stateColors[state]].shades
+                  const alertBg = t === LT ? shade[0] : `${shade[8]}22`
+                  const alertBorder = t === LT ? shade[2] : shade[8]
+                  const alertText = t === LT ? shade[8] : shade[2]
                   return (
-                    <div key={ri} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 80px', padding: '10px 12px', background: '#fff', borderTop: '1px solid #eee9e0', alignItems: 'center', fontSize: 12 }}>
-                      <span style={{ fontWeight: 600, color: '#1a1814' }}>{row.name}</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: stShade[5] }} />
-                        <span style={{ fontSize: 11, color: stShade[7] }}>{row.status}</span>
-                      </span>
-                      <span style={{ fontSize: 11, color: '#8a847e' }}>{row.role}</span>
-                      <button style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${primary}22`, background: `${primary}08`, color: primary, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                    <div key={state} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: alertBg, border: `1px solid ${alertBorder}`, marginBottom: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: shade[5], flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: alertText, fontWeight: 500, flex: 1, textTransform: 'capitalize' }}>{state} alert message</span>
+                      <ContrastBadge fg={alertText} bg={alertBg} />
                     </div>
                   )
                 })}
               </div>
+              <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
             </div>
-          </div>
+          ))}
 
-          {/* Chat / Message Bubbles */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: 16, background: '#f9f6f1' }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e', marginBottom: 12 }}>Chat Bubbles</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: secondary, color: textColorForBg(secondary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>J</div>
-                  <div style={{ padding: '8px 14px', borderRadius: '12px 12px 12px 4px', background: '#fff', border: '1px solid #eee9e0', fontSize: 12, color: '#1a1814', maxWidth: '75%' }}>
-                    Hey, how does this palette look?
-                    <div style={{ fontSize: 9, color: '#b8b2aa', marginTop: 4 }}>10:32 AM</div>
+          {/* ── Stats Widget ── */}
+          {[LT, DK].map(t => {
+            const stats = [
+              { label: 'Revenue', value: '$12.4k', trend: '+12%', color: primary },
+              { label: 'Users', value: '3,842', trend: '+8%', color: secondary },
+              { label: 'Conversion', value: '2.4%', trend: '-3%', color: accent },
+              { label: 'Avg. Time', value: '4:32', trend: '+5%', color: allColors[3] || primary },
+            ]
+            return (
+              <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+                <div style={{ padding: 14, background: t.bg }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint, display: 'block', marginBottom: 10 }}>Stats Widget</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {stats.map(s => (
+                      <div key={s.label} style={{ padding: 12, background: t.card, borderRadius: 8, border: `1px solid ${t.border}` }}>
+                        <div style={{ fontSize: 10, color: t.textFaint, fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: t.text, marginBottom: 2 }}>{s.value}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: s.trend.startsWith('+') ? STATE_PRESETS.success[stateColors.success].shades[5] : STATE_PRESETS.error[stateColors.error].shades[5] }}>{s.trend}</span>
+                          <div style={{ width: 16, height: 3, borderRadius: 2, background: s.color, opacity: .6 }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', justifyContent: 'flex-end' }}>
-                  <div style={{ padding: '8px 14px', borderRadius: '12px 12px 4px 12px', background: primary, color: textColorForBg(primary), fontSize: 12, maxWidth: '75%' }}>
-                    Looks great! The contrast ratios all pass AA.
-                    <div style={{ fontSize: 9, opacity: .7, marginTop: 4 }}>10:33 AM</div>
-                  </div>
-                  <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: secondary, color: textColorForBg(secondary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>J</div>
-                  <div style={{ padding: '8px 14px', borderRadius: '12px 12px 12px 4px', background: '#fff', border: '1px solid #eee9e0', fontSize: 12, color: '#1a1814', maxWidth: '75%' }}>
-                    Perfect, let's ship it!
-                  </div>
-                </div>
+                <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
               </div>
-            </div>
-          </div>
+            )
+          })}
 
-          {/* Progress Bars */}
-          <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Progress & Loading</div>
-            {[
-              { label: 'Design tokens', pct: 85, color: primary },
-              { label: 'Component library', pct: 62, color: secondary },
-              { label: 'Documentation', pct: 34, color: accent },
-              { label: 'Testing coverage', pct: 91, color: allColors[3] || primary },
-            ].map(p => (
-              <div key={p.label} style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--t1)' }}>{p.label}</span>
-                  <span style={{ fontSize: 11, fontFamily: 'var(--mono)', fontWeight: 600, color: p.color }}>{p.pct}%</span>
+          {/* ── Badges & Tags ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ padding: 14, background: t.bg }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint, display: 'block', marginBottom: 12 }}>Badges & Tags</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {allColors.map((c, i) => (
+                    <span key={i} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: c, color: textColorForBg(c) }}>
+                      {ROLES[i] || `Tag ${i + 1}`}
+                    </span>
+                  ))}
                 </div>
-                <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${p.pct}%`, borderRadius: 3, background: p.color, transition: 'width .3s ease' }} />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {allColors.map((c, i) => (
+                    <span key={i} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 500, border: `1px solid ${c}`, color: c, background: 'transparent' }}>
+                      Outline {i + 1}
+                    </span>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Sidebar Preview */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', height: 280 }}>
-              <div style={{ width: 180, background: previewDarkBg, padding: 14, display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#706b64', marginBottom: 8 }}>Sidebar</div>
-                {['Dashboard', 'Projects', 'Analytics', 'Settings'].map((item, idx) => (
-                  <div key={item} style={{
-                    padding: '7px 10px', borderRadius: 6, fontSize: 11, fontWeight: idx === 0 ? 600 : 400,
-                    background: idx === 0 ? primary : 'transparent',
-                    color: idx === 0 ? textColorForBg(primary) : '#a8a29e',
-                  }}>{item}</div>
-                ))}
-                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: accent, color: textColorForBg(accent), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700 }}>A</div>
-                  <span style={{ fontSize: 11, color: '#a8a29e' }}>Alex M.</span>
-                </div>
-              </div>
-              <div style={{ flex: 1, background: previewBg, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1814', marginBottom: 4 }}>Dashboard</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, flex: 1 }}>
-                  {allColors.slice(0, 4).map((c, i) => (
-                    <div key={i} style={{ borderRadius: 8, border: '1px solid #eee9e0', padding: 10, background: '#fff' }}>
-                      <div style={{ width: '100%', height: 4, borderRadius: 2, background: c, marginBottom: 8 }} />
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1814' }}>{[247, 1.2, 89, 4.8][i]}{['', 'k', '%', 's'][i]}</div>
-                      <div style={{ fontSize: 9, color: '#8a847e' }}>{['Views', 'Revenue', 'Uptime', 'Latency'][i]}</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {allColors.map((c, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
+                      <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: t.textMuted }}>{c.toUpperCase()}</span>
+                      <ContrastBadge fg={c} bg={t.bg} />
                     </div>
                   ))}
                 </div>
               </div>
+              <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
             </div>
-            <div style={{ padding: '8px 14px', background: 'var(--bg-2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--t2)' }}>
-              <span>App layout</span>
-              <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
-            </div>
-          </div>
+          ))}
 
-          {/* Toast / Notification Preview */}
-          <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Toasts & Notifications</div>
-            {[
-              { type: 'success', msg: 'Changes saved successfully', icon: '✓' },
-              { type: 'error', msg: 'Failed to upload file', icon: '✕' },
-              { type: 'warning', msg: 'Storage almost full (90%)', icon: '!' },
-              { type: 'info', msg: 'New update available v2.4', icon: 'i' },
-            ].map(t => {
-              const shade = STATE_PRESETS[t.type][stateColors[t.type]].shades
-              return (
-                <div key={t.type} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
-                  borderRadius: 8, background: 'var(--card)', border: '1px solid var(--border)',
-                  borderLeft: `3px solid ${shade[5]}`,
-                }}>
-                  <div style={{
-                    width: 22, height: 22, borderRadius: 6, background: shade[1], color: shade[7],
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0,
-                  }}>{t.icon}</div>
-                  <span style={{ fontSize: 12, color: 'var(--t0)', flex: 1 }}>{t.msg}</span>
-                  <ContrastBadge fg={shade[7]} bg={shade[1]} />
+          {/* ── Profile Card ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ height: 56, background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />
+              <div style={{ padding: '0 16px 16px', background: t.bg, position: 'relative' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: primary, color: textColorForBg(primary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, border: `3px solid ${t.bg}`, marginTop: -24, marginBottom: 10 }}>A</div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, color: t.text }}>Alex Morgan</div>
+                <div style={{ fontSize: 12, color: t.textFaint, marginBottom: 10 }}>Senior Product Designer</div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                  <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${primary}18`, color: primary }}>Design</span>
+                  <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${secondary}18`, color: secondary }}>Systems</span>
+                  <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${accent}18`, color: accent }}>Research</span>
                 </div>
-              )
-            })}
-          </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <PreviewBtn bg={primary} color={textColorForBg(primary)} style={{ flex: 1, padding: '7px', fontSize: 11 }}>Follow</PreviewBtn>
+                  <PreviewBtn bg={t.card} color={t.text} border={`1px solid ${t.border}`} hoverBg={t.surfaceAlt} style={{ flex: 1, padding: '7px', fontSize: 11, fontWeight: 500 }}>Message</PreviewBtn>
+                </div>
+              </div>
+              <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
+            </div>
+          ))}
+
+          {/* ── Pricing Card ── */}
+          {[LT, DK].map(t => {
+            const okShade = STATE_PRESETS.success[stateColors.success].shades
+            return (
+              <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+                <div style={{ padding: 20, background: t.bg }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: primary, color: textColorForBg(primary) }}>PRO</span>
+                    <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+                    <span style={{ fontSize: 32, fontWeight: 800, color: t.text }}>$29</span>
+                    <span style={{ fontSize: 13, color: t.textFaint }}>/month</span>
+                  </div>
+                  {['Unlimited projects', 'Priority support', 'Custom branding', 'API access'].map(f => (
+                    <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
+                      <div style={{ width: 16, height: 16, borderRadius: '50%', background: t === LT ? okShade[1] : `${okShade[6]}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 10, color: okShade[t === LT ? 6 : 3], fontWeight: 700 }}>&#10003;</span>
+                      </div>
+                      <span style={{ fontSize: 12, color: t.textMuted }}>{f}</span>
+                    </div>
+                  ))}
+                  <PreviewBtn bg={primary} color={textColorForBg(primary)} style={{ width: '100%', justifyContent: 'center', marginTop: 14 }}>Get Started</PreviewBtn>
+                </div>
+                <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
+              </div>
+            )
+          })}
+
+          {/* ── Data Table ── */}
+          {[LT, DK].map(t => {
+            const rows = [
+              { name: 'Sarah Chen', status: 'Active', role: 'Admin', stateKey: 'success' },
+              { name: 'James Wilson', status: 'Pending', role: 'Editor', stateKey: 'warning' },
+              { name: 'Eva Martinez', status: 'Inactive', role: 'Viewer', stateKey: 'error' },
+            ]
+            return (
+              <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+                <div style={{ padding: '12px 16px', background: t.bg }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint }}>Data Table</span>
+                    <ContrastBadge fg={t.text} bg={t.bg} />
+                  </div>
+                  <div style={{ borderRadius: 8, border: `1px solid ${t.border}`, overflow: 'hidden' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 80px', padding: '8px 12px', background: t.surfaceAlt, fontSize: 10, fontWeight: 700, color: t.textMuted, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                      <span>Name</span><span>Status</span><span>Role</span><span></span>
+                    </div>
+                    {rows.map((row, ri) => {
+                      const stShade = STATE_PRESETS[row.stateKey][stateColors[row.stateKey]].shades
+                      return (
+                        <PreviewTableRow key={ri} bg={t.card} hoverBg={t.surfaceAlt}
+                          style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 80px', padding: '10px 12px', borderTop: `1px solid ${t.border}`, alignItems: 'center', fontSize: 12 }}
+                        >
+                          <span style={{ fontWeight: 600, color: t.text }}>{row.name}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: stShade[5] }} />
+                            <span style={{ fontSize: 11, color: stShade[t === LT ? 7 : 3] }}>{row.status}</span>
+                          </span>
+                          <span style={{ fontSize: 11, color: t.textFaint }}>{row.role}</span>
+                          <PreviewBtn bg={`${primary}12`} color={primary} border={`1px solid ${primary}30`} hoverBg={`${primary}22`} style={{ padding: '4px 10px', fontSize: 10 }}>Edit</PreviewBtn>
+                        </PreviewTableRow>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
+              </div>
+            )
+          })}
+
+          {/* ── Chat Bubbles ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ padding: 16, background: t.surface }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint, display: 'block', marginBottom: 12 }}>Chat Bubbles</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: secondary, color: textColorForBg(secondary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>J</div>
+                    <div style={{ padding: '8px 14px', borderRadius: '12px 12px 12px 4px', background: t.card, border: `1px solid ${t.border}`, fontSize: 12, color: t.text, maxWidth: '75%' }}>
+                      Hey, how does this palette look?
+                      <div style={{ fontSize: 9, color: t.textGhost, marginTop: 4 }}>10:32 AM</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', justifyContent: 'flex-end' }}>
+                    <div style={{ padding: '8px 14px', borderRadius: '12px 12px 4px 12px', background: primary, color: textColorForBg(primary), fontSize: 12, maxWidth: '75%' }}>
+                      Looks great! Contrast ratios all pass AA.
+                      <div style={{ fontSize: 9, opacity: .7, marginTop: 4 }}>10:33 AM</div>
+                    </div>
+                    <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: secondary, color: textColorForBg(secondary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>J</div>
+                    <div style={{ padding: '8px 14px', borderRadius: '12px 12px 12px 4px', background: t.card, border: `1px solid ${t.border}`, fontSize: 12, color: t.text, maxWidth: '75%' }}>
+                      Perfect, let's ship it!
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding: '8px 14px', background: t === LT ? t.surfaceAlt : t.bg, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
+            </div>
+          ))}
+
+          {/* ── Progress Bars ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ padding: 14, background: t.bg }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint, display: 'block', marginBottom: 12 }}>Progress & Loading</span>
+                {[
+                  { label: 'Design tokens', pct: 85, color: primary },
+                  { label: 'Component library', pct: 62, color: secondary },
+                  { label: 'Documentation', pct: 34, color: accent },
+                  { label: 'Testing coverage', pct: 91, color: allColors[3] || primary },
+                ].map(p => (
+                  <div key={p.label} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: t.textMuted }}>{p.label}</span>
+                      <span style={{ fontSize: 11, fontFamily: 'var(--mono)', fontWeight: 600, color: p.color }}>{p.pct}%</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: t.surfaceAlt, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${p.pct}%`, borderRadius: 3, background: p.color, transition: 'width .3s ease' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
+            </div>
+          ))}
+
+          {/* ── Toasts & Notifications ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ padding: 14, background: t.bg }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t.textFaint, display: 'block', marginBottom: 12 }}>Toasts & Notifications</span>
+                {[
+                  { type: 'success', msg: 'Changes saved successfully', icon: '✓' },
+                  { type: 'error', msg: 'Failed to upload file', icon: '✕' },
+                  { type: 'warning', msg: 'Storage almost full (90%)', icon: '!' },
+                  { type: 'info', msg: 'New update available v2.4', icon: 'i' },
+                ].map(toast => {
+                  const shade = STATE_PRESETS[toast.type][stateColors[toast.type]].shades
+                  return <PreviewToast key={toast.type} icon={toast.icon} msg={toast.msg} accentColor={shade[5]} iconBg={t === LT ? shade[1] : `${shade[7]}30`} iconColor={shade[t === LT ? 7 : 3]} bg={t.card} border={t.border} textColor={t.text} />
+                })}
+              </div>
+              <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, fontSize: 10, color: t.textFaint }}>{t === LT ? 'Light' : 'Dark'}</div>
+            </div>
+          ))}
+
+          {/* ── App Layout (full-width) ── */}
+          {[LT, DK].map(t => (
+            <div key={t.bg} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              <div style={{ display: 'flex', height: 260 }}>
+                <div style={{ width: 160, background: t === LT ? DK.bg : LT.bg, padding: 12, display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: t === LT ? DK.textFaint : LT.textFaint, marginBottom: 6 }}>Sidebar</span>
+                  {['Dashboard', 'Projects', 'Analytics', 'Settings'].map((item, idx) => (
+                    <PreviewNavItem key={item} label={item} isActive={idx === 0} activeBg={primary} activeColor={textColorForBg(primary)} idleColor={t === LT ? DK.textMuted : LT.textMuted} hoverBg={t === LT ? DK.surfaceAlt : LT.surfaceAlt} />
+                  ))}
+                  <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }}>
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: accent, color: textColorForBg(accent), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700 }}>A</div>
+                    <span style={{ fontSize: 10, color: t === LT ? DK.textMuted : LT.textMuted }}>Alex M.</span>
+                  </div>
+                </div>
+                <div style={{ flex: 1, background: t.bg, padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 2 }}>Dashboard</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, flex: 1 }}>
+                    {allColors.slice(0, 4).map((c, i) => (
+                      <div key={i} style={{ borderRadius: 8, border: `1px solid ${t.border}`, padding: 8, background: t.card }}>
+                        <div style={{ width: '100%', height: 4, borderRadius: 2, background: c, marginBottom: 6 }} />
+                        <div style={{ fontSize: 15, fontWeight: 700, color: t.text }}>{[247, 1.2, 89, 4.8][i]}{['', 'k', '%', 's'][i]}</div>
+                        <div style={{ fontSize: 9, color: t.textFaint }}>{['Views', 'Revenue', 'Uptime', 'Latency'][i]}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding: '8px 14px', background: t.surface, borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', fontSize: 10, color: t.textFaint }}>
+                <span>App layout — {t === LT ? 'Light' : 'Dark'}</span>
+                <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
