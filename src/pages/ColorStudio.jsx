@@ -35,21 +35,32 @@ const STATE_PRESETS = {
   success: [
     { name: 'Emerald', shades: ['#ecfdf5', '#d1fae5', '#a7f3d0', '#6ee7b7', '#34d399', '#10b981', '#059669', '#047857', '#065f46', '#064e3b'] },
     { name: 'Green', shades: ['#f0fdf4', '#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'] },
+    { name: 'Teal', shades: ['#f0fdfa', '#ccfbf1', '#99f6e4', '#5eead4', '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e', '#115e59', '#134e4a'] },
   ],
   warning: [
     { name: 'Amber', shades: ['#fffbeb', '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f'] },
     { name: 'Yellow', shades: ['#fefce8', '#fef9c3', '#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04', '#a16207', '#854d0e', '#713f12'] },
+    { name: 'Orange', shades: ['#fff7ed', '#ffedd5', '#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12'] },
   ],
   error: [
     { name: 'Red', shades: ['#fef2f2', '#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'] },
     { name: 'Rose', shades: ['#fff1f2', '#ffe4e6', '#fecdd3', '#fda4af', '#fb7185', '#f43f5e', '#e11d48', '#be123c', '#9f1239', '#881337'] },
+    { name: 'Pink', shades: ['#fdf2f8', '#fce7f3', '#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d', '#831843'] },
   ],
   info: [
     { name: 'Blue', shades: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a'] },
+    { name: 'Sky', shades: ['#f0f9ff', '#e0f2fe', '#bae6fd', '#7dd3fc', '#38bdf8', '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e'] },
     { name: 'Indigo', shades: ['#eef2ff', '#e0e7ff', '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81'] },
   ],
 }
 const STATE_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
+
+const STATE_BUNDLES = [
+  { name: 'Default', config: { success: 0, warning: 0, error: 0, info: 0 } },
+  { name: 'Vivid', config: { success: 1, warning: 2, error: 1, info: 0 } },
+  { name: 'Cool', config: { success: 2, warning: 1, error: 2, info: 1 } },
+  { name: 'Warm', config: { success: 1, warning: 0, error: 0, info: 2 } },
+]
 
 const GRAD_PRESETS = [
   { n: 'Indigo Rose', css: 'linear-gradient(135deg,#667eea,#764ba2)' },
@@ -85,6 +96,10 @@ function ContrastBadge({ fg, bg }) {
       {ratio.toFixed(1)}:1 {pass ? 'AA' : ''}
     </span>
   )
+}
+
+function snap(value, target, threshold = 3) {
+  return Math.abs(value - target) <= threshold ? target : value
 }
 
 export default function ColorStudio({ onCopy }) {
@@ -300,12 +315,12 @@ export default function ColorStudio({ onCopy }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: 'var(--t2)' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', fontSize: 9 }}>Lum</span>
-              <input type="range" min="50" max="100" value={lumBias} onChange={e => setLumBias(+e.target.value)} style={{ width: 80 }} />
+              <input type="range" min="50" max="100" value={lumBias} onChange={e => setLumBias(snap(+e.target.value, 82))} style={{ width: 80 }} />
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{lumBias}</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', fontSize: 9 }}>Sat</span>
-              <input type="range" min="0" max="50" value={satDecay} onChange={e => setSatDecay(+e.target.value)} style={{ width: 80 }} />
+              <input type="range" min="0" max="50" value={satDecay} onChange={e => setSatDecay(snap(+e.target.value, 12))} style={{ width: 80 }} />
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{satDecay}</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
@@ -344,7 +359,19 @@ export default function ColorStudio({ onCopy }) {
 
       {/* ═══ SECTION 3: UI STATE COLORS ═══ */}
       <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>UI State Colors</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colors</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Preset</span>
+            {STATE_BUNDLES.map(b => (
+              <button key={b.name}
+                className={`pt-t${JSON.stringify(stateColors) === JSON.stringify(b.config) ? ' on' : ''}`}
+                onClick={() => setStateColors(b.config)}
+                style={{ padding: '4px 10px', fontSize: 10 }}
+              >{b.name}</button>
+            ))}
+          </div>
+        </div>
         {Object.entries(STATE_PRESETS).map(([state, presets]) => {
           const activeIdx = stateColors[state]
           const active = presets[activeIdx]
@@ -537,6 +564,229 @@ export default function ColorStudio({ onCopy }) {
               </div>
             </div>
           </div>
+
+          {/* Badges & Tags */}
+          <div className="card" style={{ padding: 14 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Badges & Tags</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {allColors.map((c, i) => (
+                <span key={i} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: c, color: textColorForBg(c) }}>
+                  {ROLES[i] || `Tag ${i + 1}`}
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {allColors.map((c, i) => (
+                <span key={i} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 500, border: `1px solid ${c}`, color: c, background: 'transparent' }}>
+                  Outline {i + 1}
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+              {allColors.map((c, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
+                  <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{c.toUpperCase()}</span>
+                  <ContrastBadge fg={c} bg={previewBg} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Profile / Avatar Card */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ height: 56, background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />
+            <div style={{ padding: '0 16px 16px', position: 'relative' }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: '50%', background: primary, color: textColorForBg(primary),
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700,
+                border: '3px solid var(--card)', marginTop: -24, marginBottom: 10,
+              }}>A</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>Alex Morgan</div>
+              <div style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 10 }}>Senior Product Designer</div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${primary}18`, color: primary }}>Design</span>
+                <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${secondary}18`, color: secondary }}>Systems</span>
+                <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: `${accent}18`, color: accent }}>Research</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button style={{ flex: 1, padding: '7px', borderRadius: 8, border: 'none', background: primary, color: textColorForBg(primary), fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Follow</button>
+                <button style={{ flex: 1, padding: '7px', borderRadius: 8, border: `1px solid var(--border)`, background: 'var(--card)', color: 'var(--t0)', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Message</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing Card */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: 20, background: previewBg }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e', marginBottom: 8 }}>Pricing Card</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: primary, color: textColorForBg(primary) }}>PRO</span>
+                <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+                <span style={{ fontSize: 32, fontWeight: 800, color: '#1a1814' }}>$29</span>
+                <span style={{ fontSize: 13, color: '#8a847e' }}>/month</span>
+              </div>
+              {['Unlimited projects', 'Priority support', 'Custom branding', 'API access'].map(f => (
+                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: `${STATE_PRESETS.success[stateColors.success].shades[1]}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 10, color: STATE_PRESETS.success[stateColors.success].shades[6], fontWeight: 700 }}>&#10003;</span>
+                  </div>
+                  <span style={{ fontSize: 12, color: '#5c5650' }}>{f}</span>
+                </div>
+              ))}
+              <button style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: primary, color: textColorForBg(primary), fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 14 }}>
+                Get Started
+              </button>
+            </div>
+          </div>
+
+          {/* Table / List Preview */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', background: previewBg }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e' }}>Data Table</span>
+                <ContrastBadge fg="#1a1814" bg={previewBg} />
+              </div>
+              <div style={{ borderRadius: 8, border: '1px solid #eee9e0', overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 80px', padding: '8px 12px', background: '#eee9e0', fontSize: 10, fontWeight: 700, color: '#5c5650', letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                  <span>Name</span><span>Status</span><span>Role</span><span></span>
+                </div>
+                {[
+                  { name: 'Sarah Chen', status: 'Active', role: 'Admin', stateKey: 'success' },
+                  { name: 'James Wilson', status: 'Pending', role: 'Editor', stateKey: 'warning' },
+                  { name: 'Eva Martinez', status: 'Inactive', role: 'Viewer', stateKey: 'error' },
+                ].map((row, ri) => {
+                  const stShade = STATE_PRESETS[row.stateKey][stateColors[row.stateKey]].shades
+                  return (
+                    <div key={ri} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 80px', padding: '10px 12px', background: '#fff', borderTop: '1px solid #eee9e0', alignItems: 'center', fontSize: 12 }}>
+                      <span style={{ fontWeight: 600, color: '#1a1814' }}>{row.name}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: stShade[5] }} />
+                        <span style={{ fontSize: 11, color: stShade[7] }}>{row.status}</span>
+                      </span>
+                      <span style={{ fontSize: 11, color: '#8a847e' }}>{row.role}</span>
+                      <button style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${primary}22`, background: `${primary}08`, color: primary, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Chat / Message Bubbles */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: 16, background: '#f9f6f1' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8a847e', marginBottom: 12 }}>Chat Bubbles</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: secondary, color: textColorForBg(secondary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>J</div>
+                  <div style={{ padding: '8px 14px', borderRadius: '12px 12px 12px 4px', background: '#fff', border: '1px solid #eee9e0', fontSize: 12, color: '#1a1814', maxWidth: '75%' }}>
+                    Hey, how does this palette look?
+                    <div style={{ fontSize: 9, color: '#b8b2aa', marginTop: 4 }}>10:32 AM</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', justifyContent: 'flex-end' }}>
+                  <div style={{ padding: '8px 14px', borderRadius: '12px 12px 4px 12px', background: primary, color: textColorForBg(primary), fontSize: 12, maxWidth: '75%' }}>
+                    Looks great! The contrast ratios all pass AA.
+                    <div style={{ fontSize: 9, opacity: .7, marginTop: 4 }}>10:33 AM</div>
+                  </div>
+                  <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: secondary, color: textColorForBg(secondary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>J</div>
+                  <div style={{ padding: '8px 14px', borderRadius: '12px 12px 12px 4px', background: '#fff', border: '1px solid #eee9e0', fontSize: 12, color: '#1a1814', maxWidth: '75%' }}>
+                    Perfect, let's ship it!
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bars */}
+          <div className="card" style={{ padding: 14 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Progress & Loading</div>
+            {[
+              { label: 'Design tokens', pct: 85, color: primary },
+              { label: 'Component library', pct: 62, color: secondary },
+              { label: 'Documentation', pct: 34, color: accent },
+              { label: 'Testing coverage', pct: 91, color: allColors[3] || primary },
+            ].map(p => (
+              <div key={p.label} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--t1)' }}>{p.label}</span>
+                  <span style={{ fontSize: 11, fontFamily: 'var(--mono)', fontWeight: 600, color: p.color }}>{p.pct}%</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${p.pct}%`, borderRadius: 3, background: p.color, transition: 'width .3s ease' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sidebar Preview */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', height: 280 }}>
+              <div style={{ width: 180, background: previewDarkBg, padding: 14, display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#706b64', marginBottom: 8 }}>Sidebar</div>
+                {['Dashboard', 'Projects', 'Analytics', 'Settings'].map((item, idx) => (
+                  <div key={item} style={{
+                    padding: '7px 10px', borderRadius: 6, fontSize: 11, fontWeight: idx === 0 ? 600 : 400,
+                    background: idx === 0 ? primary : 'transparent',
+                    color: idx === 0 ? textColorForBg(primary) : '#a8a29e',
+                  }}>{item}</div>
+                ))}
+                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: accent, color: textColorForBg(accent), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700 }}>A</div>
+                  <span style={{ fontSize: 11, color: '#a8a29e' }}>Alex M.</span>
+                </div>
+              </div>
+              <div style={{ flex: 1, background: previewBg, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1814', marginBottom: 4 }}>Dashboard</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, flex: 1 }}>
+                  {allColors.slice(0, 4).map((c, i) => (
+                    <div key={i} style={{ borderRadius: 8, border: '1px solid #eee9e0', padding: 10, background: '#fff' }}>
+                      <div style={{ width: '100%', height: 4, borderRadius: 2, background: c, marginBottom: 8 }} />
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1814' }}>{[247, 1.2, 89, 4.8][i]}{['', 'k', '%', 's'][i]}</div>
+                      <div style={{ fontSize: 9, color: '#8a847e' }}>{['Views', 'Revenue', 'Uptime', 'Latency'][i]}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: '8px 14px', background: 'var(--bg-2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--t2)' }}>
+              <span>App layout</span>
+              <ContrastBadge fg={textColorForBg(primary)} bg={primary} />
+            </div>
+          </div>
+
+          {/* Toast / Notification Preview */}
+          <div className="card" style={{ padding: 14 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Toasts & Notifications</div>
+            {[
+              { type: 'success', msg: 'Changes saved successfully', icon: '✓' },
+              { type: 'error', msg: 'Failed to upload file', icon: '✕' },
+              { type: 'warning', msg: 'Storage almost full (90%)', icon: '!' },
+              { type: 'info', msg: 'New update available v2.4', icon: 'i' },
+            ].map(t => {
+              const shade = STATE_PRESETS[t.type][stateColors[t.type]].shades
+              return (
+                <div key={t.type} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
+                  borderRadius: 8, background: 'var(--card)', border: '1px solid var(--border)',
+                  borderLeft: `3px solid ${shade[5]}`,
+                }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 6, background: shade[1], color: shade[7],
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0,
+                  }}>{t.icon}</div>
+                  <span style={{ fontSize: 12, color: 'var(--t0)', flex: 1 }}>{t.msg}</span>
+                  <ContrastBadge fg={shade[7]} bg={shade[1]} />
+                </div>
+              )
+            })}
+          </div>
         </div>
       </section>
 
@@ -591,7 +841,7 @@ export default function ColorStudio({ onCopy }) {
               <div className="seg-label" style={{ marginBottom: 0 }}>Angle</div>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t1)' }}>{gradAngle}&deg;</span>
             </div>
-            <input type="range" min="0" max="360" value={gradAngle} onChange={e => setGradAngle(+e.target.value)} />
+            <input type="range" min="0" max="360" value={gradAngle} onChange={e => setGradAngle(snap(+e.target.value, 135, 5))} />
           </div>
         </div>
 
