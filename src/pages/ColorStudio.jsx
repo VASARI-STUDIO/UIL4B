@@ -36,21 +36,33 @@ const STATE_PRESETS = {
     { name: 'Emerald', shades: ['#ecfdf5', '#d1fae5', '#a7f3d0', '#6ee7b7', '#34d399', '#10b981', '#059669', '#047857', '#065f46', '#064e3b'] },
     { name: 'Green', shades: ['#f0fdf4', '#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'] },
     { name: 'Teal', shades: ['#f0fdfa', '#ccfbf1', '#99f6e4', '#5eead4', '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e', '#115e59', '#134e4a'] },
+    { name: 'Apple', shades: ['#f0fdf4', '#dcfce7', '#b6f5cc', '#7aedaa', '#4ade80', '#34C759', '#2aa648', '#1f8a3a', '#186d2e', '#125524'] },
+    { name: 'Material', shades: ['#e8f5e9', '#c8e6c9', '#a5d6a7', '#81c784', '#66bb6a', '#4CAF50', '#43a047', '#388e3c', '#2e7d32', '#1b5e20'] },
+    { name: 'TW', shades: ['#f0fdf4', '#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'] },
   ],
   warning: [
     { name: 'Amber', shades: ['#fffbeb', '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f'] },
     { name: 'Yellow', shades: ['#fefce8', '#fef9c3', '#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04', '#a16207', '#854d0e', '#713f12'] },
     { name: 'Orange', shades: ['#fff7ed', '#ffedd5', '#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12'] },
+    { name: 'Apple', shades: ['#fffbeb', '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#FF9500', '#e08200', '#b86a00', '#925300', '#6e3e00'] },
+    { name: 'Material', shades: ['#fff8e1', '#ffecb3', '#ffe082', '#ffd54f', '#ffca28', '#FF9800', '#fb8c00', '#f57c00', '#ef6c00', '#e65100'] },
+    { name: 'TW', shades: ['#fffbeb', '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f'] },
   ],
   error: [
     { name: 'Red', shades: ['#fef2f2', '#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'] },
     { name: 'Rose', shades: ['#fff1f2', '#ffe4e6', '#fecdd3', '#fda4af', '#fb7185', '#f43f5e', '#e11d48', '#be123c', '#9f1239', '#881337'] },
     { name: 'Pink', shades: ['#fdf2f8', '#fce7f3', '#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d', '#831843'] },
+    { name: 'Apple', shades: ['#fef2f2', '#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#FF3B30', '#e0342a', '#b82a22', '#91211b', '#6e1914'] },
+    { name: 'Material', shades: ['#ffebee', '#ffcdd2', '#ef9a9a', '#e57373', '#ef5350', '#F44336', '#e53935', '#d32f2f', '#c62828', '#b71c1c'] },
+    { name: 'TW', shades: ['#fef2f2', '#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'] },
   ],
   info: [
     { name: 'Blue', shades: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a'] },
     { name: 'Sky', shades: ['#f0f9ff', '#e0f2fe', '#bae6fd', '#7dd3fc', '#38bdf8', '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e'] },
     { name: 'Indigo', shades: ['#eef2ff', '#e0e7ff', '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81'] },
+    { name: 'Apple', shades: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#007AFF', '#0062d6', '#004db3', '#003d8f', '#002e6b'] },
+    { name: 'Material', shades: ['#e3f2fd', '#bbdefb', '#90caf9', '#64b5f6', '#42a5f5', '#2196F3', '#1e88e5', '#1565c0', '#0d47a1', '#0a3880'] },
+    { name: 'TW', shades: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a'] },
   ],
 }
 const STATE_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
@@ -60,17 +72,28 @@ const STATE_BUNDLES = [
   { name: 'Vivid', config: { success: 1, warning: 2, error: 1, info: 0 } },
   { name: 'Cool', config: { success: 2, warning: 1, error: 2, info: 1 } },
   { name: 'Warm', config: { success: 1, warning: 0, error: 0, info: 2 } },
+  { name: 'Apple', config: { success: 3, warning: 3, error: 3, info: 3 } },
+  { name: 'Material', config: { success: 4, warning: 4, error: 4, info: 4 } },
+  { name: 'Tailwind', config: { success: 5, warning: 5, error: 5, info: 5 } },
 ]
 
 const GRAD_PRESETS = [
-  { n: 'Indigo Rose', css: 'linear-gradient(135deg,#667eea,#764ba2)' },
-  { n: 'Peach', css: 'linear-gradient(to right,#ee9ca7,#ffdde1)' },
-  { n: 'Aqua', css: 'linear-gradient(to right,#1a2980,#26d0ce)' },
-  { n: 'Celestial', css: 'linear-gradient(to right,#c33764,#1d2671)' },
-  { n: 'Relay', css: 'linear-gradient(to right,#3a1c71,#d76d77,#ffaf7b)' },
-  { n: 'Sublime', css: 'linear-gradient(to right,#fc5c7d,#6a82fb)' },
-  { n: 'Flare', css: 'linear-gradient(to right,#f12711,#f5af19)' },
-  { n: 'Emerald', css: 'linear-gradient(to right,#348f50,#56b4d3)' },
+  { n: 'Indigo Rose', stops: [{ color: '#667eea', pos: 0 }, { color: '#764ba2', pos: 100 }], angle: 135, type: 'Linear' },
+  { n: 'Peach', stops: [{ color: '#ee9ca7', pos: 0 }, { color: '#ffdde1', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Aqua', stops: [{ color: '#1a2980', pos: 0 }, { color: '#26d0ce', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Celestial', stops: [{ color: '#c33764', pos: 0 }, { color: '#1d2671', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Relay', stops: [{ color: '#3a1c71', pos: 0 }, { color: '#d76d77', pos: 50 }, { color: '#ffaf7b', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Sublime', stops: [{ color: '#fc5c7d', pos: 0 }, { color: '#6a82fb', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Flare', stops: [{ color: '#f12711', pos: 0 }, { color: '#f5af19', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Emerald', stops: [{ color: '#348f50', pos: 0 }, { color: '#56b4d3', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Sunset', stops: [{ color: '#f093fb', pos: 0 }, { color: '#f5576c', pos: 50 }, { color: '#ffd200', pos: 100 }], angle: 135, type: 'Linear' },
+  { n: 'Ocean', stops: [{ color: '#2E3192', pos: 0 }, { color: '#1BFFFF', pos: 100 }], angle: 135, type: 'Linear' },
+  { n: 'Northern Lights', stops: [{ color: '#43cea2', pos: 0 }, { color: '#185a9d', pos: 100 }], angle: 135, type: 'Linear' },
+  { n: 'Warm Flame', stops: [{ color: '#ff9a9e', pos: 0 }, { color: '#fecfef', pos: 50 }, { color: '#fdfcfb', pos: 100 }], angle: 45, type: 'Linear' },
+  { n: 'Deep Space', stops: [{ color: '#000000', pos: 0 }, { color: '#434343', pos: 100 }], angle: 135, type: 'Linear' },
+  { n: 'Malibu', stops: [{ color: '#4facfe', pos: 0 }, { color: '#00f2fe', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Plum Plate', stops: [{ color: '#667eea', pos: 0 }, { color: '#764ba2', pos: 100 }], angle: 90, type: 'Radial' },
+  { n: 'Rainbow', stops: [{ color: '#ff0000', pos: 0 }, { color: '#ff8800', pos: 20 }, { color: '#ffff00', pos: 40 }, { color: '#00ff00', pos: 60 }, { color: '#0088ff', pos: 80 }, { color: '#8800ff', pos: 100 }], angle: 90, type: 'Linear' },
 ]
 
 const GRAD_TYPES = ['Linear', 'Radial', 'Conic']
@@ -142,7 +165,7 @@ function snap(value, target, threshold = 3) {
 }
 
 export default function ColorStudio({ onCopy }) {
-  const [baseColor, setBaseColor] = useState('#7c5cfc')
+  const [baseColor, setBaseColor] = useState('#2563EB')
   const [harmony, setHarmony] = useState('analogous')
   const [extraColors, setExtraColors] = useState([])
   const [stateColors, setStateColors] = useState({ success: 0, warning: 0, error: 0, info: 0 })
@@ -155,10 +178,10 @@ export default function ColorStudio({ onCopy }) {
   const [satDecay, setSatDecay] = useState(12)
   const [oled, setOled] = useState(true)
 
-  const [gradColor1, setGradColor1] = useState(null)
-  const [gradColor2, setGradColor2] = useState(null)
+  const [gradStops, setGradStops] = useState([{ color: null, position: 0 }, { color: null, position: 100 }])
   const [gradAngle, setGradAngle] = useState(135)
   const [gradType, setGradType] = useState('Linear')
+  const [stopPickerIdx, setStopPickerIdx] = useState(null)
 
   const colors = generateHarmony(baseColor, harmony)
   const allColors = [...colors, ...extraColors]
@@ -214,11 +237,22 @@ export default function ColorStudio({ onCopy }) {
   }).join('\n')
   const fullCSS = `:root {\n${allColors.map((x, i) => `  --color-${i + 1}: ${x};`).join('\n')}\n\n${stateCSS}\n}`
 
-  const gc1 = gradColor1 || allColors[0]
-  const gc2 = gradColor2 || allColors[1] || allColors[0]
+  const resolveStop = (s, i) => s.color || allColors[i] || allColors[0]
   const gradFn = gradType === 'Radial' ? 'radial-gradient' : gradType === 'Conic' ? 'conic-gradient' : 'linear-gradient'
   const angleStr = gradType === 'Linear' ? `${gradAngle}deg, ` : gradType === 'Conic' ? `from ${gradAngle}deg, ` : ''
-  const gradCSS = `${gradFn}(${angleStr}${gc1}, ${gc2})`
+  const gradCSS = `${gradFn}(${angleStr}${gradStops.map((s, i) => `${resolveStop(s, i)} ${s.position}%`).join(', ')})`
+  const addGradStop = () => {
+    const sorted = [...gradStops].sort((a, b) => a.position - b.position)
+    const lastTwo = sorted.slice(-2)
+    const midPos = Math.round((lastTwo[0].position + lastTwo[1].position) / 2)
+    const c1 = hexToRgb(resolveStop(lastTwo[0], gradStops.indexOf(lastTwo[0])))
+    const c2 = hexToRgb(resolveStop(lastTwo[1], gradStops.indexOf(lastTwo[1])))
+    const midHex = '#' + [0, 1, 2].map(i => Math.round((c1[i] + c2[i]) / 2).toString(16).padStart(2, '0')).join('')
+    setGradStops([...gradStops, { color: midHex, position: midPos }])
+  }
+  const removeGradStop = (idx) => { if (gradStops.length > 2) setGradStops(gradStops.filter((_, i) => i !== idx)) }
+  const updateStop = (idx, updates) => setGradStops(gradStops.map((s, i) => i === idx ? { ...s, ...updates } : s))
+  const applyPreset = (preset) => { setGradStops(preset.stops.map(s => ({ color: s.color, position: s.pos }))); setGradAngle(preset.angle); setGradType(preset.type); setStopPickerIdx(null) }
 
   const primary = allColors[0]
   const secondary = allColors[1] || allColors[0]
@@ -834,43 +868,81 @@ export default function ColorStudio({ onCopy }) {
 
       {/* ═══ SECTION 6: GRADIENT TOOL ═══ */}
       <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Gradient Tool</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
+          <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
+          <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
+        </div>
 
         <div className="grad-big" style={{ background: gradCSS, borderRadius: 'var(--radius)' }}>
           <div className="grad-tags">
             <span className="grad-tag">{gradFn.toUpperCase()}</span>
             <span className="grad-tag">{gradAngle}&deg;</span>
+            <span className="grad-tag">{gradStops.length} stops</span>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px,100%),1fr))', gap: 14, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px,100%),1fr))', gap: 14, marginBottom: 20 }}>
+          {/* Stop controls */}
           <div className="card" style={{ padding: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Colors</div>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div className="seg-label">Start</div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <input type="color" value={gc1} onChange={e => setGradColor1(e.target.value)} />
-                  <input type="text" value={gc1} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11 }}
-                    onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) setGradColor1(e.target.value) }}
-                  />
-                </div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="seg-label">End</div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <input type="color" value={gc2} onChange={e => setGradColor2(e.target.value)} />
-                  <input type="text" value={gc2} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11 }}
-                    onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) setGradColor2(e.target.value) }}
-                  />
-                </div>
-              </div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Color Stops</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {gradStops.map((stop, si) => {
+                const resolved = resolveStop(stop, si)
+                return (
+                  <div key={si} style={{ display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
+                    <input type="color" value={resolved} onChange={e => updateStop(si, { color: e.target.value })} style={{ width: 32, height: 32, borderRadius: 6, cursor: 'pointer' }} />
+                    <input type="text" value={resolved.toUpperCase()} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, minWidth: 0 }}
+                      onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
+                    />
+                    <input type="number" min="0" max="100" value={stop.position} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
+                      style={{ width: 52, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center' }}
+                    />
+                    <span style={{ fontSize: 9, color: 'var(--t3)' }}>%</span>
+                    <button type="button" onClick={() => setStopPickerIdx(stopPickerIdx === si ? null : si)}
+                      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 6px', cursor: 'pointer', fontSize: 10, color: 'var(--t2)', transition: 'all .15s' }}
+                      title="Fill from palette or tints"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a7 7 0 007-7c0-2-1-3.9-3-5.5s-3.3-3.5-4-6.5c-.7 3-2 4.5-4 6.5S5 13 5 15a7 7 0 007 7z"/></svg>
+                    </button>
+                    {gradStops.length > 2 && (
+                      <button onClick={() => removeGradStop(si)}
+                        style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 14, padding: '2px 4px', lineHeight: 1 }}
+                      >&times;</button>
+                    )}
+                    {stopPickerIdx === si && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--warm-shadow-lg)', padding: 12, marginTop: 4, width: 260 }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 6 }}>From Palette</div>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
+                          {allColors.map((c, ci) => (
+                            <div key={ci} onClick={() => { updateStop(si, { color: c }); setStopPickerIdx(null) }}
+                              style={{ width: 24, height: 24, borderRadius: 4, background: c, cursor: 'pointer', border: '1px solid var(--border)' }} title={c}
+                            />
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 6 }}>From Tints</div>
+                        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                          {tintScale.map((c, ti) => (
+                            <div key={ti} onClick={() => { updateStop(si, { color: c }); setStopPickerIdx(null) }}
+                              style={{ width: 20, height: 20, borderRadius: 3, background: c, cursor: 'pointer', border: '1px solid var(--border)' }} title={c}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            <button className="btn btn-s" onClick={() => { setGradColor1(null); setGradColor2(null) }} style={{ fontSize: 10 }}>
-              Auto from palette
-            </button>
+            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+              <button className="btn btn-s" onClick={() => setGradStops(gradStops.map((s, i) => ({ ...s, color: null })))} style={{ fontSize: 10 }}>Auto from palette</button>
+              <button className="btn btn-s" onClick={addGradStop} style={{ fontSize: 10 }}>+ Stop</button>
+            </div>
           </div>
 
+          {/* Properties */}
           <div className="card" style={{ padding: 16 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Properties</div>
             <div className="seg-label">Type</div>
@@ -884,29 +956,49 @@ export default function ColorStudio({ onCopy }) {
               <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t1)' }}>{gradAngle}&deg;</span>
             </div>
             <input type="range" min="0" max="360" value={gradAngle} onChange={e => setGradAngle(snap(+e.target.value, 135, 5))} />
+
+            {/* CSS Export */}
+            <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>CSS</span>
+                <button className="btn btn-s" onClick={() => onCopy(`background: ${gradCSS};`)} style={{ padding: '4px 10px', fontSize: 10 }}>
+                  <CopyIcon /> Copy
+                </button>
+              </div>
+              <div className="code" onClick={() => onCopy(`background: ${gradCSS};`)} style={{ fontSize: 11 }}>
+                {`background: ${gradCSS};`}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Presets */}
+        {/* Presets — large vertical cards */}
         <div style={{ marginBottom: 14 }}>
           <div className="seg-label">Presets</div>
           <div className="grad-presets">
-            {GRAD_PRESETS.map(g => (
-              <div key={g.n} className="grad-p" style={{ background: g.css }} onClick={() => onCopy(`background: ${g.css};`)} title={g.n} />
-            ))}
-          </div>
-        </div>
-
-        {/* Export */}
-        <div className="card" style={{ padding: '12px 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600 }}>CSS</span>
-            <button className="btn btn-s" onClick={() => onCopy(`background: ${gradCSS};`)} style={{ padding: '4px 10px', fontSize: 10 }}>
-              <CopyIcon /> Copy
-            </button>
-          </div>
-          <div className="code" onClick={() => onCopy(`background: ${gradCSS};`)} style={{ fontSize: 11 }}>
-            {`background: ${gradCSS};`}
+            {GRAD_PRESETS.map(g => {
+              const previewCss = `${g.type === 'Radial' ? 'radial-gradient' : g.type === 'Conic' ? 'conic-gradient' : 'linear-gradient'}(${g.type === 'Linear' ? g.angle + 'deg, ' : g.type === 'Conic' ? 'from ' + g.angle + 'deg, ' : ''}${g.stops.map(s => `${s.color} ${s.pos}%`).join(', ')})`
+              return (
+                <div key={g.n} className="grad-p" onClick={() => applyPreset(g)}>
+                  <div className="grad-p-preview" style={{ background: previewCss }} />
+                  <div className="grad-p-info">
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'var(--t0)' }}>{g.n}</div>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {g.stops.map((s, si) => (
+                        <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <div style={{ width: 12, height: 12, borderRadius: 3, background: s.color, border: '1px solid var(--border)' }} />
+                          <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{s.color.toUpperCase()}</span>
+                          {si < g.stops.length - 1 && <span style={{ color: 'var(--t3)', fontSize: 9 }}>→</span>}
+                        </div>
+                      ))}
+                    </div>
+                    <button className="btn btn-s" style={{ marginTop: 6, padding: '3px 8px', fontSize: 9 }}
+                      onClick={e => { e.stopPropagation(); onCopy(`background: ${previewCss};`) }}
+                    ><CopyIcon size={9} /> CSS</button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>

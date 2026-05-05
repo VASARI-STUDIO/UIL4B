@@ -18,7 +18,6 @@ import FontMatcher from './pages/FontMatcher'
 import IconLibrary from './pages/IconLibrary'
 import ImageConverter from './pages/ImageConverter'
 import PromptLibrary from './pages/PromptLibrary'
-import PromptToJson from './pages/PromptToJson'
 import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
 import ExternalResources from './pages/ExternalResources'
@@ -29,6 +28,8 @@ import Feedback from './pages/Feedback'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import CategoryDashboard from './pages/CategoryDashboard'
+import DesignReference from './pages/DesignReference'
+import DesignSystemExport from './pages/DesignSystemExport'
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -76,9 +77,10 @@ export default function App() {
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
-            <Route path="/prompt-to-json" element={<PromptToJson onCopy={copy} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
+            <Route path="/design-reference" element={<DesignReference onCopy={copy} />} />
+            <Route path="/export" element={<DesignSystemExport onCopy={copy} toast={toast} />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/login" element={<Login toast={toast} />} />
             <Route path="/settings" element={<Settings toast={toast} />} />
