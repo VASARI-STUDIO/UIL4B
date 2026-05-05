@@ -135,14 +135,6 @@ export const TOOLS = [
     description: 'Convert, compress and resize images locally.',
     keywords: ['image', 'convert', 'compress', 'resize', 'webp', 'png', 'jpg'],
   },
-  {
-    id: 'prompt-to-json',
-    label: 'Prompt to JSON',
-    path: '/prompt-to-json',
-    category: 'imagery',
-    description: 'Structure natural language prompts into JSON.',
-    keywords: ['prompt', 'json', 'midjourney', 'stable diffusion', 'ai'],
-  },
 
   // Documentation
   {
@@ -160,6 +152,22 @@ export const TOOLS = [
     category: 'documentation',
     description: 'Social media and marketing best practices.',
     keywords: ['social', 'marketing', 'content', 'documentation'],
+  },
+  {
+    id: 'design-reference',
+    label: 'Design Reference',
+    path: '/design-reference',
+    category: 'documentation',
+    description: 'Spacing, shadows, radii, font scales, and design token reference.',
+    keywords: ['tailwind', 'spacing', 'shadow', 'radius', 'tokens', 'reference', 'cheat sheet'],
+  },
+  {
+    id: 'export',
+    label: 'Design System Export',
+    path: '/export',
+    category: 'documentation',
+    description: 'Export your complete design system as HTML for developers and clients.',
+    keywords: ['export', 'design system', 'html', 'tokens', 'handoff', 'developer'],
   },
   {
     id: 'resources',
