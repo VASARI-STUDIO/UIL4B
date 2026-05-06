@@ -109,26 +109,6 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Stats strip */}
-      <div className="qstats">
-        <div className="qstat">
-          <span className="qstat-label">Tools</span>
-          <span className="qstat-value">{TOOLS.length}</span>
-        </div>
-        <div className="qstat">
-          <span className="qstat-label">Pinned</span>
-          <span className="qstat-value">{pinnedTools.length}</span>
-        </div>
-        <div className="qstat">
-          <span className="qstat-label">Categories</span>
-          <span className="qstat-value">{CATEGORIES.length}</span>
-        </div>
-        <div className="qstat">
-          <span className="qstat-label">Status</span>
-          <span className="qstat-value"><span className="dot" /> Online</span>
-        </div>
-      </div>
-
       {/* Pinned tools */}
       <section className="dash-section">
         <div className="dash-section-header">

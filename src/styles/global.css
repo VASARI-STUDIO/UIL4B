@@ -387,13 +387,6 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;hei
 .tool-tile-desc{font-size:12px;color:var(--t2);line-height:1.55;flex:1}
 .tool-tile-cat{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
 
-/* ─── Quick stats strip ─── */
-.qstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;margin-bottom:36px;box-shadow:var(--warm-shadow)}
-.qstat{background:var(--card);padding:20px 22px;display:flex;flex-direction:column;gap:6px}
-.qstat-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t2);letter-spacing:.06em;text-transform:uppercase}
-.qstat-value{font-size:26px;font-weight:700;color:var(--t0);letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
-.qstat-value .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
-
 /* ─── Command Palette ─── */
 .cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding-top:max(10vh,80px);animation:cp-fade .14s ease}
 @keyframes cp-fade{from{opacity:0}to{opacity:1}}
@@ -448,7 +441,6 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;hei
   .topbar-btn-projects{padding:6px 14px;font-size:11px}
   .dash-tools-grid{grid-template-columns:repeat(2,1fr)}
   .dash-cats-grid{grid-template-columns:repeat(2,1fr)}
-  .qstats{grid-template-columns:repeat(2,1fr)}
   .seg-cell{min-width:100px}
   .tint-grid-responsive{grid-template-columns:repeat(auto-fill,minmax(56px,1fr))!important}
   .tint-controls-grid{grid-template-columns:1fr!important}
@@ -486,7 +478,6 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;hei
   .suggest-bar{flex-direction:column;gap:10px}
   .dash-tools-grid{grid-template-columns:1fr}
   .dash-cats-grid{grid-template-columns:1fr}
-  .qstats{grid-template-columns:1fr}
 }
 
 /* ─── Scrollbar ─── */
