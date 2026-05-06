@@ -58,46 +58,14 @@ export const CATEGORIES = [
 ]
 
 export const TOOLS = [
-  // Color Studio
+  // Color
   {
     id: 'color-studio',
     label: 'Color Studio',
-    path: '/color-studio',
+    path: '/color',
     category: 'color',
     description: 'Complete color system builder with palette, tints, contrast, and gradients.',
     keywords: ['color', 'studio', 'palette', 'tint', 'contrast', 'gradient', 'system'],
-  },
-  {
-    id: 'palette',
-    label: 'Palette Builder',
-    path: '/palette',
-    category: 'color',
-    description: 'Generate harmonised color systems with brand palettes.',
-    keywords: ['palette', 'color', 'harmony', 'theme', 'brand'],
-  },
-  {
-    id: 'tints',
-    label: 'Tint Generator',
-    path: '/tints',
-    category: 'color',
-    description: 'Twelve-step tonal scales from any seed colour.',
-    keywords: ['tint', 'shade', 'scale', 'tone', 'gradient', 'tailwind'],
-  },
-  {
-    id: 'contrast',
-    label: 'Contrast Checker',
-    path: '/contrast',
-    category: 'color',
-    description: 'WCAG contrast validation with suggestions.',
-    keywords: ['contrast', 'wcag', 'accessibility', 'a11y'],
-  },
-  {
-    id: 'gradients',
-    label: 'Gradient Tool',
-    path: '/gradients',
-    category: 'color',
-    description: 'Build linear and radial gradients with presets.',
-    keywords: ['gradient', 'linear', 'radial', 'mesh'],
   },
 
   // Typography
