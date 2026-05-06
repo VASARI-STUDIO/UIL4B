@@ -9,10 +9,6 @@ import { useClipboard } from './hooks/useClipboard'
 
 import Dashboard from './pages/Dashboard'
 import ColorStudio from './pages/ColorStudio'
-import PaletteBuilder from './pages/PaletteBuilder'
-import TintGenerator from './pages/TintGenerator'
-import GradientTool from './pages/GradientTool'
-import ContrastChecker from './pages/ContrastChecker'
 import TypeScale from './pages/TypeScale'
 import FontMatcher from './pages/FontMatcher'
 import IconLibrary from './pages/IconLibrary'
@@ -63,15 +59,15 @@ export default function App() {
         <main className="main">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/color" element={<CategoryDashboard categoryId="color" />} />
+            <Route path="/color" element={<ColorStudio onCopy={copy} />} />
+            <Route path="/color-studio" element={<Navigate to="/color" replace />} />
+            <Route path="/palette" element={<Navigate to="/color" replace />} />
+            <Route path="/tints" element={<Navigate to="/color" replace />} />
+            <Route path="/gradients" element={<Navigate to="/color" replace />} />
+            <Route path="/contrast" element={<Navigate to="/color" replace />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
             <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
             <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
-            <Route path="/color-studio" element={<ColorStudio onCopy={copy} />} />
-            <Route path="/palette" element={<PaletteBuilder onCopy={copy} />} />
-            <Route path="/tints" element={<TintGenerator onCopy={copy} />} />
-            <Route path="/gradients" element={<GradientTool onCopy={copy} />} />
-            <Route path="/contrast" element={<ContrastChecker />} />
             <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
             <Route path="/fontpairs" element={<FontMatcher onCopy={copy} />} />
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
