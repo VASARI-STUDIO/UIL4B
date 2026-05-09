@@ -5,7 +5,7 @@ import { TOOLS } from '../data/tools'
 const RECENT_KEY = 'vs-recent-tools'
 const PINNED_KEY = 'vs-pinned-tools'
 const MAX_RECENT = 6
-const DEFAULT_PINNED = ['color-studio', 'typescale', 'fontpairs', 'icons', 'video-frames', 'design-reference']
+const DEFAULT_PINNED = ['color-studio', 'imgconvert', 'icons', 'resources']
 const WorkspaceContext = createContext()
 
 function loadList(key, fallback = []) {
