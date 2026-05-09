@@ -1,0 +1,525 @@
+{
+  "common": {
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "close": "閉じる",
+    "open": "開く",
+    "save": "保存",
+    "delete": "削除",
+    "cancel": "キャンセル",
+    "submit": "送信",
+    "search": "検索",
+    "loading": "読み込み中…",
+    "noResults": "結果なし",
+    "signIn": "ログイン",
+    "signOut": "ログアウト",
+    "signUp": "新規登録",
+    "tools": "ツール",
+    "tool": "ツール",
+    "category": "カテゴリ",
+    "action": "アクション",
+    "pinned": "ピン留め済み",
+    "comingSoon": "近日公開",
+    "type": "タイプ",
+    "message": "メッセージ",
+    "navigate": "移動",
+    "openTool": "ツールを開く",
+    "jumpToCategory": "カテゴリに移動",
+    "pin": "{name}をピン留め",
+    "unpin": "{name}のピン留めを解除",
+    "colour": "カラー",
+    "colours": "カラー"
+  },
+  "brand": {
+    "name": "Vasari",
+    "tagline": "Obsidian Toolkit",
+    "full": "Vasari Obsidian",
+    "fullToolkit": "Vasari Obsidian Toolkit"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "settings": "設定",
+    "support": "サポート",
+    "toggleMenu": "メニューの切替",
+    "toggle": "{name}の切替",
+    "proPlan": "PRO プラン",
+    "freePlan": "無料プラン"
+  },
+  "topbar": {
+    "searchHint": "ツールを検索、ページに移動…",
+    "lightMode": "ライトモード",
+    "darkMode": "ダークモード",
+    "switchToLight": "ライトモードに切替",
+    "switchToDark": "ダークモードに切替"
+  },
+  "cmd": {
+    "placeholder": "ツールを検索、ページに移動、またはアクションを実行…",
+    "noResults": "「{query}」の検索結果なし",
+    "recent": "最近の項目",
+    "allTools": "すべてのツール",
+    "categories": "カテゴリ",
+    "actions": "アクション",
+    "goToDashboard": "ダッシュボードへ移動",
+    "openSettings": "設定を開く",
+    "sendFeedback": "フィードバックを送信"
+  },
+  "dash": {
+    "greeting": {
+      "lateNight": "夜遅くまでお疲れさまです",
+      "morning": "おはようございます",
+      "afternoon": "こんにちは",
+      "evening": "こんばんは"
+    },
+    "heroSub": "前回の続きから始めるか、下のカテゴリを探索しましょう。",
+    "yourTools": "あなたのツール",
+    "pinnedCount": "{count}件ピン留め",
+    "explore": "探索",
+    "categoryCount": "{count}カテゴリ",
+    "emptyPinned": "任意のカテゴリからツールをピン留めすると、ここに表示されます。",
+    "toolCount": "{count}件のツール"
+  },
+  "categories": {
+    "color": {
+      "label": "カラースタジオ",
+      "description": "パレット、スケール、グラデーションの作成とアクセシビリティの検証。"
+    },
+    "typography": {
+      "label": "タイポグラフィ",
+      "description": "読みやすさに最適化されたタイプスケールとフォントの組み合わせ。"
+    },
+    "imagery": {
+      "label": "画像",
+      "description": "アイコン、画像ツール、プロンプト構成。"
+    },
+    "documentation": {
+      "label": "ドキュメント",
+      "description": "デザイン原則、マーケティング参考資料、外部リソース。"
+    }
+  },
+  "tools": {
+    "colorStudio": {
+      "label": "カラースタジオ",
+      "description": "パレット、ティント、コントラスト、グラデーションを備えた総合カラーシステムビルダー。"
+    },
+    "typeScale": {
+      "label": "タイプスケール",
+      "description": "CSS エクスポート機能付きモジュラータイプスケール計算ツール。"
+    },
+    "fontPairs": {
+      "label": "フォントペアファインダー",
+      "description": "見出しと本文のための厳選されたフォントの組み合わせ。"
+    },
+    "iconLibrary": {
+      "label": "アイコンライブラリ",
+      "description": "Iconify API で数千のアイコンを検索。"
+    },
+    "imageConverter": {
+      "label": "画像コンバーター",
+      "description": "画像をローカルで変換、圧縮、リサイズ。"
+    },
+    "docsDesign": {
+      "label": "デザイン原則",
+      "description": "視覚的階層、バランス、デザイン心理学。"
+    },
+    "docsSocial": {
+      "label": "ソーシャル＆マーケティング",
+      "description": "ソーシャルメディアとマーケティングのベストプラクティス。"
+    },
+    "designReference": {
+      "label": "デザインリファレンス",
+      "description": "スペーシング、シャドウ、角丸、フォントスケール、デザイントークンのリファレンス。"
+    },
+    "designExport": {
+      "label": "デザインシステムエクスポート",
+      "description": "完成したデザインシステムを開発者やクライアント向けの HTML としてエクスポート。"
+    },
+    "externalResources": {
+      "label": "外部リソース",
+      "description": "フォント、カラー、AI ツール、インスピレーションへの厳選リンク集。"
+    }
+  },
+  "color": {
+    "title": "カラースタジオ",
+    "baseColour": "ベースカラー",
+    "palette": "パレット",
+    "harmony": "ハーモニー",
+    "tints": "ティント",
+    "stateColours": "ステートカラー",
+    "gradients": "グラデーション",
+    "preview": "プレビュー",
+    "harmonyModes": {
+      "analogous": "類似色",
+      "triadic": "トライアド",
+      "splitComp": "スプリットコンプリメンタリー",
+      "tetradic": "テトラード",
+      "complementary": "補色",
+      "monochromatic": "モノクロマティック"
+    },
+    "saveToPalette": "パレットに保存",
+    "savedToPalette": "パレットに保存しました",
+    "paletteFull": "パレットがいっぱいです（最大10）",
+    "myPalette": "マイパレット",
+    "clearPalette": "パレットをクリア",
+    "paletteCleared": "パレットをクリアしました",
+    "tintScale": "ティントスケール",
+    "shadesOf": "{colour}のシェード",
+    "success": "成功",
+    "warning": "警告",
+    "error": "エラー",
+    "info": "情報",
+    "overallPreset": "全体プリセット",
+    "contrastCheck": "コントラストチェック",
+    "foreground": "前景色",
+    "background": "背景色",
+    "swap": "入替",
+    "ratio": "比率",
+    "aaNormal": "AA 標準",
+    "aaLarge": "AA 大文字",
+    "aaaNormal": "AAA 標準",
+    "aaaLarge": "AAA 大文字",
+    "pass": "合格",
+    "fail": "不合格",
+    "gradientType": "タイプ",
+    "angle": "角度",
+    "addStop": "ストップを追加",
+    "presets": "プリセット",
+    "fromPalette": "パレットから",
+    "fromTints": "ティントから",
+    "css": "CSS",
+    "lightMode": "ライトモード",
+    "darkMode": "ダークモード",
+    "buttons": "ボタン",
+    "navigation": "ナビゲーション",
+    "table": "テーブル",
+    "toast": "トースト",
+    "primary": "プライマリ",
+    "secondary": "セカンダリ",
+    "outline": "アウトライン",
+    "ghost": "ゴースト",
+    "link": "リンク",
+    "active": "アクティブ",
+    "inactive": "非アクティブ",
+    "hover": "ホバー",
+    "headerRow": "ヘッダー行",
+    "dataRow": "データ行",
+    "altRow": "交互行",
+    "statusCol": "ステータス",
+    "itemCol": "項目",
+    "valueCol": "値"
+  },
+  "typeScale": {
+    "title": "タイプスケール",
+    "baseSize": "基本サイズ",
+    "scaleRatio": "スケール比率",
+    "lineHeight": "行の高さ",
+    "headingSpacing": "見出しの間隔",
+    "bodySpacing": "本文の間隔",
+    "responsivePreview": "レスポンシブプレビュー",
+    "desktop": "デスクトップ",
+    "tablet": "タブレット",
+    "mobile": "モバイル",
+    "exportFormat": "エクスポート形式",
+    "cssVariables": "CSS 変数",
+    "tailwindConfig": "Tailwind 設定",
+    "scssVariables": "SCSS 変数",
+    "fontWeightRef": "フォントウェイト参照",
+    "sampleText": "素早い茶色の狐が怠惰な犬を飛び越える",
+    "ratios": {
+      "minorSecond": "短2度",
+      "majorSecond": "長2度",
+      "minorThird": "短3度",
+      "majorThird": "長3度",
+      "perfectFourth": "完全4度",
+      "augFourth": "増4度",
+      "perfectFifth": "完全5度",
+      "goldenRatio": "黄金比",
+      "custom": "カスタム"
+    },
+    "weights": {
+      "thin": "Thin",
+      "extraLight": "Extra Light",
+      "light": "Light",
+      "regular": "Regular",
+      "medium": "Medium",
+      "semiBold": "Semi Bold",
+      "bold": "Bold",
+      "extraBold": "Extra Bold",
+      "black": "Black"
+    }
+  },
+  "fontMatcher": {
+    "title": "フォントペアファインダー",
+    "allCategories": "すべて",
+    "serif": "Serif",
+    "sansSerif": "Sans-Serif",
+    "display": "Display",
+    "weight": "ウェイト",
+    "sampleText": "サンプルテキスト",
+    "defaultSample": "素早い茶色の狐が怠惰な犬を飛び越える。いろはにほへとちりぬるをわかよたれそつねならむ。",
+    "pairings": "組み合わせ",
+    "compare": "比較",
+    "article": "記事",
+    "headingFont": "見出し",
+    "bodyFont": "本文",
+    "selectToCompare": "上のフォントを選択して比較",
+    "miniGuide": "ミニスタイルガイド",
+    "pairedWith": "との組み合わせ"
+  },
+  "iconLibrary": {
+    "title": "アイコンライブラリ",
+    "searchPlaceholder": "アイコンを検索…",
+    "allPacks": "すべてのパック",
+    "mode": "モード",
+    "embedded": "埋め込み",
+    "api": "API",
+    "offline": "オフライン",
+    "results": "{count}件の結果",
+    "copySvg": "SVG をコピー",
+    "copyJsx": "JSX をコピー",
+    "noIcons": "上からアイコンを検索",
+    "loadingPacks": "アイコンパックを読み込み中…"
+  },
+  "imageConverter": {
+    "title": "画像コンバーター",
+    "subtitle": "ブラウザ上でローカルに画像を変換、圧縮、リサイズ。",
+    "dropZone": "画像をここにドロップまたはクリックして選択",
+    "format": "出力形式",
+    "quality": "品質",
+    "maxWidth": "最大幅",
+    "noLimit": "制限なし",
+    "original": "オリジナル",
+    "converted": "変換済み",
+    "savings": "削減量",
+    "downloadAll": "すべてダウンロード (ZIP)",
+    "download": "ダウンロード",
+    "clear": "クリア",
+    "dimensions": "{w} × {h}"
+  },
+  "promptLibrary": {
+    "title": "プロンプトライブラリ",
+    "subtitle": "お気に入りのデザインプロンプトを保存、整理、再利用。",
+    "addPrompt": "プロンプトを追加",
+    "promptPlaceholder": "プロンプトを入力…",
+    "tagsPlaceholder": "タグ（カンマ区切り）",
+    "searchPlaceholder": "プロンプトを検索…",
+    "referenceImage": "参考画像",
+    "savedPrompts": "保存済みプロンプト",
+    "noPrompts": "保存されたプロンプトはまだありません",
+    "enterPromptFirst": "先にプロンプトを入力してください",
+    "promptSaved": "プロンプトを保存しました",
+    "promptCopied": "プロンプトをコピーしました",
+    "promptDeleted": "プロンプトを削除しました",
+    "importJson": "JSON をインポート",
+    "importedCount": "{count}件のプロンプトをインポートしました"
+  },
+  "docsDesign": {
+    "title": "デザイン原則",
+    "subtitle": "高コンバージョンでユーザーフレンドリーなインターフェースのための心理学に基づいた原則。"
+  },
+  "docsSocial": {
+    "title": "ソーシャル＆マーケティング",
+    "subtitle": "コンテンツ、エンゲージメント、成長のためのデータドリブン戦略。"
+  },
+  "designRef": {
+    "title": "デザインリファレンス",
+    "subtitle": "スペーシング、シャドウ、角丸、タイポグラフィ、不透明度、ブレークポイントのビジュアルリファレンス。",
+    "spacing": "スペーシングスケール",
+    "shadows": "シャドウスケール",
+    "borderRadius": "ボーダーラジアス",
+    "fontSizes": "フォントサイズ",
+    "fontWeights": "フォントウェイト",
+    "opacity": "不透明度スケール",
+    "breakpoints": "画面ブレークポイント",
+    "clickToCopy": "任意の値をクリックしてコピー"
+  },
+  "designExport": {
+    "title": "デザインシステムエクスポート",
+    "subtitle": "デザイントークンを収集し、開発者やクライアント向けの自己完結型 HTML リファレンスとしてエクスポート。",
+    "systemConfig": "システム設定",
+    "systemName": "システム名",
+    "author": "作成者",
+    "version": "バージョン",
+    "description": "説明",
+    "colourTokens": "カラートークン",
+    "typographyTokens": "タイポグラフィトークン",
+    "headingFont": "見出しフォント",
+    "bodyFont": "本文フォント",
+    "baseFontSize": "基本フォントサイズ",
+    "scaleRatio": "スケール比率",
+    "spacingTokens": "スペーシングトークン",
+    "spacingPreset": "スペーシングプリセット",
+    "tailwindScale": "Tailwind スケール",
+    "eightPointGrid": "8ポイントグリッド",
+    "fourPointGrid": "4ポイントグリッド",
+    "exportHtml": "HTML をエクスポート",
+    "copyCssVars": "CSS 変数をコピー",
+    "cssVarsCopied": "CSS 変数をコピーしました",
+    "importFromPalette": "パレットからインポート",
+    "paletteImported": "パレットカラーをインポートしました",
+    "noPaletteData": "パレットデータが見つかりません",
+    "addColour": "カラーを追加",
+    "removeColour": "削除"
+  },
+  "resources": {
+    "title": "外部リソース",
+    "subtitle": "ウェブデザインのためのツール、インスピレーション、参考資料への厳選リンク集。",
+    "categories": {
+      "typography": "タイポグラフィ",
+      "colour": "カラー",
+      "aiImageVideo": "AI 画像＆動画",
+      "framer": "Framer",
+      "designInspiration": "デザインインスピレーション",
+      "aiTools": "AI ツール"
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "subtitle": "環境設定、アカウント、データを管理します。",
+    "appearance": "外観",
+    "theme": "テーマ",
+    "dark": "ダーク",
+    "light": "ライト",
+    "language": "言語",
+    "account": "アカウント",
+    "dataManagement": "データ管理",
+    "dataInfo": "データはブラウザにローカル保存されています。データをエクスポートしてバックアップするか、クリアして最初からやり直すことができます。",
+    "exportData": "データをエクスポート",
+    "clearData": "ローカルデータをクリア",
+    "dataExported": "データをエクスポートしました",
+    "dataCleared": "ローカルデータをクリアしました",
+    "clearConfirm": "本当によろしいですか？ローカルに保存されたすべてのデータが削除されます。",
+    "privacyLegal": "プライバシーと法的事項",
+    "privacyInfo": "Vasari Obsidian はオーストラリアプライバシー法1988およびオーストラリアプライバシー原則（APPs）に準拠しています。該当する場合、データはオーストラリア（シドニーリージョン）で処理されます。",
+    "privacyPoints": {
+      "collect": "サービスに必要なデータのみを収集します（APP 3）",
+      "use": "データはツールキット機能の提供のみに使用されます（APP 6）",
+      "access": "いつでもデータにアクセス、修正、削除が可能です（APP 12 & 13）",
+      "security": "業界標準のセキュリティ対策でデータを保護しています（APP 11）"
+    },
+    "privacyPolicy": "プライバシーポリシー",
+    "termsOfService": "利用規約"
+  },
+  "auth": {
+    "welcomeBack": "おかえりなさい",
+    "createAccount": "アカウント作成",
+    "resetPassword": "パスワードリセット",
+    "signInSubtitle": "Vasari Obsidian アカウントにログインしてください。",
+    "signUpSubtitle": "新規登録して作品を保存し、すべての機能にアクセスしましょう。",
+    "resetSubtitle": "リセットリンクを受け取るメールアドレスを入力してください。",
+    "displayName": "表示名",
+    "namePlaceholder": "お名前",
+    "email": "メールアドレス",
+    "emailPlaceholder": "you@example.com",
+    "password": "パスワード",
+    "passwordPlaceholder": "6文字以上",
+    "sendResetLink": "リセットリンクを送信",
+    "backToSignIn": "ログインに戻る",
+    "haveAccount": "アカウントをお持ちですか？ログイン",
+    "noAccount": "アカウントをお持ちでないですか？新規登録",
+    "forgotPassword": "パスワードをお忘れですか？",
+    "pleaseWait": "お待ちください…",
+    "accountCreated": "アカウントを作成しました",
+    "signedIn": "ログインしました",
+    "resetSent": "パスワードリセットメールを送信しました",
+    "errors": {
+      "emailInUse": "このメールアドレスのアカウントは既に存在します",
+      "invalidEmail": "有効なメールアドレスを入力してください",
+      "weakPassword": "パスワードは6文字以上にしてください",
+      "invalidCredential": "メールアドレスまたはパスワードが無効です",
+      "tooManyRequests": "試行回数が多すぎます — しばらくしてからお試しください",
+      "serviceUnavailable": "サービスが一時的に利用できません",
+      "authFailed": "認証に失敗しました",
+      "userNotFound": "このメールアドレスのアカウントが見つかりません"
+    }
+  },
+  "feedback": {
+    "title": "フィードバック",
+    "subtitle": "Vasari Obsidian の改善にご協力ください。バグ、機能リクエスト、一般的なフィードバックをお寄せください。",
+    "featureRequest": "機能リクエスト",
+    "bugReport": "バグ報告",
+    "general": "一般",
+    "messagePlaceholder": "ご意見をお聞かせください…",
+    "submitFeedback": "フィードバックを送信",
+    "enterFeedback": "フィードバックを入力してください",
+    "thankYou": "フィードバックをいただきありがとうございます！"
+  },
+  "community": {
+    "title": "コミュニティ",
+    "subtitle": "Vasari Obsidian を使用する他のデザイナーや開発者とつながりましょう。",
+    "comingSoonDesc": "パレットを共有し、デザインのフィードバックを受け取り、コミュニティが作成したテンプレートを発見しましょう。"
+  },
+  "privacy": {
+    "title": "プライバシーポリシー",
+    "lastUpdated": "最終更新日：2026年3月",
+    "s1Title": "1. 本ポリシーについて",
+    "s1Text": "Vasari Obsidian（「当社」）は、オーストラリアプライバシー法1988（Cth）およびオーストラリアプライバシー原則（APPs）に従い、お客様の個人情報の保護に努めています。本ポリシーは、お客様の個人情報の収集、利用、開示、および保護の方法について説明します。",
+    "s2Title": "2. 収集する情報（APP 3）",
+    "s2Intro": "当社はサービスに合理的に必要な情報のみを収集します：",
+    "s2Items": [
+      "アカウント情報：メールアドレス、表示名、プロフィール写真（Google ログイン使用時）",
+      "使用設定：テーマ設定、保存済みパレット、ティント設定、プロンプト",
+      "当社が収集しないもの：決済カード情報（Stripe が処理）、位置データ、デバイス識別子、トラッキング Cookie"
+    ],
+    "s3Title": "3. 情報の利用方法（APP 6）",
+    "s3Intro": "お客様の情報は以下の目的にのみ使用されます：",
+    "s3Items": [
+      "アカウントとツールキット機能の提供および維持",
+      "デバイス間でのデザイン設定の同期",
+      "重要なサービス通知の送信（アカウントセキュリティ、ポリシー変更）",
+      "お客様のデータを第三者に販売したり、広告に使用することは一切ありません"
+    ],
+    "s4Title": "4. データの保管とセキュリティ（APP 8 & 11）",
+    "s4Text": "お客様のデータは Google Cloud Firestore の australia-southeast1（シドニー）リージョンに保管されます。認証は Firebase Authentication で処理されます。当社は以下を実施しています：",
+    "s4Items": [
+      "保存時および転送時の暗号化（TLS 1.3）",
+      "アクセス制御のための Firestore セキュリティルール",
+      "Firebase 設定の定期的なセキュリティ監査",
+      "同等のプライバシー保護なしでの国境を越えたデータ転送の禁止"
+    ],
+    "s5Title": "5. お客様の権利（APP 12 & 13）",
+    "s5Intro": "お客様には以下の権利があります：",
+    "s5Items": [
+      "設定からいつでも個人情報にアクセス",
+      "プロフィールの更新による個人情報の修正",
+      "設定 > データをエクスポートから全データを JSON ファイルとしてエクスポート",
+      "設定 > アカウント削除からアカウントと関連データの完全削除",
+      "ログアウトとアカウント削除による同意の撤回"
+    ],
+    "s6Title": "6. 第三者サービス",
+    "s6Items": [
+      "Firebase/Google Cloud — 認証とデータベース（シドニーリージョン）",
+      "Google Fonts — フォント読み込み（個人データは送信されません）",
+      "Iconify — アイコン検索 API（個人データは送信されません）",
+      "Stripe — 決済処理（PCI DSS 準拠、オーストラリア法人）"
+    ],
+    "s7Title": "7. お問い合わせ",
+    "s7Text": "プライバシーに関するお問い合わせ、データアクセスリクエスト、苦情については、以下までご連絡ください：",
+    "s7Complaint": "当社の対応にご満足いただけない場合は、オーストラリア情報コミッショナー事務局（OAIC）に苦情を申し立てることができます。"
+  },
+  "terms": {
+    "title": "利用規約",
+    "lastUpdated": "最終更新日：2026年3月",
+    "s1Title": "1. 同意",
+    "s1Text": "Vasari Obsidian Web Design Toolkit（「本サービス」）を利用することにより、お客様はこの利用規約に同意したものとみなされます。本サービスはオーストラリアを拠点とする事業体である Vasari Obsidian が提供しています。本規約はオーストラリアの法律に準拠します。",
+    "s2Title": "2. アカウント",
+    "s2Text": "メールアドレス/パスワードまたは Google 認証を使用してアカウントを作成できます。アカウント認証情報のセキュリティを維持する責任はお客様にあります。アカウントを作成するには16歳以上である必要があります。",
+    "s3Title": "3. 無料プランとProプラン",
+    "s3Text": "本サービスは基本機能を備えた無料プランと、追加ツールを備えたProプランを提供しています。Proサブスクリプションは月額または年額で請求されます。いつでもキャンセルでき、請求期間の終了まで引き続きアクセスできます。返金はオーストラリア消費者法に従い、個別に対応します。",
+    "s4Title": "4. 知的財産権",
+    "s4Text": "本サービスを使用して作成したデザイン、パレット、グラデーション、その他の成果物はお客様に帰属します。本サービス自体（コード、デザイン、ドキュメントを含む）は Vasari Obsidian が所有し、オーストラリアの著作権法で保護されています。",
+    "s5Title": "5. 利用上の遵守事項",
+    "s5Intro": "お客様は以下の行為を行わないことに同意します：",
+    "s5Items": [
+      "違法な目的での本サービスの使用",
+      "他のユーザーのアカウントへの不正アクセスの試み",
+      "本サービスのリバースエンジニアリング、逆コンパイル、逆アセンブル",
+      "自動化されたシステムによる本サービスからのデータ抽出"
+    ],
+    "s6Title": "6. 責任の制限",
+    "s6Text": "本サービスは、オーストラリア消費者法で要求される場合を除き、いかなる種類の保証もなく「現状のまま」提供されます。法律で認められる最大限の範囲において、Vasari Obsidian は本サービスの利用から生じるいかなる間接的、偶発的、結果的な損害に対しても責任を負いません。",
+    "s7Title": "7. 変更",
+    "s7Text": "当社は本規約を随時更新する場合があります。重要な変更は、発効の少なくとも30日前にメールまたはアプリ内通知にてお知らせします。",
+    "s8Title": "8. お問い合わせ",
+    "s8Text": "本規約についてのご質問は、以下までお問い合わせください："
+  }
+}

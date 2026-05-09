@@ -1,0 +1,533 @@
+{
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "close": "Close",
+    "open": "Open",
+    "save": "Save",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "search": "Search",
+    "loading": "Loading…",
+    "noResults": "No results",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "signUp": "Sign Up",
+    "tools": "Tools",
+    "tool": "Tool",
+    "category": "Category",
+    "action": "Action",
+    "pinned": "Pinned",
+    "comingSoon": "Coming Soon",
+    "type": "Type",
+    "message": "Message",
+    "navigate": "Navigate",
+    "openTool": "Open Tool",
+    "jumpToCategory": "Jump to category",
+    "pin": "Pin {name}",
+    "unpin": "Unpin {name}",
+    "colour": "Colour",
+    "colours": "Colours"
+  },
+  "brand": {
+    "name": "Vasari",
+    "tagline": "Obsidian Toolkit",
+    "full": "Vasari Obsidian",
+    "fullToolkit": "Vasari Obsidian Toolkit"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "support": "Support",
+    "toggleMenu": "Toggle menu",
+    "toggle": "Toggle {name}",
+    "proPlan": "PRO PLAN",
+    "freePlan": "FREE PLAN"
+  },
+  "topbar": {
+    "searchHint": "Search tools, jump to a page…",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
+  },
+  "cmd": {
+    "placeholder": "Search tools, jump to a page, or run an action…",
+    "noResults": "No results for \"{query}\"",
+    "recent": "Recent",
+    "allTools": "All Tools",
+    "categories": "Categories",
+    "actions": "Actions",
+    "goToDashboard": "Go to Dashboard",
+    "openSettings": "Open Settings",
+    "sendFeedback": "Send Feedback"
+  },
+  "dash": {
+    "greeting": {
+      "lateNight": "Working late",
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "heroSub": "Pick up where you left off, or explore a category below.",
+    "yourTools": "Your Tools",
+    "pinnedCount": "{count} pinned",
+    "explore": "Explore",
+    "categoryCount": "{count} categories",
+    "emptyPinned": "Pin tools from any category to see them here.",
+    "toolCount": "{count} tools"
+  },
+  "categories": {
+    "color": {
+      "label": "Colour Studio",
+      "description": "Build palettes, scales, gradients and verify accessibility."
+    },
+    "typography": {
+      "label": "Typography",
+      "description": "Type scales and font pairings tuned for readability."
+    },
+    "imagery": {
+      "label": "Imagery",
+      "description": "Icons, image tools, and prompt structuring."
+    },
+    "documentation": {
+      "label": "Documentation",
+      "description": "Design principles, marketing references, and external resources."
+    }
+  },
+  "tools": {
+    "colorStudio": {
+      "label": "Colour Studio",
+      "description": "Complete colour system builder with palette, tints, contrast, and gradients."
+    },
+    "typeScale": {
+      "label": "Type Scale",
+      "description": "Modular type scale calculator with CSS export."
+    },
+    "fontPairs": {
+      "label": "Font Pair Finder",
+      "description": "Curated font pairings for headlines and body."
+    },
+    "iconLibrary": {
+      "label": "Icon Library",
+      "description": "Search thousands of icons via Iconify API."
+    },
+    "imageConverter": {
+      "label": "Image Converter",
+      "description": "Convert, compress and resize images locally."
+    },
+    "docsDesign": {
+      "label": "Design Principles",
+      "description": "Visual hierarchy, balance, and design psychology."
+    },
+    "docsSocial": {
+      "label": "Social & Marketing",
+      "description": "Social media and marketing best practices."
+    },
+    "designReference": {
+      "label": "Design Reference",
+      "description": "Spacing, shadows, radii, font scales, and design token reference."
+    },
+    "designExport": {
+      "label": "Design System Export",
+      "description": "Export your complete design system as HTML for developers and clients."
+    },
+    "videoFrames": {
+      "label": "Video to Frames",
+      "description": "Extract individual frames from video files as high-quality images."
+    },
+    "externalResources": {
+      "label": "External Resources",
+      "description": "Curated links to fonts, colours, AI tools, and inspiration."
+    },
+    "promptLibrary": {
+      "label": "Prompt Library",
+      "description": "Save AI image generation prompts with output previews."
+    }
+  },
+  "color": {
+    "title": "Colour Studio",
+    "baseColour": "Base Colour",
+    "palette": "Palette",
+    "harmony": "Harmony",
+    "tints": "Tints",
+    "stateColours": "State Colours",
+    "gradients": "Gradients",
+    "preview": "Preview",
+    "harmonyModes": {
+      "analogous": "Analogous",
+      "triadic": "Triadic",
+      "splitComp": "Split-Comp",
+      "tetradic": "Tetradic",
+      "complementary": "Complementary",
+      "monochromatic": "Monochromatic"
+    },
+    "saveToPalette": "Save to Palette",
+    "savedToPalette": "Saved to palette",
+    "paletteFull": "Palette full (max 10)",
+    "myPalette": "My Palette",
+    "clearPalette": "Clear Palette",
+    "paletteCleared": "Palette cleared",
+    "tintScale": "Tint Scale",
+    "shadesOf": "Shades of {colour}",
+    "success": "Success",
+    "warning": "Warning",
+    "error": "Error",
+    "info": "Info",
+    "overallPreset": "Overall Preset",
+    "contrastCheck": "Contrast Check",
+    "foreground": "Foreground",
+    "background": "Background",
+    "swap": "Swap",
+    "ratio": "Ratio",
+    "aaNormal": "AA Normal",
+    "aaLarge": "AA Large",
+    "aaaNormal": "AAA Normal",
+    "aaaLarge": "AAA Large",
+    "pass": "Pass",
+    "fail": "Fail",
+    "gradientType": "Type",
+    "angle": "Angle",
+    "addStop": "Add Stop",
+    "presets": "Presets",
+    "fromPalette": "From Palette",
+    "fromTints": "From Tints",
+    "css": "CSS",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "buttons": "Buttons",
+    "navigation": "Navigation",
+    "table": "Table",
+    "toast": "Toast",
+    "primary": "Primary",
+    "secondary": "Secondary",
+    "outline": "Outline",
+    "ghost": "Ghost",
+    "link": "Link",
+    "active": "Active",
+    "inactive": "Inactive",
+    "hover": "Hover",
+    "headerRow": "Header Row",
+    "dataRow": "Data Row",
+    "altRow": "Alternate Row",
+    "statusCol": "Status",
+    "itemCol": "Item",
+    "valueCol": "Value"
+  },
+  "typeScale": {
+    "title": "Type Scale",
+    "baseSize": "Base Size",
+    "scaleRatio": "Scale Ratio",
+    "lineHeight": "Line Height",
+    "headingSpacing": "Heading Spacing",
+    "bodySpacing": "Body Spacing",
+    "responsivePreview": "Responsive Preview",
+    "desktop": "Desktop",
+    "tablet": "Tablet",
+    "mobile": "Mobile",
+    "exportFormat": "Export Format",
+    "cssVariables": "CSS Variables",
+    "tailwindConfig": "Tailwind Config",
+    "scssVariables": "SCSS Variables",
+    "fontWeightRef": "Font Weight Reference",
+    "sampleText": "The quick brown fox jumps over the lazy dog",
+    "ratios": {
+      "minorSecond": "Minor 2nd",
+      "majorSecond": "Major 2nd",
+      "minorThird": "Minor 3rd",
+      "majorThird": "Major 3rd",
+      "perfectFourth": "Perfect 4th",
+      "augFourth": "Aug 4th",
+      "perfectFifth": "Perfect 5th",
+      "goldenRatio": "Golden Ratio",
+      "custom": "Custom"
+    },
+    "weights": {
+      "thin": "Thin",
+      "extraLight": "Extra Light",
+      "light": "Light",
+      "regular": "Regular",
+      "medium": "Medium",
+      "semiBold": "Semi Bold",
+      "bold": "Bold",
+      "extraBold": "Extra Bold",
+      "black": "Black"
+    }
+  },
+  "fontMatcher": {
+    "title": "Font Pair Finder",
+    "allCategories": "All",
+    "serif": "Serif",
+    "sansSerif": "Sans-Serif",
+    "display": "Display",
+    "weight": "Weight",
+    "sampleText": "Sample Text",
+    "defaultSample": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.",
+    "pairings": "Pairings",
+    "compare": "Compare",
+    "article": "Article",
+    "headingFont": "Heading",
+    "bodyFont": "Body",
+    "selectToCompare": "Select a font above to compare",
+    "miniGuide": "Mini Style Guide",
+    "pairedWith": "paired with"
+  },
+  "iconLibrary": {
+    "title": "Icon Library",
+    "searchPlaceholder": "Search icons…",
+    "allPacks": "All Packs",
+    "mode": "Mode",
+    "embedded": "Embedded",
+    "api": "API",
+    "offline": "Offline",
+    "results": "{count} results",
+    "copySvg": "Copy SVG",
+    "copyJsx": "Copy JSX",
+    "noIcons": "Search for icons above",
+    "loadingPacks": "Loading icon packs…"
+  },
+  "imageConverter": {
+    "title": "Image Converter",
+    "subtitle": "Convert, compress and resize images locally in your browser.",
+    "dropZone": "Drop images here or click to browse",
+    "format": "Output Format",
+    "quality": "Quality",
+    "maxWidth": "Max Width",
+    "noLimit": "No limit",
+    "original": "Original",
+    "converted": "Converted",
+    "savings": "Savings",
+    "downloadAll": "Download All (ZIP)",
+    "download": "Download",
+    "clear": "Clear",
+    "dimensions": "{w} × {h}"
+  },
+  "promptLibrary": {
+    "title": "Prompt Library",
+    "subtitle": "Save, organise, and reuse your favourite design prompts.",
+    "addPrompt": "Add Prompt",
+    "promptPlaceholder": "Enter your prompt…",
+    "tagsPlaceholder": "Tags (comma separated)",
+    "searchPlaceholder": "Search prompts…",
+    "referenceImage": "Reference Image",
+    "savedPrompts": "Saved Prompts",
+    "noPrompts": "No prompts saved yet",
+    "enterPromptFirst": "Enter a prompt first",
+    "promptSaved": "Prompt saved",
+    "promptCopied": "Prompt copied",
+    "promptDeleted": "Prompt deleted",
+    "importJson": "Import JSON",
+    "importedCount": "Imported {count} prompts"
+  },
+  "docsDesign": {
+    "title": "Design Principles",
+    "subtitle": "Psychology-backed principles for high-converting, user-friendly interfaces."
+  },
+  "docsSocial": {
+    "title": "Social & Marketing",
+    "subtitle": "Data-driven strategies for content, engagement, and growth."
+  },
+  "designRef": {
+    "title": "Design Reference",
+    "subtitle": "Visual reference for spacing, shadows, radii, typography, opacity, and breakpoints.",
+    "spacing": "Spacing Scale",
+    "shadows": "Shadow Scale",
+    "borderRadius": "Border Radius",
+    "fontSizes": "Font Sizes",
+    "fontWeights": "Font Weights",
+    "opacity": "Opacity Scale",
+    "breakpoints": "Screen Breakpoints",
+    "clickToCopy": "Click any value to copy"
+  },
+  "designExport": {
+    "title": "Design System Export",
+    "subtitle": "Collect your design tokens and export a self-contained HTML reference for developers and clients.",
+    "systemConfig": "System Configuration",
+    "systemName": "System Name",
+    "author": "Author",
+    "version": "Version",
+    "description": "Description",
+    "colourTokens": "Colour Tokens",
+    "typographyTokens": "Typography Tokens",
+    "headingFont": "Heading Font",
+    "bodyFont": "Body Font",
+    "baseFontSize": "Base Font Size",
+    "scaleRatio": "Scale Ratio",
+    "spacingTokens": "Spacing Tokens",
+    "spacingPreset": "Spacing Preset",
+    "tailwindScale": "Tailwind Scale",
+    "eightPointGrid": "8-point Grid",
+    "fourPointGrid": "4-point Grid",
+    "exportHtml": "Export HTML",
+    "copyCssVars": "Copy CSS Variables",
+    "cssVarsCopied": "CSS variables copied",
+    "importFromPalette": "Import from Palette",
+    "paletteImported": "Palette colours imported",
+    "noPaletteData": "No palette data found",
+    "addColour": "Add Colour",
+    "removeColour": "Remove"
+  },
+  "resources": {
+    "title": "External Resources",
+    "subtitle": "Curated links to tools, inspiration, and references for web design.",
+    "categories": {
+      "typography": "Typography",
+      "colour": "Colour",
+      "aiImageVideo": "AI Image & Video",
+      "framer": "Framer",
+      "designInspiration": "Design Inspiration",
+      "aiTools": "AI Tools"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your preferences, account, and data.",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "language": "Language",
+    "account": "Account",
+    "dataManagement": "Data Management",
+    "dataInfo": "Your data is stored locally in your browser. Export your data to back it up, or clear it to start fresh.",
+    "exportData": "Export My Data",
+    "clearData": "Clear Local Data",
+    "dataExported": "Data exported",
+    "dataCleared": "Local data cleared",
+    "clearConfirm": "Are you sure? This will delete all locally saved data.",
+    "privacyLegal": "Privacy & Legal",
+    "privacyInfo": "Vasari Obsidian complies with the Australian Privacy Act 1988 and Australian Privacy Principles (APPs). Your data is processed in Australia (Sydney region) where applicable.",
+    "privacyPoints": {
+      "collect": "We only collect data necessary for the service (APP 3)",
+      "use": "Your data is used solely for providing toolkit features (APP 6)",
+      "access": "You can access, correct, or delete your data at any time (APP 12 & 13)",
+      "security": "Data is protected with industry-standard security measures (APP 11)"
+    },
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
+  "auth": {
+    "welcomeBack": "Welcome Back",
+    "createAccount": "Create Account",
+    "resetPassword": "Reset Password",
+    "signInSubtitle": "Sign in to your Vasari Obsidian account.",
+    "signUpSubtitle": "Sign up to save your work and access all features.",
+    "resetSubtitle": "Enter your email to receive a reset link.",
+    "displayName": "Display Name",
+    "namePlaceholder": "Your name",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Min 6 characters",
+    "sendResetLink": "Send Reset Link",
+    "backToSignIn": "Back to sign in",
+    "haveAccount": "Already have an account? Sign in",
+    "noAccount": "Don't have an account? Sign up",
+    "forgotPassword": "Forgot password?",
+    "pleaseWait": "Please wait…",
+    "accountCreated": "Account created",
+    "signedIn": "Signed in",
+    "resetSent": "Password reset email sent",
+    "errors": {
+      "emailInUse": "An account with this email already exists",
+      "invalidEmail": "Please enter a valid email address",
+      "weakPassword": "Password must be at least 6 characters",
+      "invalidCredential": "Invalid email or password",
+      "tooManyRequests": "Too many attempts — try again later",
+      "serviceUnavailable": "Service temporarily unavailable",
+      "authFailed": "Authentication failed",
+      "userNotFound": "No account found with this email"
+    }
+  },
+  "feedback": {
+    "title": "Feedback",
+    "subtitle": "Help us improve Vasari Obsidian. Share bugs, feature requests, or general feedback.",
+    "featureRequest": "Feature Request",
+    "bugReport": "Bug Report",
+    "general": "General",
+    "messagePlaceholder": "Tell us what you think…",
+    "submitFeedback": "Submit Feedback",
+    "enterFeedback": "Please enter your feedback",
+    "thankYou": "Thank you for your feedback!"
+  },
+  "community": {
+    "title": "Community",
+    "subtitle": "Connect with other designers and developers using Vasari Obsidian.",
+    "comingSoonDesc": "Share palettes, get feedback on your designs, and discover templates created by the community."
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: March 2026",
+    "s1Title": "1. About This Policy",
+    "s1Text": "Vasari Obsidian (\"we\", \"us\", \"our\") is committed to protecting your personal information in accordance with the Australian Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs). This policy explains how we collect, use, disclose, and protect your personal information.",
+    "s2Title": "2. Information We Collect (APP 3)",
+    "s2Intro": "We only collect information reasonably necessary for our services:",
+    "s2Items": [
+      "Account information: email address, display name, profile photo (if using Google sign-in)",
+      "Usage preferences: theme settings, saved palettes, tint configurations, prompts",
+      "We do NOT collect: payment card details (handled by Stripe), location data, device identifiers, or tracking cookies"
+    ],
+    "s3Title": "3. How We Use Your Information (APP 6)",
+    "s3Intro": "Your information is used solely to:",
+    "s3Items": [
+      "Provide and maintain your account and toolkit features",
+      "Sync your design configurations across devices",
+      "Send essential service notifications (account security, policy changes)",
+      "We will NEVER sell your data to third parties or use it for advertising"
+    ],
+    "s4Title": "4. Data Storage & Security (APP 8 & 11)",
+    "s4Text": "Your data is stored in Google Cloud Firestore in the australia-southeast1 (Sydney) region. Authentication is handled by Firebase Authentication. We implement:",
+    "s4Items": [
+      "Encryption at rest and in transit (TLS 1.3)",
+      "Firestore Security Rules for access control",
+      "Regular security audits of our Firebase configuration",
+      "No cross-border data transfer without equivalent privacy protections"
+    ],
+    "s5Title": "5. Your Rights (APP 12 & 13)",
+    "s5Intro": "You have the right to:",
+    "s5Items": [
+      "Access your personal information at any time via Settings",
+      "Correct your personal information by updating your profile",
+      "Export all your data as a JSON file via Settings > Export My Data",
+      "Delete your account and all associated data via Settings > Delete Account",
+      "Withdraw consent by signing out and deleting your account"
+    ],
+    "s6Title": "6. Third-Party Services",
+    "s6Items": [
+      "Firebase/Google Cloud — Authentication and database (Sydney region)",
+      "Google Fonts — Font loading (no personal data sent)",
+      "Iconify — Icon search API (no personal data sent)",
+      "Stripe — Payment processing (PCI DSS compliant, Australian entity)"
+    ],
+    "s7Title": "7. Contact",
+    "s7Text": "For privacy inquiries, data access requests, or complaints, contact us at:",
+    "s7Complaint": "If you are not satisfied with our response, you may lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at"
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated: March 2026",
+    "s1Title": "1. Acceptance",
+    "s1Text": "By using Vasari Obsidian Web Design Toolkit (\"the Service\"), you agree to these Terms of Service. The Service is provided by Vasari Obsidian, an Australian-based business. These terms are governed by the laws of Australia.",
+    "s2Title": "2. Account",
+    "s2Text": "You may create an account using email/password or Google authentication. You are responsible for maintaining the security of your account credentials. You must be at least 16 years old to create an account.",
+    "s3Title": "3. Free & Pro Tiers",
+    "s3Text": "The Service offers a free tier with core features and a Pro tier with additional tools. Pro subscriptions are billed monthly or annually. You may cancel at any time; access continues until the end of the billing period. Refunds are handled on a case-by-case basis in accordance with Australian Consumer Law.",
+    "s4Title": "4. Intellectual Property",
+    "s4Text": "Designs, palettes, gradients, and other outputs you create using the Service belong to you. The Service itself, including its code, design, and documentation, is owned by Vasari Obsidian and protected under Australian copyright law.",
+    "s5Title": "5. Acceptable Use",
+    "s5Intro": "You agree not to:",
+    "s5Items": [
+      "Use the Service for any unlawful purpose",
+      "Attempt to gain unauthorised access to other users' accounts",
+      "Reverse engineer, decompile, or disassemble the Service",
+      "Use automated systems to scrape or extract data from the Service"
+    ],
+    "s6Title": "6. Limitation of Liability",
+    "s6Text": "The Service is provided \"as is\" without warranties of any kind, except as required by Australian Consumer Law. To the maximum extent permitted by law, Vasari Obsidian is not liable for any indirect, incidental, or consequential damages arising from your use of the Service.",
+    "s7Title": "7. Changes",
+    "s7Text": "We may update these Terms from time to time. Material changes will be communicated via email or an in-app notification at least 30 days before they take effect.",
+    "s8Title": "8. Contact",
+    "s8Text": "Questions about these Terms? Contact us at"
+  }
+}

@@ -1,0 +1,525 @@
+{
+  "common": {
+    "copy": "복사",
+    "copied": "복사됨",
+    "close": "닫기",
+    "open": "열기",
+    "save": "저장",
+    "delete": "삭제",
+    "cancel": "취소",
+    "submit": "제출",
+    "search": "검색",
+    "loading": "로딩 중…",
+    "noResults": "결과 없음",
+    "signIn": "로그인",
+    "signOut": "로그아웃",
+    "signUp": "회원가입",
+    "tools": "도구",
+    "tool": "도구",
+    "category": "카테고리",
+    "action": "작업",
+    "pinned": "고정됨",
+    "comingSoon": "출시 예정",
+    "type": "유형",
+    "message": "메시지",
+    "navigate": "이동",
+    "openTool": "도구 열기",
+    "jumpToCategory": "카테고리로 이동",
+    "pin": "{name} 고정",
+    "unpin": "{name} 고정 해제",
+    "colour": "색상",
+    "colours": "색상"
+  },
+  "brand": {
+    "name": "Vasari",
+    "tagline": "Obsidian Toolkit",
+    "full": "Vasari Obsidian",
+    "fullToolkit": "Vasari Obsidian Toolkit"
+  },
+  "nav": {
+    "dashboard": "대시보드",
+    "settings": "설정",
+    "support": "지원",
+    "toggleMenu": "메뉴 전환",
+    "toggle": "{name} 전환",
+    "proPlan": "PRO 플랜",
+    "freePlan": "무료 플랜"
+  },
+  "topbar": {
+    "searchHint": "도구 검색, 페이지로 이동…",
+    "lightMode": "라이트 모드",
+    "darkMode": "다크 모드",
+    "switchToLight": "라이트 모드로 전환",
+    "switchToDark": "다크 모드로 전환"
+  },
+  "cmd": {
+    "placeholder": "도구 검색, 페이지 이동 또는 작업 실행…",
+    "noResults": "\"{query}\"에 대한 결과 없음",
+    "recent": "최근 항목",
+    "allTools": "모든 도구",
+    "categories": "카테고리",
+    "actions": "작업",
+    "goToDashboard": "대시보드로 이동",
+    "openSettings": "설정 열기",
+    "sendFeedback": "피드백 보내기"
+  },
+  "dash": {
+    "greeting": {
+      "lateNight": "늦은 밤까지 수고하세요",
+      "morning": "좋은 아침이에요",
+      "afternoon": "좋은 오후예요",
+      "evening": "좋은 저녁이에요"
+    },
+    "heroSub": "이전 작업을 계속하거나 아래 카테고리를 탐색하세요.",
+    "yourTools": "내 도구",
+    "pinnedCount": "{count}개 고정됨",
+    "explore": "탐색",
+    "categoryCount": "{count}개 카테고리",
+    "emptyPinned": "아무 카테고리에서 도구를 고정하면 여기에 표시됩니다.",
+    "toolCount": "{count}개 도구"
+  },
+  "categories": {
+    "color": {
+      "label": "컬러 스튜디오",
+      "description": "팔레트, 스케일, 그라데이션 구축 및 접근성 검증."
+    },
+    "typography": {
+      "label": "타이포그래피",
+      "description": "가독성에 최적화된 타입 스케일과 폰트 조합."
+    },
+    "imagery": {
+      "label": "이미지",
+      "description": "아이콘, 이미지 도구, 프롬프트 구성."
+    },
+    "documentation": {
+      "label": "문서",
+      "description": "디자인 원칙, 마케팅 참고 자료, 외부 리소스."
+    }
+  },
+  "tools": {
+    "colorStudio": {
+      "label": "컬러 스튜디오",
+      "description": "팔레트, 틴트, 대비, 그라데이션을 갖춘 종합 컬러 시스템 빌더."
+    },
+    "typeScale": {
+      "label": "타입 스케일",
+      "description": "CSS 내보내기 기능이 있는 모듈식 타입 스케일 계산기."
+    },
+    "fontPairs": {
+      "label": "폰트 페어 파인더",
+      "description": "제목과 본문을 위한 엄선된 폰트 조합."
+    },
+    "iconLibrary": {
+      "label": "아이콘 라이브러리",
+      "description": "Iconify API로 수천 개의 아이콘을 검색."
+    },
+    "imageConverter": {
+      "label": "이미지 변환기",
+      "description": "로컬에서 이미지 변환, 압축 및 크기 조절."
+    },
+    "docsDesign": {
+      "label": "디자인 원칙",
+      "description": "시각적 계층 구조, 균형, 디자인 심리학."
+    },
+    "docsSocial": {
+      "label": "소셜 및 마케팅",
+      "description": "소셜 미디어 및 마케팅 모범 사례."
+    },
+    "designReference": {
+      "label": "디자인 레퍼런스",
+      "description": "간격, 그림자, 모서리 반경, 폰트 스케일, 디자인 토큰 참조."
+    },
+    "designExport": {
+      "label": "디자인 시스템 내보내기",
+      "description": "완성된 디자인 시스템을 개발자와 고객을 위한 HTML로 내보내기."
+    },
+    "externalResources": {
+      "label": "외부 리소스",
+      "description": "폰트, 색상, AI 도구, 영감 관련 엄선된 링크 모음."
+    }
+  },
+  "color": {
+    "title": "컬러 스튜디오",
+    "baseColour": "기본 색상",
+    "palette": "팔레트",
+    "harmony": "하모니",
+    "tints": "틴트",
+    "stateColours": "상태 색상",
+    "gradients": "그라데이션",
+    "preview": "미리보기",
+    "harmonyModes": {
+      "analogous": "유사색",
+      "triadic": "삼원색 조합",
+      "splitComp": "분리 보색",
+      "tetradic": "사각 배색",
+      "complementary": "보색",
+      "monochromatic": "단색"
+    },
+    "saveToPalette": "팔레트에 저장",
+    "savedToPalette": "팔레트에 저장됨",
+    "paletteFull": "팔레트가 가득 참 (최대 10개)",
+    "myPalette": "내 팔레트",
+    "clearPalette": "팔레트 비우기",
+    "paletteCleared": "팔레트가 비워졌습니다",
+    "tintScale": "틴트 스케일",
+    "shadesOf": "{colour}의 셰이드",
+    "success": "성공",
+    "warning": "경고",
+    "error": "오류",
+    "info": "정보",
+    "overallPreset": "전체 프리셋",
+    "contrastCheck": "대비 확인",
+    "foreground": "전경색",
+    "background": "배경색",
+    "swap": "교체",
+    "ratio": "비율",
+    "aaNormal": "AA 보통",
+    "aaLarge": "AA 큰 텍스트",
+    "aaaNormal": "AAA 보통",
+    "aaaLarge": "AAA 큰 텍스트",
+    "pass": "통과",
+    "fail": "실패",
+    "gradientType": "유형",
+    "angle": "각도",
+    "addStop": "색상 정지점 추가",
+    "presets": "프리셋",
+    "fromPalette": "팔레트에서",
+    "fromTints": "틴트에서",
+    "css": "CSS",
+    "lightMode": "라이트 모드",
+    "darkMode": "다크 모드",
+    "buttons": "버튼",
+    "navigation": "내비게이션",
+    "table": "테이블",
+    "toast": "토스트",
+    "primary": "기본",
+    "secondary": "보조",
+    "outline": "아웃라인",
+    "ghost": "고스트",
+    "link": "링크",
+    "active": "활성",
+    "inactive": "비활성",
+    "hover": "호버",
+    "headerRow": "헤더 행",
+    "dataRow": "데이터 행",
+    "altRow": "교차 행",
+    "statusCol": "상태",
+    "itemCol": "항목",
+    "valueCol": "값"
+  },
+  "typeScale": {
+    "title": "타입 스케일",
+    "baseSize": "기본 크기",
+    "scaleRatio": "스케일 비율",
+    "lineHeight": "줄 높이",
+    "headingSpacing": "제목 간격",
+    "bodySpacing": "본문 간격",
+    "responsivePreview": "반응형 미리보기",
+    "desktop": "데스크톱",
+    "tablet": "태블릿",
+    "mobile": "모바일",
+    "exportFormat": "내보내기 형식",
+    "cssVariables": "CSS 변수",
+    "tailwindConfig": "Tailwind 설정",
+    "scssVariables": "SCSS 변수",
+    "fontWeightRef": "폰트 굵기 참조",
+    "sampleText": "빠른 갈색 여우가 게으른 개를 뛰어넘다",
+    "ratios": {
+      "minorSecond": "단2도",
+      "majorSecond": "장2도",
+      "minorThird": "단3도",
+      "majorThird": "장3도",
+      "perfectFourth": "완전4도",
+      "augFourth": "증4도",
+      "perfectFifth": "완전5도",
+      "goldenRatio": "황금비",
+      "custom": "사용자 정의"
+    },
+    "weights": {
+      "thin": "Thin",
+      "extraLight": "Extra Light",
+      "light": "Light",
+      "regular": "Regular",
+      "medium": "Medium",
+      "semiBold": "Semi Bold",
+      "bold": "Bold",
+      "extraBold": "Extra Bold",
+      "black": "Black"
+    }
+  },
+  "fontMatcher": {
+    "title": "폰트 페어 파인더",
+    "allCategories": "전체",
+    "serif": "Serif",
+    "sansSerif": "Sans-Serif",
+    "display": "Display",
+    "weight": "굵기",
+    "sampleText": "샘플 텍스트",
+    "defaultSample": "빠른 갈색 여우가 게으른 개를 뛰어넘다. 다람쥐 헌 쳇바퀴에 타고파.",
+    "pairings": "조합",
+    "compare": "비교",
+    "article": "글",
+    "headingFont": "제목",
+    "bodyFont": "본문",
+    "selectToCompare": "위에서 폰트를 선택하여 비교하세요",
+    "miniGuide": "미니 스타일 가이드",
+    "pairedWith": "과(와) 조합"
+  },
+  "iconLibrary": {
+    "title": "아이콘 라이브러리",
+    "searchPlaceholder": "아이콘 검색…",
+    "allPacks": "모든 팩",
+    "mode": "모드",
+    "embedded": "내장",
+    "api": "API",
+    "offline": "오프라인",
+    "results": "{count}개 결과",
+    "copySvg": "SVG 복사",
+    "copyJsx": "JSX 복사",
+    "noIcons": "위에서 아이콘을 검색하세요",
+    "loadingPacks": "아이콘 팩 로딩 중…"
+  },
+  "imageConverter": {
+    "title": "이미지 변환기",
+    "subtitle": "브라우저에서 로컬로 이미지를 변환, 압축 및 크기 조절합니다.",
+    "dropZone": "이미지를 여기에 드롭하거나 클릭하여 찾아보기",
+    "format": "출력 형식",
+    "quality": "품질",
+    "maxWidth": "최대 너비",
+    "noLimit": "제한 없음",
+    "original": "원본",
+    "converted": "변환됨",
+    "savings": "절감량",
+    "downloadAll": "모두 다운로드 (ZIP)",
+    "download": "다운로드",
+    "clear": "지우기",
+    "dimensions": "{w} × {h}"
+  },
+  "promptLibrary": {
+    "title": "프롬프트 라이브러리",
+    "subtitle": "좋아하는 디자인 프롬프트를 저장, 정리 및 재사용하세요.",
+    "addPrompt": "프롬프트 추가",
+    "promptPlaceholder": "프롬프트를 입력하세요…",
+    "tagsPlaceholder": "태그 (쉼표로 구분)",
+    "searchPlaceholder": "프롬프트 검색…",
+    "referenceImage": "참고 이미지",
+    "savedPrompts": "저장된 프롬프트",
+    "noPrompts": "아직 저장된 프롬프트가 없습니다",
+    "enterPromptFirst": "먼저 프롬프트를 입력하세요",
+    "promptSaved": "프롬프트가 저장되었습니다",
+    "promptCopied": "프롬프트가 복사되었습니다",
+    "promptDeleted": "프롬프트가 삭제되었습니다",
+    "importJson": "JSON 가져오기",
+    "importedCount": "{count}개 프롬프트를 가져왔습니다"
+  },
+  "docsDesign": {
+    "title": "디자인 원칙",
+    "subtitle": "높은 전환율과 사용자 친화적인 인터페이스를 위한 심리학 기반 원칙."
+  },
+  "docsSocial": {
+    "title": "소셜 및 마케팅",
+    "subtitle": "콘텐츠, 참여 및 성장을 위한 데이터 기반 전략."
+  },
+  "designRef": {
+    "title": "디자인 레퍼런스",
+    "subtitle": "간격, 그림자, 모서리 반경, 타이포그래피, 불투명도, 브레이크포인트에 대한 시각적 참조.",
+    "spacing": "간격 스케일",
+    "shadows": "그림자 스케일",
+    "borderRadius": "모서리 반경",
+    "fontSizes": "폰트 크기",
+    "fontWeights": "폰트 굵기",
+    "opacity": "불투명도 스케일",
+    "breakpoints": "화면 브레이크포인트",
+    "clickToCopy": "아무 값이나 클릭하여 복사"
+  },
+  "designExport": {
+    "title": "디자인 시스템 내보내기",
+    "subtitle": "디자인 토큰을 수집하고 개발자와 고객을 위한 독립형 HTML 참조 문서로 내보냅니다.",
+    "systemConfig": "시스템 설정",
+    "systemName": "시스템 이름",
+    "author": "작성자",
+    "version": "버전",
+    "description": "설명",
+    "colourTokens": "컬러 토큰",
+    "typographyTokens": "타이포그래피 토큰",
+    "headingFont": "제목 폰트",
+    "bodyFont": "본문 폰트",
+    "baseFontSize": "기본 폰트 크기",
+    "scaleRatio": "스케일 비율",
+    "spacingTokens": "간격 토큰",
+    "spacingPreset": "간격 프리셋",
+    "tailwindScale": "Tailwind 스케일",
+    "eightPointGrid": "8포인트 그리드",
+    "fourPointGrid": "4포인트 그리드",
+    "exportHtml": "HTML 내보내기",
+    "copyCssVars": "CSS 변수 복사",
+    "cssVarsCopied": "CSS 변수가 복사되었습니다",
+    "importFromPalette": "팔레트에서 가져오기",
+    "paletteImported": "팔레트 색상을 가져왔습니다",
+    "noPaletteData": "팔레트 데이터를 찾을 수 없습니다",
+    "addColour": "색상 추가",
+    "removeColour": "제거"
+  },
+  "resources": {
+    "title": "외부 리소스",
+    "subtitle": "웹 디자인을 위한 도구, 영감, 참고 자료 링크 모음.",
+    "categories": {
+      "typography": "타이포그래피",
+      "colour": "색상",
+      "aiImageVideo": "AI 이미지 및 영상",
+      "framer": "Framer",
+      "designInspiration": "디자인 영감",
+      "aiTools": "AI 도구"
+    }
+  },
+  "settings": {
+    "title": "설정",
+    "subtitle": "환경 설정, 계정 및 데이터를 관리합니다.",
+    "appearance": "외관",
+    "theme": "테마",
+    "dark": "다크",
+    "light": "라이트",
+    "language": "언어",
+    "account": "계정",
+    "dataManagement": "데이터 관리",
+    "dataInfo": "데이터는 브라우저에 로컬로 저장됩니다. 데이터를 내보내 백업하거나 지우고 새로 시작할 수 있습니다.",
+    "exportData": "내 데이터 내보내기",
+    "clearData": "로컬 데이터 지우기",
+    "dataExported": "데이터가 내보내졌습니다",
+    "dataCleared": "로컬 데이터가 지워졌습니다",
+    "clearConfirm": "정말 지우시겠습니까? 로컬에 저장된 모든 데이터가 삭제됩니다.",
+    "privacyLegal": "개인정보 및 법적 사항",
+    "privacyInfo": "Vasari Obsidian은 호주 개인정보보호법 1988 및 호주 개인정보보호원칙(APPs)을 준수합니다. 해당하는 경우 데이터는 호주(시드니 리전)에서 처리됩니다.",
+    "privacyPoints": {
+      "collect": "서비스에 필요한 데이터만 수집합니다 (APP 3)",
+      "use": "데이터는 툴킷 기능 제공에만 사용됩니다 (APP 6)",
+      "access": "언제든지 데이터에 접근, 수정 또는 삭제할 수 있습니다 (APP 12 & 13)",
+      "security": "업계 표준 보안 조치로 데이터를 보호합니다 (APP 11)"
+    },
+    "privacyPolicy": "개인정보처리방침",
+    "termsOfService": "서비스 이용약관"
+  },
+  "auth": {
+    "welcomeBack": "다시 오신 것을 환영합니다",
+    "createAccount": "계정 만들기",
+    "resetPassword": "비밀번호 재설정",
+    "signInSubtitle": "Vasari Obsidian 계정에 로그인하세요.",
+    "signUpSubtitle": "가입하여 작업을 저장하고 모든 기능에 접근하세요.",
+    "resetSubtitle": "재설정 링크를 받을 이메일을 입력하세요.",
+    "displayName": "표시 이름",
+    "namePlaceholder": "이름",
+    "email": "이메일",
+    "emailPlaceholder": "you@example.com",
+    "password": "비밀번호",
+    "passwordPlaceholder": "최소 6자",
+    "sendResetLink": "재설정 링크 보내기",
+    "backToSignIn": "로그인으로 돌아가기",
+    "haveAccount": "이미 계정이 있으신가요? 로그인",
+    "noAccount": "계정이 없으신가요? 회원가입",
+    "forgotPassword": "비밀번호를 잊으셨나요?",
+    "pleaseWait": "잠시만 기다려 주세요…",
+    "accountCreated": "계정이 생성되었습니다",
+    "signedIn": "로그인되었습니다",
+    "resetSent": "비밀번호 재설정 이메일이 전송되었습니다",
+    "errors": {
+      "emailInUse": "이 이메일로 등록된 계정이 이미 있습니다",
+      "invalidEmail": "유효한 이메일 주소를 입력하세요",
+      "weakPassword": "비밀번호는 6자 이상이어야 합니다",
+      "invalidCredential": "이메일 또는 비밀번호가 올바르지 않습니다",
+      "tooManyRequests": "시도 횟수가 너무 많습니다 — 나중에 다시 시도하세요",
+      "serviceUnavailable": "서비스를 일시적으로 사용할 수 없습니다",
+      "authFailed": "인증에 실패했습니다",
+      "userNotFound": "이 이메일로 등록된 계정을 찾을 수 없습니다"
+    }
+  },
+  "feedback": {
+    "title": "피드백",
+    "subtitle": "Vasari Obsidian 개선에 도움을 주세요. 버그, 기능 요청 또는 일반 피드백을 공유해 주세요.",
+    "featureRequest": "기능 요청",
+    "bugReport": "버그 보고",
+    "general": "일반",
+    "messagePlaceholder": "의견을 알려주세요…",
+    "submitFeedback": "피드백 제출",
+    "enterFeedback": "피드백을 입력해 주세요",
+    "thankYou": "피드백을 보내주셔서 감사합니다!"
+  },
+  "community": {
+    "title": "커뮤니티",
+    "subtitle": "Vasari Obsidian을 사용하는 다른 디자이너 및 개발자와 소통하세요.",
+    "comingSoonDesc": "팔레트를 공유하고, 디자인에 대한 피드백을 받고, 커뮤니티가 만든 템플릿을 발견하세요."
+  },
+  "privacy": {
+    "title": "개인정보처리방침",
+    "lastUpdated": "최종 업데이트: 2026년 3월",
+    "s1Title": "1. 본 방침에 관하여",
+    "s1Text": "Vasari Obsidian(\"당사\")은 호주 개인정보보호법 1988(Cth) 및 호주 개인정보보호원칙(APPs)에 따라 귀하의 개인정보를 보호하기 위해 최선을 다합니다. 본 방침은 당사가 귀하의 개인정보를 수집, 사용, 공개 및 보호하는 방법을 설명합니다.",
+    "s2Title": "2. 수집하는 정보 (APP 3)",
+    "s2Intro": "당사는 서비스에 합리적으로 필요한 정보만 수집합니다:",
+    "s2Items": [
+      "계정 정보: 이메일 주소, 표시 이름, 프로필 사진 (Google 로그인 사용 시)",
+      "사용 환경 설정: 테마 설정, 저장된 팔레트, 틴트 설정, 프롬프트",
+      "수집하지 않는 정보: 결제 카드 정보 (Stripe에서 처리), 위치 데이터, 기기 식별자, 추적 쿠키"
+    ],
+    "s3Title": "3. 정보 사용 방법 (APP 6)",
+    "s3Intro": "귀하의 정보는 다음 목적으로만 사용됩니다:",
+    "s3Items": [
+      "계정 및 툴킷 기능 제공 및 유지",
+      "여러 기기에서 디자인 설정 동기화",
+      "필수 서비스 알림 전송 (계정 보안, 정책 변경)",
+      "귀하의 데이터를 제3자에게 판매하거나 광고에 사용하지 않습니다"
+    ],
+    "s4Title": "4. 데이터 저장 및 보안 (APP 8 & 11)",
+    "s4Text": "귀하의 데이터는 Google Cloud Firestore의 australia-southeast1(시드니) 리전에 저장됩니다. 인증은 Firebase Authentication으로 처리됩니다. 당사는 다음을 시행합니다:",
+    "s4Items": [
+      "저장 및 전송 시 암호화 (TLS 1.3)",
+      "접근 제어를 위한 Firestore 보안 규칙",
+      "Firebase 구성에 대한 정기 보안 감사",
+      "동등한 개인정보 보호 없는 국경 간 데이터 이전 금지"
+    ],
+    "s5Title": "5. 귀하의 권리 (APP 12 & 13)",
+    "s5Intro": "귀하에게는 다음과 같은 권리가 있습니다:",
+    "s5Items": [
+      "설정을 통해 언제든지 개인정보에 접근",
+      "프로필 업데이트를 통한 개인정보 수정",
+      "설정 > 내 데이터 내보내기를 통해 모든 데이터를 JSON 파일로 내보내기",
+      "설정 > 계정 삭제를 통해 계정 및 모든 관련 데이터 삭제",
+      "로그아웃 및 계정 삭제를 통한 동의 철회"
+    ],
+    "s6Title": "6. 제3자 서비스",
+    "s6Items": [
+      "Firebase/Google Cloud — 인증 및 데이터베이스 (시드니 리전)",
+      "Google Fonts — 폰트 로딩 (개인 데이터 전송 없음)",
+      "Iconify — 아이콘 검색 API (개인 데이터 전송 없음)",
+      "Stripe — 결제 처리 (PCI DSS 준수, 호주 법인)"
+    ],
+    "s7Title": "7. 연락처",
+    "s7Text": "개인정보 관련 문의, 데이터 접근 요청 또는 불만 사항은 아래로 연락해 주세요:",
+    "s7Complaint": "당사의 응답에 만족하지 못하시는 경우, 호주 정보위원회(OAIC)에 불만을 제기할 수 있습니다."
+  },
+  "terms": {
+    "title": "서비스 이용약관",
+    "lastUpdated": "최종 업데이트: 2026년 3월",
+    "s1Title": "1. 동의",
+    "s1Text": "Vasari Obsidian Web Design Toolkit(\"본 서비스\")을 사용함으로써 귀하는 본 서비스 이용약관에 동의하게 됩니다. 본 서비스는 호주에 본사를 둔 Vasari Obsidian이 제공합니다. 본 약관은 호주 법률의 적용을 받습니다.",
+    "s2Title": "2. 계정",
+    "s2Text": "이메일/비밀번호 또는 Google 인증을 사용하여 계정을 만들 수 있습니다. 계정 자격 증명의 보안을 유지할 책임은 귀하에게 있습니다. 계정을 만들려면 16세 이상이어야 합니다.",
+    "s3Title": "3. 무료 및 Pro 요금제",
+    "s3Text": "본 서비스는 핵심 기능이 포함된 무료 요금제와 추가 도구가 포함된 Pro 요금제를 제공합니다. Pro 구독은 월간 또는 연간으로 청구됩니다. 언제든지 취소할 수 있으며, 결제 기간이 끝날 때까지 계속 이용할 수 있습니다. 환불은 호주 소비자법에 따라 개별 사안별로 처리됩니다.",
+    "s4Title": "4. 지적 재산권",
+    "s4Text": "본 서비스를 사용하여 만든 디자인, 팔레트, 그라데이션 및 기타 결과물은 귀하의 소유입니다. 본 서비스 자체(코드, 디자인 및 문서 포함)는 Vasari Obsidian이 소유하며 호주 저작권법에 의해 보호됩니다.",
+    "s5Title": "5. 허용되는 사용",
+    "s5Intro": "귀하는 다음을 하지 않을 것에 동의합니다:",
+    "s5Items": [
+      "불법적인 목적으로 본 서비스를 사용",
+      "다른 사용자의 계정에 무단 접근 시도",
+      "본 서비스를 역설계, 디컴파일 또는 디어셈블",
+      "자동화된 시스템으로 본 서비스에서 데이터를 스크래핑하거나 추출"
+    ],
+    "s6Title": "6. 책임의 제한",
+    "s6Text": "본 서비스는 호주 소비자법에서 요구하는 경우를 제외하고 어떠한 종류의 보증 없이 \"있는 그대로\" 제공됩니다. 법률이 허용하는 최대 범위 내에서 Vasari Obsidian은 본 서비스 사용으로 발생하는 간접적, 부수적 또는 결과적 손해에 대해 책임을 지지 않습니다.",
+    "s7Title": "7. 변경",
+    "s7Text": "당사는 수시로 본 약관을 업데이트할 수 있습니다. 중요한 변경 사항은 시행 최소 30일 전에 이메일 또는 앱 내 알림을 통해 공지됩니다.",
+    "s8Title": "8. 연락처",
+    "s8Text": "본 약관에 관한 문의사항이 있으시면 아래로 연락해 주세요:"
+  }
+}

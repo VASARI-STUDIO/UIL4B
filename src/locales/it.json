@@ -1,0 +1,525 @@
+{
+  "common": {
+    "copy": "Copia",
+    "copied": "Copiato",
+    "close": "Chiudi",
+    "open": "Apri",
+    "save": "Salva",
+    "delete": "Elimina",
+    "cancel": "Annulla",
+    "submit": "Invia",
+    "search": "Cerca",
+    "loading": "Caricamento…",
+    "noResults": "Nessun risultato",
+    "signIn": "Accedi",
+    "signOut": "Esci",
+    "signUp": "Registrati",
+    "tools": "Strumenti",
+    "tool": "Strumento",
+    "category": "Categoria",
+    "action": "Azione",
+    "pinned": "Fissato",
+    "comingSoon": "In arrivo",
+    "type": "Tipo",
+    "message": "Messaggio",
+    "navigate": "Naviga",
+    "openTool": "Apri strumento",
+    "jumpToCategory": "Vai alla categoria",
+    "pin": "Fissa {name}",
+    "unpin": "Sgancia {name}",
+    "colour": "Colore",
+    "colours": "Colori"
+  },
+  "brand": {
+    "name": "Vasari",
+    "tagline": "Obsidian Toolkit",
+    "full": "Vasari Obsidian",
+    "fullToolkit": "Vasari Obsidian Toolkit"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Impostazioni",
+    "support": "Supporto",
+    "toggleMenu": "Attiva/disattiva menu",
+    "toggle": "Attiva/disattiva {name}",
+    "proPlan": "PIANO PRO",
+    "freePlan": "PIANO GRATUITO"
+  },
+  "topbar": {
+    "searchHint": "Cerca strumenti, vai a una pagina…",
+    "lightMode": "Modalità chiara",
+    "darkMode": "Modalità scura",
+    "switchToLight": "Passa alla modalità chiara",
+    "switchToDark": "Passa alla modalità scura"
+  },
+  "cmd": {
+    "placeholder": "Cerca strumenti, vai a una pagina o esegui un'azione…",
+    "noResults": "Nessun risultato per \"{query}\"",
+    "recent": "Recenti",
+    "allTools": "Tutti gli strumenti",
+    "categories": "Categorie",
+    "actions": "Azioni",
+    "goToDashboard": "Vai al dashboard",
+    "openSettings": "Apri impostazioni",
+    "sendFeedback": "Invia feedback"
+  },
+  "dash": {
+    "greeting": {
+      "lateNight": "Lavori fino a tardi",
+      "morning": "Buongiorno",
+      "afternoon": "Buon pomeriggio",
+      "evening": "Buonasera"
+    },
+    "heroSub": "Riprendi da dove avevi lasciato o esplora una categoria qui sotto.",
+    "yourTools": "I tuoi strumenti",
+    "pinnedCount": "{count} fissati",
+    "explore": "Esplora",
+    "categoryCount": "{count} categorie",
+    "emptyPinned": "Fissa strumenti da qualsiasi categoria per vederli qui.",
+    "toolCount": "{count} strumenti"
+  },
+  "categories": {
+    "color": {
+      "label": "Studio colore",
+      "description": "Crea palette, scale, sfumature e verifica l'accessibilità."
+    },
+    "typography": {
+      "label": "Tipografia",
+      "description": "Scale tipografiche e abbinamenti di font ottimizzati per la leggibilità."
+    },
+    "imagery": {
+      "label": "Immagini",
+      "description": "Icone, strumenti per immagini e strutturazione di prompt."
+    },
+    "documentation": {
+      "label": "Documentazione",
+      "description": "Principi di design, riferimenti marketing e risorse esterne."
+    }
+  },
+  "tools": {
+    "colorStudio": {
+      "label": "Studio colore",
+      "description": "Costruttore completo di sistema colore con palette, tinte, contrasto e sfumature."
+    },
+    "typeScale": {
+      "label": "Scala tipografica",
+      "description": "Calcolatore di scala tipografica modulare con esportazione CSS."
+    },
+    "fontPairs": {
+      "label": "Trova abbinamenti font",
+      "description": "Abbinamenti di font selezionati per titoli e corpo del testo."
+    },
+    "iconLibrary": {
+      "label": "Libreria di icone",
+      "description": "Cerca migliaia di icone tramite l'API Iconify."
+    },
+    "imageConverter": {
+      "label": "Convertitore di immagini",
+      "description": "Converti, comprimi e ridimensiona immagini localmente."
+    },
+    "docsDesign": {
+      "label": "Principi di design",
+      "description": "Gerarchia visiva, equilibrio e psicologia del design."
+    },
+    "docsSocial": {
+      "label": "Social e marketing",
+      "description": "Best practice per social media e marketing."
+    },
+    "designReference": {
+      "label": "Riferimento di design",
+      "description": "Spaziatura, ombre, raggi, scale tipografiche e riferimento token di design."
+    },
+    "designExport": {
+      "label": "Esportazione sistema di design",
+      "description": "Esporta il tuo sistema di design completo come HTML per sviluppatori e clienti."
+    },
+    "externalResources": {
+      "label": "Risorse esterne",
+      "description": "Link selezionati a font, colori, strumenti IA e ispirazione."
+    }
+  },
+  "color": {
+    "title": "Studio colore",
+    "baseColour": "Colore base",
+    "palette": "Palette",
+    "harmony": "Armonia",
+    "tints": "Tinte",
+    "stateColours": "Colori di stato",
+    "gradients": "Sfumature",
+    "preview": "Anteprima",
+    "harmonyModes": {
+      "analogous": "Analoghi",
+      "triadic": "Triadici",
+      "splitComp": "Complementari divisi",
+      "tetradic": "Tetradici",
+      "complementary": "Complementari",
+      "monochromatic": "Monocromatici"
+    },
+    "saveToPalette": "Salva nella palette",
+    "savedToPalette": "Salvato nella palette",
+    "paletteFull": "Palette piena (max 10)",
+    "myPalette": "La mia palette",
+    "clearPalette": "Svuota palette",
+    "paletteCleared": "Palette svuotata",
+    "tintScale": "Scala di tinte",
+    "shadesOf": "Tonalità di {colour}",
+    "success": "Successo",
+    "warning": "Avviso",
+    "error": "Errore",
+    "info": "Info",
+    "overallPreset": "Preset generale",
+    "contrastCheck": "Verifica del contrasto",
+    "foreground": "Primo piano",
+    "background": "Sfondo",
+    "swap": "Scambia",
+    "ratio": "Rapporto",
+    "aaNormal": "AA Normale",
+    "aaLarge": "AA Grande",
+    "aaaNormal": "AAA Normale",
+    "aaaLarge": "AAA Grande",
+    "pass": "Superato",
+    "fail": "Non superato",
+    "gradientType": "Tipo",
+    "angle": "Angolo",
+    "addStop": "Aggiungi fermata",
+    "presets": "Preset",
+    "fromPalette": "Dalla palette",
+    "fromTints": "Dalle tinte",
+    "css": "CSS",
+    "lightMode": "Modalità chiara",
+    "darkMode": "Modalità scura",
+    "buttons": "Pulsanti",
+    "navigation": "Navigazione",
+    "table": "Tabella",
+    "toast": "Notifica",
+    "primary": "Primario",
+    "secondary": "Secondario",
+    "outline": "Contorno",
+    "ghost": "Trasparente",
+    "link": "Link",
+    "active": "Attivo",
+    "inactive": "Inattivo",
+    "hover": "Hover",
+    "headerRow": "Riga di intestazione",
+    "dataRow": "Riga di dati",
+    "altRow": "Riga alternata",
+    "statusCol": "Stato",
+    "itemCol": "Elemento",
+    "valueCol": "Valore"
+  },
+  "typeScale": {
+    "title": "Scala tipografica",
+    "baseSize": "Dimensione base",
+    "scaleRatio": "Rapporto di scala",
+    "lineHeight": "Altezza di riga",
+    "headingSpacing": "Spaziatura titoli",
+    "bodySpacing": "Spaziatura corpo",
+    "responsivePreview": "Anteprima responsive",
+    "desktop": "Desktop",
+    "tablet": "Tablet",
+    "mobile": "Mobile",
+    "exportFormat": "Formato di esportazione",
+    "cssVariables": "Variabili CSS",
+    "tailwindConfig": "Configurazione Tailwind",
+    "scssVariables": "Variabili SCSS",
+    "fontWeightRef": "Riferimento pesi font",
+    "sampleText": "Ma la volpe col suo balzo ha raggiunto il quieto Fido",
+    "ratios": {
+      "minorSecond": "Seconda minore",
+      "majorSecond": "Seconda maggiore",
+      "minorThird": "Terza minore",
+      "majorThird": "Terza maggiore",
+      "perfectFourth": "Quarta giusta",
+      "augFourth": "Quarta aumentata",
+      "perfectFifth": "Quinta giusta",
+      "goldenRatio": "Sezione aurea",
+      "custom": "Personalizzato"
+    },
+    "weights": {
+      "thin": "Sottile",
+      "extraLight": "Extra leggero",
+      "light": "Leggero",
+      "regular": "Normale",
+      "medium": "Medio",
+      "semiBold": "Semi grassetto",
+      "bold": "Grassetto",
+      "extraBold": "Extra grassetto",
+      "black": "Black"
+    }
+  },
+  "fontMatcher": {
+    "title": "Trova abbinamenti font",
+    "allCategories": "Tutti",
+    "serif": "Serif",
+    "sansSerif": "Sans-Serif",
+    "display": "Display",
+    "weight": "Peso",
+    "sampleText": "Testo di esempio",
+    "defaultSample": "Ma la volpe col suo balzo ha raggiunto il quieto Fido. Quel vituperabile xenofobo zelante giurava menzogne.",
+    "pairings": "Abbinamenti",
+    "compare": "Confronta",
+    "article": "Articolo",
+    "headingFont": "Titolo",
+    "bodyFont": "Corpo",
+    "selectToCompare": "Seleziona un font sopra per confrontare",
+    "miniGuide": "Mini guida di stile",
+    "pairedWith": "abbinato con"
+  },
+  "iconLibrary": {
+    "title": "Libreria di icone",
+    "searchPlaceholder": "Cerca icone…",
+    "allPacks": "Tutti i pacchetti",
+    "mode": "Modalità",
+    "embedded": "Integrato",
+    "api": "API",
+    "offline": "Offline",
+    "results": "{count} risultati",
+    "copySvg": "Copia SVG",
+    "copyJsx": "Copia JSX",
+    "noIcons": "Cerca icone qui sopra",
+    "loadingPacks": "Caricamento pacchetti di icone…"
+  },
+  "imageConverter": {
+    "title": "Convertitore di immagini",
+    "subtitle": "Converti, comprimi e ridimensiona immagini localmente nel tuo browser.",
+    "dropZone": "Trascina le immagini qui o clicca per sfogliare",
+    "format": "Formato di output",
+    "quality": "Qualità",
+    "maxWidth": "Larghezza massima",
+    "noLimit": "Nessun limite",
+    "original": "Originale",
+    "converted": "Convertito",
+    "savings": "Risparmio",
+    "downloadAll": "Scarica tutto (ZIP)",
+    "download": "Scarica",
+    "clear": "Cancella",
+    "dimensions": "{w} × {h}"
+  },
+  "promptLibrary": {
+    "title": "Libreria di prompt",
+    "subtitle": "Salva, organizza e riutilizza i tuoi prompt di design preferiti.",
+    "addPrompt": "Aggiungi prompt",
+    "promptPlaceholder": "Inserisci il tuo prompt…",
+    "tagsPlaceholder": "Tag (separati da virgola)",
+    "searchPlaceholder": "Cerca prompt…",
+    "referenceImage": "Immagine di riferimento",
+    "savedPrompts": "Prompt salvati",
+    "noPrompts": "Nessun prompt salvato",
+    "enterPromptFirst": "Inserisci prima un prompt",
+    "promptSaved": "Prompt salvato",
+    "promptCopied": "Prompt copiato",
+    "promptDeleted": "Prompt eliminato",
+    "importJson": "Importa JSON",
+    "importedCount": "{count} prompt importati"
+  },
+  "docsDesign": {
+    "title": "Principi di design",
+    "subtitle": "Principi basati sulla psicologia per interfacce ad alta conversione e facili da usare."
+  },
+  "docsSocial": {
+    "title": "Social e marketing",
+    "subtitle": "Strategie basate sui dati per contenuti, engagement e crescita."
+  },
+  "designRef": {
+    "title": "Riferimento di design",
+    "subtitle": "Riferimento visivo per spaziatura, ombre, raggi, tipografia, opacità e breakpoint.",
+    "spacing": "Scala di spaziatura",
+    "shadows": "Scala di ombre",
+    "borderRadius": "Raggio del bordo",
+    "fontSizes": "Dimensioni font",
+    "fontWeights": "Pesi font",
+    "opacity": "Scala di opacità",
+    "breakpoints": "Breakpoint dello schermo",
+    "clickToCopy": "Clicca su un valore per copiarlo"
+  },
+  "designExport": {
+    "title": "Esportazione sistema di design",
+    "subtitle": "Raccogli i tuoi token di design ed esporta un riferimento HTML autonomo per sviluppatori e clienti.",
+    "systemConfig": "Configurazione del sistema",
+    "systemName": "Nome del sistema",
+    "author": "Autore",
+    "version": "Versione",
+    "description": "Descrizione",
+    "colourTokens": "Token di colore",
+    "typographyTokens": "Token di tipografia",
+    "headingFont": "Font per titoli",
+    "bodyFont": "Font per il corpo",
+    "baseFontSize": "Dimensione font base",
+    "scaleRatio": "Rapporto di scala",
+    "spacingTokens": "Token di spaziatura",
+    "spacingPreset": "Preset di spaziatura",
+    "tailwindScale": "Scala Tailwind",
+    "eightPointGrid": "Griglia a 8 punti",
+    "fourPointGrid": "Griglia a 4 punti",
+    "exportHtml": "Esporta HTML",
+    "copyCssVars": "Copia variabili CSS",
+    "cssVarsCopied": "Variabili CSS copiate",
+    "importFromPalette": "Importa dalla palette",
+    "paletteImported": "Colori della palette importati",
+    "noPaletteData": "Nessun dato di palette trovato",
+    "addColour": "Aggiungi colore",
+    "removeColour": "Rimuovi"
+  },
+  "resources": {
+    "title": "Risorse esterne",
+    "subtitle": "Link selezionati a strumenti, ispirazione e riferimenti per il web design.",
+    "categories": {
+      "typography": "Tipografia",
+      "colour": "Colore",
+      "aiImageVideo": "Immagini e video IA",
+      "framer": "Framer",
+      "designInspiration": "Ispirazione design",
+      "aiTools": "Strumenti IA"
+    }
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "subtitle": "Gestisci le tue preferenze, il tuo account e i tuoi dati.",
+    "appearance": "Aspetto",
+    "theme": "Tema",
+    "dark": "Scuro",
+    "light": "Chiaro",
+    "language": "Lingua",
+    "account": "Account",
+    "dataManagement": "Gestione dati",
+    "dataInfo": "I tuoi dati sono archiviati localmente nel tuo browser. Esporta i tuoi dati per eseguirne il backup o cancellali per ricominciare da capo.",
+    "exportData": "Esporta i miei dati",
+    "clearData": "Cancella dati locali",
+    "dataExported": "Dati esportati",
+    "dataCleared": "Dati locali cancellati",
+    "clearConfirm": "Sei sicuro? Questa operazione eliminerà tutti i dati salvati localmente.",
+    "privacyLegal": "Privacy e aspetti legali",
+    "privacyInfo": "Vasari Obsidian è conforme alla legge australiana sulla privacy del 1988 e ai Principi australiani sulla privacy (APPs). I tuoi dati vengono elaborati in Australia (regione di Sydney) ove applicabile.",
+    "privacyPoints": {
+      "collect": "Raccogliamo solo i dati necessari per il servizio (APP 3)",
+      "use": "I tuoi dati vengono utilizzati esclusivamente per fornire le funzionalità del toolkit (APP 6)",
+      "access": "Puoi accedere, correggere o eliminare i tuoi dati in qualsiasi momento (APP 12 e 13)",
+      "security": "I dati sono protetti con misure di sicurezza standard del settore (APP 11)"
+    },
+    "privacyPolicy": "Informativa sulla privacy",
+    "termsOfService": "Termini di servizio"
+  },
+  "auth": {
+    "welcomeBack": "Bentornato",
+    "createAccount": "Crea account",
+    "resetPassword": "Reimposta password",
+    "signInSubtitle": "Accedi al tuo account Vasari Obsidian.",
+    "signUpSubtitle": "Registrati per salvare il tuo lavoro e accedere a tutte le funzionalità.",
+    "resetSubtitle": "Inserisci la tua e-mail per ricevere un link di reimpostazione.",
+    "displayName": "Nome visualizzato",
+    "namePlaceholder": "Il tuo nome",
+    "email": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Min. 6 caratteri",
+    "sendResetLink": "Invia link di reimpostazione",
+    "backToSignIn": "Torna all'accesso",
+    "haveAccount": "Hai già un account? Accedi",
+    "noAccount": "Non hai un account? Registrati",
+    "forgotPassword": "Password dimenticata?",
+    "pleaseWait": "Attendere prego…",
+    "accountCreated": "Account creato",
+    "signedIn": "Accesso effettuato",
+    "resetSent": "E-mail di reimpostazione password inviata",
+    "errors": {
+      "emailInUse": "Esiste già un account con questa e-mail",
+      "invalidEmail": "Inserisci un indirizzo e-mail valido",
+      "weakPassword": "La password deve contenere almeno 6 caratteri",
+      "invalidCredential": "E-mail o password non validi",
+      "tooManyRequests": "Troppi tentativi — riprova più tardi",
+      "serviceUnavailable": "Servizio temporaneamente non disponibile",
+      "authFailed": "Autenticazione non riuscita",
+      "userNotFound": "Nessun account trovato con questa e-mail"
+    }
+  },
+  "feedback": {
+    "title": "Feedback",
+    "subtitle": "Aiutaci a migliorare Vasari Obsidian. Segnala bug, richiedi funzionalità o condividi un feedback generico.",
+    "featureRequest": "Richiesta di funzionalità",
+    "bugReport": "Segnalazione di bug",
+    "general": "Generale",
+    "messagePlaceholder": "Dicci cosa ne pensi…",
+    "submitFeedback": "Invia feedback",
+    "enterFeedback": "Inserisci il tuo feedback",
+    "thankYou": "Grazie per il tuo feedback!"
+  },
+  "community": {
+    "title": "Community",
+    "subtitle": "Connettiti con altri designer e sviluppatori che utilizzano Vasari Obsidian.",
+    "comingSoonDesc": "Condividi palette, ottieni feedback sui tuoi design e scopri modelli creati dalla community."
+  },
+  "privacy": {
+    "title": "Informativa sulla privacy",
+    "lastUpdated": "Ultimo aggiornamento: marzo 2026",
+    "s1Title": "1. Informazioni su questa informativa",
+    "s1Text": "Vasari Obsidian (\"noi\", \"ci\", \"nostro\") si impegna a proteggere le vostre informazioni personali in conformità con la legge australiana sulla privacy del 1988 (Cth) e i Principi australiani sulla privacy (APPs). Questa informativa spiega come raccogliamo, utilizziamo, divulghiamo e proteggiamo le vostre informazioni personali.",
+    "s2Title": "2. Informazioni che raccogliamo (APP 3)",
+    "s2Intro": "Raccogliamo solo le informazioni ragionevolmente necessarie per i nostri servizi:",
+    "s2Items": [
+      "Informazioni sull'account: indirizzo e-mail, nome visualizzato, foto del profilo (se si utilizza l'accesso con Google)",
+      "Preferenze di utilizzo: impostazioni del tema, palette salvate, configurazioni di tinte, prompt",
+      "NON raccogliamo: dati delle carte di pagamento (gestiti da Stripe), dati sulla posizione, identificatori del dispositivo o cookie di tracciamento"
+    ],
+    "s3Title": "3. Come utilizziamo le vostre informazioni (APP 6)",
+    "s3Intro": "Le vostre informazioni vengono utilizzate esclusivamente per:",
+    "s3Items": [
+      "Fornire e mantenere il vostro account e le funzionalità del toolkit",
+      "Sincronizzare le vostre configurazioni di design tra i dispositivi",
+      "Inviare notifiche essenziali del servizio (sicurezza dell'account, modifiche alle policy)",
+      "Non venderemo MAI i vostri dati a terzi né li utilizzeremo per scopi pubblicitari"
+    ],
+    "s4Title": "4. Archiviazione e sicurezza dei dati (APP 8 e 11)",
+    "s4Text": "I vostri dati sono archiviati in Google Cloud Firestore nella regione australia-southeast1 (Sydney). L'autenticazione è gestita da Firebase Authentication. Implementiamo:",
+    "s4Items": [
+      "Crittografia a riposo e in transito (TLS 1.3)",
+      "Regole di sicurezza Firestore per il controllo degli accessi",
+      "Audit di sicurezza regolari della nostra configurazione Firebase",
+      "Nessun trasferimento transfrontaliero di dati senza protezioni della privacy equivalenti"
+    ],
+    "s5Title": "5. I vostri diritti (APP 12 e 13)",
+    "s5Intro": "Avete il diritto di:",
+    "s5Items": [
+      "Accedere alle vostre informazioni personali in qualsiasi momento tramite le Impostazioni",
+      "Correggere le vostre informazioni personali aggiornando il vostro profilo",
+      "Esportare tutti i vostri dati come file JSON tramite Impostazioni > Esporta i miei dati",
+      "Eliminare il vostro account e tutti i dati associati tramite Impostazioni > Elimina account",
+      "Revocare il consenso disconnettendovi ed eliminando il vostro account"
+    ],
+    "s6Title": "6. Servizi di terze parti",
+    "s6Items": [
+      "Firebase/Google Cloud — Autenticazione e database (regione di Sydney)",
+      "Google Fonts — Caricamento font (nessun dato personale inviato)",
+      "Iconify — API di ricerca icone (nessun dato personale inviato)",
+      "Stripe — Elaborazione pagamenti (conforme PCI DSS, entità australiana)"
+    ],
+    "s7Title": "7. Contatti",
+    "s7Text": "Per richieste sulla privacy, richieste di accesso ai dati o reclami, contattateci all'indirizzo:",
+    "s7Complaint": "Se non siete soddisfatti della nostra risposta, potete presentare un reclamo all'Office of the Australian Information Commissioner (OAIC) all'indirizzo"
+  },
+  "terms": {
+    "title": "Termini di servizio",
+    "lastUpdated": "Ultimo aggiornamento: marzo 2026",
+    "s1Title": "1. Accettazione",
+    "s1Text": "Utilizzando Vasari Obsidian Web Design Toolkit (\"il Servizio\"), accettate i presenti Termini di servizio. Il Servizio è fornito da Vasari Obsidian, un'azienda con sede in Australia. Questi termini sono regolati dalle leggi dell'Australia.",
+    "s2Title": "2. Account",
+    "s2Text": "Potete creare un account utilizzando e-mail/password o l'autenticazione Google. Siete responsabili del mantenimento della sicurezza delle credenziali del vostro account. Dovete avere almeno 16 anni per creare un account.",
+    "s3Title": "3. Piani gratuito e Pro",
+    "s3Text": "Il Servizio offre un piano gratuito con funzionalità di base e un piano Pro con strumenti aggiuntivi. Gli abbonamenti Pro vengono fatturati mensilmente o annualmente. Potete annullare in qualsiasi momento; l'accesso continua fino alla fine del periodo di fatturazione. I rimborsi vengono gestiti caso per caso in conformità con la legge australiana sui consumatori.",
+    "s4Title": "4. Proprietà intellettuale",
+    "s4Text": "I design, le palette, le sfumature e gli altri output che create utilizzando il Servizio appartengono a voi. Il Servizio stesso, incluso il suo codice, design e documentazione, è di proprietà di Vasari Obsidian ed è protetto dalla legge australiana sul diritto d'autore.",
+    "s5Title": "5. Uso accettabile",
+    "s5Intro": "Vi impegnate a non:",
+    "s5Items": [
+      "Utilizzare il Servizio per scopi illeciti",
+      "Tentare di ottenere accesso non autorizzato agli account di altri utenti",
+      "Effettuare reverse engineering, decompilare o disassemblare il Servizio",
+      "Utilizzare sistemi automatizzati per estrarre dati dal Servizio"
+    ],
+    "s6Title": "6. Limitazione di responsabilità",
+    "s6Text": "Il Servizio è fornito \"così com'è\" senza garanzie di alcun tipo, salvo quanto previsto dalla legge australiana sui consumatori. Nella misura massima consentita dalla legge, Vasari Obsidian non è responsabile per danni indiretti, incidentali o consequenziali derivanti dall'utilizzo del Servizio.",
+    "s7Title": "7. Modifiche",
+    "s7Text": "Potremmo aggiornare questi Termini di tanto in tanto. Le modifiche sostanziali saranno comunicate via e-mail o tramite una notifica in-app almeno 30 giorni prima della loro entrata in vigore.",
+    "s8Title": "8. Contatti",
+    "s8Text": "Domande su questi Termini? Contattateci all'indirizzo"
+  }
+}

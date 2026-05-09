@@ -1,13 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TOOLS, CATEGORIES, getCategory } from '../data/tools'
+import { TOOLS, CATEGORIES, getCategory, localiseTools, localiseCategories } from '../data/tools'
 import { useWorkspace } from '../contexts/WorkspaceContext'
-
-const QUICK_ACTIONS = [
-  { id: 'go-dashboard', label: 'Go to Dashboard', path: '/', keywords: ['home', 'dashboard'] },
-  { id: 'go-settings', label: 'Open Settings', path: '/settings', keywords: ['settings', 'preferences'] },
-  { id: 'go-feedback', label: 'Send Feedback', path: '/feedback', keywords: ['support', 'feedback', 'help'] },
-]
+import { useI18n } from '../contexts/I18nContext'
 
 export default function CommandPalette({ open, onClose }) {
   const [query, setQuery] = useState('')
@@ -16,59 +11,58 @@ export default function CommandPalette({ open, onClose }) {
   const inputRef = useRef(null)
   const listRef = useRef(null)
   const { recent } = useWorkspace()
+  const { t } = useI18n()
+
+  const lTools = useMemo(() => localiseTools(t), [t])
+  const lCats = useMemo(() => localiseCategories(t), [t])
+
+  const quickActions = useMemo(() => [
+    { id: 'go-dashboard', label: t('cmd.goToDashboard'), path: '/', keywords: ['home', 'dashboard'] },
+    { id: 'go-settings', label: t('cmd.openSettings'), path: '/settings', keywords: ['settings', 'preferences'] },
+    { id: 'go-feedback', label: t('cmd.sendFeedback'), path: '/feedback', keywords: ['support', 'feedback', 'help'] },
+  ], [t])
 
   const recentTools = useMemo(() => {
     return recent
-      .map(id => TOOLS.find(t => t.id === id))
+      .map(id => lTools.find(tl => tl.id === id))
       .filter(Boolean)
       .slice(0, 4)
-  }, [recent])
+  }, [recent, lTools])
 
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) {
       const out = []
-      if (recentTools.length) out.push({ label: 'Recent', items: recentTools.map(t => ({ kind: 'tool', ...t })) })
-      out.push({
-        label: 'All Tools',
-        items: TOOLS.map(t => ({ kind: 'tool', ...t })),
-      })
-      out.push({
-        label: 'Categories',
-        items: CATEGORIES.map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description })),
-      })
-      out.push({
-        label: 'Actions',
-        items: QUICK_ACTIONS.map(a => ({ kind: 'action', ...a })),
-      })
+      if (recentTools.length) out.push({ label: t('cmd.recent'), items: recentTools.map(tl => ({ kind: 'tool', ...tl })) })
+      out.push({ label: t('cmd.allTools'), items: lTools.map(tl => ({ kind: 'tool', ...tl })) })
+      out.push({ label: t('cmd.categories'), items: lCats.map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description })) })
+      out.push({ label: t('cmd.actions'), items: quickActions.map(a => ({ kind: 'action', ...a })) })
       return out
     }
 
-    const tools = TOOLS.filter(t =>
-      t.label.toLowerCase().includes(q) ||
-      t.description.toLowerCase().includes(q) ||
-      t.keywords.some(k => k.includes(q))
-    ).map(t => ({ kind: 'tool', ...t }))
+    const tools = lTools.filter(tl =>
+      tl.label.toLowerCase().includes(q) ||
+      tl.description.toLowerCase().includes(q) ||
+      tl.keywords.some(k => k.includes(q))
+    ).map(tl => ({ kind: 'tool', ...tl }))
 
-    const cats = CATEGORIES.filter(c =>
+    const cats = lCats.filter(c =>
       c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
     ).map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description }))
 
-    const actions = QUICK_ACTIONS.filter(a =>
+    const actions = quickActions.filter(a =>
       a.label.toLowerCase().includes(q) || a.keywords.some(k => k.includes(q))
     ).map(a => ({ kind: 'action', ...a }))
 
     const out = []
-    if (tools.length) out.push({ label: 'Tools', items: tools })
-    if (cats.length) out.push({ label: 'Categories', items: cats })
-    if (actions.length) out.push({ label: 'Actions', items: actions })
+    if (tools.length) out.push({ label: t('common.tools'), items: tools })
+    if (cats.length) out.push({ label: t('cmd.categories'), items: cats })
+    if (actions.length) out.push({ label: t('cmd.actions'), items: actions })
     return out
-  }, [query, recentTools])
+  }, [query, recentTools, lTools, lCats, quickActions, t])
 
-  // Flat array for keyboard navigation
   const flat = useMemo(() => sections.flatMap(s => s.items), [sections])
 
-  // Reset query/highlight when reopening
   useEffect(() => {
     if (open) {
       setQuery('')
@@ -77,10 +71,8 @@ export default function CommandPalette({ open, onClose }) {
     }
   }, [open])
 
-  // Clamp highlight
   const safeHighlight = Math.min(highlight, Math.max(flat.length - 1, 0))
 
-  // Lock scroll while open
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
@@ -97,19 +89,10 @@ export default function CommandPalette({ open, onClose }) {
   }
 
   const onKey = (e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      onClose()
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setHighlight(Math.min(safeHighlight + 1, flat.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setHighlight(Math.max(safeHighlight - 1, 0))
-    } else if (e.key === 'Enter') {
-      e.preventDefault()
-      select(flat[safeHighlight])
-    }
+    if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight(Math.min(safeHighlight + 1, flat.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight(Math.max(safeHighlight - 1, 0)) }
+    else if (e.key === 'Enter') { e.preventDefault(); select(flat[safeHighlight]) }
   }
 
   let runningIdx = 0
@@ -124,7 +107,7 @@ export default function CommandPalette({ open, onClose }) {
           <input
             ref={inputRef}
             className="cp-input"
-            placeholder="Search tools, jump to a page, or run an action…"
+            placeholder={t('cmd.placeholder')}
             value={query}
             onChange={e => { setQuery(e.target.value); setHighlight(0) }}
             onKeyDown={onKey}
@@ -134,7 +117,7 @@ export default function CommandPalette({ open, onClose }) {
 
         <div className="cp-results" ref={listRef}>
           {flat.length === 0 && (
-            <div className="cp-empty">No results for "{query}"</div>
+            <div className="cp-empty">{t('cmd.noResults', { query })}</div>
           )}
           {sections.map(section => (
             <div key={section.label}>
@@ -142,10 +125,9 @@ export default function CommandPalette({ open, onClose }) {
               {section.items.map(item => {
                 const idx = runningIdx++
                 const cat = item.kind === 'tool' ? getCategory(item.category) : null
+                const catLabel = item.kind === 'tool' && cat ? t(cat.labelKey) || cat.label : null
                 const icon = item.kind === 'category' ? getCategory(item.id)?.icon : (cat?.icon || (
-                  <>
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                  </>
+                  <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></>
                 ))
                 return (
                   <button
@@ -165,7 +147,7 @@ export default function CommandPalette({ open, onClose }) {
                       {item.description && <span className="cp-item-desc">{item.description}</span>}
                     </div>
                     <span className="cp-item-cat">
-                      {item.kind === 'tool' ? cat?.label : item.kind === 'category' ? 'Category' : 'Action'}
+                      {item.kind === 'tool' ? catLabel : item.kind === 'category' ? t('common.category') : t('common.action')}
                     </span>
                   </button>
                 )
@@ -176,12 +158,12 @@ export default function CommandPalette({ open, onClose }) {
 
         <div className="cp-footer">
           <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t3)' }}>
-            Vasari Obsidian Toolkit
+            {t('brand.fullToolkit')}
           </span>
           <div className="cp-footer-keys">
-            <span><span className="cp-kbd">↑↓</span> Navigate</span>
-            <span><span className="cp-kbd">↵</span> Open</span>
-            <span><span className="cp-kbd">esc</span> Close</span>
+            <span><span className="cp-kbd">↑↓</span> {t('common.navigate')}</span>
+            <span><span className="cp-kbd">↵</span> {t('common.open')}</span>
+            <span><span className="cp-kbd">esc</span> {t('common.close')}</span>
           </div>
         </div>
       </div>

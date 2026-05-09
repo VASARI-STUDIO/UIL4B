@@ -387,6 +387,16 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;hei
 .tool-tile-desc{font-size:12px;color:var(--t2);line-height:1.55;flex:1}
 .tool-tile-cat{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
 
+/* ─── Drag-and-drop pinned tools ─── */
+.dash-tools-grid{position:relative}
+.tool-mini.dragging{opacity:.4;pointer-events:none}
+.tool-mini.drag-over{box-shadow:inset 0 0 0 2px var(--accent);border-color:var(--accent)}
+.dash-pin-hint{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg-2);border:1px dashed var(--border);border-radius:var(--radius);font-size:12px;color:var(--t2);margin-bottom:12px}
+.dash-pin-hint svg{flex-shrink:0;color:var(--accent)}
+.tool-mini-drag{cursor:grab;color:var(--t3);padding:4px;border-radius:var(--radius-s);display:flex;align-items:center;transition:all var(--t);flex-shrink:0;background:none;border:none}
+.tool-mini-drag:hover{color:var(--t1);background:var(--bg-3)}
+.tool-mini-drag:active{cursor:grabbing}
+
 /* ─── Command Palette ─── */
 .cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding-top:max(10vh,80px);animation:cp-fade .14s ease}
 @keyframes cp-fade{from{opacity:0}to{opacity:1}}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useI18n } from '../contexts/I18nContext'
 
 const FONT_DB = {
   'Playfair Display': { w: [400, 700, 900], cat: 'serif', pairs: ['Source Sans 3', 'DM Sans', 'Inter', 'Instrument Sans', 'Commissioner', 'Karla'] },
@@ -39,6 +40,7 @@ function CopyIcon({ size = 12 }) {
 }
 
 export default function FontMatcher({ onCopy }) {
+  const { t } = useI18n()
   const [heading, setHeading] = useState('Playfair Display')
   const [headingWeight, setHeadingWeight] = useState(700)
   const [catFilter, setCatFilter] = useState('all')
@@ -86,9 +88,9 @@ export default function FontMatcher({ onCopy }) {
   return (
     <div className="sec">
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 8 }}>Font Pair Finder</h1>
+        <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 8 }}>{t('fontMatcher.title')}</h1>
         <p style={{ fontSize: 14, color: 'var(--t1)', maxWidth: 540, lineHeight: 1.7 }}>
-          Explore {Object.keys(FONT_DB).length} heading fonts with curated body pairings. Fonts load live from Google Fonts.
+          {t('tools.fontPairs.description')}
         </p>
       </div>
 

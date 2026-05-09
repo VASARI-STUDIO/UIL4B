@@ -1,118 +1,130 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback } from 'react'
 
 const AuthContext = createContext()
 const USERS_KEY = 'vs-users'
 const SESSION_KEY = 'vs-session'
 
-function loadUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {} } catch { return {} }
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY) || '{}') } catch { return {} }
 }
-
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-}
-
-function loadSession() {
+function saveUsers(u) { localStorage.setItem(USERS_KEY, JSON.stringify(u)) }
+function getSession() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY)) } catch { return null }
 }
+function saveSession(s) { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY) }
 
-function hashPassword(password) {
-  let hash = 0
-  for (let i = 0; i < password.length; i++) {
-    hash = ((hash << 5) - hash + password.charCodeAt(i)) | 0
-  }
-  return 'h_' + Math.abs(hash).toString(36)
+function hashPassword(p) {
+  let h = 0
+  for (let i = 0; i < p.length; i++) h = ((h << 5) - h + p.charCodeAt(i)) | 0
+  return 'h_' + Math.abs(h).toString(36)
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [userProfile, setUserProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [session, setSession] = useState(getSession)
 
-  useEffect(() => {
-    const session = loadSession()
-    if (session) {
-      setUser(session)
-      setUserProfile(session)
-    }
-    setLoading(false)
-  }, [])
+  const user = session ? { email: session.email, uid: session.uid } : null
+  const userProfile = session ? {
+    displayName: session.displayName || session.email?.split('@')[0] || 'User',
+    email: session.email,
+    photoURL: session.photoURL || '',
+    tier: session.tier || 'free',
+    location: session.location || '',
+    website: session.website || '',
+    bio: session.bio || '',
+    company: session.company || '',
+  } : null
 
-  const persistSession = useCallback((profile) => {
-    setUser(profile)
-    setUserProfile(profile)
-    localStorage.setItem(SESSION_KEY, JSON.stringify(profile))
+  const login = useCallback(async (email, password) => {
+    const users = getUsers()
+    const key = email.toLowerCase()
+    const u = users[key]
+    if (!u) throw { code: 'auth/user-not-found' }
+    if (u.passwordHash !== hashPassword(password)) throw { code: 'auth/wrong-password' }
+    const s = { email: u.email, uid: u.uid, displayName: u.displayName, photoURL: u.photoURL, tier: u.tier }
+    saveSession(s)
+    setSession(s)
   }, [])
 
   const signup = useCallback(async (email, password, displayName) => {
-    if (!email || !password) throw { code: 'auth/invalid-email', message: 'Email and password are required' }
-    if (password.length < 6) throw { code: 'auth/weak-password', message: 'Password must be at least 6 characters' }
-    const users = loadUsers()
+    const users = getUsers()
     const key = email.toLowerCase()
-    if (users[key]) throw { code: 'auth/email-already-in-use', message: 'An account with this email already exists' }
-    const profile = {
-      uid: 'u_' + Date.now().toString(36),
-      email: key,
-      displayName: displayName || key.split('@')[0],
-      photoURL: '',
-      tier: 'free',
-      createdAt: new Date().toISOString()
-    }
-    users[key] = { ...profile, pw: hashPassword(password) }
+    if (users[key]) throw { code: 'auth/email-already-in-use' }
+    const uid = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    const u = { email, uid, displayName: displayName || '', photoURL: '', tier: 'free', passwordHash: hashPassword(password), createdAt: new Date().toISOString() }
+    users[key] = u
     saveUsers(users)
-    persistSession(profile)
-    return { user: profile }
-  }, [persistSession])
-
-  const login = useCallback(async (email, password) => {
-    if (!email || !password) throw { code: 'auth/invalid-email', message: 'Email and password are required' }
-    const users = loadUsers()
-    const key = email.toLowerCase()
-    const stored = users[key]
-    if (!stored || stored.pw !== hashPassword(password)) {
-      throw { code: 'auth/invalid-credential', message: 'Invalid email or password' }
-    }
-    const { pw, ...profile } = stored
-    persistSession(profile)
-    return { user: profile }
-  }, [persistSession])
-
-  const loginWithGoogle = useCallback(async () => {
-    const name = 'Google User'
-    const email = 'google_' + Date.now().toString(36) + '@gmail.com'
-    const profile = {
-      uid: 'g_' + Date.now().toString(36),
-      email,
-      displayName: name,
-      photoURL: '',
-      tier: 'free',
-      createdAt: new Date().toISOString()
-    }
-    const users = loadUsers()
-    users[email] = { ...profile, pw: '' }
-    saveUsers(users)
-    persistSession(profile)
-    return { user: profile }
-  }, [persistSession])
-
-  const logout = useCallback(async () => {
-    setUser(null)
-    setUserProfile(null)
-    localStorage.removeItem(SESSION_KEY)
+    const s = { email: u.email, uid, displayName: u.displayName, photoURL: '', tier: 'free' }
+    saveSession(s)
+    setSession(s)
   }, [])
+
+  const logout = useCallback(() => { saveSession(null); setSession(null) }, [])
 
   const resetPassword = useCallback(async (email) => {
-    if (!email) throw { code: 'auth/invalid-email', message: 'Please enter a valid email address' }
-    const users = loadUsers()
-    if (!users[email.toLowerCase()]) throw { code: 'auth/user-not-found', message: 'No account found with this email' }
+    const users = getUsers()
+    if (!users[email.toLowerCase()]) throw { code: 'auth/user-not-found' }
   }, [])
 
-  const isProUser = useCallback(() => userProfile?.tier === 'pro', [userProfile])
+  const updateProfile = useCallback((fields) => {
+    if (!session) return
+    const users = getUsers()
+    const key = session.email.toLowerCase()
+    if (users[key]) { Object.assign(users[key], fields); saveUsers(users) }
+    const s = { ...session, ...fields }
+    saveSession(s)
+    setSession(s)
+  }, [session])
+
+  const updateDisplayName = useCallback((newName) => {
+    updateProfile({ displayName: newName })
+  }, [updateProfile])
+
+  const updateEmail = useCallback((newEmail, password) => {
+    if (!session) throw { code: 'auth/requires-recent-login' }
+    const users = getUsers()
+    const oldKey = session.email.toLowerCase()
+    const newKey = newEmail.toLowerCase()
+    if (oldKey !== newKey && users[newKey]) throw { code: 'auth/email-already-in-use' }
+    const u = users[oldKey]
+    if (!u || u.passwordHash !== hashPassword(password)) throw { code: 'auth/wrong-password' }
+    delete users[oldKey]
+    u.email = newEmail
+    users[newKey] = u
+    saveUsers(users)
+    const s = { ...session, email: newEmail }
+    saveSession(s)
+    setSession(s)
+  }, [session])
+
+  const updatePassword = useCallback((currentPassword, newPassword) => {
+    if (!session) throw { code: 'auth/requires-recent-login' }
+    const users = getUsers()
+    const key = session.email.toLowerCase()
+    const u = users[key]
+    if (!u || u.passwordHash !== hashPassword(currentPassword)) throw { code: 'auth/wrong-password' }
+    u.passwordHash = hashPassword(newPassword)
+    saveUsers(users)
+  }, [session])
+
+  const deleteAccount = useCallback((password) => {
+    if (!session) return
+    const users = getUsers()
+    const key = session.email.toLowerCase()
+    const u = users[key]
+    if (!u || u.passwordHash !== hashPassword(password)) throw { code: 'auth/wrong-password' }
+    delete users[key]
+    saveUsers(users)
+    saveSession(null)
+    setSession(null)
+  }, [session])
+
+  const isProUser = () => userProfile?.tier === 'pro'
 
   return (
     <AuthContext.Provider value={{
-      user, userProfile, loading,
-      login, signup, loginWithGoogle, logout, resetPassword,
+      user, userProfile, loading: false,
+      login, signup, logout, resetPassword,
+      updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,
       isProUser
     }}>
       {children}

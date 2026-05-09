@@ -3,7 +3,9 @@
 export const CATEGORIES = [
   {
     id: 'color',
-    label: 'Color Studio',
+    labelKey: 'categories.color.label',
+    descKey: 'categories.color.description',
+    label: 'Colour Studio',
     path: '/color',
     description: 'Build palettes, scales, gradients and verify accessibility.',
     icon: (
@@ -17,6 +19,8 @@ export const CATEGORIES = [
   },
   {
     id: 'typography',
+    labelKey: 'categories.typography.label',
+    descKey: 'categories.typography.description',
     label: 'Typography',
     path: '/typography',
     description: 'Type scales and font pairings tuned for readability.',
@@ -30,6 +34,8 @@ export const CATEGORIES = [
   },
   {
     id: 'imagery',
+    labelKey: 'categories.imagery.label',
+    descKey: 'categories.imagery.description',
     label: 'Imagery',
     path: '/imagery',
     description: 'Icons, image tools, and prompt structuring.',
@@ -43,6 +49,8 @@ export const CATEGORIES = [
   },
   {
     id: 'documentation',
+    labelKey: 'categories.documentation.label',
+    descKey: 'categories.documentation.description',
     label: 'Documentation',
     path: '/docs',
     description: 'Design principles, marketing references, and external resources.',
@@ -57,94 +65,30 @@ export const CATEGORIES = [
   },
 ]
 
+const TOOL_I18N_MAP = {
+  'color-studio': 'tools.colorStudio',
+  'typescale': 'tools.typeScale',
+  'fontpairs': 'tools.fontPairs',
+  'icons': 'tools.iconLibrary',
+  'imgconvert': 'tools.imageConverter',
+  'docs-design': 'tools.docsDesign',
+  'docs-social': 'tools.docsSocial',
+  'design-reference': 'tools.designReference',
+  'video-frames': 'tools.videoFrames',
+  'resources': 'tools.externalResources',
+}
+
 export const TOOLS = [
-  // Color
-  {
-    id: 'color-studio',
-    label: 'Color Studio',
-    path: '/color',
-    category: 'color',
-    description: 'Complete color system builder with palette, tints, contrast, and gradients.',
-    keywords: ['color', 'studio', 'palette', 'tint', 'contrast', 'gradient', 'system'],
-  },
-
-  // Typography
-  {
-    id: 'typescale',
-    label: 'Type Scale',
-    path: '/typescale',
-    category: 'typography',
-    description: 'Modular type scale calculator with CSS export.',
-    keywords: ['type', 'scale', 'modular', 'font size'],
-  },
-  {
-    id: 'fontpairs',
-    label: 'Font Pair Finder',
-    path: '/fontpairs',
-    category: 'typography',
-    description: 'Curated font pairings for headlines and body.',
-    keywords: ['font', 'pair', 'pairing', 'typography', 'google fonts'],
-  },
-
-  // Imagery
-  {
-    id: 'icons',
-    label: 'Icon Library',
-    path: '/icons',
-    category: 'imagery',
-    description: 'Search thousands of icons via Iconify API.',
-    keywords: ['icon', 'svg', 'symbol', 'iconify'],
-  },
-  {
-    id: 'imgconvert',
-    label: 'Image Converter',
-    path: '/imgconvert',
-    category: 'imagery',
-    description: 'Convert, compress and resize images locally.',
-    keywords: ['image', 'convert', 'compress', 'resize', 'webp', 'png', 'jpg'],
-  },
-
-  // Documentation
-  {
-    id: 'docs-design',
-    label: 'Design Principles',
-    path: '/docs-design',
-    category: 'documentation',
-    description: 'Visual hierarchy, balance, and design psychology.',
-    keywords: ['design', 'principles', 'theory', 'documentation'],
-  },
-  {
-    id: 'docs-social',
-    label: 'Social & Marketing',
-    path: '/docs-social',
-    category: 'documentation',
-    description: 'Social media and marketing best practices.',
-    keywords: ['social', 'marketing', 'content', 'documentation'],
-  },
-  {
-    id: 'design-reference',
-    label: 'Design Reference',
-    path: '/design-reference',
-    category: 'documentation',
-    description: 'Spacing, shadows, radii, font scales, and design token reference.',
-    keywords: ['tailwind', 'spacing', 'shadow', 'radius', 'tokens', 'reference', 'cheat sheet'],
-  },
-  {
-    id: 'export',
-    label: 'Design System Export',
-    path: '/export',
-    category: 'documentation',
-    description: 'Export your complete design system as HTML for developers and clients.',
-    keywords: ['export', 'design system', 'html', 'tokens', 'handoff', 'developer'],
-  },
-  {
-    id: 'resources',
-    label: 'External Resources',
-    path: '/resources',
-    category: 'documentation',
-    description: 'Curated links to fonts, colors, AI tools, and inspiration.',
-    keywords: ['resources', 'links', 'external', 'google fonts', 'tailwind', 'framer', 'awwwards'],
-  },
+  { id: 'color-studio', label: 'Colour Studio', path: '/color', category: 'color', description: 'Complete colour system builder with palette, tints, contrast, and gradients.', keywords: ['color', 'colour', 'studio', 'palette', 'tint', 'contrast', 'gradient', 'system'] },
+  { id: 'typescale', label: 'Type Scale', path: '/typescale', category: 'typography', description: 'Modular type scale calculator with CSS export.', keywords: ['type', 'scale', 'modular', 'font size'] },
+  { id: 'fontpairs', label: 'Font Pair Finder', path: '/fontpairs', category: 'typography', description: 'Curated font pairings for headlines and body.', keywords: ['font', 'pair', 'pairing', 'typography', 'google fonts'] },
+  { id: 'icons', label: 'Icon Library', path: '/icons', category: 'imagery', description: 'Search thousands of icons via Iconify API.', keywords: ['icon', 'svg', 'symbol', 'iconify'] },
+  { id: 'imgconvert', label: 'Image Converter', path: '/imgconvert', category: 'imagery', description: 'Convert, compress and resize images locally.', keywords: ['image', 'convert', 'compress', 'resize', 'webp', 'png', 'jpg'] },
+  { id: 'video-frames', label: 'Video to Frames', path: '/video-frames', category: 'imagery', description: 'Extract frames from video as images with scaling and compression controls.', keywords: ['video', 'frames', 'extract', 'screenshot', 'capture', 'export'] },
+  { id: 'docs-design', label: 'Design Principles', path: '/docs-design', category: 'documentation', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
+  { id: 'docs-social', label: 'Social & Marketing', path: '/docs-social', category: 'documentation', description: 'Social media and marketing best practices.', keywords: ['social', 'marketing', 'content', 'documentation'] },
+  { id: 'design-reference', label: 'Design Reference', path: '/design-reference', category: 'documentation', description: 'Spacing, shadows, radii, font scales, and design token reference.', keywords: ['tailwind', 'spacing', 'shadow', 'radius', 'tokens', 'reference', 'cheat sheet'] },
+  { id: 'resources', label: 'External Resources', path: '/resources', category: 'documentation', description: 'Curated links to fonts, colours, AI tools, and inspiration.', keywords: ['resources', 'links', 'external', 'google fonts', 'tailwind', 'framer', 'awwwards'] },
 ]
 
 export function toolsByCategory(categoryId) {
@@ -162,6 +106,34 @@ export function searchTools(query) {
     if (t.label.toLowerCase().includes(q)) return true
     if (t.description.toLowerCase().includes(q)) return true
     if (t.keywords.some(k => k.includes(q))) return true
+    return false
+  })
+}
+
+export function localiseTools(t) {
+  return TOOLS.map(tool => ({
+    ...tool,
+    label: t(TOOL_I18N_MAP[tool.id] + '.label') || tool.label,
+    description: t(TOOL_I18N_MAP[tool.id] + '.description') || tool.description,
+  }))
+}
+
+export function localiseCategories(t) {
+  return CATEGORIES.map(cat => ({
+    ...cat,
+    label: t(cat.labelKey) || cat.label,
+    description: t(cat.descKey) || cat.description,
+  }))
+}
+
+export function searchToolsLocalised(query, t) {
+  const q = query.trim().toLowerCase()
+  if (!q) return []
+  const tools = localiseTools(t)
+  return tools.filter(tool => {
+    if (tool.label.toLowerCase().includes(q)) return true
+    if (tool.description.toLowerCase().includes(q)) return true
+    if (tool.keywords.some(k => k.includes(q))) return true
     return false
   })
 }

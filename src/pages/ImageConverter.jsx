@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import JSZip from 'jszip'
+import { useI18n } from '../contexts/I18nContext'
 
 function formatBytes(b) {
   if (b < 1024) return b + ' B'
@@ -10,6 +11,7 @@ function formatBytes(b) {
 const EXT_MAP = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/avif': 'avif' }
 
 export default function ImageConverter({ toast }) {
+  const { t } = useI18n()
   const [originals, setOriginals] = useState([])
   const [format, setFormat] = useState('image/webp')
   const [quality, setQuality] = useState(80)
@@ -115,8 +117,8 @@ export default function ImageConverter({ toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <h1>Image Converter</h1>
-        <p>Convert, compress, and resize images locally. Nothing gets uploaded.</p>
+        <h1>{t('imageConverter.title')}</h1>
+        <p>{t('tools.imageConverter.description')}</p>
       </div>
 
       <div className="sub">
