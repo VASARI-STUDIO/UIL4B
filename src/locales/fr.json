@@ -1,0 +1,525 @@
+{
+  "common": {
+    "copy": "Copier",
+    "copied": "Copié",
+    "close": "Fermer",
+    "open": "Ouvrir",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "cancel": "Annuler",
+    "submit": "Soumettre",
+    "search": "Rechercher",
+    "loading": "Chargement…",
+    "noResults": "Aucun résultat",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "signUp": "S'inscrire",
+    "tools": "Outils",
+    "tool": "Outil",
+    "category": "Catégorie",
+    "action": "Action",
+    "pinned": "Épinglé",
+    "comingSoon": "Bientôt disponible",
+    "type": "Type",
+    "message": "Message",
+    "navigate": "Naviguer",
+    "openTool": "Ouvrir l'outil",
+    "jumpToCategory": "Aller à la catégorie",
+    "pin": "Épingler {name}",
+    "unpin": "Désépingler {name}",
+    "colour": "Couleur",
+    "colours": "Couleurs"
+  },
+  "brand": {
+    "name": "Vasari",
+    "tagline": "Obsidian Toolkit",
+    "full": "Vasari Obsidian",
+    "fullToolkit": "Vasari Obsidian Toolkit"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "settings": "Paramètres",
+    "support": "Support",
+    "toggleMenu": "Basculer le menu",
+    "toggle": "Basculer {name}",
+    "proPlan": "PLAN PRO",
+    "freePlan": "PLAN GRATUIT"
+  },
+  "topbar": {
+    "searchHint": "Rechercher des outils, aller à une page…",
+    "lightMode": "Mode clair",
+    "darkMode": "Mode sombre",
+    "switchToLight": "Passer au mode clair",
+    "switchToDark": "Passer au mode sombre"
+  },
+  "cmd": {
+    "placeholder": "Rechercher des outils, aller à une page ou exécuter une action…",
+    "noResults": "Aucun résultat pour « {query} »",
+    "recent": "Récents",
+    "allTools": "Tous les outils",
+    "categories": "Catégories",
+    "actions": "Actions",
+    "goToDashboard": "Aller au tableau de bord",
+    "openSettings": "Ouvrir les paramètres",
+    "sendFeedback": "Envoyer des commentaires"
+  },
+  "dash": {
+    "greeting": {
+      "lateNight": "Vous travaillez tard",
+      "morning": "Bonjour",
+      "afternoon": "Bon après-midi",
+      "evening": "Bonsoir"
+    },
+    "heroSub": "Reprenez là où vous en étiez ou explorez une catégorie ci-dessous.",
+    "yourTools": "Vos outils",
+    "pinnedCount": "{count} épinglés",
+    "explore": "Explorer",
+    "categoryCount": "{count} catégories",
+    "emptyPinned": "Épinglez des outils de n'importe quelle catégorie pour les voir ici.",
+    "toolCount": "{count} outils"
+  },
+  "categories": {
+    "color": {
+      "label": "Studio couleur",
+      "description": "Créez des palettes, des échelles, des dégradés et vérifiez l'accessibilité."
+    },
+    "typography": {
+      "label": "Typographie",
+      "description": "Échelles typographiques et associations de polices optimisées pour la lisibilité."
+    },
+    "imagery": {
+      "label": "Images",
+      "description": "Icônes, outils d'image et structuration de prompts."
+    },
+    "documentation": {
+      "label": "Documentation",
+      "description": "Principes de design, références marketing et ressources externes."
+    }
+  },
+  "tools": {
+    "colorStudio": {
+      "label": "Studio couleur",
+      "description": "Constructeur complet de système de couleurs avec palette, teintes, contraste et dégradés."
+    },
+    "typeScale": {
+      "label": "Échelle typographique",
+      "description": "Calculateur d'échelle typographique modulaire avec exportation CSS."
+    },
+    "fontPairs": {
+      "label": "Recherche de paires de polices",
+      "description": "Associations de polices sélectionnées pour les titres et le corps de texte."
+    },
+    "iconLibrary": {
+      "label": "Bibliothèque d'icônes",
+      "description": "Recherchez des milliers d'icônes via l'API Iconify."
+    },
+    "imageConverter": {
+      "label": "Convertisseur d'images",
+      "description": "Convertissez, compressez et redimensionnez des images localement."
+    },
+    "docsDesign": {
+      "label": "Principes de design",
+      "description": "Hiérarchie visuelle, équilibre et psychologie du design."
+    },
+    "docsSocial": {
+      "label": "Réseaux sociaux et marketing",
+      "description": "Bonnes pratiques pour les réseaux sociaux et le marketing."
+    },
+    "designReference": {
+      "label": "Référence de design",
+      "description": "Espacement, ombres, rayons, échelles de polices et référence de jetons de design."
+    },
+    "designExport": {
+      "label": "Exportation du système de design",
+      "description": "Exportez votre système de design complet en HTML pour les développeurs et les clients."
+    },
+    "externalResources": {
+      "label": "Ressources externes",
+      "description": "Liens sélectionnés vers des polices, des couleurs, des outils IA et de l'inspiration."
+    }
+  },
+  "color": {
+    "title": "Studio couleur",
+    "baseColour": "Couleur de base",
+    "palette": "Palette",
+    "harmony": "Harmonie",
+    "tints": "Teintes",
+    "stateColours": "Couleurs d'état",
+    "gradients": "Dégradés",
+    "preview": "Aperçu",
+    "harmonyModes": {
+      "analogous": "Analogues",
+      "triadic": "Triadiques",
+      "splitComp": "Complémentaires divisés",
+      "tetradic": "Tétradiques",
+      "complementary": "Complémentaires",
+      "monochromatic": "Monochromatiques"
+    },
+    "saveToPalette": "Enregistrer dans la palette",
+    "savedToPalette": "Enregistré dans la palette",
+    "paletteFull": "Palette pleine (max. 10)",
+    "myPalette": "Ma palette",
+    "clearPalette": "Effacer la palette",
+    "paletteCleared": "Palette effacée",
+    "tintScale": "Échelle de teintes",
+    "shadesOf": "Nuances de {colour}",
+    "success": "Succès",
+    "warning": "Avertissement",
+    "error": "Erreur",
+    "info": "Info",
+    "overallPreset": "Preset général",
+    "contrastCheck": "Vérification du contraste",
+    "foreground": "Premier plan",
+    "background": "Arrière-plan",
+    "swap": "Inverser",
+    "ratio": "Ratio",
+    "aaNormal": "AA Normal",
+    "aaLarge": "AA Grand",
+    "aaaNormal": "AAA Normal",
+    "aaaLarge": "AAA Grand",
+    "pass": "Réussi",
+    "fail": "Échoué",
+    "gradientType": "Type",
+    "angle": "Angle",
+    "addStop": "Ajouter un arrêt",
+    "presets": "Presets",
+    "fromPalette": "Depuis la palette",
+    "fromTints": "Depuis les teintes",
+    "css": "CSS",
+    "lightMode": "Mode clair",
+    "darkMode": "Mode sombre",
+    "buttons": "Boutons",
+    "navigation": "Navigation",
+    "table": "Tableau",
+    "toast": "Notification",
+    "primary": "Primaire",
+    "secondary": "Secondaire",
+    "outline": "Contour",
+    "ghost": "Fantôme",
+    "link": "Lien",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "hover": "Survol",
+    "headerRow": "Ligne d'en-tête",
+    "dataRow": "Ligne de données",
+    "altRow": "Ligne alternée",
+    "statusCol": "Statut",
+    "itemCol": "Élément",
+    "valueCol": "Valeur"
+  },
+  "typeScale": {
+    "title": "Échelle typographique",
+    "baseSize": "Taille de base",
+    "scaleRatio": "Ratio d'échelle",
+    "lineHeight": "Hauteur de ligne",
+    "headingSpacing": "Espacement des titres",
+    "bodySpacing": "Espacement du corps",
+    "responsivePreview": "Aperçu adaptatif",
+    "desktop": "Bureau",
+    "tablet": "Tablette",
+    "mobile": "Mobile",
+    "exportFormat": "Format d'exportation",
+    "cssVariables": "Variables CSS",
+    "tailwindConfig": "Configuration Tailwind",
+    "scssVariables": "Variables SCSS",
+    "fontWeightRef": "Référence des graisses de police",
+    "sampleText": "Portez ce vieux whisky au juge blond qui fume",
+    "ratios": {
+      "minorSecond": "Seconde mineure",
+      "majorSecond": "Seconde majeure",
+      "minorThird": "Tierce mineure",
+      "majorThird": "Tierce majeure",
+      "perfectFourth": "Quarte juste",
+      "augFourth": "Quarte augmentée",
+      "perfectFifth": "Quinte juste",
+      "goldenRatio": "Nombre d'or",
+      "custom": "Personnalisé"
+    },
+    "weights": {
+      "thin": "Fin",
+      "extraLight": "Extra léger",
+      "light": "Léger",
+      "regular": "Normal",
+      "medium": "Moyen",
+      "semiBold": "Semi-gras",
+      "bold": "Gras",
+      "extraBold": "Extra gras",
+      "black": "Black"
+    }
+  },
+  "fontMatcher": {
+    "title": "Recherche de paires de polices",
+    "allCategories": "Toutes",
+    "serif": "Serif",
+    "sansSerif": "Sans-Serif",
+    "display": "Display",
+    "weight": "Graisse",
+    "sampleText": "Texte d'exemple",
+    "defaultSample": "Portez ce vieux whisky au juge blond qui fume. Le cœur déçu mais l'âme plutôt naïve.",
+    "pairings": "Associations",
+    "compare": "Comparer",
+    "article": "Article",
+    "headingFont": "Titre",
+    "bodyFont": "Corps",
+    "selectToCompare": "Sélectionnez une police ci-dessus pour comparer",
+    "miniGuide": "Mini guide de style",
+    "pairedWith": "associé avec"
+  },
+  "iconLibrary": {
+    "title": "Bibliothèque d'icônes",
+    "searchPlaceholder": "Rechercher des icônes…",
+    "allPacks": "Tous les packs",
+    "mode": "Mode",
+    "embedded": "Intégré",
+    "api": "API",
+    "offline": "Hors ligne",
+    "results": "{count} résultats",
+    "copySvg": "Copier SVG",
+    "copyJsx": "Copier JSX",
+    "noIcons": "Recherchez des icônes ci-dessus",
+    "loadingPacks": "Chargement des packs d'icônes…"
+  },
+  "imageConverter": {
+    "title": "Convertisseur d'images",
+    "subtitle": "Convertissez, compressez et redimensionnez des images localement dans votre navigateur.",
+    "dropZone": "Déposez des images ici ou cliquez pour parcourir",
+    "format": "Format de sortie",
+    "quality": "Qualité",
+    "maxWidth": "Largeur maximale",
+    "noLimit": "Sans limite",
+    "original": "Original",
+    "converted": "Converti",
+    "savings": "Économies",
+    "downloadAll": "Tout télécharger (ZIP)",
+    "download": "Télécharger",
+    "clear": "Effacer",
+    "dimensions": "{w} × {h}"
+  },
+  "promptLibrary": {
+    "title": "Bibliothèque de prompts",
+    "subtitle": "Enregistrez, organisez et réutilisez vos prompts de design préférés.",
+    "addPrompt": "Ajouter un prompt",
+    "promptPlaceholder": "Saisissez votre prompt…",
+    "tagsPlaceholder": "Tags (séparés par des virgules)",
+    "searchPlaceholder": "Rechercher des prompts…",
+    "referenceImage": "Image de référence",
+    "savedPrompts": "Prompts enregistrés",
+    "noPrompts": "Aucun prompt enregistré",
+    "enterPromptFirst": "Saisissez d'abord un prompt",
+    "promptSaved": "Prompt enregistré",
+    "promptCopied": "Prompt copié",
+    "promptDeleted": "Prompt supprimé",
+    "importJson": "Importer JSON",
+    "importedCount": "{count} prompts importés"
+  },
+  "docsDesign": {
+    "title": "Principes de design",
+    "subtitle": "Principes fondés sur la psychologie pour des interfaces conviviales et à fort taux de conversion."
+  },
+  "docsSocial": {
+    "title": "Réseaux sociaux et marketing",
+    "subtitle": "Stratégies basées sur les données pour le contenu, l'engagement et la croissance."
+  },
+  "designRef": {
+    "title": "Référence de design",
+    "subtitle": "Référence visuelle pour l'espacement, les ombres, les rayons, la typographie, l'opacité et les points de rupture.",
+    "spacing": "Échelle d'espacement",
+    "shadows": "Échelle d'ombres",
+    "borderRadius": "Rayon de bordure",
+    "fontSizes": "Tailles de police",
+    "fontWeights": "Graisses de police",
+    "opacity": "Échelle d'opacité",
+    "breakpoints": "Points de rupture d'écran",
+    "clickToCopy": "Cliquez sur une valeur pour la copier"
+  },
+  "designExport": {
+    "title": "Exportation du système de design",
+    "subtitle": "Rassemblez vos jetons de design et exportez une référence HTML autonome pour les développeurs et les clients.",
+    "systemConfig": "Configuration du système",
+    "systemName": "Nom du système",
+    "author": "Auteur",
+    "version": "Version",
+    "description": "Description",
+    "colourTokens": "Jetons de couleur",
+    "typographyTokens": "Jetons de typographie",
+    "headingFont": "Police de titre",
+    "bodyFont": "Police de corps",
+    "baseFontSize": "Taille de police de base",
+    "scaleRatio": "Ratio d'échelle",
+    "spacingTokens": "Jetons d'espacement",
+    "spacingPreset": "Preset d'espacement",
+    "tailwindScale": "Échelle Tailwind",
+    "eightPointGrid": "Grille de 8 points",
+    "fourPointGrid": "Grille de 4 points",
+    "exportHtml": "Exporter HTML",
+    "copyCssVars": "Copier les variables CSS",
+    "cssVarsCopied": "Variables CSS copiées",
+    "importFromPalette": "Importer depuis la palette",
+    "paletteImported": "Couleurs de la palette importées",
+    "noPaletteData": "Aucune donnée de palette trouvée",
+    "addColour": "Ajouter une couleur",
+    "removeColour": "Supprimer"
+  },
+  "resources": {
+    "title": "Ressources externes",
+    "subtitle": "Liens sélectionnés vers des outils, de l'inspiration et des références pour le design web.",
+    "categories": {
+      "typography": "Typographie",
+      "colour": "Couleur",
+      "aiImageVideo": "Image et vidéo IA",
+      "framer": "Framer",
+      "designInspiration": "Inspiration design",
+      "aiTools": "Outils IA"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Gérez vos préférences, votre compte et vos données.",
+    "appearance": "Apparence",
+    "theme": "Thème",
+    "dark": "Sombre",
+    "light": "Clair",
+    "language": "Langue",
+    "account": "Compte",
+    "dataManagement": "Gestion des données",
+    "dataInfo": "Vos données sont stockées localement dans votre navigateur. Exportez vos données pour les sauvegarder ou effacez-les pour repartir de zéro.",
+    "exportData": "Exporter mes données",
+    "clearData": "Effacer les données locales",
+    "dataExported": "Données exportées",
+    "dataCleared": "Données locales effacées",
+    "clearConfirm": "Êtes-vous sûr ? Cela supprimera toutes les données enregistrées localement.",
+    "privacyLegal": "Confidentialité et mentions légales",
+    "privacyInfo": "Vasari Obsidian est conforme à la loi australienne sur la protection de la vie privée de 1988 et aux Principes australiens de protection de la vie privée (APPs). Vos données sont traitées en Australie (région de Sydney) le cas échéant.",
+    "privacyPoints": {
+      "collect": "Nous ne collectons que les données nécessaires au service (APP 3)",
+      "use": "Vos données sont utilisées uniquement pour fournir les fonctionnalités du toolkit (APP 6)",
+      "access": "Vous pouvez accéder à vos données, les corriger ou les supprimer à tout moment (APP 12 et 13)",
+      "security": "Les données sont protégées par des mesures de sécurité conformes aux normes de l'industrie (APP 11)"
+    },
+    "privacyPolicy": "Politique de confidentialité",
+    "termsOfService": "Conditions d'utilisation"
+  },
+  "auth": {
+    "welcomeBack": "Bon retour",
+    "createAccount": "Créer un compte",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "signInSubtitle": "Connectez-vous à votre compte Vasari Obsidian.",
+    "signUpSubtitle": "Inscrivez-vous pour sauvegarder votre travail et accéder à toutes les fonctionnalités.",
+    "resetSubtitle": "Saisissez votre adresse e-mail pour recevoir un lien de réinitialisation.",
+    "displayName": "Nom d'affichage",
+    "namePlaceholder": "Votre nom",
+    "email": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Min. 6 caractères",
+    "sendResetLink": "Envoyer le lien de réinitialisation",
+    "backToSignIn": "Retour à la connexion",
+    "haveAccount": "Vous avez déjà un compte ? Connectez-vous",
+    "noAccount": "Vous n'avez pas de compte ? Inscrivez-vous",
+    "forgotPassword": "Mot de passe oublié ?",
+    "pleaseWait": "Veuillez patienter…",
+    "accountCreated": "Compte créé",
+    "signedIn": "Connecté",
+    "resetSent": "E-mail de réinitialisation du mot de passe envoyé",
+    "errors": {
+      "emailInUse": "Un compte avec cette adresse e-mail existe déjà",
+      "invalidEmail": "Veuillez saisir une adresse e-mail valide",
+      "weakPassword": "Le mot de passe doit contenir au moins 6 caractères",
+      "invalidCredential": "Adresse e-mail ou mot de passe invalide",
+      "tooManyRequests": "Trop de tentatives — réessayez plus tard",
+      "serviceUnavailable": "Service temporairement indisponible",
+      "authFailed": "Échec de l'authentification",
+      "userNotFound": "Aucun compte trouvé avec cette adresse e-mail"
+    }
+  },
+  "feedback": {
+    "title": "Commentaires",
+    "subtitle": "Aidez-nous à améliorer Vasari Obsidian. Signalez des bugs, proposez des fonctionnalités ou partagez vos commentaires.",
+    "featureRequest": "Demande de fonctionnalité",
+    "bugReport": "Rapport de bug",
+    "general": "Général",
+    "messagePlaceholder": "Dites-nous ce que vous en pensez…",
+    "submitFeedback": "Envoyer les commentaires",
+    "enterFeedback": "Veuillez saisir vos commentaires",
+    "thankYou": "Merci pour vos commentaires !"
+  },
+  "community": {
+    "title": "Communauté",
+    "subtitle": "Connectez-vous avec d'autres designers et développeurs utilisant Vasari Obsidian.",
+    "comingSoonDesc": "Partagez des palettes, obtenez des retours sur vos designs et découvrez des modèles créés par la communauté."
+  },
+  "privacy": {
+    "title": "Politique de confidentialité",
+    "lastUpdated": "Dernière mise à jour : mars 2026",
+    "s1Title": "1. À propos de cette politique",
+    "s1Text": "Vasari Obsidian (« nous », « notre ») s'engage à protéger vos informations personnelles conformément à la loi australienne sur la protection de la vie privée de 1988 (Cth) et aux Principes australiens de protection de la vie privée (APPs). Cette politique explique comment nous collectons, utilisons, divulguons et protégeons vos informations personnelles.",
+    "s2Title": "2. Informations que nous collectons (APP 3)",
+    "s2Intro": "Nous ne collectons que les informations raisonnablement nécessaires à nos services :",
+    "s2Items": [
+      "Informations de compte : adresse e-mail, nom d'affichage, photo de profil (si vous utilisez la connexion Google)",
+      "Préférences d'utilisation : paramètres de thème, palettes enregistrées, configurations de teintes, prompts",
+      "Nous NE collectons PAS : les données de carte de paiement (gérées par Stripe), les données de localisation, les identifiants d'appareil ni les cookies de suivi"
+    ],
+    "s3Title": "3. Comment nous utilisons vos informations (APP 6)",
+    "s3Intro": "Vos informations sont utilisées uniquement pour :",
+    "s3Items": [
+      "Fournir et maintenir votre compte et les fonctionnalités du toolkit",
+      "Synchroniser vos configurations de design entre vos appareils",
+      "Envoyer des notifications de service essentielles (sécurité du compte, changements de politique)",
+      "Nous ne vendrons JAMAIS vos données à des tiers et ne les utiliserons pas à des fins publicitaires"
+    ],
+    "s4Title": "4. Stockage et sécurité des données (APP 8 et 11)",
+    "s4Text": "Vos données sont stockées dans Google Cloud Firestore dans la région australia-southeast1 (Sydney). L'authentification est gérée par Firebase Authentication. Nous mettons en œuvre :",
+    "s4Items": [
+      "Chiffrement au repos et en transit (TLS 1.3)",
+      "Règles de sécurité Firestore pour le contrôle d'accès",
+      "Audits de sécurité réguliers de notre configuration Firebase",
+      "Aucun transfert de données transfrontalier sans protections de la vie privée équivalentes"
+    ],
+    "s5Title": "5. Vos droits (APP 12 et 13)",
+    "s5Intro": "Vous avez le droit de :",
+    "s5Items": [
+      "Accéder à vos informations personnelles à tout moment via les Paramètres",
+      "Corriger vos informations personnelles en mettant à jour votre profil",
+      "Exporter toutes vos données sous forme de fichier JSON via Paramètres > Exporter mes données",
+      "Supprimer votre compte et toutes les données associées via Paramètres > Supprimer le compte",
+      "Retirer votre consentement en vous déconnectant et en supprimant votre compte"
+    ],
+    "s6Title": "6. Services tiers",
+    "s6Items": [
+      "Firebase/Google Cloud — Authentification et base de données (région de Sydney)",
+      "Google Fonts — Chargement de polices (aucune donnée personnelle envoyée)",
+      "Iconify — API de recherche d'icônes (aucune donnée personnelle envoyée)",
+      "Stripe — Traitement des paiements (conforme PCI DSS, entité australienne)"
+    ],
+    "s7Title": "7. Contact",
+    "s7Text": "Pour toute question relative à la confidentialité, demande d'accès aux données ou réclamation, contactez-nous à :",
+    "s7Complaint": "Si vous n'êtes pas satisfait de notre réponse, vous pouvez déposer une plainte auprès de l'Office of the Australian Information Commissioner (OAIC) à"
+  },
+  "terms": {
+    "title": "Conditions d'utilisation",
+    "lastUpdated": "Dernière mise à jour : mars 2026",
+    "s1Title": "1. Acceptation",
+    "s1Text": "En utilisant Vasari Obsidian Web Design Toolkit (« le Service »), vous acceptez les présentes Conditions d'utilisation. Le Service est fourni par Vasari Obsidian, une entreprise basée en Australie. Ces conditions sont régies par les lois de l'Australie.",
+    "s2Title": "2. Compte",
+    "s2Text": "Vous pouvez créer un compte en utilisant une adresse e-mail et un mot de passe ou l'authentification Google. Vous êtes responsable du maintien de la sécurité des identifiants de votre compte. Vous devez avoir au moins 16 ans pour créer un compte.",
+    "s3Title": "3. Niveaux gratuit et Pro",
+    "s3Text": "Le Service propose un niveau gratuit avec les fonctionnalités de base et un niveau Pro avec des outils supplémentaires. Les abonnements Pro sont facturés mensuellement ou annuellement. Vous pouvez annuler à tout moment ; l'accès se poursuit jusqu'à la fin de la période de facturation. Les remboursements sont traités au cas par cas conformément au droit australien de la consommation.",
+    "s4Title": "4. Propriété intellectuelle",
+    "s4Text": "Les designs, palettes, dégradés et autres créations que vous réalisez à l'aide du Service vous appartiennent. Le Service lui-même, y compris son code, son design et sa documentation, est la propriété de Vasari Obsidian et est protégé par le droit d'auteur australien.",
+    "s5Title": "5. Utilisation acceptable",
+    "s5Intro": "Vous vous engagez à ne pas :",
+    "s5Items": [
+      "Utiliser le Service à des fins illicites",
+      "Tenter d'obtenir un accès non autorisé aux comptes d'autres utilisateurs",
+      "Décompiler, désassembler ou effectuer de l'ingénierie inverse sur le Service",
+      "Utiliser des systèmes automatisés pour extraire des données du Service"
+    ],
+    "s6Title": "6. Limitation de responsabilité",
+    "s6Text": "Le Service est fourni « tel quel » sans garantie d'aucune sorte, sauf celles requises par le droit australien de la consommation. Dans toute la mesure permise par la loi, Vasari Obsidian ne saurait être tenu responsable de tout dommage indirect, accessoire ou consécutif résultant de votre utilisation du Service.",
+    "s7Title": "7. Modifications",
+    "s7Text": "Nous pouvons mettre à jour ces Conditions de temps à autre. Les modifications importantes seront communiquées par e-mail ou par une notification dans l'application au moins 30 jours avant leur entrée en vigueur.",
+    "s8Title": "8. Contact",
+    "s8Text": "Des questions sur ces Conditions ? Contactez-nous à"
+  }
+}

@@ -1,8 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useI18n } from '../contexts/I18nContext'
 
 const API_LIMIT = 999
 
 export default function IconLibrary({ onCopy }) {
+  const { t } = useI18n()
   const [query, setQuery] = useState('')
   const [icons, setIcons] = useState([])
   const [mode, setMode] = useState('Embedded')
@@ -128,8 +130,8 @@ export default function IconLibrary({ onCopy }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <h1>Icon Library</h1>
-        <p>Search thousands of icons across major open-source packs via Iconify, or browse the embedded collection offline.</p>
+        <h1>{t('iconLibrary.title')}</h1>
+        <p>{t('tools.iconLibrary.description')}</p>
       </div>
       <div className="sub">
         <div className="row" style={{ marginBottom: 14, gap: 10 }}>

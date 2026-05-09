@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, luminance, T_LABELS } from '../utils/colors'
 import { usePalette } from '../contexts/PaletteContext'
+import { useI18n } from '../contexts/I18nContext'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic']
 const HARM_LABELS = {
@@ -164,7 +165,140 @@ function snap(value, target, threshold = 3) {
   return Math.abs(value - target) <= threshold ? target : value
 }
 
+function ExportDesignSystem({ allColors, tintScale, onCopy }) {
+  const { t } = useI18n()
+  const { palette } = usePalette()
+  const exportColors = allColors.length ? allColors : palette.length ? palette : ['#2563EB', '#1D4ED8', '#60A5FA']
+  const labels = exportColors.map((_, i) => ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface'][i] || `Colour ${i + 1}`)
+
+  const generateExportHTML = () => {
+    const colorVars = exportColors.map((c, i) => `  --color-${labels[i].toLowerCase().replace(/\s+/g, '-')}: ${c};`).join('\n')
+    const tintVars = tintScale.map((c, i) => `  --tint-${i + 1}: ${c};`).join('\n')
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design System</title>
+  <style>
+:root {
+${colorVars}
+${tintVars}
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #1a1a1a; line-height: 1.6; padding: 48px 24px; }
+.container { max-width: 960px; margin: 0 auto; }
+header { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid #e5e5e5; }
+header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; }
+header p { font-size: 1.1rem; color: #666; }
+.meta { font-size: 0.85rem; color: #999; margin-top: 8px; }
+section { margin-bottom: 56px; }
+section h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
+.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+.color-card { border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5; background: #fff; }
+.color-swatch { height: 80px; }
+.color-info { padding: 12px; }
+.color-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+.color-hex { font-family: monospace; font-size: 0.8rem; color: #666; }
+.tint-row { display: flex; gap: 4px; margin-top: 8px; }
+.tint-swatch { flex: 1; height: 32px; border-radius: 4px; position: relative; }
+.tint-swatch span { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 8px; font-family: monospace; color: rgba(0,0,0,.4); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Design System</h1>
+      <p>Colour palette and tint scale reference</p>
+      <div class="meta">Generated ${new Date().toLocaleDateString()}</div>
+    </header>
+    <section>
+      <h2>Colours</h2>
+      <div class="color-grid">
+${exportColors.map((c, i) => `        <div class="color-card">
+          <div class="color-swatch" style="background: ${c}"></div>
+          <div class="color-info">
+            <div class="color-name">${labels[i]}</div>
+            <div class="color-hex">${c.toUpperCase()}</div>
+          </div>
+        </div>`).join('\n')}
+      </div>
+    </section>
+    <section>
+      <h2>Tint Scale</h2>
+      <div class="tint-row">
+${tintScale.map((c, i) => `        <div class="tint-swatch" style="background:${c}"><span>${c.toUpperCase()}</span></div>`).join('\n')}
+      </div>
+    </section>
+    <section>
+      <h2>CSS Custom Properties</h2>
+      <pre style="background:#1a1a1a;color:#e5e5e5;padding:24px;border-radius:12px;overflow-x:auto;font-size:.8rem;line-height:1.8">:root {
+${colorVars}
+${tintVars}
+}</pre>
+    </section>
+  </div>
+</body>
+</html>`
+  }
+
+  const downloadHTML = () => {
+    const html = generateExportHTML()
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'design-system.html'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadCSS = () => {
+    const colorVars = exportColors.map((c, i) => `  --color-${labels[i].toLowerCase().replace(/\s+/g, '-')}: ${c};`).join('\n')
+    const tintVars = tintScale.map((c, i) => `  --tint-${i + 1}: ${c};`).join('\n')
+    const css = `:root {\n${colorVars}\n${tintVars}\n}\n`
+    const blob = new Blob([css], { type: 'text/css' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'design-system.css'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const copyCSSVars = () => {
+    const colorVars = exportColors.map((c, i) => `  --color-${labels[i].toLowerCase().replace(/\s+/g, '-')}: ${c};`).join('\n')
+    const tintVars = tintScale.map((c, i) => `  --tint-${i + 1}: ${c};`).join('\n')
+    onCopy(`:root {\n${colorVars}\n${tintVars}\n}`)
+  }
+
+  return (
+    <section style={{ marginBottom: 48 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Export Design System</h2>
+      <div className="card" style={{ padding: 20 }}>
+        <p style={{ fontSize: 13, color: 'var(--t1)', marginBottom: 16, lineHeight: 1.7 }}>
+          Export your colour system as a styled HTML reference page for brand distribution, or as a CSS file with custom properties for developers.
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn btn-accent" onClick={downloadHTML} style={{ padding: '10px 24px', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export HTML
+          </button>
+          <button className="btn" onClick={downloadCSS} style={{ padding: '10px 20px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSS
+          </button>
+          <button className="btn" onClick={copyCSSVars} style={{ padding: '10px 20px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <CopyIcon /> Copy CSS Variables
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function ColorStudio({ onCopy }) {
+  const { t } = useI18n()
   const [baseColor, setBaseColor] = useState('#2563EB')
   const [harmony, setHarmony] = useState('analogous')
   const [extraColors, setExtraColors] = useState([])
@@ -264,10 +398,10 @@ export default function ColorStudio({ onCopy }) {
     <div className="sec">
       <div style={{ marginBottom: 36 }}>
         <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.05, marginBottom: 10 }}>
-          Color Studio
+          {t('color.title')}
         </h1>
         <p style={{ fontSize: 15, color: 'var(--t1)', maxWidth: 600, lineHeight: 1.7 }}>
-          Build complete color systems — palette, tints, contrast checks, and gradients — all in one place.
+          {t('tools.colorStudio.description')}
         </p>
       </div>
 
@@ -281,7 +415,7 @@ export default function ColorStudio({ onCopy }) {
             </svg>
             Random
           </button>
-          <button className="btn btn-s" onClick={addColor}>+ Add Color</button>
+          <button className="btn btn-s" onClick={addColor}>+ Add Colour</button>
         </div>
 
         {/* Base color + harmony row */}
@@ -433,7 +567,7 @@ export default function ColorStudio({ onCopy }) {
       {/* ═══ SECTION 3: UI STATE COLORS ═══ */}
       <section style={{ marginBottom: 48 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colors</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colours</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Preset</span>
             {STATE_BUNDLES.map(b => (
@@ -866,7 +1000,10 @@ export default function ColorStudio({ onCopy }) {
         </div>
       </section>
 
-      {/* ═══ SECTION 6: GRADIENT TOOL ═══ */}
+      {/* ═══ SECTION 6: EXPORT DESIGN SYSTEM ═══ */}
+      <ExportDesignSystem allColors={allColors} tintScale={tintScale} onCopy={onCopy} />
+
+      {/* ═══ SECTION 7: GRADIENT TOOL ═══ */}
       <section style={{ marginBottom: 48 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>

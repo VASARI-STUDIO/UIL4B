@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '../contexts/I18nContext'
 
 function DocSection({ title, icon, children }) {
   const [open, setOpen] = useState(false)
@@ -35,11 +36,12 @@ const trendIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" st
 const gridIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
 
 export default function DocsDesign() {
+  const { t } = useI18n()
   return (
     <div className="sec">
       <div className="sec-h">
-        <h1>Web Design Principles</h1>
-        <p>Psychology-driven principles for premium, high-converting websites. Backed by research and real-world data.</p>
+        <h1>{t('docsDesign.title')}</h1>
+        <p>{t('docsDesign.subtitle')}</p>
       </div>
 
       <DocSection title="The Halo Effect (First Impressions)" icon={eyeIcon}>
@@ -54,7 +56,7 @@ export default function DocsDesign() {
           <li>Typography and spacing should feel intentional from the first viewport</li>
           <li>Remove clutter that doesn&apos;t support the first impression</li>
           <li>Speed matters — over 3 seconds and the first impression is &quot;slow&quot;</li>
-          <li>Use high-quality images and consistent brand colors above the fold</li>
+          <li>Use high-quality images and consistent brand colours above the fold</li>
         </ul>
       </DocSection>
 
@@ -84,20 +86,20 @@ export default function DocsDesign() {
         <h4>Hierarchy techniques</h4>
         <ul>
           <li><strong>Size contrast</strong> — Headlines 2–3× larger than body text create clear entry points</li>
-          <li><strong>Color weight</strong> — Use your primary color sparingly for CTAs; neutrals for supporting elements</li>
+          <li><strong>Colour weight</strong> — Use your primary colour sparingly for CTAs; neutrals for supporting elements</li>
           <li><strong>Whitespace</strong> — Padding around elements signals importance and grouping</li>
           <li><strong>Position</strong> — Top-left gets most attention; use it for your key message</li>
           <li><strong>Z-pattern</strong> — For landing pages with minimal text, eyes trace a Z from top-left to bottom-right</li>
         </ul>
       </DocSection>
 
-      <DocSection title="Color Psychology for Conversion" icon={paletteIcon}>
+      <DocSection title="Colour Psychology for Conversion" icon={paletteIcon}>
         <div style={{ marginBottom: 12 }}>
-          <Stat value="85%" label="of shoppers cite color as primary purchase reason" />
-          <Stat value="80%" label="increase in brand recognition from color" />
+          <Stat value="85%" label="of shoppers cite colour as primary purchase reason" />
+          <Stat value="80%" label="increase in brand recognition from colour" />
         </div>
-        <p>Color influences 85% of consumer purchasing decisions. The right palette builds trust, urgency, or calm depending on your goals.</p>
-        <h4>Color-emotion associations</h4>
+        <p>Colour influences 85% of consumer purchasing decisions. The right palette builds trust, urgency, or calm depending on your goals.</p>
+        <h4>Colour-emotion associations</h4>
         <ul>
           <li><strong>Blue</strong> — Trust, stability, professionalism (used by banks, tech, healthcare)</li>
           <li><strong>Red/Orange</strong> — Urgency, excitement, appetite (CTAs, food brands, sales)</li>
@@ -109,7 +111,7 @@ export default function DocsDesign() {
         <h4>Conversion tips</h4>
         <ul>
           <li>CTA buttons that contrast with the page background get 21% more clicks</li>
-          <li>Use warm colors (red, orange) for urgency; cool colors (blue, green) for trust</li>
+          <li>Use warm colours (red, orange) for urgency; cool colours (blue, green) for trust</li>
           <li>Maintain a 4.5:1 contrast ratio minimum for accessibility</li>
         </ul>
       </DocSection>
@@ -193,7 +195,7 @@ export default function DocsDesign() {
         <h4>Airbnb — Trust Through Design</h4>
         <p>Large photography, verified badges, transparent pricing, and host profiles all build trust. Social proof is embedded at every decision point.</p>
         <h4>Linear — Speed as Brand</h4>
-        <p>Dark mode, keyboard-first navigation, instant transitions. The product&apos;s speed is reflected in every design choice. Minimal color usage makes purple CTAs impossible to miss.</p>
+        <p>Dark mode, keyboard-first navigation, instant transitions. The product&apos;s speed is reflected in every design choice. Minimal colour usage makes purple CTAs impossible to miss.</p>
       </DocSection>
 
       <DocSection title="3-Step Framework" icon={gridIcon}>

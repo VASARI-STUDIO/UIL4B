@@ -1,3 +1,5 @@
+import { useI18n } from '../contexts/I18nContext'
+
 const categories = [
   {
     title: 'Typography',
@@ -13,7 +15,7 @@ const categories = [
     ],
   },
   {
-    title: 'Color',
+    title: 'Colour',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="13.5" cy="6.5" r="2.5" />
@@ -24,7 +26,7 @@ const categories = [
       </svg>
     ),
     links: [
-      { name: 'Tailwind Colors', desc: 'Complete color palette reference for UI design', url: 'https://tailwindcss.com/docs/colors' },
+      { name: 'Tailwind Colors', desc: 'Complete colour palette reference for UI design', url: 'https://tailwindcss.com/docs/colors' },
     ],
   },
   {
@@ -38,6 +40,7 @@ const categories = [
     ),
     links: [
       { name: 'Google Veo', desc: 'AI-powered video and effects generation', url: 'https://labs.google/fx/tools/flow' },
+      { name: 'Kling AI', desc: 'AI image and video generation with creative controls', url: 'https://kling.ai/app' },
       { name: 'Higgsfield', desc: 'Create cinematic AI videos from text', url: 'https://higgsfield.ai/' },
     ],
   },
@@ -101,11 +104,12 @@ const externalIcon = (
 )
 
 export default function ExternalResources() {
+  const { t } = useI18n()
   return (
     <div className="sec">
       <div className="sec-h">
-        <h1>External Resources</h1>
-        <p>Curated links to tools, inspiration, and references for web design.</p>
+        <h1>{t('resources.title')}</h1>
+        <p>{t('resources.subtitle')}</p>
       </div>
 
       {categories.map((cat) => (

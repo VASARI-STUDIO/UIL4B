@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useI18n } from '../contexts/I18nContext'
 
 export default function Login({ toast }) {
   const [isSignup, setIsSignup] = useState(false)
@@ -10,6 +11,7 @@ export default function Login({ toast }) {
   const [resetMode, setResetMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const { login, signup, resetPassword } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -18,26 +20,27 @@ export default function Login({ toast }) {
     try {
       if (resetMode) {
         await resetPassword(email)
-        toast('Password reset email sent')
+        toast(t('auth.resetSent'))
         setResetMode(false)
       } else if (isSignup) {
         await signup(email, password, displayName)
-        toast('Account created')
-        navigate('/palette')
+        toast(t('auth.accountCreated'))
+        navigate('/color')
       } else {
         await login(email, password)
-        toast('Signed in')
-        navigate('/palette')
+        toast(t('auth.signedIn'))
+        navigate('/color')
       }
     } catch (err) {
       const code = err.code
-      const msg = code === 'auth/email-already-in-use' ? 'An account with this email already exists'
-        : code === 'auth/invalid-email' ? 'Please enter a valid email address'
-        : code === 'auth/weak-password' ? 'Password must be at least 6 characters'
-        : code === 'auth/invalid-credential' ? 'Invalid email or password'
-        : code === 'auth/too-many-requests' ? 'Too many attempts — try again later'
-        : code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' ? 'Service temporarily unavailable'
-        : err.message?.replace('Firebase: ', '').replace(/\(auth\/.*\)\.?/, '').trim() || 'Authentication failed'
+      const msg = code === 'auth/email-already-in-use' ? t('auth.errors.emailInUse')
+        : code === 'auth/invalid-email' ? t('auth.errors.invalidEmail')
+        : code === 'auth/weak-password' ? t('auth.errors.weakPassword')
+        : code === 'auth/invalid-credential' ? t('auth.errors.invalidCredential')
+        : code === 'auth/too-many-requests' ? t('auth.errors.tooManyRequests')
+        : code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' ? t('auth.errors.serviceUnavailable')
+        : code === 'auth/user-not-found' ? t('auth.errors.userNotFound')
+        : err.message?.replace('Firebase: ', '').replace(/\(auth\/.*\)\.?/, '').trim() || t('auth.errors.authFailed')
       toast(msg)
     }
     setLoading(false)
@@ -48,41 +51,41 @@ export default function Login({ toast }) {
       <div className="auth-container">
         <div className="auth-card card">
           <div className="auth-header">
-            <h1>{resetMode ? 'Reset Password' : isSignup ? 'Create Account' : 'Welcome Back'}</h1>
-            <p>{resetMode ? 'Enter your email to receive a reset link.' : isSignup ? 'Sign up to save your work and access all features.' : 'Sign in to your Vasari Obsidian account.'}</p>
+            <h1>{resetMode ? t('auth.resetPassword') : isSignup ? t('auth.createAccount') : t('auth.welcomeBack')}</h1>
+            <p>{resetMode ? t('auth.resetSubtitle') : isSignup ? t('auth.signUpSubtitle') : t('auth.signInSubtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
             {isSignup && !resetMode && (
               <div className="auth-field">
-                <label>Display Name</label>
-                <input type="text" name="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name" autoComplete="name" />
+                <label>{t('auth.displayName')}</label>
+                <input type="text" name="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={t('auth.namePlaceholder')} autoComplete="name" />
               </div>
             )}
             <div className="auth-field">
-              <label>Email</label>
-              <input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoComplete="email" />
+              <label>{t('auth.email')}</label>
+              <input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required autoComplete="email" />
             </div>
             {!resetMode && (
               <div className="auth-field">
-                <label>Password</label>
-                <input type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
+                <label>{t('auth.password')}</label>
+                <input type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder')} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
               </div>
             )}
             <button className="btn btn-accent auth-submit" type="submit" disabled={loading}>
-              {loading ? 'Please wait...' : resetMode ? 'Send Reset Link' : isSignup ? 'Create Account' : 'Sign In'}
+              {loading ? t('auth.pleaseWait') : resetMode ? t('auth.sendResetLink') : isSignup ? t('auth.createAccount') : t('common.signIn')}
             </button>
           </form>
 
           <div className="auth-links">
             {resetMode ? (
-              <button onClick={() => setResetMode(false)}>Back to sign in</button>
+              <button onClick={() => setResetMode(false)}>{t('auth.backToSignIn')}</button>
             ) : (
               <>
                 <button onClick={() => setIsSignup(!isSignup)}>
-                  {isSignup ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                  {isSignup ? t('auth.haveAccount') : t('auth.noAccount')}
                 </button>
-                {!isSignup && <button onClick={() => setResetMode(true)}>Forgot password?</button>}
+                {!isSignup && <button onClick={() => setResetMode(true)}>{t('auth.forgotPassword')}</button>}
               </>
             )}
           </div>

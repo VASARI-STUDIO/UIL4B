@@ -5,7 +5,7 @@ import { TOOLS } from '../data/tools'
 const RECENT_KEY = 'vs-recent-tools'
 const PINNED_KEY = 'vs-pinned-tools'
 const MAX_RECENT = 6
-const DEFAULT_PINNED = ['color-studio', 'typescale', 'fontpairs']
+const DEFAULT_PINNED = ['color-studio', 'typescale', 'fontpairs', 'icons', 'video-frames', 'design-reference']
 const WorkspaceContext = createContext()
 
 function loadList(key, fallback = []) {
@@ -48,6 +48,16 @@ export function WorkspaceProvider({ children }) {
     })
   }, [])
 
+  const reorderPinned = useCallback((fromIdx, toIdx) => {
+    setPinned(prev => {
+      const next = [...prev]
+      const [moved] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, moved)
+      saveList(PINNED_KEY, next)
+      return next
+    })
+  }, [])
+
   // Auto-track tool visits by route — bridge router state to localStorage
   useEffect(() => {
     const tool = TOOLS.find(t => t.path === location.pathname)
@@ -55,7 +65,7 @@ export function WorkspaceProvider({ children }) {
     if (tool) trackVisit(tool.id)
   }, [location.pathname, trackVisit])
 
-  const value = { recent, pinned, trackVisit, togglePinned }
+  const value = { recent, pinned, trackVisit, togglePinned, reorderPinned }
 
   return (
     <WorkspaceContext.Provider value={value}>

@@ -1,0 +1,525 @@
+{
+  "common": {
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "close": "Schließen",
+    "open": "Öffnen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "cancel": "Abbrechen",
+    "submit": "Absenden",
+    "search": "Suchen",
+    "loading": "Wird geladen…",
+    "noResults": "Keine Ergebnisse",
+    "signIn": "Anmelden",
+    "signOut": "Abmelden",
+    "signUp": "Registrieren",
+    "tools": "Werkzeuge",
+    "tool": "Werkzeug",
+    "category": "Kategorie",
+    "action": "Aktion",
+    "pinned": "Angeheftet",
+    "comingSoon": "Demnächst verfügbar",
+    "type": "Typ",
+    "message": "Nachricht",
+    "navigate": "Navigieren",
+    "openTool": "Werkzeug öffnen",
+    "jumpToCategory": "Zur Kategorie springen",
+    "pin": "{name} anheften",
+    "unpin": "{name} lösen",
+    "colour": "Farbe",
+    "colours": "Farben"
+  },
+  "brand": {
+    "name": "Vasari",
+    "tagline": "Obsidian Toolkit",
+    "full": "Vasari Obsidian",
+    "fullToolkit": "Vasari Obsidian Toolkit"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Einstellungen",
+    "support": "Support",
+    "toggleMenu": "Menü umschalten",
+    "toggle": "{name} umschalten",
+    "proPlan": "PRO-PLAN",
+    "freePlan": "KOSTENLOSER PLAN"
+  },
+  "topbar": {
+    "searchHint": "Werkzeuge suchen, zu einer Seite springen…",
+    "lightMode": "Heller Modus",
+    "darkMode": "Dunkler Modus",
+    "switchToLight": "Zum hellen Modus wechseln",
+    "switchToDark": "Zum dunklen Modus wechseln"
+  },
+  "cmd": {
+    "placeholder": "Werkzeuge suchen, zu einer Seite springen oder eine Aktion ausführen…",
+    "noResults": "Keine Ergebnisse für «{query}»",
+    "recent": "Zuletzt verwendet",
+    "allTools": "Alle Werkzeuge",
+    "categories": "Kategorien",
+    "actions": "Aktionen",
+    "goToDashboard": "Zum Dashboard",
+    "openSettings": "Einstellungen öffnen",
+    "sendFeedback": "Feedback senden"
+  },
+  "dash": {
+    "greeting": {
+      "lateNight": "Spät dran",
+      "morning": "Guten Morgen",
+      "afternoon": "Guten Nachmittag",
+      "evening": "Guten Abend"
+    },
+    "heroSub": "Machen Sie dort weiter, wo Sie aufgehört haben, oder erkunden Sie eine Kategorie unten.",
+    "yourTools": "Ihre Werkzeuge",
+    "pinnedCount": "{count} angeheftet",
+    "explore": "Entdecken",
+    "categoryCount": "{count} Kategorien",
+    "emptyPinned": "Heften Sie Werkzeuge aus einer beliebigen Kategorie an, um sie hier zu sehen.",
+    "toolCount": "{count} Werkzeuge"
+  },
+  "categories": {
+    "color": {
+      "label": "Farbstudio",
+      "description": "Erstellen Sie Paletten, Skalen, Verläufe und prüfen Sie die Barrierefreiheit."
+    },
+    "typography": {
+      "label": "Typografie",
+      "description": "Typografieskalen und Schriftpaarungen, optimiert für Lesbarkeit."
+    },
+    "imagery": {
+      "label": "Bilder",
+      "description": "Icons, Bildwerkzeuge und Prompt-Strukturierung."
+    },
+    "documentation": {
+      "label": "Dokumentation",
+      "description": "Designprinzipien, Marketing-Referenzen und externe Ressourcen."
+    }
+  },
+  "tools": {
+    "colorStudio": {
+      "label": "Farbstudio",
+      "description": "Umfassender Farbsystem-Builder mit Palette, Abstufungen, Kontrast und Verläufen."
+    },
+    "typeScale": {
+      "label": "Typografieskala",
+      "description": "Modularer Typografieskala-Rechner mit CSS-Export."
+    },
+    "fontPairs": {
+      "label": "Schriftpaar-Finder",
+      "description": "Kuratierte Schriftpaarungen für Überschriften und Fließtext."
+    },
+    "iconLibrary": {
+      "label": "Icon-Bibliothek",
+      "description": "Durchsuchen Sie Tausende von Icons über die Iconify-API."
+    },
+    "imageConverter": {
+      "label": "Bildkonverter",
+      "description": "Konvertieren, komprimieren und skalieren Sie Bilder lokal."
+    },
+    "docsDesign": {
+      "label": "Designprinzipien",
+      "description": "Visuelle Hierarchie, Balance und Designpsychologie."
+    },
+    "docsSocial": {
+      "label": "Social Media und Marketing",
+      "description": "Best Practices für Social Media und Marketing."
+    },
+    "designReference": {
+      "label": "Design-Referenz",
+      "description": "Abstände, Schatten, Radien, Schriftskalen und Design-Token-Referenz."
+    },
+    "designExport": {
+      "label": "Designsystem-Export",
+      "description": "Exportieren Sie Ihr vollständiges Designsystem als HTML für Entwickler und Kunden."
+    },
+    "externalResources": {
+      "label": "Externe Ressourcen",
+      "description": "Kuratierte Links zu Schriften, Farben, KI-Werkzeugen und Inspiration."
+    }
+  },
+  "color": {
+    "title": "Farbstudio",
+    "baseColour": "Basisfarbe",
+    "palette": "Palette",
+    "harmony": "Harmonie",
+    "tints": "Abtönungen",
+    "stateColours": "Zustandsfarben",
+    "gradients": "Verläufe",
+    "preview": "Vorschau",
+    "harmonyModes": {
+      "analogous": "Analog",
+      "triadic": "Triadisch",
+      "splitComp": "Gespalten-komplementär",
+      "tetradic": "Tetradisch",
+      "complementary": "Komplementär",
+      "monochromatic": "Monochromatisch"
+    },
+    "saveToPalette": "In Palette speichern",
+    "savedToPalette": "In Palette gespeichert",
+    "paletteFull": "Palette voll (max. 10)",
+    "myPalette": "Meine Palette",
+    "clearPalette": "Palette leeren",
+    "paletteCleared": "Palette geleert",
+    "tintScale": "Abtönungsskala",
+    "shadesOf": "Schattierungen von {colour}",
+    "success": "Erfolg",
+    "warning": "Warnung",
+    "error": "Fehler",
+    "info": "Info",
+    "overallPreset": "Allgemeine Vorgabe",
+    "contrastCheck": "Kontrastprüfung",
+    "foreground": "Vordergrund",
+    "background": "Hintergrund",
+    "swap": "Tauschen",
+    "ratio": "Verhältnis",
+    "aaNormal": "AA Normal",
+    "aaLarge": "AA Groß",
+    "aaaNormal": "AAA Normal",
+    "aaaLarge": "AAA Groß",
+    "pass": "Bestanden",
+    "fail": "Nicht bestanden",
+    "gradientType": "Typ",
+    "angle": "Winkel",
+    "addStop": "Stopp hinzufügen",
+    "presets": "Vorgaben",
+    "fromPalette": "Aus Palette",
+    "fromTints": "Aus Abtönungen",
+    "css": "CSS",
+    "lightMode": "Heller Modus",
+    "darkMode": "Dunkler Modus",
+    "buttons": "Schaltflächen",
+    "navigation": "Navigation",
+    "table": "Tabelle",
+    "toast": "Benachrichtigung",
+    "primary": "Primär",
+    "secondary": "Sekundär",
+    "outline": "Umriss",
+    "ghost": "Transparent",
+    "link": "Link",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "hover": "Hover",
+    "headerRow": "Kopfzeile",
+    "dataRow": "Datenzeile",
+    "altRow": "Abwechselnde Zeile",
+    "statusCol": "Status",
+    "itemCol": "Element",
+    "valueCol": "Wert"
+  },
+  "typeScale": {
+    "title": "Typografieskala",
+    "baseSize": "Basisgröße",
+    "scaleRatio": "Skalenverhältnis",
+    "lineHeight": "Zeilenhöhe",
+    "headingSpacing": "Überschriftenabstand",
+    "bodySpacing": "Fließtextabstand",
+    "responsivePreview": "Responsive Vorschau",
+    "desktop": "Desktop",
+    "tablet": "Tablet",
+    "mobile": "Mobil",
+    "exportFormat": "Exportformat",
+    "cssVariables": "CSS-Variablen",
+    "tailwindConfig": "Tailwind-Konfiguration",
+    "scssVariables": "SCSS-Variablen",
+    "fontWeightRef": "Referenz Schriftstärken",
+    "sampleText": "Franz jagt im komplett verwahrlosten Taxi quer durch Bayern",
+    "ratios": {
+      "minorSecond": "Kleine Sekunde",
+      "majorSecond": "Große Sekunde",
+      "minorThird": "Kleine Terz",
+      "majorThird": "Große Terz",
+      "perfectFourth": "Reine Quarte",
+      "augFourth": "Übermäßige Quarte",
+      "perfectFifth": "Reine Quinte",
+      "goldenRatio": "Goldener Schnitt",
+      "custom": "Benutzerdefiniert"
+    },
+    "weights": {
+      "thin": "Dünn",
+      "extraLight": "Extra leicht",
+      "light": "Leicht",
+      "regular": "Normal",
+      "medium": "Mittel",
+      "semiBold": "Halbfett",
+      "bold": "Fett",
+      "extraBold": "Extra fett",
+      "black": "Black"
+    }
+  },
+  "fontMatcher": {
+    "title": "Schriftpaar-Finder",
+    "allCategories": "Alle",
+    "serif": "Serif",
+    "sansSerif": "Sans-Serif",
+    "display": "Display",
+    "weight": "Stärke",
+    "sampleText": "Beispieltext",
+    "defaultSample": "Franz jagt im komplett verwahrlosten Taxi quer durch Bayern. Zwölf Boxkämpfer jagen Viktor quer über den großen Sylter Deich.",
+    "pairings": "Paarungen",
+    "compare": "Vergleichen",
+    "article": "Artikel",
+    "headingFont": "Überschrift",
+    "bodyFont": "Fließtext",
+    "selectToCompare": "Wählen Sie oben eine Schrift zum Vergleichen aus",
+    "miniGuide": "Mini-Stilhandbuch",
+    "pairedWith": "kombiniert mit"
+  },
+  "iconLibrary": {
+    "title": "Icon-Bibliothek",
+    "searchPlaceholder": "Icons suchen…",
+    "allPacks": "Alle Pakete",
+    "mode": "Modus",
+    "embedded": "Eingebettet",
+    "api": "API",
+    "offline": "Offline",
+    "results": "{count} Ergebnisse",
+    "copySvg": "SVG kopieren",
+    "copyJsx": "JSX kopieren",
+    "noIcons": "Suchen Sie oben nach Icons",
+    "loadingPacks": "Icon-Pakete werden geladen…"
+  },
+  "imageConverter": {
+    "title": "Bildkonverter",
+    "subtitle": "Konvertieren, komprimieren und skalieren Sie Bilder lokal in Ihrem Browser.",
+    "dropZone": "Bilder hier ablegen oder klicken zum Durchsuchen",
+    "format": "Ausgabeformat",
+    "quality": "Qualität",
+    "maxWidth": "Maximale Breite",
+    "noLimit": "Kein Limit",
+    "original": "Original",
+    "converted": "Konvertiert",
+    "savings": "Ersparnis",
+    "downloadAll": "Alle herunterladen (ZIP)",
+    "download": "Herunterladen",
+    "clear": "Leeren",
+    "dimensions": "{w} × {h}"
+  },
+  "promptLibrary": {
+    "title": "Prompt-Bibliothek",
+    "subtitle": "Speichern, organisieren und verwenden Sie Ihre bevorzugten Design-Prompts wieder.",
+    "addPrompt": "Prompt hinzufügen",
+    "promptPlaceholder": "Geben Sie Ihren Prompt ein…",
+    "tagsPlaceholder": "Tags (durch Komma getrennt)",
+    "searchPlaceholder": "Prompts suchen…",
+    "referenceImage": "Referenzbild",
+    "savedPrompts": "Gespeicherte Prompts",
+    "noPrompts": "Noch keine Prompts gespeichert",
+    "enterPromptFirst": "Geben Sie zuerst einen Prompt ein",
+    "promptSaved": "Prompt gespeichert",
+    "promptCopied": "Prompt kopiert",
+    "promptDeleted": "Prompt gelöscht",
+    "importJson": "JSON importieren",
+    "importedCount": "{count} Prompts importiert"
+  },
+  "docsDesign": {
+    "title": "Designprinzipien",
+    "subtitle": "Psychologisch fundierte Prinzipien für benutzerfreundliche Oberflächen mit hoher Konversionsrate."
+  },
+  "docsSocial": {
+    "title": "Social Media und Marketing",
+    "subtitle": "Datengestützte Strategien für Inhalte, Engagement und Wachstum."
+  },
+  "designRef": {
+    "title": "Design-Referenz",
+    "subtitle": "Visuelle Referenz für Abstände, Schatten, Radien, Typografie, Deckkraft und Breakpoints.",
+    "spacing": "Abstandsskala",
+    "shadows": "Schattenskala",
+    "borderRadius": "Rahmenradius",
+    "fontSizes": "Schriftgrößen",
+    "fontWeights": "Schriftstärken",
+    "opacity": "Deckkraftskala",
+    "breakpoints": "Bildschirm-Breakpoints",
+    "clickToCopy": "Klicken Sie auf einen Wert, um ihn zu kopieren"
+  },
+  "designExport": {
+    "title": "Designsystem-Export",
+    "subtitle": "Sammeln Sie Ihre Design-Tokens und exportieren Sie eine eigenständige HTML-Referenz für Entwickler und Kunden.",
+    "systemConfig": "Systemkonfiguration",
+    "systemName": "Systemname",
+    "author": "Autor",
+    "version": "Version",
+    "description": "Beschreibung",
+    "colourTokens": "Farb-Tokens",
+    "typographyTokens": "Typografie-Tokens",
+    "headingFont": "Überschriftenschrift",
+    "bodyFont": "Fließtextschrift",
+    "baseFontSize": "Basisschriftgröße",
+    "scaleRatio": "Skalenverhältnis",
+    "spacingTokens": "Abstands-Tokens",
+    "spacingPreset": "Abstandsvorgabe",
+    "tailwindScale": "Tailwind-Skala",
+    "eightPointGrid": "8-Punkt-Raster",
+    "fourPointGrid": "4-Punkt-Raster",
+    "exportHtml": "HTML exportieren",
+    "copyCssVars": "CSS-Variablen kopieren",
+    "cssVarsCopied": "CSS-Variablen kopiert",
+    "importFromPalette": "Aus Palette importieren",
+    "paletteImported": "Palettenfarben importiert",
+    "noPaletteData": "Keine Palettendaten gefunden",
+    "addColour": "Farbe hinzufügen",
+    "removeColour": "Entfernen"
+  },
+  "resources": {
+    "title": "Externe Ressourcen",
+    "subtitle": "Kuratierte Links zu Werkzeugen, Inspiration und Referenzen für Webdesign.",
+    "categories": {
+      "typography": "Typografie",
+      "colour": "Farbe",
+      "aiImageVideo": "KI-Bild und -Video",
+      "framer": "Framer",
+      "designInspiration": "Design-Inspiration",
+      "aiTools": "KI-Werkzeuge"
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Verwalten Sie Ihre Einstellungen, Ihr Konto und Ihre Daten.",
+    "appearance": "Erscheinungsbild",
+    "theme": "Design",
+    "dark": "Dunkel",
+    "light": "Hell",
+    "language": "Sprache",
+    "account": "Konto",
+    "dataManagement": "Datenverwaltung",
+    "dataInfo": "Ihre Daten werden lokal in Ihrem Browser gespeichert. Exportieren Sie Ihre Daten zur Sicherung oder löschen Sie sie, um neu zu beginnen.",
+    "exportData": "Meine Daten exportieren",
+    "clearData": "Lokale Daten löschen",
+    "dataExported": "Daten exportiert",
+    "dataCleared": "Lokale Daten gelöscht",
+    "clearConfirm": "Sind Sie sicher? Dadurch werden alle lokal gespeicherten Daten gelöscht.",
+    "privacyLegal": "Datenschutz und Recht",
+    "privacyInfo": "Vasari Obsidian entspricht dem australischen Datenschutzgesetz von 1988 und den australischen Datenschutzgrundsätzen (APPs). Ihre Daten werden gegebenenfalls in Australien (Region Sydney) verarbeitet.",
+    "privacyPoints": {
+      "collect": "Wir erheben nur die für den Dienst erforderlichen Daten (APP 3)",
+      "use": "Ihre Daten werden ausschließlich zur Bereitstellung der Toolkit-Funktionen verwendet (APP 6)",
+      "access": "Sie können jederzeit auf Ihre Daten zugreifen, sie korrigieren oder löschen (APP 12 und 13)",
+      "security": "Daten werden mit branchenüblichen Sicherheitsmaßnahmen geschützt (APP 11)"
+    },
+    "privacyPolicy": "Datenschutzrichtlinie",
+    "termsOfService": "Nutzungsbedingungen"
+  },
+  "auth": {
+    "welcomeBack": "Willkommen zurück",
+    "createAccount": "Konto erstellen",
+    "resetPassword": "Passwort zurücksetzen",
+    "signInSubtitle": "Melden Sie sich bei Ihrem Vasari Obsidian-Konto an.",
+    "signUpSubtitle": "Registrieren Sie sich, um Ihre Arbeit zu speichern und auf alle Funktionen zuzugreifen.",
+    "resetSubtitle": "Geben Sie Ihre E-Mail-Adresse ein, um einen Link zum Zurücksetzen zu erhalten.",
+    "displayName": "Anzeigename",
+    "namePlaceholder": "Ihr Name",
+    "email": "E-Mail",
+    "emailPlaceholder": "you@example.com",
+    "password": "Passwort",
+    "passwordPlaceholder": "Min. 6 Zeichen",
+    "sendResetLink": "Link zum Zurücksetzen senden",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "haveAccount": "Bereits ein Konto? Anmelden",
+    "noAccount": "Noch kein Konto? Registrieren",
+    "forgotPassword": "Passwort vergessen?",
+    "pleaseWait": "Bitte warten…",
+    "accountCreated": "Konto erstellt",
+    "signedIn": "Angemeldet",
+    "resetSent": "E-Mail zum Zurücksetzen des Passworts gesendet",
+    "errors": {
+      "emailInUse": "Ein Konto mit dieser E-Mail-Adresse existiert bereits",
+      "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "weakPassword": "Das Passwort muss mindestens 6 Zeichen lang sein",
+      "invalidCredential": "Ungültige E-Mail-Adresse oder ungültiges Passwort",
+      "tooManyRequests": "Zu viele Versuche — versuchen Sie es später erneut",
+      "serviceUnavailable": "Dienst vorübergehend nicht verfügbar",
+      "authFailed": "Authentifizierung fehlgeschlagen",
+      "userNotFound": "Kein Konto mit dieser E-Mail-Adresse gefunden"
+    }
+  },
+  "feedback": {
+    "title": "Feedback",
+    "subtitle": "Helfen Sie uns, Vasari Obsidian zu verbessern. Teilen Sie Fehler, Funktionswünsche oder allgemeines Feedback mit.",
+    "featureRequest": "Funktionswunsch",
+    "bugReport": "Fehlerbericht",
+    "general": "Allgemein",
+    "messagePlaceholder": "Sagen Sie uns, was Sie denken…",
+    "submitFeedback": "Feedback absenden",
+    "enterFeedback": "Bitte geben Sie Ihr Feedback ein",
+    "thankYou": "Vielen Dank für Ihr Feedback!"
+  },
+  "community": {
+    "title": "Community",
+    "subtitle": "Vernetzen Sie sich mit anderen Designern und Entwicklern, die Vasari Obsidian nutzen.",
+    "comingSoonDesc": "Teilen Sie Paletten, erhalten Sie Feedback zu Ihren Designs und entdecken Sie von der Community erstellte Vorlagen."
+  },
+  "privacy": {
+    "title": "Datenschutzrichtlinie",
+    "lastUpdated": "Zuletzt aktualisiert: März 2026",
+    "s1Title": "1. Über diese Richtlinie",
+    "s1Text": "Vasari Obsidian («wir», «uns», «unser») verpflichtet sich, Ihre persönlichen Daten gemäß dem australischen Datenschutzgesetz von 1988 (Cth) und den australischen Datenschutzgrundsätzen (APPs) zu schützen. Diese Richtlinie erläutert, wie wir Ihre persönlichen Daten erheben, verwenden, offenlegen und schützen.",
+    "s2Title": "2. Informationen, die wir erheben (APP 3)",
+    "s2Intro": "Wir erheben nur Informationen, die für unsere Dienste vernünftigerweise erforderlich sind:",
+    "s2Items": [
+      "Kontoinformationen: E-Mail-Adresse, Anzeigename, Profilfoto (bei Verwendung der Google-Anmeldung)",
+      "Nutzungspräferenzen: Designeinstellungen, gespeicherte Paletten, Abtönungskonfigurationen, Prompts",
+      "Wir erheben NICHT: Zahlungskartendaten (werden von Stripe verarbeitet), Standortdaten, Gerätekennungen oder Tracking-Cookies"
+    ],
+    "s3Title": "3. Wie wir Ihre Informationen verwenden (APP 6)",
+    "s3Intro": "Ihre Informationen werden ausschließlich verwendet, um:",
+    "s3Items": [
+      "Ihr Konto und die Toolkit-Funktionen bereitzustellen und zu pflegen",
+      "Ihre Designkonfigurationen geräteübergreifend zu synchronisieren",
+      "Wesentliche Dienstbenachrichtigungen zu senden (Kontosicherheit, Richtlinienänderungen)",
+      "Wir werden Ihre Daten NIEMALS an Dritte verkaufen oder für Werbung verwenden"
+    ],
+    "s4Title": "4. Datenspeicherung und Sicherheit (APP 8 und 11)",
+    "s4Text": "Ihre Daten werden in Google Cloud Firestore in der Region australia-southeast1 (Sydney) gespeichert. Die Authentifizierung wird über Firebase Authentication abgewickelt. Wir setzen um:",
+    "s4Items": [
+      "Verschlüsselung im Ruhezustand und bei der Übertragung (TLS 1.3)",
+      "Firestore-Sicherheitsregeln für die Zugriffskontrolle",
+      "Regelmäßige Sicherheitsaudits unserer Firebase-Konfiguration",
+      "Kein grenzüberschreitender Datentransfer ohne gleichwertige Datenschutzmaßnahmen"
+    ],
+    "s5Title": "5. Ihre Rechte (APP 12 und 13)",
+    "s5Intro": "Sie haben das Recht:",
+    "s5Items": [
+      "Jederzeit über die Einstellungen auf Ihre persönlichen Daten zuzugreifen",
+      "Ihre persönlichen Daten durch Aktualisierung Ihres Profils zu korrigieren",
+      "Alle Ihre Daten als JSON-Datei über Einstellungen > Meine Daten exportieren zu exportieren",
+      "Ihr Konto und alle zugehörigen Daten über Einstellungen > Konto löschen zu löschen",
+      "Ihre Einwilligung durch Abmeldung und Löschung Ihres Kontos zu widerrufen"
+    ],
+    "s6Title": "6. Drittanbieterdienste",
+    "s6Items": [
+      "Firebase/Google Cloud — Authentifizierung und Datenbank (Region Sydney)",
+      "Google Fonts — Schriftartenladung (keine persönlichen Daten gesendet)",
+      "Iconify — Icon-Such-API (keine persönlichen Daten gesendet)",
+      "Stripe — Zahlungsabwicklung (PCI-DSS-konform, australische Niederlassung)"
+    ],
+    "s7Title": "7. Kontakt",
+    "s7Text": "Für Datenschutzanfragen, Auskunftsersuchen oder Beschwerden kontaktieren Sie uns unter:",
+    "s7Complaint": "Wenn Sie mit unserer Antwort nicht zufrieden sind, können Sie eine Beschwerde beim Office of the Australian Information Commissioner (OAIC) einreichen unter"
+  },
+  "terms": {
+    "title": "Nutzungsbedingungen",
+    "lastUpdated": "Zuletzt aktualisiert: März 2026",
+    "s1Title": "1. Annahme",
+    "s1Text": "Durch die Nutzung von Vasari Obsidian Web Design Toolkit («der Dienst») stimmen Sie diesen Nutzungsbedingungen zu. Der Dienst wird von Vasari Obsidian, einem in Australien ansässigen Unternehmen, bereitgestellt. Diese Bedingungen unterliegen den Gesetzen Australiens.",
+    "s2Title": "2. Konto",
+    "s2Text": "Sie können ein Konto mit E-Mail/Passwort oder Google-Authentifizierung erstellen. Sie sind für die Sicherheit Ihrer Kontoanmeldedaten verantwortlich. Sie müssen mindestens 16 Jahre alt sein, um ein Konto zu erstellen.",
+    "s3Title": "3. Kostenlose und Pro-Stufe",
+    "s3Text": "Der Dienst bietet eine kostenlose Stufe mit Kernfunktionen und eine Pro-Stufe mit zusätzlichen Werkzeugen. Pro-Abonnements werden monatlich oder jährlich abgerechnet. Sie können jederzeit kündigen; der Zugang besteht bis zum Ende des Abrechnungszeitraums fort. Erstattungen werden im Einzelfall gemäß dem australischen Verbraucherrecht behandelt.",
+    "s4Title": "4. Geistiges Eigentum",
+    "s4Text": "Designs, Paletten, Verläufe und andere Ergebnisse, die Sie mit dem Dienst erstellen, gehören Ihnen. Der Dienst selbst, einschließlich seines Codes, Designs und seiner Dokumentation, ist Eigentum von Vasari Obsidian und durch das australische Urheberrecht geschützt.",
+    "s5Title": "5. Zulässige Nutzung",
+    "s5Intro": "Sie verpflichten sich, Folgendes zu unterlassen:",
+    "s5Items": [
+      "Den Dienst für rechtswidrige Zwecke zu nutzen",
+      "Unbefugten Zugriff auf die Konten anderer Benutzer zu erlangen",
+      "Den Dienst zu reverse-engineeren, zu dekompilieren oder zu disassemblieren",
+      "Automatisierte Systeme zum Extrahieren von Daten aus dem Dienst zu verwenden"
+    ],
+    "s6Title": "6. Haftungsbeschränkung",
+    "s6Text": "Der Dienst wird ohne Gewährleistung jeglicher Art bereitgestellt, außer soweit dies nach dem australischen Verbraucherrecht erforderlich ist. Im gesetzlich zulässigen Umfang haftet Vasari Obsidian nicht für indirekte, zufällige oder Folgeschäden, die aus Ihrer Nutzung des Dienstes entstehen.",
+    "s7Title": "7. Änderungen",
+    "s7Text": "Wir können diese Bedingungen von Zeit zu Zeit aktualisieren. Wesentliche Änderungen werden per E-Mail oder durch eine In-App-Benachrichtigung mindestens 30 Tage vor Inkrafttreten mitgeteilt.",
+    "s8Title": "8. Kontakt",
+    "s8Text": "Fragen zu diesen Bedingungen? Kontaktieren Sie uns unter"
+  }
+}

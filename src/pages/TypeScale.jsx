@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useI18n } from '../contexts/I18nContext'
 
 const NAMES = ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl']
 const EXPS = [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
@@ -35,6 +36,7 @@ function CopyIcon({ size = 12 }) {
 }
 
 export default function TypeScale({ onCopy }) {
+  const { t } = useI18n()
   const [base, setBase] = useState(16)
   const [ratio, setRatio] = useState(1.250)
   const [customRatio, setCustomRatio] = useState(1.333)
@@ -100,9 +102,9 @@ export default function TypeScale({ onCopy }) {
   return (
     <div className="sec">
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 8 }}>Type Scale</h1>
+        <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 8 }}>{t('typeScale.title')}</h1>
         <p style={{ fontSize: 14, color: 'var(--t1)', maxWidth: 540, lineHeight: 1.7 }}>
-          Modular type scale calculator with line-height, letter-spacing, responsive preview, and multi-format export.
+          {t('tools.typeScale.description')}
         </p>
       </div>
 

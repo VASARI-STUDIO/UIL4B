@@ -1,0 +1,525 @@
+{
+  "common": {
+    "copy": "复制",
+    "copied": "已复制",
+    "close": "关闭",
+    "open": "打开",
+    "save": "保存",
+    "delete": "删除",
+    "cancel": "取消",
+    "submit": "提交",
+    "search": "搜索",
+    "loading": "加载中…",
+    "noResults": "无结果",
+    "signIn": "登录",
+    "signOut": "退出登录",
+    "signUp": "注册",
+    "tools": "工具",
+    "tool": "工具",
+    "category": "分类",
+    "action": "操作",
+    "pinned": "已固定",
+    "comingSoon": "即将推出",
+    "type": "类型",
+    "message": "消息",
+    "navigate": "导航",
+    "openTool": "打开工具",
+    "jumpToCategory": "跳转至分类",
+    "pin": "固定{name}",
+    "unpin": "取消固定{name}",
+    "colour": "颜色",
+    "colours": "颜色"
+  },
+  "brand": {
+    "name": "Vasari",
+    "tagline": "Obsidian Toolkit",
+    "full": "Vasari Obsidian",
+    "fullToolkit": "Vasari Obsidian Toolkit"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "settings": "设置",
+    "support": "支持",
+    "toggleMenu": "切换菜单",
+    "toggle": "切换{name}",
+    "proPlan": "专业版",
+    "freePlan": "免费版"
+  },
+  "topbar": {
+    "searchHint": "搜索工具、跳转至页面…",
+    "lightMode": "浅色模式",
+    "darkMode": "深色模式",
+    "switchToLight": "切换至浅色模式",
+    "switchToDark": "切换至深色模式"
+  },
+  "cmd": {
+    "placeholder": "搜索工具、跳转至页面或执行操作…",
+    "noResults": "「{query}」无搜索结果",
+    "recent": "最近使用",
+    "allTools": "所有工具",
+    "categories": "分类",
+    "actions": "操作",
+    "goToDashboard": "前往仪表盘",
+    "openSettings": "打开设置",
+    "sendFeedback": "发送反馈"
+  },
+  "dash": {
+    "greeting": {
+      "lateNight": "夜深了，辛苦了",
+      "morning": "早上好",
+      "afternoon": "下午好",
+      "evening": "晚上好"
+    },
+    "heroSub": "继续上次的工作，或浏览下方的分类。",
+    "yourTools": "我的工具",
+    "pinnedCount": "{count}个已固定",
+    "explore": "探索",
+    "categoryCount": "{count}个分类",
+    "emptyPinned": "从任意分类中固定工具，即可在此处显示。",
+    "toolCount": "{count}个工具"
+  },
+  "categories": {
+    "color": {
+      "label": "色彩工作室",
+      "description": "构建调色板、色阶、渐变并验证无障碍性。"
+    },
+    "typography": {
+      "label": "排版",
+      "description": "为可读性优化的字体比例和字体配对。"
+    },
+    "imagery": {
+      "label": "图像",
+      "description": "图标、图像工具和提示词构建。"
+    },
+    "documentation": {
+      "label": "文档",
+      "description": "设计原则、营销参考和外部资源。"
+    }
+  },
+  "tools": {
+    "colorStudio": {
+      "label": "色彩工作室",
+      "description": "集调色板、色调、对比度和渐变于一体的完整色彩系统构建器。"
+    },
+    "typeScale": {
+      "label": "字体比例",
+      "description": "支持 CSS 导出的模块化字体比例计算器。"
+    },
+    "fontPairs": {
+      "label": "字体配对查找器",
+      "description": "为标题和正文精选的字体配对方案。"
+    },
+    "iconLibrary": {
+      "label": "图标库",
+      "description": "通过 Iconify API 搜索数千个图标。"
+    },
+    "imageConverter": {
+      "label": "图像转换器",
+      "description": "在本地转换、压缩和调整图像大小。"
+    },
+    "docsDesign": {
+      "label": "设计原则",
+      "description": "视觉层次、平衡和设计心理学。"
+    },
+    "docsSocial": {
+      "label": "社交与营销",
+      "description": "社交媒体和营销最佳实践。"
+    },
+    "designReference": {
+      "label": "设计参考",
+      "description": "间距、阴影、圆角、字体比例和设计令牌参考。"
+    },
+    "designExport": {
+      "label": "设计系统导出",
+      "description": "将完整的设计系统导出为 HTML，供开发者和客户使用。"
+    },
+    "externalResources": {
+      "label": "外部资源",
+      "description": "精选字体、颜色、AI 工具和灵感链接。"
+    }
+  },
+  "color": {
+    "title": "色彩工作室",
+    "baseColour": "基础颜色",
+    "palette": "调色板",
+    "harmony": "色彩和谐",
+    "tints": "色调",
+    "stateColours": "状态颜色",
+    "gradients": "渐变",
+    "preview": "预览",
+    "harmonyModes": {
+      "analogous": "类似色",
+      "triadic": "三色组",
+      "splitComp": "分裂互补",
+      "tetradic": "四色组",
+      "complementary": "互补色",
+      "monochromatic": "单色"
+    },
+    "saveToPalette": "保存到调色板",
+    "savedToPalette": "已保存到调色板",
+    "paletteFull": "调色板已满（最多10个）",
+    "myPalette": "我的调色板",
+    "clearPalette": "清空调色板",
+    "paletteCleared": "调色板已清空",
+    "tintScale": "色调比例",
+    "shadesOf": "{colour}的色阶",
+    "success": "成功",
+    "warning": "警告",
+    "error": "错误",
+    "info": "信息",
+    "overallPreset": "整体预设",
+    "contrastCheck": "对比度检查",
+    "foreground": "前景色",
+    "background": "背景色",
+    "swap": "交换",
+    "ratio": "比率",
+    "aaNormal": "AA 标准",
+    "aaLarge": "AA 大字",
+    "aaaNormal": "AAA 标准",
+    "aaaLarge": "AAA 大字",
+    "pass": "通过",
+    "fail": "未通过",
+    "gradientType": "类型",
+    "angle": "角度",
+    "addStop": "添加色标",
+    "presets": "预设",
+    "fromPalette": "从调色板",
+    "fromTints": "从色调",
+    "css": "CSS",
+    "lightMode": "浅色模式",
+    "darkMode": "深色模式",
+    "buttons": "按钮",
+    "navigation": "导航",
+    "table": "表格",
+    "toast": "提示通知",
+    "primary": "主要",
+    "secondary": "次要",
+    "outline": "轮廓",
+    "ghost": "幽灵",
+    "link": "链接",
+    "active": "激活",
+    "inactive": "未激活",
+    "hover": "悬停",
+    "headerRow": "表头行",
+    "dataRow": "数据行",
+    "altRow": "交替行",
+    "statusCol": "状态",
+    "itemCol": "项目",
+    "valueCol": "值"
+  },
+  "typeScale": {
+    "title": "字体比例",
+    "baseSize": "基础大小",
+    "scaleRatio": "缩放比例",
+    "lineHeight": "行高",
+    "headingSpacing": "标题间距",
+    "bodySpacing": "正文间距",
+    "responsivePreview": "响应式预览",
+    "desktop": "桌面端",
+    "tablet": "平板端",
+    "mobile": "移动端",
+    "exportFormat": "导出格式",
+    "cssVariables": "CSS 变量",
+    "tailwindConfig": "Tailwind 配置",
+    "scssVariables": "SCSS 变量",
+    "fontWeightRef": "字重参考",
+    "sampleText": "敏捷的棕色狐狸跳过了懒惰的狗",
+    "ratios": {
+      "minorSecond": "小二度",
+      "majorSecond": "大二度",
+      "minorThird": "小三度",
+      "majorThird": "大三度",
+      "perfectFourth": "纯四度",
+      "augFourth": "增四度",
+      "perfectFifth": "纯五度",
+      "goldenRatio": "黄金比例",
+      "custom": "自定义"
+    },
+    "weights": {
+      "thin": "Thin",
+      "extraLight": "Extra Light",
+      "light": "Light",
+      "regular": "Regular",
+      "medium": "Medium",
+      "semiBold": "Semi Bold",
+      "bold": "Bold",
+      "extraBold": "Extra Bold",
+      "black": "Black"
+    }
+  },
+  "fontMatcher": {
+    "title": "字体配对查找器",
+    "allCategories": "全部",
+    "serif": "Serif",
+    "sansSerif": "Sans-Serif",
+    "display": "Display",
+    "weight": "字重",
+    "sampleText": "示例文本",
+    "defaultSample": "敏捷的棕色狐狸跳过了懒惰的狗。天地玄黄，宇宙洪荒，日月盈昃，辰宿列张。",
+    "pairings": "配对方案",
+    "compare": "比较",
+    "article": "文章",
+    "headingFont": "标题",
+    "bodyFont": "正文",
+    "selectToCompare": "选择上方的字体进行比较",
+    "miniGuide": "迷你样式指南",
+    "pairedWith": "搭配"
+  },
+  "iconLibrary": {
+    "title": "图标库",
+    "searchPlaceholder": "搜索图标…",
+    "allPacks": "所有图标包",
+    "mode": "模式",
+    "embedded": "嵌入",
+    "api": "API",
+    "offline": "离线",
+    "results": "{count}个结果",
+    "copySvg": "复制 SVG",
+    "copyJsx": "复制 JSX",
+    "noIcons": "在上方搜索图标",
+    "loadingPacks": "正在加载图标包…"
+  },
+  "imageConverter": {
+    "title": "图像转换器",
+    "subtitle": "在浏览器中本地转换、压缩和调整图像大小。",
+    "dropZone": "将图像拖放到此处或点击浏览",
+    "format": "输出格式",
+    "quality": "质量",
+    "maxWidth": "最大宽度",
+    "noLimit": "不限制",
+    "original": "原始",
+    "converted": "已转换",
+    "savings": "节省量",
+    "downloadAll": "全部下载 (ZIP)",
+    "download": "下载",
+    "clear": "清除",
+    "dimensions": "{w} × {h}"
+  },
+  "promptLibrary": {
+    "title": "提示词库",
+    "subtitle": "保存、整理和复用您喜爱的设计提示词。",
+    "addPrompt": "添加提示词",
+    "promptPlaceholder": "输入提示词…",
+    "tagsPlaceholder": "标签（逗号分隔）",
+    "searchPlaceholder": "搜索提示词…",
+    "referenceImage": "参考图片",
+    "savedPrompts": "已保存的提示词",
+    "noPrompts": "尚未保存任何提示词",
+    "enterPromptFirst": "请先输入提示词",
+    "promptSaved": "提示词已保存",
+    "promptCopied": "提示词已复制",
+    "promptDeleted": "提示词已删除",
+    "importJson": "导入 JSON",
+    "importedCount": "已导入{count}条提示词"
+  },
+  "docsDesign": {
+    "title": "设计原则",
+    "subtitle": "基于心理学的原则，打造高转化率、用户友好的界面。"
+  },
+  "docsSocial": {
+    "title": "社交与营销",
+    "subtitle": "数据驱动的内容、互动和增长策略。"
+  },
+  "designRef": {
+    "title": "设计参考",
+    "subtitle": "间距、阴影、圆角、排版、透明度和断点的可视化参考。",
+    "spacing": "间距比例",
+    "shadows": "阴影比例",
+    "borderRadius": "圆角",
+    "fontSizes": "字号",
+    "fontWeights": "字重",
+    "opacity": "透明度比例",
+    "breakpoints": "屏幕断点",
+    "clickToCopy": "点击任意值即可复制"
+  },
+  "designExport": {
+    "title": "设计系统导出",
+    "subtitle": "收集设计令牌并导出为自包含的 HTML 参考文档，供开发者和客户使用。",
+    "systemConfig": "系统配置",
+    "systemName": "系统名称",
+    "author": "作者",
+    "version": "版本",
+    "description": "描述",
+    "colourTokens": "颜色令牌",
+    "typographyTokens": "排版令牌",
+    "headingFont": "标题字体",
+    "bodyFont": "正文字体",
+    "baseFontSize": "基础字号",
+    "scaleRatio": "缩放比例",
+    "spacingTokens": "间距令牌",
+    "spacingPreset": "间距预设",
+    "tailwindScale": "Tailwind 比例",
+    "eightPointGrid": "8点栅格",
+    "fourPointGrid": "4点栅格",
+    "exportHtml": "导出 HTML",
+    "copyCssVars": "复制 CSS 变量",
+    "cssVarsCopied": "CSS 变量已复制",
+    "importFromPalette": "从调色板导入",
+    "paletteImported": "调色板颜色已导入",
+    "noPaletteData": "未找到调色板数据",
+    "addColour": "添加颜色",
+    "removeColour": "移除"
+  },
+  "resources": {
+    "title": "外部资源",
+    "subtitle": "精选网页设计工具、灵感和参考资源链接。",
+    "categories": {
+      "typography": "排版",
+      "colour": "颜色",
+      "aiImageVideo": "AI 图像与视频",
+      "framer": "Framer",
+      "designInspiration": "设计灵感",
+      "aiTools": "AI 工具"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "管理您的偏好设置、账户和数据。",
+    "appearance": "外观",
+    "theme": "主题",
+    "dark": "深色",
+    "light": "浅色",
+    "language": "语言",
+    "account": "账户",
+    "dataManagement": "数据管理",
+    "dataInfo": "您的数据存储在浏览器本地。导出数据进行备份，或清除数据重新开始。",
+    "exportData": "导出我的数据",
+    "clearData": "清除本地数据",
+    "dataExported": "数据已导出",
+    "dataCleared": "本地数据已清除",
+    "clearConfirm": "确定要清除吗？这将删除所有本地保存的数据。",
+    "privacyLegal": "隐私与法律",
+    "privacyInfo": "Vasari Obsidian 遵守澳大利亚1988年隐私法和澳大利亚隐私原则（APPs）。在适用情况下，您的数据在澳大利亚（悉尼区域）处理。",
+    "privacyPoints": {
+      "collect": "我们仅收集服务所需的数据（APP 3）",
+      "use": "您的数据仅用于提供工具包功能（APP 6）",
+      "access": "您可以随时访问、更正或删除您的数据（APP 12 & 13）",
+      "security": "数据受到行业标准安全措施的保护（APP 11）"
+    },
+    "privacyPolicy": "隐私政策",
+    "termsOfService": "服务条款"
+  },
+  "auth": {
+    "welcomeBack": "欢迎回来",
+    "createAccount": "创建账户",
+    "resetPassword": "重置密码",
+    "signInSubtitle": "登录您的 Vasari Obsidian 账户。",
+    "signUpSubtitle": "注册以保存您的工作并访问所有功能。",
+    "resetSubtitle": "输入您的电子邮件以接收重置链接。",
+    "displayName": "显示名称",
+    "namePlaceholder": "您的名字",
+    "email": "电子邮件",
+    "emailPlaceholder": "you@example.com",
+    "password": "密码",
+    "passwordPlaceholder": "至少6个字符",
+    "sendResetLink": "发送重置链接",
+    "backToSignIn": "返回登录",
+    "haveAccount": "已有账户？登录",
+    "noAccount": "没有账户？注册",
+    "forgotPassword": "忘记密码？",
+    "pleaseWait": "请稍候…",
+    "accountCreated": "账户已创建",
+    "signedIn": "已登录",
+    "resetSent": "密码重置邮件已发送",
+    "errors": {
+      "emailInUse": "此电子邮件已关联账户",
+      "invalidEmail": "请输入有效的电子邮件地址",
+      "weakPassword": "密码至少需要6个字符",
+      "invalidCredential": "电子邮件或密码无效",
+      "tooManyRequests": "尝试次数过多——请稍后再试",
+      "serviceUnavailable": "服务暂时不可用",
+      "authFailed": "身份验证失败",
+      "userNotFound": "未找到与此电子邮件关联的账户"
+    }
+  },
+  "feedback": {
+    "title": "反馈",
+    "subtitle": "帮助我们改进 Vasari Obsidian。分享 Bug、功能请求或一般反馈。",
+    "featureRequest": "功能请求",
+    "bugReport": "Bug 报告",
+    "general": "一般反馈",
+    "messagePlaceholder": "告诉我们您的想法…",
+    "submitFeedback": "提交反馈",
+    "enterFeedback": "请输入您的反馈",
+    "thankYou": "感谢您的反馈！"
+  },
+  "community": {
+    "title": "社区",
+    "subtitle": "与使用 Vasari Obsidian 的其他设计师和开发者建立联系。",
+    "comingSoonDesc": "分享调色板、获取设计反馈，并发现社区创建的模板。"
+  },
+  "privacy": {
+    "title": "隐私政策",
+    "lastUpdated": "最后更新：2026年3月",
+    "s1Title": "1. 关于本政策",
+    "s1Text": "Vasari Obsidian（「我们」）致力于根据澳大利亚1988年隐私法（Cth）和澳大利亚隐私原则（APPs）保护您的个人信息。本政策说明我们如何收集、使用、披露和保护您的个人信息。",
+    "s2Title": "2. 我们收集的信息（APP 3）",
+    "s2Intro": "我们仅收集服务合理所需的信息：",
+    "s2Items": [
+      "账户信息：电子邮件地址、显示名称、个人头像（使用 Google 登录时）",
+      "使用偏好：主题设置、已保存的调色板、色调配置、提示词",
+      "我们不收集：支付卡信息（由 Stripe 处理）、位置数据、设备标识符或跟踪 Cookie"
+    ],
+    "s3Title": "3. 我们如何使用您的信息（APP 6）",
+    "s3Intro": "您的信息仅用于：",
+    "s3Items": [
+      "提供和维护您的账户及工具包功能",
+      "在设备之间同步您的设计配置",
+      "发送必要的服务通知（账户安全、政策变更）",
+      "我们绝不会将您的数据出售给第三方或用于广告目的"
+    ],
+    "s4Title": "4. 数据存储与安全（APP 8 & 11）",
+    "s4Text": "您的数据存储在 Google Cloud Firestore 的 australia-southeast1（悉尼）区域。身份验证由 Firebase Authentication 处理。我们实施了以下措施：",
+    "s4Items": [
+      "静态和传输中的加密（TLS 1.3）",
+      "用于访问控制的 Firestore 安全规则",
+      "定期对 Firebase 配置进行安全审计",
+      "在没有同等隐私保护的情况下不进行跨境数据传输"
+    ],
+    "s5Title": "5. 您的权利（APP 12 & 13）",
+    "s5Intro": "您有权：",
+    "s5Items": [
+      "随时通过设置访问您的个人信息",
+      "通过更新个人资料更正您的个人信息",
+      "通过设置 > 导出我的数据将所有数据导出为 JSON 文件",
+      "通过设置 > 删除账户删除您的账户及所有相关数据",
+      "通过退出登录并删除账户撤回同意"
+    ],
+    "s6Title": "6. 第三方服务",
+    "s6Items": [
+      "Firebase/Google Cloud — 身份验证和数据库（悉尼区域）",
+      "Google Fonts — 字体加载（不发送个人数据）",
+      "Iconify — 图标搜索 API（不发送个人数据）",
+      "Stripe — 支付处理（符合 PCI DSS，澳大利亚实体）"
+    ],
+    "s7Title": "7. 联系方式",
+    "s7Text": "如有隐私咨询、数据访问请求或投诉，请通过以下方式联系我们：",
+    "s7Complaint": "如果您对我们的回复不满意，可以向澳大利亚信息专员办公室（OAIC）提出投诉，网址为"
+  },
+  "terms": {
+    "title": "服务条款",
+    "lastUpdated": "最后更新：2026年3月",
+    "s1Title": "1. 接受条款",
+    "s1Text": "使用 Vasari Obsidian Web Design Toolkit（「本服务」），即表示您同意本服务条款。本服务由总部位于澳大利亚的 Vasari Obsidian 提供。本条款受澳大利亚法律管辖。",
+    "s2Title": "2. 账户",
+    "s2Text": "您可以使用电子邮件/密码或 Google 身份验证创建账户。您有责任维护账户凭据的安全。创建账户须年满16周岁。",
+    "s3Title": "3. 免费版与专业版",
+    "s3Text": "本服务提供包含核心功能的免费版和包含额外工具的专业版。专业版订阅按月或按年计费。您可以随时取消；在计费周期结束前可继续访问。退款将根据澳大利亚消费者法逐案处理。",
+    "s4Title": "4. 知识产权",
+    "s4Text": "您使用本服务创建的设计、调色板、渐变和其他成果归您所有。本服务本身（包括其代码、设计和文档）归 Vasari Obsidian 所有，并受澳大利亚版权法保护。",
+    "s5Title": "5. 可接受的使用",
+    "s5Intro": "您同意不会：",
+    "s5Items": [
+      "将本服务用于任何非法目的",
+      "试图未经授权访问其他用户的账户",
+      "对本服务进行逆向工程、反编译或反汇编",
+      "使用自动化系统从本服务中抓取或提取数据"
+    ],
+    "s6Title": "6. 责任限制",
+    "s6Text": "本服务按「现状」提供，除澳大利亚消费者法要求外，不提供任何形式的保证。在法律允许的最大范围内，Vasari Obsidian 不对因使用本服务而产生的任何间接、附带或后果性损害承担责任。",
+    "s7Title": "7. 变更",
+    "s7Text": "我们可能会不时更新本条款。重大变更将通过电子邮件或应用内通知，在生效前至少30天告知您。",
+    "s8Title": "8. 联系方式",
+    "s8Text": "对本条款有疑问？请通过以下方式联系我们："
+  }
+}

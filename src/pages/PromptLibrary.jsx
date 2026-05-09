@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { useI18n } from '../contexts/I18nContext'
 
 function getPrompts() {
   try { return JSON.parse(localStorage.getItem('vs-prompts') || '[]') }
@@ -7,6 +8,7 @@ function getPrompts() {
 function setPromptsStore(p) { localStorage.setItem('vs-prompts', JSON.stringify(p)) }
 
 export default function PromptLibrary({ onCopy, toast }) {
+  const { t } = useI18n()
   const [prompts, setPrompts] = useState(getPrompts)
   const [text, setText] = useState('')
   const [tags, setTags] = useState('')
@@ -52,8 +54,8 @@ export default function PromptLibrary({ onCopy, toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <h1>Prompt Library</h1>
-        <p>Save AI image generation prompts with output previews.</p>
+        <h1>{t('promptLibrary.title')}</h1>
+        <p>{t('tools.promptLibrary.description')}</p>
       </div>
 
       <div className="sub">

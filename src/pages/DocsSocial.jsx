@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '../contexts/I18nContext'
 
 function DocSection({ title, icon, children }) {
   const [open, setOpen] = useState(false)
@@ -32,13 +33,64 @@ const pathIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" str
 const layoutIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
 const dollarIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
 const msgIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+const gridIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+
+const boxStyle = (span = 1, h = 48) => ({
+  background: 'var(--accent-bg)',
+  border: '1px solid var(--accent)',
+  borderRadius: 'var(--radius-s)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 11,
+  fontWeight: 700,
+  fontFamily: 'var(--mono)',
+  color: 'var(--accent)',
+  gridColumn: span > 1 ? `span ${span}` : undefined,
+  gridRow: span < 0 ? `span ${-span}` : undefined,
+  minHeight: h,
+})
+
+const previewWrap = {
+  background: 'var(--bg-2)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
+  padding: 16,
+  marginBottom: 16,
+}
+
+const codeBlock = {
+  background: 'var(--bg-1)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius-s)',
+  padding: '12px 16px',
+  fontSize: 12,
+  fontFamily: 'var(--mono)',
+  color: 'var(--t1)',
+  overflowX: 'auto',
+  lineHeight: 1.7,
+  marginBottom: 12,
+  whiteSpace: 'pre',
+}
+
+function LayoutExample({ title, description, code, children }) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <h4>{title}</h4>
+      {description && <p style={{ marginBottom: 12 }}>{description}</p>}
+      <div style={previewWrap}>{children}</div>
+      <div style={codeBlock}>{code}</div>
+    </div>
+  )
+}
 
 export default function DocsSocial() {
+  const { t } = useI18n()
   return (
     <div className="sec">
       <div className="sec-h">
-        <h1>Social Media Marketing</h1>
-        <p>Strategy, templates, analytics, and growth tactics for designers and agencies.</p>
+        <h1>{t('docsSocial.title')}</h1>
+        <p>{t('docsSocial.subtitle')}</p>
       </div>
 
       <DocSection title="Content Pillars" icon={megaphoneIcon}>
@@ -111,9 +163,9 @@ export default function DocsSocial() {
         <h4>Long — Free Offer</h4>
         <p><em>&quot;Is your site mobile-friendly? 60% of web traffic is mobile now. Download our FREE responsive design checklist via link in bio! 📱&quot;</em></p>
         <h4>Short — Tip</h4>
-        <p><em>&quot;Pro Tip: Buttons with contrast colors get 21% more clicks. Test it on your site today.&quot;</em></p>
+        <p><em>&quot;Pro Tip: Buttons with contrast colours get 21% more clicks. Test it on your site today.&quot;</em></p>
         <h4>Story — Engagement</h4>
-        <p><em>&quot;What&apos;s your biggest design challenge right now? Drop a 🔥 for typography, 💡 for color, ⚡ for layout.&quot;</em></p>
+        <p><em>&quot;What&apos;s your biggest design challenge right now? Drop a 🔥 for typography, 💡 for colour, ⚡ for layout.&quot;</em></p>
         <h4>Carousel — Educational</h4>
         <p><em>Slide 1: &quot;5 design mistakes killing your conversions&quot; → Slides 2-5: one mistake each with visual → Slide 6: CTA to your service</em></p>
       </DocSection>
@@ -132,7 +184,7 @@ export default function DocsSocial() {
           <li><strong>January</strong> — &quot;New year, new website&quot; promotions</li>
           <li><strong>March</strong> — Spring refresh campaigns</li>
           <li><strong>September</strong> — Back to business, Q4 planning</li>
-          <li><strong>November</strong> — Black Friday/holiday prep for e-commerce clients</li>
+          <li><strong>November</strong> — End-of-year brand refresh campaigns, portfolio showcases</li>
           <li><strong>Year-round</strong> — Industry events, platform updates, trending topics</li>
         </ul>
       </DocSection>
@@ -165,9 +217,9 @@ export default function DocsSocial() {
         <h4>Benchmark by industry (engagement rate)</h4>
         <ul>
           <li>Design/Creative agencies: 2.5–4%</li>
-          <li>E-commerce: 1.5–3%</li>
-          <li>SaaS/Tech: 1–2.5%</li>
-          <li>Food & Beverage: 3–5%</li>
+          <li>Branding & Identity studios: 2–3.5%</li>
+          <li>Web development: 1.5–3%</li>
+          <li>Digital marketing: 1–2.5%</li>
         </ul>
       </DocSection>
 
@@ -177,9 +229,9 @@ export default function DocsSocial() {
         <h4>$200/month</h4>
         <p>1–2 boosted posts, lookalike audiences, retargeting pixels. Expected: 100–500 clicks, 100–300 new followers.</p>
         <h4>$500/month</h4>
-        <p>Feed + Reels ads, A/B testing creative, 1 micro-influencer collaboration. Expected: 500–1,500 clicks, 300–600 new followers.</p>
+        <p>Feed + Reels ads, A/B testing creative, 1 design community collaboration. Expected: 500–1,500 clicks, 300–600 new followers.</p>
         <h4>$1,000+/month</h4>
-        <p>Full funnel (awareness + retargeting + conversion), A/B testing, mid-tier influencers, carousel ads. Expected: 1,000+ clicks, 500–1,000+ new followers, measurable leads.</p>
+        <p>Full funnel (awareness + retargeting + conversion), A/B testing, sponsored content with design creators, carousel ads. Expected: 1,000+ clicks, 500–1,000+ new followers, measurable leads.</p>
       </DocSection>
 
       <DocSection title="Design Tips for Social Media" icon={layoutIcon}>
@@ -191,9 +243,9 @@ export default function DocsSocial() {
           <li>1 font family maximum per carousel (2 weights: bold + regular)</li>
           <li>Left-aligned text reads faster than centered</li>
         </ul>
-        <h4>Color for feeds</h4>
+        <h4>Colour for feeds</h4>
         <ul>
-          <li>Stick to 2–3 brand colors for a cohesive grid</li>
+          <li>Stick to 2–3 brand colours for a cohesive grid</li>
           <li>High saturation performs better on Instagram (the algorithm favors engagement)</li>
           <li>Dark backgrounds with light text stop the scroll more effectively</li>
           <li>Avoid pure white backgrounds — they blend with the app&apos;s UI</li>
@@ -205,6 +257,124 @@ export default function DocsSocial() {
           <li>Carousel: first slide must hook, last slide must have CTA</li>
           <li>Use consistent templates — recognition builds trust faster than novelty</li>
         </ul>
+      </DocSection>
+
+      <DocSection title="Post Layout Grids" icon={gridIcon}>
+        <p>Common grid patterns for arranging content within social media posts and carousels. Use these as starting points for your templates.</p>
+
+        <LayoutExample
+          title="Single Feature — Centred hero"
+          description="Full-width layout for product shots, announcements, or bold typographic statements."
+          code={`display: grid;\ngrid-template-rows: 1fr auto;\n\n/* 1080×1080 or 1080×1350 */\n┌──────────────────────┐\n│                      │\n│    Hero Image /      │\n│    Key Visual        │\n│                      │\n├──────────────────────┤\n│  Headline + CTA bar  │\n└──────────────────────┘`}
+        >
+          <div style={{ display: 'grid', gridTemplateRows: '1fr auto', gap: 8, minHeight: 160 }}>
+            <div style={boxStyle(1, 120)}>Hero</div>
+            <div style={{ ...boxStyle(1, 36), background: 'var(--accent)', color: '#fff', border: 'none' }}>CTA</div>
+          </div>
+        </LayoutExample>
+
+        <LayoutExample
+          title="Two-Column Split"
+          description="Side-by-side layout for comparisons, before/after reveals, or image + text pairings."
+          code={`display: grid;\ngrid-template-columns: 1fr 1fr;\ngap: 12px;\n\n┌──────────┬──────────┐\n│          │          │\n│  Visual  │   Text   │\n│          │  / Info  │\n│          │          │\n└──────────┴──────────┘`}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, minHeight: 120 }}>
+            <div style={boxStyle()}>Visual</div>
+            <div style={boxStyle()}>Text</div>
+          </div>
+        </LayoutExample>
+
+        <LayoutExample
+          title="Three-Column Grid"
+          description="Equal columns for feature lists, service breakdowns, or icon + label groups."
+          code={`display: grid;\ngrid-template-columns: repeat(3, 1fr);\ngap: 12px;\n\n┌──────┬──────┬──────┐\n│  01  │  02  │  03  │\n│      │      │      │\n└──────┴──────┴──────┘`}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, minHeight: 80 }}>
+            <div style={boxStyle()}>01</div>
+            <div style={boxStyle()}>02</div>
+            <div style={boxStyle()}>03</div>
+          </div>
+        </LayoutExample>
+
+        <LayoutExample
+          title="Feature + Supporting Grid"
+          description="One large hero with smaller supporting items. Great for portfolio highlights or product collections."
+          code={`display: grid;\ngrid-template-columns: 2fr 1fr;\ngrid-template-rows: 1fr 1fr;\ngap: 12px;\n\n┌──────────────┬──────┐\n│              │  02  │\n│     01       ├──────┤\n│              │  03  │\n└──────────────┴──────┘`}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, minHeight: 140 }}>
+            <div style={{ ...boxStyle(), gridRow: 'span 2' }}>01</div>
+            <div style={boxStyle()}>02</div>
+            <div style={boxStyle()}>03</div>
+          </div>
+        </LayoutExample>
+
+        <LayoutExample
+          title="Four-Quadrant Grid"
+          description="Balanced 2×2 grid for multi-point content, tip collections, or visual mood boards."
+          code={`display: grid;\ngrid-template-columns: 1fr 1fr;\ngrid-template-rows: 1fr 1fr;\ngap: 12px;\n\n┌──────┬──────┐\n│  01  │  02  │\n├──────┼──────┤\n│  03  │  04  │\n└──────┴──────┘`}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, minHeight: 120 }}>
+            <div style={boxStyle()}>01</div>
+            <div style={boxStyle()}>02</div>
+            <div style={boxStyle()}>03</div>
+            <div style={boxStyle()}>04</div>
+          </div>
+        </LayoutExample>
+      </DocSection>
+
+      <DocSection title="Carousel Slide Layouts" icon={gridIcon}>
+        <p>Consistent slide structures across a carousel build rhythm and make content scannable. These patterns work for educational, promotional, and portfolio carousels.</p>
+
+        <LayoutExample
+          title="Title Slide (Slide 1)"
+          description="Hook the viewer. Bold headline, minimal text, strong brand presence."
+          code={`display: grid;\ngrid-template-rows: 1fr auto auto;\npadding: 10% safe zone;\n\n┌──────────────────────┐\n│                      │\n│   Bold Headline      │\n│   (24–32pt min)      │\n│                      │\n├──────────────────────┤\n│   Subtext / hook     │\n├──────────────────────┤\n│   Brand mark / @     │\n└──────────────────────┘`}
+        >
+          <div style={{ display: 'grid', gridTemplateRows: '1fr auto auto', gap: 6, minHeight: 160, padding: 8 }}>
+            <div style={{ ...boxStyle(1, 80), fontSize: 14, fontWeight: 800 }}>Headline</div>
+            <div style={{ ...boxStyle(1, 28), opacity: 0.7 }}>Subtext</div>
+            <div style={{ ...boxStyle(1, 24), opacity: 0.5, fontSize: 10 }}>@brand</div>
+          </div>
+        </LayoutExample>
+
+        <LayoutExample
+          title="Content Slide — Text + Visual"
+          description="Split layout for educational carousels. Visual on one side, key point on the other."
+          code={`display: grid;\ngrid-template-columns: 1fr 1fr;\nalign-items: center;\ngap: 16px;\n\n┌──────────┬──────────┐\n│          │          │\n│  Icon /  │  Point   │\n│  Visual  │  + Body  │\n│          │          │\n└──────────┴──────────┘`}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, minHeight: 120, alignItems: 'center' }}>
+            <div style={boxStyle(1, 80)}>Visual</div>
+            <div style={boxStyle(1, 80)}>Point</div>
+          </div>
+        </LayoutExample>
+
+        <LayoutExample
+          title="Content Slide — Numbered Steps"
+          description="Vertical stack for process flows, step-by-step guides, or numbered lists."
+          code={`display: grid;\ngrid-template-rows: auto 1fr 1fr 1fr;\ngap: 8px;\n\n┌──────────────────────┐\n│   Section Title      │\n├──┬───────────────────┤\n│01│  Step description  │\n├──┼───────────────────┤\n│02│  Step description  │\n├──┼───────────────────┤\n│03│  Step description  │\n└──┴───────────────────┘`}
+        >
+          <div style={{ display: 'grid', gap: 6, minHeight: 160 }}>
+            <div style={{ ...boxStyle(1, 32), fontWeight: 800, fontSize: 12 }}>Title</div>
+            {[1, 2, 3].map(n => (
+              <div key={n} style={{ display: 'grid', gridTemplateColumns: '36px 1fr', gap: 6 }}>
+                <div style={{ ...boxStyle(1, 32), background: 'var(--accent)', color: '#fff', border: 'none' }}>{`0${n}`}</div>
+                <div style={boxStyle(1, 32)}>Step</div>
+              </div>
+            ))}
+          </div>
+        </LayoutExample>
+
+        <LayoutExample
+          title="CTA Slide (Final Slide)"
+          description="Clear call-to-action. Minimal distraction, strong contrast, direct instruction."
+          code={`display: grid;\ngrid-template-rows: 1fr auto auto;\nplace-items: center;\n\n┌──────────────────────┐\n│                      │\n│   Value proposition  │\n│                      │\n├──────────────────────┤\n│   ▶ CTA Button       │\n├──────────────────────┤\n│   @handle / link     │\n└──────────────────────┘`}
+        >
+          <div style={{ display: 'grid', gridTemplateRows: '1fr auto auto', gap: 6, minHeight: 140, textAlign: 'center' }}>
+            <div style={{ ...boxStyle(1, 60), fontSize: 13 }}>Value Prop</div>
+            <div style={{ ...boxStyle(1, 36), background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 20, fontSize: 12 }}>Get Started</div>
+            <div style={{ ...boxStyle(1, 24), opacity: 0.5, fontSize: 10 }}>@handle</div>
+          </div>
+        </LayoutExample>
       </DocSection>
 
       <DocSection title="DM Templates & Lead Capture" icon={msgIcon}>
