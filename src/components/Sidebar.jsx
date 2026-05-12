@@ -63,8 +63,9 @@ export default function Sidebar({ isOpen, onClose }) {
         <NavLink to="/" className="sidebar-brand" onClick={onClose}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
             <div style={{ width: 30, height: 30, borderRadius: 8, background: '#2C2825', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--warm-shadow)', flexShrink: 0 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 22 12 2l10 20" /><path d="M7 18h10" />
+              <svg width="16" height="16" viewBox="0 0 255 255" fill="none">
+                <path d="M45.048 67.54L70.2 135.892C71.992 140.628 73.912 145.876 75.96 151.636C78.136 157.268 80.12 162.516 81.912 167.38H82.296L93.816 135.892L119.352 67.54H137.784L90.168 188.5H73.08L26.424 67.54H45.048Z" fill="white"/>
+                <path d="M211.452 187.96L186.3 119.608C184.508 114.872 182.588 109.624 180.54 103.864C178.364 98.232 176.38 92.984 174.588 88.12L174.204 88.12L162.684 119.608L137.148 187.96L118.716 187.96L166.332 67L183.42 67L230.076 187.96L211.452 187.96Z" fill="white"/>
               </svg>
             </div>
             <div className="sidebar-brand-text">

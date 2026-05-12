@@ -19,6 +19,8 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .topbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
 .topbar-hamburger{display:none;background:none;border:none;color:var(--t1);cursor:pointer;padding:6px;border-radius:var(--radius-s);flex-shrink:0;transition:all var(--t)}
 .topbar-hamburger:hover{background:var(--bg-2);color:var(--t0)}
+.topbar-brand{display:flex;align-items:center;gap:8px}
+.topbar-logo{width:24px;height:24px;border-radius:6px;background:#2C2825;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .topbar-title{font-size:13px;font-weight:700;color:var(--t0);white-space:nowrap;letter-spacing:-.01em}
 .topbar-tabs{display:flex;gap:2px;margin-left:8px}
 .topbar-tab{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-s);font-size:13px;font-weight:500;color:var(--t2);text-decoration:none!important;transition:all var(--t);white-space:nowrap}
