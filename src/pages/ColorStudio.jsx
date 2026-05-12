@@ -186,6 +186,30 @@ export default function ColorStudio({ onCopy }) {
   const [gradType, setGradType] = useState('Linear')
   const [stopPickerIdx, setStopPickerIdx] = useState(null)
 
+  const SECTIONS = useMemo(() => [
+    { id: 'palette', label: 'Palette' },
+    { id: 'tints', label: 'Tints' },
+    { id: 'states', label: 'States' },
+    { id: 'systems', label: 'Systems' },
+    { id: 'preview', label: 'Preview' },
+    { id: 'gradients', label: 'Gradients' },
+  ], [])
+  const [collapsed, setCollapsed] = useState({})
+  const [activeSection, setActiveSection] = useState('palette')
+  const toggleCollapse = useCallback((id) => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })), [])
+
+  useEffect(() => {
+    const els = SECTIONS.map(s => document.getElementById(s.id)).filter(Boolean)
+    if (!els.length) return
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) { setActiveSection(entry.target.id); break }
+      }
+    }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 })
+    els.forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [SECTIONS])
+
   const colors = generateHarmony(baseColor, harmony)
   const allColors = [...colors, ...extraColors]
 
@@ -411,19 +435,31 @@ ${stateVars}
         </p>
       </div>
 
+      <nav className="cs-sticky-nav">
+        {SECTIONS.map(s => (
+          <button
+            key={s.id}
+            className={`cs-nav-item${activeSection === s.id ? ' active' : ''}`}
+            onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >{s.label}</button>
+        ))}
+      </nav>
+
       {/* ═══ SECTION 1: PALETTE BUILDER ═══ */}
-      <section style={{ marginBottom: 48 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <section id="palette" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('palette')} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.palette ? 0 : 20, cursor: 'pointer' }}>
+          <svg className={`cs-chevron${collapsed.palette ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Palette Builder</h2>
-          <button className="btn btn-s" onClick={randomPalette} title="Random palette" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); randomPalette() }} title="Random palette" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10" /><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14" />
             </svg>
             Random
           </button>
-          <button className="btn btn-s" onClick={addColor}>+ Add Colour</button>
+          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); addColor() }}>+ Add Colour</button>
         </div>
 
+        {!collapsed.palette && <>
         {/* Base color + harmony row */}
         <div className="card" style={{ padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -506,12 +542,17 @@ ${stateVars}
             </div>
           )}
         </div>
+        </>}
       </section>
 
       {/* ═══ SECTION 2: TINT SCALES ═══ */}
-      <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Tint Scale</h2>
+      <section id="tints" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('tints')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.tints ? 0 : 14 }}>
+          <svg className={`cs-chevron${collapsed.tints ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Tint Scale</h2>
+        </div>
 
+        {!collapsed.tints && <>
         {/* Quick switch + controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -568,13 +609,17 @@ ${stateVars}
             </div>
           ))}
         </div>
+        </>}
       </section>
 
       {/* ═══ SECTION 3: UI STATE COLORS ═══ */}
-      <section style={{ marginBottom: 48 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colours</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <section id="states" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('states')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: collapsed.states ? 0 : 14, flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <svg className={`cs-chevron${collapsed.states ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colours</h2>
+          </div>
+          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Preset</span>
             {STATE_BUNDLES.map(b => (
               <button key={b.name}
@@ -585,6 +630,7 @@ ${stateVars}
             ))}
           </div>
         </div>
+        {!collapsed.states && <>
         {Object.entries(STATE_PRESETS).map(([state, presets]) => {
           const activeIdx = stateColors[state]
           const active = presets[activeIdx]
@@ -615,11 +661,16 @@ ${stateVars}
             </div>
           )
         })}
+        </>}
       </section>
 
       {/* ═══ SECTION 4: DESIGN SYSTEMS ═══ */}
-      <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Design Systems</h2>
+      <section id="systems" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('systems')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.systems ? 0 : 14 }}>
+          <svg className={`cs-chevron${collapsed.systems ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Design Systems</h2>
+        </div>
+        {!collapsed.systems && <>
         <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16, lineHeight: 1.6 }}>
           Click a system to load its palette. Or start from a brand below.
         </p>
@@ -647,11 +698,16 @@ ${stateVars}
             </div>
           ))}
         </div>
+        </>}
       </section>
 
       {/* ═══ SECTION 5: UI PREVIEW COMPONENTS ═══ */}
-      <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>UI Preview</h2>
+      <section id="preview" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('preview')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.preview ? 0 : 14 }}>
+          <svg className={`cs-chevron${collapsed.preview ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI Preview</h2>
+        </div>
+        {!collapsed.preview && <>
         <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20, lineHeight: 1.6 }}>
           See your palette in context. Every component shown in light and dark mode with interactive states and WCAG contrast ratios.
         </p>
@@ -1004,16 +1060,21 @@ ${stateVars}
             </div>
           ))}
         </div>
+        </>}
       </section>
 
       {/* ═══ SECTION 6: GRADIENT TOOL ═══ */}
-      <section style={{ marginBottom: 48 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+      <section id="gradients" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('gradients')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.gradients ? 0 : 14 }}>
+          <svg className={`cs-chevron${collapsed.gradients ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
-          <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
-          <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
+          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
+            <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
+          </div>
         </div>
 
+        {!collapsed.gradients && <>
         <div className="grad-big" style={{ background: gradCSS, borderRadius: 'var(--radius)' }}>
           <div className="grad-tags">
             <span className="grad-tag">{gradFn.toUpperCase()}</span>
@@ -1141,6 +1202,7 @@ ${stateVars}
             })}
           </div>
         </div>
+        </>}
       </section>
     </div>
   )
