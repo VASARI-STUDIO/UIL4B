@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { PaletteProvider } from './contexts/PaletteContext'
 import { WorkspaceProvider } from './contexts/WorkspaceContext'
+import { ExportProvider } from './contexts/ExportContext'
 import { I18nProvider } from './contexts/I18nContext'
 import './styles/global.css'
 
@@ -17,7 +18,9 @@ createRoot(document.getElementById('root')).render(
           <AuthProvider>
             <PaletteProvider>
               <WorkspaceProvider>
-                <App />
+                <ExportProvider>
+                  <App />
+                </ExportProvider>
               </WorkspaceProvider>
             </PaletteProvider>
           </AuthProvider>
