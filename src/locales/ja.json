@@ -413,7 +413,7 @@
     "resetPassword": "パスワードリセット",
     "signInSubtitle": "Vasari Obsidian アカウントにログインしてください。",
     "signUpSubtitle": "新規登録して作品を保存し、すべての機能にアクセスしましょう。",
-    "resetSubtitle": "リセットリンクを受け取るメールアドレスを入力してください。",
+    "resetSubtitle": "メールアドレスを入力し、新しいパスワードを選択してください。",
     "displayName": "表示名",
     "namePlaceholder": "お名前",
     "email": "メールアドレス",
@@ -437,8 +437,13 @@
       "tooManyRequests": "試行回数が多すぎます — しばらくしてからお試しください",
       "serviceUnavailable": "サービスが一時的に利用できません",
       "authFailed": "認証に失敗しました",
-      "userNotFound": "このメールアドレスのアカウントが見つかりません"
-    }
+      "userNotFound": "このメールアドレスのアカウントが見つかりません",
+      "googleUnavailable": "このドメインではGoogleログインは利用できません"
+    },
+    "continueWithGoogle": "Googleで続行",
+    "orEmail": "またはメールで続行",
+    "newPassword": "新しいパスワード",
+    "passwordReset": "パスワードがリセットされました"
   },
   "feedback": {
     "title": "フィードバック",

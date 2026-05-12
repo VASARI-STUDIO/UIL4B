@@ -413,7 +413,7 @@
     "resetPassword": "重置密码",
     "signInSubtitle": "登录您的 Vasari Obsidian 账户。",
     "signUpSubtitle": "注册以保存您的工作并访问所有功能。",
-    "resetSubtitle": "输入您的电子邮件以接收重置链接。",
+    "resetSubtitle": "输入您的邮箱并选择新密码。",
     "displayName": "显示名称",
     "namePlaceholder": "您的名字",
     "email": "电子邮件",
@@ -437,8 +437,13 @@
       "tooManyRequests": "尝试次数过多——请稍后再试",
       "serviceUnavailable": "服务暂时不可用",
       "authFailed": "身份验证失败",
-      "userNotFound": "未找到与此电子邮件关联的账户"
-    }
+      "userNotFound": "未找到与此电子邮件关联的账户",
+      "googleUnavailable": "此域名不支持 Google 登录"
+    },
+    "continueWithGoogle": "使用 Google 继续",
+    "orEmail": "或使用邮箱继续",
+    "newPassword": "新密码",
+    "passwordReset": "密码已重置"
   },
   "feedback": {
     "title": "反馈",
