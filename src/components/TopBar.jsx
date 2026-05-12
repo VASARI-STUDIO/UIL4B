@@ -1,14 +1,72 @@
+import { useState, useRef, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useExport } from '../contexts/ExportContext'
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+
+function ExportDropdown({ actions }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        className="topbar-btn-export"
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Export
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 2, transition: 'transform .15s', transform: open ? 'rotate(180deg)' : 'none' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="export-dropdown">
+          <button className="export-dropdown-item" onClick={() => { actions.downloadHTML(); setOpen(false) }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
+            </svg>
+            Export HTML
+            <span className="export-dropdown-hint">Styled reference page</span>
+          </button>
+          <button className="export-dropdown-item" onClick={() => { actions.downloadCSS(); setOpen(false) }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+            </svg>
+            Export CSS
+            <span className="export-dropdown-hint">Custom properties file</span>
+          </button>
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+          <button className="export-dropdown-item" onClick={() => { actions.copyCSS(); setOpen(false) }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+            Copy CSS Variables
+            <span className="export-dropdown-hint">To clipboard</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function TopBar({ onMenuToggle, onCommandPalette }) {
   const { user, userProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
+  const { exportActions } = useExport()
   const isMac = IS_MAC
 
   return (
@@ -35,6 +93,8 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
       </div>
 
       <div className="topbar-right">
+        {exportActions && <ExportDropdown actions={exportActions} />}
+
         <button
           className="topbar-icon-btn"
           onClick={toggleTheme}
