@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "외부 리소스",
       "description": "폰트, 색상, AI 도구, 영감 관련 엄선된 링크 모음."
+    },
+    "videoFrames": {
+      "label": "비디오에서 프레임 추출",
+      "description": "비디오 파일에서 고품질 이미지로 개별 프레임 추출."
+    },
+    "promptLibrary": {
+      "label": "프롬프트 라이브러리",
+      "description": "AI 이미지 생성 프롬프트를 미리보기와 함께 저장."
     }
   },
   "color": {
@@ -441,12 +449,21 @@
     "messagePlaceholder": "의견을 알려주세요…",
     "submitFeedback": "피드백 제출",
     "enterFeedback": "피드백을 입력해 주세요",
-    "thankYou": "피드백을 보내주셔서 감사합니다!"
+    "thankYou": "피드백을 보내주셔서 감사합니다!",
+    "sendViaEmail": "이메일로 보내기",
+    "openGitHubIssue": "GitHub Issue 열기"
   },
   "community": {
     "title": "커뮤니티",
     "subtitle": "Vasari Obsidian을 사용하는 다른 디자이너 및 개발자와 소통하세요.",
-    "comingSoonDesc": "팔레트를 공유하고, 디자인에 대한 피드백을 받고, 커뮤니티가 만든 템플릿을 발견하세요."
+    "comingSoonDesc": "팔레트를 공유하고, 디자인에 대한 피드백을 받고, 커뮤니티가 만든 템플릿을 발견하세요.",
+    "github": "GitHub 저장소",
+    "githubDesc": "소스 코드 탐색, 프로젝트 스타 표시 및 기여.",
+    "discussions": "GitHub 토론",
+    "discussionsDesc": "질문하고, 아이디어를 공유하고, 커뮤니티와 소통하세요.",
+    "reportIssue": "문제 신고",
+    "reportIssueDesc": "버그를 발견하셨나요? 알려주세요.",
+    "visitLink": "방문"
   },
   "privacy": {
     "title": "개인정보처리방침",

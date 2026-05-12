@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "外部リソース",
       "description": "フォント、カラー、AI ツール、インスピレーションへの厳選リンク集。"
+    },
+    "videoFrames": {
+      "label": "ビデオからフレーム",
+      "description": "ビデオファイルから高品質な画像として個々のフレームを抽出。"
+    },
+    "promptLibrary": {
+      "label": "プロンプトライブラリ",
+      "description": "AI画像生成プロンプトをプレビュー付きで保存。"
     }
   },
   "color": {
@@ -441,12 +449,21 @@
     "messagePlaceholder": "ご意見をお聞かせください…",
     "submitFeedback": "フィードバックを送信",
     "enterFeedback": "フィードバックを入力してください",
-    "thankYou": "フィードバックをいただきありがとうございます！"
+    "thankYou": "フィードバックをいただきありがとうございます！",
+    "sendViaEmail": "メールで送信",
+    "openGitHubIssue": "GitHub Issueを開く"
   },
   "community": {
     "title": "コミュニティ",
     "subtitle": "Vasari Obsidian を使用する他のデザイナーや開発者とつながりましょう。",
-    "comingSoonDesc": "パレットを共有し、デザインのフィードバックを受け取り、コミュニティが作成したテンプレートを発見しましょう。"
+    "comingSoonDesc": "パレットを共有し、デザインのフィードバックを受け取り、コミュニティが作成したテンプレートを発見しましょう。",
+    "github": "GitHubリポジトリ",
+    "githubDesc": "ソースコードを閲覧、プロジェクトにスターを付け、貢献する。",
+    "discussions": "GitHubディスカッション",
+    "discussionsDesc": "質問、アイデアの共有、コミュニティとの交流。",
+    "reportIssue": "問題を報告",
+    "reportIssueDesc": "バグを見つけましたか？お知らせください。",
+    "visitLink": "訪問"
   },
   "privacy": {
     "title": "プライバシーポリシー",
