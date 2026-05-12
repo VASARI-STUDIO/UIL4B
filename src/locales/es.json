@@ -413,7 +413,7 @@
     "resetPassword": "Restablecer contraseña",
     "signInSubtitle": "Inicia sesión en tu cuenta de Vasari Obsidian.",
     "signUpSubtitle": "Regístrate para guardar tu trabajo y acceder a todas las funciones.",
-    "resetSubtitle": "Introduce tu correo electrónico para recibir un enlace de restablecimiento.",
+    "resetSubtitle": "Ingresa tu email y elige una nueva contraseña.",
     "displayName": "Nombre para mostrar",
     "namePlaceholder": "Tu nombre",
     "email": "Correo electrónico",
@@ -437,8 +437,13 @@
       "tooManyRequests": "Demasiados intentos — inténtalo de nuevo más tarde",
       "serviceUnavailable": "Servicio temporalmente no disponible",
       "authFailed": "Error de autenticación",
-      "userNotFound": "No se encontró ninguna cuenta con este correo electrónico"
-    }
+      "userNotFound": "No se encontró ninguna cuenta con este correo electrónico",
+      "googleUnavailable": "Inicio de sesión con Google no disponible en este dominio"
+    },
+    "continueWithGoogle": "Continuar con Google",
+    "orEmail": "o continuar con email",
+    "newPassword": "Nueva contraseña",
+    "passwordReset": "Contraseña restablecida"
   },
   "feedback": {
     "title": "Comentarios",
