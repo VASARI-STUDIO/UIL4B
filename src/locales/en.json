@@ -449,12 +449,21 @@
     "messagePlaceholder": "Tell us what you think…",
     "submitFeedback": "Submit Feedback",
     "enterFeedback": "Please enter your feedback",
-    "thankYou": "Thank you for your feedback!"
+    "thankYou": "Thank you for your feedback!",
+    "sendViaEmail": "Send via Email",
+    "openGitHubIssue": "Open GitHub Issue"
   },
   "community": {
     "title": "Community",
     "subtitle": "Connect with other designers and developers using Vasari Obsidian.",
-    "comingSoonDesc": "Share palettes, get feedback on your designs, and discover templates created by the community."
+    "comingSoonDesc": "Share palettes, get feedback on your designs, and discover templates created by the community.",
+    "github": "GitHub Repository",
+    "githubDesc": "Browse source code, star the project, and contribute.",
+    "discussions": "GitHub Discussions",
+    "discussionsDesc": "Ask questions, share ideas, and connect with the community.",
+    "reportIssue": "Report an Issue",
+    "reportIssueDesc": "Found a bug? Let us know and we will fix it.",
+    "visitLink": "Visit"
   },
   "privacy": {
     "title": "Privacy Policy",

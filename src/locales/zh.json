@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "外部资源",
       "description": "精选字体、颜色、AI 工具和灵感链接。"
+    },
+    "videoFrames": {
+      "label": "视频转帧",
+      "description": "从视频文件中提取高质量的单帧图像。"
+    },
+    "promptLibrary": {
+      "label": "提示词库",
+      "description": "保存AI图像生成提示词及输出预览。"
     }
   },
   "color": {
@@ -441,12 +449,21 @@
     "messagePlaceholder": "告诉我们您的想法…",
     "submitFeedback": "提交反馈",
     "enterFeedback": "请输入您的反馈",
-    "thankYou": "感谢您的反馈！"
+    "thankYou": "感谢您的反馈！",
+    "sendViaEmail": "通过邮件发送",
+    "openGitHubIssue": "打开 GitHub Issue"
   },
   "community": {
     "title": "社区",
     "subtitle": "与使用 Vasari Obsidian 的其他设计师和开发者建立联系。",
-    "comingSoonDesc": "分享调色板、获取设计反馈，并发现社区创建的模板。"
+    "comingSoonDesc": "分享调色板、获取设计反馈，并发现社区创建的模板。",
+    "github": "GitHub 仓库",
+    "githubDesc": "浏览源代码、收藏项目并参与贡献。",
+    "discussions": "GitHub 讨论区",
+    "discussionsDesc": "提问、分享创意、与社区互动。",
+    "reportIssue": "报告问题",
+    "reportIssueDesc": "发现了 Bug？请告诉我们。",
+    "visitLink": "访问"
   },
   "privacy": {
     "title": "隐私政策",

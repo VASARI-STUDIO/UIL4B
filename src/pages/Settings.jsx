@@ -103,6 +103,82 @@ function PasswordChange({ onSave }) {
   )
 }
 
+function EmailEditField({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [email, setEmail] = useState(value || '')
+  const [password, setPassword] = useState('')
+  const [step, setStep] = useState('email')
+  const [error, setError] = useState('')
+
+  const handleNext = () => {
+    if (!email || email === value) { setError('Enter a new email address'); return }
+    setStep('confirm')
+    setError('')
+  }
+
+  const handleSave = () => {
+    if (!password) { setError('Password is required'); return }
+    try {
+      onSave(email, password)
+      setEditing(false)
+      setStep('email')
+      setPassword('')
+      setError('')
+    } catch (e) {
+      if (e.code === 'auth/wrong-password') setError('Password is incorrect')
+      else setError(e.message || 'Failed to update email')
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>Email Address</div>
+          <div style={{ fontSize: 14, color: 'var(--t0)' }}>{value || '—'}</div>
+        </div>
+        <button className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
+        {step === 'email' ? 'Email Address' : 'Confirm Password'}
+      </div>
+      {step === 'email' ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Enter new email"
+            style={{ flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', fontFamily: 'var(--font)', fontSize: 13 }}
+            autoFocus
+          />
+          <button className="btn btn-s" onClick={handleNext}>Next</button>
+          <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Enter your password to confirm"
+            style={{ flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', fontFamily: 'var(--font)', fontSize: 13 }}
+            autoFocus
+          />
+          <button className="btn btn-s" onClick={handleSave}>Save</button>
+          <button className="btn btn-s" onClick={() => { setStep('email'); setPassword(''); setError('') }}>Back</button>
+        </div>
+      )}
+      {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 4 }}>{error}</div>}
+    </div>
+  )
+}
+
 function DeleteAccount({ onDelete }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
@@ -119,15 +195,15 @@ function DeleteAccount({ onDelete }) {
 
   if (!open) {
     return (
-      <button className="btn" onClick={() => setOpen(true)} style={{ color: '#ef4444', borderColor: '#ef4444', marginTop: 8 }}>
+      <button className="btn" onClick={() => setOpen(true)} style={{ color: 'var(--err)', borderColor: 'var(--err)', marginTop: 8 }}>
         Delete Account
       </button>
     )
   }
 
   return (
-    <div style={{ marginTop: 8, padding: 16, borderRadius: 'var(--radius-s)', border: '1px solid #ef4444', background: 'rgba(239,68,68,.04)' }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: '#ef4444', marginBottom: 8 }}>Delete Account</div>
+    <div style={{ marginTop: 8, padding: 16, borderRadius: 'var(--radius-s)', border: '1px solid var(--err)', background: 'color-mix(in srgb, var(--err) 4%, transparent)' }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--err)', marginBottom: 8 }}>Delete Account</div>
       <p style={{ fontSize: 13, color: 'var(--t1)', marginBottom: 12, lineHeight: 1.6 }}>
         This action is permanent and cannot be undone. All your data, preferences, and saved content will be removed.
       </p>
@@ -139,12 +215,12 @@ function DeleteAccount({ onDelete }) {
         style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', fontFamily: 'var(--font)', fontSize: 13, marginBottom: 10 }}
       />
       <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn" onClick={handleDelete} style={{ color: '#fff', background: '#ef4444', borderColor: '#ef4444' }}>
+        <button className="btn" onClick={handleDelete} style={{ color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>
           Permanently Delete
         </button>
         <button className="btn btn-s" onClick={() => { setOpen(false); setError('') }}>Cancel</button>
       </div>
-      {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 6 }}>{error}</div>}
+      {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 6 }}>{error}</div>}
     </div>
   )
 }
@@ -245,17 +321,9 @@ export default function Settings({ toast }) {
               placeholder="Enter your display name"
             />
 
-            <EditField
-              label="Email Address"
+            <EmailEditField
               value={user.email}
-              type="email"
-              onSave={(email) => {
-                const pw = prompt('Enter your password to confirm email change:')
-                if (!pw) return
-                updateEmail(email, pw)
-                toast('Email updated')
-              }}
-              placeholder="Enter new email"
+              onSave={(email, pw) => { updateEmail(email, pw); toast('Email updated') }}
             />
 
             <EditField
@@ -307,7 +375,7 @@ export default function Settings({ toast }) {
           </p>
           <div className="row" style={{ gap: 8 }}>
             <button className="btn" onClick={exportData}>{t('settings.exportData')}</button>
-            <button className="btn" onClick={deleteAllData} style={{ color: '#ef4444', borderColor: '#ef4444' }}>{t('settings.clearData')}</button>
+            <button className="btn" onClick={deleteAllData} style={{ color: 'var(--err)', borderColor: 'var(--err)' }}>{t('settings.clearData')}</button>
           </div>
         </div>
       </div>

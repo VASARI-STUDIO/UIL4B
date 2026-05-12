@@ -9,8 +9,17 @@ export default function Feedback({ toast }) {
   const submit = (e) => {
     e.preventDefault()
     if (!message.trim()) { toast(t('feedback.enterFeedback')); return }
+
+    const subject = encodeURIComponent(`[${type}] Feedback — Vasari Obsidian Toolkit`)
+    const body = encodeURIComponent(`Type: ${type}\n\n${message}`)
+    window.open(`mailto:hello@vasari.studio?subject=${subject}&body=${body}`, '_self')
+
     toast(t('feedback.thankYou'))
     setMessage('')
+  }
+
+  const openGitHubIssue = () => {
+    window.open('https://github.com/vasari-studio/web-design-toolkit/issues/new', '_blank')
   }
 
   return (
@@ -35,7 +44,10 @@ export default function Feedback({ toast }) {
             <div className="seg-label">{t('common.message')}</div>
             <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder={t('feedback.messagePlaceholder')} style={{ width: '100%', minHeight: 120, resize: 'vertical' }} />
           </div>
-          <button className="btn btn-accent" type="submit">{t('feedback.submitFeedback')}</button>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn btn-accent" type="submit">{t('feedback.sendViaEmail')}</button>
+            <button className="btn" type="button" onClick={openGitHubIssue}>{t('feedback.openGitHubIssue')}</button>
+          </div>
         </form>
       </div>
     </div>

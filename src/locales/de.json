@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "Externe Ressourcen",
       "description": "Kuratierte Links zu Schriften, Farben, KI-Werkzeugen und Inspiration."
+    },
+    "videoFrames": {
+      "label": "Video zu Einzelbildern",
+      "description": "Einzelbilder aus Videodateien als hochwertige Bilder extrahieren."
+    },
+    "promptLibrary": {
+      "label": "Prompt-Bibliothek",
+      "description": "KI-Bildgenerierungs-Prompts mit Vorschau speichern."
     }
   },
   "color": {
@@ -441,12 +449,21 @@
     "messagePlaceholder": "Sagen Sie uns, was Sie denken…",
     "submitFeedback": "Feedback absenden",
     "enterFeedback": "Bitte geben Sie Ihr Feedback ein",
-    "thankYou": "Vielen Dank für Ihr Feedback!"
+    "thankYou": "Vielen Dank für Ihr Feedback!",
+    "sendViaEmail": "Per E-Mail senden",
+    "openGitHubIssue": "GitHub-Issue öffnen"
   },
   "community": {
     "title": "Community",
     "subtitle": "Vernetzen Sie sich mit anderen Designern und Entwicklern, die Vasari Obsidian nutzen.",
-    "comingSoonDesc": "Teilen Sie Paletten, erhalten Sie Feedback zu Ihren Designs und entdecken Sie von der Community erstellte Vorlagen."
+    "comingSoonDesc": "Teilen Sie Paletten, erhalten Sie Feedback zu Ihren Designs und entdecken Sie von der Community erstellte Vorlagen.",
+    "github": "GitHub-Repository",
+    "githubDesc": "Quellcode durchsuchen, Projekt markieren und beitragen.",
+    "discussions": "GitHub-Diskussionen",
+    "discussionsDesc": "Fragen stellen, Ideen teilen und mit der Community verbinden.",
+    "reportIssue": "Problem melden",
+    "reportIssueDesc": "Einen Fehler gefunden? Lassen Sie es uns wissen.",
+    "visitLink": "Besuchen"
   },
   "privacy": {
     "title": "Datenschutzrichtlinie",
