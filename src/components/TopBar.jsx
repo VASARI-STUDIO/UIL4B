@@ -78,7 +78,15 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
           </svg>
         </button>
 
-        <span className="topbar-title">{t('brand.full')}</span>
+        <div className="topbar-brand">
+          <div className="topbar-logo">
+            <svg width="14" height="14" viewBox="0 0 255 255" fill="none">
+              <path d="M45.048 67.54L70.2 135.892C71.992 140.628 73.912 145.876 75.96 151.636C78.136 157.268 80.12 162.516 81.912 167.38H82.296L93.816 135.892L119.352 67.54H137.784L90.168 188.5H73.08L26.424 67.54H45.048Z" fill="white"/>
+              <path d="M211.452 187.96L186.3 119.608C184.508 114.872 182.588 109.624 180.54 103.864C178.364 98.232 176.38 92.984 174.588 88.12L174.204 88.12L162.684 119.608L137.148 187.96L118.716 187.96L166.332 67L183.42 67L230.076 187.96L211.452 187.96Z" fill="white"/>
+            </svg>
+          </div>
+          <span className="topbar-title">{t('brand.full')}</span>
+        </div>
 
         <button type="button" className="cmdk-hint" onClick={onCommandPalette} aria-label={t('cmd.placeholder')}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
