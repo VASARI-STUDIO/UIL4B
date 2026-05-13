@@ -32,7 +32,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const [openCats, setOpenCats] = useState(() => {
     const stored = loadOpenState()
     if (stored) return stored
-    return CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: true }), {})
+    return CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: c.id === activeCategoryId }), {})
   })
 
   useEffect(() => {
