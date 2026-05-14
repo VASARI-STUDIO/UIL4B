@@ -405,7 +405,8 @@
       "security": "Daten werden mit branchenüblichen Sicherheitsmaßnahmen geschützt (APP 11)"
     },
     "privacyPolicy": "Datenschutzrichtlinie",
-    "termsOfService": "Nutzungsbedingungen"
+    "termsOfService": "Nutzungsbedingungen",
+    "confirmClear": "Ja, alle Daten löschen"
   },
   "auth": {
     "welcomeBack": "Willkommen zurück",

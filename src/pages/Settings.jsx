@@ -229,6 +229,7 @@ export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { t, lang, setLang, languages } = useI18n()
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const exportData = () => {
     const data = {
@@ -246,10 +247,9 @@ export default function Settings({ toast }) {
   }
 
   const deleteAllData = () => {
-    if (confirm(t('settings.clearConfirm'))) {
-      localStorage.removeItem('vs-prompts')
-      toast(t('settings.dataCleared'))
-    }
+    localStorage.removeItem('vs-prompts')
+    setConfirmClear(false)
+    toast(t('settings.dataCleared'))
   }
 
   return (
@@ -375,7 +375,14 @@ export default function Settings({ toast }) {
           </p>
           <div className="row" style={{ gap: 8 }}>
             <button className="btn" onClick={exportData}>{t('settings.exportData')}</button>
-            <button className="btn" onClick={deleteAllData} style={{ color: 'var(--err)', borderColor: 'var(--err)' }}>{t('settings.clearData')}</button>
+            {confirmClear ? (
+              <>
+                <button className="btn" onClick={deleteAllData} style={{ color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>{t('settings.confirmClear')}</button>
+                <button className="btn" onClick={() => setConfirmClear(false)}>{t('common.cancel')}</button>
+              </>
+            ) : (
+              <button className="btn" onClick={() => setConfirmClear(true)} style={{ color: 'var(--err)', borderColor: 'var(--err)' }}>{t('settings.clearData')}</button>
+            )}
           </div>
         </div>
       </div>

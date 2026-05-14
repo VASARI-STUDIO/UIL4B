@@ -405,7 +405,8 @@
       "security": "数据受到行业标准安全措施的保护（APP 11）"
     },
     "privacyPolicy": "隐私政策",
-    "termsOfService": "服务条款"
+    "termsOfService": "服务条款",
+    "confirmClear": "是的，清除所有数据"
   },
   "auth": {
     "welcomeBack": "欢迎回来",

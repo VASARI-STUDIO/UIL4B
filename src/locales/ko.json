@@ -405,7 +405,8 @@
       "security": "업계 표준 보안 조치로 데이터를 보호합니다 (APP 11)"
     },
     "privacyPolicy": "개인정보처리방침",
-    "termsOfService": "서비스 이용약관"
+    "termsOfService": "서비스 이용약관",
+    "confirmClear": "예, 모든 데이터 삭제"
   },
   "auth": {
     "welcomeBack": "다시 오신 것을 환영합니다",
