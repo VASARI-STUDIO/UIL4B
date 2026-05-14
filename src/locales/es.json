@@ -405,7 +405,8 @@
       "security": "Los datos están protegidos con medidas de seguridad estándar de la industria (APP 11)"
     },
     "privacyPolicy": "Política de privacidad",
-    "termsOfService": "Términos de servicio"
+    "termsOfService": "Términos de servicio",
+    "confirmClear": "Sí, borrar todos los datos"
   },
   "auth": {
     "welcomeBack": "Bienvenido de nuevo",
