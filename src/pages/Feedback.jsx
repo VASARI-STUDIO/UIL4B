@@ -1,14 +1,19 @@
 import { useState } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import { useAuth } from '../contexts/AuthContext'
+import { saveFeedback } from '../utils/analytics'
 
 export default function Feedback({ toast }) {
   const [type, setType] = useState('feature')
   const [message, setMessage] = useState('')
   const { t } = useI18n()
+  const { user } = useAuth()
 
   const submit = (e) => {
     e.preventDefault()
     if (!message.trim()) { toast(t('feedback.enterFeedback')); return }
+
+    saveFeedback({ type, message: message.trim(), email: user?.email || '' })
 
     const subject = encodeURIComponent(`[${type}] Feedback — Vasari Obsidian Toolkit`)
     const body = encodeURIComponent(`Type: ${type}\n\n${message}`)
