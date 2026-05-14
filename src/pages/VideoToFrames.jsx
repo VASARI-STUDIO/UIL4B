@@ -14,7 +14,7 @@ function formatTime(s) {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
-const FORMAT_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
+const FORMAT_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/avif': 'avif' }
 const ACCEPTED_VIDEO = '.mp4,.webm,.mov,.avi'
 
 const INTERVAL_OPTIONS = [
@@ -356,6 +356,7 @@ export default function VideoToFrames({ toast }) {
                     <option value="image/png">PNG</option>
                     <option value="image/jpeg">JPEG</option>
                     <option value="image/webp">WebP</option>
+                    <option value="image/avif">AVIF</option>
                   </select>
                 </div>
 
