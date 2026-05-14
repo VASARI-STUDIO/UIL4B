@@ -127,7 +127,9 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .sidebar-footer{margin-top:auto;padding:8px 10px 14px;border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:2px}
 
 /* User Profile */
-.sidebar-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);margin-top:4px}
+.sidebar-user{display:flex;align-items:center;gap:6px;padding:10px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);margin-top:4px}
+.sidebar-user-link{display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none!important;color:inherit;border-radius:var(--radius-s);transition:opacity var(--t)}
+.sidebar-user-link:hover{opacity:.8}
 .sidebar-user-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--accent-bg);color:var(--accent);font-weight:700;font-size:14px;flex-shrink:0}
 .sidebar-user-avatar img{width:100%;height:100%;object-fit:cover}
 .sidebar-user-info{flex:1;min-width:0}

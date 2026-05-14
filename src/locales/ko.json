@@ -406,7 +406,33 @@
     },
     "privacyPolicy": "개인정보처리방침",
     "termsOfService": "서비스 이용약관",
-    "confirmClear": "예, 모든 데이터 삭제"
+    "confirmClear": "예, 모든 데이터 삭제",
+    "subscription": "구독",
+    "plans": {
+      "recommended": "업그레이드",
+      "currentPlan": "현재 플랜",
+      "switched": "{plan}으로 전환됨",
+      "switchTo": "{plan}으로 전환",
+      "signInRequired": "플랜 변경은 로그인이 필요합니다",
+      "free": {
+        "name": "무료",
+        "price": "₩0",
+        "f1": "모든 핵심 디자인 도구",
+        "f2": "표준 HTML 및 CSS 내보내기",
+        "f3": "커뮤니티 지원",
+        "f4": "기본 문서"
+      },
+      "pro": {
+        "name": "프로",
+        "price": "$4.99",
+        "period": "/ 월",
+        "f1": "무료 플랜 모든 기능",
+        "f2": "사이드바 내비 및 형식 전환 포함 프리미엄 내보내기",
+        "f3": "전체 문서 라이브러리",
+        "f4": "무제한 프롬프트",
+        "f5": "새 도구 조기 액세스"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "다시 오신 것을 환영합니다",
