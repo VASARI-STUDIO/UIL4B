@@ -1,85 +1,71 @@
-import { useState } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 
-function DocSection({ title, icon, children }) {
-  const [open, setOpen] = useState(false)
+function Stat({ value, label, sub }) {
   return (
-    <div className="doc-sub">
-      <button className={`doc-tog${open ? ' open' : ''}`} onClick={() => setOpen(!open)}>
-        <span className="arr">&#x25B8;</span>
-        {icon && <span style={{ display: 'inline-flex', marginRight: 8, color: 'var(--accent)', verticalAlign: 'middle' }}>{icon}</span>}
-        {title}
-      </button>
-      <div className={`doc-body${open ? ' open' : ''}`}>{children}</div>
+    <div style={{ padding: '16px 20px', borderRadius: 'var(--radius)', background: 'var(--bg-1)', border: '1px solid var(--border)', flex: '1 1 140px', minWidth: 120 }}>
+      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)', letterSpacing: '-.02em', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t0)', marginTop: 6 }}>{label}</div>
+      {sub && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>{sub}</div>}
     </div>
   )
 }
 
-function Stat({ value, label }) {
+function Callout({ children, type = 'insight' }) {
+  const colors = {
+    insight: { bg: 'var(--accent-bg)', border: 'var(--accent)', label: 'Key Insight' },
+    warning: { bg: 'rgba(245,158,11,.08)', border: 'var(--warn)', label: 'Common Mistake' },
+    pro: { bg: 'rgba(16,185,129,.08)', border: 'var(--ok)', label: 'Tested Strategy' },
+  }
+  const c = colors[type]
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: '6px 14px', borderRadius: 'var(--radius-s)', background: 'var(--accent-bg)', marginRight: 6, marginBottom: 6 }}>
-      <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent)' }}>{value}</span>
-      <span style={{ fontSize: 11, color: 'var(--t1)' }}>{label}</span>
+    <div style={{ padding: '14px 18px', borderRadius: 'var(--radius-s)', background: c.bg, borderLeft: `3px solid ${c.border}`, marginTop: 16, marginBottom: 16 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: c.border, marginBottom: 6 }}>{c.label}</div>
+      <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--t0)' }}>{children}</div>
     </div>
   )
 }
 
-const megaphoneIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 11-5.8-1.6"/></svg>
-const calendarIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-const editIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-const chartIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-const imageIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-const pathIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="6" r="3"/><circle cx="19" cy="18" r="3"/><path d="M8 6h4a4 4 0 014 4v0a4 4 0 01-4 4H8"/></svg>
-const layoutIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-const dollarIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-const msgIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-const gridIcon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-
-const boxStyle = (span = 1, h = 48) => ({
-  background: 'var(--accent-bg)',
-  border: '1px solid var(--accent)',
-  borderRadius: 'var(--radius-s)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: 11,
-  fontWeight: 700,
-  fontFamily: 'var(--mono)',
-  color: 'var(--accent)',
-  gridColumn: span > 1 ? `span ${span}` : undefined,
-  gridRow: span < 0 ? `span ${-span}` : undefined,
-  minHeight: h,
-})
-
-const previewWrap = {
-  background: 'var(--bg-2)',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius)',
-  padding: 16,
-  marginBottom: 16,
-}
-
-const codeBlock = {
-  background: 'var(--bg-1)',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius-s)',
-  padding: '12px 16px',
-  fontSize: 12,
-  fontFamily: 'var(--mono)',
-  color: 'var(--t1)',
-  overflowX: 'auto',
-  lineHeight: 1.7,
-  marginBottom: 12,
-  whiteSpace: 'pre',
-}
-
-function LayoutExample({ title, description, code, children }) {
+function DimensionTable({ platform, items }) {
   return (
-    <div style={{ marginBottom: 24 }}>
-      <h4>{title}</h4>
-      {description && <p style={{ marginBottom: 12 }}>{description}</p>}
-      <div style={previewWrap}>{children}</div>
-      <div style={codeBlock}>{code}</div>
+    <div style={{ marginBottom: 20 }}>
+      <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{platform}</h4>
+      <div style={{ borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        {items.map((item, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', fontSize: 12, borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none', background: i % 2 === 0 ? 'var(--bg-1)' : 'transparent' }}>
+            <span style={{ color: 'var(--t1)' }}>{item.type}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontWeight: 600, color: 'var(--t0)' }}>{item.size}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Article({ number, title, children }) {
+  return (
+    <section style={{ marginBottom: 48, paddingBottom: 48, borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+        <span style={{ fontSize: 48, fontWeight: 800, color: 'var(--accent)', opacity: 0.15, lineHeight: 1, fontFamily: 'var(--mono)' }}>{number}</span>
+        <h2 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 700, letterSpacing: '-.03em', lineHeight: 1.2 }}>{title}</h2>
+      </div>
+      <div style={{ maxWidth: 720 }}>{children}</div>
+    </section>
+  )
+}
+
+function LayoutBox({ label, span = 1, height = 48, accent }) {
+  return (
+    <div style={{
+      background: accent ? 'var(--accent)' : 'var(--accent-bg)',
+      border: accent ? 'none' : '1px solid var(--accent)',
+      borderRadius: 'var(--radius-s)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 10, fontWeight: 700, fontFamily: 'var(--mono)',
+      color: accent ? '#fff' : 'var(--accent)',
+      gridColumn: span > 1 ? `span ${span}` : undefined,
+      minHeight: height,
+    }}>
+      {label}
     </div>
   )
 }
@@ -88,309 +74,305 @@ export default function DocsSocial() {
   const { t } = useI18n()
   return (
     <div className="sec">
-      <div className="sec-h">
-        <h1>{t('docsSocial.title')}</h1>
-        <p>{t('docsSocial.subtitle')}</p>
+      <div style={{ marginBottom: 48 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 32, height: 2, background: 'var(--accent)', borderRadius: 1 }} />
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>Marketing Playbook</span>
+        </div>
+        <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 800, letterSpacing: '-.04em', lineHeight: 1.05, marginBottom: 12 }}>{t('docsSocial.title')}</h1>
+        <p style={{ fontSize: 15, color: 'var(--t1)', maxWidth: 600, lineHeight: 1.75 }}>
+          Data-driven social media strategies for design professionals. Algorithm insights, conversion psychology, and creative frameworks that actually move metrics.
+        </p>
       </div>
 
-      <DocSection title="Content Pillars" icon={megaphoneIcon}>
-        <p>Every brand needs 5–7 content pillars to maintain consistency while keeping things fresh. Each pillar serves a different purpose in the funnel.</p>
-        <ul>
-          <li><strong>Promotional</strong> — Templates, launches, offers. KPIs: link clicks, conversions</li>
-          <li><strong>Free-Value</strong> — Guides, checklists, tools. KPIs: downloads, email sign-ups</li>
-          <li><strong>Case Studies</strong> — Before/after, process breakdowns. KPIs: engagement, inquiries</li>
-          <li><strong>Testimonials</strong> — Client quotes, video reviews, UGC. KPIs: trust signals, profile visits</li>
-          <li><strong>Behind-the-Scenes</strong> — Process, team, workspace. KPIs: comments, follower growth</li>
-          <li><strong>Tips & Tutorials</strong> — UX tips, how-tos, carousels. KPIs: saves, shares</li>
-          <li><strong>Reels & Short Video</strong> — 15–60s videos. Algorithm favours these heavily. KPIs: views, reach</li>
+      <Article number="01" title="How Social Algorithms Actually Rank Content in 2025">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          Every platform uses a different ranking model, but they all optimise for the same thing: <strong>time spent on platform</strong>. Understanding the signals each algorithm weights helps you create content that reaches more people organically.
+        </p>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Instagram&apos;s ranking signals (by weight)</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          <li><strong>Saves</strong> — highest-weighted engagement signal since 2023. A save tells Instagram the content has long-term value. Design carousels worth saving (checklists, reference guides, templates).</li>
+          <li><strong>Shares to DMs</strong> — second highest. Content people share privately signals genuine value over performative engagement. Create content people want to send to a specific friend.</li>
+          <li><strong>Time spent on post</strong> — Instagram tracks dwell time. Carousels with 8-10 slides get 3-5x more dwell time than single images. Long captions add 15-30 seconds.</li>
+          <li><strong>Comments with substance</strong> — multi-word comments weight more than emoji-only. Ask open questions that require real answers.</li>
+          <li><strong>Likes</strong> — lowest weighted engagement signal. Optimising for likes alone is a losing strategy.</li>
         </ul>
-      </DocSection>
+        <Callout type="insight">
+          Instagram Reels in 2025 are distributed 70% to non-followers via the Explore and Reels tabs. Feed posts reach primarily followers. If your goal is growth, Reels are mathematically required. If your goal is conversion, feed posts to existing followers are more effective.
+        </Callout>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>LinkedIn&apos;s unique algorithm behavior</h4>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 12 }}>
+          LinkedIn penalises outbound links (posts with links get ~40% less reach). The workaround: post your content natively and add the link as the first comment. Document posts (multi-image carousels uploaded as PDFs) get 3x the reach of text-only posts. LinkedIn&apos;s &quot;dwell time&quot; signal means longer posts that people actually read outperform short ones.
+        </p>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>TikTok&apos;s watch-time model</h4>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)' }}>
+          TikTok&apos;s algorithm cares about <strong>completion rate above all else</strong>. A 15-second video watched 3 times outranks a 60-second video watched once. Hook in the first 1-2 seconds (text overlay or unexpected visual), deliver value fast, and end with a reason to rewatch (loop or reveal). Average watch time drops 50% after the 7-second mark.
+        </p>
+      </Article>
 
-      <DocSection title="Posting Cadence" icon={calendarIcon}>
-        <div style={{ marginBottom: 12 }}>
-          <Stat value="2-3" label="feed posts per week" />
-          <Stat value="Daily" label="Stories" />
+      <Article number="02" title="Content Architecture — The Pillar System">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          Random posting is the #1 reason small brands stall at under 1,000 followers. A pillar system ensures every post serves a strategic purpose while keeping your content diverse enough to avoid audience fatigue.
+        </p>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>The 5-pillar framework</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          <li><strong>Authority content (30%)</strong> — Tutorials, breakdowns, hot takes on industry trends. Positions you as an expert. Optimise for saves and shares. Example: &quot;5 typography rules that separate junior from senior designers&quot;</li>
+          <li><strong>Process content (25%)</strong> — Behind-the-scenes, design process, before/after reveals. Builds trust and relatability. Optimise for comments and followers. Example: time-lapse of a logo design from sketch to final.</li>
+          <li><strong>Social proof (20%)</strong> — Client results, testimonials, case studies with metrics. Converts followers to leads. Optimise for profile visits and link clicks. Example: &quot;How we increased [Client]&apos;s conversion rate by 34% with a homepage redesign.&quot;</li>
+          <li><strong>Community content (15%)</strong> — Polls, Q&As, opinion posts, memes. Drives engagement and algorithmic reach. Optimise for comments and shares. Example: &quot;Which logo version would you ship? A or B?&quot;</li>
+          <li><strong>Promotional (10%)</strong> — Direct offers, service announcements, launches. Keeps to 10% maximum to avoid unfollows. Optimise for link clicks and DMs. Example: &quot;3 spots open for Q2 brand identity projects — link in bio.&quot;</li>
+        </ul>
+        <Callout type="warning">
+          The most common mistake: 60%+ promotional content. Audiences unfollow accounts that feel like ads. The 10% rule is counterintuitive but accounts following it convert better because they&apos;ve built trust through the other 90%.
+        </Callout>
+      </Article>
+
+      <Article number="03" title="Platform Dimensions — The Complete Reference">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          Incorrect dimensions cause cropping, pixelation, and wasted effort. These are current as of 2025. Bookmark this section.
+        </p>
+        <DimensionTable platform="Instagram" items={[
+          { type: 'Square post', size: '1080 × 1080px (1:1)' },
+          { type: 'Portrait post (recommended)', size: '1080 × 1350px (4:5)' },
+          { type: 'Stories & Reels', size: '1080 × 1920px (9:16)' },
+          { type: 'Carousel slide', size: '1080 × 1080 or 1080 × 1350' },
+          { type: 'Profile photo', size: '320 × 320px min' },
+        ]} />
+        <DimensionTable platform="Facebook" items={[
+          { type: 'Feed image', size: '1200 × 630px' },
+          { type: 'Cover photo (desktop)', size: '820 × 312px' },
+          { type: 'Cover photo (mobile crop)', size: '640 × 360px' },
+          { type: 'Stories', size: '1080 × 1920px' },
+          { type: 'Event cover', size: '1920 × 1005px' },
+        ]} />
+        <DimensionTable platform="LinkedIn" items={[
+          { type: 'Feed image', size: '1200 × 627px or 1080 × 1080' },
+          { type: 'Banner / cover', size: '1584 × 396px' },
+          { type: 'Article cover', size: '1200 × 644px' },
+          { type: 'Document post', size: '1080 × 1350px (PDF)' },
+        ]} />
+        <DimensionTable platform="Twitter/X" items={[
+          { type: 'In-stream image', size: '1200 × 675px (16:9)' },
+          { type: 'Header image', size: '1500 × 500px' },
+          { type: 'Profile photo', size: '400 × 400px' },
+        ]} />
+        <DimensionTable platform="TikTok" items={[
+          { type: 'Video (standard)', size: '1080 × 1920px (9:16)' },
+          { type: 'Profile photo', size: '200 × 200px min' },
+        ]} />
+        <DimensionTable platform="YouTube" items={[
+          { type: 'Thumbnail', size: '1280 × 720px (16:9)' },
+          { type: 'Channel banner', size: '2560 × 1440px' },
+          { type: 'Shorts', size: '1080 × 1920px (9:16)' },
+        ]} />
+        <Callout type="pro">
+          4:5 portrait posts on Instagram get 35% more feed real estate than square 1:1. Always default to 1080 × 1350 for feed posts unless you have a specific reason for square. For carousels, keep all slides the same aspect ratio or Instagram crops inconsistently.
+        </Callout>
+      </Article>
+
+      <Article number="04" title="The Posting Schedule That Actually Matters">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          &quot;Best time to post&quot; articles are mostly useless because they aggregate data across millions of accounts with different audiences. What actually matters is <strong>consistency and your specific audience&apos;s active hours</strong>.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+          <Stat value="3-5x" label="Per week (feed)" sub="Diminishing returns above 7" />
+          <Stat value="Daily" label="Stories" sub="Keeps you in the tray" />
+          <Stat value="4-7" label="Reels per week" sub="For growth phase" />
+          <Stat value="30 min" label="Engage after posting" sub="Reply to every comment" />
         </div>
-        <h4>Weekly schedule</h4>
-        <ul>
-          <li><strong>Monday</strong> — Promotional or case study (high intent, start of work week)</li>
-          <li><strong>Wednesday</strong> — Tips/tutorial carousel or educational Reel</li>
-          <li><strong>Friday</strong> — Behind-the-scenes, testimonial, or community engagement</li>
-          <li><strong>Daily</strong> — Stories (polls, Q&As, process clips, quick tips)</li>
-        </ul>
-        <h4>Best posting times (general)</h4>
-        <ul>
-          <li><strong>Instagram</strong> — Tues–Fri, 10am–2pm local time</li>
-          <li><strong>LinkedIn</strong> — Tues–Thurs, 8–10am</li>
-          <li><strong>Twitter/X</strong> — Mon–Fri, 8am–12pm</li>
-          <li><strong>TikTok</strong> — Tues–Thurs, 7–9pm</li>
-        </ul>
-        <p style={{ fontSize: 12, color: 'var(--t2)', marginTop: 8 }}>Always verify with your own analytics — these are starting points, not rules.</p>
-      </DocSection>
-
-      <DocSection title="Platform-Specific Image Dimensions" icon={imageIcon}>
-        <p>Using the correct dimensions prevents cropping and ensures your content looks polished on every platform.</p>
-        <h4>Instagram</h4>
-        <ul>
-          <li><strong>Square post</strong> — 1080 × 1080px (1:1)</li>
-          <li><strong>Portrait post</strong> — 1080 × 1350px (4:5) — gets most feed real estate</li>
-          <li><strong>Stories & Reels</strong> — 1080 × 1920px (9:16)</li>
-          <li><strong>Carousel</strong> — 1080 × 1080 or 1080 × 1350 (consistent within set)</li>
-          <li><strong>Profile photo</strong> — 320 × 320px minimum</li>
-        </ul>
-        <h4>Facebook</h4>
-        <ul>
-          <li><strong>Feed image</strong> — 1200 × 630px</li>
-          <li><strong>Cover photo</strong> — 820 × 312px (desktop) / 640 × 360px (mobile crop)</li>
-          <li><strong>Stories</strong> — 1080 × 1920px</li>
-        </ul>
-        <h4>LinkedIn</h4>
-        <ul>
-          <li><strong>Feed image</strong> — 1200 × 627px or 1080 × 1080px</li>
-          <li><strong>Banner</strong> — 1584 × 396px</li>
-          <li><strong>Article cover</strong> — 1200 × 644px</li>
-        </ul>
-        <h4>Twitter/X</h4>
-        <ul>
-          <li><strong>In-stream image</strong> — 1200 × 675px (16:9)</li>
-          <li><strong>Header</strong> — 1500 × 500px</li>
-        </ul>
-      </DocSection>
-
-      <DocSection title="Caption Templates" icon={editIcon}>
-        <h4>Short — Invite</h4>
-        <p><em>&quot;Need a website refresh? DM us your ideas or check the link in bio!&quot;</em></p>
-        <h4>Long — Free Offer</h4>
-        <p><em>&quot;Is your site mobile-friendly? 60% of web traffic is mobile now. Download our FREE responsive design checklist via link in bio! 📱&quot;</em></p>
-        <h4>Short — Tip</h4>
-        <p><em>&quot;Pro Tip: Buttons with contrast colours get 21% more clicks. Test it on your site today.&quot;</em></p>
-        <h4>Story — Engagement</h4>
-        <p><em>&quot;What&apos;s your biggest design challenge right now? Drop a 🔥 for typography, 💡 for colour, ⚡ for layout.&quot;</em></p>
-        <h4>Carousel — Educational</h4>
-        <p><em>Slide 1: &quot;5 design mistakes killing your conversions&quot; → Slides 2-5: one mistake each with visual → Slide 6: CTA to your service</em></p>
-      </DocSection>
-
-      <DocSection title="Content Calendar Strategy" icon={calendarIcon}>
-        <p>Plan content monthly, execute weekly. A content calendar prevents last-minute scrambles and ensures balanced pillar coverage.</p>
-        <h4>Monthly planning template</h4>
-        <ul>
-          <li><strong>Week 1</strong> — Theme: Launch/Promotion. Lead with case study + testimonial</li>
-          <li><strong>Week 2</strong> — Theme: Education. Tutorial carousel + tips Reel</li>
-          <li><strong>Week 3</strong> — Theme: Community. UGC spotlight + behind-the-scenes</li>
-          <li><strong>Week 4</strong> — Theme: Value. Free resource + thought leadership</li>
-        </ul>
-        <h4>Seasonal triggers</h4>
-        <ul>
-          <li><strong>January</strong> — &quot;New year, new website&quot; promotions</li>
-          <li><strong>March</strong> — Spring refresh campaigns</li>
-          <li><strong>September</strong> — Back to business, Q4 planning</li>
-          <li><strong>November</strong> — End-of-year brand refresh campaigns, portfolio showcases</li>
-          <li><strong>Year-round</strong> — Industry events, platform updates, trending topics</li>
-        </ul>
-      </DocSection>
-
-      <DocSection title="Consumer Decision Journey" icon={pathIcon}>
-        <p>The modern consumer journey isn&apos;t linear. Design your content strategy to support each stage.</p>
-        <h4>Stages</h4>
-        <ul>
-          <li><strong>Awareness</strong> — They discover you. Content: Reels, educational carousels, SEO blog posts. Design: bold visuals, clear branding.</li>
-          <li><strong>Consideration</strong> — They evaluate you. Content: case studies, process videos, testimonials. Design: trust signals, social proof, detailed portfolio.</li>
-          <li><strong>Decision</strong> — They choose you. Content: pricing pages, comparison posts, DM conversations. Design: clear CTAs, urgency, easy contact.</li>
-          <li><strong>Retention</strong> — They stay. Content: exclusive tips, client community, check-ins. Design: client portal, resource hub.</li>
-          <li><strong>Advocacy</strong> — They refer others. Content: referral programs, client spotlights, shared wins. Design: shareable templates, co-branded content.</li>
-        </ul>
-      </DocSection>
-
-      <DocSection title="Analytics & ROI Tracking" icon={chartIcon}>
-        <div style={{ marginBottom: 12 }}>
-          <Stat value="1-3%" label="average engagement rate" />
-          <Stat value="$5-15" label="avg cost per 1000 impressions" />
-        </div>
-        <h4>Key metrics formulas</h4>
-        <ul>
-          <li><strong>Engagement Rate</strong> = (likes + comments + saves + shares) ÷ reach × 100. Average: 1–3%. Above 5% = excellent.</li>
-          <li><strong>Click-Through Rate</strong> = link clicks ÷ impressions × 100. Average: 0.5–1.5%.</li>
-          <li><strong>Conversion Rate</strong> = conversions ÷ link clicks × 100. Landing page average: 2–5%.</li>
-          <li><strong>Cost Per Lead</strong> = total ad spend ÷ leads generated. Design services: $15–50 typical.</li>
-          <li><strong>Customer Lifetime Value</strong> = avg project value × avg projects per client × avg retention years.</li>
-        </ul>
-        <h4>Benchmark by industry (engagement rate)</h4>
-        <ul>
-          <li>Design/Creative agencies: 2.5–4%</li>
-          <li>Branding & Identity studios: 2–3.5%</li>
-          <li>Web development: 1.5–3%</li>
-          <li>Digital marketing: 1–2.5%</li>
-        </ul>
-      </DocSection>
-
-      <DocSection title="Growth Tactics & Budgets" icon={dollarIcon}>
-        <h4>Organic ($0)</h4>
-        <p>Quality visuals, strategic hashtags, Stories stickers, reply to everything. Expected: +5–15% followers/month, 100–500 reach per post.</p>
-        <h4>$200/month</h4>
-        <p>1–2 boosted posts, lookalike audiences, retargeting pixels. Expected: 100–500 clicks, 100–300 new followers.</p>
-        <h4>$500/month</h4>
-        <p>Feed + Reels ads, A/B testing creative, 1 design community collaboration. Expected: 500–1,500 clicks, 300–600 new followers.</p>
-        <h4>$1,000+/month</h4>
-        <p>Full funnel (awareness + retargeting + conversion), A/B testing, sponsored content with design creators, carousel ads. Expected: 1,000+ clicks, 500–1,000+ new followers, measurable leads.</p>
-      </DocSection>
-
-      <DocSection title="Design Tips for Social Media" icon={layoutIcon}>
-        <p>Design principles for social media are different from web design. Content must communicate in under 3 seconds while scrolling.</p>
-        <h4>Typography for carousels</h4>
-        <ul>
-          <li>Headline: 24–32pt minimum (must be readable at thumbnail size)</li>
-          <li>Body text: 16–20pt with high contrast</li>
-          <li>1 font family maximum per carousel (2 weights: bold + regular)</li>
-          <li>Left-aligned text reads faster than centered</li>
-        </ul>
-        <h4>Colour for feeds</h4>
-        <ul>
-          <li>Stick to 2–3 brand colours for a cohesive grid</li>
-          <li>High saturation performs better on Instagram (the algorithm favors engagement)</li>
-          <li>Dark backgrounds with light text stop the scroll more effectively</li>
-          <li>Avoid pure white backgrounds — they blend with the app&apos;s UI</li>
-        </ul>
-        <h4>Composition rules</h4>
-        <ul>
-          <li>Leave 10% padding from edges (platform UIs overlap corners)</li>
-          <li>Face in photo? Place text on the opposite side</li>
-          <li>Carousel: first slide must hook, last slide must have CTA</li>
-          <li>Use consistent templates — recognition builds trust faster than novelty</li>
-        </ul>
-      </DocSection>
-
-      <DocSection title="Post Layout Grids" icon={gridIcon}>
-        <p>Common grid patterns for arranging content within social media posts and carousels. Use these as starting points for your templates.</p>
-
-        <LayoutExample
-          title="Single Feature — Centred hero"
-          description="Full-width layout for product shots, announcements, or bold typographic statements."
-          code={`display: grid;\ngrid-template-rows: 1fr auto;\n\n/* 1080×1080 or 1080×1350 */\n┌──────────────────────┐\n│                      │\n│    Hero Image /      │\n│    Key Visual        │\n│                      │\n├──────────────────────┤\n│  Headline + CTA bar  │\n└──────────────────────┘`}
-        >
-          <div style={{ display: 'grid', gridTemplateRows: '1fr auto', gap: 8, minHeight: 160 }}>
-            <div style={boxStyle(1, 120)}>Hero</div>
-            <div style={{ ...boxStyle(1, 36), background: 'var(--accent)', color: '#fff', border: 'none' }}>CTA</div>
-          </div>
-        </LayoutExample>
-
-        <LayoutExample
-          title="Two-Column Split"
-          description="Side-by-side layout for comparisons, before/after reveals, or image + text pairings."
-          code={`display: grid;\ngrid-template-columns: 1fr 1fr;\ngap: 12px;\n\n┌──────────┬──────────┐\n│          │          │\n│  Visual  │   Text   │\n│          │  / Info  │\n│          │          │\n└──────────┴──────────┘`}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, minHeight: 120 }}>
-            <div style={boxStyle()}>Visual</div>
-            <div style={boxStyle()}>Text</div>
-          </div>
-        </LayoutExample>
-
-        <LayoutExample
-          title="Three-Column Grid"
-          description="Equal columns for feature lists, service breakdowns, or icon + label groups."
-          code={`display: grid;\ngrid-template-columns: repeat(3, 1fr);\ngap: 12px;\n\n┌──────┬──────┬──────┐\n│  01  │  02  │  03  │\n│      │      │      │\n└──────┴──────┴──────┘`}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, minHeight: 80 }}>
-            <div style={boxStyle()}>01</div>
-            <div style={boxStyle()}>02</div>
-            <div style={boxStyle()}>03</div>
-          </div>
-        </LayoutExample>
-
-        <LayoutExample
-          title="Feature + Supporting Grid"
-          description="One large hero with smaller supporting items. Great for portfolio highlights or product collections."
-          code={`display: grid;\ngrid-template-columns: 2fr 1fr;\ngrid-template-rows: 1fr 1fr;\ngap: 12px;\n\n┌──────────────┬──────┐\n│              │  02  │\n│     01       ├──────┤\n│              │  03  │\n└──────────────┴──────┘`}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, minHeight: 140 }}>
-            <div style={{ ...boxStyle(), gridRow: 'span 2' }}>01</div>
-            <div style={boxStyle()}>02</div>
-            <div style={boxStyle()}>03</div>
-          </div>
-        </LayoutExample>
-
-        <LayoutExample
-          title="Four-Quadrant Grid"
-          description="Balanced 2×2 grid for multi-point content, tip collections, or visual mood boards."
-          code={`display: grid;\ngrid-template-columns: 1fr 1fr;\ngrid-template-rows: 1fr 1fr;\ngap: 12px;\n\n┌──────┬──────┐\n│  01  │  02  │\n├──────┼──────┤\n│  03  │  04  │\n└──────┴──────┘`}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, minHeight: 120 }}>
-            <div style={boxStyle()}>01</div>
-            <div style={boxStyle()}>02</div>
-            <div style={boxStyle()}>03</div>
-            <div style={boxStyle()}>04</div>
-          </div>
-        </LayoutExample>
-      </DocSection>
-
-      <DocSection title="Carousel Slide Layouts" icon={gridIcon}>
-        <p>Consistent slide structures across a carousel build rhythm and make content scannable. These patterns work for educational, promotional, and portfolio carousels.</p>
-
-        <LayoutExample
-          title="Title Slide (Slide 1)"
-          description="Hook the viewer. Bold headline, minimal text, strong brand presence."
-          code={`display: grid;\ngrid-template-rows: 1fr auto auto;\npadding: 10% safe zone;\n\n┌──────────────────────┐\n│                      │\n│   Bold Headline      │\n│   (24–32pt min)      │\n│                      │\n├──────────────────────┤\n│   Subtext / hook     │\n├──────────────────────┤\n│   Brand mark / @     │\n└──────────────────────┘`}
-        >
-          <div style={{ display: 'grid', gridTemplateRows: '1fr auto auto', gap: 6, minHeight: 160, padding: 8 }}>
-            <div style={{ ...boxStyle(1, 80), fontSize: 14, fontWeight: 800 }}>Headline</div>
-            <div style={{ ...boxStyle(1, 28), opacity: 0.7 }}>Subtext</div>
-            <div style={{ ...boxStyle(1, 24), opacity: 0.5, fontSize: 10 }}>@brand</div>
-          </div>
-        </LayoutExample>
-
-        <LayoutExample
-          title="Content Slide — Text + Visual"
-          description="Split layout for educational carousels. Visual on one side, key point on the other."
-          code={`display: grid;\ngrid-template-columns: 1fr 1fr;\nalign-items: center;\ngap: 16px;\n\n┌──────────┬──────────┐\n│          │          │\n│  Icon /  │  Point   │\n│  Visual  │  + Body  │\n│          │          │\n└──────────┴──────────┘`}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, minHeight: 120, alignItems: 'center' }}>
-            <div style={boxStyle(1, 80)}>Visual</div>
-            <div style={boxStyle(1, 80)}>Point</div>
-          </div>
-        </LayoutExample>
-
-        <LayoutExample
-          title="Content Slide — Numbered Steps"
-          description="Vertical stack for process flows, step-by-step guides, or numbered lists."
-          code={`display: grid;\ngrid-template-rows: auto 1fr 1fr 1fr;\ngap: 8px;\n\n┌──────────────────────┐\n│   Section Title      │\n├──┬───────────────────┤\n│01│  Step description  │\n├──┼───────────────────┤\n│02│  Step description  │\n├──┼───────────────────┤\n│03│  Step description  │\n└──┴───────────────────┘`}
-        >
-          <div style={{ display: 'grid', gap: 6, minHeight: 160 }}>
-            <div style={{ ...boxStyle(1, 32), fontWeight: 800, fontSize: 12 }}>Title</div>
-            {[1, 2, 3].map(n => (
-              <div key={n} style={{ display: 'grid', gridTemplateColumns: '36px 1fr', gap: 6 }}>
-                <div style={{ ...boxStyle(1, 32), background: 'var(--accent)', color: '#fff', border: 'none' }}>{`0${n}`}</div>
-                <div style={boxStyle(1, 32)}>Step</div>
-              </div>
-            ))}
-          </div>
-        </LayoutExample>
-
-        <LayoutExample
-          title="CTA Slide (Final Slide)"
-          description="Clear call-to-action. Minimal distraction, strong contrast, direct instruction."
-          code={`display: grid;\ngrid-template-rows: 1fr auto auto;\nplace-items: center;\n\n┌──────────────────────┐\n│                      │\n│   Value proposition  │\n│                      │\n├──────────────────────┤\n│   ▶ CTA Button       │\n├──────────────────────┤\n│   @handle / link     │\n└──────────────────────┘`}
-        >
-          <div style={{ display: 'grid', gridTemplateRows: '1fr auto auto', gap: 6, minHeight: 140, textAlign: 'center' }}>
-            <div style={{ ...boxStyle(1, 60), fontSize: 13 }}>Value Prop</div>
-            <div style={{ ...boxStyle(1, 36), background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 20, fontSize: 12 }}>Get Started</div>
-            <div style={{ ...boxStyle(1, 24), opacity: 0.5, fontSize: 10 }}>@handle</div>
-          </div>
-        </LayoutExample>
-      </DocSection>
-
-      <DocSection title="DM Templates & Lead Capture" icon={msgIcon}>
-        <h4>New Follower</h4>
-        <p><em>&quot;Hi [Name]! Thanks for following. We help businesses with [your service]. If you ever need design help, just DM — we love chatting!&quot;</em></p>
-        <h4>Lead Funnel</h4>
-        <ol>
-          <li>Post with CTA → link in bio</li>
-          <li>Landing page → email capture (offer free resource)</li>
-          <li>Welcome email sequence (3 emails over 7 days)</li>
-          <li>DM conversations → discovery call</li>
-          <li>Follow-up → proposal → close</li>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Finding YOUR best time</h4>
+        <ol style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          <li>Go to Instagram Insights → Audience → Most Active Times</li>
+          <li>Post 30 minutes before the peak (early presence catches the wave)</li>
+          <li>Track for 4 weeks, then compare post-by-post: same content type, different times</li>
+          <li>Your audience&apos;s pattern will emerge — it may not match generic advice</li>
         </ol>
-        <h4>Inquiry Response Template</h4>
-        <p><em>&quot;Thanks for reaching out! I&apos;d love to help. To give you an accurate quote, could you share: 1) Your business/brand name, 2) What you need (website, branding, etc.), 3) Your timeline? I&apos;ll get back to you within 24 hours!&quot;</em></p>
-      </DocSection>
+        <Callout type="insight">
+          The <strong>first 30 minutes</strong> after posting determine your reach for that post. Instagram shows your content to a small test group first. If engagement is high relative to that group, it expands distribution. This is why replying to every comment immediately matters — it doubles the comment count and signals active conversation.
+        </Callout>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Weekly content calendar template</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)' }}>
+          <li><strong>Monday</strong> — Authority carousel (educational, save-worthy)</li>
+          <li><strong>Tuesday</strong> — Reel (process / tutorial / trend format)</li>
+          <li><strong>Wednesday</strong> — Community post (poll, question, opinion)</li>
+          <li><strong>Thursday</strong> — Reel (behind-the-scenes / results)</li>
+          <li><strong>Friday</strong> — Social proof (case study, testimonial, before/after)</li>
+          <li><strong>Weekend</strong> — Stories only (personal, casual, polls)</li>
+        </ul>
+      </Article>
+
+      <Article number="05" title="Caption Psychology — Writing That Converts">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          Caption length has a direct relationship with engagement, but not the one most people assume. Instagram captions between 1,000-2,000 characters (roughly 150-300 words) get <strong>60% more engagement</strong> than short captions under 300 characters. The algorithm reads dwell time as a positive signal.
+        </p>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>The hook-story-CTA framework</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          <li><strong>Hook (line 1)</strong> — Must be visible before &quot;...more&quot;. Use a bold claim, question, or number. Example: &quot;This one typography rule tripled our client&apos;s conversion rate.&quot;</li>
+          <li><strong>Story (lines 2-8)</strong> — Deliver the value. Be specific: names, numbers, before/after. Vague advice gets scrolled past.</li>
+          <li><strong>CTA (final line)</strong> — One clear action. &quot;Save this for your next project&quot; or &quot;Drop a [emoji] if you&apos;ve seen this.&quot; Don&apos;t ask for two things.</li>
+        </ul>
+        <Callout type="pro">
+          <strong>The &quot;pattern interrupt&quot;</strong>: Start your caption with a line that contradicts expectations. &quot;Stop using Canva templates.&quot; &quot;Your logo doesn&apos;t matter.&quot; Controversial openers get 2-3x the &quot;...more&quot; tap rate because curiosity is a stronger driver than agreement.
+        </Callout>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Hashtag strategy (2025)</h4>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)' }}>
+          Instagram confirmed hashtags are now primarily a categorisation signal, not a discovery mechanism. Use 3-5 highly relevant hashtags, not 30 generic ones. Place them in the caption (not comments — Instagram changed this in 2024). Niche hashtags with 10K-500K posts outperform mega-hashtags with 10M+, because competition is lower and relevance is higher.
+        </p>
+      </Article>
+
+      <Article number="06" title="Visual Design for Social — The 3-Second Rule">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          Social media design follows different rules than web design. Content must communicate in under 3 seconds while being thumb-scrolled at speed. Everything below is specific to social — don&apos;t apply web design thinking here.
+        </p>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Typography hierarchy for carousels</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          <li><strong>Minimum headline size: 48px</strong> at 1080px width (must be legible at thumbnail size in the feed grid)</li>
+          <li><strong>Body text: 24-32px</strong> with maximum 40 characters per line. On mobile, people hold the phone at arm&apos;s length.</li>
+          <li><strong>One typeface per carousel</strong> — two weights max (bold for headings, regular for body). More than one typeface at small sizes creates visual noise.</li>
+          <li><strong>Left-align text</strong> — centred text is harder to scan and reads 10% slower (eye has to re-find the start of each line).</li>
+        </ul>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Colour for feed cohesion</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          <li><strong>Dark backgrounds outperform light</strong> — they stop the scroll because most feed content is bright. Contrast wins attention.</li>
+          <li><strong>2-3 brand colours maximum</strong> across your grid. Cohesive grids get 40% more profile visits from non-followers.</li>
+          <li><strong>Avoid pure white (#FFFFFF)</strong> — it blends with the app UI. Use off-white (#F5F5F0) or light grey.</li>
+          <li><strong>High saturation on accent colours</strong> — desaturated palettes look sophisticated on websites but get lost in social feeds where you&apos;re competing with every other post.</li>
+        </ul>
+        <Callout type="warning">
+          The safe zone problem: every platform overlays UI elements on content. Instagram puts the username over the bottom-left of feed posts and heart/comment/share icons on the right of Reels. Leave a <strong>15% margin from all edges</strong> — especially bottom and right — for your important elements.
+        </Callout>
+
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginTop: 20, marginBottom: 12 }}>Post layout patterns</h4>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          These grid patterns serve as starting points for social templates. Consistent templates build recognition faster than novelty.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 14, marginBottom: 16 }}>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--t0)' }}>Single Feature</div>
+            <div style={{ display: 'grid', gridTemplateRows: '1fr auto', gap: 6, minHeight: 120 }}>
+              <LayoutBox label="Hero Visual" height={80} />
+              <LayoutBox label="CTA" height={32} accent />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 8 }}>Product shots, announcements, bold typography</div>
+          </div>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--t0)' }}>Split Comparison</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, minHeight: 120 }}>
+              <LayoutBox label="Before" height={120} />
+              <LayoutBox label="After" height={120} />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 8 }}>Before/after, A vs B, visual comparisons</div>
+          </div>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--t0)' }}>Feature Grid</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gridTemplateRows: '1fr 1fr', gap: 6, minHeight: 120 }}>
+              <div style={{ gridRow: 'span 2' }}><LayoutBox label="Main" height={120} /></div>
+              <LayoutBox label="02" height={56} />
+              <LayoutBox label="03" height={56} />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 8 }}>Portfolio highlights, product collections</div>
+          </div>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, color: 'var(--t0)' }}>Carousel CTA Slide</div>
+            <div style={{ display: 'grid', gridTemplateRows: '1fr auto auto', gap: 6, minHeight: 120, textAlign: 'center' }}>
+              <LayoutBox label="Value Proposition" height={60} />
+              <LayoutBox label="Get Started" height={32} accent />
+              <LayoutBox label="@handle" height={20} />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 8 }}>Final carousel slide, clear single CTA</div>
+          </div>
+        </div>
+      </Article>
+
+      <Article number="07" title="Analytics That Actually Predict Growth">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          Most creators track vanity metrics (follower count, likes). The metrics that predict future growth are different — and not always obvious.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+          <Stat value="1-3%" label="Average engagement rate" sub="Design/creative niche" />
+          <Stat value=">5%" label="Excellent engagement" sub="Indicates loyal audience" />
+          <Stat value="3-7%" label="Save rate on carousels" sub="Healthy content value" />
+        </div>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Leading indicators (predict future growth)</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          <li><strong>Save rate</strong> = saves ÷ reach × 100. Above 2% means your content has lasting value. Below 0.5% means it&apos;s consumed and forgotten.</li>
+          <li><strong>Share rate</strong> = shares ÷ reach × 100. Above 1% means your content is worth passing on — this is the viral mechanism.</li>
+          <li><strong>Profile visits from non-followers</strong> — this predicts follow growth before it happens. Track weekly.</li>
+          <li><strong>Story completion rate</strong> — percentage of people who watch your entire story sequence. Below 60% means stories are too long or unengaging.</li>
+        </ul>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Lagging indicators (measure past success)</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          <li><strong>Follower growth rate</strong> — net new followers ÷ total followers × 100 per week. Healthy: 1-3% weekly growth.</li>
+          <li><strong>Link click rate</strong> = clicks ÷ impressions × 100. Average: 0.5-1.5%. Above 2% is excellent.</li>
+          <li><strong>Conversion rate</strong> = conversions ÷ link clicks × 100. If above 5%, your landing page is working. Below 2%, fix the landing page before scaling traffic.</li>
+        </ul>
+        <Callout type="insight">
+          <strong>The engagement rate trap</strong>: As your account grows, engagement rate naturally drops (denominator grows faster than engagement). Don&apos;t compare your rate to smaller accounts. A 2% rate at 50K followers generates more business than 8% at 500 followers. Focus on absolute numbers for business metrics and rates for content quality assessment.
+        </Callout>
+      </Article>
+
+      <Article number="08" title="Growth Budget Tiers — What Each Level Unlocks">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          Paid promotion accelerates organic reach but has diminishing returns. Here&apos;s what each budget tier realistically unlocks, based on aggregated results from design-industry accounts.
+        </p>
+        <div style={{ borderRadius: 'var(--radius)', border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 16 }}>
+          {[
+            { tier: '$0 — Organic', reach: '100-500 per post', growth: '5-15%/month', strategy: 'Quality content, strategic hashtags, Stories stickers, reply to every comment within 30 min' },
+            { tier: '$200/month', reach: '1K-5K per boosted post', growth: '100-300 new followers', strategy: 'Boost 2-3 best-performing posts, retargeting pixel setup, lookalike audiences from existing followers' },
+            { tier: '$500/month', reach: '5K-15K per campaign', growth: '300-600 new followers', strategy: 'Feed + Reels ads with A/B testing, one collaboration with a complementary creator, custom audience targeting' },
+            { tier: '$1,000+/month', reach: '15K-50K per campaign', growth: '500-1,000+ new followers', strategy: 'Full funnel: awareness → retargeting → conversion, carousel ads, sponsored content, multiple A/B tests' },
+          ].map((row, i) => (
+            <div key={i} style={{ padding: '14px 18px', borderBottom: i < 3 ? '1px solid var(--border)' : 'none', background: i % 2 === 0 ? 'var(--bg-1)' : 'transparent' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)', marginBottom: 4 }}>{row.tier}</div>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: 'var(--t2)' }}>Reach: <strong style={{ color: 'var(--t1)' }}>{row.reach}</strong></span>
+                <span style={{ fontSize: 11, color: 'var(--t2)' }}>Growth: <strong style={{ color: 'var(--t1)' }}>{row.growth}</strong></span>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.6 }}>{row.strategy}</div>
+            </div>
+          ))}
+        </div>
+        <Callout type="pro">
+          <strong>The $200 sweet spot</strong>: Before spending more, make sure your organic content converts. Boosting a post that doesn&apos;t work organically won&apos;t make it work paid. Only boost posts that already have above-average engagement — paid reach amplifies what&apos;s already working.
+        </Callout>
+      </Article>
+
+      <Article number="09" title="The Lead Funnel — From Follower to Client">
+        <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
+          Followers are not leads. The conversion from follower to paying client requires a deliberate funnel. Most design accounts lose potential clients because they skip steps.
+        </p>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>The 5-step funnel</h4>
+        <ol style={{ fontSize: 13, lineHeight: 2, color: 'var(--t1)', marginBottom: 16 }}>
+          <li><strong>Content → Profile visit</strong> — Your content makes someone click your profile. Conversion driver: strong hooks and clear expertise signals.</li>
+          <li><strong>Profile → Follow</strong> — Your bio and grid convince them to follow. Conversion driver: clear value proposition in bio, cohesive grid, pinned posts showing results.</li>
+          <li><strong>Follow → Link click</strong> — Stories, CTAs, and link-in-bio drive them to your site. Conversion driver: regular CTAs (not every post, but weekly), clear link-in-bio landing page.</li>
+          <li><strong>Link click → Lead capture</strong> — Email signup, contact form, or booking link. Conversion driver: free resource (design checklist, template) in exchange for email.</li>
+          <li><strong>Lead → Client</strong> — Email sequence, DM conversation, discovery call. Conversion driver: 3-email welcome sequence over 7 days, then monthly newsletter.</li>
+        </ol>
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>DM response templates</h4>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 8 }}>
+          Speed matters: responding within 5 minutes increases conversion by 400% compared to responding within 24 hours (InsideSales.com research). Use templates for speed, then personalise.
+        </p>
+        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-s)', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>New Inquiry Template</div>
+          <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--t1)', margin: 0, fontStyle: 'italic' }}>
+            &quot;Thanks for reaching out! I&apos;d love to help with [their specific request]. To give you an accurate scope: 1) What&apos;s your timeline? 2) Do you have examples of styles you like? 3) What&apos;s your budget range? Happy to jump on a quick 15-min call this week if that&apos;s easier — here&apos;s my calendar: [link]&quot;
+          </p>
+        </div>
+        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-s)', padding: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>New Follower Welcome</div>
+          <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--t1)', margin: 0, fontStyle: 'italic' }}>
+            &quot;Hey [Name]! Thanks for the follow. I share [type of content] here — if you ever need [your service], just DM. What are you working on right now?&quot;
+          </p>
+        </div>
+      </Article>
+
+      <div className="card" style={{ marginTop: 20, background: 'var(--accent-bg)', borderColor: 'var(--accent)' }}>
+        <p style={{ fontSize: 14, color: 'var(--accent)', fontWeight: 600, margin: 0, lineHeight: 1.7 }}>
+          Social media marketing is a compounding investment. The first 90 days feel like shouting into a void. Months 3-6 build momentum. After month 6, organic reach compounds — old posts continue generating profile visits and followers indefinitely. Consistency beats virality.
+        </p>
+      </div>
     </div>
   )
 }
