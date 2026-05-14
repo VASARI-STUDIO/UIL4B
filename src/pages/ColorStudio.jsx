@@ -257,85 +257,107 @@ export default function ColorStudio({ onCopy }) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Design System</title>
+  <title>Design System — Vasari Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
 :root {
 ${colorVars}
 ${tintVars}
 ${stateVars}
-  --ds-bg: #f8f9fa; --ds-bg2: #fff; --ds-text: #1a1a1a; --ds-text2: #666;
-  --ds-text3: #999; --ds-border: #e5e5e5; --ds-border2: #eee;
-  --ds-code-bg: #1a1a1a; --ds-code-text: #e5e5e5;
-  --ds-sidebar: #fff; --ds-hover: rgba(0,0,0,.04);
-  --ds-accent: #6366f1; --ds-accent-bg: rgba(99,102,241,.08);
+  --ds-bg: #faf9f7; --ds-bg2: #fff; --ds-text: #1a1a17; --ds-text2: #6b6b63;
+  --ds-text3: #a3a299; --ds-border: rgba(0,0,0,.08); --ds-border2: rgba(0,0,0,.05);
+  --ds-code-bg: #1a1a17; --ds-code-text: #e5e5dd;
+  --ds-sidebar: rgba(255,255,255,.85); --ds-hover: rgba(0,0,0,.04);
+  --ds-accent: #a78bfa; --ds-accent-bg: rgba(167,139,250,.1);
+  --ds-radius: 12px; --ds-radius-s: 8px;
+  --ds-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03);
+  --ds-shadow-lg: 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04);
+  --ds-glass: rgba(255,255,255,.6);
 }
 [data-theme="dark"] {
-  --ds-bg: #0c0c0c; --ds-bg2: #161616; --ds-text: #e5e5e5; --ds-text2: #999;
-  --ds-text3: #666; --ds-border: #262626; --ds-border2: #1f1f1f;
-  --ds-code-bg: #0f0f0f; --ds-code-text: #d4d4d4;
-  --ds-sidebar: #111; --ds-hover: rgba(255,255,255,.05);
-  --ds-accent: #818cf8; --ds-accent-bg: rgba(129,140,248,.1);
+  --ds-bg: #0d0d0c; --ds-bg2: #161614; --ds-text: #e8e8e2; --ds-text2: #8a8a80;
+  --ds-text3: #555550; --ds-border: rgba(255,255,255,.07); --ds-border2: rgba(255,255,255,.04);
+  --ds-code-bg: #111110; --ds-code-text: #d4d4cc;
+  --ds-sidebar: rgba(17,17,15,.9); --ds-hover: rgba(255,255,255,.04);
+  --ds-accent: #a78bfa; --ds-accent-bg: rgba(167,139,250,.12);
+  --ds-shadow: 0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.15);
+  --ds-shadow-lg: 0 4px 16px rgba(0,0,0,.3), 0 12px 40px rgba(0,0,0,.2);
+  --ds-glass: rgba(255,255,255,.04);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--ds-bg); color: var(--ds-text); line-height: 1.6; display: flex; min-height: 100vh; }
-.sidebar { position: fixed; top: 0; left: 0; width: 200px; height: 100vh; background: var(--ds-sidebar); border-right: 1px solid var(--ds-border); padding: 24px 0; overflow-y: auto; z-index: 10; }
-.sidebar-brand { padding: 0 16px 20px; border-bottom: 1px solid var(--ds-border); margin-bottom: 12px; }
-.sidebar-brand h3 { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
-.sidebar-brand span { font-size: 10px; color: var(--ds-text3); display: block; margin-top: 2px; }
-.sidebar a { display: block; padding: 7px 16px; font-size: 12px; font-weight: 500; color: var(--ds-text2); text-decoration: none; transition: all .15s; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--ds-bg); color: var(--ds-text); line-height: 1.6; display: flex; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+.sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--ds-sidebar); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-right: 1px solid var(--ds-border); padding: 24px 0; overflow-y: auto; z-index: 10; }
+.sidebar-brand { padding: 0 20px 20px; border-bottom: 1px solid var(--ds-border); margin-bottom: 12px; }
+.sidebar-brand h3 { font-size: 14px; font-weight: 800; letter-spacing: -.02em; }
+.sidebar-brand .brand-sub { font-size: 10px; color: var(--ds-accent); display: block; margin-top: 2px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.sidebar-brand .brand-date { font-size: 10px; color: var(--ds-text3); display: block; margin-top: 4px; }
+.sidebar .nav-label { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ds-text3); padding: 16px 20px 6px; }
+.sidebar a { display: block; padding: 8px 20px; font-size: 12px; font-weight: 500; color: var(--ds-text2); text-decoration: none; transition: all .15s; border-left: 2px solid transparent; }
 .sidebar a:hover { color: var(--ds-text); background: var(--ds-hover); }
-.sidebar a.active { color: var(--ds-accent); background: var(--ds-accent-bg); }
-.content { margin-left: 200px; flex: 1; padding: 48px 40px; max-width: 900px; }
-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--ds-border); }
-header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; }
-header p { font-size: 14px; color: var(--ds-text2); }
-.meta { font-size: 11px; color: var(--ds-text3); margin-top: 6px; font-family: monospace; }
-.format-bar { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
-.fmt-btn { padding: 5px 12px; border: 1px solid var(--ds-border); background: transparent; color: var(--ds-text2); font-size: 10px; font-weight: 600; letter-spacing: .04em; border-radius: 4px; cursor: pointer; font-family: inherit; text-transform: uppercase; transition: all .15s; }
-.fmt-btn:hover { border-color: var(--ds-text2); color: var(--ds-text); }
-.fmt-btn.active { background: var(--ds-accent-bg); color: var(--ds-accent); border-color: var(--ds-accent); }
-section { margin-bottom: 48px; scroll-margin-top: 24px; }
-section h2 { font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--ds-border2); color: var(--ds-text2); }
-.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-.color-card { border-radius: 10px; overflow: hidden; border: 1px solid var(--ds-border); background: var(--ds-bg2); cursor: pointer; transition: transform .15s, box-shadow .15s; }
-.color-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
-.color-swatch { height: 72px; position: relative; }
-.color-swatch::after { content: 'Click to copy'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #fff; background: rgba(0,0,0,.4); opacity: 0; transition: opacity .15s; text-transform: uppercase; letter-spacing: .06em; }
+.sidebar a.active { color: var(--ds-accent); background: var(--ds-accent-bg); border-left-color: var(--ds-accent); }
+.sidebar-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; border-top: 1px solid var(--ds-border); }
+.sidebar-footer span { font-size: 9px; color: var(--ds-text3); letter-spacing: .04em; }
+.content { margin-left: 220px; flex: 1; padding: 48px 48px; max-width: 920px; }
+header { margin-bottom: 48px; }
+header .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ds-accent); background: var(--ds-accent-bg); padding: 4px 12px; border-radius: 20px; margin-bottom: 14px; }
+header h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-bottom: 8px; }
+header p { font-size: 14px; color: var(--ds-text2); line-height: 1.7; }
+.meta { font-size: 11px; color: var(--ds-text3); margin-top: 8px; font-family: 'SF Mono', 'Fira Code', monospace; }
+.format-bar { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+.fmt-btn { padding: 6px 14px; border: 1px solid var(--ds-border); background: var(--ds-glass); color: var(--ds-text2); font-size: 10px; font-weight: 600; letter-spacing: .04em; border-radius: var(--ds-radius-s); cursor: pointer; font-family: inherit; text-transform: uppercase; transition: all .2s cubic-bezier(.16,1,.3,1); }
+.fmt-btn:hover { border-color: var(--ds-text2); color: var(--ds-text); transform: translateY(-1px); }
+.fmt-btn.active { background: var(--ds-accent-bg); color: var(--ds-accent); border-color: rgba(167,139,250,.3); box-shadow: 0 0 0 1px rgba(167,139,250,.1); }
+section { margin-bottom: 56px; scroll-margin-top: 24px; }
+section h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--ds-border2); color: var(--ds-text3); }
+.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.color-card { border-radius: var(--ds-radius); overflow: hidden; border: 1px solid var(--ds-border); background: var(--ds-bg2); cursor: pointer; transition: all .25s cubic-bezier(.16,1,.3,1); box-shadow: var(--ds-shadow); }
+.color-card:hover { transform: translateY(-3px); box-shadow: var(--ds-shadow-lg); }
+.color-swatch { height: 80px; position: relative; }
+.color-swatch::after { content: 'Click to copy'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #fff; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); opacity: 0; transition: opacity .2s; text-transform: uppercase; letter-spacing: .06em; }
 .color-card:hover .color-swatch::after { opacity: 1; }
-.color-info { padding: 10px; }
-.color-name { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
-.color-val { font-family: monospace; font-size: 11px; color: var(--ds-text2); }
-.tint-row { display: flex; gap: 3px; }
-.tint-swatch { flex: 1; height: 40px; border-radius: 5px; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; transition: transform .1s; }
-.tint-swatch:hover { transform: scaleY(1.15); }
-.tint-swatch span { font-size: 7px; font-family: monospace; opacity: .6; }
-.state-section { margin-bottom: 20px; }
-.state-label { font-size: 12px; font-weight: 600; text-transform: capitalize; margin-bottom: 6px; }
-.state-row { display: flex; gap: 3px; }
-.state-chip { flex: 1; height: 36px; border-radius: 5px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; cursor: pointer; transition: transform .1s; }
-.state-chip:hover { transform: scaleY(1.12); }
-.state-chip span { font-size: 7px; font-family: monospace; opacity: .6; }
-pre.code { background: var(--ds-code-bg); color: var(--ds-code-text); padding: 20px; border-radius: 10px; overflow-x: auto; font-size: 11px; line-height: 1.8; border: 1px solid var(--ds-border); }
-.toast { position: fixed; bottom: 20px; right: 20px; background: var(--ds-text); color: var(--ds-bg); padding: 8px 18px; border-radius: 6px; font-size: 12px; font-weight: 500; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 100; }
-.toast.show { opacity: 1; }
+.color-info { padding: 12px; }
+.color-name { font-weight: 600; font-size: 12px; margin-bottom: 3px; }
+.color-val { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--ds-text2); }
+.tint-row { display: flex; gap: 4px; }
+.tint-swatch { flex: 1; height: 48px; border-radius: var(--ds-radius-s); cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; transition: transform .15s cubic-bezier(.16,1,.3,1); box-shadow: inset 0 -1px 0 rgba(0,0,0,.06); }
+.tint-swatch:hover { transform: scaleY(1.2) translateY(-2px); }
+.tint-swatch span { font-size: 7px; font-family: 'SF Mono', 'Fira Code', monospace; opacity: .5; }
+.state-section { margin-bottom: 24px; }
+.state-label { font-size: 11px; font-weight: 700; text-transform: capitalize; margin-bottom: 8px; letter-spacing: .02em; }
+.state-row { display: flex; gap: 4px; }
+.state-chip { flex: 1; height: 40px; border-radius: var(--ds-radius-s); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; cursor: pointer; transition: transform .15s cubic-bezier(.16,1,.3,1); }
+.state-chip:hover { transform: scaleY(1.15) translateY(-1px); }
+.state-chip span { font-size: 7px; font-family: 'SF Mono', 'Fira Code', monospace; opacity: .5; }
+pre.code { background: var(--ds-code-bg); color: var(--ds-code-text); padding: 24px; border-radius: var(--ds-radius); overflow-x: auto; font-size: 11px; line-height: 1.9; border: 1px solid var(--ds-border); font-family: 'SF Mono', 'Fira Code', monospace; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--ds-text); color: var(--ds-bg); padding: 10px 20px; border-radius: var(--ds-radius-s); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 100; transform: translateY(8px); box-shadow: var(--ds-shadow-lg); }
+.toast.show { opacity: 1; transform: translateY(0); }
+.theme-toggle { position: fixed; top: 16px; right: 16px; z-index: 20; background: var(--ds-glass); border: 1px solid var(--ds-border); backdrop-filter: blur(12px); padding: 8px 14px; border-radius: var(--ds-radius-s); cursor: pointer; font-size: 11px; font-weight: 600; color: var(--ds-text2); font-family: inherit; transition: all .15s; }
+.theme-toggle:hover { color: var(--ds-text); border-color: var(--ds-text2); }
 @media (max-width: 700px) {
   .sidebar { display: none; }
   .content { margin-left: 0; padding: 24px 16px; }
+  .theme-toggle { top: 12px; right: 12px; }
 }
   </style>
 </head>
 <body>
+  <button class="theme-toggle" onclick="var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;this.textContent=t==='dark'?'Light Mode':'Dark Mode'">${isDark ? 'Light Mode' : 'Dark Mode'}</button>
   <nav class="sidebar">
-    <div class="sidebar-brand"><h3>Design System</h3><span>Generated ${new Date().toLocaleDateString()}</span></div>
+    <div class="sidebar-brand"><h3>Vasari Studio</h3><span class="brand-sub">Design System</span><span class="brand-date">Generated ${new Date().toLocaleDateString()}</span></div>
+    <div class="nav-label">Sections</div>
     <a href="#colours" class="active">Colours</a>
     <a href="#tint-scale">Tint Scale</a>
     <a href="#state-colours">State Colours</a>
     <a href="#css-properties">CSS Properties</a>
+    <div class="sidebar-footer"><span>Exported from Vasari Studio</span></div>
   </nav>
   <div class="content">
     <header>
-      <h1>Design System</h1>
-      <p>Colour palette, tint scale, and UI state colours</p>
+      <span class="tag">Design System Export</span>
+      <h1>Colour System</h1>
+      <p>Complete colour palette, tint scale, and UI state colours with CSS custom properties ready for production.</p>
     </header>
     <div class="format-bar">
       <button class="fmt-btn active" data-fmt="hex">HEX</button>
