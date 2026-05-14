@@ -51,6 +51,12 @@ export default function Login({ toast }) {
       }
     } catch (err) {
       const code = err.code
+      if (code === 'auth/user-not-found' && !isSignup && !resetMode) {
+        setIsSignup(true)
+        toast(t('auth.errors.noAccountSwitched'))
+        setLoading(false)
+        return
+      }
       const msg = code === 'auth/email-already-in-use' ? t('auth.errors.emailInUse')
         : code === 'auth/invalid-email' ? t('auth.errors.invalidEmail')
         : code === 'auth/weak-password' ? t('auth.errors.weakPassword')

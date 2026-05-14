@@ -438,7 +438,8 @@
       "serviceUnavailable": "서비스를 일시적으로 사용할 수 없습니다",
       "authFailed": "인증에 실패했습니다",
       "userNotFound": "이 이메일로 등록된 계정을 찾을 수 없습니다",
-      "googleUnavailable": "이 도메인에서는 Google 로그인을 사용할 수 없습니다"
+      "googleUnavailable": "이 도메인에서는 Google 로그인을 사용할 수 없습니다",
+      "noAccountSwitched": "계정을 찾을 수 없습니다 — 아래에서 가입하세요"
     },
     "continueWithGoogle": "Google로 계속",
     "orEmail": "또는 이메일로 계속",

@@ -438,7 +438,8 @@
       "serviceUnavailable": "サービスが一時的に利用できません",
       "authFailed": "認証に失敗しました",
       "userNotFound": "このメールアドレスのアカウントが見つかりません",
-      "googleUnavailable": "このドメインではGoogleログインは利用できません"
+      "googleUnavailable": "このドメインではGoogleログインは利用できません",
+      "noAccountSwitched": "アカウントが見つかりません — 以下からサインアップしてください"
     },
     "continueWithGoogle": "Googleで続行",
     "orEmail": "またはメールで続行",

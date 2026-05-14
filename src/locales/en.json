@@ -438,7 +438,8 @@
       "serviceUnavailable": "Service temporarily unavailable",
       "authFailed": "Authentication failed",
       "userNotFound": "No account found with this email",
-      "googleUnavailable": "Google sign-in is not available on this domain"
+      "googleUnavailable": "Google sign-in is not available on this domain",
+      "noAccountSwitched": "No account found — sign up below to create one"
     },
     "continueWithGoogle": "Continue with Google",
     "orEmail": "or continue with email",

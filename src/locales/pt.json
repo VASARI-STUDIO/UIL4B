@@ -438,7 +438,8 @@
       "serviceUnavailable": "Serviço temporariamente indisponível",
       "authFailed": "Falha na autenticação",
       "userNotFound": "Nenhuma conta encontrada com este e-mail",
-      "googleUnavailable": "Login com Google não disponível neste domínio"
+      "googleUnavailable": "Login com Google não disponível neste domínio",
+      "noAccountSwitched": "Nenhuma conta encontrada — cadastre-se abaixo"
     },
     "continueWithGoogle": "Continuar com Google",
     "orEmail": "ou continuar com email",
