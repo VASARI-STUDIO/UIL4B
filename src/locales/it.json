@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "Risorse esterne",
       "description": "Link selezionati a font, colori, strumenti IA e ispirazione."
+    },
+    "videoFrames": {
+      "label": "Video in fotogrammi",
+      "description": "Estrarre singoli fotogrammi da file video come immagini di alta qualità."
+    },
+    "promptLibrary": {
+      "label": "Libreria di prompt",
+      "description": "Salvare prompt di generazione immagini IA con anteprime."
     }
   },
   "color": {
@@ -397,7 +405,34 @@
       "security": "I dati sono protetti con misure di sicurezza standard del settore (APP 11)"
     },
     "privacyPolicy": "Informativa sulla privacy",
-    "termsOfService": "Termini di servizio"
+    "termsOfService": "Termini di servizio",
+    "confirmClear": "Sì, cancella tutti i dati",
+    "subscription": "Abbonamento",
+    "plans": {
+      "recommended": "Aggiorna",
+      "currentPlan": "Piano attuale",
+      "switched": "Passato a {plan}",
+      "switchTo": "Passa a {plan}",
+      "signInRequired": "Accedi per cambiare piano",
+      "free": {
+        "name": "Gratuito",
+        "price": "0 €",
+        "f1": "Tutti gli strumenti principali",
+        "f2": "Esportazione HTML e CSS standard",
+        "f3": "Supporto community",
+        "f4": "Documentazione base"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "4,99 €",
+        "period": "/ mese",
+        "f1": "Tutto del Gratuito",
+        "f2": "Esportazione premium con barra laterale e cambio formato",
+        "f3": "Libreria documentazione completa",
+        "f4": "Prompt illimitati",
+        "f5": "Accesso anticipato ai nuovi strumenti"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "Bentornato",
@@ -405,7 +440,7 @@
     "resetPassword": "Reimposta password",
     "signInSubtitle": "Accedi al tuo account Vasari Obsidian.",
     "signUpSubtitle": "Registrati per salvare il tuo lavoro e accedere a tutte le funzionalità.",
-    "resetSubtitle": "Inserisci la tua e-mail per ricevere un link di reimpostazione.",
+    "resetSubtitle": "Inserisci la tua email e scegli una nuova password.",
     "displayName": "Nome visualizzato",
     "namePlaceholder": "Il tuo nome",
     "email": "E-mail",
@@ -429,8 +464,14 @@
       "tooManyRequests": "Troppi tentativi — riprova più tardi",
       "serviceUnavailable": "Servizio temporaneamente non disponibile",
       "authFailed": "Autenticazione non riuscita",
-      "userNotFound": "Nessun account trovato con questa e-mail"
-    }
+      "userNotFound": "Nessun account trovato con questa e-mail",
+      "googleUnavailable": "Accesso Google non disponibile su questo dominio",
+      "noAccountSwitched": "Nessun account trovato — registrati qui sotto"
+    },
+    "continueWithGoogle": "Continua con Google",
+    "orEmail": "o continua con email",
+    "newPassword": "Nuova password",
+    "passwordReset": "Password reimpostata"
   },
   "feedback": {
     "title": "Feedback",
@@ -441,12 +482,21 @@
     "messagePlaceholder": "Dicci cosa ne pensi…",
     "submitFeedback": "Invia feedback",
     "enterFeedback": "Inserisci il tuo feedback",
-    "thankYou": "Grazie per il tuo feedback!"
+    "thankYou": "Grazie per il tuo feedback!",
+    "sendViaEmail": "Invia via email",
+    "openGitHubIssue": "Apri issue su GitHub"
   },
   "community": {
     "title": "Community",
     "subtitle": "Connettiti con altri designer e sviluppatori che utilizzano Vasari Obsidian.",
-    "comingSoonDesc": "Condividi palette, ottieni feedback sui tuoi design e scopri modelli creati dalla community."
+    "comingSoonDesc": "Condividi palette, ottieni feedback sui tuoi design e scopri modelli creati dalla community.",
+    "github": "Repository GitHub",
+    "githubDesc": "Sfogliare il codice sorgente, mettere una stella e contribuire.",
+    "discussions": "Discussioni GitHub",
+    "discussionsDesc": "Fare domande, condividere idee e connettersi con la community.",
+    "reportIssue": "Segnala un problema",
+    "reportIssueDesc": "Hai trovato un bug? Facci sapere.",
+    "visitLink": "Visita"
   },
   "privacy": {
     "title": "Informativa sulla privacy",

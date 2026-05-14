@@ -187,7 +187,7 @@ export default function ImageConverter({ toast }) {
                     <div style={{ fontSize: 10, color: 'var(--t2)', marginBottom: 2 }}>{preview.w} &times; {preview.h}px</div>
                     <div style={{ fontSize: 10, color: 'var(--t2)' }}>
                       {formatBytes(orig.size)} &rarr; {formatBytes(preview.convertedSize)}{' '}
-                      <span style={{ color: preview.savings > 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                      <span style={{ color: preview.savings > 0 ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
                         {preview.savings > 0 ? '−' : '+'}{Math.abs(preview.savings)}%
                       </span>
                     </div>

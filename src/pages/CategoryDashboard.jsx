@@ -28,7 +28,6 @@ export default function CategoryDashboard({ categoryId }) {
   return (
     <div className="sec">
       <div className="hero-section" style={{ marginBottom: 40 }}>
-        <div className="hero-glow" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, position: 'relative', zIndex: 1 }}>
           <div style={{ width: 32, height: 2, background: 'var(--accent)', borderRadius: 1, boxShadow: '0 0 12px var(--accent-glow)' }} />
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
@@ -52,7 +51,7 @@ export default function CategoryDashboard({ categoryId }) {
                   <button type="button" className={`tool-mini-pin${isPinned ? ' pinned' : ''}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePinned(tool.id) }} aria-label={isPinned ? t('common.unpin', { name: tool.label }) : t('common.pin', { name: tool.label })} style={{ padding: 6 }}>
                     <PinIcon filled={isPinned} />
                   </button>
-                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '4px 10px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-s)' }}>{cat.label}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '4px 10px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)', borderRadius: 'var(--radius-s)' }}>{cat.label}</span>
                 </div>
               </div>
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, letterSpacing: '-.01em' }}>{tool.label}</h3>

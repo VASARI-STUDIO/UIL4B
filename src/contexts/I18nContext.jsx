@@ -71,8 +71,6 @@ export function I18nProvider({ children }) {
     return val
   }, [messages])
 
-  if (!messages) return null
-
   return (
     <I18nContext.Provider value={{ t, lang, setLang, languages: LANGUAGES }}>
       {children}

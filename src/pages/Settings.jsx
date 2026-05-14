@@ -103,6 +103,82 @@ function PasswordChange({ onSave }) {
   )
 }
 
+function EmailEditField({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [email, setEmail] = useState(value || '')
+  const [password, setPassword] = useState('')
+  const [step, setStep] = useState('email')
+  const [error, setError] = useState('')
+
+  const handleNext = () => {
+    if (!email || email === value) { setError('Enter a new email address'); return }
+    setStep('confirm')
+    setError('')
+  }
+
+  const handleSave = () => {
+    if (!password) { setError('Password is required'); return }
+    try {
+      onSave(email, password)
+      setEditing(false)
+      setStep('email')
+      setPassword('')
+      setError('')
+    } catch (e) {
+      if (e.code === 'auth/wrong-password') setError('Password is incorrect')
+      else setError(e.message || 'Failed to update email')
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>Email Address</div>
+          <div style={{ fontSize: 14, color: 'var(--t0)' }}>{value || '—'}</div>
+        </div>
+        <button className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
+        {step === 'email' ? 'Email Address' : 'Confirm Password'}
+      </div>
+      {step === 'email' ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Enter new email"
+            style={{ flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', fontFamily: 'var(--font)', fontSize: 13 }}
+            autoFocus
+          />
+          <button className="btn btn-s" onClick={handleNext}>Next</button>
+          <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Enter your password to confirm"
+            style={{ flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', fontFamily: 'var(--font)', fontSize: 13 }}
+            autoFocus
+          />
+          <button className="btn btn-s" onClick={handleSave}>Save</button>
+          <button className="btn btn-s" onClick={() => { setStep('email'); setPassword(''); setError('') }}>Back</button>
+        </div>
+      )}
+      {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 4 }}>{error}</div>}
+    </div>
+  )
+}
+
 function DeleteAccount({ onDelete }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
@@ -119,15 +195,15 @@ function DeleteAccount({ onDelete }) {
 
   if (!open) {
     return (
-      <button className="btn" onClick={() => setOpen(true)} style={{ color: '#ef4444', borderColor: '#ef4444', marginTop: 8 }}>
+      <button className="btn" onClick={() => setOpen(true)} style={{ color: 'var(--err)', borderColor: 'var(--err)', marginTop: 8 }}>
         Delete Account
       </button>
     )
   }
 
   return (
-    <div style={{ marginTop: 8, padding: 16, borderRadius: 'var(--radius-s)', border: '1px solid #ef4444', background: 'rgba(239,68,68,.04)' }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: '#ef4444', marginBottom: 8 }}>Delete Account</div>
+    <div style={{ marginTop: 8, padding: 16, borderRadius: 'var(--radius-s)', border: '1px solid var(--err)', background: 'color-mix(in srgb, var(--err) 4%, transparent)' }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--err)', marginBottom: 8 }}>Delete Account</div>
       <p style={{ fontSize: 13, color: 'var(--t1)', marginBottom: 12, lineHeight: 1.6 }}>
         This action is permanent and cannot be undone. All your data, preferences, and saved content will be removed.
       </p>
@@ -139,12 +215,12 @@ function DeleteAccount({ onDelete }) {
         style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', fontFamily: 'var(--font)', fontSize: 13, marginBottom: 10 }}
       />
       <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn" onClick={handleDelete} style={{ color: '#fff', background: '#ef4444', borderColor: '#ef4444' }}>
+        <button className="btn" onClick={handleDelete} style={{ color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>
           Permanently Delete
         </button>
         <button className="btn btn-s" onClick={() => { setOpen(false); setError('') }}>Cancel</button>
       </div>
-      {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 6 }}>{error}</div>}
+      {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 6 }}>{error}</div>}
     </div>
   )
 }
@@ -153,6 +229,7 @@ export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { t, lang, setLang, languages } = useI18n()
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const exportData = () => {
     const data = {
@@ -170,10 +247,9 @@ export default function Settings({ toast }) {
   }
 
   const deleteAllData = () => {
-    if (confirm(t('settings.clearConfirm'))) {
-      localStorage.removeItem('vs-prompts')
-      toast(t('settings.dataCleared'))
-    }
+    localStorage.removeItem('vs-prompts')
+    setConfirmClear(false)
+    toast(t('settings.dataCleared'))
   }
 
   return (
@@ -181,6 +257,85 @@ export default function Settings({ toast }) {
       <div className="sec-h">
         <h1>{t('settings.title')}</h1>
         <p>{t('settings.subtitle')}</p>
+      </div>
+
+      {/* Subscription Plans */}
+      <div className="sub">
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('settings.subscription')}</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 14 }}>
+          {[
+            {
+              id: 'free',
+              name: t('settings.plans.free.name'),
+              price: t('settings.plans.free.price'),
+              features: [
+                t('settings.plans.free.f1'),
+                t('settings.plans.free.f2'),
+                t('settings.plans.free.f3'),
+                t('settings.plans.free.f4'),
+              ],
+            },
+            {
+              id: 'pro',
+              name: t('settings.plans.pro.name'),
+              price: t('settings.plans.pro.price'),
+              period: t('settings.plans.pro.period'),
+              features: [
+                t('settings.plans.pro.f1'),
+                t('settings.plans.pro.f2'),
+                t('settings.plans.pro.f3'),
+                t('settings.plans.pro.f4'),
+                t('settings.plans.pro.f5'),
+              ],
+              accent: true,
+            },
+          ].map(plan => {
+            const isCurrent = (userProfile?.tier || 'free') === plan.id
+            return (
+              <div key={plan.id} className="card" style={{
+                padding: 0, overflow: 'hidden',
+                border: plan.accent ? '2px solid var(--accent)' : undefined,
+              }}>
+                <div style={{ padding: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{plan.name}</div>
+                    {plan.accent && (
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', padding: '3px 8px', background: 'var(--accent-bg)', borderRadius: 'var(--radius-s)' }}>
+                        {t('settings.plans.recommended')}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
+                    <span style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.02em' }}>{plan.price}</span>
+                    {plan.period && <span style={{ fontSize: 13, color: 'var(--t2)' }}>{plan.period}</span>}
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {plan.features.map((f, i) => (
+                      <li key={i} style={{ fontSize: 13, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={plan.accent ? 'var(--accent)' : 'var(--ok)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {isCurrent ? (
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textAlign: 'center', padding: '10px 0', border: '1px solid var(--accent)', borderRadius: 'var(--radius-s)' }}>
+                      {t('settings.plans.currentPlan')}
+                    </div>
+                  ) : (
+                    <button className={plan.accent ? 'btn btn-accent' : 'btn'} style={{ width: '100%', justifyContent: 'center' }} onClick={() => {
+                      if (user) { updateProfile({ tier: plan.id }); toast(t('settings.plans.switched', { plan: plan.name })) }
+                      else toast(t('settings.plans.signInRequired'))
+                    }}>
+                      {t('settings.plans.switchTo', { plan: plan.name })}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Appearance */}
@@ -245,17 +400,9 @@ export default function Settings({ toast }) {
               placeholder="Enter your display name"
             />
 
-            <EditField
-              label="Email Address"
+            <EmailEditField
               value={user.email}
-              type="email"
-              onSave={(email) => {
-                const pw = prompt('Enter your password to confirm email change:')
-                if (!pw) return
-                updateEmail(email, pw)
-                toast('Email updated')
-              }}
-              placeholder="Enter new email"
+              onSave={(email, pw) => { updateEmail(email, pw); toast('Email updated') }}
             />
 
             <EditField
@@ -307,7 +454,14 @@ export default function Settings({ toast }) {
           </p>
           <div className="row" style={{ gap: 8 }}>
             <button className="btn" onClick={exportData}>{t('settings.exportData')}</button>
-            <button className="btn" onClick={deleteAllData} style={{ color: '#ef4444', borderColor: '#ef4444' }}>{t('settings.clearData')}</button>
+            {confirmClear ? (
+              <>
+                <button className="btn" onClick={deleteAllData} style={{ color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>{t('settings.confirmClear')}</button>
+                <button className="btn" onClick={() => setConfirmClear(false)}>{t('common.cancel')}</button>
+              </>
+            ) : (
+              <button className="btn" onClick={() => setConfirmClear(true)} style={{ color: 'var(--err)', borderColor: 'var(--err)' }}>{t('settings.clearData')}</button>
+            )}
           </div>
         </div>
       </div>

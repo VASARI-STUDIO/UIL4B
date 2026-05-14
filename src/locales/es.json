@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "Recursos externos",
       "description": "Enlaces seleccionados a fuentes, colores, herramientas de IA e inspiración."
+    },
+    "videoFrames": {
+      "label": "Video a fotogramas",
+      "description": "Extraer fotogramas individuales de archivos de video como imágenes de alta calidad."
+    },
+    "promptLibrary": {
+      "label": "Biblioteca de prompts",
+      "description": "Guardar prompts de generación de imágenes con IA con vistas previas."
     }
   },
   "color": {
@@ -397,7 +405,34 @@
       "security": "Los datos están protegidos con medidas de seguridad estándar de la industria (APP 11)"
     },
     "privacyPolicy": "Política de privacidad",
-    "termsOfService": "Términos de servicio"
+    "termsOfService": "Términos de servicio",
+    "confirmClear": "Sí, borrar todos los datos",
+    "subscription": "Suscripción",
+    "plans": {
+      "recommended": "Mejorar",
+      "currentPlan": "Plan actual",
+      "switched": "Cambiado a {plan}",
+      "switchTo": "Cambiar a {plan}",
+      "signInRequired": "Inicia sesión para cambiar de plan",
+      "free": {
+        "name": "Gratis",
+        "price": "$0",
+        "f1": "Todas las herramientas principales",
+        "f2": "Exportación HTML y CSS estándar",
+        "f3": "Soporte comunitario",
+        "f4": "Documentación básica"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$4.99",
+        "period": "/ mes",
+        "f1": "Todo lo de Gratis",
+        "f2": "Exportación premium con barra lateral y cambio de formato",
+        "f3": "Biblioteca de documentación completa",
+        "f4": "Prompts ilimitados",
+        "f5": "Acceso anticipado a nuevas herramientas"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "Bienvenido de nuevo",
@@ -405,7 +440,7 @@
     "resetPassword": "Restablecer contraseña",
     "signInSubtitle": "Inicia sesión en tu cuenta de Vasari Obsidian.",
     "signUpSubtitle": "Regístrate para guardar tu trabajo y acceder a todas las funciones.",
-    "resetSubtitle": "Introduce tu correo electrónico para recibir un enlace de restablecimiento.",
+    "resetSubtitle": "Ingresa tu email y elige una nueva contraseña.",
     "displayName": "Nombre para mostrar",
     "namePlaceholder": "Tu nombre",
     "email": "Correo electrónico",
@@ -429,8 +464,14 @@
       "tooManyRequests": "Demasiados intentos — inténtalo de nuevo más tarde",
       "serviceUnavailable": "Servicio temporalmente no disponible",
       "authFailed": "Error de autenticación",
-      "userNotFound": "No se encontró ninguna cuenta con este correo electrónico"
-    }
+      "userNotFound": "No se encontró ninguna cuenta con este correo electrónico",
+      "googleUnavailable": "Inicio de sesión con Google no disponible en este dominio",
+      "noAccountSwitched": "No se encontró cuenta — regístrate abajo para crear una"
+    },
+    "continueWithGoogle": "Continuar con Google",
+    "orEmail": "o continuar con email",
+    "newPassword": "Nueva contraseña",
+    "passwordReset": "Contraseña restablecida"
   },
   "feedback": {
     "title": "Comentarios",
@@ -441,12 +482,21 @@
     "messagePlaceholder": "Cuéntanos lo que piensas…",
     "submitFeedback": "Enviar comentarios",
     "enterFeedback": "Introduce tus comentarios",
-    "thankYou": "¡Gracias por tus comentarios!"
+    "thankYou": "¡Gracias por tus comentarios!",
+    "sendViaEmail": "Enviar por email",
+    "openGitHubIssue": "Abrir issue en GitHub"
   },
   "community": {
     "title": "Comunidad",
     "subtitle": "Conecta con otros diseñadores y desarrolladores que usan Vasari Obsidian.",
-    "comingSoonDesc": "Comparte paletas, obtén retroalimentación sobre tus diseños y descubre plantillas creadas por la comunidad."
+    "comingSoonDesc": "Comparte paletas, obtén retroalimentación sobre tus diseños y descubre plantillas creadas por la comunidad.",
+    "github": "Repositorio GitHub",
+    "githubDesc": "Explorar código fuente, destacar el proyecto y contribuir.",
+    "discussions": "Discusiones de GitHub",
+    "discussionsDesc": "Hacer preguntas, compartir ideas y conectar con la comunidad.",
+    "reportIssue": "Reportar un problema",
+    "reportIssueDesc": "¿Encontraste un error? Haznos saber.",
+    "visitLink": "Visitar"
   },
   "privacy": {
     "title": "Política de privacidad",

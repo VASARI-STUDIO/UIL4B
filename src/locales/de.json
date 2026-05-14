@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "Externe Ressourcen",
       "description": "Kuratierte Links zu Schriften, Farben, KI-Werkzeugen und Inspiration."
+    },
+    "videoFrames": {
+      "label": "Video zu Einzelbildern",
+      "description": "Einzelbilder aus Videodateien als hochwertige Bilder extrahieren."
+    },
+    "promptLibrary": {
+      "label": "Prompt-Bibliothek",
+      "description": "KI-Bildgenerierungs-Prompts mit Vorschau speichern."
     }
   },
   "color": {
@@ -397,7 +405,34 @@
       "security": "Daten werden mit branchenüblichen Sicherheitsmaßnahmen geschützt (APP 11)"
     },
     "privacyPolicy": "Datenschutzrichtlinie",
-    "termsOfService": "Nutzungsbedingungen"
+    "termsOfService": "Nutzungsbedingungen",
+    "confirmClear": "Ja, alle Daten löschen",
+    "subscription": "Abonnement",
+    "plans": {
+      "recommended": "Upgrade",
+      "currentPlan": "Aktueller Plan",
+      "switched": "Zu {plan} gewechselt",
+      "switchTo": "Zu {plan} wechseln",
+      "signInRequired": "Anmelden um den Plan zu ändern",
+      "free": {
+        "name": "Kostenlos",
+        "price": "0 €",
+        "f1": "Alle Design-Kerntools",
+        "f2": "Standard-HTML- & CSS-Export",
+        "f3": "Community-Support",
+        "f4": "Grundlegende Dokumentation"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "4,99 €",
+        "period": "/ Monat",
+        "f1": "Alles aus Kostenlos",
+        "f2": "Premium-Export mit Seitenleiste & Formatwechsel",
+        "f3": "Vollständige Dokumentationsbibliothek",
+        "f4": "Unbegrenzte Prompts",
+        "f5": "Frühzugang zu neuen Tools"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "Willkommen zurück",
@@ -405,7 +440,7 @@
     "resetPassword": "Passwort zurücksetzen",
     "signInSubtitle": "Melden Sie sich bei Ihrem Vasari Obsidian-Konto an.",
     "signUpSubtitle": "Registrieren Sie sich, um Ihre Arbeit zu speichern und auf alle Funktionen zuzugreifen.",
-    "resetSubtitle": "Geben Sie Ihre E-Mail-Adresse ein, um einen Link zum Zurücksetzen zu erhalten.",
+    "resetSubtitle": "Geben Sie Ihre E-Mail ein und wählen Sie ein neues Passwort.",
     "displayName": "Anzeigename",
     "namePlaceholder": "Ihr Name",
     "email": "E-Mail",
@@ -429,8 +464,14 @@
       "tooManyRequests": "Zu viele Versuche — versuchen Sie es später erneut",
       "serviceUnavailable": "Dienst vorübergehend nicht verfügbar",
       "authFailed": "Authentifizierung fehlgeschlagen",
-      "userNotFound": "Kein Konto mit dieser E-Mail-Adresse gefunden"
-    }
+      "userNotFound": "Kein Konto mit dieser E-Mail-Adresse gefunden",
+      "googleUnavailable": "Google-Anmeldung ist auf dieser Domain nicht verfügbar",
+      "noAccountSwitched": "Kein Konto gefunden — registrieren Sie sich unten"
+    },
+    "continueWithGoogle": "Weiter mit Google",
+    "orEmail": "oder mit E-Mail fortfahren",
+    "newPassword": "Neues Passwort",
+    "passwordReset": "Passwort wurde zurückgesetzt"
   },
   "feedback": {
     "title": "Feedback",
@@ -441,12 +482,21 @@
     "messagePlaceholder": "Sagen Sie uns, was Sie denken…",
     "submitFeedback": "Feedback absenden",
     "enterFeedback": "Bitte geben Sie Ihr Feedback ein",
-    "thankYou": "Vielen Dank für Ihr Feedback!"
+    "thankYou": "Vielen Dank für Ihr Feedback!",
+    "sendViaEmail": "Per E-Mail senden",
+    "openGitHubIssue": "GitHub-Issue öffnen"
   },
   "community": {
     "title": "Community",
     "subtitle": "Vernetzen Sie sich mit anderen Designern und Entwicklern, die Vasari Obsidian nutzen.",
-    "comingSoonDesc": "Teilen Sie Paletten, erhalten Sie Feedback zu Ihren Designs und entdecken Sie von der Community erstellte Vorlagen."
+    "comingSoonDesc": "Teilen Sie Paletten, erhalten Sie Feedback zu Ihren Designs und entdecken Sie von der Community erstellte Vorlagen.",
+    "github": "GitHub-Repository",
+    "githubDesc": "Quellcode durchsuchen, Projekt markieren und beitragen.",
+    "discussions": "GitHub-Diskussionen",
+    "discussionsDesc": "Fragen stellen, Ideen teilen und mit der Community verbinden.",
+    "reportIssue": "Problem melden",
+    "reportIssueDesc": "Einen Fehler gefunden? Lassen Sie es uns wissen.",
+    "visitLink": "Besuchen"
   },
   "privacy": {
     "title": "Datenschutzrichtlinie",
