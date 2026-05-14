@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Toast from './components/Toast'
@@ -32,11 +32,16 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const { message, visible, toast } = useToast()
   const copy = useClipboard(toast)
+  const location = useLocation()
 
   const toggleMenu = () => setMenuOpen(prev => !prev)
   const closeMenu = () => setMenuOpen(false)
   const openPalette = () => setPaletteOpen(true)
   const closePalette = () => setPaletteOpen(false)
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -56,8 +61,8 @@ export default function App() {
       <div className="app-main">
         <TopBar onMenuToggle={toggleMenu} onCommandPalette={openPalette} />
 
-        <main className="main">
-          <Routes>
+        <main className="main" key={location.pathname}>
+          <Routes location={location}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />

@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react'
+import { signInWithPopup } from 'firebase/auth'
+import { auth as firebaseAuth, googleProvider } from '../utils/firebase'
 
 const AuthContext = createContext()
 const USERS_KEY = 'vs-users'
@@ -60,9 +62,47 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => { saveSession(null); setSession(null) }, [])
 
-  const resetPassword = useCallback(async (email) => {
+  const resetPassword = useCallback(async (email, newPassword) => {
     const users = getUsers()
-    if (!users[email.toLowerCase()]) throw { code: 'auth/user-not-found' }
+    const key = email.toLowerCase()
+    if (!users[key]) throw { code: 'auth/user-not-found' }
+    users[key].passwordHash = hashPassword(newPassword)
+    saveUsers(users)
+  }, [])
+
+  const loginWithGoogle = useCallback(async () => {
+    const result = await signInWithPopup(firebaseAuth, googleProvider)
+    const gUser = result.user
+    const email = gUser.email
+    const key = email.toLowerCase()
+    const users = getUsers()
+
+    if (!users[key]) {
+      users[key] = {
+        email,
+        uid: gUser.uid,
+        displayName: gUser.displayName || '',
+        photoURL: gUser.photoURL || '',
+        tier: 'free',
+        passwordHash: '',
+        provider: 'google',
+        createdAt: new Date().toISOString(),
+      }
+    } else {
+      if (gUser.displayName) users[key].displayName = gUser.displayName
+      if (gUser.photoURL) users[key].photoURL = gUser.photoURL
+    }
+    saveUsers(users)
+
+    const s = {
+      email,
+      uid: users[key].uid,
+      displayName: users[key].displayName,
+      photoURL: users[key].photoURL,
+      tier: users[key].tier,
+    }
+    saveSession(s)
+    setSession(s)
   }, [])
 
   const updateProfile = useCallback((fields) => {
@@ -86,7 +126,8 @@ export function AuthProvider({ children }) {
     const newKey = newEmail.toLowerCase()
     if (oldKey !== newKey && users[newKey]) throw { code: 'auth/email-already-in-use' }
     const u = users[oldKey]
-    if (!u || u.passwordHash !== hashPassword(password)) throw { code: 'auth/wrong-password' }
+    if (!u) throw { code: 'auth/user-not-found' }
+    if (u.provider !== 'google' && u.passwordHash !== hashPassword(password)) throw { code: 'auth/wrong-password' }
     delete users[oldKey]
     u.email = newEmail
     users[newKey] = u
@@ -101,7 +142,8 @@ export function AuthProvider({ children }) {
     const users = getUsers()
     const key = session.email.toLowerCase()
     const u = users[key]
-    if (!u || u.passwordHash !== hashPassword(currentPassword)) throw { code: 'auth/wrong-password' }
+    if (!u) throw { code: 'auth/user-not-found' }
+    if (u.provider !== 'google' && u.passwordHash !== hashPassword(currentPassword)) throw { code: 'auth/wrong-password' }
     u.passwordHash = hashPassword(newPassword)
     saveUsers(users)
   }, [session])
@@ -111,7 +153,8 @@ export function AuthProvider({ children }) {
     const users = getUsers()
     const key = session.email.toLowerCase()
     const u = users[key]
-    if (!u || u.passwordHash !== hashPassword(password)) throw { code: 'auth/wrong-password' }
+    if (!u) return
+    if (u.provider !== 'google' && u.passwordHash !== hashPassword(password)) throw { code: 'auth/wrong-password' }
     delete users[key]
     saveUsers(users)
     saveSession(null)
@@ -123,7 +166,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, userProfile, loading: false,
-      login, signup, logout, resetPassword,
+      login, signup, logout, resetPassword, loginWithGoogle,
       updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,
       isProUser
     }}>

@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "Recursos Externos",
       "description": "Links curados para fontes, cores, ferramentas de IA e inspiração."
+    },
+    "videoFrames": {
+      "label": "Vídeo para Quadros",
+      "description": "Extrair quadros individuais de arquivos de vídeo como imagens de alta qualidade."
+    },
+    "promptLibrary": {
+      "label": "Biblioteca de Prompts",
+      "description": "Salvar prompts de geração de imagens com IA com pré-visualizações."
     }
   },
   "color": {
@@ -397,7 +405,34 @@
       "security": "Os dados são protegidos com medidas de segurança padrão da indústria (APP 11)"
     },
     "privacyPolicy": "Política de Privacidade",
-    "termsOfService": "Termos de Serviço"
+    "termsOfService": "Termos de Serviço",
+    "confirmClear": "Sim, limpar todos os dados",
+    "subscription": "Assinatura",
+    "plans": {
+      "recommended": "Melhorar",
+      "currentPlan": "Plano atual",
+      "switched": "Mudou para {plan}",
+      "switchTo": "Mudar para {plan}",
+      "signInRequired": "Entre para mudar de plano",
+      "free": {
+        "name": "Grátis",
+        "price": "R$0",
+        "f1": "Todas as ferramentas principais",
+        "f2": "Exportação HTML e CSS padrão",
+        "f3": "Suporte da comunidade",
+        "f4": "Documentação básica"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$4.99",
+        "period": "/ mês",
+        "f1": "Tudo do Grátis",
+        "f2": "Exportação premium com barra lateral e troca de formato",
+        "f3": "Biblioteca de documentação completa",
+        "f4": "Prompts ilimitados",
+        "f5": "Acesso antecipado a novas ferramentas"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "Bem-vindo de Volta",
@@ -405,7 +440,7 @@
     "resetPassword": "Redefinir Senha",
     "signInSubtitle": "Entre na sua conta Vasari Obsidian.",
     "signUpSubtitle": "Cadastre-se para salvar seu trabalho e acessar todos os recursos.",
-    "resetSubtitle": "Digite seu e-mail para receber um link de redefinição.",
+    "resetSubtitle": "Digite seu email e escolha uma nova senha.",
     "displayName": "Nome de Exibição",
     "namePlaceholder": "Seu nome",
     "email": "E-mail",
@@ -429,8 +464,14 @@
       "tooManyRequests": "Muitas tentativas — tente novamente mais tarde",
       "serviceUnavailable": "Serviço temporariamente indisponível",
       "authFailed": "Falha na autenticação",
-      "userNotFound": "Nenhuma conta encontrada com este e-mail"
-    }
+      "userNotFound": "Nenhuma conta encontrada com este e-mail",
+      "googleUnavailable": "Login com Google não disponível neste domínio",
+      "noAccountSwitched": "Nenhuma conta encontrada — cadastre-se abaixo"
+    },
+    "continueWithGoogle": "Continuar com Google",
+    "orEmail": "ou continuar com email",
+    "newPassword": "Nova senha",
+    "passwordReset": "Senha redefinida"
   },
   "feedback": {
     "title": "Feedback",
@@ -441,12 +482,21 @@
     "messagePlaceholder": "Conte-nos o que você acha…",
     "submitFeedback": "Enviar Feedback",
     "enterFeedback": "Por favor, insira seu feedback",
-    "thankYou": "Obrigado pelo seu feedback!"
+    "thankYou": "Obrigado pelo seu feedback!",
+    "sendViaEmail": "Enviar por email",
+    "openGitHubIssue": "Abrir Issue no GitHub"
   },
   "community": {
     "title": "Comunidade",
     "subtitle": "Conecte-se com outros designers e desenvolvedores que usam o Vasari Obsidian.",
-    "comingSoonDesc": "Compartilhe paletas, obtenha feedback sobre seus designs e descubra templates criados pela comunidade."
+    "comingSoonDesc": "Compartilhe paletas, obtenha feedback sobre seus designs e descubra templates criados pela comunidade.",
+    "github": "Repositório GitHub",
+    "githubDesc": "Navegar pelo código-fonte, favoritar o projeto e contribuir.",
+    "discussions": "Discussões no GitHub",
+    "discussionsDesc": "Fazer perguntas, compartilhar ideias e conectar-se com a comunidade.",
+    "reportIssue": "Reportar um Problema",
+    "reportIssueDesc": "Encontrou um bug? Nos avise.",
+    "visitLink": "Visitar"
   },
   "privacy": {
     "title": "Política de Privacidade",

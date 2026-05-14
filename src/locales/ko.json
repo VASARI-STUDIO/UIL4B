@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "외부 리소스",
       "description": "폰트, 색상, AI 도구, 영감 관련 엄선된 링크 모음."
+    },
+    "videoFrames": {
+      "label": "비디오에서 프레임 추출",
+      "description": "비디오 파일에서 고품질 이미지로 개별 프레임 추출."
+    },
+    "promptLibrary": {
+      "label": "프롬프트 라이브러리",
+      "description": "AI 이미지 생성 프롬프트를 미리보기와 함께 저장."
     }
   },
   "color": {
@@ -397,7 +405,34 @@
       "security": "업계 표준 보안 조치로 데이터를 보호합니다 (APP 11)"
     },
     "privacyPolicy": "개인정보처리방침",
-    "termsOfService": "서비스 이용약관"
+    "termsOfService": "서비스 이용약관",
+    "confirmClear": "예, 모든 데이터 삭제",
+    "subscription": "구독",
+    "plans": {
+      "recommended": "업그레이드",
+      "currentPlan": "현재 플랜",
+      "switched": "{plan}으로 전환됨",
+      "switchTo": "{plan}으로 전환",
+      "signInRequired": "플랜 변경은 로그인이 필요합니다",
+      "free": {
+        "name": "무료",
+        "price": "₩0",
+        "f1": "모든 핵심 디자인 도구",
+        "f2": "표준 HTML 및 CSS 내보내기",
+        "f3": "커뮤니티 지원",
+        "f4": "기본 문서"
+      },
+      "pro": {
+        "name": "프로",
+        "price": "$4.99",
+        "period": "/ 월",
+        "f1": "무료 플랜 모든 기능",
+        "f2": "사이드바 내비 및 형식 전환 포함 프리미엄 내보내기",
+        "f3": "전체 문서 라이브러리",
+        "f4": "무제한 프롬프트",
+        "f5": "새 도구 조기 액세스"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "다시 오신 것을 환영합니다",
@@ -405,7 +440,7 @@
     "resetPassword": "비밀번호 재설정",
     "signInSubtitle": "Vasari Obsidian 계정에 로그인하세요.",
     "signUpSubtitle": "가입하여 작업을 저장하고 모든 기능에 접근하세요.",
-    "resetSubtitle": "재설정 링크를 받을 이메일을 입력하세요.",
+    "resetSubtitle": "이메일을 입력하고 새 비밀번호를 선택하세요.",
     "displayName": "표시 이름",
     "namePlaceholder": "이름",
     "email": "이메일",
@@ -429,8 +464,14 @@
       "tooManyRequests": "시도 횟수가 너무 많습니다 — 나중에 다시 시도하세요",
       "serviceUnavailable": "서비스를 일시적으로 사용할 수 없습니다",
       "authFailed": "인증에 실패했습니다",
-      "userNotFound": "이 이메일로 등록된 계정을 찾을 수 없습니다"
-    }
+      "userNotFound": "이 이메일로 등록된 계정을 찾을 수 없습니다",
+      "googleUnavailable": "이 도메인에서는 Google 로그인을 사용할 수 없습니다",
+      "noAccountSwitched": "계정을 찾을 수 없습니다 — 아래에서 가입하세요"
+    },
+    "continueWithGoogle": "Google로 계속",
+    "orEmail": "또는 이메일로 계속",
+    "newPassword": "새 비밀번호",
+    "passwordReset": "비밀번호가 재설정되었습니다"
   },
   "feedback": {
     "title": "피드백",
@@ -441,12 +482,21 @@
     "messagePlaceholder": "의견을 알려주세요…",
     "submitFeedback": "피드백 제출",
     "enterFeedback": "피드백을 입력해 주세요",
-    "thankYou": "피드백을 보내주셔서 감사합니다!"
+    "thankYou": "피드백을 보내주셔서 감사합니다!",
+    "sendViaEmail": "이메일로 보내기",
+    "openGitHubIssue": "GitHub Issue 열기"
   },
   "community": {
     "title": "커뮤니티",
     "subtitle": "Vasari Obsidian을 사용하는 다른 디자이너 및 개발자와 소통하세요.",
-    "comingSoonDesc": "팔레트를 공유하고, 디자인에 대한 피드백을 받고, 커뮤니티가 만든 템플릿을 발견하세요."
+    "comingSoonDesc": "팔레트를 공유하고, 디자인에 대한 피드백을 받고, 커뮤니티가 만든 템플릿을 발견하세요.",
+    "github": "GitHub 저장소",
+    "githubDesc": "소스 코드 탐색, 프로젝트 스타 표시 및 기여.",
+    "discussions": "GitHub 토론",
+    "discussionsDesc": "질문하고, 아이디어를 공유하고, 커뮤니티와 소통하세요.",
+    "reportIssue": "문제 신고",
+    "reportIssueDesc": "버그를 발견하셨나요? 알려주세요.",
+    "visitLink": "방문"
   },
   "privacy": {
     "title": "개인정보처리방침",

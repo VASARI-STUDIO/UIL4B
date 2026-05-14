@@ -136,6 +136,14 @@
     "externalResources": {
       "label": "外部资源",
       "description": "精选字体、颜色、AI 工具和灵感链接。"
+    },
+    "videoFrames": {
+      "label": "视频转帧",
+      "description": "从视频文件中提取高质量的单帧图像。"
+    },
+    "promptLibrary": {
+      "label": "提示词库",
+      "description": "保存AI图像生成提示词及输出预览。"
     }
   },
   "color": {
@@ -397,7 +405,34 @@
       "security": "数据受到行业标准安全措施的保护（APP 11）"
     },
     "privacyPolicy": "隐私政策",
-    "termsOfService": "服务条款"
+    "termsOfService": "服务条款",
+    "confirmClear": "是的，清除所有数据",
+    "subscription": "订阅",
+    "plans": {
+      "recommended": "升级",
+      "currentPlan": "当前方案",
+      "switched": "已切换至{plan}",
+      "switchTo": "切换至{plan}",
+      "signInRequired": "请登录后更改方案",
+      "free": {
+        "name": "免费",
+        "price": "¥0",
+        "f1": "所有核心设计工具",
+        "f2": "标准HTML和CSS导出",
+        "f3": "社区支持",
+        "f4": "基础文档"
+      },
+      "pro": {
+        "name": "专业版",
+        "price": "$4.99",
+        "period": "/ 月",
+        "f1": "免费版所有功能",
+        "f2": "带侧边栏导航和格式切换的高级导出",
+        "f3": "完整文档库",
+        "f4": "无限提示词",
+        "f5": "新工具抢先体验"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "欢迎回来",
@@ -405,7 +440,7 @@
     "resetPassword": "重置密码",
     "signInSubtitle": "登录您的 Vasari Obsidian 账户。",
     "signUpSubtitle": "注册以保存您的工作并访问所有功能。",
-    "resetSubtitle": "输入您的电子邮件以接收重置链接。",
+    "resetSubtitle": "输入您的邮箱并选择新密码。",
     "displayName": "显示名称",
     "namePlaceholder": "您的名字",
     "email": "电子邮件",
@@ -429,8 +464,14 @@
       "tooManyRequests": "尝试次数过多——请稍后再试",
       "serviceUnavailable": "服务暂时不可用",
       "authFailed": "身份验证失败",
-      "userNotFound": "未找到与此电子邮件关联的账户"
-    }
+      "userNotFound": "未找到与此电子邮件关联的账户",
+      "googleUnavailable": "此域名不支持 Google 登录",
+      "noAccountSwitched": "未找到账户 — 请在下方注册"
+    },
+    "continueWithGoogle": "使用 Google 继续",
+    "orEmail": "或使用邮箱继续",
+    "newPassword": "新密码",
+    "passwordReset": "密码已重置"
   },
   "feedback": {
     "title": "反馈",
@@ -441,12 +482,21 @@
     "messagePlaceholder": "告诉我们您的想法…",
     "submitFeedback": "提交反馈",
     "enterFeedback": "请输入您的反馈",
-    "thankYou": "感谢您的反馈！"
+    "thankYou": "感谢您的反馈！",
+    "sendViaEmail": "通过邮件发送",
+    "openGitHubIssue": "打开 GitHub Issue"
   },
   "community": {
     "title": "社区",
     "subtitle": "与使用 Vasari Obsidian 的其他设计师和开发者建立联系。",
-    "comingSoonDesc": "分享调色板、获取设计反馈，并发现社区创建的模板。"
+    "comingSoonDesc": "分享调色板、获取设计反馈，并发现社区创建的模板。",
+    "github": "GitHub 仓库",
+    "githubDesc": "浏览源代码、收藏项目并参与贡献。",
+    "discussions": "GitHub 讨论区",
+    "discussionsDesc": "提问、分享创意、与社区互动。",
+    "reportIssue": "报告问题",
+    "reportIssueDesc": "发现了 Bug？请告诉我们。",
+    "visitLink": "访问"
   },
   "privacy": {
     "title": "隐私政策",
