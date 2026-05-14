@@ -6,6 +6,7 @@ import Toast from './components/Toast'
 import CommandPalette from './components/CommandPalette'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
+import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 
 import Dashboard from './pages/Dashboard'
 import ColorStudio from './pages/ColorStudio'
@@ -26,6 +27,7 @@ import Terms from './pages/Terms'
 import CategoryDashboard from './pages/CategoryDashboard'
 import DesignReference from './pages/DesignReference'
 import VideoToFrames from './pages/VideoToFrames'
+import Admin from './pages/Admin'
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -40,7 +42,13 @@ export default function App() {
   const closePalette = () => setPaletteOpen(false)
 
   useEffect(() => {
+    return initAnalytics()
+  }, [])
+
+  useEffect(() => {
     window.scrollTo(0, 0)
+    trackPageView(location.pathname)
+    trackSessionPage(location.pathname)
   }, [location.pathname])
 
   useEffect(() => {
@@ -90,6 +98,7 @@ export default function App() {
             <Route path="/feedback" element={<Feedback toast={toast} />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/admin" element={<Admin toast={toast} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
