@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import { useI18n } from '../contexts/I18nContext'
 
@@ -104,15 +104,41 @@ export default function ImageConverter({ toast }) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [])
 
-  const getPreview = useCallback((orig) => {
-    const { canvas, w, h } = getCanvas(orig)
-    let dataUrl
-    try { dataUrl = canvas.toDataURL(format, quality / 100) }
-    catch { dataUrl = canvas.toDataURL('image/png') }
-    const cs = Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75)
-    const sv = orig.size > 0 ? Math.round((1 - cs / orig.size) * 100) : 0
-    return { dataUrl, w, h, convertedSize: cs, savings: sv }
-  }, [format, quality, getCanvas])
+  const [previews, setPreviews] = useState([])
+  const [previewing, setPreviewing] = useState(false)
+
+  useEffect(() => {
+    if (!originals.length) { setPreviews([]); return }
+    setPreviewing(true)
+    const timer = setTimeout(() => {
+      let cancelled = false
+      const compute = async () => {
+        const next = []
+        for (let i = 0; i < originals.length; i++) {
+          if (cancelled) return
+          const orig = originals[i]
+          if (!orig) { next.push(null); continue }
+          const { canvas, w, h } = getCanvas(orig)
+          const dataUrl = await new Promise(resolve => {
+            canvas.toBlob(blob => {
+              if (!blob) { resolve(null); return }
+              const reader = new FileReader()
+              reader.onload = () => resolve({ url: reader.result, size: blob.size })
+              reader.readAsDataURL(blob)
+            }, format, quality / 100)
+          })
+          if (cancelled) return
+          if (!dataUrl) { next.push(null); continue }
+          const sv = orig.size > 0 ? Math.round((1 - dataUrl.size / orig.size) * 100) : 0
+          next.push({ dataUrl: dataUrl.url, w, h, convertedSize: dataUrl.size, savings: sv })
+        }
+        if (!cancelled) { setPreviews(next); setPreviewing(false) }
+      }
+      compute()
+      return () => { cancelled = true }
+    }, 180)
+    return () => { clearTimeout(timer); setPreviewing(false) }
+  }, [originals, format, quality, maxWidth, getCanvas])
 
   return (
     <div className="sec">
@@ -169,27 +195,41 @@ export default function ImageConverter({ toast }) {
           </div>
 
           <div className="sub">
-            <div className="sl">Preview</div>
+            <div className="sl" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              Preview
+              {previewing && <span style={{ fontSize: 10, color: 'var(--t2)', fontWeight: 500 }}>updating…</span>}
+            </div>
             <div className="img-grid">
               {originals.map((orig, idx) => {
                 if (!orig) return null
                 const ext = EXT_MAP[format] || 'webp'
-                const preview = getPreview(orig)
+                const preview = previews[idx]
                 const bn = orig.name.replace(/\.[^.]+$/, '')
                 return (
-                  <div key={idx} className="card" style={{ padding: 10 }}>
-                    <div style={{ background: 'var(--bg-2)', marginBottom: 8, overflow: 'hidden', borderRadius: 8 }}>
-                      <img src={preview.dataUrl} style={{ width: '100%', display: 'block', maxHeight: 160, objectFit: 'contain' }} alt={bn} />
+                  <div key={idx} className="card" style={{ padding: 10, opacity: preview ? 1 : 0.5, transition: 'opacity .15s' }}>
+                    <div style={{ background: 'var(--bg-2)', marginBottom: 8, overflow: 'hidden', borderRadius: 8, minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {preview ? (
+                        <img src={preview.dataUrl} style={{ width: '100%', display: 'block', maxHeight: 160, objectFit: 'contain' }} alt={bn} />
+                      ) : (
+                        <div style={{ fontSize: 10, color: 'var(--t2)' }}>Loading…</div>
+                      )}
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {bn}.{ext}
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--t2)', marginBottom: 2 }}>{preview.w} &times; {preview.h}px</div>
+                    <div style={{ fontSize: 10, color: 'var(--t2)', marginBottom: 2 }}>
+                      {preview ? `${preview.w} × ${preview.h}px` : `${orig.w} × ${orig.h}px`}
+                    </div>
                     <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {formatBytes(orig.size)} &rarr; {formatBytes(preview.convertedSize)}{' '}
-                      <span style={{ color: preview.savings > 0 ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
-                        {preview.savings > 0 ? '−' : '+'}{Math.abs(preview.savings)}%
-                      </span>
+                      {formatBytes(orig.size)}
+                      {preview && (
+                        <>
+                          {' → '}{formatBytes(preview.convertedSize)}{' '}
+                          <span style={{ color: preview.savings > 0 ? 'var(--ok)' : 'var(--err)', fontWeight: 600 }}>
+                            {preview.savings > 0 ? '−' : '+'}{Math.abs(preview.savings)}%
+                          </span>
+                        </>
+                      )}
                     </div>
                     <button className="btn btn-s" style={{ marginTop: 8, width: '100%' }} onClick={() => downloadSingle(idx)}>
                       Download
