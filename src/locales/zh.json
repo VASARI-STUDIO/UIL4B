@@ -438,7 +438,8 @@
       "serviceUnavailable": "服务暂时不可用",
       "authFailed": "身份验证失败",
       "userNotFound": "未找到与此电子邮件关联的账户",
-      "googleUnavailable": "此域名不支持 Google 登录"
+      "googleUnavailable": "此域名不支持 Google 登录",
+      "noAccountSwitched": "未找到账户 — 请在下方注册"
     },
     "continueWithGoogle": "使用 Google 继续",
     "orEmail": "或使用邮箱继续",
