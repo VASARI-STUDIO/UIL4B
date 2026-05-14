@@ -406,7 +406,33 @@
     },
     "privacyPolicy": "Informativa sulla privacy",
     "termsOfService": "Termini di servizio",
-    "confirmClear": "Sì, cancella tutti i dati"
+    "confirmClear": "Sì, cancella tutti i dati",
+    "subscription": "Abbonamento",
+    "plans": {
+      "recommended": "Aggiorna",
+      "currentPlan": "Piano attuale",
+      "switched": "Passato a {plan}",
+      "switchTo": "Passa a {plan}",
+      "signInRequired": "Accedi per cambiare piano",
+      "free": {
+        "name": "Gratuito",
+        "price": "0 €",
+        "f1": "Tutti gli strumenti principali",
+        "f2": "Esportazione HTML e CSS standard",
+        "f3": "Supporto community",
+        "f4": "Documentazione base"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "4,99 €",
+        "period": "/ mese",
+        "f1": "Tutto del Gratuito",
+        "f2": "Esportazione premium con barra laterale e cambio formato",
+        "f3": "Libreria documentazione completa",
+        "f4": "Prompt illimitati",
+        "f5": "Accesso anticipato ai nuovi strumenti"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "Bentornato",

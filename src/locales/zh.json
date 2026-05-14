@@ -406,7 +406,33 @@
     },
     "privacyPolicy": "隐私政策",
     "termsOfService": "服务条款",
-    "confirmClear": "是的，清除所有数据"
+    "confirmClear": "是的，清除所有数据",
+    "subscription": "订阅",
+    "plans": {
+      "recommended": "升级",
+      "currentPlan": "当前方案",
+      "switched": "已切换至{plan}",
+      "switchTo": "切换至{plan}",
+      "signInRequired": "请登录后更改方案",
+      "free": {
+        "name": "免费",
+        "price": "¥0",
+        "f1": "所有核心设计工具",
+        "f2": "标准HTML和CSS导出",
+        "f3": "社区支持",
+        "f4": "基础文档"
+      },
+      "pro": {
+        "name": "专业版",
+        "price": "$4.99",
+        "period": "/ 月",
+        "f1": "免费版所有功能",
+        "f2": "带侧边栏导航和格式切换的高级导出",
+        "f3": "完整文档库",
+        "f4": "无限提示词",
+        "f5": "新工具抢先体验"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "欢迎回来",

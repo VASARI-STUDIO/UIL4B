@@ -259,6 +259,85 @@ export default function Settings({ toast }) {
         <p>{t('settings.subtitle')}</p>
       </div>
 
+      {/* Subscription Plans */}
+      <div className="sub">
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('settings.subscription')}</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 14 }}>
+          {[
+            {
+              id: 'free',
+              name: t('settings.plans.free.name'),
+              price: t('settings.plans.free.price'),
+              features: [
+                t('settings.plans.free.f1'),
+                t('settings.plans.free.f2'),
+                t('settings.plans.free.f3'),
+                t('settings.plans.free.f4'),
+              ],
+            },
+            {
+              id: 'pro',
+              name: t('settings.plans.pro.name'),
+              price: t('settings.plans.pro.price'),
+              period: t('settings.plans.pro.period'),
+              features: [
+                t('settings.plans.pro.f1'),
+                t('settings.plans.pro.f2'),
+                t('settings.plans.pro.f3'),
+                t('settings.plans.pro.f4'),
+                t('settings.plans.pro.f5'),
+              ],
+              accent: true,
+            },
+          ].map(plan => {
+            const isCurrent = (userProfile?.tier || 'free') === plan.id
+            return (
+              <div key={plan.id} className="card" style={{
+                padding: 0, overflow: 'hidden',
+                border: plan.accent ? '2px solid var(--accent)' : undefined,
+              }}>
+                <div style={{ padding: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{plan.name}</div>
+                    {plan.accent && (
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', padding: '3px 8px', background: 'var(--accent-bg)', borderRadius: 'var(--radius-s)' }}>
+                        {t('settings.plans.recommended')}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
+                    <span style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.02em' }}>{plan.price}</span>
+                    {plan.period && <span style={{ fontSize: 13, color: 'var(--t2)' }}>{plan.period}</span>}
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {plan.features.map((f, i) => (
+                      <li key={i} style={{ fontSize: 13, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={plan.accent ? 'var(--accent)' : 'var(--ok)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {isCurrent ? (
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textAlign: 'center', padding: '10px 0', border: '1px solid var(--accent)', borderRadius: 'var(--radius-s)' }}>
+                      {t('settings.plans.currentPlan')}
+                    </div>
+                  ) : (
+                    <button className={plan.accent ? 'btn btn-accent' : 'btn'} style={{ width: '100%', justifyContent: 'center' }} onClick={() => {
+                      if (user) { updateProfile({ tier: plan.id }); toast(t('settings.plans.switched', { plan: plan.name })) }
+                      else toast(t('settings.plans.signInRequired'))
+                    }}>
+                      {t('settings.plans.switchTo', { plan: plan.name })}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Appearance */}
       <div className="sub">
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('settings.appearance')}</h2>

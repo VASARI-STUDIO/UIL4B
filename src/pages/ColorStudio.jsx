@@ -3,6 +3,7 @@ import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl,
 import { usePalette } from '../contexts/PaletteContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useExport } from '../contexts/ExportContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic']
 const HARM_LABELS = {
@@ -168,6 +169,7 @@ function snap(value, target, threshold = 3) {
 
 export default function ColorStudio({ onCopy }) {
   const { t } = useI18n()
+  const { theme } = useTheme()
   const [baseColor, setBaseColor] = useState('#2563EB')
   const [harmony, setHarmony] = useState('analogous')
   const [extraColors, setExtraColors] = useState([])
@@ -249,8 +251,9 @@ export default function ColorStudio({ onCopy }) {
       const stateEntries = Object.entries(stateColors).map(([state, presetIdx]) => ({
         name: state, shades: STATE_PRESETS[state][presetIdx].shades
       }))
+      const isDark = theme === 'dark'
       return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="${isDark ? 'dark' : 'light'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -260,75 +263,145 @@ export default function ColorStudio({ onCopy }) {
 ${colorVars}
 ${tintVars}
 ${stateVars}
+  --ds-bg: #f8f9fa; --ds-bg2: #fff; --ds-text: #1a1a1a; --ds-text2: #666;
+  --ds-text3: #999; --ds-border: #e5e5e5; --ds-border2: #eee;
+  --ds-code-bg: #1a1a1a; --ds-code-text: #e5e5e5;
+  --ds-sidebar: #fff; --ds-hover: rgba(0,0,0,.04);
+  --ds-accent: #6366f1; --ds-accent-bg: rgba(99,102,241,.08);
+}
+[data-theme="dark"] {
+  --ds-bg: #0c0c0c; --ds-bg2: #161616; --ds-text: #e5e5e5; --ds-text2: #999;
+  --ds-text3: #666; --ds-border: #262626; --ds-border2: #1f1f1f;
+  --ds-code-bg: #0f0f0f; --ds-code-text: #d4d4d4;
+  --ds-sidebar: #111; --ds-hover: rgba(255,255,255,.05);
+  --ds-accent: #818cf8; --ds-accent-bg: rgba(129,140,248,.1);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #1a1a1a; line-height: 1.6; padding: 48px 24px; }
-.container { max-width: 960px; margin: 0 auto; }
-header { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid #e5e5e5; }
-header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; }
-header p { font-size: 1.1rem; color: #666; }
-.meta { font-size: 0.85rem; color: #999; margin-top: 8px; }
-section { margin-bottom: 56px; }
-section h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
-.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-.color-card { border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5; background: #fff; }
-.color-swatch { height: 80px; }
-.color-info { padding: 12px; }
-.color-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
-.color-hex { font-family: monospace; font-size: 0.8rem; color: #666; }
-.tint-row { display: flex; gap: 4px; margin-top: 8px; }
-.tint-swatch { flex: 1; height: 32px; border-radius: 4px; position: relative; }
-.tint-swatch span { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 8px; font-family: monospace; color: rgba(0,0,0,.4); }
-.state-section { margin-bottom: 24px; }
-.state-label { font-size: 0.95rem; font-weight: 600; text-transform: capitalize; margin-bottom: 8px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--ds-bg); color: var(--ds-text); line-height: 1.6; display: flex; min-height: 100vh; }
+.sidebar { position: fixed; top: 0; left: 0; width: 200px; height: 100vh; background: var(--ds-sidebar); border-right: 1px solid var(--ds-border); padding: 24px 0; overflow-y: auto; z-index: 10; }
+.sidebar-brand { padding: 0 16px 20px; border-bottom: 1px solid var(--ds-border); margin-bottom: 12px; }
+.sidebar-brand h3 { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.sidebar-brand span { font-size: 10px; color: var(--ds-text3); display: block; margin-top: 2px; }
+.sidebar a { display: block; padding: 7px 16px; font-size: 12px; font-weight: 500; color: var(--ds-text2); text-decoration: none; transition: all .15s; }
+.sidebar a:hover { color: var(--ds-text); background: var(--ds-hover); }
+.sidebar a.active { color: var(--ds-accent); background: var(--ds-accent-bg); }
+.content { margin-left: 200px; flex: 1; padding: 48px 40px; max-width: 900px; }
+header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--ds-border); }
+header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; }
+header p { font-size: 14px; color: var(--ds-text2); }
+.meta { font-size: 11px; color: var(--ds-text3); margin-top: 6px; font-family: monospace; }
+.format-bar { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+.fmt-btn { padding: 5px 12px; border: 1px solid var(--ds-border); background: transparent; color: var(--ds-text2); font-size: 10px; font-weight: 600; letter-spacing: .04em; border-radius: 4px; cursor: pointer; font-family: inherit; text-transform: uppercase; transition: all .15s; }
+.fmt-btn:hover { border-color: var(--ds-text2); color: var(--ds-text); }
+.fmt-btn.active { background: var(--ds-accent-bg); color: var(--ds-accent); border-color: var(--ds-accent); }
+section { margin-bottom: 48px; scroll-margin-top: 24px; }
+section h2 { font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--ds-border2); color: var(--ds-text2); }
+.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.color-card { border-radius: 10px; overflow: hidden; border: 1px solid var(--ds-border); background: var(--ds-bg2); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.color-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.color-swatch { height: 72px; position: relative; }
+.color-swatch::after { content: 'Click to copy'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #fff; background: rgba(0,0,0,.4); opacity: 0; transition: opacity .15s; text-transform: uppercase; letter-spacing: .06em; }
+.color-card:hover .color-swatch::after { opacity: 1; }
+.color-info { padding: 10px; }
+.color-name { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+.color-val { font-family: monospace; font-size: 11px; color: var(--ds-text2); }
+.tint-row { display: flex; gap: 3px; }
+.tint-swatch { flex: 1; height: 40px; border-radius: 5px; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; transition: transform .1s; }
+.tint-swatch:hover { transform: scaleY(1.15); }
+.tint-swatch span { font-size: 7px; font-family: monospace; opacity: .6; }
+.state-section { margin-bottom: 20px; }
+.state-label { font-size: 12px; font-weight: 600; text-transform: capitalize; margin-bottom: 6px; }
 .state-row { display: flex; gap: 3px; }
-.state-chip { flex: 1; height: 36px; border-radius: 6px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; }
-.state-chip span { font-size: 7px; font-family: monospace; opacity: .7; }
+.state-chip { flex: 1; height: 36px; border-radius: 5px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; cursor: pointer; transition: transform .1s; }
+.state-chip:hover { transform: scaleY(1.12); }
+.state-chip span { font-size: 7px; font-family: monospace; opacity: .6; }
+pre.code { background: var(--ds-code-bg); color: var(--ds-code-text); padding: 20px; border-radius: 10px; overflow-x: auto; font-size: 11px; line-height: 1.8; border: 1px solid var(--ds-border); }
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--ds-text); color: var(--ds-bg); padding: 8px 18px; border-radius: 6px; font-size: 12px; font-weight: 500; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 100; }
+.toast.show { opacity: 1; }
+@media (max-width: 700px) {
+  .sidebar { display: none; }
+  .content { margin-left: 0; padding: 24px 16px; }
+}
   </style>
 </head>
 <body>
-  <div class="container">
+  <nav class="sidebar">
+    <div class="sidebar-brand"><h3>Design System</h3><span>Generated ${new Date().toLocaleDateString()}</span></div>
+    <a href="#colours" class="active">Colours</a>
+    <a href="#tint-scale">Tint Scale</a>
+    <a href="#state-colours">State Colours</a>
+    <a href="#css-properties">CSS Properties</a>
+  </nav>
+  <div class="content">
     <header>
       <h1>Design System</h1>
       <p>Colour palette, tint scale, and UI state colours</p>
-      <div class="meta">Generated ${new Date().toLocaleDateString()}</div>
     </header>
-    <section>
+    <div class="format-bar">
+      <button class="fmt-btn active" data-fmt="hex">HEX</button>
+      <button class="fmt-btn" data-fmt="rgb">RGB</button>
+      <button class="fmt-btn" data-fmt="hsl">HSL</button>
+      <button class="fmt-btn" data-fmt="hsb">HSB</button>
+      <button class="fmt-btn" data-fmt="cmyk">CMYK</button>
+      <button class="fmt-btn" data-fmt="oklch">OKLCH</button>
+    </div>
+    <section id="colours">
       <h2>Colours</h2>
       <div class="color-grid">
-${allColors.map((c, i) => `        <div class="color-card">
-          <div class="color-swatch" style="background: ${c}"></div>
+${allColors.map((c, i) => `        <div class="color-card" data-hex="${c}">
+          <div class="color-swatch" style="background:${c}"></div>
           <div class="color-info">
             <div class="color-name">${labels[i]}</div>
-            <div class="color-hex">${c.toUpperCase()}</div>
+            <div class="color-val">${c.toUpperCase()}</div>
           </div>
         </div>`).join('\n')}
       </div>
     </section>
-    <section>
+    <section id="tint-scale">
       <h2>Tint Scale</h2>
       <div class="tint-row">
-${tintScale.map((c) => `        <div class="tint-swatch" style="background:${c}"><span>${c.toUpperCase()}</span></div>`).join('\n')}
+${tintScale.map((c) => `        <div class="tint-swatch" data-hex="${c}" style="background:${c}"><span>${c.toUpperCase()}</span></div>`).join('\n')}
       </div>
     </section>
-    <section>
+    <section id="state-colours">
       <h2>State Colours</h2>
 ${stateEntries.map(s => `      <div class="state-section">
         <div class="state-label">${s.name}</div>
         <div class="state-row">
-${s.shades.map((c, i) => `          <div class="state-chip" style="background:${c};color:${i < 5 ? '#000' : '#fff'}"><span>${stateLabels[i]}</span></div>`).join('\n')}
+${s.shades.map((c, i) => `          <div class="state-chip" data-hex="${c}" style="background:${c};color:${i < 5 ? '#000' : '#fff'}"><span>${stateLabels[i]}</span></div>`).join('\n')}
         </div>
       </div>`).join('\n')}
     </section>
-    <section>
+    <section id="css-properties">
       <h2>CSS Custom Properties</h2>
-      <pre style="background:#1a1a1a;color:#e5e5e5;padding:24px;border-radius:12px;overflow-x:auto;font-size:.8rem;line-height:1.8">:root {
+      <pre class="code">:root {
 ${colorVars}
 ${tintVars}
 ${stateVars}
 }</pre>
     </section>
   </div>
+  <div class="toast" id="toast"></div>
+  <script>
+(function(){
+  function hexToRgb(h){h=h.replace('#','');var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);return{r:r,g:g,b:b}}
+  function hexToHsl(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,s=0,hh=0;if(mx!==mn){var d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);if(mx===r)hh=((g-b)/d+(g<b?6:0))/6;else if(mx===g)hh=((b-r)/d+2)/6;else hh=((r-g)/d+4)/6}return{h:Math.round(hh*360),s:Math.round(s*100),l:Math.round(l*100)}}
+  function hexToHsb(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn,s=mx===0?0:d/mx,v=mx,hh=0;if(d!==0){if(mx===r)hh=((g-b)/d+(g<b?6:0))/6;else if(mx===g)hh=((b-r)/d+2)/6;else hh=((r-g)/d+4)/6}return{h:Math.round(hh*360),s:Math.round(s*100),b:Math.round(v*100)}}
+  function hexToCmyk(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,k=1-Math.max(r,g,b);if(k===1)return{c:0,m:0,y:0,k:100};return{c:Math.round((1-r-k)/(1-k)*100),m:Math.round((1-g-k)/(1-k)*100),y:Math.round((1-b-k)/(1-k)*100),k:Math.round(k*100)}}
+  function hexToOklch(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255;function lin(v){return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)}var lr=lin(r),lg=lin(g),lb=lin(b);var l=Math.cbrt(.4122214708*lr+.5363325363*lg+.0514459929*lb);var m=Math.cbrt(.2119034982*lr+.6806995451*lg+.1073969566*lb);var s=Math.cbrt(.0883024619*lr+.2164557872*lg+.6652917509*lb);var L=.2104542553*l+.793617785*m-.0040720468*s;var a=1.9779984951*l-2.428592205*m+.4505937099*s;var bb=.0259040371*l+.7827717662*m-.808675766*s;var C=Math.sqrt(a*a+bb*bb);var H=Math.atan2(bb,a)*180/Math.PI;if(H<0)H+=360;return{l:+(L*100).toFixed(1),c:+C.toFixed(3),h:+H.toFixed(1)}}
+  function fmt(hex,f){hex=hex.trim();switch(f){case'hex':return hex.toUpperCase();case'rgb':var c=hexToRgb(hex);return'rgb('+c.r+', '+c.g+', '+c.b+')';case'hsl':var h=hexToHsl(hex);return'hsl('+h.h+', '+h.s+'%, '+h.l+'%)';case'hsb':var v=hexToHsb(hex);return'hsb('+v.h+', '+v.s+'%, '+v.b+'%)';case'cmyk':var k=hexToCmyk(hex);return'cmyk('+k.c+'%, '+k.m+'%, '+k.y+'%, '+k.k+'%)';case'oklch':var o=hexToOklch(hex);return'oklch('+o.l+'% '+o.c+' '+o.h+')';default:return hex.toUpperCase()}}
+  var cur='hex';
+  var toast=document.getElementById('toast');var tid;
+  function show(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tid);tid=setTimeout(function(){toast.classList.remove('show')},1800)}
+  function update(){document.querySelectorAll('.color-val').forEach(function(el){var card=el.closest('[data-hex]');if(card)el.textContent=fmt(card.dataset.hex,cur)});document.querySelectorAll('.tint-swatch span, .state-chip span').forEach(function(el){var p=el.closest('[data-hex]');if(p)el.textContent=fmt(p.dataset.hex,cur)})}
+  document.querySelectorAll('.fmt-btn').forEach(function(btn){btn.addEventListener('click',function(){cur=btn.dataset.fmt;document.querySelectorAll('.fmt-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');update()})});
+  document.querySelectorAll('[data-hex]').forEach(function(el){el.addEventListener('click',function(){var t=fmt(el.dataset.hex,cur);navigator.clipboard.writeText(t).then(function(){show('Copied: '+t)}).catch(function(){show('Copied: '+t)})})});
+  document.querySelectorAll('.sidebar a').forEach(function(a){a.addEventListener('click',function(){document.querySelectorAll('.sidebar a').forEach(function(l){l.classList.remove('active')});a.classList.add('active')})});
+  var sections=document.querySelectorAll('section[id]');var links=document.querySelectorAll('.sidebar a');
+  var io=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.toggle('active',l.getAttribute('href')==='#'+e.target.id)})}})},{rootMargin:'-20% 0px -60% 0px'});
+  sections.forEach(function(s){io.observe(s)});
+})();
+  </script>
 </body>
 </html>`
     }
@@ -363,7 +436,7 @@ ${stateVars}
 
     return () => clearExport()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allColors.join(','), tintScale.join(','), JSON.stringify(stateColors)])
+  }, [allColors.join(','), tintScale.join(','), JSON.stringify(stateColors), theme])
 
   const randomPalette = useCallback(() => {
     const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))

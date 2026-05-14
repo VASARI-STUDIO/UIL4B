@@ -406,7 +406,33 @@
     },
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
-    "confirmClear": "Yes, clear all data"
+    "confirmClear": "Yes, clear all data",
+    "subscription": "Subscription",
+    "plans": {
+      "recommended": "Upgrade",
+      "currentPlan": "Current Plan",
+      "switched": "Switched to {plan}",
+      "switchTo": "Switch to {plan}",
+      "signInRequired": "Sign in to change plans",
+      "free": {
+        "name": "Free",
+        "price": "$0",
+        "f1": "All core design tools",
+        "f2": "Standard HTML & CSS export",
+        "f3": "Community support",
+        "f4": "Basic documentation"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$4.99",
+        "period": "/ month",
+        "f1": "Everything in Free",
+        "f2": "Premium export with sidebar nav & format switching",
+        "f3": "Full documentation library",
+        "f4": "Unlimited saved prompts",
+        "f5": "Early access to new tools"
+      }
+    }
   },
   "auth": {
     "welcomeBack": "Welcome Back",

@@ -161,19 +161,21 @@ export default function Sidebar({ isOpen, onClose }) {
 
           {user ? (
             <div className="sidebar-user">
-              <div className="sidebar-user-avatar">
-                {userProfile?.photoURL ? (
-                  <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
-                ) : (
-                  <span>{(userProfile?.displayName || user.email || 'U')[0].toUpperCase()}</span>
-                )}
-              </div>
-              <div className="sidebar-user-info">
-                <div className="sidebar-user-name">{userProfile?.displayName || user.email?.split('@')[0]}</div>
-                <div className={`sidebar-user-tier${userProfile?.tier === 'pro' ? ' pro' : ''}`}>
-                  {userProfile?.tier === 'pro' ? t('nav.proPlan') : t('nav.freePlan')}
+              <NavLink to="/settings" className="sidebar-user-link" onClick={onClose}>
+                <div className="sidebar-user-avatar">
+                  {userProfile?.photoURL ? (
+                    <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span>{(userProfile?.displayName || user.email || 'U')[0].toUpperCase()}</span>
+                  )}
                 </div>
-              </div>
+                <div className="sidebar-user-info">
+                  <div className="sidebar-user-name">{userProfile?.displayName || user.email?.split('@')[0]}</div>
+                  <div className={`sidebar-user-tier${userProfile?.tier === 'pro' ? ' pro' : ''}`}>
+                    {userProfile?.tier === 'pro' ? t('nav.proPlan') : t('nav.freePlan')}
+                  </div>
+                </div>
+              </NavLink>
               <button className="sidebar-user-action" onClick={logout} title={t('common.signOut')}>
                 <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
