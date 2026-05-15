@@ -1,8 +1,8 @@
-# Vasari Obsidian — Web Design Toolkit
+# UIl4b — Design Toolkit
 
 A comprehensive design toolkit built with React and Vite. Create colour palettes, generate tint scales, check contrast, build gradients, pair fonts, convert images, extract video frames, and export production-ready CSS — all in the browser.
 
-**Live:** [vasari-studio.github.io/Web-Design-Toolkit](https://vasari-studio.github.io/Web-Design-Toolkit/)
+**Live:** [uil4b.com](https://www.uil4b.com)
 
 ## Tools
 
@@ -82,8 +82,8 @@ npm run preview    # Preview production build
 1. Push to `main`
 2. GitHub Actions builds and deploys automatically, or:
    - Settings → Pages → Deploy from branch → `main` / `root`
-3. Live at `https://<username>.github.io/Web-Design-Toolkit/`
+3. Live at [uil4b.com](https://www.uil4b.com)
 
 ## Licence
 
-MIT — Vasari Studio 2026.
+MIT — UIl4b 2026.

@@ -31,12 +31,17 @@ export default function Login({ toast }) {
     setLoading(true)
     try {
       if (resetMode) {
+        if (!password) {
+          toast(t('auth.errors.invalidCredential'))
+          setLoading(false)
+          return
+        }
         if (!newPassword || newPassword.length < 6) {
           toast(t('auth.errors.weakPassword'))
           setLoading(false)
           return
         }
-        await resetPassword(email, newPassword)
+        await resetPassword(email, password, newPassword)
         toast(t('auth.passwordReset'))
         setResetMode(false)
         setNewPassword('')
@@ -117,12 +122,10 @@ export default function Login({ toast }) {
               <label>{t('auth.email')}</label>
               <input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required autoComplete="email" />
             </div>
-            {!resetMode && (
-              <div className="auth-field">
-                <label>{t('auth.password')}</label>
-                <input type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder')} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
-              </div>
-            )}
+            <div className="auth-field">
+              <label>{resetMode ? t('auth.currentPassword') || 'Current Password' : t('auth.password')}</label>
+              <input type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder')} required minLength={6} autoComplete="current-password" />
+            </div>
             {resetMode && (
               <div className="auth-field">
                 <label>{t('auth.newPassword')}</label>

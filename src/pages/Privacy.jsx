@@ -47,7 +47,7 @@ export default function Privacy() {
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('privacy.s7Title')}</h3>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}>
           {t('privacy.s7Text')}{' '}
-          <a href="mailto:privacy@visaristudio.com">privacy@visaristudio.com</a>
+          <a href="mailto:privacy@uil4b.com">privacy@uil4b.com</a>
         </p>
         <p style={{ fontSize: 14, color: 'var(--t1)' }}>
           {t('privacy.s7Complaint')}{' '}

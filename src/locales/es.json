@@ -31,10 +31,10 @@
     "colours": "Colores"
   },
   "brand": {
-    "name": "Vasari",
-    "tagline": "Obsidian Toolkit",
-    "full": "Vasari Obsidian",
-    "fullToolkit": "Vasari Obsidian Toolkit"
+    "name": "UIl4b",
+    "tagline": "Design Toolkit",
+    "full": "UIl4b",
+    "fullToolkit": "UIl4b Design Toolkit"
   },
   "nav": {
     "dashboard": "Panel",
@@ -397,7 +397,7 @@
     "dataCleared": "Datos locales limpiados",
     "clearConfirm": "¿Estás seguro? Esto eliminará todos los datos guardados localmente.",
     "privacyLegal": "Privacidad y legal",
-    "privacyInfo": "Vasari Obsidian cumple con la Ley de Privacidad de Australia de 1988 y los Principios de Privacidad Australianos (APPs). Tus datos se procesan en Australia (región de Sídney) cuando corresponda.",
+    "privacyInfo": "UIl4b cumple con la Ley de Privacidad de Australia de 1988 y los Principios de Privacidad Australianos (APPs). Tus datos se procesan en Australia (región de Sídney) cuando corresponda.",
     "privacyPoints": {
       "collect": "Solo recopilamos los datos necesarios para el servicio (APP 3)",
       "use": "Tus datos se utilizan únicamente para proporcionar las funciones del toolkit (APP 6)",
@@ -438,7 +438,7 @@
     "welcomeBack": "Bienvenido de nuevo",
     "createAccount": "Crear cuenta",
     "resetPassword": "Restablecer contraseña",
-    "signInSubtitle": "Inicia sesión en tu cuenta de Vasari Obsidian.",
+    "signInSubtitle": "Inicia sesión en tu cuenta de UIl4b.",
     "signUpSubtitle": "Regístrate para guardar tu trabajo y acceder a todas las funciones.",
     "resetSubtitle": "Ingresa tu email y elige una nueva contraseña.",
     "displayName": "Nombre para mostrar",
@@ -475,7 +475,7 @@
   },
   "feedback": {
     "title": "Comentarios",
-    "subtitle": "Ayúdanos a mejorar Vasari Obsidian. Comparte errores, solicitudes de funciones o comentarios generales.",
+    "subtitle": "Ayúdanos a mejorar UIl4b. Comparte errores, solicitudes de funciones o comentarios generales.",
     "featureRequest": "Solicitud de función",
     "bugReport": "Informe de error",
     "general": "General",
@@ -488,7 +488,7 @@
   },
   "community": {
     "title": "Comunidad",
-    "subtitle": "Conecta con otros diseñadores y desarrolladores que usan Vasari Obsidian.",
+    "subtitle": "Conecta con otros diseñadores y desarrolladores que usan UIl4b.",
     "comingSoonDesc": "Comparte paletas, obtén retroalimentación sobre tus diseños y descubre plantillas creadas por la comunidad.",
     "github": "Repositorio GitHub",
     "githubDesc": "Explorar código fuente, destacar el proyecto y contribuir.",
@@ -502,7 +502,7 @@
     "title": "Política de privacidad",
     "lastUpdated": "Última actualización: marzo de 2026",
     "s1Title": "1. Acerca de esta política",
-    "s1Text": "Vasari Obsidian (\"nosotros\", \"nos\", \"nuestro\") se compromete a proteger su información personal de conformidad con la Ley de Privacidad de Australia de 1988 (Cth) y los Principios de Privacidad Australianos (APPs). Esta política explica cómo recopilamos, usamos, divulgamos y protegemos su información personal.",
+    "s1Text": "UIl4b (\"nosotros\", \"nos\", \"nuestro\") se compromete a proteger su información personal de conformidad con la Ley de Privacidad de Australia de 1988 (Cth) y los Principios de Privacidad Australianos (APPs). Esta política explica cómo recopilamos, usamos, divulgamos y protegemos su información personal.",
     "s2Title": "2. Información que recopilamos (APP 3)",
     "s2Intro": "Solo recopilamos la información razonablemente necesaria para nuestros servicios:",
     "s2Items": [
@@ -550,13 +550,13 @@
     "title": "Términos de servicio",
     "lastUpdated": "Última actualización: marzo de 2026",
     "s1Title": "1. Aceptación",
-    "s1Text": "Al utilizar Vasari Obsidian Web Design Toolkit (\"el Servicio\"), usted acepta estos Términos de servicio. El Servicio es proporcionado por Vasari Obsidian, una empresa con sede en Australia. Estos términos se rigen por las leyes de Australia.",
+    "s1Text": "Al utilizar UIl4b Design Toolkit (\"el Servicio\"), usted acepta estos Términos de servicio. El Servicio es proporcionado por UIl4b, una empresa con sede en Australia. Estos términos se rigen por las leyes de Australia.",
     "s2Title": "2. Cuenta",
     "s2Text": "Puede crear una cuenta utilizando correo electrónico/contraseña o autenticación de Google. Usted es responsable de mantener la seguridad de las credenciales de su cuenta. Debe tener al menos 16 años para crear una cuenta.",
     "s3Title": "3. Niveles gratuito y Pro",
     "s3Text": "El Servicio ofrece un nivel gratuito con funciones básicas y un nivel Pro con herramientas adicionales. Las suscripciones Pro se facturan mensual o anualmente. Puede cancelar en cualquier momento; el acceso continúa hasta el final del período de facturación. Los reembolsos se gestionan caso por caso de acuerdo con la Ley del Consumidor de Australia.",
     "s4Title": "4. Propiedad intelectual",
-    "s4Text": "Los diseños, paletas, degradados y otros resultados que cree utilizando el Servicio le pertenecen a usted. El Servicio en sí, incluido su código, diseño y documentación, es propiedad de Vasari Obsidian y está protegido por la ley de derechos de autor australiana.",
+    "s4Text": "Los diseños, paletas, degradados y otros resultados que cree utilizando el Servicio le pertenecen a usted. El Servicio en sí, incluido su código, diseño y documentación, es propiedad de UIl4b y está protegido por la ley de derechos de autor australiana.",
     "s5Title": "5. Uso aceptable",
     "s5Intro": "Usted se compromete a no:",
     "s5Items": [
@@ -566,7 +566,7 @@
       "Usar sistemas automatizados para extraer datos del Servicio"
     ],
     "s6Title": "6. Limitación de responsabilidad",
-    "s6Text": "El Servicio se proporciona \"tal cual\" sin garantías de ningún tipo, salvo las requeridas por la Ley del Consumidor de Australia. En la medida máxima permitida por la ley, Vasari Obsidian no es responsable de ningún daño indirecto, incidental o consecuente que surja del uso del Servicio.",
+    "s6Text": "El Servicio se proporciona \"tal cual\" sin garantías de ningún tipo, salvo las requeridas por la Ley del Consumidor de Australia. En la medida máxima permitida por la ley, UIl4b no es responsable de ningún daño indirecto, incidental o consecuente que surja del uso del Servicio.",
     "s7Title": "7. Cambios",
     "s7Text": "Podemos actualizar estos Términos periódicamente. Los cambios materiales se comunicarán por correo electrónico o mediante una notificación en la aplicación con al menos 30 días de antelación antes de que entren en vigor.",
     "s8Title": "8. Contacto",

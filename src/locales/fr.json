@@ -31,10 +31,10 @@
     "colours": "Couleurs"
   },
   "brand": {
-    "name": "Vasari",
-    "tagline": "Obsidian Toolkit",
-    "full": "Vasari Obsidian",
-    "fullToolkit": "Vasari Obsidian Toolkit"
+    "name": "UIl4b",
+    "tagline": "Design Toolkit",
+    "full": "UIl4b",
+    "fullToolkit": "UIl4b Design Toolkit"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -397,7 +397,7 @@
     "dataCleared": "Données locales effacées",
     "clearConfirm": "Êtes-vous sûr ? Cela supprimera toutes les données enregistrées localement.",
     "privacyLegal": "Confidentialité et mentions légales",
-    "privacyInfo": "Vasari Obsidian est conforme à la loi australienne sur la protection de la vie privée de 1988 et aux Principes australiens de protection de la vie privée (APPs). Vos données sont traitées en Australie (région de Sydney) le cas échéant.",
+    "privacyInfo": "UIl4b est conforme à la loi australienne sur la protection de la vie privée de 1988 et aux Principes australiens de protection de la vie privée (APPs). Vos données sont traitées en Australie (région de Sydney) le cas échéant.",
     "privacyPoints": {
       "collect": "Nous ne collectons que les données nécessaires au service (APP 3)",
       "use": "Vos données sont utilisées uniquement pour fournir les fonctionnalités du toolkit (APP 6)",
@@ -438,7 +438,7 @@
     "welcomeBack": "Bon retour",
     "createAccount": "Créer un compte",
     "resetPassword": "Réinitialiser le mot de passe",
-    "signInSubtitle": "Connectez-vous à votre compte Vasari Obsidian.",
+    "signInSubtitle": "Connectez-vous à votre compte UIl4b.",
     "signUpSubtitle": "Inscrivez-vous pour sauvegarder votre travail et accéder à toutes les fonctionnalités.",
     "resetSubtitle": "Entrez votre email et choisissez un nouveau mot de passe.",
     "displayName": "Nom d'affichage",
@@ -475,7 +475,7 @@
   },
   "feedback": {
     "title": "Commentaires",
-    "subtitle": "Aidez-nous à améliorer Vasari Obsidian. Signalez des bugs, proposez des fonctionnalités ou partagez vos commentaires.",
+    "subtitle": "Aidez-nous à améliorer UIl4b. Signalez des bugs, proposez des fonctionnalités ou partagez vos commentaires.",
     "featureRequest": "Demande de fonctionnalité",
     "bugReport": "Rapport de bug",
     "general": "Général",
@@ -488,7 +488,7 @@
   },
   "community": {
     "title": "Communauté",
-    "subtitle": "Connectez-vous avec d'autres designers et développeurs utilisant Vasari Obsidian.",
+    "subtitle": "Connectez-vous avec d'autres designers et développeurs utilisant UIl4b.",
     "comingSoonDesc": "Partagez des palettes, obtenez des retours sur vos designs et découvrez des modèles créés par la communauté.",
     "github": "Dépôt GitHub",
     "githubDesc": "Parcourir le code source, mettre en favori et contribuer.",
@@ -502,7 +502,7 @@
     "title": "Politique de confidentialité",
     "lastUpdated": "Dernière mise à jour : mars 2026",
     "s1Title": "1. À propos de cette politique",
-    "s1Text": "Vasari Obsidian (« nous », « notre ») s'engage à protéger vos informations personnelles conformément à la loi australienne sur la protection de la vie privée de 1988 (Cth) et aux Principes australiens de protection de la vie privée (APPs). Cette politique explique comment nous collectons, utilisons, divulguons et protégeons vos informations personnelles.",
+    "s1Text": "UIl4b (« nous », « notre ») s'engage à protéger vos informations personnelles conformément à la loi australienne sur la protection de la vie privée de 1988 (Cth) et aux Principes australiens de protection de la vie privée (APPs). Cette politique explique comment nous collectons, utilisons, divulguons et protégeons vos informations personnelles.",
     "s2Title": "2. Informations que nous collectons (APP 3)",
     "s2Intro": "Nous ne collectons que les informations raisonnablement nécessaires à nos services :",
     "s2Items": [
@@ -550,13 +550,13 @@
     "title": "Conditions d'utilisation",
     "lastUpdated": "Dernière mise à jour : mars 2026",
     "s1Title": "1. Acceptation",
-    "s1Text": "En utilisant Vasari Obsidian Web Design Toolkit (« le Service »), vous acceptez les présentes Conditions d'utilisation. Le Service est fourni par Vasari Obsidian, une entreprise basée en Australie. Ces conditions sont régies par les lois de l'Australie.",
+    "s1Text": "En utilisant UIl4b Design Toolkit (« le Service »), vous acceptez les présentes Conditions d'utilisation. Le Service est fourni par UIl4b, une entreprise basée en Australie. Ces conditions sont régies par les lois de l'Australie.",
     "s2Title": "2. Compte",
     "s2Text": "Vous pouvez créer un compte en utilisant une adresse e-mail et un mot de passe ou l'authentification Google. Vous êtes responsable du maintien de la sécurité des identifiants de votre compte. Vous devez avoir au moins 16 ans pour créer un compte.",
     "s3Title": "3. Niveaux gratuit et Pro",
     "s3Text": "Le Service propose un niveau gratuit avec les fonctionnalités de base et un niveau Pro avec des outils supplémentaires. Les abonnements Pro sont facturés mensuellement ou annuellement. Vous pouvez annuler à tout moment ; l'accès se poursuit jusqu'à la fin de la période de facturation. Les remboursements sont traités au cas par cas conformément au droit australien de la consommation.",
     "s4Title": "4. Propriété intellectuelle",
-    "s4Text": "Les designs, palettes, dégradés et autres créations que vous réalisez à l'aide du Service vous appartiennent. Le Service lui-même, y compris son code, son design et sa documentation, est la propriété de Vasari Obsidian et est protégé par le droit d'auteur australien.",
+    "s4Text": "Les designs, palettes, dégradés et autres créations que vous réalisez à l'aide du Service vous appartiennent. Le Service lui-même, y compris son code, son design et sa documentation, est la propriété de UIl4b et est protégé par le droit d'auteur australien.",
     "s5Title": "5. Utilisation acceptable",
     "s5Intro": "Vous vous engagez à ne pas :",
     "s5Items": [
@@ -566,7 +566,7 @@
       "Utiliser des systèmes automatisés pour extraire des données du Service"
     ],
     "s6Title": "6. Limitation de responsabilité",
-    "s6Text": "Le Service est fourni « tel quel » sans garantie d'aucune sorte, sauf celles requises par le droit australien de la consommation. Dans toute la mesure permise par la loi, Vasari Obsidian ne saurait être tenu responsable de tout dommage indirect, accessoire ou consécutif résultant de votre utilisation du Service.",
+    "s6Text": "Le Service est fourni « tel quel » sans garantie d'aucune sorte, sauf celles requises par le droit australien de la consommation. Dans toute la mesure permise par la loi, UIl4b ne saurait être tenu responsable de tout dommage indirect, accessoire ou consécutif résultant de votre utilisation du Service.",
     "s7Title": "7. Modifications",
     "s7Text": "Nous pouvons mettre à jour ces Conditions de temps à autre. Les modifications importantes seront communiquées par e-mail ou par une notification dans l'application au moins 30 jours avant leur entrée en vigueur.",
     "s8Title": "8. Contact",

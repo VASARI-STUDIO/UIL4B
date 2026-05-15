@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, deleteFeedback } from '../utils/analytics'
 
-const ADMIN_CODE = 'vasari-dev-2025'
+const ADMIN_CODE = 'uil4b-dev-2026'
 const ADMIN_KEY = 'vs-admin-unlocked'
 
 function StatCard({ value, label, sub }) {

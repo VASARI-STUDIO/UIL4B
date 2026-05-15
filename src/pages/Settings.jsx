@@ -240,7 +240,7 @@ export default function Settings({ toast }) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = 'vasari-studio-export.json'
+    a.download = 'uil4b-export.json'
     a.click()
     URL.revokeObjectURL(a.href)
     toast(t('settings.dataExported'))
@@ -416,7 +416,7 @@ export default function Settings({ toast }) {
               label="Company / Studio"
               value={userProfile?.company}
               onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }}
-              placeholder="e.g. Vasari Design Studio"
+              placeholder="e.g. Acme Design"
             />
 
             <EditField

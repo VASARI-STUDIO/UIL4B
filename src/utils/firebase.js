@@ -8,9 +8,9 @@ import { getFirestore } from 'firebase/firestore'
 // when creating the database in Firebase Console.
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'PLACEHOLDER_API_KEY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'visari-studio.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'visari-studio',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'visari-studio.appspot.com',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'uil4b.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'uil4b',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'uil4b.firebasestorage.app',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
   appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
 }
