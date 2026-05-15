@@ -80,9 +80,9 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
 
         <div className="topbar-brand">
           <div className="topbar-logo">
-            <svg width="14" height="14" viewBox="0 0 255 255" fill="none">
-              <path d="M45.048 67.54L70.2 135.892C71.992 140.628 73.912 145.876 75.96 151.636C78.136 157.268 80.12 162.516 81.912 167.38H82.296L93.816 135.892L119.352 67.54H137.784L90.168 188.5H73.08L26.424 67.54H45.048Z" fill="white"/>
-              <path d="M211.452 187.96L186.3 119.608C184.508 114.872 182.588 109.624 180.54 103.864C178.364 98.232 176.38 92.984 174.588 88.12L174.204 88.12L162.684 119.608L137.148 187.96L118.716 187.96L166.332 67L183.42 67L230.076 187.96L211.452 187.96Z" fill="white"/>
+            <svg width="16" height="16" viewBox="0 0 255 255" fill="none">
+              <text x="127.5" y="175" fontFamily="system-ui" fontSize="160" fontWeight="800" fill="white" textAnchor="middle" letterSpacing="-6">UI</text>
+              <rect x="168" y="58" width="10" height="100" rx="5" fill="#60A5FA"/>
             </svg>
           </div>
           <span className="topbar-title">{t('brand.full')}</span>

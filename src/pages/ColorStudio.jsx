@@ -257,7 +257,7 @@ export default function ColorStudio({ onCopy }) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Design System — Vasari Studio</title>
+  <title>Design System — UIl4b</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -345,13 +345,13 @@ pre.code { background: var(--ds-code-bg); color: var(--ds-code-text); padding: 2
 <body>
   <button class="theme-toggle" onclick="var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;this.textContent=t==='dark'?'Light Mode':'Dark Mode'">${isDark ? 'Light Mode' : 'Dark Mode'}</button>
   <nav class="sidebar">
-    <div class="sidebar-brand"><h3>Vasari Studio</h3><span class="brand-sub">Design System</span><span class="brand-date">Generated ${new Date().toLocaleDateString()}</span></div>
+    <div class="sidebar-brand"><h3>UIl4b</h3><span class="brand-sub">Design System</span><span class="brand-date">Generated ${new Date().toLocaleDateString()}</span></div>
     <div class="nav-label">Sections</div>
     <a href="#colours" class="active">Colours</a>
     <a href="#tint-scale">Tint Scale</a>
     <a href="#state-colours">State Colours</a>
     <a href="#css-properties">CSS Properties</a>
-    <div class="sidebar-footer"><span>Exported from Vasari Studio</span></div>
+    <div class="sidebar-footer"><span>Exported from UIl4b</span></div>
   </nav>
   <div class="content">
     <header>

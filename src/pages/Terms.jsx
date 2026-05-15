@@ -39,7 +39,7 @@ export default function Terms() {
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('terms.s8Title')}</h3>
         <p style={{ fontSize: 14, color: 'var(--t1)' }}>
           {t('terms.s8Text')}{' '}
-          <a href="mailto:legal@visaristudio.com">legal@visaristudio.com</a>.
+          <a href="mailto:legal@uil4b.com">legal@uil4b.com</a>.
         </p>
       </div>
     </div>

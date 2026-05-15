@@ -15,16 +15,16 @@ export default function Feedback({ toast }) {
 
     saveFeedback({ type, message: message.trim(), email: user?.email || '' })
 
-    const subject = encodeURIComponent(`[${type}] Feedback — Vasari Obsidian Toolkit`)
+    const subject = encodeURIComponent(`[${type}] Feedback — UIl4b Design Toolkit`)
     const body = encodeURIComponent(`Type: ${type}\n\n${message}`)
-    window.open(`mailto:hello@vasari.studio?subject=${subject}&body=${body}`, '_self')
+    window.open(`mailto:hello@uil4b.com?subject=${subject}&body=${body}`, '_self')
 
     toast(t('feedback.thankYou'))
     setMessage('')
   }
 
   const openGitHubIssue = () => {
-    window.open('https://github.com/vasari-studio/web-design-toolkit/issues/new', '_blank')
+    window.open('https://github.com/VASARI-STUDIO/Web-Design-Toolkit/issues/new', '_blank')
   }
 
   return (

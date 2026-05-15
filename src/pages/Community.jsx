@@ -10,7 +10,7 @@ const LINKS = [
     ),
     titleKey: 'community.github',
     descKey: 'community.githubDesc',
-    url: 'https://github.com/vasari-studio/web-design-toolkit',
+    url: 'https://github.com/VASARI-STUDIO/Web-Design-Toolkit',
   },
   {
     id: 'discussions',
@@ -21,7 +21,7 @@ const LINKS = [
     ),
     titleKey: 'community.discussions',
     descKey: 'community.discussionsDesc',
-    url: 'https://github.com/vasari-studio/web-design-toolkit/discussions',
+    url: 'https://github.com/VASARI-STUDIO/Web-Design-Toolkit/discussions',
   },
   {
     id: 'issues',
@@ -32,7 +32,7 @@ const LINKS = [
     ),
     titleKey: 'community.reportIssue',
     descKey: 'community.reportIssueDesc',
-    url: 'https://github.com/vasari-studio/web-design-toolkit/issues/new',
+    url: 'https://github.com/VASARI-STUDIO/Web-Design-Toolkit/issues/new',
   },
 ]
 

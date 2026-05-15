@@ -62,16 +62,26 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => { saveSession(null); setSession(null) }, [])
 
-  const resetPassword = useCallback(async (email, newPassword) => {
+  const resetPassword = useCallback(async (email, currentPassword, newPassword) => {
     const users = getUsers()
     const key = email.toLowerCase()
     if (!users[key]) throw { code: 'auth/user-not-found' }
+    if (users[key].provider === 'google') throw { code: 'auth/wrong-password' }
+    if (users[key].passwordHash !== hashPassword(currentPassword)) throw { code: 'auth/wrong-password' }
     users[key].passwordHash = hashPassword(newPassword)
     saveUsers(users)
   }, [])
 
   const loginWithGoogle = useCallback(async () => {
-    const result = await signInWithPopup(firebaseAuth, googleProvider)
+    let result
+    try {
+      result = await signInWithPopup(firebaseAuth, googleProvider)
+    } catch (err) {
+      if (err?.code === 'auth/configuration-not-found' || err?.code === 'auth/invalid-api-key' || err?.code === 'auth/api-key-not-valid') {
+        throw { code: 'auth/google-unavailable' }
+      }
+      throw err
+    }
     const gUser = result.user
     const email = gUser.email
     const key = email.toLowerCase()
