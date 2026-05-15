@@ -1,4 +1,4 @@
-# UIl4b — Design Toolkit
+# UIL4B — Design Toolkit
 
 A comprehensive design toolkit built with React and Vite. Create colour palettes, generate tint scales, check contrast, build gradients, pair fonts, convert images, extract video frames, and export production-ready CSS — all in the browser.
 
@@ -86,4 +86,4 @@ npm run preview    # Preview production build
 
 ## Licence
 
-MIT — UIl4b 2026.
+MIT — UIL4B 2026.

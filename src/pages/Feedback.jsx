@@ -15,7 +15,7 @@ export default function Feedback({ toast }) {
 
     saveFeedback({ type, message: message.trim(), email: user?.email || '' })
 
-    const subject = encodeURIComponent(`[${type}] Feedback — UIl4b Design Toolkit`)
+    const subject = encodeURIComponent(`[${type}] Feedback — UIL4B Design Toolkit`)
     const body = encodeURIComponent(`Type: ${type}\n\n${message}`)
     window.open(`mailto:hello@uil4b.com?subject=${subject}&body=${body}`, '_self')
 
