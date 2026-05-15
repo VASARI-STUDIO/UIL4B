@@ -117,7 +117,7 @@ export default function Dashboard() {
           <p className="bento-hero-sub">{t('dash.heroSub')}</p>
           {lastTool && (
             <NavLink to={lastTool.path} className="bento-hero-cta">
-              <span>Continue with {lastTool.label}</span>
+              <span>{t('dash.continueWith', { name: lastTool.label })}</span>
               <ArrowIcon />
             </NavLink>
           )}
@@ -125,18 +125,18 @@ export default function Dashboard() {
 
         {/* TIME / STATUS */}
         <div className="bento-card bento-time">
-          <div className="bento-label">Local time</div>
+          <div className="bento-label">{t('dash.localTime')}</div>
           <div className="bento-time-big">{timeStr}</div>
           <div className="bento-time-stats">
-            <div><span className="bento-time-num">{pinnedTools.length}</span><span className="bento-time-lbl">Pinned</span></div>
-            <div><span className="bento-time-num">{lTools.length}</span><span className="bento-time-lbl">Tools</span></div>
-            <div><span className="bento-time-num">{lCats.length}</span><span className="bento-time-lbl">Areas</span></div>
+            <div><span className="bento-time-num">{pinnedTools.length}</span><span className="bento-time-lbl">{t('dash.pinned')}</span></div>
+            <div><span className="bento-time-num">{lTools.length}</span><span className="bento-time-lbl">{t('dash.tools')}</span></div>
+            <div><span className="bento-time-num">{lCats.length}</span><span className="bento-time-lbl">{t('dash.areas')}</span></div>
           </div>
         </div>
 
         {/* QUICK ACTIONS */}
         <div className="bento-card bento-quick">
-          <div className="bento-label">Jump back in</div>
+          <div className="bento-label">{t('dash.jumpBackIn')}</div>
           <div className="bento-quick-list">
             {recentTools.length > 0 ? recentTools.map(tl => (
               <NavLink key={tl.id} to={tl.path} className="bento-quick-item">
@@ -145,7 +145,7 @@ export default function Dashboard() {
                 <ArrowIcon />
               </NavLink>
             )) : (
-              <div className="bento-quick-empty">Visit a tool to see it here</div>
+              <div className="bento-quick-empty">{t('dash.visitToolHint')}</div>
             )}
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function Dashboard() {
         {/* COLOR STUDIO featured - palette preview */}
         <NavLink to="/color" className="bento-card bento-feature bento-color">
           <div className="bento-feature-head">
-            <div className="bento-label">Featured</div>
+            <div className="bento-label">{t('dash.featured')}</div>
             <span className="bento-feature-num">01</span>
           </div>
           <div className="bento-color-strip">
@@ -164,9 +164,9 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="bento-feature-body">
-            <h2>Colour Studio</h2>
-            <p>Build palettes, tints, gradients, contrast checks and complete design system exports.</p>
-            <span className="bento-feature-link">Open studio <ArrowIcon /></span>
+            <h2>{colorCat?.label || 'Colour Studio'}</h2>
+            <p>{colorCat?.description}</p>
+            <span className="bento-feature-link">{t('common.open')} <ArrowIcon /></span>
           </div>
         </NavLink>
 
@@ -178,9 +178,9 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="bento-cat-body">
-            <div className="bento-label">Category 02</div>
+            <div className="bento-label">{t('dash.category', { num: '02' })}</div>
             <h3>{typoCat?.label || 'Typography'}</h3>
-            <p>Type scales and pairings tuned for readability.</p>
+            <p>{typoCat?.description}</p>
           </div>
         </NavLink>
 
@@ -194,9 +194,9 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="bento-cat-body">
-            <div className="bento-label">Category 03</div>
+            <div className="bento-label">{t('dash.category', { num: '03' })}</div>
             <h3>{imgCat?.label || 'Imagery'}</h3>
-            <p>Icons, image tools, video frames, prompts.</p>
+            <p>{imgCat?.description}</p>
           </div>
         </NavLink>
 
@@ -211,9 +211,9 @@ export default function Dashboard() {
             <span className="bento-docs-mark" />
           </div>
           <div className="bento-cat-body">
-            <div className="bento-label">Category 04</div>
+            <div className="bento-label">{t('dash.category', { num: '04' })}</div>
             <h3>{docsCat?.label || 'Documentation'}</h3>
-            <p>Principles, marketing playbooks, and references — written like real articles.</p>
+            <p>{docsCat?.description}</p>
           </div>
         </NavLink>
       </div>
@@ -227,7 +227,7 @@ export default function Dashboard() {
         {pinnedTools.length === 0 ? (
           <div className="dash-pin-hint">
             <PinIcon />
-            <span>Pin tools from any category to see them here for quick access.</span>
+            <span>{t('dash.pinHint')}</span>
           </div>
         ) : (
           <div className="pinned-strip">

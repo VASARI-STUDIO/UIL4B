@@ -7,6 +7,7 @@ import CommandPalette from './components/CommandPalette'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
+import { useAuth } from './contexts/AuthContext'
 
 import Dashboard from './pages/Dashboard'
 import ColorStudio from './pages/ColorStudio'
@@ -28,6 +29,13 @@ import CategoryDashboard from './pages/CategoryDashboard'
 import DesignReference from './pages/DesignReference'
 import VideoToFrames from './pages/VideoToFrames'
 import Admin from './pages/Admin'
+
+function RequireAuth({ children }) {
+  const { user } = useAuth()
+  const location = useLocation()
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
+  return children
+}
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -93,12 +101,12 @@ export default function App() {
             <Route path="/design-reference" element={<DesignReference onCopy={copy} />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/login" element={<Login toast={toast} />} />
-            <Route path="/settings" element={<Settings toast={toast} />} />
+            <Route path="/settings" element={<RequireAuth><Settings toast={toast} /></RequireAuth>} />
             <Route path="/community" element={<Community />} />
             <Route path="/feedback" element={<Feedback toast={toast} />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="/admin" element={<Admin toast={toast} />} />
+            <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

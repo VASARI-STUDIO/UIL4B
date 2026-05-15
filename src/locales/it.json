@@ -76,7 +76,17 @@
     "explore": "Esplora",
     "categoryCount": "{count} categorie",
     "emptyPinned": "Fissa strumenti da qualsiasi categoria per vederli qui.",
-    "toolCount": "{count} strumenti"
+    "toolCount": "{count} strumenti",
+    "localTime": "Ora locale",
+    "pinned": "Fissati",
+    "tools": "Strumenti",
+    "areas": "Aree",
+    "jumpBackIn": "Riprendi",
+    "continueWith": "Continua con {name}",
+    "visitToolHint": "Visita uno strumento per vederlo qui",
+    "featured": "In primo piano",
+    "category": "Categoria {num}",
+    "pinHint": "Fissa strumenti da qualsiasi categoria per vederli qui per un accesso rapido."
   },
   "categories": {
     "color": {

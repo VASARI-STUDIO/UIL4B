@@ -76,7 +76,17 @@
     "explore": "Explorer",
     "categoryCount": "{count} catégories",
     "emptyPinned": "Épinglez des outils de n'importe quelle catégorie pour les voir ici.",
-    "toolCount": "{count} outils"
+    "toolCount": "{count} outils",
+    "localTime": "Heure locale",
+    "pinned": "Épinglés",
+    "tools": "Outils",
+    "areas": "Domaines",
+    "jumpBackIn": "Reprendre",
+    "continueWith": "Continuer avec {name}",
+    "visitToolHint": "Visitez un outil pour le voir ici",
+    "featured": "À la une",
+    "category": "Catégorie {num}",
+    "pinHint": "Épinglez des outils de n'importe quelle catégorie pour y accéder rapidement."
   },
   "categories": {
     "color": {
