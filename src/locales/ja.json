@@ -43,7 +43,8 @@
     "toggleMenu": "メニューの切替",
     "toggle": "{name}の切替",
     "proPlan": "PRO プラン",
-    "freePlan": "無料プラン"
+    "freePlan": "無料プラン",
+    "projects": "プロジェクト"
   },
   "topbar": {
     "searchHint": "ツールを検索、ページに移動…",

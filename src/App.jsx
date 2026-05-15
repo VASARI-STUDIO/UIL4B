@@ -29,6 +29,7 @@ import CategoryDashboard from './pages/CategoryDashboard'
 import DesignReference from './pages/DesignReference'
 import VideoToFrames from './pages/VideoToFrames'
 import Admin from './pages/Admin'
+import Projects from './pages/Projects'
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
@@ -91,7 +92,7 @@ export default function App() {
             <Route path="/contrast" element={<Navigate to="/color" replace />} />
             <Route path="/export" element={<Navigate to="/color" replace />} />
             <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
-            <Route path="/fontpairs" element={<FontMatcher onCopy={copy} />} />
+            <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="/design-reference" element={<DesignReference onCopy={copy} />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/login" element={<Login toast={toast} />} />
+            <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
             <Route path="/settings" element={<RequireAuth><Settings toast={toast} /></RequireAuth>} />
             <Route path="/community" element={<Community />} />
             <Route path="/feedback" element={<Feedback toast={toast} />} />

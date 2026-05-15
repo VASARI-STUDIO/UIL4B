@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import { useProject } from '../contexts/ProjectContext'
 import {
   fetchFonts,
   searchFonts,
@@ -53,8 +54,19 @@ function ShuffleIcon() {
 
 const PAGE_SIZE = 40
 
-export default function FontMatcher({ onCopy }) {
+export default function FontMatcher({ onCopy, toast }) {
   const { t } = useI18n()
+  const { design, setFonts } = useProject()
+
+  const applyPairing = useCallback((heading, body) => {
+    const hWeight = heading.variants.includes(700) ? 700 : (heading.variants[heading.variants.length - 1] || 400)
+    const bWeight = body.variants.includes(400) ? 400 : (body.variants[0] || 400)
+    setFonts({
+      heading: { family: heading.family, weight: hWeight, category: heading.category },
+      body: { family: body.family, weight: bWeight, category: body.category },
+    })
+    if (toast) toast(`Applied: ${heading.family} + ${body.family}`)
+  }, [setFonts, toast])
 
   const [view, setView] = useState('discover')
   const [allFonts, setAllFonts] = useState([])
@@ -429,6 +441,14 @@ export default function FontMatcher({ onCopy }) {
                           </div>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button
+                              className="btn btn-s btn-accent"
+                              onClick={() => applyPairing(headingFont, body)}
+                              style={{ fontSize: 10 }}
+                              title="Use this pair in your current project"
+                            >
+                              Apply
+                            </button>
+                            <button
                               className="btn btn-s"
                               onClick={() => copyImport([
                                 { family: headingFont.family, weights: headingFont.variants },
@@ -436,7 +456,7 @@ export default function FontMatcher({ onCopy }) {
                               ])}
                               style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4 }}
                             >
-                              <CopyIcon size={9} /> Copy import
+                              <CopyIcon size={9} /> Copy
                             </button>
                             <button className="btn btn-s" onClick={() => openSpecimen(body)} style={{ fontSize: 10 }}>
                               View

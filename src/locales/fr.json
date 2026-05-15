@@ -43,7 +43,8 @@
     "toggleMenu": "Basculer le menu",
     "toggle": "Basculer {name}",
     "proPlan": "PLAN PRO",
-    "freePlan": "PLAN GRATUIT"
+    "freePlan": "PLAN GRATUIT",
+    "projects": "Projets"
   },
   "topbar": {
     "searchHint": "Rechercher des outils, aller à une page…",

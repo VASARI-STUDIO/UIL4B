@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, luminance, T_LABELS } from '../utils/colors'
-import { usePalette } from '../contexts/PaletteContext'
+import { usePalette, useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -170,22 +170,24 @@ function snap(value, target, threshold = 3) {
 export default function ColorStudio({ onCopy }) {
   const { t } = useI18n()
   const { theme } = useTheme()
-  const [baseColor, setBaseColor] = useState('#2563EB')
-  const [harmony, setHarmony] = useState('analogous')
-  const [extraColors, setExtraColors] = useState([])
-  const [stateColors, setStateColors] = useState({ success: 0, warning: 0, error: 0, info: 0 })
-  const [activeColorIdx, setActiveColorIdx] = useState(0)
-  const [cssExpanded, setCssExpanded] = useState(false)
-  const colorRef = useRef(null)
+  const { design, setPalette, setStates, setTints, setGradient } = useProject()
   const { savePalette } = usePalette()
 
-  const [lumBias, setLumBias] = useState(82)
-  const [satDecay, setSatDecay] = useState(12)
-  const [oled, setOled] = useState(true)
+  const [baseColor, setBaseColor] = useState(() => design?.palette?.base || '#2563EB')
+  const [harmony, setHarmony] = useState(() => design?.palette?.harmony || 'analogous')
+  const [extraColors, setExtraColors] = useState(() => design?.palette?.extraColors || [])
+  const [stateColors, setStateColors] = useState(() => design?.states || { success: 0, warning: 0, error: 0, info: 0 })
+  const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
+  const [cssExpanded, setCssExpanded] = useState(false)
+  const colorRef = useRef(null)
 
-  const [gradStops, setGradStops] = useState([{ color: null, position: 0 }, { color: null, position: 100 }])
-  const [gradAngle, setGradAngle] = useState(135)
-  const [gradType, setGradType] = useState('Linear')
+  const [lumBias, setLumBias] = useState(() => design?.tints?.lumBias ?? 82)
+  const [satDecay, setSatDecay] = useState(() => design?.tints?.satDecay ?? 12)
+  const [oled, setOled] = useState(() => design?.tints?.oled ?? true)
+
+  const [gradStops, setGradStops] = useState(() => design?.gradient?.stops || [{ color: null, position: 0 }, { color: null, position: 100 }])
+  const [gradAngle, setGradAngle] = useState(() => design?.gradient?.angle ?? 135)
+  const [gradType, setGradType] = useState(() => design?.gradient?.type || 'Linear')
   const [stopPickerIdx, setStopPickerIdx] = useState(null)
 
   const SECTIONS = useMemo(() => [
@@ -215,10 +217,29 @@ export default function ColorStudio({ onCopy }) {
   const colors = generateHarmony(baseColor, harmony)
   const allColors = [...colors, ...extraColors]
 
+  // Sync palette state to ProjectContext (full design persistence)
   useEffect(() => {
-    savePalette(allColors)
+    setPalette({ base: baseColor, harmony, extraColors, activeIdx: activeColorIdx, colors: allColors })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseColor, harmony, extraColors.length])
+  }, [baseColor, harmony, extraColors, activeColorIdx, allColors.join(',')])
+
+  useEffect(() => {
+    setStates(stateColors)
+    // Cache resolved state shades to localStorage so the global style-guide
+    // export (in TopBar) can include them without needing STATE_PRESETS.
+    try {
+      const resolved = Object.fromEntries(
+        Object.entries(stateColors).map(([state, idx]) => [state, STATE_PRESETS[state][idx].shades])
+      )
+      localStorage.setItem('vs-state-shades', JSON.stringify(resolved))
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stateColors])
+
+  useEffect(() => {
+    setGradient({ stops: gradStops, angle: gradAngle, type: gradType })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gradStops, gradAngle, gradType])
 
   const activeColor = allColors[activeColorIdx] || allColors[0]
 
@@ -229,6 +250,12 @@ export default function ColorStudio({ onCopy }) {
       lMin: oled ? 3 : 5, lMax: lumBias, mode: 'perceived',
     })
   }, [activeColor, lumBias, satDecay, oled])
+
+  // Sync tints to ProjectContext
+  useEffect(() => {
+    setTints({ lumBias, satDecay, oled, scale: tintScale })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lumBias, satDecay, oled, tintScale.join(',')])
 
   const { registerExport, clearExport } = useExport()
 
@@ -429,13 +456,14 @@ ${stateVars}
     }
 
     registerExport({
+      label: 'Colour System',
       downloadHTML: () => {
         const html = generateHTML()
         const blob = new Blob([html], { type: 'text/html' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'design-system.html'
+        a.download = 'colour-system.html'
         a.click()
         URL.revokeObjectURL(url)
       },
@@ -446,7 +474,7 @@ ${stateVars}
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'design-system.css'
+        a.download = 'colour-system.css'
         a.click()
         URL.revokeObjectURL(url)
       },

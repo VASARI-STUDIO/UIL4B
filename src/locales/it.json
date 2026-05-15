@@ -43,7 +43,8 @@
     "toggleMenu": "Attiva/disattiva menu",
     "toggle": "Attiva/disattiva {name}",
     "proPlan": "PIANO PRO",
-    "freePlan": "PIANO GRATUITO"
+    "freePlan": "PIANO GRATUITO",
+    "projects": "Progetti"
   },
   "topbar": {
     "searchHint": "Cerca strumenti, vai a una pagina…",
