@@ -31,10 +31,10 @@
     "colours": "Cores"
   },
   "brand": {
-    "name": "UIl4b",
+    "name": "UIL4B",
     "tagline": "Design Toolkit",
-    "full": "UIl4b",
-    "fullToolkit": "UIl4b Design Toolkit"
+    "full": "UIL4B",
+    "fullToolkit": "UIL4B Design Toolkit"
   },
   "nav": {
     "dashboard": "Painel",
@@ -397,7 +397,7 @@
     "dataCleared": "Dados locais limpos",
     "clearConfirm": "Tem certeza? Isso excluirá todos os dados salvos localmente.",
     "privacyLegal": "Privacidade e Jurídico",
-    "privacyInfo": "UIl4b está em conformidade com a Lei de Privacidade Australiana de 1988 e os Princípios de Privacidade Australianos (APPs). Seus dados são processados na Austrália (região de Sydney), quando aplicável.",
+    "privacyInfo": "UIL4B está em conformidade com a Lei de Privacidade Australiana de 1988 e os Princípios de Privacidade Australianos (APPs). Seus dados são processados na Austrália (região de Sydney), quando aplicável.",
     "privacyPoints": {
       "collect": "Coletamos apenas os dados necessários para o serviço (APP 3)",
       "use": "Seus dados são usados exclusivamente para fornecer os recursos do toolkit (APP 6)",
@@ -438,7 +438,7 @@
     "welcomeBack": "Bem-vindo de Volta",
     "createAccount": "Criar Conta",
     "resetPassword": "Redefinir Senha",
-    "signInSubtitle": "Entre na sua conta UIl4b.",
+    "signInSubtitle": "Entre na sua conta UIL4B.",
     "signUpSubtitle": "Cadastre-se para salvar seu trabalho e acessar todos os recursos.",
     "resetSubtitle": "Digite seu email e escolha uma nova senha.",
     "displayName": "Nome de Exibição",
@@ -475,7 +475,7 @@
   },
   "feedback": {
     "title": "Feedback",
-    "subtitle": "Ajude-nos a melhorar o UIl4b. Compartilhe bugs, solicitações de recursos ou feedback geral.",
+    "subtitle": "Ajude-nos a melhorar o UIL4B. Compartilhe bugs, solicitações de recursos ou feedback geral.",
     "featureRequest": "Solicitação de Recurso",
     "bugReport": "Relatório de Bug",
     "general": "Geral",
@@ -488,7 +488,7 @@
   },
   "community": {
     "title": "Comunidade",
-    "subtitle": "Conecte-se com outros designers e desenvolvedores que usam o UIl4b.",
+    "subtitle": "Conecte-se com outros designers e desenvolvedores que usam o UIL4B.",
     "comingSoonDesc": "Compartilhe paletas, obtenha feedback sobre seus designs e descubra templates criados pela comunidade.",
     "github": "Repositório GitHub",
     "githubDesc": "Navegar pelo código-fonte, favoritar o projeto e contribuir.",
@@ -502,7 +502,7 @@
     "title": "Política de Privacidade",
     "lastUpdated": "Última atualização: março de 2026",
     "s1Title": "1. Sobre Esta Política",
-    "s1Text": "UIl4b (\"nós\", \"nos\", \"nosso\") está comprometido em proteger suas informações pessoais em conformidade com a Lei de Privacidade Australiana de 1988 (Cth) e os Princípios de Privacidade Australianos (APPs). Esta política explica como coletamos, usamos, divulgamos e protegemos suas informações pessoais.",
+    "s1Text": "UIL4B (\"nós\", \"nos\", \"nosso\") está comprometido em proteger suas informações pessoais em conformidade com a Lei de Privacidade Australiana de 1988 (Cth) e os Princípios de Privacidade Australianos (APPs). Esta política explica como coletamos, usamos, divulgamos e protegemos suas informações pessoais.",
     "s2Title": "2. Informações que Coletamos (APP 3)",
     "s2Intro": "Coletamos apenas as informações razoavelmente necessárias para nossos serviços:",
     "s2Items": [
@@ -550,13 +550,13 @@
     "title": "Termos de Serviço",
     "lastUpdated": "Última atualização: março de 2026",
     "s1Title": "1. Aceitação",
-    "s1Text": "Ao usar o UIl4b Design Toolkit (\"o Serviço\"), você concorda com estes Termos de Serviço. O Serviço é fornecido pela UIl4b, uma empresa sediada na Austrália. Estes termos são regidos pelas leis da Austrália.",
+    "s1Text": "Ao usar o UIL4B Design Toolkit (\"o Serviço\"), você concorda com estes Termos de Serviço. O Serviço é fornecido pela UIL4B, uma empresa sediada na Austrália. Estes termos são regidos pelas leis da Austrália.",
     "s2Title": "2. Conta",
     "s2Text": "Você pode criar uma conta usando e-mail/senha ou autenticação do Google. Você é responsável por manter a segurança das credenciais da sua conta. Você deve ter pelo menos 16 anos para criar uma conta.",
     "s3Title": "3. Planos Gratuito e Pro",
     "s3Text": "O Serviço oferece um plano gratuito com recursos essenciais e um plano Pro com ferramentas adicionais. As assinaturas Pro são cobradas mensal ou anualmente. Você pode cancelar a qualquer momento; o acesso continua até o final do período de cobrança. Reembolsos são tratados caso a caso, em conformidade com a Lei do Consumidor Australiana.",
     "s4Title": "4. Propriedade Intelectual",
-    "s4Text": "Designs, paletas, gradientes e outros resultados que você criar usando o Serviço pertencem a você. O Serviço em si, incluindo seu código, design e documentação, é de propriedade da UIl4b e protegido pela lei de direitos autorais australiana.",
+    "s4Text": "Designs, paletas, gradientes e outros resultados que você criar usando o Serviço pertencem a você. O Serviço em si, incluindo seu código, design e documentação, é de propriedade da UIL4B e protegido pela lei de direitos autorais australiana.",
     "s5Title": "5. Uso Aceitável",
     "s5Intro": "Você concorda em não:",
     "s5Items": [
@@ -566,7 +566,7 @@
       "Usar sistemas automatizados para extrair dados do Serviço"
     ],
     "s6Title": "6. Limitação de Responsabilidade",
-    "s6Text": "O Serviço é fornecido \"como está\", sem garantias de qualquer tipo, exceto conforme exigido pela Lei do Consumidor Australiana. Na máxima extensão permitida por lei, a UIl4b não é responsável por quaisquer danos indiretos, incidentais ou consequenciais decorrentes do uso do Serviço.",
+    "s6Text": "O Serviço é fornecido \"como está\", sem garantias de qualquer tipo, exceto conforme exigido pela Lei do Consumidor Australiana. Na máxima extensão permitida por lei, a UIL4B não é responsável por quaisquer danos indiretos, incidentais ou consequenciais decorrentes do uso do Serviço.",
     "s7Title": "7. Alterações",
     "s7Text": "Podemos atualizar estes Termos periodicamente. Alterações significativas serão comunicadas por e-mail ou notificação no aplicativo com pelo menos 30 dias de antecedência antes de entrarem em vigor.",
     "s8Title": "8. Contato",

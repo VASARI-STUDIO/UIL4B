@@ -31,10 +31,10 @@
     "colours": "Farben"
   },
   "brand": {
-    "name": "UIl4b",
+    "name": "UIL4B",
     "tagline": "Design Toolkit",
-    "full": "UIl4b",
-    "fullToolkit": "UIl4b Design Toolkit"
+    "full": "UIL4B",
+    "fullToolkit": "UIL4B Design Toolkit"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -397,7 +397,7 @@
     "dataCleared": "Lokale Daten gelöscht",
     "clearConfirm": "Sind Sie sicher? Dadurch werden alle lokal gespeicherten Daten gelöscht.",
     "privacyLegal": "Datenschutz und Recht",
-    "privacyInfo": "UIl4b entspricht dem australischen Datenschutzgesetz von 1988 und den australischen Datenschutzgrundsätzen (APPs). Ihre Daten werden gegebenenfalls in Australien (Region Sydney) verarbeitet.",
+    "privacyInfo": "UIL4B entspricht dem australischen Datenschutzgesetz von 1988 und den australischen Datenschutzgrundsätzen (APPs). Ihre Daten werden gegebenenfalls in Australien (Region Sydney) verarbeitet.",
     "privacyPoints": {
       "collect": "Wir erheben nur die für den Dienst erforderlichen Daten (APP 3)",
       "use": "Ihre Daten werden ausschließlich zur Bereitstellung der Toolkit-Funktionen verwendet (APP 6)",
@@ -438,7 +438,7 @@
     "welcomeBack": "Willkommen zurück",
     "createAccount": "Konto erstellen",
     "resetPassword": "Passwort zurücksetzen",
-    "signInSubtitle": "Melden Sie sich bei Ihrem UIl4b-Konto an.",
+    "signInSubtitle": "Melden Sie sich bei Ihrem UIL4B-Konto an.",
     "signUpSubtitle": "Registrieren Sie sich, um Ihre Arbeit zu speichern und auf alle Funktionen zuzugreifen.",
     "resetSubtitle": "Geben Sie Ihre E-Mail ein und wählen Sie ein neues Passwort.",
     "displayName": "Anzeigename",
@@ -475,7 +475,7 @@
   },
   "feedback": {
     "title": "Feedback",
-    "subtitle": "Helfen Sie uns, UIl4b zu verbessern. Teilen Sie Fehler, Funktionswünsche oder allgemeines Feedback mit.",
+    "subtitle": "Helfen Sie uns, UIL4B zu verbessern. Teilen Sie Fehler, Funktionswünsche oder allgemeines Feedback mit.",
     "featureRequest": "Funktionswunsch",
     "bugReport": "Fehlerbericht",
     "general": "Allgemein",
@@ -488,7 +488,7 @@
   },
   "community": {
     "title": "Community",
-    "subtitle": "Vernetzen Sie sich mit anderen Designern und Entwicklern, die UIl4b nutzen.",
+    "subtitle": "Vernetzen Sie sich mit anderen Designern und Entwicklern, die UIL4B nutzen.",
     "comingSoonDesc": "Teilen Sie Paletten, erhalten Sie Feedback zu Ihren Designs und entdecken Sie von der Community erstellte Vorlagen.",
     "github": "GitHub-Repository",
     "githubDesc": "Quellcode durchsuchen, Projekt markieren und beitragen.",
@@ -502,7 +502,7 @@
     "title": "Datenschutzrichtlinie",
     "lastUpdated": "Zuletzt aktualisiert: März 2026",
     "s1Title": "1. Über diese Richtlinie",
-    "s1Text": "UIl4b («wir», «uns», «unser») verpflichtet sich, Ihre persönlichen Daten gemäß dem australischen Datenschutzgesetz von 1988 (Cth) und den australischen Datenschutzgrundsätzen (APPs) zu schützen. Diese Richtlinie erläutert, wie wir Ihre persönlichen Daten erheben, verwenden, offenlegen und schützen.",
+    "s1Text": "UIL4B («wir», «uns», «unser») verpflichtet sich, Ihre persönlichen Daten gemäß dem australischen Datenschutzgesetz von 1988 (Cth) und den australischen Datenschutzgrundsätzen (APPs) zu schützen. Diese Richtlinie erläutert, wie wir Ihre persönlichen Daten erheben, verwenden, offenlegen und schützen.",
     "s2Title": "2. Informationen, die wir erheben (APP 3)",
     "s2Intro": "Wir erheben nur Informationen, die für unsere Dienste vernünftigerweise erforderlich sind:",
     "s2Items": [
@@ -550,13 +550,13 @@
     "title": "Nutzungsbedingungen",
     "lastUpdated": "Zuletzt aktualisiert: März 2026",
     "s1Title": "1. Annahme",
-    "s1Text": "Durch die Nutzung von UIl4b Design Toolkit («der Dienst») stimmen Sie diesen Nutzungsbedingungen zu. Der Dienst wird von UIl4b, einem in Australien ansässigen Unternehmen, bereitgestellt. Diese Bedingungen unterliegen den Gesetzen Australiens.",
+    "s1Text": "Durch die Nutzung von UIL4B Design Toolkit («der Dienst») stimmen Sie diesen Nutzungsbedingungen zu. Der Dienst wird von UIL4B, einem in Australien ansässigen Unternehmen, bereitgestellt. Diese Bedingungen unterliegen den Gesetzen Australiens.",
     "s2Title": "2. Konto",
     "s2Text": "Sie können ein Konto mit E-Mail/Passwort oder Google-Authentifizierung erstellen. Sie sind für die Sicherheit Ihrer Kontoanmeldedaten verantwortlich. Sie müssen mindestens 16 Jahre alt sein, um ein Konto zu erstellen.",
     "s3Title": "3. Kostenlose und Pro-Stufe",
     "s3Text": "Der Dienst bietet eine kostenlose Stufe mit Kernfunktionen und eine Pro-Stufe mit zusätzlichen Werkzeugen. Pro-Abonnements werden monatlich oder jährlich abgerechnet. Sie können jederzeit kündigen; der Zugang besteht bis zum Ende des Abrechnungszeitraums fort. Erstattungen werden im Einzelfall gemäß dem australischen Verbraucherrecht behandelt.",
     "s4Title": "4. Geistiges Eigentum",
-    "s4Text": "Designs, Paletten, Verläufe und andere Ergebnisse, die Sie mit dem Dienst erstellen, gehören Ihnen. Der Dienst selbst, einschließlich seines Codes, Designs und seiner Dokumentation, ist Eigentum von UIl4b und durch das australische Urheberrecht geschützt.",
+    "s4Text": "Designs, Paletten, Verläufe und andere Ergebnisse, die Sie mit dem Dienst erstellen, gehören Ihnen. Der Dienst selbst, einschließlich seines Codes, Designs und seiner Dokumentation, ist Eigentum von UIL4B und durch das australische Urheberrecht geschützt.",
     "s5Title": "5. Zulässige Nutzung",
     "s5Intro": "Sie verpflichten sich, Folgendes zu unterlassen:",
     "s5Items": [
@@ -566,7 +566,7 @@
       "Automatisierte Systeme zum Extrahieren von Daten aus dem Dienst zu verwenden"
     ],
     "s6Title": "6. Haftungsbeschränkung",
-    "s6Text": "Der Dienst wird ohne Gewährleistung jeglicher Art bereitgestellt, außer soweit dies nach dem australischen Verbraucherrecht erforderlich ist. Im gesetzlich zulässigen Umfang haftet UIl4b nicht für indirekte, zufällige oder Folgeschäden, die aus Ihrer Nutzung des Dienstes entstehen.",
+    "s6Text": "Der Dienst wird ohne Gewährleistung jeglicher Art bereitgestellt, außer soweit dies nach dem australischen Verbraucherrecht erforderlich ist. Im gesetzlich zulässigen Umfang haftet UIL4B nicht für indirekte, zufällige oder Folgeschäden, die aus Ihrer Nutzung des Dienstes entstehen.",
     "s7Title": "7. Änderungen",
     "s7Text": "Wir können diese Bedingungen von Zeit zu Zeit aktualisieren. Wesentliche Änderungen werden per E-Mail oder durch eine In-App-Benachrichtigung mindestens 30 Tage vor Inkrafttreten mitgeteilt.",
     "s8Title": "8. Kontakt",
