@@ -64,7 +64,9 @@ export function saveFeedback(entry) {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     ...entry,
     status: 'new',
+    adminNotes: '',
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   })
   save(FEEDBACK_KEY, feedback)
 }
@@ -78,6 +80,18 @@ export function updateFeedbackStatus(id, status) {
   const item = feedback.find(f => f.id === id)
   if (item) {
     item.status = status
+    item.updatedAt = new Date().toISOString()
+    save(FEEDBACK_KEY, feedback)
+  }
+  return feedback
+}
+
+export function updateFeedbackNotes(id, notes) {
+  const feedback = load(FEEDBACK_KEY, [])
+  const item = feedback.find(f => f.id === id)
+  if (item) {
+    item.adminNotes = notes
+    item.updatedAt = new Date().toISOString()
     save(FEEDBACK_KEY, feedback)
   }
   return feedback
