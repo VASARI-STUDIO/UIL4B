@@ -76,7 +76,17 @@
     "explore": "Entdecken",
     "categoryCount": "{count} Kategorien",
     "emptyPinned": "Heften Sie Werkzeuge aus einer beliebigen Kategorie an, um sie hier zu sehen.",
-    "toolCount": "{count} Werkzeuge"
+    "toolCount": "{count} Werkzeuge",
+    "localTime": "Ortszeit",
+    "pinned": "Angeheftet",
+    "tools": "Werkzeuge",
+    "areas": "Bereiche",
+    "jumpBackIn": "Weitermachen",
+    "continueWith": "Weiter mit {name}",
+    "visitToolHint": "Besuchen Sie ein Werkzeug, um es hier zu sehen",
+    "featured": "Empfohlen",
+    "category": "Kategorie {num}",
+    "pinHint": "Heften Sie Werkzeuge aus einer beliebigen Kategorie an, um sie hier für den schnellen Zugriff zu sehen."
   },
   "categories": {
     "color": {

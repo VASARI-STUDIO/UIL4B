@@ -76,7 +76,17 @@
     "explore": "探索",
     "categoryCount": "{count}カテゴリ",
     "emptyPinned": "任意のカテゴリからツールをピン留めすると、ここに表示されます。",
-    "toolCount": "{count}件のツール"
+    "toolCount": "{count}件のツール",
+    "localTime": "現地時間",
+    "pinned": "ピン留め",
+    "tools": "ツール",
+    "areas": "エリア",
+    "jumpBackIn": "続きから",
+    "continueWith": "{name}を続ける",
+    "visitToolHint": "ツールを訪れるとここに表示されます",
+    "featured": "おすすめ",
+    "category": "カテゴリー {num}",
+    "pinHint": "任意のカテゴリーからツールをピン留めして、ここからすばやくアクセスできます。"
   },
   "categories": {
     "color": {

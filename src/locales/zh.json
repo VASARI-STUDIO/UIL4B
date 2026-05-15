@@ -76,7 +76,17 @@
     "explore": "探索",
     "categoryCount": "{count}个分类",
     "emptyPinned": "从任意分类中固定工具，即可在此处显示。",
-    "toolCount": "{count}个工具"
+    "toolCount": "{count}个工具",
+    "localTime": "本地时间",
+    "pinned": "已固定",
+    "tools": "工具",
+    "areas": "领域",
+    "jumpBackIn": "继续",
+    "continueWith": "继续使用{name}",
+    "visitToolHint": "访问工具后会显示在这里",
+    "featured": "精选",
+    "category": "类别 {num}",
+    "pinHint": "从任何类别固定工具，以便在此处快速访问。"
   },
   "categories": {
     "color": {

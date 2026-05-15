@@ -76,7 +76,17 @@
     "explore": "Explore",
     "categoryCount": "{count} categories",
     "emptyPinned": "Pin tools from any category to see them here.",
-    "toolCount": "{count} tools"
+    "toolCount": "{count} tools",
+    "localTime": "Local time",
+    "pinned": "Pinned",
+    "tools": "Tools",
+    "areas": "Areas",
+    "jumpBackIn": "Jump back in",
+    "continueWith": "Continue with {name}",
+    "visitToolHint": "Visit a tool to see it here",
+    "featured": "Featured",
+    "category": "Category {num}",
+    "pinHint": "Pin tools from any category to see them here for quick access."
   },
   "categories": {
     "color": {
