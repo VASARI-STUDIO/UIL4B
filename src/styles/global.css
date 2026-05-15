@@ -436,13 +436,13 @@ a.bento-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.
 .bento-img:hover .bento-img-cell:nth-child(6){transition-delay:.2s}
 
 /* Docs preview */
-.bento-docs-grid{flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:7px;justify-content:center;position:relative;z-index:2;min-height:110px}
-.bento-docs-line{height:7px;border-radius:4px;background:var(--bg-3);display:block;transition:background .3s}
-.bento-docs-line.w-full{width:100%}
-.bento-docs-line.w-3\/4{width:75%}
-.bento-docs-line.w-5\/6{width:83%}
-.bento-docs-line.w-2\/3{width:66%}
-.bento-docs-line.w-4\/5{width:80%}
+.bento-docs-grid{flex:1;padding:18px 60px 18px 20px;display:flex;flex-direction:column;gap:7px;justify-content:center;position:relative;z-index:2;min-height:110px}
+.bento-docs-line{height:7px;border-radius:4px;background:var(--bg-3);display:block;transition:background .3s,width .3s}
+.bento-docs-line.w-full{width:85%}
+.bento-docs-line.w-3\/4{width:65%}
+.bento-docs-line.w-5\/6{width:72%}
+.bento-docs-line.w-2\/3{width:55%}
+.bento-docs-line.w-4\/5{width:68%}
 .bento-docs:hover .bento-docs-line:nth-child(1){background:var(--accent);width:90%}
 .bento-docs:hover .bento-docs-line:nth-child(3){background:color-mix(in srgb,var(--accent) 50%,var(--bg-3))}
 .bento-docs-mark{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:50%;background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 20%,transparent);display:flex;align-items:center;justify-content:center}
