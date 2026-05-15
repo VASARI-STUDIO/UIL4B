@@ -43,7 +43,8 @@
     "toggleMenu": "切换菜单",
     "toggle": "切换{name}",
     "proPlan": "专业版",
-    "freePlan": "免费版"
+    "freePlan": "免费版",
+    "projects": "项目"
   },
   "topbar": {
     "searchHint": "搜索工具、跳转至页面…",

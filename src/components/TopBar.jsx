@@ -1,21 +1,86 @@
 import { useState, useRef, useEffect } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useExport } from '../contexts/ExportContext'
+import { useProject } from '../contexts/ProjectContext'
+import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
-function ExportDropdown({ actions }) {
+const STATE_PRESETS_KEY = 'vs-state-shades'
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function ExportDropdown({ actions, onSaveProject, canSave }) {
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState('page')
   const ref = useRef(null)
+  const { design } = useProject()
+  const { theme } = useTheme()
 
   useEffect(() => {
     const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
+
+  // Pull cached state shades from localStorage if present (set by ColorStudio)
+  const getStateShades = () => {
+    try {
+      const raw = localStorage.getItem(STATE_PRESETS_KEY)
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  }
+
+  const exportStyleGuideHTML = () => {
+    const html = buildStyleGuideHTML({
+      design,
+      stateShades: getStateShades(),
+      theme,
+      projectName: 'My Style Guide',
+    })
+    downloadFile(html, 'style-guide.html', 'text/html')
+    setOpen(false)
+  }
+
+  const exportStyleGuideCSS = () => {
+    const css = buildCSSVars({
+      palette: design.palette,
+      tints: design.tints,
+      states: design.states,
+      fonts: design.fonts,
+      typeScale: design.typeScale,
+      stateShades: getStateShades(),
+    })
+    downloadFile(css + '\n', 'design-tokens.css', 'text/css')
+    setOpen(false)
+  }
+
+  const copyStyleGuideCSS = () => {
+    const css = buildCSSVars({
+      palette: design.palette,
+      tints: design.tints,
+      states: design.states,
+      fonts: design.fonts,
+      typeScale: design.typeScale,
+      stateShades: getStateShades(),
+    })
+    navigator.clipboard.writeText(css)
+    setOpen(false)
+  }
+
+  const showPageMode = !!actions && mode === 'page'
+  const showGuideMode = mode === 'guide'
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -33,31 +98,157 @@ function ExportDropdown({ actions }) {
         </svg>
       </button>
       {open && (
-        <div className="export-dropdown">
-          <button className="export-dropdown-item" onClick={() => { actions.downloadHTML(); setOpen(false) }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
-            </svg>
-            Export HTML
-            <span className="export-dropdown-hint">Styled reference page</span>
-          </button>
-          <button className="export-dropdown-item" onClick={() => { actions.downloadCSS(); setOpen(false) }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-            </svg>
-            Export CSS
-            <span className="export-dropdown-hint">Custom properties file</span>
-          </button>
-          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-          <button className="export-dropdown-item" onClick={() => { actions.copyCSS(); setOpen(false) }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-            </svg>
-            Copy CSS Variables
-            <span className="export-dropdown-hint">To clipboard</span>
-          </button>
+        <div className="export-dropdown" style={{ minWidth: 280 }}>
+          {/* Mode toggle */}
+          <div style={{ display: 'flex', gap: 4, padding: '6px 6px 8px', borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
+            <button
+              type="button"
+              className={`pt-t${mode === 'page' ? ' on' : ''}`}
+              onClick={() => setMode('page')}
+              disabled={!actions}
+              style={{ flex: 1, padding: '6px 10px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', opacity: !actions ? 0.4 : 1 }}
+            >
+              This page
+            </button>
+            <button
+              type="button"
+              className={`pt-t${mode === 'guide' ? ' on' : ''}`}
+              onClick={() => setMode('guide')}
+              style={{ flex: 1, padding: '6px 10px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}
+            >
+              Style guide
+            </button>
+          </div>
+
+          {/* PAGE MODE */}
+          {showPageMode && (
+            <>
+              <button className="export-dropdown-item" onClick={() => { actions.downloadHTML(); setOpen(false) }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
+                </svg>
+                Download HTML
+                <span className="export-dropdown-hint">{actions.label || 'This tool'}</span>
+              </button>
+              <button className="export-dropdown-item" onClick={() => { actions.downloadCSS(); setOpen(false) }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+                </svg>
+                Download CSS
+                <span className="export-dropdown-hint">Variables only</span>
+              </button>
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              <button className="export-dropdown-item" onClick={() => { actions.copyCSS(); setOpen(false) }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                </svg>
+                Copy CSS variables
+                <span className="export-dropdown-hint">To clipboard</span>
+              </button>
+            </>
+          )}
+
+          {!actions && mode === 'page' && (
+            <div style={{ padding: '12px 12px', fontSize: 11, color: 'var(--t2)' }}>
+              No page-specific export for this tool. Switch to Style guide to export your full design.
+            </div>
+          )}
+
+          {/* GUIDE MODE */}
+          {showGuideMode && (
+            <>
+              <button className="export-dropdown-item" onClick={exportStyleGuideHTML}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
+                </svg>
+                Download style guide
+                <span className="export-dropdown-hint">Styled HTML page</span>
+              </button>
+              <button className="export-dropdown-item" onClick={exportStyleGuideCSS}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+                </svg>
+                Download tokens
+                <span className="export-dropdown-hint">All CSS variables</span>
+              </button>
+              <button className="export-dropdown-item" onClick={copyStyleGuideCSS}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                </svg>
+                Copy tokens
+                <span className="export-dropdown-hint">To clipboard</span>
+              </button>
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              <div style={{ padding: '8px 12px 10px', fontSize: 10, color: 'var(--t3)', lineHeight: 1.5 }}>
+                Includes: palette · tints · states · fonts · type scale · gradient
+              </div>
+            </>
+          )}
+
+          {/* Save project */}
+          {canSave && (
+            <>
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              <button className="export-dropdown-item" onClick={() => { setOpen(false); onSaveProject() }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                Save as project
+                <span className="export-dropdown-hint">In your account</span>
+              </button>
+            </>
+          )}
         </div>
       )}
+    </div>
+  )
+}
+
+function SaveProjectModal({ open, onClose, onSave }) {
+  const [name, setName] = useState('')
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (open) {
+      setName('')
+      setTimeout(() => inputRef.current?.focus(), 50)
+    }
+  }, [open])
+
+  if (!open) return null
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    onSave(name.trim())
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="card"
+        style={{ width: '100%', maxWidth: 460, padding: 24 }}
+      >
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>Save project</div>
+        <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-.02em', marginBottom: 6 }}>Name this design</h3>
+        <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>Captures your palette, fonts, type scale, and tokens.</p>
+        <input
+          ref={inputRef}
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Brand v1, Marketing site, Mobile app"
+          style={{ width: '100%', marginBottom: 14 }}
+        />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn btn-accent" disabled={!name.trim()}>Save</button>
+        </div>
+      </form>
     </div>
   )
 }
@@ -67,7 +258,20 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
   const { exportActions } = useExport()
+  const { canSaveProjects, saveProject } = useProject()
+  const navigate = useNavigate()
+  const [saveOpen, setSaveOpen] = useState(false)
   const isMac = IS_MAC
+
+  const handleSaveProject = (name) => {
+    try {
+      saveProject(name)
+      setSaveOpen(false)
+      navigate('/projects')
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   return (
     <header className="topbar">
@@ -101,7 +305,11 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
       </div>
 
       <div className="topbar-right">
-        {exportActions && <ExportDropdown actions={exportActions} />}
+        <ExportDropdown
+          actions={exportActions}
+          onSaveProject={() => setSaveOpen(true)}
+          canSave={canSaveProjects}
+        />
 
         <button
           className="topbar-icon-btn"
@@ -136,6 +344,12 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
           </NavLink>
         )}
       </div>
+
+      <SaveProjectModal
+        open={saveOpen}
+        onClose={() => setSaveOpen(false)}
+        onSave={handleSaveProject}
+      />
     </header>
   )
 }

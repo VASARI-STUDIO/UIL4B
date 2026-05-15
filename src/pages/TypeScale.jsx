@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import { useProject } from '../contexts/ProjectContext'
 
 const NAMES = ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl']
 const EXPS = [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
@@ -37,16 +38,23 @@ function CopyIcon({ size = 12 }) {
 
 export default function TypeScale({ onCopy }) {
   const { t } = useI18n()
-  const [base, setBase] = useState(16)
-  const [ratio, setRatio] = useState(1.250)
+  const { design, setTypeScale } = useProject()
+  const [base, setBase] = useState(() => design?.typeScale?.base || 16)
+  const [ratio, setRatio] = useState(() => design?.typeScale?.ratio || 1.250)
   const [customRatio, setCustomRatio] = useState(1.333)
-  const [lineHeight, setLineHeight] = useState(1.5)
-  const [headingSpacing, setHeadingSpacing] = useState(0)
-  const [bodySpacing, setBodySpacing] = useState(0)
+  const [lineHeight, setLineHeight] = useState(() => design?.typeScale?.lineHeight || 1.5)
+  const [headingSpacing, setHeadingSpacing] = useState(() => design?.typeScale?.headingSpacing || 0)
+  const [bodySpacing, setBodySpacing] = useState(() => design?.typeScale?.bodySpacing || 0)
   const [exportFormat, setExportFormat] = useState('css')
   const [previewWidth, setPreviewWidth] = useState('full')
 
   const activeRatio = ratio === 0 ? customRatio : ratio
+
+  // Persist to ProjectContext
+  useEffect(() => {
+    setTypeScale({ base, ratio: activeRatio, lineHeight, headingSpacing, bodySpacing })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base, activeRatio, lineHeight, headingSpacing, bodySpacing])
 
   const scale = useMemo(() =>
     EXPS.map((e, i) => {

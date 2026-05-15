@@ -4,7 +4,7 @@ import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { PaletteProvider } from './contexts/PaletteContext'
+import { ProjectProvider } from './contexts/ProjectContext'
 import { WorkspaceProvider } from './contexts/WorkspaceContext'
 import { ExportProvider } from './contexts/ExportContext'
 import { I18nProvider } from './contexts/I18nContext'
@@ -16,13 +16,13 @@ createRoot(document.getElementById('root')).render(
       <ThemeProvider>
         <I18nProvider>
           <AuthProvider>
-            <PaletteProvider>
+            <ProjectProvider>
               <WorkspaceProvider>
                 <ExportProvider>
                   <App />
                 </ExportProvider>
               </WorkspaceProvider>
-            </PaletteProvider>
+            </ProjectProvider>
           </AuthProvider>
         </I18nProvider>
       </ThemeProvider>

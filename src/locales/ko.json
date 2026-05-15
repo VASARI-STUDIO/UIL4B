@@ -43,7 +43,8 @@
     "toggleMenu": "메뉴 전환",
     "toggle": "{name} 전환",
     "proPlan": "PRO 플랜",
-    "freePlan": "무료 플랜"
+    "freePlan": "무료 플랜",
+    "projects": "프로젝트"
   },
   "topbar": {
     "searchHint": "도구 검색, 페이지로 이동…",

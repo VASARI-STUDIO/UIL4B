@@ -24,10 +24,11 @@ function ArrowIcon() {
 
 function loadSavedPalette() {
   try {
-    const raw = localStorage.getItem('vs-palette')
+    const raw = localStorage.getItem('vs-current-design')
     if (!raw) return null
     const data = JSON.parse(raw)
-    return Array.isArray(data) ? data : null
+    const colors = data?.palette?.colors
+    return Array.isArray(colors) && colors.length ? colors : null
   } catch { return null }
 }
 
