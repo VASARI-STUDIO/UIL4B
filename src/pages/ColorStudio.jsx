@@ -645,7 +645,7 @@ ${stateVars}
         <div className="card" style={{ padding: '10px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button onClick={() => setCssExpanded(!cssExpanded)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font)', fontSize: 12, fontWeight: 600, color: 'var(--t1)', padding: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font)', fontSize: 12, fontWeight: 600, color: 'var(--t1)', padding: '8px 0', minHeight: 36 }}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transition: 'transform .2s', transform: cssExpanded ? 'rotate(90deg)' : 'none' }}>
                 <polyline points="9 6 15 12 9 18" />
@@ -678,9 +678,10 @@ ${stateVars}
           <div style={{ display: 'flex', gap: 4 }}>
             {allColors.map((c, i) => (
               <button key={i} onClick={() => setActiveColorIdx(i)} title={c}
+                aria-label={`Switch to ${c}`}
                 style={{
-                  width: 28, height: 28, borderRadius: 6, background: c, border: i === activeColorIdx ? '2px solid var(--accent)' : '1px solid var(--border)',
-                  cursor: 'pointer', transition: 'transform .1s',
+                  width: 36, height: 36, borderRadius: 8, background: c, border: i === activeColorIdx ? '2px solid var(--accent)' : '1px solid var(--border)',
+                  cursor: 'pointer', transition: 'transform .1s', padding: 0,
                 }}
               />
             ))}

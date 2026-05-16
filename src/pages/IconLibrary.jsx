@@ -155,8 +155,8 @@ export default function IconLibrary({ onCopy }) {
         </div>
 
         <div className="ig">
-          {icons.map(icon => (
-            <div key={icon.id + icon.name} className="ic" onClick={() => handleIconClick(icon)}>
+          {icons.map((icon, idx) => (
+            <div key={`${idx}-${icon.pack || ''}-${icon.name || ''}`} className="ic" onClick={() => handleIconClick(icon)}>
               {icon.cdn ? (
                 <img
                   src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`}
