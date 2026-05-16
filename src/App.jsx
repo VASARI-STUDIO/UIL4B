@@ -58,7 +58,13 @@ export default function App() {
     window.scrollTo(0, 0)
     trackPageView(location.pathname)
     trackSessionPage(location.pathname)
+    setMenuOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    document.body.classList.toggle('menu-open', menuOpen)
+    return () => document.body.classList.remove('menu-open')
+  }, [menuOpen])
 
   useEffect(() => {
     const onKey = (e) => {

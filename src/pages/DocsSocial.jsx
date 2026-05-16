@@ -74,15 +74,10 @@ export default function DocsSocial() {
   const { t } = useI18n()
   return (
     <div className="sec">
-      <div style={{ marginBottom: 48 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 32, height: 2, background: 'var(--accent)', borderRadius: 1 }} />
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>Marketing Playbook</span>
-        </div>
-        <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 800, letterSpacing: '-.04em', lineHeight: 1.05, marginBottom: 12 }}>{t('docsSocial.title')}</h1>
-        <p style={{ fontSize: 15, color: 'var(--t1)', maxWidth: 600, lineHeight: 1.75 }}>
-          Data-driven social media strategies for design professionals. Algorithm insights, conversion psychology, and creative frameworks that actually move metrics.
-        </p>
+      <div className="sec-h">
+        <div className="sec-h-eyebrow">Marketing Playbook</div>
+        <h1>{t('docsSocial.title')}</h1>
+        <p>Data-driven social media strategies for design professionals. Algorithm insights, conversion psychology, and creative frameworks that actually move metrics.</p>
       </div>
 
       <Article number="01" title="How Social Algorithms Actually Rank Content in 2025">

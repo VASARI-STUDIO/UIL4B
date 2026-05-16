@@ -21,25 +21,30 @@ function StatCard({ value, label, sub }) {
 }
 
 function DataTable({ headers, rows }) {
+  const cols = headers.map(h => h.width || 'minmax(120px, 1fr)').join(' ')
   return (
     <div style={{ borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: headers.map(h => h.width || '1fr').join(' '), background: 'var(--bg-2)', borderBottom: '1px solid var(--border)', padding: '8px 14px', gap: 8 }}>
-        {headers.map(h => (
-          <div key={h.key} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>{h.label}</div>
-        ))}
-      </div>
-      {rows.length === 0 && (
-        <div style={{ padding: '20px 14px', fontSize: 12, color: 'var(--t2)', textAlign: 'center' }}>No data yet</div>
-      )}
-      {rows.map((row, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: headers.map(h => h.width || '1fr').join(' '), padding: '8px 14px', gap: 8, borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', background: i % 2 === 0 ? 'transparent' : 'var(--bg-1)', fontSize: 12, alignItems: 'center' }}>
-          {headers.map(h => (
-            <div key={h.key} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: h.mono ? 'var(--t1)' : 'var(--t0)', fontFamily: h.mono ? 'var(--mono)' : 'inherit', fontWeight: h.bold ? 600 : 400 }}>
-              {typeof row[h.key] === 'function' ? row[h.key]() : row[h.key]}
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ minWidth: 'fit-content' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: cols, background: 'var(--bg-2)', borderBottom: '1px solid var(--border)', padding: '10px 14px', gap: 12 }}>
+            {headers.map(h => (
+              <div key={h.key} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>{h.label}</div>
+            ))}
+          </div>
+          {rows.length === 0 && (
+            <div style={{ padding: '20px 14px', fontSize: 12, color: 'var(--t2)', textAlign: 'center' }}>No data yet</div>
+          )}
+          {rows.map((row, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, padding: '10px 14px', gap: 12, borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', background: i % 2 === 0 ? 'transparent' : 'var(--bg-1)', fontSize: 12, alignItems: 'center' }}>
+              {headers.map(h => (
+                <div key={h.key} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: h.mono ? 'var(--t1)' : 'var(--t0)', fontFamily: h.mono ? 'var(--mono)' : 'inherit', fontWeight: h.bold ? 600 : 400 }}>
+                  {typeof row[h.key] === 'function' ? row[h.key]() : row[h.key]}
+                </div>
+              ))}
             </div>
           ))}
         </div>
-      ))}
+      </div>
     </div>
   )
 }
@@ -307,13 +312,13 @@ export default function Admin({ toast }) {
 
   return (
     <div className="sec">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+      <div className="sec-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ok)', boxShadow: '0 0 8px var(--ok)' }} />
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ok)', fontFamily: 'var(--mono)' }}>Admin Mode</span>
+          <div className="sec-h-eyebrow" style={{ color: 'var(--ok)' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ok)', display: 'inline-block', marginRight: 0 }} />
+            Admin Mode
           </div>
-          <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-.03em' }}>Dashboard</h1>
+          <h1>Dashboard</h1>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-s" onClick={refresh}>Refresh</button>

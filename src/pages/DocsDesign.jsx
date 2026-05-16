@@ -56,15 +56,10 @@ export default function DocsDesign() {
   const { t } = useI18n()
   return (
     <div className="sec">
-      <div style={{ marginBottom: 48 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 32, height: 2, background: 'var(--accent)', borderRadius: 1 }} />
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>Design Principles</span>
-        </div>
-        <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 800, letterSpacing: '-.04em', lineHeight: 1.05, marginBottom: 12 }}>{t('docsDesign.title')}</h1>
-        <p style={{ fontSize: 15, color: 'var(--t1)', maxWidth: 600, lineHeight: 1.75 }}>
-          Research-backed design principles that separate amateur sites from professional ones. Each section links psychology to actionable technique.
-        </p>
+      <div className="sec-h">
+        <div className="sec-h-eyebrow">Design Principles</div>
+        <h1>{t('docsDesign.title')}</h1>
+        <p>Research-backed design principles that separate amateur sites from professional ones. Each section links psychology to actionable technique.</p>
       </div>
 
       <Article number="01" title="The 50ms Verdict — Why Surface Quality Determines Trust">
