@@ -65,7 +65,7 @@ export default function PromptLibrary({ onCopy, toast }) {
             <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Enter your prompt..." style={{ minHeight: 80, resize: 'vertical' }} />
             <div className="row">
               <label style={{ fontSize: 10, color: 'var(--t2)' }}>Output image</label>
-              <input ref={fileRef} type="file" accept="image/*" style={{ fontSize: 11 }} />
+              <input ref={fileRef} type="file" accept="image/*" style={{ fontSize: 12, padding: 8, minHeight: 40 }} />
             </div>
             <div className="row">
               <label style={{ fontSize: 10, color: 'var(--t2)' }}>Tags</label>
