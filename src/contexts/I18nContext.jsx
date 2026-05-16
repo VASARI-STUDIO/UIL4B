@@ -4,15 +4,15 @@ const I18nContext = createContext()
 const STORAGE_KEY = 'vs-lang'
 
 const LANGUAGES = [
-  { code: 'en', label: 'English (AU)', flag: '🇦🇺' },
-  { code: 'es', label: 'Español', flag: '🇪🇸' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-  { code: 'it', label: 'Italiano', flag: '🇮🇹' },
-  { code: 'pt', label: 'Português', flag: '🇧🇷' },
-  { code: 'ja', label: '日本語', flag: '🇯🇵' },
-  { code: 'zh', label: '中文', flag: '🇨🇳' },
-  { code: 'ko', label: '한국어', flag: '🇰🇷' },
+  { code: 'en', label: 'English', native: 'English (AU)', flag: '🇦🇺', region: 'AU' },
+  { code: 'es', label: 'Spanish', native: 'Español', flag: '🇪🇸', region: 'ES' },
+  { code: 'fr', label: 'French', native: 'Français', flag: '🇫🇷', region: 'FR' },
+  { code: 'de', label: 'German', native: 'Deutsch', flag: '🇩🇪', region: 'DE' },
+  { code: 'it', label: 'Italian', native: 'Italiano', flag: '🇮🇹', region: 'IT' },
+  { code: 'pt', label: 'Portuguese', native: 'Português', flag: '🇧🇷', region: 'BR' },
+  { code: 'ja', label: 'Japanese', native: '日本語', flag: '🇯🇵', region: 'JP' },
+  { code: 'zh', label: 'Chinese', native: '中文', flag: '🇨🇳', region: 'CN' },
+  { code: 'ko', label: 'Korean', native: '한국어', flag: '🇰🇷', region: 'KR' },
 ]
 
 let localeCache = {}
