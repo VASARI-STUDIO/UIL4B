@@ -549,13 +549,10 @@ ${stateVars}
 
   return (
     <div className="sec">
-      <div style={{ marginBottom: 36 }}>
-        <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.05, marginBottom: 10 }}>
-          {t('color.title')}
-        </h1>
-        <p style={{ fontSize: 15, color: 'var(--t1)', maxWidth: 600, lineHeight: 1.7 }}>
-          {t('tools.colorStudio.description')}
-        </p>
+      <div className="sec-h">
+        <div className="sec-h-eyebrow">Colour</div>
+        <h1>{t('color.title')}</h1>
+        <p>{t('tools.colorStudio.description')}</p>
       </div>
 
       <nav className="cs-sticky-nav">

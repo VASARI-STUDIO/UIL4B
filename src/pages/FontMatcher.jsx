@@ -236,14 +236,10 @@ export default function FontMatcher({ onCopy, toast }) {
 
   return (
     <div className="sec">
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 8 }}>
-          {t('fontMatcher.title')}
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--t1)', maxWidth: 560, lineHeight: 1.7 }}>
-          Browse {allFonts.length.toLocaleString()} Google Fonts, discover pairings, and compare typefaces side by side.
-        </p>
+      <div className="sec-h">
+        <div className="sec-h-eyebrow">Typography</div>
+        <h1>{t('fontMatcher.title')}</h1>
+        <p>Browse {allFonts.length.toLocaleString()} Google Fonts, discover pairings, and compare typefaces side by side.</p>
       </div>
 
       {/* View tabs */}

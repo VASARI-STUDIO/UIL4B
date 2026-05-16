@@ -91,11 +91,10 @@ export default function DesignReference({ onCopy }) {
   const { t } = useI18n()
   return (
     <div className="sec">
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 8 }}>{t('designRef.title')}</h1>
-        <p style={{ fontSize: 14, color: 'var(--t1)', maxWidth: 540, lineHeight: 1.7 }}>
-          {t('designRef.subtitle')}
-        </p>
+      <div className="sec-h">
+        <div className="sec-h-eyebrow">Reference</div>
+        <h1>{t('designRef.title')}</h1>
+        <p>{t('designRef.subtitle')}</p>
       </div>
 
       {/* Spacing */}

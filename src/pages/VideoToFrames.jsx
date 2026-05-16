@@ -306,7 +306,7 @@ export default function VideoToFrames({ toast }) {
         <>
           <div className="sub">
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              <div style={{ flex: '1 1 400px', minWidth: 280 }}>
+              <div style={{ flex: '1 1 min(400px, 100%)', minWidth: 0 }}>
                 <video
                   ref={videoRef}
                   src={videoUrl}
@@ -322,7 +322,7 @@ export default function VideoToFrames({ toast }) {
                 />
               </div>
               {videoMeta && (
-                <div className="card" style={{ flex: '0 0 auto', minWidth: 200, padding: 16 }}>
+                <div className="card" style={{ flex: '1 1 200px', minWidth: 0, padding: 16 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--t0)' }}>
                     Video Information
                   </div>
