@@ -1,9 +1,13 @@
-# Build and deploy Vite + React app to GitHub Pages
+# Builds production (main → /) and preview (claude/redesign-layout-google-auth-PUSyT → /test/)
+# and deploys both as a single GitHub Pages artifact so uil4b.com and
+# uil4b.com/test/ stay in sync on every push to either branch.
 name: Deploy to Pages
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+      - claude/redesign-layout-google-auth-PUSyT
   workflow_dispatch:
 
 permissions:
@@ -22,20 +26,61 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: Install dependencies
+      # ─── Build PRODUCTION (main → /) ───
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod-src
+
+      - name: Install (prod)
+        working-directory: prod-src
         run: npm ci
 
-      - name: Build
+      - name: Build prod
+        working-directory: prod-src
+        env:
+          VITE_BASE: /
         run: npm run build
+
+      # ─── Build PREVIEW (claude/redesign-layout-google-auth-PUSyT → /test/) ───
+      - name: Checkout preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/redesign-layout-google-auth-PUSyT
+          path: preview-src
+
+      - name: Install (preview)
+        working-directory: preview-src
+        run: npm ci
+
+      - name: Build preview
+        working-directory: preview-src
+        env:
+          VITE_BASE: /test/
+        run: npm run build
+
+      # ─── Combine into one deploy ───
+      - name: Combine dist folders
+        run: |
+          mkdir -p combined
+          cp -r prod-src/dist/. combined/
+          mkdir -p combined/test
+          cp -r preview-src/dist/. combined/test/
+          # CNAME must live at root only — custom domain applies site-wide
+          if [ -f prod-src/public/CNAME ]; then
+            cp prod-src/public/CNAME combined/CNAME
+          fi
+          # Sanity check
+          echo "── Combined contents ──"
+          ls -la combined/
+          echo "── /test/ contents ──"
+          ls -la combined/test/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -43,8 +88,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dist'
+          path: combined
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4

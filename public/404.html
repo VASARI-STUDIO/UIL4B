@@ -3,9 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <script>
-// SPA redirect for GitHub Pages — converts path to hash for HashRouter
-var path = window.location.pathname;
-window.location.replace(window.location.origin + '/#' + path);
+// SPA redirect for GitHub Pages — converts path to hash for HashRouter.
+// Detects whether we're under /test/ (preview) or root (production).
+(function () {
+  var path = window.location.pathname;
+  var origin = window.location.origin;
+  var search = window.location.search;
+  if (path.indexOf('/test/') === 0) {
+    var rest = path.slice(5) || '/';
+    window.location.replace(origin + '/test/#' + rest + search);
+  } else {
+    window.location.replace(origin + '/#' + path + search);
+  }
+})();
 </script>
 </head>
 <body></body>
