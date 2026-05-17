@@ -31,6 +31,7 @@ import VideoToFrames from './pages/VideoToFrames'
 import Admin from './pages/Admin'
 import Projects from './pages/Projects'
 import FontGallery from './pages/FontGallery'
+import AltTextGenerator from './pages/AltTextGenerator'
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
@@ -103,6 +104,7 @@ export default function App() {
             <Route path="/fontgallery" element={<FontGallery onCopy={copy} />} />
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
+            <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
