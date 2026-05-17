@@ -5,10 +5,6 @@
 [data-theme="light"]{--bg-0:#FAFAF7;--bg-1:#FFFFFF;--bg-2:#F5F4EE;--bg-3:#EAE7DD;--bg-4:#D5D1C5;--border:rgba(15,17,31,.07);--bh:rgba(15,17,31,.14);--t0:#15171F;--t1:#4F525E;--t2:#7B7E8B;--t3:#ABADB7;--cbg:#F5F4EE;--hvr:rgba(15,17,31,.025);--card:#FFFFFF;--card-grad:linear-gradient(180deg,#FFFFFF 0%,#FCFBF7 100%);--inp:#FFFFFF;--shadow:0 1px 2px rgba(15,17,31,.05);--warm-shadow:0 1px 2px rgba(15,17,31,.04),0 6px 18px rgba(15,17,31,.05);--warm-shadow-lg:0 8px 24px rgba(15,17,31,.06),0 24px 56px rgba(15,17,31,.07);--ok:#059669;--warn:#D97706;--err:#DC2626;--accent:#5965E6;--accent-strong:#4651D4;--accent-soft:#8C95F0;--accent-bg:rgba(89,101,230,.07);--accent-glow:rgba(89,101,230,.20)}
 html{scroll-behavior:smooth}
 body{font-family:var(--font);font-weight:200;background:var(--bg-0);color:var(--t0);line-height:1.65;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
-body.is-preview{padding-top:28px}
-body.is-preview .topbar{top:28px}
-body.is-preview .sidebar{top:28px;height:calc(100vh - 28px)}
-.preview-banner{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#FB7185 0%,#F59E0B 100%);color:#000;text-align:center;padding:6px 12px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border-bottom:2px solid rgba(0,0,0,.15);height:28px;line-height:16px}
 ::selection{background:var(--accent);color:#fff}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-s)}
@@ -493,7 +489,6 @@ a.bento-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.
 /* Dashboard fills viewport on desktop — no scrolling, bento always fits the frame */
 @media(min-width:981px){
   .main:has(>.dash){padding:18px 24px;max-width:none;height:calc(100dvh - var(--top-h));overflow:hidden}
-  body.is-preview .main:has(>.dash){height:calc(100dvh - var(--top-h) - 28px)}
   .dash{height:100%;display:flex;flex-direction:column;min-height:0}
   .bento{flex:1;grid-auto-rows:1fr;margin-bottom:0;min-height:0;gap:12px}
   .bento-card{min-height:0;overflow:hidden}
