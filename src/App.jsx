@@ -56,7 +56,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    document.querySelector('.main')?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     trackPageView(location.pathname)
     trackSessionPage(location.pathname)
     setMenuOpen(false)
