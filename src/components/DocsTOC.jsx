@@ -6,10 +6,12 @@ export default function DocsTOC({ items }) {
   const navRef = useRef(null)
 
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 220)
+    const scroller = document.querySelector('.main')
+    if (!scroller) return
+    const onScroll = () => setVisible(scroller.scrollTop > 220)
     onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    scroller.addEventListener('scroll', onScroll, { passive: true })
+    return () => scroller.removeEventListener('scroll', onScroll)
   }, [])
 
   useEffect(() => {
@@ -44,10 +46,11 @@ export default function DocsTOC({ items }) {
   const onClick = (e, id) => {
     e.preventDefault()
     const el = document.getElementById(id)
-    if (el) {
+    const scroller = document.querySelector('.main')
+    if (el && scroller) {
       const offset = 110
-      const top = el.getBoundingClientRect().top + window.scrollY - offset
-      window.scrollTo({ top, behavior: 'smooth' })
+      const top = el.getBoundingClientRect().top + scroller.scrollTop - scroller.getBoundingClientRect().top - offset
+      scroller.scrollTo({ top, behavior: 'smooth' })
     }
   }
 
