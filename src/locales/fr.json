@@ -128,6 +128,10 @@
       "label": "Convertisseur d'images",
       "description": "Convertissez, compressez et redimensionnez des images localement."
     },
+    "altText": {
+      "label": "Alt Text Generator",
+      "description": "Generate accessible alt text for images in batch using Gemini."
+    },
     "docsDesign": {
       "label": "Principes de design",
       "description": "Hiérarchie visuelle, équilibre et psychologie du design."
