@@ -128,6 +128,10 @@
       "label": "图像转换器",
       "description": "在本地转换、压缩和调整图像大小。"
     },
+    "altText": {
+      "label": "Alt Text Generator",
+      "description": "Generate accessible alt text for images in batch using Gemini."
+    },
     "docsDesign": {
       "label": "设计原则",
       "description": "视觉层次、平衡和设计心理学。"

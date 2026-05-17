@@ -57,7 +57,12 @@ export default async function handler(req, res) {
 
     if (!r.ok) {
       const text = await r.text()
-      return res.status(r.status).json({ error: 'Gemini error', detail: text.slice(0, 500) })
+      let detail = text.slice(0, 500)
+      try {
+        const parsed = JSON.parse(text)
+        detail = parsed?.error?.message || detail
+      } catch {}
+      return res.status(502).json({ error: detail })
     }
 
     const data = await r.json()

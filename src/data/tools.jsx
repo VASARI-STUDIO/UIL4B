@@ -72,6 +72,7 @@ const TOOL_I18N_MAP = {
   'fontgallery': 'tools.fontGallery',
   'icons': 'tools.iconLibrary',
   'imgconvert': 'tools.imageConverter',
+  'alt-text': 'tools.altText',
   'prompts': 'tools.promptLibrary',
   'docs-design': 'tools.docsDesign',
   'docs-social': 'tools.docsSocial',
@@ -116,19 +117,29 @@ export function searchTools(query) {
 }
 
 export function localiseTools(t) {
-  return TOOLS.map(tool => ({
-    ...tool,
-    label: t(TOOL_I18N_MAP[tool.id] + '.label') || tool.label,
-    description: t(TOOL_I18N_MAP[tool.id] + '.description') || tool.description,
-  }))
+  return TOOLS.map(tool => {
+    const prefix = TOOL_I18N_MAP[tool.id]
+    if (!prefix) return tool
+    const label = t(prefix + '.label')
+    const description = t(prefix + '.description')
+    return {
+      ...tool,
+      label: (label && label !== prefix + '.label') ? label : tool.label,
+      description: (description && description !== prefix + '.description') ? description : tool.description,
+    }
+  })
 }
 
 export function localiseCategories(t) {
-  return CATEGORIES.map(cat => ({
-    ...cat,
-    label: t(cat.labelKey) || cat.label,
-    description: t(cat.descKey) || cat.description,
-  }))
+  return CATEGORIES.map(cat => {
+    const label = t(cat.labelKey)
+    const description = t(cat.descKey)
+    return {
+      ...cat,
+      label: (label && label !== cat.labelKey) ? label : cat.label,
+      description: (description && description !== cat.descKey) ? description : cat.description,
+    }
+  })
 }
 
 export function searchToolsLocalised(query, t) {
