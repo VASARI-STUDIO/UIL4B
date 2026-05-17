@@ -3,6 +3,10 @@
     "chrome-devtools": {
       "command": "npx",
       "args": ["chrome-devtools-mcp@latest"]
+    },
+    "vercel": {
+      "command": "npx",
+      "args": ["-y", "vercel-mcp@latest"]
     }
   }
 }
