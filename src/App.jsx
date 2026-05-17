@@ -30,6 +30,7 @@ import DesignReference from './pages/DesignReference'
 import VideoToFrames from './pages/VideoToFrames'
 import Admin from './pages/Admin'
 import Projects from './pages/Projects'
+import FontGallery from './pages/FontGallery'
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
@@ -77,8 +78,20 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const isPreview = import.meta.env.BASE_URL === '/test/'
+
+  useEffect(() => {
+    document.body.classList.toggle('is-preview', isPreview)
+    return () => document.body.classList.remove('is-preview')
+  }, [isPreview])
+
   return (
     <div className="app">
+      {isPreview && (
+        <div className="preview-banner">
+          PREVIEW BUILD · {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__.slice(0, 19).replace('T', ' ') + ' UTC' : 'dev'}
+        </div>
+      )}
       <Sidebar isOpen={menuOpen} onClose={closeMenu} />
 
       <div className="app-main">
@@ -99,6 +112,7 @@ export default function App() {
             <Route path="/export" element={<Navigate to="/color" replace />} />
             <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
             <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
+            <Route path="/fontgallery" element={<FontGallery onCopy={copy} />} />
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />

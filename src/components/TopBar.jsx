@@ -285,9 +285,9 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
 
         <div className="topbar-brand">
           <div className="topbar-logo">
-            <svg width="16" height="16" viewBox="0 0 255 255" fill="none">
-              <text x="127.5" y="175" fontFamily="system-ui" fontSize="160" fontWeight="800" fill="white" textAnchor="middle" letterSpacing="-6">UI</text>
-              <rect x="168" y="58" width="10" height="100" rx="5" fill="#60A5FA"/>
+            <svg width="26" height="26" viewBox="0 0 512 512" fill="none">
+              <circle cx="256" cy="256" r="256" fill="#000"/>
+              <text x="256" y="298" fontFamily="Inter, system-ui, sans-serif" fontSize="128" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="-4">UI L4B</text>
             </svg>
           </div>
           <span className="topbar-title">{t('brand.full')}</span>

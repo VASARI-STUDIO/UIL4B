@@ -555,6 +555,10 @@ export default function Settings({ toast }) {
 
         </div>
       </div>
+
+      <div style={{ textAlign: 'center', padding: '24px 0 12px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)', letterSpacing: '.03em' }}>
+        UIL4B · Build {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__.slice(0, 16).replace('T', ' ') : 'dev'}
+      </div>
     </div>
   )
 }

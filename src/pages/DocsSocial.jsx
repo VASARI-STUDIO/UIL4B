@@ -1,4 +1,17 @@
 import { useI18n } from '../contexts/I18nContext'
+import DocsTOC from '../components/DocsTOC'
+
+const TOC_ITEMS = [
+  { id: 'art-social-01', number: '01', title: 'Algorithm Ranking' },
+  { id: 'art-social-02', number: '02', title: 'Pillar System' },
+  { id: 'art-social-03', number: '03', title: 'Platform Dimensions' },
+  { id: 'art-social-04', number: '04', title: 'Posting Schedule' },
+  { id: 'art-social-05', number: '05', title: 'Caption Psychology' },
+  { id: 'art-social-06', number: '06', title: '3-Second Rule' },
+  { id: 'art-social-07', number: '07', title: 'Growth Analytics' },
+  { id: 'art-social-08', number: '08', title: 'Budget Tiers' },
+  { id: 'art-social-09', number: '09', title: 'Lead Funnel' },
+]
 
 function Stat({ value, label, sub }) {
   return (
@@ -41,9 +54,9 @@ function DimensionTable({ platform, items }) {
   )
 }
 
-function Article({ number, title, children }) {
+function Article({ id, number, title, children }) {
   return (
-    <section style={{ marginBottom: 48, paddingBottom: 48, borderBottom: '1px solid var(--border)' }}>
+    <section id={id} style={{ marginBottom: 48, paddingBottom: 48, borderBottom: '1px solid var(--border)', scrollMarginTop: 120 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <span style={{ fontSize: 48, fontWeight: 800, color: 'var(--accent)', opacity: 0.15, lineHeight: 1, fontFamily: 'var(--mono)' }}>{number}</span>
         <h2 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 700, letterSpacing: '-.03em', lineHeight: 1.2 }}>{title}</h2>
@@ -80,7 +93,9 @@ export default function DocsSocial() {
         <p>Data-driven social media strategies for design professionals. Algorithm insights, conversion psychology, and creative frameworks that actually move metrics.</p>
       </div>
 
-      <Article number="01" title="How Social Algorithms Actually Rank Content in 2025">
+      <DocsTOC items={TOC_ITEMS} />
+
+      <Article id="art-social-01" number="01" title="How Social Algorithms Actually Rank Content in 2025">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Every platform uses a different ranking model, but they all optimise for the same thing: <strong>time spent on platform</strong>. Understanding the signals each algorithm weights helps you create content that reaches more people organically.
         </p>
@@ -105,7 +120,7 @@ export default function DocsSocial() {
         </p>
       </Article>
 
-      <Article number="02" title="Content Architecture — The Pillar System">
+      <Article id="art-social-02" number="02" title="Content Architecture — The Pillar System">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Random posting is the #1 reason small brands stall at under 1,000 followers. A pillar system ensures every post serves a strategic purpose while keeping your content diverse enough to avoid audience fatigue.
         </p>
@@ -122,7 +137,7 @@ export default function DocsSocial() {
         </Callout>
       </Article>
 
-      <Article number="03" title="Platform Dimensions — The Complete Reference">
+      <Article id="art-social-03" number="03" title="Platform Dimensions — The Complete Reference">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Incorrect dimensions cause cropping, pixelation, and wasted effort. These are current as of 2025. Bookmark this section.
         </p>
@@ -165,7 +180,7 @@ export default function DocsSocial() {
         </Callout>
       </Article>
 
-      <Article number="04" title="The Posting Schedule That Actually Matters">
+      <Article id="art-social-04" number="04" title="The Posting Schedule That Actually Matters">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           &quot;Best time to post&quot; articles are mostly useless because they aggregate data across millions of accounts with different audiences. What actually matters is <strong>consistency and your specific audience&apos;s active hours</strong>.
         </p>
@@ -196,7 +211,7 @@ export default function DocsSocial() {
         </ul>
       </Article>
 
-      <Article number="05" title="Caption Psychology — Writing That Converts">
+      <Article id="art-social-05" number="05" title="Caption Psychology — Writing That Converts">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Caption length has a direct relationship with engagement, but not the one most people assume. Instagram captions between 1,000-2,000 characters (roughly 150-300 words) get <strong>60% more engagement</strong> than short captions under 300 characters. The algorithm reads dwell time as a positive signal.
         </p>
@@ -215,7 +230,7 @@ export default function DocsSocial() {
         </p>
       </Article>
 
-      <Article number="06" title="Visual Design for Social — The 3-Second Rule">
+      <Article id="art-social-06" number="06" title="Visual Design for Social — The 3-Second Rule">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Social media design follows different rules than web design. Content must communicate in under 3 seconds while being thumb-scrolled at speed. Everything below is specific to social — don&apos;t apply web design thinking here.
         </p>
@@ -280,7 +295,7 @@ export default function DocsSocial() {
         </div>
       </Article>
 
-      <Article number="07" title="Analytics That Actually Predict Growth">
+      <Article id="art-social-07" number="07" title="Analytics That Actually Predict Growth">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Most creators track vanity metrics (follower count, likes). The metrics that predict future growth are different — and not always obvious.
         </p>
@@ -307,7 +322,7 @@ export default function DocsSocial() {
         </Callout>
       </Article>
 
-      <Article number="08" title="Growth Budget Tiers — What Each Level Unlocks">
+      <Article id="art-social-08" number="08" title="Growth Budget Tiers — What Each Level Unlocks">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Paid promotion accelerates organic reach but has diminishing returns. Here&apos;s what each budget tier realistically unlocks, based on aggregated results from design-industry accounts.
         </p>
@@ -333,7 +348,7 @@ export default function DocsSocial() {
         </Callout>
       </Article>
 
-      <Article number="09" title="The Lead Funnel — From Follower to Client">
+      <Article id="art-social-09" number="09" title="The Lead Funnel — From Follower to Client">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Followers are not leads. The conversion from follower to paying client requires a deliberate funnel. Most design accounts lose potential clients because they skip steps.
         </p>

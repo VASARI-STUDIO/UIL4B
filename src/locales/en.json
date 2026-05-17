@@ -120,6 +120,10 @@
       "label": "Font Pair Finder",
       "description": "Curated font pairings for headlines and body."
     },
+    "fontGallery": {
+      "label": "Font Gallery",
+      "description": "Visual gallery to browse and preview typefaces."
+    },
     "iconLibrary": {
       "label": "Icon Library",
       "description": "Search thousands of icons via Iconify API."

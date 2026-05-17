@@ -1,4 +1,16 @@
 import { useI18n } from '../contexts/I18nContext'
+import DocsTOC from '../components/DocsTOC'
+
+const TOC_ITEMS = [
+  { id: 'art-design-01', number: '01', title: 'The 50ms Verdict' },
+  { id: 'art-design-02', number: '02', title: 'Cognitive Load' },
+  { id: 'art-design-03', number: '03', title: 'Eye Tracking Patterns' },
+  { id: 'art-design-04', number: '04', title: 'Colour Psychology' },
+  { id: 'art-design-05', number: '05', title: 'Micro-Interactions' },
+  { id: 'art-design-06', number: '06', title: 'Behavioral Economics' },
+  { id: 'art-design-07', number: '07', title: 'Performance as Design' },
+  { id: 'art-design-08', number: '08', title: 'The Framework' },
+]
 
 function Stat({ value, label, sub }) {
   return (
@@ -40,9 +52,9 @@ function BeforeAfter({ bad, good, badLabel = 'Avoid', goodLabel = 'Better' }) {
   )
 }
 
-function Article({ number, title, children }) {
+function Article({ id, number, title, children }) {
   return (
-    <section style={{ marginBottom: 48, paddingBottom: 48, borderBottom: '1px solid var(--border)' }}>
+    <section id={id} style={{ marginBottom: 48, paddingBottom: 48, borderBottom: '1px solid var(--border)', scrollMarginTop: 120 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <span style={{ fontSize: 48, fontWeight: 800, color: 'var(--accent)', opacity: 0.15, lineHeight: 1, fontFamily: 'var(--mono)' }}>{number}</span>
         <h2 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 700, letterSpacing: '-.03em', lineHeight: 1.2 }}>{title}</h2>
@@ -62,7 +74,9 @@ export default function DocsDesign() {
         <p>Research-backed design principles that separate amateur sites from professional ones. Each section links psychology to actionable technique.</p>
       </div>
 
-      <Article number="01" title="The 50ms Verdict — Why Surface Quality Determines Trust">
+      <DocsTOC items={TOC_ITEMS} />
+
+      <Article id="art-design-01" number="01" title="The 50ms Verdict — Why Surface Quality Determines Trust">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Google&apos;s 2012 study at the University of Basel found that users form aesthetic judgments in <strong>17 milliseconds</strong> — not the commonly cited 50ms. The follow-up research showed these snap judgments are remarkably stable: people who initially find a site unappealing rarely change their mind after exploring it.
         </p>
@@ -89,7 +103,7 @@ export default function DocsDesign() {
         />
       </Article>
 
-      <Article number="02" title="Cognitive Load — The Invisible Bottleneck">
+      <Article id="art-design-02" number="02" title="Cognitive Load — The Invisible Bottleneck">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Working memory holds 4±1 chunks (not 7±2 — Cowan&apos;s 2001 revision of Miller&apos;s Law is more accurate). Every design element that isn&apos;t serving the user&apos;s current goal is stealing one of those chunks. This is why minimal design converts better — it&apos;s not aesthetic preference, it&apos;s cognitive architecture.
         </p>
@@ -119,7 +133,7 @@ export default function DocsDesign() {
         />
       </Article>
 
-      <Article number="03" title="Eye Tracking Patterns — Where People Actually Look">
+      <Article id="art-design-03" number="03" title="Eye Tracking Patterns — Where People Actually Look">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           The F-pattern is real but overly simplified. Nielsen Norman Group&apos;s 2020 updated research identified <strong>multiple scanning patterns</strong> that users switch between depending on content density and layout.
         </p>
@@ -141,7 +155,7 @@ export default function DocsDesign() {
         </p>
       </Article>
 
-      <Article number="04" title="Colour Psychology — What the Research Actually Says">
+      <Article id="art-design-04" number="04" title="Colour Psychology — What the Research Actually Says">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Most &quot;colour psychology&quot; articles recycle the same unsupported claims. Here&apos;s what peer-reviewed research actually shows:
         </p>
@@ -165,7 +179,7 @@ export default function DocsDesign() {
         </p>
       </Article>
 
-      <Article number="05" title="Micro-Interactions — Perceived Performance vs Actual Speed">
+      <Article id="art-design-05" number="05" title="Micro-Interactions — Perceived Performance vs Actual Speed">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Facebook&apos;s internal research found that perceived speed matters more than actual speed. A 500ms animation that masks a 300ms load feels faster than an instant-but-janky transition. This is the principle behind skeleton screens, which outperform spinners by <strong>15-20% in perceived speed</strong>.
         </p>
@@ -188,7 +202,7 @@ export default function DocsDesign() {
         </ul>
       </Article>
 
-      <Article number="06" title="Behavioral Economics in Interface Design">
+      <Article id="art-design-06" number="06" title="Behavioral Economics in Interface Design">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Behavioral economics research reveals consistent decision-making biases. Used ethically, these patterns help users make decisions that serve their goals.
         </p>
@@ -213,7 +227,7 @@ export default function DocsDesign() {
         </p>
       </Article>
 
-      <Article number="07" title="Performance as Design — Core Web Vitals">
+      <Article id="art-design-07" number="07" title="Performance as Design — Core Web Vitals">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           Google now uses Core Web Vitals as a ranking factor. But beyond SEO, performance directly affects conversion: Walmart found that every 1-second improvement in page load increased conversions by 2%.
         </p>
@@ -235,7 +249,7 @@ export default function DocsDesign() {
         </Callout>
       </Article>
 
-      <Article number="08" title="The Framework — How Elite Studios Actually Work">
+      <Article id="art-design-08" number="08" title="The Framework — How Elite Studios Actually Work">
         <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
           After analyzing the design systems of Apple, Stripe, Linear, Vercel, and Airbnb, common patterns emerge:
         </p>

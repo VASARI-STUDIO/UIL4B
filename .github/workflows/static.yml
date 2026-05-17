@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
@@ -46,6 +46,7 @@ jobs:
         working-directory: prod-src
         env:
           VITE_BASE: /
+          VITE_GOOGLE_FONTS_API_KEY: ${{ secrets.VITE_GOOGLE_FONTS_API_KEY }}
         run: npm run build
 
       # ─── Build PREVIEW (claude/redesign-layout-google-auth-PUSyT → /test/) ───
@@ -63,6 +64,7 @@ jobs:
         working-directory: preview-src
         env:
           VITE_BASE: /test/
+          VITE_GOOGLE_FONTS_API_KEY: ${{ secrets.VITE_GOOGLE_FONTS_API_KEY }}
         run: npm run build
 
       # ─── Combine into one deploy ───
@@ -76,6 +78,8 @@ jobs:
           if [ -f prod-src/public/CNAME ]; then
             cp prod-src/public/CNAME combined/CNAME
           fi
+          # Inject no-cache meta into preview index.html so browsers always fetch latest
+          sed -i 's/<head>/<head>\n<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">/' combined/test/index.html
           # Sanity check
           echo "── Combined contents ──"
           ls -la combined/
