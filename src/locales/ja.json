@@ -128,6 +128,10 @@
       "label": "画像コンバーター",
       "description": "画像をローカルで変換、圧縮、リサイズ。"
     },
+    "altText": {
+      "label": "Alt Text Generator",
+      "description": "Generate accessible alt text for images in batch using Gemini."
+    },
     "docsDesign": {
       "label": "デザイン原則",
       "description": "視覚的階層、バランス、デザイン心理学。"
