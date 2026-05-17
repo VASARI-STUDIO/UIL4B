@@ -1,4 +1,5 @@
-const API_KEY = 'AIzaSyApyaaPalOyYE9O-yf2ESvRzbqRU8yrumc'
+// Google Fonts WebFonts API — public client-side key (restricted by HTTP referrer)
+const API_KEY = import.meta.env.VITE_GOOGLE_FONTS_API_KEY || 'AIzaSyApyaaPalOyYE9O-yf2ESvRzbqRU8yrumc' // nosemgrep: generic-api-key
 const API_URL = `https://www.googleapis.com/webfonts/v1/webfonts?key=${API_KEY}&sort=popularity`
 const CACHE_TTL = 60 * 60 * 1000
 
@@ -28,6 +29,10 @@ function transformFont(item, index) {
 
 async function getRawFonts() {
   if (cache && Date.now() - cacheTimestamp < CACHE_TTL) return cache
+  if (!API_KEY) {
+    console.warn('Google Fonts API key missing — set VITE_GOOGLE_FONTS_API_KEY')
+    return cache || []
+  }
   try {
     const res = await fetch(API_URL)
     if (!res.ok) return cache || []

@@ -62,10 +62,10 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Brand */}
         <NavLink to="/" className="sidebar-brand" onClick={onClose}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--warm-shadow)', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 255 255" fill="none">
-                <text x="127.5" y="175" fontFamily="system-ui" fontSize="160" fontWeight="800" fill="white" textAnchor="middle" letterSpacing="-6">UI</text>
-                <rect x="168" y="58" width="10" height="100" rx="5" fill="#60A5FA"/>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--warm-shadow)', flexShrink: 0, overflow: 'hidden' }}>
+              <svg width="32" height="32" viewBox="0 0 512 512" fill="none">
+                <circle cx="256" cy="256" r="256" fill="#000"/>
+                <text x="256" y="298" fontFamily="Inter, system-ui, sans-serif" fontSize="128" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="-4">UI L4B</text>
               </svg>
             </div>
             <div className="sidebar-brand-text">
