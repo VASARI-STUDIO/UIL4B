@@ -156,6 +156,10 @@
       "label": "Video to Frames",
       "description": "Extract individual frames from video files as high-quality images."
     },
+    "cadConverter": {
+      "label": "CAD Converter",
+      "description": "Convert DXF files to OBJ for Blender with 3D preview."
+    },
     "externalResources": {
       "label": "External Resources",
       "description": "Curated links to fonts, colours, AI tools, and inspiration."
