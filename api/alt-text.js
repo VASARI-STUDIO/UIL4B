@@ -68,7 +68,8 @@ export default async function handler(req, res) {
             { inline_data: { mime_type: mimeType, data: image } },
           ],
         }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 200 },
+        generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
+        thinkingConfig: { thinkingBudget: 0 },
       }),
     })
 
