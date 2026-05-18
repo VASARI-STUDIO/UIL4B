@@ -78,7 +78,6 @@ const TOOL_I18N_MAP = {
   'docs-social': 'tools.docsSocial',
   'design-reference': 'tools.designReference',
   'video-frames': 'tools.videoFrames',
-  'cad-converter': 'tools.cadConverter',
   'resources': 'tools.externalResources',
 }
 
@@ -91,7 +90,7 @@ export const TOOLS = [
   { id: 'imgconvert', label: 'Image Converter', path: '/imgconvert', category: 'imagery', description: 'Convert, compress and resize images locally.', keywords: ['image', 'convert', 'compress', 'resize', 'webp', 'png', 'jpg'] },
   { id: 'alt-text', label: 'Alt Text Generator', path: '/alt-text', category: 'imagery', description: 'Generate accessible alt text for images in batch using Gemini.', keywords: ['alt', 'text', 'accessibility', 'a11y', 'gemini', 'ai', 'description', 'batch'] },
   { id: 'video-frames', label: 'Video to Frames', path: '/video-frames', category: 'imagery', description: 'Extract frames from video as images with scaling and compression controls.', keywords: ['video', 'frames', 'extract', 'screenshot', 'capture', 'export'] },
-  { id: 'cad-converter', label: 'CAD Converter', path: '/cad-converter', category: 'imagery', description: 'Convert DXF files to OBJ for Blender with 3D preview.', keywords: ['cad', 'dxf', 'dwg', 'obj', 'blender', '3d', 'convert', 'autocad'] },
+
   { id: 'prompts', label: 'Prompt Library', path: '/prompts', category: 'imagery', description: 'Save AI image generation prompts with output previews.', keywords: ['prompt', 'ai', 'midjourney', 'dalle', 'stable diffusion', 'library'] },
   { id: 'docs-design', label: 'Design Principles', path: '/docs-design', category: 'documentation', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
   { id: 'docs-social', label: 'Social & Marketing', path: '/docs-social', category: 'documentation', description: 'Social media and marketing best practices.', keywords: ['social', 'marketing', 'content', 'documentation'] },
