@@ -148,6 +148,10 @@
       "label": "디자인 시스템 내보내기",
       "description": "완성된 디자인 시스템을 개발자와 고객을 위한 HTML로 내보내기."
     },
+    "cadConverter": {
+      "label": "CAD Converter",
+      "description": "Convert DXF files to OBJ for Blender with 3D preview."
+    },
     "externalResources": {
       "label": "외부 리소스",
       "description": "폰트, 색상, AI 도구, 영감 관련 엄선된 링크 모음."
