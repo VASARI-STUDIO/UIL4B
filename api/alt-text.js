@@ -8,7 +8,7 @@ export const config = {
   },
 }
 
-const GEMINI_MODEL = 'gemini-1.5-flash-002'
+const GEMINI_MODEL = 'gemini-2.0-flash'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 const PROMPT = `You are writing alt text for a website. Describe the image in 1-2 sentences, under 125 characters when possible.
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
             { inline_data: { mime_type: mimeType, data: image } },
           ],
         }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
+        generationConfig: { temperature: 0.4, maxOutputTokens: 300 },
       }),
     })
 
