@@ -82,7 +82,7 @@ export default async function handler(req, res) {
       } catch {}
 
       if (r.status === 429) {
-        return res.status(429).json({ error: 'Gemini rate limit exceeded. Please wait a moment and try again.', retryAfter: 10 })
+        return res.status(429).json({ error: `Gemini 429: ${detail}`, model: GEMINI_MODEL, retryAfter: 10 })
       }
       return res.status(502).json({ error: `Gemini ${r.status}: ${detail}`, model: GEMINI_MODEL })
     }
