@@ -148,6 +148,10 @@
       "label": "デザインシステムエクスポート",
       "description": "完成したデザインシステムを開発者やクライアント向けの HTML としてエクスポート。"
     },
+    "cadConverter": {
+      "label": "CAD Converter",
+      "description": "Convert DXF files to OBJ for Blender with 3D preview."
+    },
     "externalResources": {
       "label": "外部リソース",
       "description": "フォント、カラー、AI ツール、インスピレーションへの厳選リンク集。"
