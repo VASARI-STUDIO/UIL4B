@@ -148,6 +148,10 @@
       "label": "设计系统导出",
       "description": "将完整的设计系统导出为 HTML，供开发者和客户使用。"
     },
+    "cadConverter": {
+      "label": "CAD Converter",
+      "description": "Convert DXF files to OBJ for Blender with 3D preview."
+    },
     "externalResources": {
       "label": "外部资源",
       "description": "精选字体、颜色、AI 工具和灵感链接。"
