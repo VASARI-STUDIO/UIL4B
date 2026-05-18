@@ -1,5 +1,6 @@
 // Vercel serverless function — generates alt text for an image via Google Gemini.
 // Requires env var GEMINI_API_KEY (server-side only, never exposed to the client).
+// Free tier: 15 RPM, 1500 RPD for gemini-2.0-flash.
 
 export const config = {
   api: {
@@ -17,6 +18,18 @@ const PROMPT = `You are writing alt text for a website. Describe the image in 1-
 - If text is visible and important, include it verbatim in quotes.
 - Plain text only, no markdown.`
 
+const RPM_LIMIT = 14
+const RPM_WINDOW = 60_000
+const requestLog = []
+
+function isRateLimited() {
+  const now = Date.now()
+  while (requestLog.length && requestLog[0] < now - RPM_WINDOW) requestLog.shift()
+  if (requestLog.length >= RPM_LIMIT) return true
+  requestLog.push(now)
+  return false
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -26,6 +39,10 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     return res.status(500).json({ error: 'GEMINI_API_KEY not configured' })
+  }
+
+  if (isRateLimited()) {
+    return res.status(429).json({ error: 'Rate limit reached (15 requests/minute). Please wait before trying again.', retryAfter: 5 })
   }
 
   const { image, mimeType, context } = req.body || {}
@@ -62,6 +79,10 @@ export default async function handler(req, res) {
         const parsed = JSON.parse(text)
         detail = parsed?.error?.message || detail
       } catch {}
+
+      if (r.status === 429) {
+        return res.status(429).json({ error: 'Gemini rate limit exceeded. Please wait a moment and try again.', retryAfter: 10 })
+      }
       return res.status(502).json({ error: detail })
     }
 
