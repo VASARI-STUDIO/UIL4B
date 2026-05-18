@@ -116,7 +116,7 @@ export default function App() {
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/login" element={<Login toast={toast} />} />
             <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
-            <Route path="/settings" element={<RequireAuth><Settings toast={toast} /></RequireAuth>} />
+            <Route path="/settings" element={<Settings toast={toast} />} />
             <Route path="/community" element={<Community />} />
             <Route path="/feedback" element={<Feedback toast={toast} />} />
             <Route path="/privacy" element={<Privacy />} />
