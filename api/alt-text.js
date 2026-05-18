@@ -8,7 +8,7 @@ export const config = {
   },
 }
 
-const GEMINI_MODEL = 'gemini-2.0-flash'
+const GEMINI_MODEL = 'gemini-2.0-flash-lite'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 const PROMPT = `You are writing alt text for a website. Describe the image in 1-2 sentences, under 125 characters when possible.
@@ -82,7 +82,7 @@ export default async function handler(req, res) {
       } catch {}
 
       if (r.status === 429) {
-        return res.status(429).json({ error: 'Gemini rate limit exceeded. Please wait a moment and try again.', retryAfter: 10 })
+        return res.status(429).json({ error: `Gemini 429: ${detail}`, model: GEMINI_MODEL, retryAfter: 10 })
       }
       return res.status(502).json({ error: `Gemini ${r.status}: ${detail}`, model: GEMINI_MODEL })
     }
