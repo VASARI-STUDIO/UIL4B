@@ -148,6 +148,10 @@
       "label": "Exportación de sistema de diseño",
       "description": "Exporta tu sistema de diseño completo como HTML para desarrolladores y clientes."
     },
+    "cadConverter": {
+      "label": "CAD Converter",
+      "description": "Convert DXF files to OBJ for Blender with 3D preview."
+    },
     "externalResources": {
       "label": "Recursos externos",
       "description": "Enlaces seleccionados a fuentes, colores, herramientas de IA e inspiración."

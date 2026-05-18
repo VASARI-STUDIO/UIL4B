@@ -90,7 +90,9 @@ export default function AltTextGenerator({ toast }) {
   const removeItem = (id) => setItems(prev => prev.filter(it => it.id !== id))
   const clearAll = () => setItems([])
 
-  const generateForItem = async (item) => {
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+  const generateForItem = async (item, retries = 2) => {
     if (!item.base64) return
     setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'generating', error: null } : p))
     try {
@@ -100,6 +102,12 @@ export default function AltTextGenerator({ toast }) {
         body: JSON.stringify({ image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined }),
       })
       const data = await r.json().catch(() => ({}))
+      if (r.status === 429 && retries > 0) {
+        const wait = (data.retryAfter || 5) * 1000
+        setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'ready', error: `Rate limited, retrying in ${wait / 1000}s…` } : p))
+        await delay(wait)
+        return generateForItem(item, retries - 1)
+      }
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, altText: data.altText, status: 'done' } : p))
     } catch (err) {
@@ -110,8 +118,9 @@ export default function AltTextGenerator({ toast }) {
   const generateAll = async () => {
     setBusy(true)
     const targets = items.filter(it => it.status === 'ready' || it.status === 'error')
-    for (const it of targets) {
-      await generateForItem(it)
+    for (let i = 0; i < targets.length; i++) {
+      await generateForItem(targets[i])
+      if (i < targets.length - 1) await delay(4500)
     }
     setBusy(false)
     toast?.(`Generated ${targets.length} alt text${targets.length === 1 ? '' : 's'}`)
