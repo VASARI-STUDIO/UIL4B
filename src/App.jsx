@@ -8,6 +8,7 @@ import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { useAuth } from './contexts/AuthContext'
+import { useFirestoreSync } from './hooks/useFirestoreSync'
 
 import Dashboard from './pages/Dashboard'
 import ColorStudio from './pages/ColorStudio'
@@ -43,6 +44,8 @@ function RequireAuth({ children }) {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const { user: authUser } = useAuth()
+  useFirestoreSync(authUser?.uid || null)
   const { message, visible, toast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
