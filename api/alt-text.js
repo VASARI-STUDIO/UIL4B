@@ -8,8 +8,8 @@ export const config = {
   },
 }
 
-const GEMINI_MODEL = 'gemini-1.5-flash-latest'
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent`
+const GEMINI_MODEL = 'gemini-1.5-flash-002'
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 const PROMPT = `You are writing alt text for a website. Describe the image in 1-2 sentences, under 125 characters when possible.
 - Be concise and specific. Lead with the most important subject.
@@ -74,6 +74,7 @@ export default async function handler(req, res) {
 
     if (!r.ok) {
       const text = await r.text()
+      console.error('Gemini API error:', r.status, text.slice(0, 1000))
       let detail = text.slice(0, 500)
       try {
         const parsed = JSON.parse(text)
@@ -83,7 +84,7 @@ export default async function handler(req, res) {
       if (r.status === 429) {
         return res.status(429).json({ error: 'Gemini rate limit exceeded. Please wait a moment and try again.', retryAfter: 10 })
       }
-      return res.status(502).json({ error: detail })
+      return res.status(502).json({ error: `Gemini ${r.status}: ${detail}`, model: GEMINI_MODEL })
     }
 
     const data = await r.json()
