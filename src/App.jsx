@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
@@ -32,8 +32,6 @@ import Admin from './pages/Admin'
 import Projects from './pages/Projects'
 import FontGallery from './pages/FontGallery'
 import AltTextGenerator from './pages/AltTextGenerator'
-
-const CadConverter = lazy(() => import('./pages/CadConverter'))
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
@@ -107,7 +105,6 @@ export default function App() {
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
-            <Route path="/cad-converter" element={<Suspense fallback={<div style={{ padding: 40, color: 'var(--t2)' }}>Loading 3D tools…</div>}><CadConverter toast={toast} /></Suspense>} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
