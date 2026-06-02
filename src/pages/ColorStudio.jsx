@@ -597,11 +597,19 @@ ${stateVars}
         <div className="card" style={{ padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                onClick={() => colorRef.current?.click()}
-                style={{ width: 42, height: 42, borderRadius: 'var(--radius-s)', background: baseColor, cursor: 'pointer', border: '1px solid var(--border)', flexShrink: 0 }}
-              />
-              <input ref={colorRef} type="color" value={baseColor} onChange={e => setBaseColor(e.target.value)} style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />
+              <div style={{ position: 'relative', width: 42, height: 42, flexShrink: 0 }}>
+                <div
+                  style={{ width: 42, height: 42, borderRadius: 'var(--radius-s)', background: baseColor, border: '1px solid var(--border)', pointerEvents: 'none' }}
+                />
+                <input
+                  ref={colorRef}
+                  type="color"
+                  value={baseColor}
+                  onChange={e => setBaseColor(e.target.value)}
+                  aria-label="Pick base colour"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0, background: 'none', appearance: 'none', WebkitAppearance: 'none' }}
+                />
+              </div>
               <input
                 type="text" value={baseColor.toUpperCase()}
                 style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, width: 90 }}
