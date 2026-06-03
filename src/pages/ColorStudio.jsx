@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, T_LABELS } from '../utils/colors'
-import { usePalette, useProject } from '../contexts/ProjectContext'
+import { useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -189,7 +189,6 @@ export default function ColorStudio({ onCopy }) {
   const { theme } = useTheme()
   const { rounding } = useAppearance()
   const { design, setPalette, setStates, setTints, setGradient } = useProject()
-  const { savePalette } = usePalette()
 
   const [baseColor, setBaseColor] = useState(() => design?.palette?.base || '#2563EB')
   const [harmony, setHarmony] = useState(() => design?.palette?.harmony || 'analogous')
