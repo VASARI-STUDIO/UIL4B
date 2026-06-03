@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, luminance, T_LABELS } from '../utils/colors'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, T_LABELS } from '../utils/colors'
 import { usePalette, useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useExport } from '../contexts/ExportContext'
@@ -862,8 +862,8 @@ ${stateVars}
 
         {/* ── App Layout ── */}
         <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${tk.border}`, marginBottom: 24 }}>
-          <div style={{ display: 'flex', minHeight: 280 }}>
-            <div style={{ width: 180, background: sidebarTk.bg, padding: 16, display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0, borderRight: `1px solid ${sidebarTk.border}` }}>
+          <div className="uip-layout">
+            <div className="uip-sidebar" style={{ background: sidebarTk.bg, borderRight: `1px solid ${sidebarTk.border}` }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: sidebarTk.text, marginBottom: 12 }}>AppName</span>
               {['Dashboard', 'Projects', 'Analytics', 'Settings'].map((item, idx) => (
                 <PreviewNavItem key={item} label={item} isActive={idx === 0} activeBg={primary} activeColor={textColorForBg(primary)} idleColor={sidebarTk.textMuted} hoverBg={sidebarTk.surfaceAlt} />
@@ -878,7 +878,7 @@ ${stateVars}
                 <div style={{ fontSize: 16, fontWeight: 700, color: tk.text }}>Dashboard</div>
                 <PreviewBtn bg={primary} color={textColorForBg(primary)} style={{ fontSize: 11, padding: '6px 16px' }}>New Project</PreviewBtn>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
                 {allColors.slice(0, 4).map((c, i) => (
                   <div key={i} style={{ borderRadius: 10, border: `1px solid ${tk.border}`, padding: 14, background: tk.card }}>
                     <div style={{ width: '100%', height: 4, borderRadius: 2, background: c, marginBottom: 10 }} />

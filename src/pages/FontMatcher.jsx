@@ -3,7 +3,6 @@ import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
 import {
   fetchFonts,
-  searchFonts,
   loadFont,
   generatePairings,
   getFontImportUrl,

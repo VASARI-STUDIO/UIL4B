@@ -75,12 +75,12 @@ function PasswordChange({ onSave }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError('')
     if (next.length < 6) { setError('New password must be at least 6 characters'); return }
     if (next !== confirm) { setError('Passwords do not match'); return }
     try {
-      onSave(current, next)
+      await onSave(current, next)
       setSuccess(true)
       setCurrent(''); setNext(''); setConfirm('')
       setTimeout(() => { setSuccess(false); setOpen(false) }, 1500)
@@ -133,10 +133,10 @@ function EmailEditField({ value, onSave }) {
     setError('')
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!password) { setError('Password is required'); return }
     try {
-      onSave(email, password)
+      await onSave(email, password)
       setEditing(false)
       setStep('email')
       setPassword('')
@@ -187,9 +187,9 @@ function DeleteAccount({ onDelete }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     try {
-      onDelete(password)
+      await onDelete(password)
     } catch (e) {
       if (e.code === 'auth/wrong-password') setError('Password is incorrect')
       else setError(e.message || 'Failed to delete account')

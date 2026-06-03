@@ -710,6 +710,14 @@ a.bento-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.
   .cs-bento .cs-b-2,.cs-bento .cs-b-3,.cs-bento .cs-b-6{grid-column:span 1}
 }
 
+/* UI Preview app layout */
+.uip-layout{display:flex;min-height:280px}
+.uip-sidebar{width:180px;padding:16px;display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+@media(max-width:640px){
+  .uip-layout{flex-direction:column}
+  .uip-sidebar{width:100%;flex-direction:row;flex-wrap:wrap;gap:6px;padding:12px;border-right:none!important;border-bottom:1px solid var(--border)}
+}
+
 /* ─── Hero (Dashboard) ─── */
 .hero-section{position:relative;margin-bottom:40px;padding:8px 0 0}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t2);text-transform:uppercase;margin-bottom:20px;position:relative;z-index:1}
@@ -870,8 +878,19 @@ img,svg,video{max-width:100%;height:auto}
   /* Cards & buttons */
   .card{padding:18px;border-radius:var(--radius)}
   .card-i{padding:16px}
-  .btn{padding:10px 16px;font-size:12px;min-height:38px}
-  .btn-s{padding:7px 12px;font-size:11px;min-height:32px}
+  .btn{padding:10px 16px;font-size:12px;min-height:44px}
+  .btn-s{padding:7px 12px;font-size:11px;min-height:38px}
+
+  /* Touch targets — minimum 44px on mobile */
+  .cs-nav-item{min-height:44px;padding:10px 14px}
+  .pt-t{min-height:44px;padding:10px 14px}
+  .tool-mini-pin{min-width:44px;min-height:44px;padding:10px}
+  .sidebar-user-action{min-width:44px;min-height:44px}
+  .nav-item{min-height:44px}
+  .nav-cat-toggle{min-width:44px;min-height:44px}
+  .pinned-card-pin{min-width:44px;min-height:44px}
+  .tool-tile-pin{min-width:44px;min-height:44px}
+  .auth-links button{min-height:44px}
 
   /* Grids stack */
   .dash-tools-grid,.dash-cats-grid{grid-template-columns:1fr}

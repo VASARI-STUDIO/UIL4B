@@ -6,7 +6,7 @@ import { hexToRgb } from './colors'
 
 function lum(hex) {
   try {
-    const { r, g, b } = hexToRgb(hex)
+    const [r, g, b] = hexToRgb(hex)
     const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
     return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
   } catch {
