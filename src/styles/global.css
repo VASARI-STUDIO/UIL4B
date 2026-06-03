@@ -480,7 +480,7 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .bento-img{grid-area:img}
 .bento-docs{grid-area:docs}
 
-.bento-card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);padding:22px;overflow:hidden;text-decoration:none!important;color:inherit;transition:all .35s cubic-bezier(.16,1,.3,1);box-shadow:var(--warm-shadow);display:flex;flex-direction:column;isolation:isolate}
+.bento-card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);padding:22px;text-decoration:none!important;color:inherit;transition:all .35s cubic-bezier(.16,1,.3,1);box-shadow:var(--warm-shadow);display:flex;flex-direction:column;isolation:isolate;min-height:0}
 .bento-card::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,.02) 40%,transparent 70%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:1}
 .bento-card::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.015) 0%,transparent 60%);border-radius:inherit;pointer-events:none;z-index:0}
 [data-theme="light"] .bento-card::before{background:linear-gradient(135deg,rgba(0,0,0,.04) 0%,rgba(0,0,0,.01) 40%,transparent 70%)}
@@ -595,22 +595,26 @@ a.bento-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.
 
 /* Bento responsive */
 @media(max-width:980px){
-  .bento{grid-template-columns:repeat(2,1fr);grid-template-areas:"hero hero" "time quick" "color color" "typo img" "docs docs"}
-  .bento-hero{min-height:240px}
+  .bento{grid-template-columns:repeat(2,1fr);grid-auto-rows:auto;grid-template-areas:"hero hero" "time quick" "color color" "typo img" "docs docs"}
+  .bento-hero{min-height:220px}
+  .bento-hero-title{font-size:clamp(26px,5vw,40px)}
 }
 @media(max-width:560px){
-  .bento{grid-template-columns:1fr;grid-template-areas:"hero" "time" "quick" "color" "typo" "img" "docs";gap:10px}
+  .bento{grid-template-columns:1fr;grid-auto-rows:auto;grid-template-areas:"hero" "time" "quick" "color" "typo" "img" "docs";gap:10px}
   .bento-hero{min-height:auto;padding:24px}
+  .bento-hero-title{font-size:clamp(24px,7vw,36px)}
+  .bento-hero-sub{font-size:13px}
+  .bento-time-big{font-size:28px}
 }
 
-/* Dashboard fills viewport on desktop — bento fits the frame, allows scroll for pinned section */
+/* Dashboard fills viewport on desktop — scrollable, bento uses auto rows */
 @media(min-width:981px){
   .main:has(>.dash){padding:0 24px;max-width:none;overflow-y:auto;overflow-x:hidden}
   .main:has(>.dash)>.dash{padding-top:18px;padding-bottom:18px}
   .dash{display:flex;flex-direction:column;min-height:0}
-  .bento{flex:none;grid-auto-rows:minmax(120px,auto);margin-bottom:0;min-height:0;gap:12px}
+  .bento{flex:none;grid-auto-rows:auto;margin-bottom:14px;min-height:0;gap:12px}
   .bento-card{min-height:0}
-  .bento-hero{min-height:180px}
+  .bento-hero{min-height:200px}
   .bento-hero-title{margin:10px 0 8px;font-size:clamp(28px,3.5vw,46px)}
   .bento-hero-sub{margin-bottom:auto;font-size:14px}
 }
