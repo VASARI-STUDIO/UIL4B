@@ -28,7 +28,14 @@ function googleFontUrl(families) {
 const PALETTE_LABELS = ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight']
 const TINT_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
 
-export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateShades }) {
+const ROUNDING_MAP = {
+  none: { radius: '0px', radiusS: '0px', radiusL: '0px', radiusXl: '0px' },
+  subtle: { radius: '6px', radiusS: '4px', radiusL: '8px', radiusXl: '12px' },
+  default: { radius: '12px', radiusS: '8px', radiusL: '16px', radiusXl: '24px' },
+  pronounced: { radius: '20px', radiusS: '14px', radiusL: '28px', radiusXl: '40px' },
+}
+
+export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateShades, appearance }) {
   const lines = [':root {']
 
   // Palette colours
@@ -72,12 +79,19 @@ export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateSh
     })
   }
 
+  // Appearance (rounding, density)
+  const rounding = ROUNDING_MAP[appearance?.rounding] || ROUNDING_MAP.default
+  lines.push(`  --radius: ${rounding.radius};`)
+  lines.push(`  --radius-s: ${rounding.radiusS};`)
+  lines.push(`  --radius-l: ${rounding.radiusL};`)
+  lines.push(`  --radius-xl: ${rounding.radiusXl};`)
+
   lines.push('}')
   return lines.join('\n')
 }
 
 // Style guide HTML — uses the user's actual palette + fonts as page styling.
-export function buildStyleGuideHTML({ design, stateShades, theme = 'light', projectName = 'Design System' }) {
+export function buildStyleGuideHTML({ design, stateShades, theme = 'light', projectName = 'Design System', appearance }) {
   const primary = design?.palette?.colors?.[0] || '#2563EB'
   const secondary = design?.palette?.colors?.[1] || primary
   const accent = design?.palette?.colors?.[2] || primary
@@ -89,6 +103,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
 
   const primaryText = contrastText(primary)
   const isDark = theme === 'dark'
+  const rounding = ROUNDING_MAP[appearance?.rounding] || ROUNDING_MAP.default
   const fontsUrl = googleFontUrl([headingFamily, bodyFamily])
 
   const cssVars = buildCSSVars({
@@ -98,6 +113,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
     fonts: design.fonts,
     typeScale: ts,
     stateShades,
+    appearance,
   })
 
   const date = new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })
@@ -211,9 +227,9 @@ ${cssVars}
   --sg-text-2: ${isDark ? '#94A3B8' : '#475569'};
   --sg-text-3: ${isDark ? '#64748B' : '#94A3B8'};
   --sg-border: ${isDark ? 'rgba(255,255,255,.08)' : 'rgba(15,23,42,.06)'};
-  --sg-radius: 12px;
-  --sg-radius-s: 8px;
-  --sg-radius-l: 16px;
+  --sg-radius: ${rounding.radius};
+  --sg-radius-s: ${rounding.radiusS};
+  --sg-radius-l: ${rounding.radiusL};
   --sg-shadow: ${isDark ? '0 1px 2px rgba(0,0,0,.4)' : '0 1px 2px rgba(15,17,31,.05)'};
   --sg-shadow-lg: ${isDark ? '0 8px 24px rgba(0,0,0,.35),0 24px 48px rgba(0,0,0,.25)' : '0 8px 24px rgba(15,17,31,.06),0 24px 56px rgba(15,17,31,.07)'};
   --sg-t: .2s cubic-bezier(.16,1,.3,1);

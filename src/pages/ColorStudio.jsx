@@ -5,6 +5,7 @@ import { usePalette, useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useAppearance } from '../contexts/AppearanceContext'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic']
 const HARM_LABELS = {
@@ -186,6 +187,7 @@ function snap(value, target, threshold = 3) {
 export default function ColorStudio({ onCopy }) {
   const { t } = useI18n()
   const { theme } = useTheme()
+  const { rounding } = useAppearance()
   const { design, setPalette, setStates, setTints, setGradient } = useProject()
   const { savePalette } = usePalette()
 
@@ -295,6 +297,8 @@ export default function ColorStudio({ onCopy }) {
         name: state, shades: STATE_PRESETS[state][presetIdx].shades
       }))
       const isDark = theme === 'dark'
+      const rdMap = { none: ['0px', '0px'], subtle: ['6px', '4px'], default: ['12px', '8px'], pronounced: ['20px', '14px'] }
+      const [rdVal, rdSVal] = rdMap[rounding] || rdMap.default
       return `<!DOCTYPE html>
 <html lang="en" data-theme="${isDark ? 'dark' : 'light'}">
 <head>
@@ -314,7 +318,7 @@ ${stateVars}
   --ds-code-bg: #1a1a17; --ds-code-text: #e5e5dd;
   --ds-sidebar: rgba(255,255,255,.85); --ds-hover: rgba(0,0,0,.04);
   --ds-accent: #a78bfa; --ds-accent-bg: rgba(167,139,250,.1);
-  --ds-radius: 12px; --ds-radius-s: 8px;
+  --ds-radius: ${rdVal}; --ds-radius-s: ${rdSVal};
   --ds-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03);
   --ds-shadow-lg: 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04);
   --ds-glass: rgba(255,255,255,.6);
@@ -502,7 +506,7 @@ ${stateVars}
 
     return () => clearExport()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allColors.join(','), tintScale.join(','), JSON.stringify(stateColors), theme])
+  }, [allColors.join(','), tintScale.join(','), JSON.stringify(stateColors), theme, rounding])
 
   const randomPalette = useCallback(() => {
     const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
