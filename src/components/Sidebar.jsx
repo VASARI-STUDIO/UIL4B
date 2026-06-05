@@ -61,17 +61,9 @@ export default function Sidebar({ isOpen, onClose }) {
       <nav className={`sidebar${isOpen ? ' open' : ''}`} id="sidebar">
         {/* Brand */}
         <NavLink to="/" className="sidebar-brand" onClick={onClose}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--warm-shadow)', flexShrink: 0, overflow: 'hidden' }}>
-              <svg width="32" height="32" viewBox="0 0 512 512" fill="none">
-                <circle cx="256" cy="256" r="256" fill="#000"/>
-                <text x="256" y="298" fontFamily="Inter, system-ui, sans-serif" fontSize="128" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="-4">UI L4B</text>
-              </svg>
-            </div>
-            <div className="sidebar-brand-text">
-              <span className="sidebar-brand-name">{t('brand.name')}</span>
-              <span className="sidebar-brand-sub">{t('brand.tagline')}</span>
-            </div>
+          <div className="sidebar-brand-text">
+            <span className="sidebar-brand-name">{t('brand.name')}</span>
+            <span className="sidebar-brand-sub">{t('brand.tagline')}</span>
           </div>
         </NavLink>
 

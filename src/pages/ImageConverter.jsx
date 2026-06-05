@@ -168,7 +168,7 @@ export default function ImageConverter({ toast }) {
             <div className="row" style={{ gap: 16, marginTop: 10 }}>
               <div>
                 <div className="seg-label">Format</div>
-                <select value={format} onChange={e => setFormat(e.target.value)} style={{ width: 140 }}>
+                <select value={format} onChange={e => setFormat(e.target.value)} style={{ width: '100%', maxWidth: 140 }}>
                   <option value="image/webp">WebP</option>
                   <option value="image/png">PNG</option>
                   <option value="image/jpeg">JPEG</option>
