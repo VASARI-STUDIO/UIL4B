@@ -350,7 +350,7 @@ export default function VideoToFrames({ toast }) {
                   <select
                     value={format}
                     onChange={e => setFormat(e.target.value)}
-                    style={{ width: 130 }}
+                    style={{ width: '100%', maxWidth: 130 }}
                     disabled={extracting}
                   >
                     <option value="image/png">PNG</option>
@@ -397,7 +397,7 @@ export default function VideoToFrames({ toast }) {
                   <select
                     value={scale}
                     onChange={e => setScale(+e.target.value)}
-                    style={{ width: 150 }}
+                    style={{ width: '100%', maxWidth: 150 }}
                     disabled={extracting}
                   >
                     {SCALE_OPTIONS.map(opt => (
@@ -417,7 +417,7 @@ export default function VideoToFrames({ toast }) {
                   <select
                     value={interval}
                     onChange={e => setInterval_(e.target.value)}
-                    style={{ width: 170 }}
+                    style={{ width: '100%', maxWidth: 170 }}
                     disabled={extracting}
                   >
                     {INTERVAL_OPTIONS.map(opt => (

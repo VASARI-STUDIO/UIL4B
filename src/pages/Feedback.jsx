@@ -11,17 +11,27 @@ export default function Feedback({ toast }) {
   const { t } = useI18n()
   const { user } = useAuth()
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     if (!message.trim()) { toast(t('feedback.enterFeedback')); return }
 
-    saveFeedback({
+    const payload = {
       type,
       subject: subject.trim() || `[${type}] Submission`,
       message: message.trim(),
       email: user?.email || '',
       source: 'feedback-form',
-    })
+    }
+
+    saveFeedback(payload)
+
+    try {
+      await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    } catch {}
 
     toast(t('feedback.thankYou'))
     setMessage('')

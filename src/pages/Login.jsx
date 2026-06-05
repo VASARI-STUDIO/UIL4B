@@ -18,9 +18,9 @@ export default function Login({ toast }) {
   const [isSignup, setIsSignup] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [resetMode, setResetMode] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
@@ -31,20 +31,9 @@ export default function Login({ toast }) {
     setLoading(true)
     try {
       if (resetMode) {
-        if (!password) {
-          toast(t('auth.errors.invalidCredential'))
-          setLoading(false)
-          return
-        }
-        if (!newPassword || newPassword.length < 6) {
-          toast(t('auth.errors.weakPassword'))
-          setLoading(false)
-          return
-        }
-        await resetPassword(email, password, newPassword)
-        toast(t('auth.passwordReset'))
-        setResetMode(false)
-        setNewPassword('')
+        await resetPassword(email)
+        setResetSent(true)
+        toast(t('auth.resetEmailSent') || 'Password reset email sent')
       } else if (isSignup) {
         await signup(email, password, displayName)
         toast(t('auth.accountCreated'))
@@ -95,7 +84,7 @@ export default function Login({ toast }) {
         <div className="auth-card card">
           <div className="auth-header">
             <h1>{resetMode ? t('auth.resetPassword') : isSignup ? t('auth.createAccount') : t('auth.welcomeBack')}</h1>
-            <p>{resetMode ? t('auth.resetSubtitle') : isSignup ? t('auth.signUpSubtitle') : t('auth.signInSubtitle')}</p>
+            <p>{resetMode ? (t('auth.resetSubtitle') || "We'll send a reset link to your email") : isSignup ? t('auth.signUpSubtitle') : t('auth.signInSubtitle')}</p>
           </div>
 
           {!resetMode && (
@@ -111,35 +100,48 @@ export default function Login({ toast }) {
             </>
           )}
 
-          <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
-            {isSignup && !resetMode && (
-              <div className="auth-field">
-                <label>{t('auth.displayName')}</label>
-                <input type="text" name="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={t('auth.namePlaceholder')} autoComplete="name" />
-              </div>
-            )}
-            <div className="auth-field">
-              <label>{t('auth.email')}</label>
-              <input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required autoComplete="email" />
+          {resetMode && resetSent ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
+                <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8" />
+                <polyline points="22 7 13.5 12.5 2 7" />
+                <path d="m16 19 2 2 4-4" />
+              </svg>
+              <p style={{ fontSize: 14, color: 'var(--t0)', marginBottom: 8 }}>Check your email</p>
+              <p style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 16 }}>
+                We sent a password reset link to <strong>{email}</strong>
+              </p>
+              <button className="btn" onClick={() => { setResetMode(false); setResetSent(false) }}>
+                Back to sign in
+              </button>
             </div>
-            <div className="auth-field">
-              <label>{resetMode ? t('auth.currentPassword') || 'Current Password' : t('auth.password')}</label>
-              <input type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder')} required minLength={6} autoComplete="current-password" />
-            </div>
-            {resetMode && (
+          ) : (
+            <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
+              {isSignup && !resetMode && (
+                <div className="auth-field">
+                  <label>{t('auth.displayName')}</label>
+                  <input type="text" name="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={t('auth.namePlaceholder')} autoComplete="name" />
+                </div>
+              )}
               <div className="auth-field">
-                <label>{t('auth.newPassword')}</label>
-                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder')} required minLength={6} autoComplete="new-password" />
+                <label>{t('auth.email')}</label>
+                <input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required autoComplete="email" />
               </div>
-            )}
-            <button className="btn btn-accent auth-submit" type="submit" disabled={loading}>
-              {loading ? t('auth.pleaseWait') : resetMode ? t('auth.resetPassword') : isSignup ? t('auth.createAccount') : t('common.signIn')}
-            </button>
-          </form>
+              {!resetMode && (
+                <div className="auth-field">
+                  <label>{t('auth.password')}</label>
+                  <input type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder')} required minLength={6} autoComplete="current-password" />
+                </div>
+              )}
+              <button className="btn btn-accent auth-submit" type="submit" disabled={loading}>
+                {loading ? t('auth.pleaseWait') : resetMode ? t('auth.sendResetLink') || 'Send reset link' : isSignup ? t('auth.createAccount') : t('common.signIn')}
+              </button>
+            </form>
+          )}
 
           <div className="auth-links">
             {resetMode ? (
-              <button onClick={() => setResetMode(false)}>{t('auth.backToSignIn')}</button>
+              <button onClick={() => { setResetMode(false); setResetSent(false) }}>{t('auth.backToSignIn')}</button>
             ) : (
               <>
                 <button onClick={() => setIsSignup(!isSignup)}>

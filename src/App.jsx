@@ -8,6 +8,7 @@ import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { useAuth } from './contexts/AuthContext'
+import { useFirestoreSync } from './hooks/useFirestoreSync'
 
 import Dashboard from './pages/Dashboard'
 import ColorStudio from './pages/ColorStudio'
@@ -43,6 +44,8 @@ function RequireAuth({ children }) {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const { user: authUser } = useAuth()
+  useFirestoreSync(authUser?.uid || null)
   const { message, visible, toast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
@@ -113,7 +116,7 @@ export default function App() {
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/login" element={<Login toast={toast} />} />
             <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
-            <Route path="/settings" element={<RequireAuth><Settings toast={toast} /></RequireAuth>} />
+            <Route path="/settings" element={<Settings toast={toast} />} />
             <Route path="/community" element={<Community />} />
             <Route path="/feedback" element={<Feedback toast={toast} />} />
             <Route path="/privacy" element={<Privacy />} />
