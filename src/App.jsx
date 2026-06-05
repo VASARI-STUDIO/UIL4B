@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Toast from './components/Toast'
 import CommandPalette from './components/CommandPalette'
+import GoogleOneTap from './components/GoogleOneTap'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
@@ -129,6 +130,7 @@ export default function App() {
 
       <Toast message={message} visible={visible} />
       <CommandPalette open={paletteOpen} onClose={closePalette} />
+      <GoogleOneTap />
     </div>
   )
 }
