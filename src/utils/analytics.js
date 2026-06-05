@@ -172,15 +172,16 @@ export function getAnalyticsSummary() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10)
 
-  // Users (from localStorage)
+  // Users (from local profile cache — Firebase Auth manages actual accounts)
   let users = []
   try {
-    const raw = JSON.parse(localStorage.getItem('vs-users') || '{}')
-    users = Object.values(raw).map(u => ({
+    const raw = JSON.parse(localStorage.getItem('vs-profile-cache') || '{}')
+    users = Object.entries(raw).map(([uid, u]) => ({
+      uid,
       email: u.email,
       displayName: u.displayName,
       tier: u.tier,
-      provider: u.provider || 'email',
+      provider: u.photoURL ? 'google' : 'email',
       createdAt: u.createdAt,
     }))
   } catch { /* ignore */ }

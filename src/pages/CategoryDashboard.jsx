@@ -167,7 +167,17 @@ export default function CategoryDashboard({ categoryId }) {
         </div>
       )}
 
-      <div className="dash-footer" style={{ marginTop: 40 }}>
+      {categoryId === 'typography' && (
+        <div style={{ textAlign: 'center', padding: '40px 0 20px', borderTop: '1px solid var(--border)', marginTop: 40 }}>
+          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 14 }}>Typography set? Customise UI chrome — rounding, density, and motion.</p>
+          <NavLink to="/settings#set-appearance" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 32px', borderRadius: 'var(--radius)', background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none', transition: 'all .25s', boxShadow: '0 4px 16px var(--accent-glow)' }}>
+            Continue to Appearance Settings
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+          </NavLink>
+        </div>
+      )}
+
+      <div className="dash-footer" style={{ marginTop: categoryId === 'typography' ? 20 : 40 }}>
         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>{t('common.jumpToCategory')}</span>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {cats.filter(c => c.id !== categoryId).map(c => (

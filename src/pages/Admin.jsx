@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback } from '../utils/analytics'
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
+import { db } from '../utils/firebase'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 const ADMIN_KEY = 'vs-admin-unlocked'
@@ -230,9 +232,18 @@ export default function Admin({ toast }) {
   const [filterStatus, setFilterStatus] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     setData(getAnalyticsSummary())
-    setFeedback(getFeedback())
+    const localFeedback = getFeedback()
+    let merged = [...localFeedback]
+    try {
+      const q2 = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'))
+      const snap = await getDocs(q2)
+      const fsFeedback = snap.docs.map(d => ({ ...d.data(), id: d.id, source: d.data().source || 'firestore' }))
+      const localIds = new Set(localFeedback.map(f => f.id))
+      fsFeedback.forEach(f => { if (!localIds.has(f.id)) merged.push(f) })
+    } catch {}
+    setFeedback(merged)
   }, [])
 
   useEffect(() => {
@@ -396,6 +407,76 @@ export default function Admin({ toast }) {
                     )
                   })}
                 </div>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Product Insights">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%), 1fr))', gap: 14 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Most Used Tools</div>
+                {data.topPages.filter(([p]) => p && p !== '/' && !['settings','login','admin','community','feedback','privacy','terms','projects'].some(s => p.includes(s))).slice(0, 5).map(([page, count], i) => (
+                  <div key={page} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < 4 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
+                    <span style={{ fontFamily: 'var(--mono)', color: 'var(--t0)', fontWeight: 500 }}>{page.replace('/', '')}</span>
+                    <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{count}</span>
+                  </div>
+                ))}
+                {data.topPages.length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No page data yet</div>}
+              </div>
+
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Feature Requests</div>
+                {feedback.filter(f => f.type === 'feature').slice(-5).reverse().map((f, i) => (
+                  <div key={f.id || i} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                    <div style={{ fontWeight: 500, color: 'var(--t0)', marginBottom: 2 }}>{f.subject || 'No subject'}</div>
+                    <div style={{ color: 'var(--t2)', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.message}</div>
+                  </div>
+                ))}
+                {feedback.filter(f => f.type === 'feature').length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No feature requests yet</div>}
+              </div>
+
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Open Bugs</div>
+                {feedback.filter(f => f.type === 'bug' && f.status !== 'done').map((f, i) => (
+                  <div key={f.id || i} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Badge color={STATUS_COLORS[f.status]} bg={STATUS_BGS[f.status]}>{STATUS_LABELS[f.status]}</Badge>
+                      <span style={{ fontWeight: 500, color: 'var(--t0)' }}>{f.subject || 'No subject'}</span>
+                    </div>
+                  </div>
+                ))}
+                {feedback.filter(f => f.type === 'bug' && f.status !== 'done').length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  No open bugs
+                </div>}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Setup Checklist">
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { label: 'Firebase Auth configured', check: true, note: 'Enable Email/Password + Google providers in Firebase Console' },
+                  { label: 'Firestore database created', check: true, note: 'Set region to australia-southeast1 (Sydney) in Firebase Console' },
+                  { label: 'Firestore security rules deployed', check: false, note: 'Deploy firestore.rules from repo root via Firebase CLI' },
+                  { label: 'Email notifications', check: false, note: 'Set RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL env vars in Vercel' },
+                  { label: 'Custom domain', check: true, note: 'uil4b.com configured' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: item.check ? 'rgba(16,185,129,.1)' : 'rgba(245,158,11,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      {item.check ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" strokeWidth="3" strokeLinecap="round"><circle cx="12" cy="12" r="1" /></svg>
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t0)' }}>{item.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--t2)' }}>{item.note}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </Section>

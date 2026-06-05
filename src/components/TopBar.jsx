@@ -6,6 +6,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useExport } from '../contexts/ExportContext'
 import { useProject } from '../contexts/ProjectContext'
 import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
+import { useAppearance } from '../contexts/AppearanceContext'
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
@@ -27,6 +28,7 @@ function ExportDropdown({ actions, onSaveProject, canSave }) {
   const ref = useRef(null)
   const { design } = useProject()
   const { theme } = useTheme()
+  const { rounding, density, reduceMotion } = useAppearance()
 
   useEffect(() => {
     const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -48,6 +50,7 @@ function ExportDropdown({ actions, onSaveProject, canSave }) {
       stateShades: getStateShades(),
       theme,
       projectName: 'My Style Guide',
+      appearance: { rounding, density, reduceMotion },
     })
     downloadFile(html, 'style-guide.html', 'text/html')
     setOpen(false)
@@ -61,6 +64,7 @@ function ExportDropdown({ actions, onSaveProject, canSave }) {
       fonts: design.fonts,
       typeScale: design.typeScale,
       stateShades: getStateShades(),
+      appearance: { rounding, density, reduceMotion },
     })
     downloadFile(css + '\n', 'design-tokens.css', 'text/css')
     setOpen(false)
@@ -74,6 +78,7 @@ function ExportDropdown({ actions, onSaveProject, canSave }) {
       fonts: design.fonts,
       typeScale: design.typeScale,
       stateShades: getStateShades(),
+      appearance: { rounding, density, reduceMotion },
     })
     navigator.clipboard.writeText(css)
     setOpen(false)
@@ -284,12 +289,6 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
         </button>
 
         <div className="topbar-brand">
-          <div className="topbar-logo">
-            <svg width="26" height="26" viewBox="0 0 512 512" fill="none">
-              <circle cx="256" cy="256" r="256" fill="#000"/>
-              <text x="256" y="298" fontFamily="Inter, system-ui, sans-serif" fontSize="128" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="-4">UI L4B</text>
-            </svg>
-          </div>
           <span className="topbar-title">{t('brand.full')}</span>
         </div>
 

@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 
 const STORAGE_DISCLOSURE = [
   { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
   { key: 'vs-t', purpose: 'Theme preference (light/dark)', pii: 'no' },
+  { key: 'vs-appearance', purpose: 'Appearance settings (rounding, density, motion)', pii: 'no' },
   { key: 'vs-nav-open', purpose: 'Sidebar category state', pii: 'no' },
   { key: 'vs-pinned-tools', purpose: 'Tools you pinned for quick access', pii: 'no' },
   { key: 'vs-recent-tools', purpose: 'Recently used tools list', pii: 'no' },
@@ -14,8 +16,7 @@ const STORAGE_DISCLOSURE = [
   { key: 'vs-projects', purpose: 'Saved design projects (per account)', pii: 'local' },
   { key: 'vs-prompts', purpose: 'Your AI prompt library', pii: 'local' },
   { key: 'vs-state-shades', purpose: 'Cached state colour shades', pii: 'no' },
-  { key: 'vs-users', purpose: 'Account credentials (hashed password)', pii: 'yes' },
-  { key: 'vs-session', purpose: 'Active session (no password stored)', pii: 'yes' },
+  { key: 'vs-profile-cache', purpose: 'Cached user profile (synced via Firebase)', pii: 'yes' },
   { key: 'vs-admin-unlocked', purpose: 'Admin panel access flag', pii: 'no' },
 ]
 
@@ -74,12 +75,12 @@ function PasswordChange({ onSave }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError('')
     if (next.length < 6) { setError('New password must be at least 6 characters'); return }
     if (next !== confirm) { setError('Passwords do not match'); return }
     try {
-      onSave(current, next)
+      await onSave(current, next)
       setSuccess(true)
       setCurrent(''); setNext(''); setConfirm('')
       setTimeout(() => { setSuccess(false); setOpen(false) }, 1500)
@@ -132,10 +133,10 @@ function EmailEditField({ value, onSave }) {
     setError('')
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!password) { setError('Password is required'); return }
     try {
-      onSave(email, password)
+      await onSave(email, password)
       setEditing(false)
       setStep('email')
       setPassword('')
@@ -186,9 +187,9 @@ function DeleteAccount({ onDelete }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     try {
-      onDelete(password)
+      await onDelete(password)
     } catch (e) {
       if (e.code === 'auth/wrong-password') setError('Password is incorrect')
       else setError(e.message || 'Failed to delete account')
@@ -234,6 +235,7 @@ function NavIcon({ id }) {
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { rounding, density, reduceMotion, setRounding, setDensity, setReduceMotion } = useAppearance()
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -358,16 +360,7 @@ export default function Settings({ toast }) {
                     {isCurrent ? (
                       <div className="plan-card-current">Current plan</div>
                     ) : (
-                      <button
-                        className={plan.featured ? 'btn btn-accent' : 'btn'}
-                        style={{ width: '100%', justifyContent: 'center' }}
-                        onClick={() => {
-                          if (user) { updateProfile({ tier: plan.id }); toast(`Switched to ${plan.name}`) }
-                          else toast('Sign in to change plan')
-                        }}
-                      >
-                        Switch to {plan.name}
-                      </button>
+                      <div className="plan-card-coming">Coming soon</div>
                     )}
                   </div>
                 )
@@ -379,7 +372,7 @@ export default function Settings({ toast }) {
           <section id="set-appearance" className="settings-section">
             <div className="settings-section-h">
               <h2>Appearance</h2>
-              <p>Switch between light and dark themes.</p>
+              <p>Customise the look and feel of the interface.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
@@ -398,6 +391,47 @@ export default function Settings({ toast }) {
                       Dark
                     </button>
                   </div>
+                </div>
+
+                <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
+                  <div>
+                    <div className="settings-row-label">Rounding</div>
+                    <div className="settings-row-meta">Control the border-radius across the UI</div>
+                  </div>
+                  <div className="rounding-options">
+                    {[
+                      { id: 'none', label: 'None' },
+                      { id: 'subtle', label: 'Subtle' },
+                      { id: 'default', label: 'Default' },
+                      { id: 'pronounced', label: 'Round' },
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        className={`rounding-opt${rounding === opt.id ? ' active' : ''}`}
+                        data-r={opt.id}
+                        onClick={() => setRounding(opt.id)}
+                      >
+                        <div className="rounding-preview" />
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="toggle-row">
+                  <div className="toggle-row-info">
+                    <div className="toggle-row-label">Compact mode</div>
+                    <div className="toggle-row-meta">Reduce spacing for denser layouts</div>
+                  </div>
+                  <button className={`toggle-switch${density === 'compact' ? ' on' : ''}`} onClick={() => setDensity(density === 'compact' ? 'cozy' : 'compact')} />
+                </div>
+
+                <div className="toggle-row">
+                  <div className="toggle-row-info">
+                    <div className="toggle-row-label">Reduce motion</div>
+                    <div className="toggle-row-meta">Minimise animations and transitions</div>
+                  </div>
+                  <button className={`toggle-switch${reduceMotion ? ' on' : ''}`} onClick={() => setReduceMotion(!reduceMotion)} />
                 </div>
               </div>
             </div>
@@ -495,7 +529,7 @@ export default function Settings({ toast }) {
               </div>
               <div className="settings-card-body">
                 <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.65, padding: '12px 0' }}>
-                  We don't run a backend, don't track you, and don't sell your data. All preferences, projects, and account info live only in this browser unless you export them.
+                  We don't sell your data or use third-party trackers. Preferences and projects are stored locally in your browser. When signed in, data syncs securely via Firebase for cross-device access.
                 </p>
                 <div className="settings-row" style={{ paddingTop: 16, paddingBottom: 16 }}>
                   <div>
@@ -532,9 +566,9 @@ export default function Settings({ toast }) {
               <div className="settings-card-body">
                 <ul style={{ listStyle: 'none', padding: '14px 0', margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[
-                    'No analytics, no third-party trackers, no cookies for tracking.',
-                    'No backend — your data stays in your browser unless you export it.',
-                    'Account passwords are hashed before being stored locally.',
+                    'No analytics trackers, no third-party cookies, no ad networks.',
+                    'Authentication is handled securely by Firebase Auth (Google).',
+                    'Your data is stored locally and optionally synced via Firestore when signed in.',
                     'You can export or delete your data at any time, with no requests.',
                   ].map((line, i) => (
                     <li key={i} style={{ display: 'flex', gap: 10, fontSize: 13.5, color: 'var(--t1)', lineHeight: 1.55 }}>

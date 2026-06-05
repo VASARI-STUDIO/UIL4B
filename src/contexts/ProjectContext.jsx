@@ -219,15 +219,3 @@ export function ProjectProvider({ children }) {
 }
 
 export const useProject = () => useContext(ProjectContext)
-
-// Legacy compatibility shim — existing code uses usePalette() with .palette and savePalette()
-export const usePalette = () => {
-  const ctx = useContext(ProjectContext)
-  if (!ctx) return { palette: [], savePalette: () => {} }
-  return {
-    palette: ctx.design?.palette?.colors || [],
-    savePalette: (colors) => {
-      if (Array.isArray(colors)) ctx.setPalette({ colors })
-    },
-  }
-}

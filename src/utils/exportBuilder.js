@@ -6,7 +6,7 @@ import { hexToRgb } from './colors'
 
 function lum(hex) {
   try {
-    const { r, g, b } = hexToRgb(hex)
+    const [r, g, b] = hexToRgb(hex)
     const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
     return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
   } catch {
@@ -28,7 +28,14 @@ function googleFontUrl(families) {
 const PALETTE_LABELS = ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight']
 const TINT_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
 
-export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateShades }) {
+const ROUNDING_MAP = {
+  none: { radius: '0px', radiusS: '0px', radiusL: '0px', radiusXl: '0px' },
+  subtle: { radius: '6px', radiusS: '4px', radiusL: '8px', radiusXl: '12px' },
+  default: { radius: '12px', radiusS: '8px', radiusL: '16px', radiusXl: '24px' },
+  pronounced: { radius: '20px', radiusS: '14px', radiusL: '28px', radiusXl: '40px' },
+}
+
+export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateShades, appearance }) {
   const lines = [':root {']
 
   // Palette colours
@@ -72,12 +79,19 @@ export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateSh
     })
   }
 
+  // Appearance (rounding, density)
+  const rounding = ROUNDING_MAP[appearance?.rounding] || ROUNDING_MAP.default
+  lines.push(`  --radius: ${rounding.radius};`)
+  lines.push(`  --radius-s: ${rounding.radiusS};`)
+  lines.push(`  --radius-l: ${rounding.radiusL};`)
+  lines.push(`  --radius-xl: ${rounding.radiusXl};`)
+
   lines.push('}')
   return lines.join('\n')
 }
 
 // Style guide HTML — uses the user's actual palette + fonts as page styling.
-export function buildStyleGuideHTML({ design, stateShades, theme = 'light', projectName = 'Design System' }) {
+export function buildStyleGuideHTML({ design, stateShades, theme = 'light', projectName = 'Design System', appearance }) {
   const primary = design?.palette?.colors?.[0] || '#2563EB'
   const secondary = design?.palette?.colors?.[1] || primary
   const accent = design?.palette?.colors?.[2] || primary
@@ -89,6 +103,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
 
   const primaryText = contrastText(primary)
   const isDark = theme === 'dark'
+  const rounding = ROUNDING_MAP[appearance?.rounding] || ROUNDING_MAP.default
   const fontsUrl = googleFontUrl([headingFamily, bodyFamily])
 
   const cssVars = buildCSSVars({
@@ -98,6 +113,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
     fonts: design.fonts,
     typeScale: ts,
     stateShades,
+    appearance,
   })
 
   const date = new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })
@@ -211,8 +227,12 @@ ${cssVars}
   --sg-text-2: ${isDark ? '#94A3B8' : '#475569'};
   --sg-text-3: ${isDark ? '#64748B' : '#94A3B8'};
   --sg-border: ${isDark ? 'rgba(255,255,255,.08)' : 'rgba(15,23,42,.06)'};
-  --sg-radius: 10px;
-  --sg-radius-s: 6px;
+  --sg-radius: ${rounding.radius};
+  --sg-radius-s: ${rounding.radiusS};
+  --sg-radius-l: ${rounding.radiusL};
+  --sg-shadow: ${isDark ? '0 1px 2px rgba(0,0,0,.4)' : '0 1px 2px rgba(15,17,31,.05)'};
+  --sg-shadow-lg: ${isDark ? '0 8px 24px rgba(0,0,0,.35),0 24px 48px rgba(0,0,0,.25)' : '0 8px 24px rgba(15,17,31,.06),0 24px 56px rgba(15,17,31,.07)'};
+  --sg-t: .2s cubic-bezier(.16,1,.3,1);
 }
 html { scroll-behavior: smooth; }
 body {
@@ -223,9 +243,11 @@ body {
   line-height: ${ts.lineHeight};
   font-size: ${ts.base}px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   display: flex;
   min-height: 100vh;
 }
+::selection { background: ${primary}; color: ${primaryText}; }
 h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-weight: ${headingWeight}; letter-spacing: -0.02em; }
 .sg-sidebar {
   position: sticky; top: 0; height: 100vh; width: 240px; flex-shrink: 0;
@@ -256,6 +278,12 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 .sg-nav a.active { color: ${primary}; border-left-color: ${primary}; background: ${isDark ? 'rgba(96,165,250,.06)' : 'rgba(37,99,235,.06)'}; }
 .sg-nav .num { font-family: ui-monospace, monospace; font-size: 10px; color: var(--sg-text-3); }
 .sg-sidebar-footer { margin-top: auto; padding: 16px 22px; border-top: 1px solid var(--sg-border); font-size: 10px; color: var(--sg-text-3); }
+.sg-sidebar-footer a { color: ${primary}; text-decoration: none; font-weight: 600; }
+.sg-sidebar-footer a:hover { text-decoration: underline; }
+.sg-footer { margin-top: 80px; padding: 32px 0; border-top: 1px solid var(--sg-border); text-align: center; }
+.sg-footer-brand { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--sg-text-3); font-weight: 500; text-decoration: none; transition: color var(--sg-t); }
+.sg-footer-brand:hover { color: var(--sg-text-2); }
+.sg-footer-mark { width: 18px; height: 18px; border-radius: 50%; background: ${primary}; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: ${primaryText}; font-family: '${headingFamily}', sans-serif; }
 .sg-main { flex: 1; min-width: 0; max-width: 1100px; padding: 56px clamp(24px, 5vw, 72px) 96px; }
 .sg-hero { margin-bottom: 56px; padding-bottom: 32px; border-bottom: 1px solid var(--sg-border); }
 .sg-hero-tag {
@@ -279,9 +307,9 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 .sg-color-card {
   background: var(--sg-bg-1); border: 1px solid var(--sg-border);
   border-radius: var(--sg-radius); overflow: hidden; cursor: pointer;
-  transition: transform .2s, box-shadow .2s;
+  transition: all .3s cubic-bezier(.16,1,.3,1); box-shadow: var(--sg-shadow);
 }
-.sg-color-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+.sg-color-card:hover { transform: translateY(-3px); box-shadow: var(--sg-shadow-lg); border-color: ${isDark ? 'rgba(255,255,255,.12)' : 'rgba(15,23,42,.1)'}; }
 .sg-color-swatch {
   aspect-ratio: 4/3; display: flex; align-items: flex-end; justify-content: flex-start;
   padding: 14px; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600;
@@ -297,7 +325,8 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 .sg-state-row { display: flex; gap: 3px; border-radius: var(--sg-radius-s); overflow: hidden; }
 .sg-state-cell { flex: 1; height: 48px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-family: ui-monospace, monospace; font-size: 9px; }
 .sg-font-pair { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 28px; }
-.sg-font-card { background: var(--sg-bg-1); border: 1px solid var(--sg-border); border-radius: var(--sg-radius); padding: 24px; }
+.sg-font-card { background: var(--sg-bg-1); border: 1px solid var(--sg-border); border-radius: var(--sg-radius); padding: 24px; box-shadow: var(--sg-shadow); transition: all .3s cubic-bezier(.16,1,.3,1); }
+.sg-font-card:hover { box-shadow: var(--sg-shadow-lg); }
 .sg-font-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sg-text-3); margin-bottom: 14px; font-family: ui-monospace, monospace; }
 .sg-font-sample { margin-bottom: 12px; line-height: 1.1; letter-spacing: -0.02em; }
 .sg-font-sample-s { color: var(--sg-text-2); letter-spacing: 0.04em; }
@@ -307,12 +336,12 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 .sg-type-size { font-family: ui-monospace, monospace; font-size: 11px; color: var(--sg-text-2); font-weight: 600; }
 .sg-type-preview { color: var(--sg-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sg-gradient { aspect-ratio: 16/6; border-radius: var(--sg-radius); display: flex; align-items: flex-end; justify-content: flex-end; padding: 18px; color: #fff; font-family: ui-monospace, monospace; font-size: 11px; }
-.sg-code-section { background: var(--sg-bg-1); border: 1px solid var(--sg-border); border-radius: var(--sg-radius); padding: 20px; margin-top: 24px; overflow-x: auto; }
+.sg-code-section { background: var(--sg-bg-1); border: 1px solid var(--sg-border); border-radius: var(--sg-radius); padding: 20px; margin-top: 24px; overflow-x: auto; box-shadow: var(--sg-shadow); }
 .sg-code-section pre { font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; color: var(--sg-text); }
 .sg-toast { position: fixed; bottom: 24px; right: 24px; background: var(--sg-text); color: var(--sg-bg); padding: 10px 18px; border-radius: var(--sg-radius-s); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; transform: translateY(8px); z-index: 100; }
 .sg-toast.show { opacity: 1; transform: translateY(0); }
-.sg-theme-toggle { position: fixed; top: 18px; right: 18px; background: var(--sg-bg-1); border: 1px solid var(--sg-border); padding: 7px 14px; border-radius: var(--sg-radius-s); cursor: pointer; font-size: 11px; font-weight: 600; color: var(--sg-text-2); font-family: inherit; z-index: 50; }
-.sg-theme-toggle:hover { color: var(--sg-text); border-color: var(--sg-text-3); }
+.sg-theme-toggle { position: fixed; top: 18px; right: 18px; background: var(--sg-bg-1); border: 1px solid var(--sg-border); padding: 8px 16px; border-radius: var(--sg-radius); cursor: pointer; font-size: 11px; font-weight: 600; color: var(--sg-text-2); font-family: inherit; z-index: 50; box-shadow: var(--sg-shadow); transition: all var(--sg-t); letter-spacing: .02em; }
+.sg-theme-toggle:hover { color: var(--sg-text); border-color: var(--sg-text-3); box-shadow: var(--sg-shadow-lg); }
 @media (max-width: 800px) {
   body { flex-direction: column; }
   .sg-sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--sg-border); }
@@ -338,7 +367,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
       ${gradStops?.length >= 2 ? '<a href="#gradients"><span class="num">05</span> Gradient</a>' : ''}
       <a href="#tokens"><span class="num">06</span> Tokens</a>
     </nav>
-    <div class="sg-sidebar-footer">Generated with UIL4B</div>
+    <div class="sg-sidebar-footer">Generated with <a href="https://uil4b.com" target="_blank">UIL4B</a></div>
   </aside>
   <main class="sg-main">
     <header class="sg-hero">
@@ -380,6 +409,13 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
         <pre>${cssVars.replace(/</g, '&lt;')}</pre>
       </div>
     </section>
+
+    <footer class="sg-footer">
+      <a class="sg-footer-brand" href="https://uil4b.com" target="_blank" rel="noopener">
+        <span class="sg-footer-mark">U</span>
+        Built with UIL4B · ${date}
+      </a>
+    </footer>
   </main>
   <div class="sg-toast" id="sgt"></div>
   <script>
