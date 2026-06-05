@@ -619,6 +619,64 @@ a.bento-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.
   .bento-hero-sub{margin-bottom:auto;font-size:14px}
 }
 
+/* Short viewport — compact everything to avoid clipping */
+@media(min-width:981px) and (max-height:700px){
+  :root{--top-h:46px}
+  .sidebar{padding-top:8px}
+  .main:has(>.dash){padding:0 18px}
+  .main:has(>.dash)>.dash{padding-top:10px;padding-bottom:10px}
+  .main>*:first-child{padding-top:10px}
+  .bento{gap:8px;margin-bottom:8px}
+  .bento-hero{min-height:auto;padding:18px}
+  .bento-hero-title{font-size:clamp(22px,3vw,32px);margin:6px 0 4px}
+  .bento-hero-sub{font-size:12px;line-height:1.4}
+  .bento-hero-cta{padding:8px 14px;font-size:12px;margin-top:8px}
+  .bento-hero-meta{font-size:10px}
+  .bento-card{padding:14px}
+  .bento-time{padding:14px}
+  .bento-time-big{font-size:24px;margin:4px 0}
+  .bento-time-stats{gap:10px}
+  .bento-time-num{font-size:14px}
+  .bento-quick{padding:12px 14px}
+  .bento-quick-item{padding:5px 8px;font-size:11px}
+  .bento-label{font-size:9px}
+  .bento-color-strip{height:80px}
+  .bento-feature-head{padding:12px 16px 6px}
+  .bento-feature-body{padding:10px 16px 14px}
+  .bento-feature-body h2{font-size:18px;margin-bottom:2px}
+  .bento-feature-body p{font-size:11px;line-height:1.4;margin-bottom:8px}
+  .bento-typo-preview{min-height:60px;padding:8px}
+  .bento-typo-preview span{font-size:clamp(22px,2.5vw,32px)}
+  .bento-img-preview{min-height:60px;padding:8px;gap:4px}
+  .bento-cat-body{padding:10px 14px 12px}
+  .bento-cat-body h3{font-size:14px;margin:3px 0 2px}
+  .bento-cat-body p{font-size:10px}
+  .bento-docs-grid{padding:8px 14px;gap:4px}
+  .dash-section{margin-top:4px}
+  .dash-section-header{margin-bottom:8px}
+  .dash-section-header h2{font-size:13px}
+  .pinned-strip{gap:8px}
+  .pinned-card{padding:10px 14px}
+  .pinned-card-icon{width:28px;height:28px}
+  .pinned-card-label{font-size:12px}
+  .pinned-card-desc{font-size:10px}
+  .dash-pinned-section{margin-top:4px}
+
+  /* General page sections */
+  .main>*:first-child{padding-top:12px}
+  .sec-h{margin-bottom:20px}
+  .sec-h h1{font-size:clamp(24px,4vw,36px);margin-bottom:8px}
+  .sec-h p{font-size:13px}
+  .sub{margin-bottom:24px}
+  .sub h2{font-size:16px}
+
+  /* Category dashboard */
+  .cat-bento{gap:10px}
+  .cat-bento-hero{min-height:auto;padding:20px}
+  .cat-bento-hero-title{font-size:clamp(20px,3vw,28px)}
+  .cat-bento-quick{padding:14px}
+}
+
 /* ─── Docs sticky TOC ─── */
 .docs-toc{position:sticky;top:0;z-index:50;margin:-12px -16px 36px;padding:10px 16px 12px;background:color-mix(in srgb,var(--bg-1) 92%,transparent);backdrop-filter:saturate(160%) blur(14px);-webkit-backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid var(--border);opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity .25s ease,transform .25s ease}
 .docs-toc.visible{opacity:1;transform:translateY(0);pointer-events:auto}
