@@ -17,6 +17,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
+
+// Google OAuth client ID (public, not secret). Used for both the Firebase
+// popup flow and Google Identity Services One Tap. Must also be registered in
+// Firebase Console → Authentication → Sign-in method → Google → Web SDK config.
+export const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  '1074019872488-osev158n28j6f1g2460ss43qslsaempe.apps.googleusercontent.com'
+
 export const googleProvider = new GoogleAuthProvider()
+googleProvider.setCustomParameters({ prompt: 'select_account' })
 export const db = getFirestore(app)
 export default app

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import {
   signInWithPopup,
+  signInWithCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -10,6 +11,7 @@ import {
   updatePassword as fbUpdatePassword,
   deleteUser,
   EmailAuthProvider,
+  GoogleAuthProvider,
   reauthenticateWithCredential,
   sendPasswordResetEmail,
 } from 'firebase/auth'
@@ -153,6 +155,12 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Sign in with a Google ID token from Google Identity Services (One Tap).
+  const loginWithGoogleCredential = useCallback(async (idToken) => {
+    const credential = GoogleAuthProvider.credential(idToken)
+    await signInWithCredential(firebaseAuth, credential)
+  }, [])
+
   const updateProfile = useCallback((fields) => {
     if (!firebaseUser || !profileRef.current) return
     const updated = { ...profileRef.current, ...fields }
@@ -211,7 +219,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, userProfile, loading,
-      login, signup, logout, resetPassword, loginWithGoogle,
+      login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,
       updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,
       isProUser
     }}>
