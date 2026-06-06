@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 
@@ -25,6 +25,9 @@ export default function Login({ toast }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isGate = searchParams.get('gate') === '1'
+  const [gateSuccess, setGateSuccess] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -37,10 +40,12 @@ export default function Login({ toast }) {
       } else if (isSignup) {
         await signup(email, password, displayName)
         toast(t('auth.accountCreated'))
+        if (isGate) { setGateSuccess(true); setTimeout(() => window.close(), 1200); return }
         navigate('/')
       } else {
         await login(email, password)
         toast(t('auth.signedIn'))
+        if (isGate) { setGateSuccess(true); setTimeout(() => window.close(), 1200); return }
         navigate('/')
       }
     } catch (err) {
@@ -69,6 +74,7 @@ export default function Login({ toast }) {
     try {
       await loginWithGoogle()
       toast(t('auth.signedIn'))
+      if (isGate) { setGateSuccess(true); setTimeout(() => window.close(), 1200); return }
       navigate('/')
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
@@ -76,6 +82,22 @@ export default function Login({ toast }) {
       }
     }
     setLoading(false)
+  }
+
+  if (gateSuccess) {
+    return (
+      <div className="sec">
+        <div className="auth-container">
+          <div className="auth-card card" style={{ textAlign: 'center', padding: '48px 32px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }}>
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>You're signed in</h2>
+            <p style={{ fontSize: 13, color: 'var(--t2)' }}>This tab will close automatically. Return to your previous tab to continue.</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
