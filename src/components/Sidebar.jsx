@@ -32,7 +32,8 @@ export default function Sidebar({ isOpen, onClose }) {
   const [openCats, setOpenCats] = useState(() => {
     const stored = loadOpenState()
     if (stored) return stored
-    return CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: c.id === activeCategoryId }), {})
+    // Default: every category expanded so users see all tools immediately.
+    return CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: true }), {})
   })
 
   useEffect(() => {

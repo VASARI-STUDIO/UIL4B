@@ -3,7 +3,6 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useI18n } from '../contexts/I18nContext'
-import { useExport } from '../contexts/ExportContext'
 import { useProject } from '../contexts/ProjectContext'
 import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
 import { useAppearance } from '../contexts/AppearanceContext'
@@ -22,13 +21,12 @@ function downloadFile(content, filename, mime) {
   URL.revokeObjectURL(url)
 }
 
-function ExportDropdown({ actions, onSaveProject, canSave }) {
+function ExportDropdown({ onSaveProject, canSave }) {
   const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState('page')
   const ref = useRef(null)
   const { design } = useProject()
   const { theme } = useTheme()
-  const { rounding, density, reduceMotion } = useAppearance()
+  const { rounding, density } = useAppearance()
 
   useEffect(() => {
     const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -50,7 +48,7 @@ function ExportDropdown({ actions, onSaveProject, canSave }) {
       stateShades: getStateShades(),
       theme,
       projectName: 'My Style Guide',
-      appearance: { rounding, density, reduceMotion },
+      appearance: { rounding, density },
     })
     downloadFile(html, 'style-guide.html', 'text/html')
     setOpen(false)
@@ -64,9 +62,9 @@ function ExportDropdown({ actions, onSaveProject, canSave }) {
       fonts: design.fonts,
       typeScale: design.typeScale,
       stateShades: getStateShades(),
-      appearance: { rounding, density, reduceMotion },
+      appearance: { rounding, density },
     })
-    downloadFile(css + '\n', 'design-tokens.css', 'text/css')
+    downloadFile(css + '\n', 'design.css', 'text/css')
     setOpen(false)
   }
 
@@ -78,14 +76,11 @@ function ExportDropdown({ actions, onSaveProject, canSave }) {
       fonts: design.fonts,
       typeScale: design.typeScale,
       stateShades: getStateShades(),
-      appearance: { rounding, density, reduceMotion },
+      appearance: { rounding, density },
     })
     navigator.clipboard.writeText(css)
     setOpen(false)
   }
-
-  const showPageMode = !!actions && mode === 'page'
-  const showGuideMode = mode === 'guide'
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -105,91 +100,31 @@ function ExportDropdown({ actions, onSaveProject, canSave }) {
       </button>
       {open && (
         <div className="export-dropdown">
-          {/* Mode toggle */}
-          <div style={{ display: 'flex', gap: 4, padding: '6px 6px 8px', borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
-            <button
-              type="button"
-              className={`pt-t${mode === 'page' ? ' on' : ''}`}
-              onClick={() => setMode('page')}
-              disabled={!actions}
-              style={{ flex: 1, padding: '6px 10px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', opacity: !actions ? 0.4 : 1 }}
-            >
-              This page
-            </button>
-            <button
-              type="button"
-              className={`pt-t${mode === 'guide' ? ' on' : ''}`}
-              onClick={() => setMode('guide')}
-              style={{ flex: 1, padding: '6px 10px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}
-            >
-              Style guide
-            </button>
+          <button className="export-dropdown-item" onClick={exportStyleGuideHTML}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
+            </svg>
+            Download style guide
+            <span className="export-dropdown-hint">Styled HTML page</span>
+          </button>
+          <button className="export-dropdown-item" onClick={exportStyleGuideCSS}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+            </svg>
+            Download CSS
+            <span className="export-dropdown-hint">All CSS variables</span>
+          </button>
+          <button className="export-dropdown-item" onClick={copyStyleGuideCSS}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+            Copy CSS
+            <span className="export-dropdown-hint">To clipboard</span>
+          </button>
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+          <div style={{ padding: '8px 12px 10px', fontSize: 10, color: 'var(--t3)', lineHeight: 1.5 }}>
+            Includes: palette · tints · states · fonts · type scale · gradient
           </div>
-
-          {/* PAGE MODE */}
-          {showPageMode && (
-            <>
-              <button className="export-dropdown-item" onClick={() => { actions.downloadHTML(); setOpen(false) }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
-                </svg>
-                Download HTML
-                <span className="export-dropdown-hint">{actions.label || 'This tool'}</span>
-              </button>
-              <button className="export-dropdown-item" onClick={() => { actions.downloadCSS(); setOpen(false) }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-                </svg>
-                Download CSS
-                <span className="export-dropdown-hint">Variables only</span>
-              </button>
-              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-              <button className="export-dropdown-item" onClick={() => { actions.copyCSS(); setOpen(false) }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                </svg>
-                Copy CSS variables
-                <span className="export-dropdown-hint">To clipboard</span>
-              </button>
-            </>
-          )}
-
-          {!actions && mode === 'page' && (
-            <div style={{ padding: '12px 12px', fontSize: 11, color: 'var(--t2)' }}>
-              No page-specific export for this tool. Switch to Style guide to export your full design.
-            </div>
-          )}
-
-          {/* GUIDE MODE */}
-          {showGuideMode && (
-            <>
-              <button className="export-dropdown-item" onClick={exportStyleGuideHTML}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
-                </svg>
-                Download style guide
-                <span className="export-dropdown-hint">Styled HTML page</span>
-              </button>
-              <button className="export-dropdown-item" onClick={exportStyleGuideCSS}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-                </svg>
-                Download tokens
-                <span className="export-dropdown-hint">All CSS variables</span>
-              </button>
-              <button className="export-dropdown-item" onClick={copyStyleGuideCSS}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                </svg>
-                Copy tokens
-                <span className="export-dropdown-hint">To clipboard</span>
-              </button>
-              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-              <div style={{ padding: '8px 12px 10px', fontSize: 10, color: 'var(--t3)', lineHeight: 1.5 }}>
-                Includes: palette · tints · states · fonts · type scale · gradient
-              </div>
-            </>
-          )}
 
           {/* Save project */}
           {canSave && (
@@ -242,7 +177,7 @@ function SaveProjectModal({ open, onClose, onSave }) {
       >
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>Save project</div>
         <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-.02em', marginBottom: 6 }}>Name this design</h3>
-        <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>Captures your palette, fonts, type scale, and tokens.</p>
+        <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>Captures your palette, fonts, type scale, and CSS.</p>
         <input
           ref={inputRef}
           value={name}
@@ -263,7 +198,6 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
   const { user, userProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
-  const { exportActions } = useExport()
   const { canSaveProjects, saveProject } = useProject()
   const navigate = useNavigate()
   const [saveOpen, setSaveOpen] = useState(false)
@@ -306,7 +240,6 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
 
       <div className="topbar-right">
         <ExportDropdown
-          actions={exportActions}
           onSaveProject={() => setSaveOpen(true)}
           canSave={canSaveProjects}
         />

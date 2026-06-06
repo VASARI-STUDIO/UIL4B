@@ -17,6 +17,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:wght@700&family=Sora:wght@400;600;700&family=Fraunces:wght@400;700&family=Bricolage+Grotesque:wght@400;700&family=Source+Sans+3:wght@400;600&family=Commissioner:wght@400;500&family=Inter+Tight:wght@400;500&family=Outfit:wght@100;200;300;400;500;600;700;800;900&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+<script>
+// Apply the saved theme synchronously before first paint so icons/colours
+// render with the correct theme variables (avoids dark-mode black icon flash).
+(function(){try{var v=localStorage.getItem('vs-t-v'),t;if(v!=='2'){t='light'}else{t=localStorage.getItem('vs-t')||'light'}document.documentElement.setAttribute('data-theme',t);var a=JSON.parse(localStorage.getItem('vs-appearance')||'{}');document.documentElement.setAttribute('data-rounding',a.rounding||'default');document.documentElement.setAttribute('data-density',a.density||'cozy')}catch(e){document.documentElement.setAttribute('data-theme','light')}})();
+</script>
 <div id="root"></div>
 <script src="icons-data.js"></script>
 <script>window.icons = typeof icons !== 'undefined' ? icons : []; window.CATS = typeof CATS !== 'undefined' ? CATS : {}; window.PACKS = typeof PACKS !== 'undefined' ? PACKS : {};</script>

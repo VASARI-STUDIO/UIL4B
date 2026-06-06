@@ -6,7 +6,6 @@ const STORAGE_KEY = 'vs-appearance'
 const DEFAULTS = {
   rounding: 'default', // 'none' | 'subtle' | 'default' | 'pronounced'
   density: 'cozy',     // 'cozy' | 'compact'
-  reduceMotion: false,
 }
 
 function load() {
@@ -21,7 +20,6 @@ function applyToDocument(state) {
   const root = document.documentElement
   root.setAttribute('data-rounding', state.rounding)
   root.setAttribute('data-density', state.density)
-  root.setAttribute('data-motion', state.reduceMotion ? 'reduced' : 'full')
 }
 
 export function AppearanceProvider({ children }) {
@@ -35,7 +33,6 @@ export function AppearanceProvider({ children }) {
 
   const setRounding = (rounding) => setState(s => ({ ...s, rounding }))
   const setDensity = (density) => setState(s => ({ ...s, density }))
-  const setReduceMotion = (reduceMotion) => setState(s => ({ ...s, reduceMotion }))
   const setAppearance = (partial) => setState(s => ({ ...s, ...partial }))
 
   return (
@@ -43,7 +40,6 @@ export function AppearanceProvider({ children }) {
       ...state,
       setRounding,
       setDensity,
-      setReduceMotion,
       setAppearance,
     }}>
       {children}

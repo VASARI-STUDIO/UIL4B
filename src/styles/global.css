@@ -1294,9 +1294,6 @@ img,svg,video{max-width:100%;height:auto}
 [data-density="compact"] .topbar{height:46px;--top-h:46px}
 [data-density="compact"] .main{padding-top:0}
 
-/* ─── Appearance: Reduce Motion ─── */
-[data-motion="reduced"],[data-motion="reduced"] *,[data-motion="reduced"] *::before,[data-motion="reduced"] *::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}
-
 /* ─── Appearance Settings Controls ─── */
 .rounding-options{display:flex;gap:8px;flex-wrap:wrap}
 .rounding-opt{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 18px;border:2px solid var(--border);background:var(--card);cursor:pointer;font-family:var(--font);font-size:12px;font-weight:500;color:var(--t1);transition:all .2s;min-width:90px}
