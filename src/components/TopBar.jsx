@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useI18n } from '../contexts/I18nContext'
@@ -194,8 +194,98 @@ function SaveProjectModal({ open, onClose, onSave }) {
   )
 }
 
+function ProfileMenu() {
+  const { user, userProfile, logout } = useAuth()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  const go = (to) => { setOpen(false); navigate(to) }
+  const goSection = (section) => { setOpen(false); navigate('/settings', { state: { section } }) }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      {user ? (
+        <button className="topbar-avatar" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu" title={userProfile?.displayName || user.email}>
+          {userProfile?.photoURL ? (
+            <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
+          ) : (
+            <span>{(userProfile?.displayName || user.email || 'U')[0].toUpperCase()}</span>
+          )}
+        </button>
+      ) : (
+        <button className="topbar-avatar topbar-avatar-guest" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu" aria-label="Account">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
+          </svg>
+        </button>
+      )}
+
+      {open && (
+        <div className="profile-menu" role="menu">
+          {user ? (
+            <>
+              <div className="profile-menu-head">
+                <div className="profile-menu-avatar">
+                  {userProfile?.photoURL ? (
+                    <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span>{(userProfile?.displayName || user.email || 'U')[0].toUpperCase()}</span>
+                  )}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="profile-menu-name">{userProfile?.displayName || user.email?.split('@')[0]}</div>
+                  <div className="profile-menu-email">{user.email}</div>
+                </div>
+              </div>
+              <button className="profile-menu-item" role="menuitem" onClick={() => goSection('account')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Account
+              </button>
+              <button className="profile-menu-item" role="menuitem" onClick={() => go('/projects')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                My Projects
+              </button>
+              <button className="profile-menu-item" role="menuitem" onClick={() => goSection('appearance')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8L7 17M17 7l2.8-2.8"/></svg>
+                Appearance
+              </button>
+              <button className="profile-menu-item" role="menuitem" onClick={() => goSection('language')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
+                Language
+              </button>
+              <div className="profile-menu-sep" />
+              <button className="profile-menu-item profile-menu-danger" role="menuitem" onClick={() => { setOpen(false); logout() }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="profile-menu-guest">You're not signed in</div>
+              <button className="profile-menu-item" role="menuitem" onClick={() => go('/login')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                Sign in
+              </button>
+              <button className="profile-menu-item" role="menuitem" onClick={() => go('/login')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                Create account
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TopBar({ onMenuToggle, onCommandPalette }) {
-  const { user, userProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
   const { canSaveProjects, saveProject } = useProject()
@@ -261,21 +351,7 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
           )}
         </button>
 
-        {user ? (
-          <NavLink to="/settings" className="topbar-avatar" title={userProfile?.displayName || user.email}>
-            {userProfile?.photoURL ? (
-              <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
-            ) : (
-              <span>{(userProfile?.displayName || user.email || 'U')[0].toUpperCase()}</span>
-            )}
-          </NavLink>
-        ) : (
-          <NavLink to="/login" className="topbar-avatar topbar-avatar-guest" aria-label={t('common.signIn')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
-            </svg>
-          </NavLink>
-        )}
+        <ProfileMenu />
       </div>
 
       <SaveProjectModal
