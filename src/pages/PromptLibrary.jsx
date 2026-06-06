@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 
@@ -96,8 +96,16 @@ export default function PromptLibrary({ onCopy, toast }) {
   const [addOpen, setAddOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [dragOver, setDragOver] = useState(false)
-  const [tab, setTab] = useState('my')
+  // Default to the community feed unless the user last left off on "my prompts".
+  const [tab, setTab] = useState(() => {
+    try { return localStorage.getItem('vs-prompt-tab') === 'my' ? 'my' : 'community' }
+    catch { return 'community' }
+  })
   const fileRef = useRef(null)
+
+  useEffect(() => {
+    try { localStorage.setItem('vs-prompt-tab', tab) } catch { /* ignore */ }
+  }, [tab])
 
   const save = useCallback(() => {
     if (!text.trim()) { toast(t('promptLibrary.enterPromptFirst')); return }
