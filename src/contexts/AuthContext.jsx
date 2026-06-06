@@ -25,7 +25,6 @@ const DEFAULT_PROFILE = {
   displayName: '',
   email: '',
   photoURL: '',
-  tier: 'free',
   location: '',
   website: '',
   bio: '',
@@ -115,7 +114,6 @@ export function AuthProvider({ children }) {
     displayName: profile.displayName || user?.email?.split('@')[0] || 'User',
     email: profile.email,
     photoURL: profile.photoURL || '',
-    tier: profile.tier || 'free',
     location: profile.location || '',
     website: profile.website || '',
     bio: profile.bio || '',
@@ -214,14 +212,11 @@ export function AuthProvider({ children }) {
     await deleteUser(firebaseUser)
   }, [firebaseUser])
 
-  const isProUser = () => userProfile?.tier === 'pro'
-
   return (
     <AuthContext.Provider value={{
       user, userProfile, loading,
       login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,
       updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,
-      isProUser
     }}>
       {children}
     </AuthContext.Provider>

@@ -265,7 +265,7 @@ export default function Settings({ toast }) {
   }
 
   const sections = [
-    { id: 'subscription', label: t('settings.subscription') || 'Subscription' },
+    { id: 'support', label: 'Support' },
     { id: 'appearance', label: t('settings.appearance') || 'Appearance' },
     { id: 'language', label: t('settings.language') || 'Language' },
     ...(user ? [{ id: 'account', label: t('settings.account') || 'Account' }] : []),
@@ -300,71 +300,26 @@ export default function Settings({ toast }) {
 
         <div className="settings-content">
 
-          {/* Subscription */}
-          <section id="set-subscription" className="settings-section">
+          {/* Support */}
+          <section id="set-support" className="settings-section">
             <div className="settings-section-h">
-              <h2>Subscription</h2>
-              <p>Choose the plan that suits how you work.</p>
+              <h2>Support</h2>
+              <p>UIL4B is free for everyone. If you find it useful, consider supporting development.</p>
             </div>
-            <div className="plan-grid">
-              {[
-                {
-                  id: 'free',
-                  name: t('settings.plans.free.name') || 'Free',
-                  desc: 'Everything you need to get started.',
-                  price: t('settings.plans.free.price') || '$0',
-                  period: 'forever',
-                  features: [
-                    t('settings.plans.free.f1'),
-                    t('settings.plans.free.f2'),
-                    t('settings.plans.free.f3'),
-                    t('settings.plans.free.f4'),
-                  ],
-                },
-                {
-                  id: 'pro',
-                  name: t('settings.plans.pro.name') || 'Pro',
-                  desc: 'Power tools for professional designers.',
-                  price: t('settings.plans.pro.price') || '$9',
-                  period: t('settings.plans.pro.period') || '/month',
-                  features: [
-                    t('settings.plans.pro.f1'),
-                    t('settings.plans.pro.f2'),
-                    t('settings.plans.pro.f3'),
-                    t('settings.plans.pro.f4'),
-                    t('settings.plans.pro.f5'),
-                  ],
-                  featured: true,
-                },
-              ].map(plan => {
-                const isCurrent = (userProfile?.tier || 'free') === plan.id
-                return (
-                  <div key={plan.id} className={`plan-card${plan.featured ? ' featured' : ''}`}>
-                    {plan.featured && <span className="plan-card-badge">Recommended</span>}
-                    <div className="plan-card-name">{plan.name}</div>
-                    <div className="plan-card-desc">{plan.desc}</div>
-                    <div className="plan-card-price">
-                      <span className="plan-card-price-num">{plan.price}</span>
-                      {plan.period && <span className="plan-card-price-period">{plan.period}</span>}
-                    </div>
-                    <ul className="plan-card-features">
-                      {plan.features.filter(Boolean).map((f, i) => (
-                        <li key={i}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    {isCurrent ? (
-                      <div className="plan-card-current">Current plan</div>
-                    ) : (
-                      <div className="plan-card-coming">Coming soon</div>
-                    )}
-                  </div>
-                )
-              })}
+            <div className="settings-card">
+              <div className="settings-card-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
+                  <path d="M18 8h1a4 4 0 010 8h-1" /><path d="M6 8H5a4 4 0 000 8h1" /><path d="M6 8a6 6 0 0112 0v1a2 2 0 01-2 2H8a2 2 0 01-2-2V8z" /><line x1="12" y1="16" x2="12" y2="20" /><line x1="8" y1="20" x2="16" y2="20" />
+                </svg>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>Buy me a coffee</div>
+                <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20, lineHeight: 1.6 }}>
+                  Your support helps keep UIL4B free, maintained, and improving.
+                </div>
+                <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer" className="btn btn-accent" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                  Support UIL4B
+                </a>
+              </div>
             </div>
           </section>
 
@@ -488,9 +443,6 @@ export default function Settings({ toast }) {
                   <div className="settings-profile-info">
                     <div className="settings-profile-name">{userProfile?.displayName || 'Welcome'}</div>
                     <div className="settings-profile-email">{user.email}</div>
-                    <div className={`settings-profile-tier${userProfile?.tier === 'pro' ? ' pro' : ''}`}>
-                      {userProfile?.tier === 'pro' ? '✦ Pro' : 'Free plan'}
-                    </div>
                   </div>
                   <button className="btn btn-s" onClick={logout}>Sign out</button>
                 </div>
