@@ -23,7 +23,7 @@ export const auth = getAuth(app)
 // Firebase Console → Authentication → Sign-in method → Google → Web SDK config.
 export const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
-  '1074019872488-osev158n28j6f1g2460ss43qslsaempe.apps.googleusercontent.com'
+  '30029260768-7vestvvslbrqt1tbdbvi9poa8fgn7gqp.apps.googleusercontent.com'
 
 export const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({ prompt: 'select_account' })
