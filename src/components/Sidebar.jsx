@@ -140,6 +140,11 @@ export default function Sidebar({ isOpen, onClose }) {
                         onClick={onClose}
                       >
                         <span className="nav-item-num">{idx + 1}.{ti + 1}</span>
+                        {tool.icon && (
+                          <svg className="nav-icon nav-icon-sub" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            {tool.icon}
+                          </svg>
+                        )}
                         <span className="nav-item-label">{tool.label}</span>
                       </NavLink>
                     ))}
