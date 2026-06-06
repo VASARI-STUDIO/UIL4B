@@ -235,7 +235,7 @@ function NavIcon({ id }) {
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { theme, setTheme } = useTheme()
-  const { rounding, density, reduceMotion, setRounding, setDensity, setReduceMotion } = useAppearance()
+  const { rounding, density, setRounding, setDensity } = useAppearance()
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -379,14 +379,6 @@ export default function Settings({ toast }) {
                     <div className="toggle-row-meta">Reduce spacing for denser layouts</div>
                   </div>
                   <button className={`toggle-switch${density === 'compact' ? ' on' : ''}`} onClick={() => setDensity(density === 'compact' ? 'cozy' : 'compact')} />
-                </div>
-
-                <div className="toggle-row">
-                  <div className="toggle-row-info">
-                    <div className="toggle-row-label">Reduce motion</div>
-                    <div className="toggle-row-meta">Minimise animations and transitions</div>
-                  </div>
-                  <button className={`toggle-switch${reduceMotion ? ' on' : ''}`} onClick={() => setReduceMotion(!reduceMotion)} />
                 </div>
               </div>
             </div>
