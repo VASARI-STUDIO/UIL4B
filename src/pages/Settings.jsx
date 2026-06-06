@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
@@ -239,6 +239,16 @@ export default function Settings({ toast }) {
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)
+  const location = useLocation()
+
+  // Jump to a section when navigated from the profile quick-menu.
+  useEffect(() => {
+    const section = location.state?.section
+    if (!section) return
+    setActive(section)
+    const el = document.getElementById(`set-${section}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [location.state])
 
   const exportData = () => {
     const data = {}
