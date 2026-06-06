@@ -180,7 +180,6 @@ export function getAnalyticsSummary() {
       uid,
       email: u.email,
       displayName: u.displayName,
-      tier: u.tier,
       provider: u.photoURL ? 'google' : 'email',
       createdAt: u.createdAt,
     }))
