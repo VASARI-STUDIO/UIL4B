@@ -219,19 +219,39 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
   <style>
 ${cssVars}
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Theme variables scoped to data-theme so the toggle button actually works. */
+html[data-theme="light"] {
+  --sg-bg: #F8FAFC;
+  --sg-bg-1: #FFFFFF;
+  --sg-bg-2: #F1F5F9;
+  --sg-text: #0F172A;
+  --sg-text-2: #475569;
+  --sg-text-3: #94A3B8;
+  --sg-border: rgba(15,23,42,.06);
+  --sg-shadow: 0 1px 2px rgba(15,17,31,.05);
+  --sg-shadow-lg: 0 8px 24px rgba(15,17,31,.06),0 24px 56px rgba(15,17,31,.07);
+  --sg-hover: rgba(15,23,42,.02);
+  --sg-nav-active-bg: rgba(37,99,235,.06);
+  --sg-card-hover-border: rgba(15,23,42,.1);
+}
+html[data-theme="dark"] {
+  --sg-bg: #0B0F1A;
+  --sg-bg-1: #111827;
+  --sg-bg-2: #1E293B;
+  --sg-text: #F1F5F9;
+  --sg-text-2: #94A3B8;
+  --sg-text-3: #64748B;
+  --sg-border: rgba(255,255,255,.08);
+  --sg-shadow: 0 1px 2px rgba(0,0,0,.4);
+  --sg-shadow-lg: 0 8px 24px rgba(0,0,0,.35),0 24px 48px rgba(0,0,0,.25);
+  --sg-hover: rgba(255,255,255,.04);
+  --sg-nav-active-bg: rgba(96,165,250,.06);
+  --sg-card-hover-border: rgba(255,255,255,.12);
+}
 :root {
-  --sg-bg: ${isDark ? '#0B0F1A' : '#F8FAFC'};
-  --sg-bg-1: ${isDark ? '#111827' : '#FFFFFF'};
-  --sg-bg-2: ${isDark ? '#1E293B' : '#F1F5F9'};
-  --sg-text: ${isDark ? '#F1F5F9' : '#0F172A'};
-  --sg-text-2: ${isDark ? '#94A3B8' : '#475569'};
-  --sg-text-3: ${isDark ? '#64748B' : '#94A3B8'};
-  --sg-border: ${isDark ? 'rgba(255,255,255,.08)' : 'rgba(15,23,42,.06)'};
   --sg-radius: ${rounding.radius};
   --sg-radius-s: ${rounding.radiusS};
   --sg-radius-l: ${rounding.radiusL};
-  --sg-shadow: ${isDark ? '0 1px 2px rgba(0,0,0,.4)' : '0 1px 2px rgba(15,17,31,.05)'};
-  --sg-shadow-lg: ${isDark ? '0 8px 24px rgba(0,0,0,.35),0 24px 48px rgba(0,0,0,.25)' : '0 8px 24px rgba(15,17,31,.06),0 24px 56px rgba(15,17,31,.07)'};
   --sg-t: .2s cubic-bezier(.16,1,.3,1);
 }
 html { scroll-behavior: smooth; }
@@ -274,8 +294,8 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
   color: var(--sg-text-2); text-decoration: none;
   transition: all .15s; border-left: 2px solid transparent;
 }
-.sg-nav a:hover { color: var(--sg-text); background: ${isDark ? 'rgba(255,255,255,.04)' : 'rgba(15,23,42,.02)'}; }
-.sg-nav a.active { color: ${primary}; border-left-color: ${primary}; background: ${isDark ? 'rgba(96,165,250,.06)' : 'rgba(37,99,235,.06)'}; }
+.sg-nav a:hover { color: var(--sg-text); background: var(--sg-hover); }
+.sg-nav a.active { color: ${primary}; border-left-color: ${primary}; background: var(--sg-nav-active-bg); }
 .sg-nav .num { font-family: ui-monospace, monospace; font-size: 10px; color: var(--sg-text-3); }
 .sg-sidebar-footer { margin-top: auto; padding: 16px 22px; border-top: 1px solid var(--sg-border); font-size: 10px; color: var(--sg-text-3); }
 .sg-sidebar-footer a { color: ${primary}; text-decoration: none; font-weight: 600; }
@@ -309,7 +329,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
   border-radius: var(--sg-radius); overflow: hidden; cursor: pointer;
   transition: all .3s cubic-bezier(.16,1,.3,1); box-shadow: var(--sg-shadow);
 }
-.sg-color-card:hover { transform: translateY(-3px); box-shadow: var(--sg-shadow-lg); border-color: ${isDark ? 'rgba(255,255,255,.12)' : 'rgba(15,23,42,.1)'}; }
+.sg-color-card:hover { transform: translateY(-3px); box-shadow: var(--sg-shadow-lg); border-color: var(--sg-card-hover-border); }
 .sg-color-swatch {
   aspect-ratio: 4/3; display: flex; align-items: flex-end; justify-content: flex-start;
   padding: 14px; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600;
