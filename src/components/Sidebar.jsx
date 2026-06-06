@@ -176,9 +176,6 @@ export default function Sidebar({ isOpen, onClose }) {
                 </div>
                 <div className="sidebar-user-info">
                   <div className="sidebar-user-name">{userProfile?.displayName || user.email?.split('@')[0]}</div>
-                  <div className={`sidebar-user-tier${userProfile?.tier === 'pro' ? ' pro' : ''}`}>
-                    {userProfile?.tier === 'pro' ? t('nav.proPlan') : t('nav.freePlan')}
-                  </div>
                 </div>
               </NavLink>
               <button className="sidebar-user-action" onClick={logout} title={t('common.signOut')}>
