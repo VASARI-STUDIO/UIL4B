@@ -7,12 +7,12 @@ import { getFirestore } from 'firebase/firestore'
 // IMPORTANT: Set Firestore region to australia-southeast1 (Sydney)
 // when creating the database in Firebase Console.
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'PLACEHOLDER_API_KEY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'uil4b.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'uil4b',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'uil4b.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyADQoAyU3qwAls2bUW6rfE1csZa0Ud6EKE',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'uil4b-357c5.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'uil4b-357c5',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'uil4b-357c5.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '30029260768',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:30029260768:web:1125a25d6a19765180ad85',
 }
 
 const app = initializeApp(firebaseConfig)
