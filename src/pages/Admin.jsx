@@ -375,9 +375,6 @@ export default function Admin({ toast }) {
               <div className="card" style={{ padding: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Registered Users</div>
                 <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--accent)' }}>{data.users.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 4 }}>
-                  {data.users.filter(u => u.tier === 'pro').length} Pro · {data.users.filter(u => u.tier !== 'pro').length} Free
-                </div>
               </div>
               <div
                 className="card"
@@ -608,14 +605,12 @@ export default function Admin({ toast }) {
             headers={[
               { key: 'email', label: 'Email', mono: true, bold: true },
               { key: 'name', label: 'Name' },
-              { key: 'tier', label: 'Tier', width: '80px' },
               { key: 'provider', label: 'Provider', width: '80px' },
               { key: 'joined', label: 'Joined', width: '120px' },
             ]}
             rows={data.users.map(u => ({
               email: u.email,
               name: u.displayName || '—',
-              tier: u.tier || 'free',
               provider: u.provider || 'email',
               joined: fmtDate(u.createdAt),
             }))}
