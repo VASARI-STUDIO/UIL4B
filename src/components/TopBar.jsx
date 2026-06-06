@@ -21,12 +21,18 @@ function downloadFile(content, filename, mime) {
   URL.revokeObjectURL(url)
 }
 
-function ExportDropdown({ onSaveProject, canSave }) {
+function openLoginGate() {
+  const base = window.location.origin + window.location.pathname
+  window.open(`${base}#/login?gate=1`, '_blank', 'width=500,height=660,noopener')
+}
+
+function ExportDropdown({ onSaveProject }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const { design } = useProject()
   const { theme } = useTheme()
   const { rounding, density } = useAppearance()
+  const { user } = useAuth()
 
   useEffect(() => {
     const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -42,7 +48,12 @@ function ExportDropdown({ onSaveProject, canSave }) {
     } catch { return null }
   }
 
-  const exportStyleGuideHTML = () => {
+  const requireAuth = (action) => {
+    if (!user) { openLoginGate(); setOpen(false); return }
+    action()
+  }
+
+  const exportStyleGuideHTML = () => requireAuth(() => {
     const html = buildStyleGuideHTML({
       design,
       stateShades: getStateShades(),
@@ -52,7 +63,7 @@ function ExportDropdown({ onSaveProject, canSave }) {
     })
     downloadFile(html, 'style-guide.html', 'text/html')
     setOpen(false)
-  }
+  })
 
   const exportStyleGuideCSS = () => {
     const css = buildCSSVars({
@@ -126,19 +137,15 @@ function ExportDropdown({ onSaveProject, canSave }) {
             Includes: palette · tints · states · fonts · type scale · gradient
           </div>
 
-          {/* Save project */}
-          {canSave && (
-            <>
-              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-              <button className="export-dropdown-item" onClick={() => { setOpen(false); onSaveProject() }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-                Save as project
-                <span className="export-dropdown-hint">In your account</span>
-              </button>
-            </>
-          )}
+          {/* Save project — always visible, gated behind login */}
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+          <button className="export-dropdown-item" onClick={() => requireAuth(() => { setOpen(false); onSaveProject() })}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+            Save as project
+            <span className="export-dropdown-hint">{user ? 'In your account' : 'Sign in required'}</span>
+          </button>
         </div>
       )}
     </div>
@@ -288,7 +295,7 @@ function ProfileMenu() {
 export default function TopBar({ onMenuToggle, onCommandPalette }) {
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
-  const { canSaveProjects, saveProject } = useProject()
+  const { saveProject } = useProject()
   const navigate = useNavigate()
   const [saveOpen, setSaveOpen] = useState(false)
   const isMac = IS_MAC
@@ -331,7 +338,6 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
       <div className="topbar-right">
         <ExportDropdown
           onSaveProject={() => setSaveOpen(true)}
-          canSave={canSaveProjects}
         />
 
         <button
