@@ -35,6 +35,8 @@ import Projects from './pages/Projects'
 import FontGallery from './pages/FontGallery'
 import AltTextGenerator from './pages/AltTextGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
+import About from './pages/About'
+import FAQ from './pages/FAQ'
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
@@ -124,6 +126,8 @@ export default function App() {
             <Route path="/feedback" element={<Feedback toast={toast} />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/faq" element={<FAQ />} />
             <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

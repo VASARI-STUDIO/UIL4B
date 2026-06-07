@@ -121,9 +121,12 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
   const paletteSection = (design?.palette?.colors || []).map((c, i) => {
     const label = PALETTE_LABELS[i] || `Colour ${i + 1}`
     const textColor = contrastText(c)
+    let rgbStr = ''
+    try { const [r, g, b] = hexToRgb(c); rgbStr = `rgb(${r}, ${g}, ${b})` } catch { rgbStr = '' }
     return `<div class="sg-color-card" data-hex="${c}">
         <div class="sg-color-swatch" style="background:${c};color:${textColor}">
           <span class="sg-color-hex">${c.toUpperCase()}</span>
+          ${rgbStr ? `<span class="sg-color-rgb">${rgbStr}</span>` : ''}
         </div>
         <div class="sg-color-meta">
           <span class="sg-color-name">${label}</span>
@@ -333,7 +336,16 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 .sg-color-swatch {
   aspect-ratio: 4/3; display: flex; align-items: flex-end; justify-content: flex-start;
   padding: 14px; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600;
+  position: relative; transition: filter .2s ease;
 }
+.sg-color-card:hover .sg-color-swatch { filter: brightness(1.08); }
+@media (prefers-color-scheme: dark) { .sg-color-card:hover .sg-color-swatch { filter: brightness(.88); } }
+.sg-color-rgb {
+  position: absolute; top: 14px; left: 14px; font-size: 10px; opacity: 0;
+  transition: opacity .2s ease; font-weight: 500;
+}
+.sg-color-card:hover .sg-color-rgb { opacity: 1; }
+.sg-color-card:hover .sg-color-hex { opacity: 1; }
 .sg-color-meta { padding: 12px 14px; }
 .sg-color-name { display: block; font-size: 13px; font-weight: 600; }
 .sg-color-token { display: block; font-size: 10px; color: var(--sg-text-3); font-family: ui-monospace, monospace; margin-top: 2px; }
