@@ -163,6 +163,14 @@
     "promptLibrary": {
       "label": "Biblioteca de prompts",
       "description": "Guardar prompts de generación de imágenes con IA con vistas previas."
+    },
+    "fontGallery": {
+      "label": "Galería de Fuentes",
+      "description": "Galería visual para explorar y previsualizar tipografías."
+    },
+    "emojiLibrary": {
+      "label": "Biblioteca de Emojis",
+      "description": "Explora y copia emojis organizados por categoría."
     }
   },
   "color": {

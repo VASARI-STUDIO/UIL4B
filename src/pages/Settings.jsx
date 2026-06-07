@@ -409,10 +409,12 @@ export default function Settings({ toast }) {
                       className={`lang-tile${lang === l.code ? ' active' : ''}`}
                       onClick={() => { setLang(l.code); toast(`Language: ${l.native}`) }}
                     >
-                      <span className="lang-flag">{l.flag}</span>
+                      <span className="lang-flag">
+                        <img src={`https://flagcdn.com/w40/${l.region.toLowerCase()}.png`} alt={l.region} width="28" height="21" style={{ objectFit: 'cover', borderRadius: 2 }} />
+                      </span>
                       <div className="lang-tile-info">
                         <span className="lang-tile-label">{l.native}</span>
-                        <span className="lang-tile-code">{l.code} · {l.region}</span>
+                        <span className="lang-tile-code">{l.label}</span>
                       </div>
                       {lang === l.code && (
                         <svg className="lang-tile-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

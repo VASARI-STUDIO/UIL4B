@@ -1143,7 +1143,7 @@ img,svg,video{max-width:100%;height:auto}
 .lang-tile.active .lang-flag{background:var(--card);border-color:var(--accent)}
 .lang-tile-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .lang-tile-label{font-size:13px;font-weight:600;color:var(--t0);line-height:1.2}
-.lang-tile-code{font-family:var(--mono);font-size:9.5px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;line-height:1}
+.lang-tile-code{font-size:11px;color:var(--t2);line-height:1}
 .lang-tile.active .lang-tile-code{color:var(--accent)}
 .lang-tile-check{flex-shrink:0;color:var(--accent);opacity:0;transition:opacity var(--t)}
 .lang-tile.active .lang-tile-check{opacity:1}
