@@ -405,6 +405,17 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .pl-empty svg{opacity:.25}
 .pl-empty p{font-size:14px;margin:0}
 
+/* ─── Emoji Library ─── */
+.emoji-sections{display:flex;flex-direction:column;gap:32px}
+.emoji-section-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.emoji-section-head h3{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.emoji-section-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px}
+.emoji-cell{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:all .15s;position:relative}
+.emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2)}
+.emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent)}
+.emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;font-family:var(--font)}
+
 /* ─── CAD Converter ─── */
 .cad-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:80px 40px;border:2px dashed var(--border);border-radius:var(--radius-l);cursor:pointer;transition:all var(--t);text-align:center;background:var(--card)}
 .cad-drop:hover,.cad-drop.over{border-color:var(--accent);background:var(--accent-bg)}
@@ -566,10 +577,10 @@ a.bento-card:hover{border-color:var(--bh)}
 
 /* Typography preview */
 .bento-typo-preview{flex:1;display:flex;align-items:center;justify-content:center;gap:18px;padding:16px;position:relative;z-index:2;min-height:110px}
-.bento-typo-preview span{font-size:clamp(28px,3.5vw,42px);line-height:1;color:var(--t1);opacity:.85;transition:all .3s}
+.bento-typo-preview span{line-height:1;color:var(--t1);opacity:.85;transition:all .3s}
+.bento-typo-meta{font-size:10px!important;font-weight:600;letter-spacing:.04em;color:var(--t3)!important;font-family:var(--mono);position:absolute;bottom:12px;left:50%;transform:translateX(-50%);white-space:nowrap}
 .bento-typo:hover .bento-typo-preview span{color:var(--accent);opacity:1;transform:translateY(-2px)}
 .bento-typo:hover .bento-typo-preview span:nth-child(2){transition-delay:.05s}
-.bento-typo:hover .bento-typo-preview span:nth-child(3){transition-delay:.1s}
 
 /* Imagery preview */
 .bento-img-preview{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:14px;min-height:110px;position:relative;z-index:2}
@@ -583,17 +594,13 @@ a.bento-card:hover{border-color:var(--bh)}
 .bento-img:hover .bento-img-cell:nth-child(6){transition-delay:.2s}
 
 /* Docs preview */
-.bento-docs-grid{flex:1;padding:18px 60px 18px 20px;display:flex;flex-direction:column;gap:7px;justify-content:center;position:relative;z-index:2;min-height:110px}
-.bento-docs-line{height:7px;border-radius:4px;background:var(--bg-3);display:block;transition:background .3s,width .3s}
-.bento-docs-line.w-full{width:85%}
-.bento-docs-line.w-3\/4{width:65%}
-.bento-docs-line.w-5\/6{width:72%}
-.bento-docs-line.w-2\/3{width:55%}
-.bento-docs-line.w-4\/5{width:68%}
-.bento-docs:hover .bento-docs-line:nth-child(1){background:var(--accent);width:90%}
-.bento-docs:hover .bento-docs-line:nth-child(3){background:color-mix(in srgb,var(--accent) 50%,var(--bg-3))}
-.bento-docs-mark{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:50%;background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 20%,transparent);display:flex;align-items:center;justify-content:center}
-.bento-docs-mark::after{content:'?';font-family:Georgia,serif;font-size:18px;font-weight:600;color:var(--accent);line-height:1}
+.bento-docs-grid{flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:6px;justify-content:center;position:relative;z-index:2;min-height:110px}
+.bento-docs-scale-row{display:flex;align-items:center;gap:8px}
+.bento-docs-size{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--t3);min-width:22px;text-align:right;transition:color .3s}
+.bento-docs-line{height:6px;border-radius:3px;background:var(--bg-3);display:block;transition:background .3s,width .4s cubic-bezier(.16,1,.3,1)}
+.bento-docs:hover .bento-docs-scale-row:nth-child(1) .bento-docs-line{background:var(--accent)}
+.bento-docs:hover .bento-docs-scale-row:nth-child(1) .bento-docs-size{color:var(--accent)}
+.bento-docs:hover .bento-docs-scale-row:nth-child(2) .bento-docs-line{background:color-mix(in srgb,var(--accent) 60%,var(--bg-3))}
 
 /* Pinned tools strip below bento */
 .dash-section{margin-bottom:32px}

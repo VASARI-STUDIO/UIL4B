@@ -4,6 +4,7 @@ import { CATEGORIES, localiseTools, localiseCategories } from '../data/tools'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useProject } from '../contexts/ProjectContext'
 
 function PinIcon({ filled }) {
   return (
@@ -22,23 +23,7 @@ function ArrowIcon() {
   )
 }
 
-function loadSavedPalette() {
-  try {
-    const raw = localStorage.getItem('vs-current-design')
-    if (!raw) return null
-    const data = JSON.parse(raw)
-    const colors = data?.palette?.colors
-    return Array.isArray(colors) && colors.length ? colors : null
-  } catch { return null }
-}
-
 const DEFAULT_PALETTE = ['#2563EB', '#7C3AED', '#EC4899', '#F59E0B', '#10B981']
-
-const SAMPLE_FONTS = [
-  { family: 'Inter, sans-serif', weight: 800, label: 'Aa' },
-  { family: 'Georgia, serif', weight: 400, label: 'Aa' },
-  { family: '"Courier New", monospace', weight: 600, label: 'Aa' },
-]
 
 const ICON_GLYPHS = [
   <path key="1" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
@@ -53,18 +38,20 @@ export default function Dashboard() {
   const { user, userProfile } = useAuth()
   const { pinned, togglePinned, recent } = useWorkspace()
   const { t } = useI18n()
+  const { design } = useProject()
   const [now, setNow] = useState(() => new Date())
-  const [palette, setPalette] = useState(() => loadSavedPalette() || DEFAULT_PALETTE)
+
+  const palette = (design?.palette?.colors?.length ? design.palette.colors : DEFAULT_PALETTE)
+  const headingFont = design?.fonts?.heading?.family || 'Inter'
+  const bodyFont = design?.fonts?.body?.family || 'Inter'
+  const headingWeight = design?.fonts?.heading?.weight || 700
+  const bodyWeight = design?.fonts?.body?.weight || 400
+  const typeBase = design?.typeScale?.base || 16
+  const typeRatio = design?.typeScale?.ratio || 1.25
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(id)
-  }, [])
-
-  useEffect(() => {
-    const onStorage = () => setPalette(loadSavedPalette() || DEFAULT_PALETTE)
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
   }, [])
 
   const lTools = localiseTools(t)
@@ -171,12 +158,12 @@ export default function Dashboard() {
           </div>
         </NavLink>
 
-        {/* TYPOGRAPHY */}
+        {/* TYPOGRAPHY — live font preview from design state */}
         <NavLink to="/typography" className="bento-card bento-cat bento-typo">
           <div className="bento-typo-preview">
-            {SAMPLE_FONTS.map((f, i) => (
-              <span key={i} style={{ fontFamily: f.family, fontWeight: f.weight }}>{f.label}</span>
-            ))}
+            <span style={{ fontFamily: `'${headingFont}', sans-serif`, fontWeight: headingWeight, fontSize: 36 }}>Aa</span>
+            <span style={{ fontFamily: `'${bodyFont}', sans-serif`, fontWeight: bodyWeight, fontSize: 28 }}>Aa</span>
+            <span className="bento-typo-meta">{headingFont}{headingFont !== bodyFont ? ` / ${bodyFont}` : ''}</span>
           </div>
           <div className="bento-cat-body">
             <div className="bento-label">{t('dash.category', { num: '02' })}</div>
@@ -201,15 +188,18 @@ export default function Dashboard() {
           </div>
         </NavLink>
 
-        {/* DOCUMENTATION */}
+        {/* DOCUMENTATION — type scale mini preview */}
         <NavLink to="/docs" className="bento-card bento-cat bento-docs">
           <div className="bento-docs-grid">
-            <span className="bento-docs-line w-full" />
-            <span className="bento-docs-line w-3/4" />
-            <span className="bento-docs-line w-5/6" />
-            <span className="bento-docs-line w-2/3" />
-            <span className="bento-docs-line w-4/5" />
-            <span className="bento-docs-mark" />
+            {[3, 2, 1, 0].map(step => {
+              const size = Math.round(typeBase * Math.pow(typeRatio, step))
+              return (
+                <div key={step} className="bento-docs-scale-row">
+                  <span className="bento-docs-size">{size}</span>
+                  <span className="bento-docs-line" style={{ width: `${100 - step * 12}%` }} />
+                </div>
+              )
+            })}
           </div>
           <div className="bento-cat-body">
             <div className="bento-label">{t('dash.category', { num: '04' })}</div>
