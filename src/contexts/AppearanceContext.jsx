@@ -4,7 +4,7 @@ const AppearanceContext = createContext()
 const STORAGE_KEY = 'vs-appearance'
 
 const DEFAULTS = {
-  rounding: 'none', // 'none' | 'subtle' | 'default' | 'pronounced'
+  rounding: 'none', // 'none' (Square) | 'subtle' | 'default' (Medium) | 'pronounced' (Round)
   density: 'cozy',  // 'cozy' | 'compact'
 }
 
