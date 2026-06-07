@@ -365,9 +365,9 @@ export default function Settings({ toast }) {
                   </div>
                   <div className="rounding-options">
                     {[
-                      { id: 'none', label: 'None' },
+                      { id: 'none', label: 'Square' },
                       { id: 'subtle', label: 'Subtle' },
-                      { id: 'default', label: 'Default' },
+                      { id: 'default', label: 'Medium' },
                       { id: 'pronounced', label: 'Round' },
                     ].map(opt => (
                       <button

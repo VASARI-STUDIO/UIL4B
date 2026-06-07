@@ -25,6 +25,17 @@ function ArrowIcon() {
 
 const DEFAULT_PALETTE = ['#2563EB', '#7C3AED', '#EC4899', '#F59E0B', '#10B981']
 
+const FEATURED_PALETTES = [
+  { name: 'Oceanic', colors: ['#0D1B2A', '#1B263B', '#415A77', '#778DA9', '#E0E1DD'] },
+  { name: 'Sunset', colors: ['#F72585', '#B5179E', '#7209B7', '#560BAD', '#480CA8'] },
+  { name: 'Forest', colors: ['#2D6A4F', '#40916C', '#52B788', '#74C69D', '#B7E4C7'] },
+  { name: 'Coral', colors: ['#FF6B6B', '#EE6C4D', '#F4845F', '#F7B267', '#F9D56E'] },
+  { name: 'Arctic', colors: ['#CAF0F8', '#90E0EF', '#48CAE4', '#0096C7', '#023E8A'] },
+  { name: 'Terracotta', colors: ['#D4A373', '#CCD5AE', '#E9EDC9', '#FAEDCD', '#FEFAE0'] },
+  { name: 'Neon', colors: ['#7400B8', '#6930C3', '#5E60CE', '#5390D9', '#4EA8DE'] },
+  { name: 'Warm Clay', colors: ['#3E2723', '#D4896A', '#FFF8E1', '#8FBC8F', '#5D4037'] },
+]
+
 const ICON_GLYPHS = [
   <path key="1" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
   <><circle key="1" cx="12" cy="12" r="10" /><path key="2" d="M8 14s1.5 2 4 2 4-2 4-2" /><line key="3" x1="9" y1="9" x2="9.01" y2="9" /><line key="4" x1="15" y1="9" x2="15.01" y2="9" /></>,
@@ -40,8 +51,11 @@ export default function Dashboard() {
   const { t } = useI18n()
   const { design } = useProject()
   const [now, setNow] = useState(() => new Date())
+  const [featuredIdx, setFeaturedIdx] = useState(0)
 
-  const palette = (design?.palette?.colors?.length ? design.palette.colors : DEFAULT_PALETTE)
+  const hasUserPalette = design?.palette?.colors?.length > 0
+  const palette = hasUserPalette ? design.palette.colors : FEATURED_PALETTES[featuredIdx].colors
+  const paletteName = hasUserPalette ? null : FEATURED_PALETTES[featuredIdx].name
   const headingFont = design?.fonts?.heading?.family || 'Inter'
   const bodyFont = design?.fonts?.body?.family || 'Inter'
   const headingWeight = design?.fonts?.heading?.weight || 700
@@ -54,6 +68,12 @@ export default function Dashboard() {
     return () => clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    if (hasUserPalette) return
+    const id = setInterval(() => setFeaturedIdx(i => (i + 1) % FEATURED_PALETTES.length), 5000)
+    return () => clearInterval(id)
+  }, [hasUserPalette])
+
   const lTools = localiseTools(t)
   const lCats = localiseCategories(t)
 
@@ -65,7 +85,7 @@ export default function Dashboard() {
     return t('dash.greeting.evening')
   })()
 
-  const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'maker'
+  const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'Creator'
 
   const pinnedTools = pinned.map(id => {
     const tool = lTools.find(tl => tl.id === id)
@@ -141,10 +161,10 @@ export default function Dashboard() {
         {/* COLOR STUDIO featured - palette preview */}
         <NavLink to="/color" className="bento-card bento-feature bento-color">
           <div className="bento-feature-head">
-            <div className="bento-label">{t('dash.featured')}</div>
+            <div className="bento-label">{paletteName ? `Featured · ${paletteName}` : t('dash.featured')}</div>
             <span className="bento-feature-num">01</span>
           </div>
-          <div className="bento-color-strip">
+          <div className="bento-color-strip" key={featuredIdx}>
             {palette.slice(0, 5).map((c, i) => (
               <div key={i} className="bento-color-swatch" style={{ background: c }}>
                 <span>{c.toUpperCase()}</span>
