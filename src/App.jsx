@@ -34,6 +34,7 @@ import Admin from './pages/Admin'
 import Projects from './pages/Projects'
 import FontGallery from './pages/FontGallery'
 import AltTextGenerator from './pages/AltTextGenerator'
+import EmojiLibrary from './pages/EmojiLibrary'
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
@@ -110,6 +111,7 @@ export default function App() {
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
+            <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
