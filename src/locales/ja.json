@@ -163,6 +163,14 @@
     "promptLibrary": {
       "label": "プロンプトライブラリ",
       "description": "AI画像生成プロンプトをプレビュー付きで保存。"
+    },
+    "fontGallery": {
+      "label": "フォントギャラリー",
+      "description": "書体を閲覧・プレビューできるビジュアルギャラリー。"
+    },
+    "emojiLibrary": {
+      "label": "絵文字ライブラリ",
+      "description": "カテゴリ別に絵文字を閲覧・コピー。"
     }
   },
   "color": {
