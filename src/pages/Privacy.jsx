@@ -53,7 +53,7 @@ export default function Privacy() {
         {/* Storage disclosure table — full transparency */}
         <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 8 }}>What we store on your device</h3>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 16 }}>
-          UIL4B writes the following keys to your browser's localStorage. Nothing is sent to a server. You can inspect, export, or clear all of this from <a href="/#/settings">Settings → Your data</a>.
+          UIL4B writes the following keys to your browser's localStorage. Nothing is sent to a server. You can inspect, export, or clear all of this from <a href="/settings">Settings → Your data</a>.
         </p>
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 24 }}>
           <table className="storage-table">

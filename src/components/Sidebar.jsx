@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useWorkspace } from '../contexts/WorkspaceContext'
 import { CATEGORIES, toolsByCategory, localiseCategories, localiseTools } from '../data/tools'
 
 const STORAGE_KEY = 'vs-nav-open'
@@ -19,6 +20,7 @@ function loadOpenState() {
 export default function Sidebar({ isOpen, onClose }) {
   const { user, userProfile, logout } = useAuth()
   const { t } = useI18n()
+  const { pinned } = useWorkspace()
   const location = useLocation()
 
   const activeCategoryId = (() => {
@@ -55,6 +57,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const cats = localiseCategories(t)
   const allTools = localiseTools(t)
+  const pinnedTools = pinned.map(id => allTools.find(tl => tl.id === id)).filter(Boolean)
 
   return (
     <>
@@ -93,6 +96,28 @@ export default function Sidebar({ isOpen, onClose }) {
               </svg>
               <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>{t('nav.projects') || 'Projects'}</span>
             </NavLink>
+          )}
+
+          {pinnedTools.length > 0 && (
+            <div className="nav-pinned">
+              <div className="nav-pinned-label">{t('dash.pinned')}</div>
+              {pinnedTools.map(tool => (
+                <NavLink
+                  key={tool.id}
+                  to={tool.path}
+                  className={({ isActive }) => `nav-item nav-item-pinned${isActive ? ' active' : ''}`}
+                  onClick={onClose}
+                >
+                  <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    {tool.icon}
+                  </svg>
+                  <span className="nav-item-label">{tool.label}</span>
+                  <svg className="nav-item-pin" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 17v5" /><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
+                  </svg>
+                </NavLink>
+              ))}
+            </div>
           )}
 
           {cats.map((cat, idx) => {

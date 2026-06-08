@@ -23,8 +23,7 @@ function downloadFile(content, filename, mime) {
 }
 
 function openLoginGate() {
-  const base = window.location.origin + window.location.pathname
-  window.open(`${base}#/login?gate=1`, '_blank', 'width=500,height=660,noopener')
+  window.open(`${window.location.origin}/login?gate=1`, '_blank', 'width=500,height=660,noopener')
 }
 
 function ExportDropdown({ onSaveProject }) {
