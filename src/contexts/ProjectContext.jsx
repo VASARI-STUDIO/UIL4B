@@ -8,11 +8,11 @@ const PROJECTS_KEY = 'vs-projects'
 
 export const DEFAULT_DESIGN = {
   palette: {
-    base: '#2563EB',
+    base: '#0051FF',
     harmony: 'analogous',
     extraColors: [],
     activeIdx: 0,
-    colors: ['#2563EB'],
+    colors: ['#0051FF'],
   },
   states: { success: 4, warning: 4, error: 4, info: 4 }, // Material palette default
   tints: { lumBias: 82, satDecay: 12, oled: true, scale: [] },
