@@ -37,6 +37,7 @@ import AltTextGenerator from './pages/AltTextGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
 import About from './pages/About'
 import FAQ from './pages/FAQ'
+import HelpCentre from './pages/HelpCentre'
 import Landing from './pages/Landing'
 
 const VISITED_KEY = 'vs-visited'
@@ -52,12 +53,12 @@ function RequireAuth({ children }) {
 // visitors and signed-in users go straight to the dashboard.
 function Home() {
   const { user, loading } = useAuth()
-  if (loading) return null
   const hasVisited = (() => {
     try { return localStorage.getItem(VISITED_KEY) === '1' } catch { return false }
   })()
-  if (!user && !hasVisited) return <Navigate to="/welcome" replace />
-  return <Dashboard />
+  if (hasVisited || user) return <Dashboard />
+  if (loading) return null
+  return <Navigate to="/welcome" replace />
 }
 
 export default function App() {
@@ -146,8 +147,9 @@ export default function App() {
             <Route path="/feedback" element={<Feedback toast={toast} />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/faq" element={<FAQ />} />
+            <Route path="/help" element={<HelpCentre />} />
+            <Route path="/about" element={<Navigate to="/help#about" replace />} />
+            <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
             <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
