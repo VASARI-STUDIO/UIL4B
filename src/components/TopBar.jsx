@@ -134,10 +134,12 @@ function ExportDropdown({ onSaveProject }) {
   }
 
   const tabStyle = (active) => ({
-    flex: 1, padding: '6px 0', fontSize: 10, fontWeight: active ? 600 : 400, border: 'none',
+    flex: 1, padding: '6px 0', fontSize: 10, fontWeight: 600, border: 'none',
     cursor: 'pointer', transition: 'all .15s', borderRadius: 'var(--radius-s)',
-    background: active ? 'var(--accent)' : 'transparent',
-    color: active ? '#fff' : 'var(--t2)',
+    background: active ? 'var(--card)' : 'transparent',
+    color: active ? 'var(--t0)' : 'var(--t2)',
+    boxShadow: active ? 'var(--warm-shadow)' : 'none',
+    fontFamily: 'inherit',
   })
 
   return (
@@ -159,7 +161,7 @@ function ExportDropdown({ onSaveProject }) {
       {open && (
         <div className="export-dropdown">
           {/* Tab switcher */}
-          <div style={{ display: 'flex', gap: 3, padding: '6px 8px 4px', background: 'var(--bg2)', borderRadius: 'var(--radius-s)', margin: '0 8px 6px' }}>
+          <div style={{ display: 'flex', gap: 3, padding: '6px 8px 4px', background: 'var(--bg-2)', borderRadius: 'var(--radius-s)', margin: '0 8px 6px' }}>
             <button style={tabStyle(exportTab === 'colour')} onClick={() => setExportTab('colour')}>Colour System</button>
             <button style={tabStyle(exportTab === 'design')} onClick={() => setExportTab('design')}>Design System</button>
           </div>
@@ -188,8 +190,8 @@ function ExportDropdown({ onSaveProject }) {
           ) : (
             <>
               {!isDesignComplete && (
-                <div style={{ margin: '0 8px 6px', padding: '8px 10px', borderRadius: 'var(--radius-s)', background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.2)', fontSize: 10, color: 'var(--t2)', lineHeight: 1.5 }}>
-                  <span style={{ fontWeight: 600, color: '#d97706' }}>Heads up:</span> If you export the design system without completing other sections, UIL4B's default values will be used for: {missingSections.join(', ')}.
+                <div style={{ margin: '0 8px 6px', padding: '8px 10px', borderRadius: 'var(--radius-s)', background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.25)', fontSize: 10, color: 'var(--t0)', lineHeight: 1.5 }}>
+                  <span style={{ fontWeight: 700, color: '#d97706' }}>Heads up:</span> If you export the design system without completing other sections, UIL4B's default values will be used for: {missingSections.join(', ')}.
                 </div>
               )}
               <button className="export-dropdown-item" onClick={exportStyleGuideHTML}>
@@ -381,9 +383,9 @@ function ProfileMenu() {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 Support
               </button>
-              <button className="profile-menu-item" role="menuitem" onClick={() => go('/about')}>
+              <button className="profile-menu-item" role="menuitem" onClick={() => go('/help')}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                About
+                Help Centre
               </button>
             </>
           )}
