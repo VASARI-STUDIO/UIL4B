@@ -5,7 +5,7 @@
 [data-theme="light"]{--bg-0:#fff;--bg-1:#fff;--bg-2:#f5f5f5;--bg-3:#e8e8e8;--bg-4:#d4d4d4;--border:rgba(0,0,0,.08);--bh:rgba(0,0,0,.15);--t0:#171717;--t1:#525252;--t2:#737373;--t3:#a3a3a3;--cbg:#f5f5f5;--hvr:rgba(0,0,0,.03);--card:#fff;--card-grad:#fff;--inp:#fff;--shadow:0 1px 2px rgba(0,0,0,.04);--warm-shadow:0 1px 3px rgba(0,0,0,.06);--warm-shadow-lg:0 4px 16px rgba(0,0,0,.08);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#171717;--accent-strong:#0a0a0a;--accent-soft:#525252;--accent-bg:rgba(0,0,0,.04);--accent-glow:rgba(0,0,0,.06)}
 html{scroll-behavior:auto}
 body{font-family:var(--font);font-weight:200;background:var(--bg-0);color:var(--t0);line-height:1.65;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
-::selection{background:var(--accent);color:#fff}
+::selection{background:var(--accent);color:var(--bg-0)}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-s)}
 :focus:not(:focus-visible){outline:none}
@@ -1252,7 +1252,7 @@ img,svg,video{max-width:100%;height:auto}
 .fg-filter-cats{display:flex;gap:4px;flex-wrap:wrap}
 .fg-cat-pill{padding:7px 16px;border-radius:100px;font-size:12px;font-weight:500;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--t);white-space:nowrap}
 .fg-cat-pill:hover{color:var(--t0);border-color:var(--bh)}
-.fg-cat-pill.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.fg-cat-pill.active{background:var(--accent);border-color:var(--accent);color:var(--bg-0);font-weight:600}
 .fg-search{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border);border-radius:100px;padding:7px 16px;min-width:200px;transition:all var(--t)}
 .fg-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
 .fg-search svg{color:var(--t3);flex-shrink:0}

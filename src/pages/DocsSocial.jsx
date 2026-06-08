@@ -74,7 +74,7 @@ function LayoutBox({ label, span = 1, height = 48, accent }) {
       borderRadius: 'var(--radius-s)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 10, fontWeight: 700, fontFamily: 'var(--mono)',
-      color: accent ? '#fff' : 'var(--accent)',
+      color: accent ? 'var(--bg-0)' : 'var(--accent)',
       gridColumn: span > 1 ? `span ${span}` : undefined,
       minHeight: height,
     }}>
