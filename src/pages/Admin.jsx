@@ -348,7 +348,7 @@ export default function Admin({ toast }) {
           >
             {t.label}
             {t.id === 'submissions' && (newCount + inProgressCount) > 0 && (
-              <span style={{ marginLeft: 6, background: 'var(--accent)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>
+              <span style={{ marginLeft: 6, background: 'var(--accent)', color: 'var(--bg-0)', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>
                 {newCount + inProgressCount}
               </span>
             )}
