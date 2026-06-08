@@ -37,12 +37,27 @@ import AltTextGenerator from './pages/AltTextGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
 import About from './pages/About'
 import FAQ from './pages/FAQ'
+import Landing from './pages/Landing'
+
+const VISITED_KEY = 'vs-visited'
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
   const location = useLocation()
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
   return children
+}
+
+// First-time, signed-out visitors land on the welcome page. Returning
+// visitors and signed-in users go straight to the dashboard.
+function Home() {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  const hasVisited = (() => {
+    try { return localStorage.getItem(VISITED_KEY) === '1' } catch { return false }
+  })()
+  if (!user && !hasVisited) return <Navigate to="/welcome" replace />
+  return <Dashboard />
 }
 
 export default function App() {
@@ -86,6 +101,11 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // The welcome page renders full-screen, outside the app chrome.
+  if (location.pathname === '/welcome') {
+    return <Landing />
+  }
+
   return (
     <div className="app">
       <Sidebar isOpen={menuOpen} onClose={closeMenu} />
@@ -95,7 +115,7 @@ export default function App() {
 
         <main className="main" key={location.pathname}>
           <Routes location={location}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Home />} />
             <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
             <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
