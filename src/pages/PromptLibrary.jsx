@@ -8,82 +8,129 @@ function getPrompts() {
 }
 function setPromptsStore(p) { localStorage.setItem('vs-prompts', JSON.stringify(p)) }
 
+function getSavedIds() {
+  try { return new Set(JSON.parse(localStorage.getItem('vs-saved-prompt-ids') || '[]')) }
+  catch { return new Set() }
+}
+function setSavedIdsStore(ids) {
+  localStorage.setItem('vs-saved-prompt-ids', JSON.stringify([...ids]))
+}
+
 function parseTags(tagStr) {
   if (!tagStr) return []
   return tagStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
 }
 
-function PromptCard({ p, isExpanded, onToggle, onCopy, onRemove, onSave, isCommunity }) {
+function PromptCard({ p, onOpen, isCommunity, isSaved }) {
   const pTags = parseTags(p.tags)
 
   return (
-    <div
-      className={`pl-card${isExpanded ? ' expanded' : ''}${p.img ? '' : ' no-img'}`}
-      onClick={() => onToggle(p.id)}
-    >
-      {p.img ? (
-        <div className="pl-card-img">
-          <img src={p.img} alt="" loading="lazy" />
-          <div className="pl-card-overlay">
-            <div className="pl-card-title">{p.title || p.text.slice(0, 60)}</div>
-            {pTags.length > 0 && (
-              <div className="pl-card-tags">
-                {pTags.map(tag => <span key={tag} className="pl-tag">{tag}</span>)}
-              </div>
+    <div className="pl-card no-img" onClick={() => onOpen(p)}>
+      <div className="pl-card-text-hero">
+        <div className="pl-card-title">{p.title || p.text.slice(0, 60)}</div>
+        {pTags.length > 0 && (
+          <div className="pl-card-tags">
+            {pTags.slice(0, 3).map(tag => <span key={tag} className="pl-tag">{tag}</span>)}
+            {pTags.length > 3 && <span className="pl-tag">+{pTags.length - 3}</span>}
+          </div>
+        )}
+        {isCommunity && (
+          <div className="pl-card-author">
+            <span>{p.author}</span>
+            {p.saves > 0 && <span className="pl-card-saves">{p.saves} saves</span>}
+            {isSaved && (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto' }}>
+                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+              </svg>
             )}
           </div>
-        </div>
-      ) : (
-        <div className="pl-card-text-hero">
-          <div className="pl-card-title">{p.title || p.text.slice(0, 60)}</div>
+        )}
+        {!isCommunity && <div className="pl-card-date-inline">{p.date}</div>}
+      </div>
+    </div>
+  )
+}
+
+function PromptModal({ prompt, onClose, onCopy, onSave, onRemove, isCommunity, isSaved }) {
+  const pTags = parseTags(prompt.tags)
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="pl-modal-backdrop" onClick={onClose}>
+      <div className="pl-modal" onClick={e => e.stopPropagation()}>
+        <button className="pl-modal-close" onClick={onClose} aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="pl-modal-header">
+          <h2>{prompt.title || prompt.text.slice(0, 60)}</h2>
           {pTags.length > 0 && (
-            <div className="pl-card-tags">
+            <div className="pl-card-tags" style={{ marginTop: 8 }}>
               {pTags.map(tag => <span key={tag} className="pl-tag">{tag}</span>)}
             </div>
           )}
-          {isCommunity && p.author && (
-            <div className="pl-card-author">
-              <span>{p.author}</span>
-              {p.saves > 0 && <span className="pl-card-saves">{p.saves} saves</span>}
+          {isCommunity && prompt.author && (
+            <div className="pl-modal-author">
+              <span>{prompt.author}</span>
+              {prompt.saves > 0 && <span className="pl-card-saves">{prompt.saves} saves</span>}
             </div>
           )}
         </div>
-      )}
 
-      <div className={`pl-card-detail${isExpanded ? ' open' : ''}`}>
-        <div className="pl-card-prompt" onClick={e => { e.stopPropagation(); onCopy(e, p.text) }}>
-          <pre>{p.text}</pre>
-          <div className="pl-card-copy-hint">
+        <div className="pl-modal-body">
+          <div className="pl-modal-prompt" onClick={(e) => { e.stopPropagation(); onCopy(e, prompt.text) }}>
+            <pre>{prompt.text}</pre>
+            <div className="pl-card-copy-hint" style={{ opacity: 1 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </svg>
+              Copy
+            </div>
+          </div>
+        </div>
+
+        <div className="pl-modal-footer">
+          {isCommunity ? (
+            <button className={`btn ${isSaved ? '' : 'btn-accent'}`} onClick={(e) => { e.stopPropagation(); onSave(prompt) }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+              </svg>
+              {isSaved ? 'Saved' : 'Save to my library'}
+            </button>
+          ) : (
+            <button className="btn pl-modal-delete" onClick={(e) => { e.stopPropagation(); onRemove(e, prompt.id) }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+              Delete
+            </button>
+          )}
+          <button className="btn btn-accent" onClick={(e) => { e.stopPropagation(); onCopy(e, prompt.text) }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
-            Copy
-          </div>
-        </div>
-        <div className="pl-card-meta">
-          {isCommunity ? (
-            <button className="btn btn-accent btn-s" onClick={e => { e.stopPropagation(); onSave(p) }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
-              </svg>
-              Save to my library
-            </button>
-          ) : (
-            <>
-              <span className="pl-card-date">{p.date}</span>
-              <button className="pl-card-delete" onClick={e => onRemove(e, p.id)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                </svg>
-                Delete
-              </button>
-            </>
-          )}
+            Copy prompt
+          </button>
         </div>
       </div>
     </div>
   )
 }
+
+const TAG_CATEGORIES = [
+  { label: 'Website', tags: ['business', 'local', 'one-page', 'restaurant', 'portfolio', 'freelancer', 'construction', 'ecommerce', 'real-estate', 'coffee', 'fitness', 'saas', 'listing', 'property', 'landing', 'blog', 'editorial'] },
+  { label: '3D & Motion', tags: ['3d', 'threejs', 'animation', 'motion', 'hero', 'scroll', 'gsap', 'transitions', 'lottie', 'particles', 'wave', 'blob', 'shader', 'glsl', 'text'] },
+  { label: 'UI Components', tags: ['dashboard', 'cards', 'pricing', 'component', 'carousel', 'glass', 'menu', 'onboarding', 'loading', 'micro'] },
+  { label: 'CSS & Visual', tags: ['css', 'no-js', 'gallery', 'hover', 'dark', 'interactive'] },
+  { label: 'Branding', tags: ['branding', 'identity', 'creative', 'premium', 'elegant', 'warm', 'typography'] },
+]
 
 export default function PromptLibrary({ onCopy, toast }) {
   const { t } = useI18n()
@@ -92,11 +139,11 @@ export default function PromptLibrary({ onCopy, toast }) {
   const [tags, setTags] = useState('')
   const [title, setTitle] = useState('')
   const [search, setSearch] = useState('')
-  const [activeTag, setActiveTag] = useState(null)
+  const [activeCategory, setActiveCategory] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
-  const [expandedId, setExpandedId] = useState(null)
+  const [modalPrompt, setModalPrompt] = useState(null)
   const [dragOver, setDragOver] = useState(false)
-  // Default to the community feed unless the user last left off on "my prompts".
+  const [savedIds, setSavedIds] = useState(getSavedIds)
   const [tab, setTab] = useState(() => {
     try { return localStorage.getItem('vs-prompt-tab') === 'my' ? 'my' : 'community' }
     catch { return 'community' }
@@ -141,8 +188,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   }, [text, tags, title, prompts, toast, t])
 
   const saveCommunityPrompt = useCallback((cp) => {
-    const exists = prompts.some(p => p.title === cp.title && p.text === cp.text)
-    if (exists) { toast('Already in your library'); return }
+    if (savedIds.has(cp.id)) { toast('Already in your library'); return }
     const prompt = {
       id: Date.now(),
       title: cp.title,
@@ -154,14 +200,19 @@ export default function PromptLibrary({ onCopy, toast }) {
     const updated = [prompt, ...prompts]
     setPromptsStore(updated)
     setPrompts(updated)
+    const newSaved = new Set(savedIds)
+    newSaved.add(cp.id)
+    setSavedIds(newSaved)
+    setSavedIdsStore(newSaved)
     toast('Saved to your library')
-  }, [prompts, toast])
+  }, [prompts, savedIds, toast])
 
   const remove = useCallback((e, id) => {
     e.stopPropagation()
     const updated = prompts.filter(p => p.id !== id)
     setPromptsStore(updated)
     setPrompts(updated)
+    setModalPrompt(null)
     toast(t('promptLibrary.promptDeleted'))
   }, [prompts, toast, t])
 
@@ -173,15 +224,14 @@ export default function PromptLibrary({ onCopy, toast }) {
   const isCommunity = tab === 'community'
   const sourceList = isCommunity ? COMMUNITY_PROMPTS : prompts
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set()
-    sourceList.forEach(p => parseTags(p.tags).forEach(tag => tagSet.add(tag)))
-    return [...tagSet].sort()
-  }, [sourceList])
-
   const q = search.toLowerCase()
+  const activeTags = activeCategory ? TAG_CATEGORIES.find(c => c.label === activeCategory)?.tags || [] : []
+
   const filtered = sourceList.filter(p => {
-    if (activeTag && !parseTags(p.tags).includes(activeTag)) return false
+    if (activeCategory) {
+      const pTags = parseTags(p.tags)
+      if (!pTags.some(tag => activeTags.includes(tag))) return false
+    }
     if (!q) return true
     return p.text.toLowerCase().includes(q) || (p.tags || '').toLowerCase().includes(q) || (p.title || '').toLowerCase().includes(q)
   })
@@ -207,14 +257,14 @@ export default function PromptLibrary({ onCopy, toast }) {
 
       {/* Tab switcher */}
       <div className="pl-tabs">
-        <button className={`pl-tab${tab === 'my' ? ' active' : ''}`} onClick={() => { setTab('my'); setActiveTag(null); setSearch('') }}>
+        <button className={`pl-tab${tab === 'my' ? ' active' : ''}`} onClick={() => { setTab('my'); setActiveCategory(null); setSearch('') }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
           </svg>
           My Prompts
           {prompts.length > 0 && <span className="pl-tab-count">{prompts.length}</span>}
         </button>
-        <button className={`pl-tab${tab === 'community' ? ' active' : ''}`} onClick={() => { setTab('community'); setActiveTag(null); setSearch('') }}>
+        <button className={`pl-tab${tab === 'community' ? ' active' : ''}`} onClick={() => { setTab('community'); setActiveCategory(null); setSearch('') }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
@@ -223,7 +273,7 @@ export default function PromptLibrary({ onCopy, toast }) {
         </button>
       </div>
 
-      {/* Toolbar: search + filter chips + add button */}
+      {/* Toolbar: search + category chips */}
       <div className="pl-toolbar">
         <div className="pl-search-wrap">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -243,18 +293,18 @@ export default function PromptLibrary({ onCopy, toast }) {
           )}
         </div>
 
-        {allTags.length > 0 && (
+        {isCommunity && (
           <div className="pl-chips">
             <button
-              className={`pl-chip${!activeTag ? ' active' : ''}`}
-              onClick={() => setActiveTag(null)}
+              className={`pl-chip${!activeCategory ? ' active' : ''}`}
+              onClick={() => setActiveCategory(null)}
             >All</button>
-            {allTags.map(tag => (
+            {TAG_CATEGORIES.map(cat => (
               <button
-                key={tag}
-                className={`pl-chip${activeTag === tag ? ' active' : ''}`}
-                onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-              >{tag}</button>
+                key={cat.label}
+                className={`pl-chip${activeCategory === cat.label ? ' active' : ''}`}
+                onClick={() => setActiveCategory(activeCategory === cat.label ? null : cat.label)}
+              >{cat.label}</button>
             ))}
           </div>
         )}
@@ -322,12 +372,9 @@ export default function PromptLibrary({ onCopy, toast }) {
             <PromptCard
               key={p.id}
               p={p}
-              isExpanded={expandedId === p.id}
-              onToggle={(id) => setExpandedId(expandedId === id ? null : id)}
-              onCopy={copyPrompt}
-              onRemove={remove}
-              onSave={saveCommunityPrompt}
+              onOpen={setModalPrompt}
               isCommunity={isCommunity}
+              isSaved={savedIds.has(p.id)}
             />
           ))}
         </div>
@@ -349,6 +396,19 @@ export default function PromptLibrary({ onCopy, toast }) {
             <button className="btn btn-accent" onClick={() => setAddOpen(true)}>{t('promptLibrary.addPrompt')}</button>
           )}
         </div>
+      )}
+
+      {/* Detail Modal */}
+      {modalPrompt && (
+        <PromptModal
+          prompt={modalPrompt}
+          onClose={() => setModalPrompt(null)}
+          onCopy={copyPrompt}
+          onSave={saveCommunityPrompt}
+          onRemove={remove}
+          isCommunity={isCommunity}
+          isSaved={savedIds.has(modalPrompt.id)}
+        />
       )}
     </div>
   )

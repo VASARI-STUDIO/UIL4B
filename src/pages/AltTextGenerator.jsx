@@ -1,4 +1,9 @@
 import { useState, useCallback, useRef } from 'react'
+import UsageGate from '../components/UsageGate'
+import { recordUsage, canUseFeature } from '../utils/usageTracker'
+
+const ALT_TEXT_TOOL_ID = 'alt-text'
+const ALT_TEXT_DAILY_LIMIT = 20
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif'
 const MAX_DIM = 1600
@@ -94,6 +99,11 @@ export default function AltTextGenerator({ toast }) {
 
   const generateForItem = async (item, retries = 2) => {
     if (!item.base64) return
+    if (!canUseFeature(ALT_TEXT_TOOL_ID, ALT_TEXT_DAILY_LIMIT)) {
+      setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: 'Daily usage limit reached' } : p))
+      toast?.('Daily limit reached — resets at midnight')
+      return
+    }
     setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'generating', error: null } : p))
     try {
       const r = await fetch('/api/alt-text', {
@@ -109,6 +119,7 @@ export default function AltTextGenerator({ toast }) {
         return generateForItem(item, retries - 1)
       }
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
+      recordUsage(ALT_TEXT_TOOL_ID)
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, altText: data.altText, status: 'done' } : p))
     } catch (err) {
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: err.message } : p))
@@ -217,24 +228,28 @@ export default function AltTextGenerator({ toast }) {
       </div>
 
       {items.length > 0 && (
-        <div className="alt-toolbar">
-          <div className="alt-toolbar-info">
-            <strong>{items.length}</strong> image{items.length === 1 ? '' : 's'}
-            {doneCount > 0 && <> · <strong>{doneCount}</strong> generated</>}
-          </div>
-          <div className="alt-toolbar-actions">
-            <button className="btn btn-s" onClick={clearAll} disabled={busy}>Clear</button>
-            {doneCount > 0 && (
-              <>
-                <button className="btn btn-s" onClick={copyAll} disabled={busy}>Copy all</button>
-                <button className="btn btn-s" onClick={downloadCSV} disabled={busy}>Download CSV</button>
-              </>
-            )}
-            <button className="btn btn-primary btn-s" onClick={generateAll} disabled={busy || readyCount === 0}>
-              {busy ? 'Generating…' : `Generate ${readyCount > 0 ? `(${readyCount})` : 'all'}`}
-            </button>
-          </div>
-        </div>
+        <>
+          <UsageGate toolId={ALT_TEXT_TOOL_ID} dailyLimit={ALT_TEXT_DAILY_LIMIT}>
+            <div className="alt-toolbar">
+              <div className="alt-toolbar-info">
+                <strong>{items.length}</strong> image{items.length === 1 ? '' : 's'}
+                {doneCount > 0 && <> · <strong>{doneCount}</strong> generated</>}
+              </div>
+              <div className="alt-toolbar-actions">
+                <button className="btn btn-s" onClick={clearAll} disabled={busy}>Clear</button>
+                {doneCount > 0 && (
+                  <>
+                    <button className="btn btn-s" onClick={copyAll} disabled={busy}>Copy all</button>
+                    <button className="btn btn-s" onClick={downloadCSV} disabled={busy}>Download CSV</button>
+                  </>
+                )}
+                <button className="btn btn-primary btn-s" onClick={generateAll} disabled={busy || readyCount === 0}>
+                  {busy ? 'Generating…' : `Generate ${readyCount > 0 ? `(${readyCount})` : 'all'}`}
+                </button>
+              </div>
+            </div>
+          </UsageGate>
+        </>
       )}
 
       <div className="alt-grid">

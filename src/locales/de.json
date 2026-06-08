@@ -163,6 +163,14 @@
     "promptLibrary": {
       "label": "Prompt-Bibliothek",
       "description": "KI-Bildgenerierungs-Prompts mit Vorschau speichern."
+    },
+    "fontGallery": {
+      "label": "Schriftgalerie",
+      "description": "Visuelle Galerie zum Durchstöbern und Vorschauen von Schriften."
+    },
+    "emojiLibrary": {
+      "label": "Emoji-Bibliothek",
+      "description": "Emojis nach Kategorien durchsuchen und kopieren."
     }
   },
   "color": {

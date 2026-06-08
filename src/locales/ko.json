@@ -163,6 +163,14 @@
     "promptLibrary": {
       "label": "프롬프트 라이브러리",
       "description": "AI 이미지 생성 프롬프트를 미리보기와 함께 저장."
+    },
+    "fontGallery": {
+      "label": "폰트 갤러리",
+      "description": "서체를 탐색하고 미리 볼 수 있는 비주얼 갤러리."
+    },
+    "emojiLibrary": {
+      "label": "이모지 라이브러리",
+      "description": "카테고리별로 이모지를 탐색하고 복사합니다."
     }
   },
   "color": {
