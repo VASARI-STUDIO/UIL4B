@@ -553,11 +553,52 @@ ${stateVars}
     setActiveColorIdx(0)
   }, [])
 
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+
   const addColor = () => {
     const [h] = hexToHsl(baseColor)
     const offset = (extraColors.length + 1) * 47
     setExtraColors([...extraColors, hslToHex((h + offset) % 360, 55, 55)])
+    setAddMenuOpen(false)
   }
+
+  const addComplement = () => {
+    const [h, s, l] = hexToHsl(baseColor)
+    setExtraColors([...extraColors, hslToHex((h + 180) % 360, s, l)])
+    setAddMenuOpen(false)
+  }
+
+  const addAnalogous = () => {
+    const [h, s, l] = hexToHsl(baseColor)
+    const offset = 30 + Math.floor(Math.random() * 15)
+    setExtraColors([...extraColors, hslToHex((h + offset) % 360, s, l)])
+    setAddMenuOpen(false)
+  }
+
+  const addTriadic = () => {
+    const [h, s, l] = hexToHsl(baseColor)
+    setExtraColors([...extraColors, hslToHex((h + 120) % 360, s, l)])
+    setAddMenuOpen(false)
+  }
+
+  const addSplitComp = () => {
+    const [h, s, l] = hexToHsl(baseColor)
+    setExtraColors([...extraColors, hslToHex((h + 150) % 360, s, l)])
+    setAddMenuOpen(false)
+  }
+
+  const addBrandColors = (brand) => {
+    const newColors = brand.colors.filter(c => !allColors.map(x => x.toUpperCase()).includes(c.toUpperCase()))
+    setExtraColors([...extraColors, ...newColors.slice(0, 3)])
+    setAddMenuOpen(false)
+  }
+
+  useEffect(() => {
+    if (!addMenuOpen) return
+    const close = () => setAddMenuOpen(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [addMenuOpen])
 
   const removeExtra = (i) => {
     setExtraColors(extraColors.filter((_, idx) => idx !== i))
@@ -634,7 +675,33 @@ ${stateVars}
             </svg>
             Random
           </button>
-          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); addColor() }}>+ Add Colour</button>
+          <div className="cs-add-wrap" onClick={(e) => e.stopPropagation()}>
+            <button className="btn btn-s" onClick={() => setAddMenuOpen(!addMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              + Add Colour
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            {addMenuOpen && (
+              <div className="cs-add-menu">
+                <button onClick={addColor}>Custom (Hue Offset)</button>
+                <button onClick={addComplement}>Complementary</button>
+                <button onClick={addAnalogous}>Analogous</button>
+                <button onClick={addTriadic}>Triadic</button>
+                <button onClick={addSplitComp}>Split Complement</button>
+                <div className="cs-add-menu-sep" />
+                <div className="cs-add-menu-label">From Brand Palette</div>
+                {BRANDS.slice(0, 6).map(b => (
+                  <button key={b.n} onClick={() => addBrandColors(b)}>
+                    <span>{b.n}</span>
+                    <span className="cs-add-menu-dots">
+                      {b.colors.slice(0, 4).map((c, ci) => (
+                        <span key={ci} className="cs-add-menu-dot" style={{ background: c }} />
+                      ))}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {!collapsed.palette && <>
