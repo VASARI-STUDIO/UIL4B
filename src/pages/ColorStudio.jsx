@@ -905,7 +905,7 @@ ${stateVars}
           <div style={{ display: 'flex', gap: 4, background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: 3 }}>
             {ROUNDING_OPTIONS.map(opt => (
               <button key={opt.id} onClick={() => setPreviewRounding(opt.id)}
-                style={{ padding: '5px 14px', borderRadius: 'var(--radius-s)', fontSize: 11, fontWeight: previewRounding === opt.id ? 600 : 400, border: 'none', cursor: 'pointer', transition: 'all .15s ease', background: previewRounding === opt.id ? 'var(--accent)' : 'transparent', color: previewRounding === opt.id ? '#fff' : 'var(--t2)' }}
+                style={{ padding: '5px 14px', borderRadius: 'var(--radius-s)', fontSize: 11, fontWeight: previewRounding === opt.id ? 600 : 400, border: 'none', cursor: 'pointer', transition: 'all .15s ease', background: previewRounding === opt.id ? 'var(--accent)' : 'transparent', color: previewRounding === opt.id ? 'var(--bg-0)' : 'var(--t2)' }}
               >{opt.label}</button>
             ))}
           </div>
