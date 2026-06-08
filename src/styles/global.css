@@ -642,7 +642,7 @@ a.bento-card:hover{border-color:var(--bh)}
 
 /* Dashboard fills viewport on desktop — no scroll, flex to fit */
 @media(min-width:981px){
-  .main:has(>.dash){padding:0 24px;max-width:none;overflow:hidden}
+  .main:has(>.dash){padding:0 24px;max-width:none;overflow-y:auto}
   .main:has(>.dash)>.dash{padding-top:18px;padding-bottom:12px;height:100%;box-sizing:border-box}
   .dash{display:flex;flex-direction:column;min-height:0;height:100%}
   .bento{flex:1;grid-auto-rows:1fr;margin-bottom:10px;min-height:0;gap:12px}
@@ -654,7 +654,7 @@ a.bento-card:hover{border-color:var(--bh)}
 }
 
 /* Short viewport — compact everything to avoid clipping */
-@media(min-width:981px) and (max-height:700px){
+@media(min-width:981px) and (max-height:800px){
   :root{--top-h:46px}
   .sidebar{padding-top:8px}
   .main:has(>.dash){padding:0 18px}
@@ -1483,7 +1483,7 @@ img,svg,video{max-width:100%;height:auto}
 .bento-hero-palette-label{font-size:10px;font-weight:600;color:var(--t2);letter-spacing:.02em;margin-left:2px}
 
 /* Short viewport — compact hero extras */
-@media(min-width:981px) and (max-height:700px){
+@media(min-width:981px) and (max-height:800px){
   .bento-hero-extras{gap:6px}
   .bento-hero-tip{font-size:11px}
   .bento-hero-tip-badge{font-size:8px;padding:1px 6px}
