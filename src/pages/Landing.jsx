@@ -4,6 +4,33 @@ import { CATEGORIES } from '../data/tools'
 
 const VISITED_KEY = 'vs-visited'
 
+const FEATURES = [
+  {
+    title: 'Build complete colour systems',
+    body: 'Create harmonious palettes from colour theory, generate Material-style state colours, fine-tune tints and gradients, and export everything as production-ready CSS or JSON.',
+    image: '/previews/colour-studio.jpg',
+    alt: 'UIL4B Colour Studio showing palette builder with tints and accessibility contrast checks',
+  },
+  {
+    title: 'Pair fonts and preview typography',
+    body: 'Browse hundreds of Google Fonts in a visual gallery, find curated pairings for headings and body, and dial in a modular type scale with live preview.',
+    image: '/previews/font-gallery.jpg',
+    alt: 'UIL4B Font Gallery showing a visual grid of typeface previews',
+  },
+  {
+    title: 'Icons, images and AI tools',
+    body: 'Search thousands of icons via Iconify, convert and compress images locally, generate accessible alt text with Gemini, and save AI prompt templates for reuse.',
+    image: '/previews/icon-library.jpg',
+    alt: 'UIL4B Icon Library showing an icon search with instant SVG preview and copy',
+  },
+  {
+    title: 'Design tokens at your fingertips',
+    body: 'Reference spacing scales, shadows, border radii, and font sizes from popular frameworks. Export a complete design system from your palette, fonts, and type scale in one click.',
+    image: '/previews/type-scale.jpg',
+    alt: 'UIL4B Type Scale calculator showing modular scale with CSS export',
+  },
+]
+
 const HIGHLIGHTS = [
   {
     title: 'Everything in one place',
@@ -77,7 +104,16 @@ export default function Landing() {
           <span className="landing-cta-note">No signup required to explore. Free forever.</span>
         </section>
 
-        {/* Category showcase */}
+        {/* Hero screenshot */}
+        <section className="landing-screenshot-hero">
+          <img
+            src="/previews/dashboard.jpg"
+            alt="UIL4B dashboard showing the bento grid with colour palette, typography preview, and design progress"
+            loading="eager"
+          />
+        </section>
+
+        {/* Category cards */}
         <section className="landing-cats">
           {CATEGORIES.map(cat => (
             <div key={cat.id} className="landing-cat-card">
@@ -90,7 +126,20 @@ export default function Landing() {
           ))}
         </section>
 
-        {/* Highlights */}
+        {/* Feature sections with alternating screenshots */}
+        {FEATURES.map((f, i) => (
+          <section key={f.title} className={`landing-feature${i % 2 === 1 ? ' landing-feature-reverse' : ''}`}>
+            <div className="landing-feature-text">
+              <h2>{f.title}</h2>
+              <p>{f.body}</p>
+            </div>
+            <div className="landing-feature-img">
+              <img src={f.image} alt={f.alt} loading="lazy" />
+            </div>
+          </section>
+        ))}
+
+        {/* Value highlights */}
         <section className="landing-highlights">
           {HIGHLIGHTS.map(h => (
             <div key={h.title} className="landing-highlight">
