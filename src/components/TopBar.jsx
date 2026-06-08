@@ -10,6 +10,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
 const STATE_PRESETS_KEY = 'vs-state-shades'
+const PREVIEW_ROUNDING_KEY = 'vs-preview-rounding'
 
 function downloadFile(content, filename, mime) {
   const blob = new Blob([content], { type: mime })
@@ -21,12 +22,19 @@ function downloadFile(content, filename, mime) {
   URL.revokeObjectURL(url)
 }
 
-function ExportDropdown({ onSaveProject, canSave }) {
+function openLoginGate() {
+  const base = window.location.origin + window.location.pathname
+  window.open(`${base}#/login?gate=1`, '_blank', 'width=500,height=660,noopener')
+}
+
+function ExportDropdown({ onSaveProject }) {
   const [open, setOpen] = useState(false)
+  const [exportTab, setExportTab] = useState('colour')
   const ref = useRef(null)
   const { design } = useProject()
   const { theme } = useTheme()
   const { rounding, density } = useAppearance()
+  const { user } = useAuth()
 
   useEffect(() => {
     const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -34,7 +42,6 @@ function ExportDropdown({ onSaveProject, canSave }) {
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
-  // Pull cached state shades from localStorage if present (set by ColorStudio)
   const getStateShades = () => {
     try {
       const raw = localStorage.getItem(STATE_PRESETS_KEY)
@@ -42,17 +49,61 @@ function ExportDropdown({ onSaveProject, canSave }) {
     } catch { return null }
   }
 
-  const exportStyleGuideHTML = () => {
+  const getPreviewRounding = () => {
+    try { return localStorage.getItem(PREVIEW_ROUNDING_KEY) || rounding } catch { return rounding }
+  }
+
+  const requireAuth = (action) => {
+    if (!user) { openLoginGate(); setOpen(false); return }
+    action()
+  }
+
+  const hasFonts = !!design.fonts?.heading?.family
+  const hasScale = !!design.typeScale?.base
+  const hasGradient = design.gradient?.stops?.some(s => s.color)
+  const missingSections = []
+  if (!hasFonts) missingSections.push('Typography')
+  if (!hasScale) missingSections.push('Type Scale')
+  if (!hasGradient) missingSections.push('Gradient')
+  const isDesignComplete = missingSections.length === 0
+
+  const exportRoundingVal = () => getPreviewRounding()
+
+  const exportColourCSS = () => {
+    const css = buildCSSVars({
+      palette: design.palette,
+      tints: design.tints,
+      states: design.states,
+      stateShades: getStateShades(),
+      appearance: { rounding: exportRoundingVal(), density },
+    })
+    downloadFile(css + '\n', 'colours.css', 'text/css')
+    setOpen(false)
+  }
+
+  const copyColourCSS = () => {
+    const css = buildCSSVars({
+      palette: design.palette,
+      tints: design.tints,
+      states: design.states,
+      stateShades: getStateShades(),
+      appearance: { rounding: exportRoundingVal(), density },
+    })
+    navigator.clipboard.writeText(css)
+    setOpen(false)
+  }
+
+  const exportStyleGuideHTML = () => requireAuth(() => {
     const html = buildStyleGuideHTML({
       design,
       stateShades: getStateShades(),
       theme,
       projectName: 'My Style Guide',
-      appearance: { rounding, density },
+      appearance: { rounding: exportRoundingVal(), density },
     })
     downloadFile(html, 'style-guide.html', 'text/html')
     setOpen(false)
-  }
+  })
 
   const exportStyleGuideCSS = () => {
     const css = buildCSSVars({
@@ -62,7 +113,7 @@ function ExportDropdown({ onSaveProject, canSave }) {
       fonts: design.fonts,
       typeScale: design.typeScale,
       stateShades: getStateShades(),
-      appearance: { rounding, density },
+      appearance: { rounding: exportRoundingVal(), density },
     })
     downloadFile(css + '\n', 'design.css', 'text/css')
     setOpen(false)
@@ -76,11 +127,18 @@ function ExportDropdown({ onSaveProject, canSave }) {
       fonts: design.fonts,
       typeScale: design.typeScale,
       stateShades: getStateShades(),
-      appearance: { rounding, density },
+      appearance: { rounding: exportRoundingVal(), density },
     })
     navigator.clipboard.writeText(css)
     setOpen(false)
   }
+
+  const tabStyle = (active) => ({
+    flex: 1, padding: '6px 0', fontSize: 10, fontWeight: active ? 600 : 400, border: 'none',
+    cursor: 'pointer', transition: 'all .15s', borderRadius: 'var(--radius-s)',
+    background: active ? 'var(--accent)' : 'transparent',
+    color: active ? '#fff' : 'var(--t2)',
+  })
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -100,45 +158,77 @@ function ExportDropdown({ onSaveProject, canSave }) {
       </button>
       {open && (
         <div className="export-dropdown">
-          <button className="export-dropdown-item" onClick={exportStyleGuideHTML}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
-            </svg>
-            Download style guide
-            <span className="export-dropdown-hint">Styled HTML page</span>
-          </button>
-          <button className="export-dropdown-item" onClick={exportStyleGuideCSS}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-            </svg>
-            Download CSS
-            <span className="export-dropdown-hint">All CSS variables</span>
-          </button>
-          <button className="export-dropdown-item" onClick={copyStyleGuideCSS}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-            </svg>
-            Copy CSS
-            <span className="export-dropdown-hint">To clipboard</span>
-          </button>
-          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-          <div style={{ padding: '8px 12px 10px', fontSize: 10, color: 'var(--t3)', lineHeight: 1.5 }}>
-            Includes: palette · tints · states · fonts · type scale · gradient
+          {/* Tab switcher */}
+          <div style={{ display: 'flex', gap: 3, padding: '6px 8px 4px', background: 'var(--bg2)', borderRadius: 'var(--radius-s)', margin: '0 8px 6px' }}>
+            <button style={tabStyle(exportTab === 'colour')} onClick={() => setExportTab('colour')}>Colour System</button>
+            <button style={tabStyle(exportTab === 'design')} onClick={() => setExportTab('design')}>Design System</button>
           </div>
 
-          {/* Save project */}
-          {canSave && (
+          {exportTab === 'colour' ? (
             <>
-              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-              <button className="export-dropdown-item" onClick={() => { setOpen(false); onSaveProject() }}>
+              <button className="export-dropdown-item" onClick={exportColourCSS}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
                 </svg>
-                Save as project
-                <span className="export-dropdown-hint">In your account</span>
+                Download colour CSS
+                <span className="export-dropdown-hint">Palette, tints &amp; states</span>
               </button>
+              <button className="export-dropdown-item" onClick={copyColourCSS}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                </svg>
+                Copy colour CSS
+                <span className="export-dropdown-hint">To clipboard</span>
+              </button>
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              <div style={{ padding: '8px 12px 10px', fontSize: 10, color: 'var(--t3)', lineHeight: 1.5 }}>
+                Includes: palette · tints · state colours
+              </div>
+            </>
+          ) : (
+            <>
+              {!isDesignComplete && (
+                <div style={{ margin: '0 8px 6px', padding: '8px 10px', borderRadius: 'var(--radius-s)', background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.2)', fontSize: 10, color: 'var(--t2)', lineHeight: 1.5 }}>
+                  <span style={{ fontWeight: 600, color: '#d97706' }}>Heads up:</span> If you export the design system without completing other sections, UIL4B's default values will be used for: {missingSections.join(', ')}.
+                </div>
+              )}
+              <button className="export-dropdown-item" onClick={exportStyleGuideHTML}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
+                </svg>
+                Download style guide
+                <span className="export-dropdown-hint">Full HTML page</span>
+              </button>
+              <button className="export-dropdown-item" onClick={exportStyleGuideCSS}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+                </svg>
+                Download CSS
+                <span className="export-dropdown-hint">All design variables</span>
+              </button>
+              <button className="export-dropdown-item" onClick={copyStyleGuideCSS}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                </svg>
+                Copy CSS
+                <span className="export-dropdown-hint">To clipboard</span>
+              </button>
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              <div style={{ padding: '8px 12px 10px', fontSize: 10, color: 'var(--t3)', lineHeight: 1.5 }}>
+                Includes: palette · tints · states · fonts · type scale · gradient
+              </div>
             </>
           )}
+
+          {/* Save project — always visible, gated behind login */}
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+          <button className="export-dropdown-item" onClick={() => requireAuth(() => { setOpen(false); onSaveProject() })}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+            Save as project
+            <span className="export-dropdown-hint">{user ? 'In your account' : 'Sign in required'}</span>
+          </button>
         </div>
       )}
     </div>
@@ -277,6 +367,24 @@ function ProfileMenu() {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                 Create account
               </button>
+              <div className="profile-menu-sep" />
+              <button className="profile-menu-item" role="menuitem" onClick={() => goSection('appearance')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8L7 17M17 7l2.8-2.8"/></svg>
+                Appearance
+              </button>
+              <button className="profile-menu-item" role="menuitem" onClick={() => goSection('language')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
+                Language
+              </button>
+              <div className="profile-menu-sep" />
+              <button className="profile-menu-item" role="menuitem" onClick={() => goSection('support')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Support
+              </button>
+              <button className="profile-menu-item" role="menuitem" onClick={() => go('/about')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                About
+              </button>
             </>
           )}
         </div>
@@ -288,7 +396,7 @@ function ProfileMenu() {
 export default function TopBar({ onMenuToggle, onCommandPalette }) {
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
-  const { canSaveProjects, saveProject } = useProject()
+  const { saveProject } = useProject()
   const navigate = useNavigate()
   const [saveOpen, setSaveOpen] = useState(false)
   const isMac = IS_MAC
@@ -331,7 +439,6 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
       <div className="topbar-right">
         <ExportDropdown
           onSaveProject={() => setSaveOpen(true)}
-          canSave={canSaveProjects}
         />
 
         <button

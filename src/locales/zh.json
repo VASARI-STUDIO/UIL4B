@@ -163,6 +163,14 @@
     "promptLibrary": {
       "label": "提示词库",
       "description": "保存AI图像生成提示词及输出预览。"
+    },
+    "fontGallery": {
+      "label": "字体画廊",
+      "description": "浏览和预览字体的视觉画廊。"
+    },
+    "emojiLibrary": {
+      "label": "表情符号库",
+      "description": "按类别浏览和复制表情符号。"
     }
   },
   "color": {

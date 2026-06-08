@@ -163,6 +163,14 @@
     "promptLibrary": {
       "label": "Libreria di prompt",
       "description": "Salvare prompt di generazione immagini IA con anteprime."
+    },
+    "fontGallery": {
+      "label": "Galleria Font",
+      "description": "Galleria visiva per sfogliare e visualizzare in anteprima i caratteri."
+    },
+    "emojiLibrary": {
+      "label": "Libreria Emoji",
+      "description": "Sfoglia e copia emoji organizzati per categoria."
     }
   },
   "color": {
