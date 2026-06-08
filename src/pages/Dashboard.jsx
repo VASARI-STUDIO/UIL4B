@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
-import { CATEGORIES, TOOLS, localiseTools, localiseCategories } from '../data/tools'
+import { localiseTools, localiseCategories } from '../data/tools'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
@@ -40,6 +40,15 @@ const DESIGN_TIPS = [
   { tip: 'Repetition of visual elements creates unity across your design system.', topic: 'Principles' },
 ]
 
+const ICON_GLYPHS = [
+  <path key="1" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
+  <><circle key="1" cx="12" cy="12" r="10" /><path key="2" d="M8 14s1.5 2 4 2 4-2 4-2" /><line key="3" x1="9" y1="9" x2="9.01" y2="9" /><line key="4" x1="15" y1="9" x2="15.01" y2="9" /></>,
+  <><rect key="1" x="3" y="3" width="18" height="18" rx="2" /><circle key="2" cx="8.5" cy="8.5" r="1.5" /><polyline key="3" points="21 15 16 10 5 21" /></>,
+  <><path key="1" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>,
+  <><circle key="1" cx="12" cy="12" r="10" /><polygon key="2" points="10 8 16 12 10 16 10 8" /></>,
+  <><path key="1" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline key="2" points="9 22 9 12 15 12 15 22" /></>,
+]
+
 export default function Dashboard() {
   const { user, userProfile } = useAuth()
   const { pinned, togglePinned, recent } = useWorkspace()
@@ -47,13 +56,13 @@ export default function Dashboard() {
   const { design } = useProject()
   const [now, setNow] = useState(() => new Date())
 
+  const palette = design?.palette?.colors?.length ? design.palette.colors : ['#0051FF']
   const headingFont = design?.fonts?.heading?.family || 'Inter'
   const bodyFont = design?.fonts?.body?.family || 'Inter'
   const headingWeight = design?.fonts?.heading?.weight || 700
   const bodyWeight = design?.fonts?.body?.weight || 400
   const typeBase = design?.typeScale?.base || 16
   const typeRatio = design?.typeScale?.ratio || 1.25
-  const palette = design?.palette?.colors || ['#0051FF']
 
   const dailyTip = useMemo(() => {
     const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
@@ -63,8 +72,8 @@ export default function Dashboard() {
   const completionStatus = useMemo(() => {
     const sections = [
       { key: 'colours', label: 'Colours', done: (design?.palette?.colors?.length || 0) > 1 },
-      { key: 'typography', label: 'Typography', done: design?.fonts?.heading?.family !== 'Inter' || design?.fonts?.body?.family !== 'Inter' },
-      { key: 'typeScale', label: 'Type Scale', done: design?.typeScale?.ratio !== 1.25 || design?.typeScale?.base !== 16 },
+      { key: 'typography', label: 'Fonts', done: design?.fonts?.heading?.family !== 'Inter' || design?.fonts?.body?.family !== 'Inter' },
+      { key: 'typeScale', label: 'Scale', done: design?.typeScale?.ratio !== 1.25 || design?.typeScale?.base !== 16 },
       { key: 'tints', label: 'Tints', done: (design?.tints?.scale?.length || 0) > 0 },
       { key: 'gradients', label: 'Gradients', done: design?.gradient?.stops?.some(s => s.color != null) || false },
     ]
@@ -98,6 +107,12 @@ export default function Dashboard() {
   }, [togglePinned])
 
   const recentTools = recent.map(id => lTools.find(tl => tl.id === id)).filter(Boolean).slice(0, 4)
+  const lastTool = recentTools[0]
+
+  const colorCat = lCats.find(c => c.id === 'color')
+  const typoCat = lCats.find(c => c.id === 'typography')
+  const imgCat = lCats.find(c => c.id === 'imagery')
+  const docsCat = lCats.find(c => c.id === 'documentation')
 
   const toolsWithMeta = lTools.map(tool => {
     const cat = lCats.find(c => c.id === tool.category)
@@ -106,81 +121,127 @@ export default function Dashboard() {
 
   return (
     <div className="dash">
-      {/* ── Header row ── */}
-      <header className="dash-header">
-        <div className="dash-header-left">
-          <h1 className="dash-greeting">{greeting}, <em>{firstName}</em></h1>
-          <span className="dash-date">{dateStr} · {timeStr}</span>
-        </div>
-        <div className="dash-header-right">
-          <div className="dash-completion">
-            <div className="dash-completion-bar">
-              <div className="dash-completion-fill" style={{ width: `${completionStatus.pct}%` }} />
+      <div className="bento">
+        {/* HERO — compact greeting + completion */}
+        <div className="bento-card bento-hero">
+          <div className="bento-hero-top">
+            <div>
+              <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr} · {timeStr}</div>
+              <h1 className="bento-hero-title">{greeting}, <em>{firstName}</em></h1>
             </div>
-            <span className="dash-completion-label">{completionStatus.doneCount}/{completionStatus.total} design tokens</span>
+            {lastTool && (
+              <NavLink to={lastTool.path} className="bento-hero-cta">
+                <span>{t('dash.continueWith', { name: lastTool.label })}</span>
+                <ArrowIcon />
+              </NavLink>
+            )}
+          </div>
+          <div className="bento-hero-foot">
+            <div className="bento-hero-completion">
+              <div className="bento-hero-completion-bar">
+                <div style={{ width: `${completionStatus.pct}%` }} />
+              </div>
+              <span className="bento-hero-completion-label">{completionStatus.doneCount}/{completionStatus.total} design tokens</span>
+            </div>
+            <div className="bento-hero-checks">
+              {completionStatus.sections.map(s => (
+                <span key={s.key} className={`bento-hero-check${s.done ? ' done' : ''}`}>{s.done ? '✓' : '·'} {s.label}</span>
+              ))}
+            </div>
           </div>
         </div>
-      </header>
 
-      {/* ── Design system overview ── */}
-      <section className="dash-overview">
-        <NavLink to="/color" className="dash-ov-card dash-ov-palette">
-          <div className="dash-ov-head">
-            <span className="dash-ov-label">Palette</span>
-            <ArrowIcon />
+        {/* WORKSPACE STATS */}
+        <div className="bento-card bento-time">
+          <div className="bento-label">{t('dash.localTime')}</div>
+          <div className="bento-time-big">{timeStr}</div>
+          <div className="bento-time-stats">
+            <div><span className="bento-time-num">{pinned.length}</span><span className="bento-time-lbl">{t('dash.pinned')}</span></div>
+            <div><span className="bento-time-num">{lTools.length}</span><span className="bento-time-lbl">{t('dash.tools')}</span></div>
+            <div><span className="bento-time-num">{lCats.length}</span><span className="bento-time-lbl">{t('dash.areas')}</span></div>
           </div>
-          <div className="dash-ov-swatches">
-            {palette.slice(0, 6).map((c, i) => (
-              <div key={i} className="dash-ov-swatch" style={{ background: c }} title={c} />
+        </div>
+
+        {/* COLOUR — live palette */}
+        <NavLink to="/color" className="bento-card bento-feature bento-color">
+          <div className="bento-feature-head">
+            <span className="bento-label">Palette</span>
+            <span className="bento-feature-num">01</span>
+          </div>
+          <div className="bento-color-strip">
+            {palette.slice(0, 5).map((c, i) => (
+              <div key={i} className="bento-color-swatch" style={{ background: c }}>
+                <span>{c.toUpperCase()}</span>
+              </div>
             ))}
           </div>
-          <div className="dash-ov-completion">
-            {completionStatus.sections.filter(s => ['colours', 'tints', 'gradients'].includes(s.key)).map(s => (
-              <span key={s.key} className={`dash-ov-dot${s.done ? ' done' : ''}`}>{s.done ? '✓' : '·'} {s.label}</span>
-            ))}
+          <div className="bento-feature-body">
+            <h2>{colorCat?.label || 'Colour Studio'}</h2>
+            <p>{colorCat?.description}</p>
+            <span className="bento-feature-link">{t('common.open')} <ArrowIcon /></span>
           </div>
         </NavLink>
 
-        <NavLink to="/typography" className="dash-ov-card dash-ov-fonts">
-          <div className="dash-ov-head">
-            <span className="dash-ov-label">Fonts</span>
-            <ArrowIcon />
+        {/* TYPOGRAPHY — live fonts */}
+        <NavLink to="/typography" className="bento-card bento-cat bento-typo">
+          <div className="bento-typo-preview">
+            <span className="bento-typo-h" style={{ fontFamily: `'${headingFont}', sans-serif`, fontWeight: headingWeight }}>Aa</span>
+            <span className="bento-typo-b" style={{ fontFamily: `'${bodyFont}', sans-serif`, fontWeight: bodyWeight }}>Aa</span>
+            <span className="bento-typo-meta">{headingFont}{headingFont !== bodyFont ? ` / ${bodyFont}` : ''}</span>
           </div>
-          <div className="dash-ov-font-preview">
-            <span className="dash-ov-font-h" style={{ fontFamily: `'${headingFont}', sans-serif`, fontWeight: headingWeight }}>Aa</span>
-            <span className="dash-ov-font-b" style={{ fontFamily: `'${bodyFont}', sans-serif`, fontWeight: bodyWeight }}>Aa</span>
+          <div className="bento-cat-body">
+            <div className="bento-label">{t('dash.category', { num: '02' })}</div>
+            <h3>{typoCat?.label || 'Typography'}</h3>
+            <p>{typoCat?.description}</p>
           </div>
-          <span className="dash-ov-font-meta">{headingFont}{headingFont !== bodyFont ? ` / ${bodyFont}` : ''}</span>
         </NavLink>
 
-        <NavLink to="/typescale" className="dash-ov-card dash-ov-scale">
-          <div className="dash-ov-head">
-            <span className="dash-ov-label">Type Scale</span>
-            <ArrowIcon />
+        {/* IMAGERY */}
+        <NavLink to="/imagery" className="bento-card bento-cat bento-img">
+          <div className="bento-img-preview">
+            {ICON_GLYPHS.map((g, i) => (
+              <span key={i} className="bento-img-cell">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">{g}</svg>
+              </span>
+            ))}
           </div>
-          <div className="dash-ov-scale-rows">
+          <div className="bento-cat-body">
+            <div className="bento-label">{t('dash.category', { num: '03' })}</div>
+            <h3>{imgCat?.label || 'Imagery'}</h3>
+            <p>{imgCat?.description}</p>
+          </div>
+        </NavLink>
+
+        {/* DOCUMENTATION — live type scale */}
+        <NavLink to="/docs" className="bento-card bento-cat bento-docs">
+          <div className="bento-docs-grid">
             {[3, 2, 1, 0].map(step => {
               const size = Math.round(typeBase * Math.pow(typeRatio, step))
               return (
-                <div key={step} className="dash-ov-scale-row">
-                  <span className="dash-ov-scale-num">{size}</span>
-                  <span className="dash-ov-scale-bar" style={{ width: `${100 - step * 15}%` }} />
+                <div key={step} className="bento-docs-row">
+                  <span className="bento-docs-num">{size}</span>
+                  <span className="bento-docs-bar" style={{ width: `${100 - step * 14}%` }} />
                 </div>
               )
             })}
           </div>
+          <div className="bento-cat-body">
+            <div className="bento-label">{t('dash.category', { num: '04' })}</div>
+            <h3>{docsCat?.label || 'Documentation'}</h3>
+            <p>{docsCat?.description}</p>
+          </div>
         </NavLink>
-      </section>
+      </div>
 
-      {/* ── Design tip ── */}
+      {/* Daily tip */}
       <div className="dash-tip">
         <span className="dash-tip-badge">{dailyTip.topic}</span>
         <span className="dash-tip-text">{dailyTip.tip}</span>
       </div>
 
-      {/* ── Recent tools ── */}
+      {/* Recent tools */}
       {recentTools.length > 0 && (
-        <section className="dash-recent">
+        <section>
           <h2 className="dash-section-title">{t('dash.jumpBackIn')}</h2>
           <div className="dash-recent-row">
             {recentTools.map(tl => (
@@ -194,27 +255,8 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* ── Categories ── */}
-      <section className="dash-cats">
-        <h2 className="dash-section-title">Categories</h2>
-        <div className="dash-cats-row">
-          {lCats.map(cat => (
-            <NavLink key={cat.id} to={cat.path} className="dash-cat-card">
-              <div className="dash-cat-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{cat.icon}</svg>
-              </div>
-              <div className="dash-cat-info">
-                <span className="dash-cat-name">{cat.label}</span>
-                <span className="dash-cat-desc">{cat.description}</span>
-              </div>
-              <ArrowIcon />
-            </NavLink>
-          ))}
-        </div>
-      </section>
-
-      {/* ── All tools ── */}
-      <section className="dash-tools">
+      {/* All tools */}
+      <section>
         <div className="dash-tools-header">
           <h2 className="dash-section-title">{t('dash.yourTools')}</h2>
           <span className="dash-tools-count">{pinned.length} {t('dash.pinned').toLowerCase()}</span>
