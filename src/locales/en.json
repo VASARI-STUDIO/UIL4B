@@ -167,6 +167,10 @@
     "promptLibrary": {
       "label": "Prompt Library",
       "description": "Save AI image generation prompts with output previews."
+    },
+    "emojiLibrary": {
+      "label": "Emoji Library",
+      "description": "Browse and copy emojis organised by category."
     }
   },
   "color": {
