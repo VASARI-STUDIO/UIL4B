@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { CATEGORIES } from '../data/tools'
@@ -8,26 +9,18 @@ const FEATURES = [
   {
     title: 'Build complete colour systems',
     body: 'Create harmonious palettes from colour theory, generate Material-style state colours, fine-tune tints and gradients, and export everything as production-ready CSS or JSON.',
-    image: '/previews/colour-studio.jpg',
-    alt: 'UIL4B Colour Studio showing palette builder with tints and accessibility contrast checks',
   },
   {
     title: 'Pair fonts and preview typography',
     body: 'Browse hundreds of Google Fonts in a visual gallery, find curated pairings for headings and body, and dial in a modular type scale with live preview.',
-    image: '/previews/font-gallery.jpg',
-    alt: 'UIL4B Font Gallery showing a visual grid of typeface previews',
   },
   {
     title: 'Icons, images and AI tools',
     body: 'Search thousands of icons via Iconify, convert and compress images locally, generate accessible alt text with Gemini, and save AI prompt templates for reuse.',
-    image: '/previews/icon-library.jpg',
-    alt: 'UIL4B Icon Library showing an icon search with instant SVG preview and copy',
   },
   {
     title: 'Design tokens at your fingertips',
     body: 'Reference spacing scales, shadows, border radii, and font sizes from popular frameworks. Export a complete design system from your palette, fonts, and type scale in one click.',
-    image: '/previews/type-scale.jpg',
-    alt: 'UIL4B Type Scale calculator showing modular scale with CSS export',
   },
 ]
 
@@ -38,8 +31,8 @@ const HIGHLIGHTS = [
     icon: (<><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>),
   },
   {
-    title: 'Free, no strings',
-    body: 'Open the toolkit and start building right away. No paywall, no trial timer. Create a free account only when you want the AI tools or to save projects.',
+    title: 'Mostly free, always fair',
+    body: 'Explore the full toolkit for free. Upgrade for AI tools, extra prompts, and advanced exports — from just $4.99/month.',
     icon: (<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></>),
   },
   {
@@ -48,6 +41,203 @@ const HIGHLIGHTS = [
     icon: (<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
   },
 ]
+
+const DEMO_PALETTE = ['#635BFF', '#0A2540', '#00D4AA', '#7A73FF', '#FBFCFE']
+const DEMO_LABELS = ['Primary', 'Dark', 'Accent', 'Light', 'Base']
+
+function PaletteDemo() {
+  const [hovered, setHovered] = useState(null)
+  return (
+    <div className="landing-demo landing-demo-palette">
+      <div style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', height: 120 }}>
+        {DEMO_PALETTE.map((c, i) => (
+          <div
+            key={i}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}
+            style={{
+              flex: hovered === i ? 2.5 : 1,
+              background: c,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              paddingBottom: 10,
+              transition: 'flex .35s cubic-bezier(.16,1,.3,1)',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{
+              fontFamily: 'var(--mono)',
+              fontSize: 9,
+              fontWeight: 700,
+              color: 'rgba(255,255,255,.9)',
+              opacity: hovered === i ? 1 : 0,
+              transition: 'opacity .2s',
+              background: 'rgba(0,0,0,.32)',
+              padding: '3px 7px',
+              borderRadius: 4,
+              backdropFilter: 'blur(8px)',
+            }}>
+              {c}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {DEMO_LABELS.map((label, i) => (
+          <span key={i} style={{
+            flex: 1,
+            textAlign: 'center',
+            fontSize: 9,
+            fontFamily: 'var(--mono)',
+            fontWeight: 600,
+            letterSpacing: '.04em',
+            textTransform: 'uppercase',
+            color: 'var(--t3)',
+          }}>{label}</span>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => {
+          const l = 95 - i * 9
+          return (
+            <div key={i} style={{
+              flex: 1,
+              height: 24,
+              borderRadius: 3,
+              background: `hsl(250, 100%, ${l}%)`,
+              transition: 'transform .2s',
+            }} />
+          )
+        })}
+      </div>
+      <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', textAlign: 'center' }}>
+        Tint Scale · 50–900
+      </div>
+    </div>
+  )
+}
+
+const FONT_PAIRS = [
+  { heading: 'Playfair Display', body: 'Source Sans 3', hWeight: 700, bWeight: 400 },
+  { heading: 'Space Grotesk', body: 'Inter', hWeight: 600, bWeight: 400 },
+  { heading: 'DM Serif Display', body: 'DM Sans', hWeight: 400, bWeight: 400 },
+]
+
+function FontDemo() {
+  const [pair, setPair] = useState(0)
+  const p = FONT_PAIRS[pair]
+  return (
+    <div className="landing-demo" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {FONT_PAIRS.map((fp, i) => (
+          <button key={i} onClick={() => setPair(i)} style={{
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-s)',
+            border: '1px solid',
+            borderColor: pair === i ? 'var(--accent)' : 'var(--border)',
+            background: pair === i ? 'var(--accent-bg)' : 'transparent',
+            color: pair === i ? 'var(--accent)' : 'var(--t2)',
+            fontSize: 10,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'var(--font)',
+            transition: 'all .2s',
+          }}>{fp.heading.split(' ')[0]}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20, flex: 1, justifyContent: 'center', minHeight: 100 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: `'${p.heading}', serif`, fontWeight: p.hWeight, fontSize: 'clamp(32px,4vw,48px)', lineHeight: 1, color: 'var(--t0)', transition: 'all .3s' }}>Aa</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 600, color: 'var(--t3)', marginTop: 6 }}>Heading</div>
+        </div>
+        <div style={{ width: 1, height: 50, background: 'var(--border)' }} />
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: `'${p.body}', sans-serif`, fontWeight: p.bWeight, fontSize: 'clamp(24px,3vw,36px)', lineHeight: 1, color: 'var(--t1)', transition: 'all .3s' }}>Aa</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 600, color: 'var(--t3)', marginTop: 6 }}>Body</div>
+        </div>
+      </div>
+      <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)', fontWeight: 600 }}>
+        {p.heading} / {p.body}
+      </div>
+    </div>
+  )
+}
+
+const DEMO_ICONS = [
+  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
+  <><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></>,
+  <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></>,
+  <><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>,
+  <><polygon points="12 2 15 9 22 9.3 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.3 9 9" /></>,
+  <><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></>,
+  <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>,
+  <><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M7 4v16" /><path d="M17 4v16" /></>,
+  <><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></>,
+]
+
+function IconDemo() {
+  return (
+    <div className="landing-demo-icons">
+      {DEMO_ICONS.map((g, i) => (
+        <div key={i} className="landing-demo-icon" style={{ transitionDelay: `${i * 30}ms` }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{g}</svg>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const DEMO_TOKENS = [
+  { label: 'xs', value: 4 },
+  { label: 'sm', value: 8 },
+  { label: 'md', value: 16 },
+  { label: 'lg', value: 24 },
+  { label: 'xl', value: 32 },
+  { label: '2xl', value: 48 },
+]
+
+function TokenDemo() {
+  const [hovered, setHovered] = useState(null)
+  return (
+    <div className="landing-demo-tokens">
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>Spacing Scale</div>
+      {DEMO_TOKENS.map((tk, i) => (
+        <div key={i}
+          onMouseEnter={() => setHovered(i)}
+          onMouseLeave={() => setHovered(null)}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'default' }}
+        >
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, color: hovered === i ? 'var(--accent)' : 'var(--t2)', minWidth: 28, transition: 'color .2s' }}>{tk.label}</span>
+          <div style={{
+            height: 6,
+            borderRadius: 3,
+            background: hovered === i ? 'var(--accent)' : 'var(--bg-3)',
+            width: `${(tk.value / 48) * 100}%`,
+            minWidth: 8,
+            transition: 'all .3s cubic-bezier(.16,1,.3,1)',
+          }} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)', fontWeight: 600 }}>{tk.value}px</span>
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+        {[0, 2, 6, 12, 20, 999].map((r, i) => (
+          <div key={i} style={{
+            width: 28,
+            height: 28,
+            borderRadius: r,
+            background: 'var(--bg-2)',
+            border: '1px solid var(--border)',
+            transition: 'all .2s',
+          }} />
+        ))}
+      </div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)', fontWeight: 600, letterSpacing: '.04em' }}>Border Radius</div>
+    </div>
+  )
+}
+
+const FEATURE_DEMOS = [PaletteDemo, FontDemo, IconDemo, TokenDemo]
 
 export default function Landing() {
   const navigate = useNavigate()
@@ -85,7 +275,7 @@ export default function Landing() {
       <main className="landing-main">
         {/* Hero */}
         <section className="landing-hero">
-          <span className="landing-eyebrow">A free toolkit for designers and developers</span>
+          <span className="landing-eyebrow">A design toolkit for designers and developers</span>
           <h1 className="landing-title">
             Every design tool<br /><em>you reach for</em>, together.
           </h1>
@@ -101,16 +291,7 @@ export default function Landing() {
             </button>
             <button type="button" className="btn landing-cta-secondary" onClick={signIn}>Create free account</button>
           </div>
-          <span className="landing-cta-note">No signup required to explore. Free forever.</span>
-        </section>
-
-        {/* Hero screenshot */}
-        <section className="landing-screenshot-hero">
-          <img
-            src="/previews/dashboard.jpg"
-            alt="UIL4B dashboard showing the bento grid with colour palette, typography preview, and design progress"
-            loading="eager"
-          />
+          <span className="landing-cta-note">No signup required to explore. Free tier included.</span>
         </section>
 
         {/* Category cards */}
@@ -126,18 +307,21 @@ export default function Landing() {
           ))}
         </section>
 
-        {/* Feature sections with alternating screenshots */}
-        {FEATURES.map((f, i) => (
-          <section key={f.title} className={`landing-feature${i % 2 === 1 ? ' landing-feature-reverse' : ''}`}>
-            <div className="landing-feature-text">
-              <h2>{f.title}</h2>
-              <p>{f.body}</p>
-            </div>
-            <div className="landing-feature-img">
-              <img src={f.image} alt={f.alt} loading="lazy" />
-            </div>
-          </section>
-        ))}
+        {/* Feature sections with interactive demos */}
+        {FEATURES.map((f, i) => {
+          const Demo = FEATURE_DEMOS[i]
+          return (
+            <section key={f.title} className={`landing-feature${i % 2 === 1 ? ' landing-feature-reverse' : ''}`}>
+              <div className="landing-feature-text">
+                <h2>{f.title}</h2>
+                <p>{f.body}</p>
+              </div>
+              <div className="landing-feature-img">
+                {Demo && <Demo />}
+              </div>
+            </section>
+          )
+        })}
 
         {/* Value highlights */}
         <section className="landing-highlights">
