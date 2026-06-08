@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
+import { useAuth } from '../contexts/AuthContext'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 const ADMIN_KEY = 'vs-admin-unlocked'
+// Owner accounts that get admin access automatically when signed in.
+const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 const STATUSES = ['new', 'in-progress', 'done']
 const STATUS_LABELS = { new: 'New', 'in-progress': 'In Progress', done: 'Done' }
 const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--accent)', done: 'var(--ok)' }
@@ -223,6 +226,8 @@ const TABS = [
 ]
 
 export default function Admin({ toast }) {
+  const { user } = useAuth()
+  const isAdminUser = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
   const [unlocked, setUnlocked] = useState(() => localStorage.getItem(ADMIN_KEY) === 'true')
   const [code, setCode] = useState('')
   const [tab, setTab] = useState('overview')
@@ -239,16 +244,19 @@ export default function Admin({ toast }) {
     try {
       const q2 = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'))
       const snap = await getDocs(q2)
-      const fsFeedback = snap.docs.map(d => ({ ...d.data(), id: d.id, source: d.data().source || 'firestore' }))
+      const fsFeedback = snap.docs.map(d => ({ ...d.data(), id: d.id, _fs: true, source: d.data().source || 'firestore' }))
       const localIds = new Set(localFeedback.map(f => f.id))
       fsFeedback.forEach(f => { if (!localIds.has(f.id)) merged.push(f) })
-    } catch {}
+    } catch { /* firestore unavailable — fall back to local feedback */ }
     setFeedback(merged)
   }, [])
 
+  const effectiveUnlocked = unlocked || isAdminUser
+
   useEffect(() => {
-    if (unlocked) refresh()
-  }, [unlocked, refresh])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (effectiveUnlocked) refresh()
+  }, [effectiveUnlocked, refresh])
 
   const handleUnlock = (e) => {
     e.preventDefault()
@@ -268,23 +276,53 @@ export default function Admin({ toast }) {
     toast('Admin access revoked')
   }
 
-  const handleStatusChange = (id, status) => {
-    const updated = updateFeedbackStatus(id, status)
-    setFeedback(updated)
+  const handleStatusChange = async (id, status) => {
+    const item = feedback.find(f => f.id === id)
+    if (item?._fs) {
+      setFeedback(prev => prev.map(f => f.id === id ? { ...f, status, updatedAt: new Date().toISOString() } : f))
+      try { await updateDoc(doc(db, 'feedback', id), { status, updatedAt: new Date().toISOString() }) } catch { /* offline */ }
+    } else {
+      setFeedback(updateFeedbackStatus(id, status))
+    }
     toast(`Marked as ${STATUS_LABELS[status]}`)
   }
 
-  const handleNotesChange = (id, notes) => {
-    const updated = updateFeedbackNotes(id, notes)
-    setFeedback(updated)
+  const handleNotesChange = async (id, notes) => {
+    const item = feedback.find(f => f.id === id)
+    if (item?._fs) {
+      setFeedback(prev => prev.map(f => f.id === id ? { ...f, adminNotes: notes, updatedAt: new Date().toISOString() } : f))
+      try { await updateDoc(doc(db, 'feedback', id), { adminNotes: notes, updatedAt: new Date().toISOString() }) } catch { /* offline */ }
+    } else {
+      setFeedback(updateFeedbackNotes(id, notes))
+    }
     toast('Notes saved')
   }
 
-  const handleDelete = (id) => {
-    const updated = deleteFeedback(id)
-    setFeedback(updated)
+  const handleDelete = async (id) => {
+    const item = feedback.find(f => f.id === id)
+    if (item?._fs) {
+      setFeedback(prev => prev.filter(f => f.id !== id))
+      try { await deleteDoc(doc(db, 'feedback', id)) } catch { /* offline */ }
+    } else {
+      setFeedback(deleteFeedback(id))
+    }
     setExpandedId(null)
     toast('Submission deleted')
+  }
+
+  const exportCSV = () => {
+    const cols = ['createdAt', 'type', 'status', 'subject', 'message', 'email', 'source', 'adminNotes']
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const rows = [...feedback].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    const csv = [cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `uil4b-feedback-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast(`Exported ${rows.length} submissions`)
   }
 
   const filteredFeedback = [...feedback].reverse().filter(item => {
@@ -296,13 +334,13 @@ export default function Admin({ toast }) {
   const newCount = feedback.filter(f => f.status === 'new').length
   const inProgressCount = feedback.filter(f => f.status === 'in-progress').length
 
-  if (!unlocked) {
+  if (!effectiveUnlocked) {
     return (
       <div className="sec">
         <div style={{ maxWidth: 400, margin: '80px auto', textAlign: 'center' }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 16, fontFamily: 'var(--mono)' }}>Admin Access</div>
           <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.03em', marginBottom: 8 }}>Developer Dashboard</h1>
-          <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 24 }}>Enter the admin code to access analytics and management tools.</p>
+          <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 24 }}>{user ? 'Your account does not have admin access. Enter the admin code to continue.' : 'Sign in with an owner account, or enter the admin code to access analytics and management tools.'}</p>
           <form onSubmit={handleUnlock} style={{ display: 'flex', gap: 8 }}>
             <input
               type="password"
@@ -333,7 +371,8 @@ export default function Admin({ toast }) {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-s" onClick={refresh}>Refresh</button>
-          <button className="btn btn-s" onClick={handleLock} style={{ color: 'var(--err)' }}>Lock</button>
+          <button className="btn btn-s" onClick={exportCSV}>Export CSV</button>
+          {!isAdminUser && <button className="btn btn-s" onClick={handleLock} style={{ color: 'var(--err)' }}>Lock</button>}
         </div>
       </div>
 
@@ -458,6 +497,7 @@ export default function Admin({ toast }) {
                   { label: 'Firestore database created', check: true, note: 'Set region to australia-southeast1 (Sydney) in Firebase Console' },
                   { label: 'Firestore security rules deployed', check: false, note: 'Deploy firestore.rules from repo root via Firebase CLI' },
                   { label: 'Email notifications', check: false, note: 'Set RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL env vars in Vercel' },
+                  { label: 'Google Sheets sync', check: !!import.meta.env.VITE_SHEETS_ENABLED, note: 'Set GOOGLE_SHEETS_WEBHOOK_URL in Vercel — see docs/google-sheets-setup.md. Use Export CSV anytime.' },
                   { label: 'Custom domain', check: true, note: 'uil4b.com configured' },
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
