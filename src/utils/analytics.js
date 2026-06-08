@@ -29,7 +29,7 @@ let sessionPages = []
 
 export function startSession() {
   sessionStart = Date.now()
-  sessionPages = [window.location.hash.replace('#', '') || '/']
+  sessionPages = [window.location.pathname || '/']
 }
 
 export function trackSessionPage(path) {

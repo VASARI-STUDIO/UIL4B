@@ -51,6 +51,30 @@ export default async function handler(req, res) {
     console.error('Firestore write failed:', err.message)
   }
 
+  // Append to a Google Sheet via an Apps Script web app (optional).
+  // Set GOOGLE_SHEETS_WEBHOOK_URL in Vercel to enable. See docs/google-sheets-setup.md.
+  const sheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL
+  if (sheetsWebhook) {
+    try {
+      await fetch(sheetsWebhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: process.env.GOOGLE_SHEETS_WEBHOOK_SECRET || '',
+          createdAt: entry.createdAt,
+          type: entry.type,
+          status: entry.status,
+          subject: entry.subject,
+          message: entry.message,
+          email: entry.email,
+          source: entry.source,
+        }),
+      })
+    } catch (err) {
+      console.error('Google Sheets append failed:', err.message)
+    }
+  }
+
   const resendKey = process.env.RESEND_API_KEY
   const notifyEmail = process.env.SUPPORT_NOTIFY_EMAIL
 
