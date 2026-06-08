@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 import { localiseTools, localiseCategories } from '../data/tools'
 import { useWorkspace } from '../contexts/WorkspaceContext'
@@ -6,22 +6,18 @@ import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
 
-function PinIcon({ filled }) {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 17v5" />
-      <path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
-    </svg>
-  )
-}
-
-function ArrowIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-    </svg>
-  )
-}
+const BRAND_PALETTES = [
+  { n: 'Google', colors: ['#4285F4', '#DB4437', '#F4B400', '#0F9D58', '#1A1A1A'] },
+  { n: 'Spotify', colors: ['#1DB954', '#191414', '#535353', '#B3B3B3', '#FFFFFF'] },
+  { n: 'Stripe', colors: ['#635BFF', '#0A2540', '#00D4AA', '#7A73FF', '#FBFCFE'] },
+  { n: 'Netflix', colors: ['#E50914', '#221F1F', '#B20710', '#F5F5F1', '#564D4D'] },
+  { n: 'Discord', colors: ['#5865F2', '#57F287', '#FEE75C', '#EB459E', '#2C2F33'] },
+  { n: 'Airbnb', colors: ['#FF5A5F', '#00A699', '#FC642D', '#767676', '#484848'] },
+  { n: 'Slack', colors: ['#4A154B', '#36C5F0', '#2EB67D', '#ECB22E', '#E01E5A'] },
+  { n: 'GitHub', colors: ['#24292F', '#0969DA', '#1F883D', '#8250DF', '#CF222E'] },
+  { n: 'Linear', colors: ['#5E6AD2', '#1B1B25', '#F2F2F2', '#26B5CE', '#EB5757'] },
+  { n: 'Figma', colors: ['#F24E1E', '#FF7262', '#A259FF', '#1ABCFE', '#0ACF83'] },
+]
 
 const DESIGN_TIPS = [
   { tip: 'Use no more than 2-3 typefaces in a single project for visual cohesion.', topic: 'Typography' },
@@ -49,20 +45,64 @@ const ICON_GLYPHS = [
   <><path key="1" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline key="2" points="9 22 9 12 15 12 15 22" /></>,
 ]
 
+function ArrowIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+    </svg>
+  )
+}
+
+function getGridStyle(index, total) {
+  if (total === 1) return { gridColumn: 'span 6' }
+  if (total === 2) return { gridColumn: 'span 3' }
+  if (total === 3) {
+    if (index === 0) return { gridColumn: 'span 4', gridRow: 'span 2' }
+    return { gridColumn: 'span 2' }
+  }
+  if (total === 4) return { gridColumn: 'span 3' }
+  if (total === 5) {
+    if (index < 2) return { gridColumn: 'span 3' }
+    return { gridColumn: 'span 2' }
+  }
+  if (index < 2) return { gridColumn: 'span 3' }
+  if (index < 5) return { gridColumn: 'span 2' }
+  return { gridColumn: 'span 3' }
+}
+
+const CATEGORY_CLASS = {
+  color: 'bento-feature bento-color',
+  typography: 'bento-cat bento-typo',
+  imagery: 'bento-cat bento-img',
+  documentation: 'bento-cat',
+}
+
 export default function Dashboard() {
   const { user, userProfile } = useAuth()
-  const { pinned, togglePinned, recent } = useWorkspace()
+  const { pinned, recent } = useWorkspace()
   const { t } = useI18n()
   const { design } = useProject()
   const [now, setNow] = useState(() => new Date())
 
-  const palette = design?.palette?.colors?.length ? design.palette.colors : ['#0051FF']
   const headingFont = design?.fonts?.heading?.family || 'Inter'
   const bodyFont = design?.fonts?.body?.family || 'Inter'
   const headingWeight = design?.fonts?.heading?.weight || 700
   const bodyWeight = design?.fonts?.body?.weight || 400
   const typeBase = design?.typeScale?.base || 16
   const typeRatio = design?.typeScale?.ratio || 1.25
+
+  const fallbackPalette = useMemo(() => {
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
+    return BRAND_PALETTES[dayOfYear % BRAND_PALETTES.length]
+  }, [now])
+
+  const palette = (design?.palette?.colors?.length > 1)
+    ? design.palette.colors
+    : fallbackPalette.colors
+
+  const paletteName = (design?.palette?.colors?.length > 1)
+    ? null
+    : fallbackPalette.n
 
   const dailyTip = useMemo(() => {
     const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
@@ -101,29 +141,115 @@ export default function Dashboard() {
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
   const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 
-  const togglePin = useCallback((e, id) => {
-    e.preventDefault(); e.stopPropagation()
-    togglePinned(id)
-  }, [togglePinned])
-
   const recentTools = recent.map(id => lTools.find(tl => tl.id === id)).filter(Boolean).slice(0, 4)
   const lastTool = recentTools[0]
 
-  const colorCat = lCats.find(c => c.id === 'color')
-  const typoCat = lCats.find(c => c.id === 'typography')
-  const imgCat = lCats.find(c => c.id === 'imagery')
-  const docsCat = lCats.find(c => c.id === 'documentation')
+  const pinnedTools = useMemo(() => {
+    return pinned.map(id => {
+      const tool = lTools.find(tl => tl.id === id)
+      if (!tool) return null
+      const cat = lCats.find(c => c.id === tool.category)
+      return { ...tool, catIcon: cat?.icon, catLabel: cat?.label }
+    }).filter(Boolean)
+  }, [pinned, lTools, lCats])
 
-  const toolsWithMeta = lTools.map(tool => {
-    const cat = lCats.find(c => c.id === tool.category)
-    return { ...tool, catIcon: cat?.icon, isPinned: pinned.includes(tool.id) }
-  })
+  const renderPreview = (tool) => {
+    switch (tool.category) {
+      case 'color':
+        return (
+          <>
+            <div className="bento-feature-head">
+              <span className="bento-label">{paletteName || 'Palette'}</span>
+              <span className="bento-feature-num">{palette.length} colours</span>
+            </div>
+            <div className="bento-color-strip">
+              {palette.slice(0, 5).map((c, i) => (
+                <div key={i} className="bento-color-swatch" style={{ background: c }}>
+                  <span>{c.toUpperCase()}</span>
+                </div>
+              ))}
+            </div>
+            <div className="bento-feature-body">
+              <h2>{tool.label}</h2>
+              <p>{tool.description}</p>
+              <span className="bento-feature-link">{t('common.open')} <ArrowIcon /></span>
+            </div>
+          </>
+        )
+      case 'typography':
+        return (
+          <>
+            <div className="bento-typo-preview">
+              <span className="bento-typo-h" style={{ fontFamily: `'${headingFont}', sans-serif`, fontWeight: headingWeight }}>Aa</span>
+              <span className="bento-typo-b" style={{ fontFamily: `'${bodyFont}', sans-serif`, fontWeight: bodyWeight }}>Aa</span>
+              <span className="bento-typo-meta">{headingFont}{headingFont !== bodyFont ? ` / ${bodyFont}` : ''}</span>
+            </div>
+            <div className="bento-cat-body">
+              <div className="bento-label">{tool.catLabel}</div>
+              <h3>{tool.label}</h3>
+              <p>{tool.description}</p>
+            </div>
+          </>
+        )
+      case 'imagery':
+        return (
+          <>
+            <div className="bento-img-preview">
+              {ICON_GLYPHS.map((g, i) => (
+                <span key={i} className="bento-img-cell">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">{g}</svg>
+                </span>
+              ))}
+            </div>
+            <div className="bento-cat-body">
+              <div className="bento-label">{tool.catLabel}</div>
+              <h3>{tool.label}</h3>
+              <p>{tool.description}</p>
+            </div>
+          </>
+        )
+      case 'documentation':
+        return (
+          <>
+            <div className="bento-docs-grid" style={{ padding: 16 }}>
+              {[3, 2, 1, 0].map(step => {
+                const size = Math.round(typeBase * Math.pow(typeRatio, step))
+                return (
+                  <div key={step} className="bento-docs-row">
+                    <span className="bento-docs-num">{size}</span>
+                    <span className="bento-docs-bar" style={{ width: `${100 - step * 14}%` }} />
+                  </div>
+                )
+              })}
+            </div>
+            <div className="bento-cat-body">
+              <div className="bento-label">{tool.catLabel}</div>
+              <h3>{tool.label}</h3>
+              <p>{tool.description}</p>
+            </div>
+          </>
+        )
+      default:
+        return (
+          <>
+            <div className="bento-pin-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">{tool.catIcon}</svg>
+            </div>
+            <div className="bento-cat-body">
+              <div className="bento-label">{tool.catLabel}</div>
+              <h3>{tool.label}</h3>
+              <p>{tool.description}</p>
+            </div>
+          </>
+        )
+    }
+  }
 
   return (
     <div className="dash">
       <div className="bento">
-        {/* HERO — compact greeting + completion */}
-        <div className="bento-card bento-hero">
+        {/* HERO — greeting + completion */}
+        <div className="bento-card bento-hero" style={{ gridColumn: 'span 4' }}>
           <div className="bento-hero-top">
             <div>
               <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr} · {timeStr}</div>
@@ -152,7 +278,7 @@ export default function Dashboard() {
         </div>
 
         {/* WORKSPACE STATS */}
-        <div className="bento-card bento-time">
+        <div className="bento-card bento-time" style={{ gridColumn: 'span 2' }}>
           <div className="bento-label">{t('dash.localTime')}</div>
           <div className="bento-time-big">{timeStr}</div>
           <div className="bento-time-stats">
@@ -162,75 +288,29 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* COLOUR — live palette */}
-        <NavLink to="/color" className="bento-card bento-feature bento-color">
-          <div className="bento-feature-head">
-            <span className="bento-label">Palette</span>
-            <span className="bento-feature-num">01</span>
-          </div>
-          <div className="bento-color-strip">
-            {palette.slice(0, 5).map((c, i) => (
-              <div key={i} className="bento-color-swatch" style={{ background: c }}>
-                <span>{c.toUpperCase()}</span>
-              </div>
-            ))}
-          </div>
-          <div className="bento-feature-body">
-            <h2>{colorCat?.label || 'Colour Studio'}</h2>
-            <p>{colorCat?.description}</p>
-            <span className="bento-feature-link">{t('common.open')} <ArrowIcon /></span>
-          </div>
-        </NavLink>
+        {/* PINNED TOOLS — dynamic bento cells */}
+        {pinnedTools.map((tool, i) => {
+          const gridStyle = getGridStyle(i, pinnedTools.length)
+          const catClass = CATEGORY_CLASS[tool.category] || 'bento-cat'
+          return (
+            <NavLink key={tool.id} to={tool.path} className={`bento-card ${catClass} bento-pin-cell`} style={gridStyle}>
+              {renderPreview(tool)}
+            </NavLink>
+          )
+        })}
 
-        {/* TYPOGRAPHY — live fonts */}
-        <NavLink to="/typography" className="bento-card bento-cat bento-typo">
-          <div className="bento-typo-preview">
-            <span className="bento-typo-h" style={{ fontFamily: `'${headingFont}', sans-serif`, fontWeight: headingWeight }}>Aa</span>
-            <span className="bento-typo-b" style={{ fontFamily: `'${bodyFont}', sans-serif`, fontWeight: bodyWeight }}>Aa</span>
-            <span className="bento-typo-meta">{headingFont}{headingFont !== bodyFont ? ` / ${bodyFont}` : ''}</span>
+        {/* EMPTY STATE */}
+        {pinnedTools.length === 0 && (
+          <div className="bento-card bento-empty" style={{ gridColumn: 'span 6' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--t3)', marginBottom: 10 }}>
+              <path d="M12 17v5" />
+              <path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
+            </svg>
+            <p style={{ color: 'var(--t2)', fontSize: 13, maxWidth: 320 }}>
+              Pin tools from the sidebar to build your personalised dashboard.
+            </p>
           </div>
-          <div className="bento-cat-body">
-            <div className="bento-label">{t('dash.category', { num: '02' })}</div>
-            <h3>{typoCat?.label || 'Typography'}</h3>
-            <p>{typoCat?.description}</p>
-          </div>
-        </NavLink>
-
-        {/* IMAGERY */}
-        <NavLink to="/imagery" className="bento-card bento-cat bento-img">
-          <div className="bento-img-preview">
-            {ICON_GLYPHS.map((g, i) => (
-              <span key={i} className="bento-img-cell">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">{g}</svg>
-              </span>
-            ))}
-          </div>
-          <div className="bento-cat-body">
-            <div className="bento-label">{t('dash.category', { num: '03' })}</div>
-            <h3>{imgCat?.label || 'Imagery'}</h3>
-            <p>{imgCat?.description}</p>
-          </div>
-        </NavLink>
-
-        {/* DOCUMENTATION — live type scale */}
-        <NavLink to="/docs" className="bento-card bento-cat bento-docs">
-          <div className="bento-docs-grid">
-            {[3, 2, 1, 0].map(step => {
-              const size = Math.round(typeBase * Math.pow(typeRatio, step))
-              return (
-                <div key={step} className="bento-docs-row">
-                  <span className="bento-docs-num">{size}</span>
-                  <span className="bento-docs-bar" style={{ width: `${100 - step * 14}%` }} />
-                </div>
-              )
-            })}
-          </div>
-          <div className="bento-cat-body">
-            <div className="bento-label">{t('dash.category', { num: '04' })}</div>
-            <h3>{docsCat?.label || 'Documentation'}</h3>
-            <p>{docsCat?.description}</p>
-          </div>
-        </NavLink>
+        )}
       </div>
 
       {/* Daily tip */}
@@ -254,35 +334,6 @@ export default function Dashboard() {
           </div>
         </section>
       )}
-
-      {/* All tools */}
-      <section>
-        <div className="dash-tools-header">
-          <h2 className="dash-section-title">{t('dash.yourTools')}</h2>
-          <span className="dash-tools-count">{pinned.length} {t('dash.pinned').toLowerCase()}</span>
-        </div>
-        <div className="dash-tools-grid">
-          {toolsWithMeta.map(tl => (
-            <NavLink key={tl.id} to={tl.path} className={`dash-tool-card${tl.isPinned ? ' pinned' : ''}`}>
-              <div className="dash-tool-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{tl.catIcon}</svg>
-              </div>
-              <div className="dash-tool-body">
-                <span className="dash-tool-name">{tl.label}</span>
-                <span className="dash-tool-desc">{tl.description}</span>
-              </div>
-              <button
-                type="button"
-                className="dash-tool-pin"
-                onClick={(e) => togglePin(e, tl.id)}
-                aria-label={tl.isPinned ? t('common.unpin', { name: tl.label }) : t('common.pin', { name: tl.label })}
-              >
-                <PinIcon filled={tl.isPinned} />
-              </button>
-            </NavLink>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }
