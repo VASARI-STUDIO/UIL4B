@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef } from 'react'
 import UsageGate from '../components/UsageGate'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
+import { auth as firebaseAuth } from '../utils/firebase'
 
 const ALT_TEXT_TOOL_ID = 'alt-text'
-const ALT_TEXT_DAILY_LIMIT = 20
-
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif'
 const MAX_DIM = 1600
 
@@ -50,6 +50,8 @@ export default function AltTextGenerator({ toast }) {
   const [busy, setBusy] = useState(false)
   const fileInputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
+  const { plan, isPro } = useSubscription()
+  const dailyLimit = plan?.limits?.[ALT_TEXT_TOOL_ID] ?? 40
 
   const handleFiles = useCallback(async (files) => {
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -99,20 +101,26 @@ export default function AltTextGenerator({ toast }) {
 
   const generateForItem = async (item, retries = 2) => {
     if (!item.base64) return
-    if (!canUseFeature(ALT_TEXT_TOOL_ID, ALT_TEXT_DAILY_LIMIT)) {
+    if (!canUseFeature(ALT_TEXT_TOOL_ID, dailyLimit)) {
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: 'Daily usage limit reached' } : p))
       toast?.('Daily limit reached — resets at midnight')
       return
     }
     setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'generating', error: null } : p))
     try {
+      const token = await firebaseAuth.currentUser?.getIdToken()
+      if (!token) throw new Error('Not signed in')
+
       const r = await fetch('/api/alt-text', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined }),
       })
       const data = await r.json().catch(() => ({}))
-      if (r.status === 429 && retries > 0) {
+      if (r.status === 429 && data.retryAfter && retries > 0) {
         const wait = (data.retryAfter || 5) * 1000
         setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'ready', error: `Rate limited, retrying in ${wait / 1000}s…` } : p))
         await delay(wait)
@@ -187,7 +195,7 @@ export default function AltTextGenerator({ toast }) {
       <div className="sec-h">
         <div className="sec-h-eyebrow">Imagery</div>
         <h1>Alt Text <em>Generator</em></h1>
-        <p>Batch-upload images and generate accessible alt text using Google Gemini. Edit results inline before exporting.</p>
+        <p>Batch-upload images and generate accessible alt text using AI. {isPro ? 'Pro model active.' : 'Upgrade to Pro for higher-quality models.'}</p>
       </div>
 
       <div
@@ -229,7 +237,7 @@ export default function AltTextGenerator({ toast }) {
 
       {items.length > 0 && (
         <>
-          <UsageGate toolId={ALT_TEXT_TOOL_ID} dailyLimit={ALT_TEXT_DAILY_LIMIT}>
+          <UsageGate toolId={ALT_TEXT_TOOL_ID}>
             <div className="alt-toolbar">
               <div className="alt-toolbar-info">
                 <strong>{items.length}</strong> image{items.length === 1 ? '' : 's'}
