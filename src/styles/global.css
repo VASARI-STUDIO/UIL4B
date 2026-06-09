@@ -534,10 +534,11 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .toast.show{transform:translateY(0) scale(1);opacity:1}
 
 /* ─── Dashboard (Bento) ─── */
-.dash{padding:20px 0 40px;display:flex;flex-direction:column;gap:20px}
+.dash{padding:20px 0 24px;display:flex;flex-direction:column;gap:16px;min-height:100%;box-sizing:border-box}
 
 /* Bento grid */
-.bento{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:minmax(118px,auto);gap:12px}
+.bento{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:minmax(100px,1fr);gap:12px;flex:1}
+@media(min-width:981px){.dash{height:calc(100vh - var(--top-h) - 40px)}}
 
 .bento-card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);padding:20px;text-decoration:none!important;color:inherit;transition:transform .25s cubic-bezier(.16,1,.3,1),border-color .25s;box-shadow:var(--warm-shadow);display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .bento-card::before,.bento-card::after{display:none}
@@ -626,7 +627,7 @@ a.bento-card:hover{border-color:var(--bh);transform:translateY(-2px)}
 .bento-docs .bento-cat-body{margin-top:0;padding:0;flex:1;min-width:0}
 
 /* Design tip banner */
-.dash-tip{display:flex;align-items:baseline;gap:10px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;line-height:1.5;box-shadow:var(--warm-shadow)}
+.dash-tip{display:flex;align-items:baseline;gap:10px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;line-height:1.5;box-shadow:var(--warm-shadow);flex-shrink:0}
 .dash-tip-badge{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-bg);padding:2px 8px;border-radius:var(--radius-s);border:1px solid color-mix(in srgb,var(--accent) 15%,transparent);flex-shrink:0;white-space:nowrap}
 .dash-tip-text{color:var(--t2);font-size:12px}
 
