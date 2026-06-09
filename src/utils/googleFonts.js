@@ -83,24 +83,41 @@ export async function getFontCategories() {
   return [...new Set(fonts.map(f => f.category))]
 }
 
-const loadedFonts = new Map()
+const loadedFonts = new Map() // family -> { link, weights:Set<number> }
 
 export function loadFont(family, weights = [400]) {
-  if (loadedFonts.has(family)) return
-  const weightStr = weights.map(w => `wght@${w}`).join(';')
+  const requested = [...new Set(weights)]
+    .filter(w => Number.isFinite(w))
+    .sort((a, b) => a - b)
+  if (!requested.length) requested.push(400)
+
+  const existing = loadedFonts.get(family)
+  if (existing) {
+    // Already covers everything we need — nothing to do.
+    if (requested.every(w => existing.weights.has(w))) return
+    // Otherwise upgrade the link to the union of weights so previews aren't
+    // forced to synthesise (faux-bold) a weight that was never downloaded.
+    requested.forEach(w => existing.weights.add(w))
+    existing.link.remove()
+  }
+
+  const all = existing ? [...existing.weights].sort((a, b) => a - b) : requested
+  // CSS2 API wants the axis tag ONCE: family=Name:wght@400;700 — NOT
+  // wght@400;wght@700 (which Google rejects, leaving the font unloaded).
+  const weightStr = `wght@${all.join(';')}`
   const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:${weightStr}&display=swap`
   const link = document.createElement('link')
   link.rel = 'stylesheet'
   link.href = url
   link.dataset.fontFamily = family
   document.head.appendChild(link)
-  loadedFonts.set(family, link)
+  loadedFonts.set(family, { link, weights: new Set(all) })
 }
 
 export function unloadFont(family) {
-  const link = loadedFonts.get(family)
-  if (!link) return
-  link.remove()
+  const entry = loadedFonts.get(family)
+  if (!entry) return
+  entry.link.remove()
   loadedFonts.delete(family)
 }
 

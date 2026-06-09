@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import { useI18n } from '../contexts/I18nContext'
+import { takePendingImages } from '../utils/imageHandoff'
 
 function formatBytes(b) {
   if (b < 1024) return b + ' B'
@@ -38,6 +39,12 @@ export default function ImageConverter({ toast }) {
       reader.readAsDataURL(file)
     })
   }, [])
+
+  // Pick up any files handed off from the dashboard's quick-upload tile.
+  useEffect(() => {
+    const pending = takePendingImages()
+    if (pending?.length) handleFiles(pending)
+  }, [handleFiles])
 
   const getCanvas = useCallback((orig) => {
     const canvas = document.createElement('canvas')

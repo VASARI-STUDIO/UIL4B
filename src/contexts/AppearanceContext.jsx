@@ -2,15 +2,26 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const AppearanceContext = createContext()
 const STORAGE_KEY = 'vs-appearance'
+// Bump when we want to force a new appearance default onto everyone (including
+// returning users who already have a saved preference).
+const VERSION_KEY = 'vs-appearance-v'
+const APPEARANCE_VERSION = '2'
 
 const DEFAULTS = {
-  rounding: 'none',
+  rounding: 'default', // "Medium" rounding — the friendly default for everyone
   density: 'cozy',
   reducedMotion: false,
 }
 
 function load() {
   try {
+    // One-time migration: snap everyone to the new medium-rounding default.
+    if (localStorage.getItem(VERSION_KEY) !== APPEARANCE_VERSION) {
+      localStorage.setItem(VERSION_KEY, APPEARANCE_VERSION)
+      const raw = localStorage.getItem(STORAGE_KEY)
+      const prev = raw ? JSON.parse(raw) : {}
+      return { ...DEFAULTS, ...prev, rounding: DEFAULTS.rounding }
+    }
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return DEFAULTS
     return { ...DEFAULTS, ...JSON.parse(raw) }
