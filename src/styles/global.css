@@ -1426,6 +1426,7 @@ img,svg,video{max-width:100%;height:auto}
 .fg-weight-num{font-family:var(--mono);font-size:10px;color:var(--t2)}
 .fg-charset{font-size:22px;line-height:1.8;letter-spacing:.02em;word-break:break-all;color:var(--t1)}
 .fg-paragraph{max-width:600px}
+.fg-detail-apply{display:flex;gap:10px;flex-wrap:wrap}
 .fg-detail-actions{display:flex;gap:10px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--border)}
 
 /* Loader */

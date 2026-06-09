@@ -131,7 +131,7 @@ export default function App() {
             <Route path="/export" element={<Navigate to="/color" replace />} />
             <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
             <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
-            <Route path="/fontgallery" element={<FontGallery onCopy={copy} />} />
+            <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
