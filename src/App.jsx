@@ -39,8 +39,6 @@ import FAQ from './pages/FAQ'
 import HelpCentre from './pages/HelpCentre'
 import Landing from './pages/Landing'
 
-const VISITED_KEY = 'vs-visited'
-
 function RequireAuth({ children }) {
   const { user } = useAuth()
   const location = useLocation()
@@ -48,21 +46,10 @@ function RequireAuth({ children }) {
   return children
 }
 
-function Home() {
-  const { user, loading } = useAuth()
-  const hasVisited = (() => {
-    try { return localStorage.getItem(VISITED_KEY) === '1' } catch { return false }
-  })()
-  if (user) return <Navigate to="/dashboard" replace />
-  if (hasVisited) return <Navigate to="/dashboard" replace />
-  if (loading) return null
-  return <Navigate to="/welcome" replace />
-}
-
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const { user: authUser } = useAuth()
+  const { user: authUser, loading: authLoading } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   const { message, visible, toast } = useToast()
   const copy = useClipboard(toast)
@@ -100,8 +87,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // The welcome page renders full-screen, outside the app chrome.
+  // The sales / landing page is the public homepage. It renders full-screen,
+  // outside the app chrome. The root URL (/) serves it to logged-out visitors so
+  // it is the first page that loads and is indexable; logged-in users are sent
+  // straight to their dashboard but can still reach it via /welcome.
   if (location.pathname === '/welcome') {
+    return <Landing />
+  }
+  if (location.pathname === '/') {
+    if (authLoading) return null
+    if (authUser) return <Navigate to="/dashboard" replace />
     return <Landing />
   }
 
@@ -114,7 +109,6 @@ export default function App() {
 
         <main className="main" key={location.pathname}>
           <Routes location={location}>
-            <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />

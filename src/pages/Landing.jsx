@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
+import { useAuth } from '../contexts/AuthContext'
 import { CATEGORIES } from '../data/tools'
 import { loadFont } from '../utils/googleFonts'
 
@@ -319,10 +320,13 @@ const FEATURE_DEMOS = [PaletteDemo, FontDemo, IconDemo, TokenDemo]
 export default function Landing() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
+  const { user, userProfile } = useAuth()
+  const loggedIn = !!user
+  const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0]
 
   const enter = () => {
     try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
-    navigate('/')
+    navigate('/dashboard')
   }
 
   const signIn = () => {
@@ -345,7 +349,11 @@ export default function Landing() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
             )}
           </button>
-          <button type="button" className="btn landing-signin" onClick={signIn}>Sign in</button>
+          {loggedIn ? (
+            <button type="button" className="btn landing-signin" onClick={enter}>Resume</button>
+          ) : (
+            <button type="button" className="btn landing-signin" onClick={signIn}>Sign in</button>
+          )}
         </div>
       </header>
 
@@ -363,12 +371,18 @@ export default function Landing() {
           </p>
           <div className="landing-cta-row">
             <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-              Open the toolkit
+              {loggedIn ? 'Resume where you left off' : 'Open the toolkit'}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
             </button>
-            <button type="button" className="btn landing-cta-secondary" onClick={signIn}>Create free account</button>
+            <button type="button" className="btn landing-cta-secondary" onClick={signIn}>
+              {loggedIn ? 'Log in to another account' : 'Create free account'}
+            </button>
           </div>
-          <span className="landing-cta-note">No signup required to explore. Free tier included.</span>
+          <span className="landing-cta-note">
+            {loggedIn
+              ? `Signed in${firstName ? ` as ${firstName}` : ''}. Pick up right where you left off.`
+              : 'No signup required to explore. Free tier included.'}
+          </span>
         </section>
 
         {/* Category cards */}
@@ -415,10 +429,14 @@ export default function Landing() {
 
         {/* Closing CTA */}
         <Reveal className="landing-closing">
-          <h2>Start designing in seconds.</h2>
-          <p>Jump straight into the toolkit. Your work is saved locally, and an account unlocks AI tools and synced projects whenever you are ready.</p>
+          <h2>{loggedIn ? 'Pick up where you left off.' : 'Start designing in seconds.'}</h2>
+          <p>
+            {loggedIn
+              ? 'Your projects and design tokens are ready and waiting. Jump back into the toolkit any time.'
+              : 'Jump straight into the toolkit. Your work is saved locally, and an account unlocks AI tools and synced projects whenever you are ready.'}
+          </p>
           <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-            Open the toolkit
+            {loggedIn ? 'Resume where you left off' : 'Open the toolkit'}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
           </button>
         </Reveal>
