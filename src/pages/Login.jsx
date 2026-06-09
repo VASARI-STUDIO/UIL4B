@@ -41,7 +41,7 @@ export default function Login({ toast }) {
         await signup(email, password, displayName)
         toast(t('auth.accountCreated'))
         if (isGate) { setGateSuccess(true); setTimeout(() => window.close(), 1200); return }
-        navigate('/')
+        navigate('/onboarding')
       } else {
         await login(email, password)
         toast(t('auth.signedIn'))
@@ -75,7 +75,8 @@ export default function Login({ toast }) {
       await loginWithGoogle()
       toast(t('auth.signedIn'))
       if (isGate) { setGateSuccess(true); setTimeout(() => window.close(), 1200); return }
-      navigate('/')
+      const onboarded = localStorage.getItem('vs-onboarded') === '1'
+      navigate(onboarded ? '/' : '/onboarding')
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
         toast(err.code === 'auth/unauthorized-domain' ? t('auth.errors.googleUnavailable') : t('auth.errors.authFailed'))
