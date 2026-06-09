@@ -44,6 +44,11 @@ export default function GoogleOneTap() {
       if (cancelled || !window.google?.accounts?.id) return
 
       if (!initialised.current) {
+        // Returning Google users get automatic single-click sign-in: Google
+        // re-selects the previously used account without an extra prompt.
+        let returning = false
+        try { returning = localStorage.getItem('vs-google-returning') === '1' } catch { /* ignore */ }
+
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: async (response) => {
@@ -55,7 +60,7 @@ export default function GoogleOneTap() {
               console.error('Google One Tap sign-in failed', err)
             }
           },
-          auto_select: false,
+          auto_select: returning,
           cancel_on_tap_outside: true,
           context: 'signin',
           use_fedcm_for_prompt: true,
