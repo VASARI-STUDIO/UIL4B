@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import { useAuth } from '../contexts/AuthContext'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
+import { collection, addDoc } from 'firebase/firestore'
+import { db } from '../utils/firebase'
 
 function getPrompts() {
   try { return JSON.parse(localStorage.getItem('vs-prompts') || '[]') }
@@ -134,7 +137,9 @@ const TAG_CATEGORIES = [
 
 export default function PromptLibrary({ onCopy, toast }) {
   const { t } = useI18n()
+  const { user, userProfile } = useAuth()
   const [prompts, setPrompts] = useState(getPrompts)
+  const [submitOpen, setSubmitOpen] = useState(false)
   const [text, setText] = useState('')
   const [tags, setTags] = useState('')
   const [title, setTitle] = useState('')
@@ -247,6 +252,37 @@ export default function PromptLibrary({ onCopy, toast }) {
     }
   }, [])
 
+  const [submitTitle, setSubmitTitle] = useState('')
+  const [submitText, setSubmitText] = useState('')
+  const [submitTags, setSubmitTags] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const submitToComm = useCallback(async () => {
+    if (!submitText.trim()) { toast('Enter a prompt to submit'); return }
+    if (!user) { toast('Sign in to submit prompts'); return }
+    setSubmitting(true)
+    try {
+      await addDoc(collection(db, 'community-prompts'), {
+        title: submitTitle.trim() || submitText.trim().slice(0, 60),
+        text: submitText.trim(),
+        tags: submitTags.trim(),
+        authorEmail: user.email,
+        authorName: userProfile?.displayName || user.email?.split('@')[0],
+        authorUid: user.uid,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      })
+      toast('Prompt submitted for review')
+      setSubmitTitle('')
+      setSubmitText('')
+      setSubmitTags('')
+      setSubmitOpen(false)
+    } catch {
+      toast('Failed to submit — try again')
+    }
+    setSubmitting(false)
+  }, [submitTitle, submitText, submitTags, user, userProfile, toast])
+
   return (
     <div className="sec">
       <div className="sec-h">
@@ -309,6 +345,15 @@ export default function PromptLibrary({ onCopy, toast }) {
           </div>
         )}
 
+        {isCommunity && user && (
+          <button className="btn pl-add-btn" onClick={() => setSubmitOpen(!submitOpen)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
+            </svg>
+            Submit prompt
+          </button>
+        )}
+
         {!isCommunity && (
           <button className="btn btn-accent pl-add-btn" onClick={() => setAddOpen(!addOpen)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -360,6 +405,28 @@ export default function PromptLibrary({ onCopy, toast }) {
             <div className="pl-add-actions">
               <button className="btn" onClick={() => setAddOpen(false)}>Cancel</button>
               <button className="btn btn-accent" onClick={save}>{t('promptLibrary.addPrompt')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Submit to community panel */}
+      {isCommunity && submitOpen && (
+        <div className="pl-add-panel open">
+          <div className="pl-add-inner">
+            <div className="pl-add-fields">
+              <input type="text" value={submitTitle} onChange={e => setSubmitTitle(e.target.value)} placeholder="Prompt title" className="pl-input-title" />
+              <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} placeholder="Your prompt..." className="pl-textarea" />
+              <input type="text" value={submitTags} onChange={e => setSubmitTags(e.target.value)} placeholder="Tags (comma separated)" />
+            </div>
+            <div className="pl-add-actions">
+              <button className="btn" onClick={() => setSubmitOpen(false)}>Cancel</button>
+              <button className="btn btn-accent" onClick={submitToComm} disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit for review'}
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>
+              Submissions are reviewed before appearing in the community library.
             </div>
           </div>
         </div>

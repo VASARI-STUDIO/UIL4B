@@ -1,15 +1,11 @@
-// Vercel serverless function — generates alt text for an image via Google Gemini.
-// Requires env var GEMINI_API_KEY (server-side only, never exposed to the client).
-// Free tier: 15 RPM, 1500 RPD for gemini-2.0-flash.
+import { adminDb, adminAuth, FieldValueIncrement } from './_lib/firebase-admin.js'
+import { planForSubscription, dailyLimitFor, modelFor } from './_lib/plans.js'
 
 export const config = {
-  api: {
-    bodyParser: { sizeLimit: '8mb' },
-  },
+  api: { bodyParser: { sizeLimit: '8mb' } },
 }
 
-const GEMINI_MODEL = 'gemini-3-flash-preview'
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
 const PROMPT = `You are writing alt text for a website. Describe the image in 1-2 sentences, under 125 characters when possible.
 - Be concise and specific. Lead with the most important subject.
@@ -18,16 +14,9 @@ const PROMPT = `You are writing alt text for a website. Describe the image in 1-
 - If text is visible and important, include it verbatim in quotes.
 - Plain text only, no markdown.`
 
-const RPM_LIMIT = 14
-const RPM_WINDOW = 60_000
-const requestLog = []
-
-function isRateLimited() {
-  const now = Date.now()
-  while (requestLog.length && requestLog[0] < now - RPM_WINDOW) requestLog.shift()
-  if (requestLog.length >= RPM_LIMIT) return true
-  requestLog.push(now)
-  return false
+function todayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export default async function handler(req, res) {
@@ -36,63 +25,98 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY not configured' })
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) return res.status(500).json({ error: 'AI provider not configured' })
+
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' })
   }
 
-  if (isRateLimited()) {
-    return res.status(429).json({ error: 'Rate limit reached (15 requests/minute). Please wait before trying again.', retryAfter: 5 })
+  let uid
+  try {
+    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
+    uid = decoded.uid
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' })
+  }
+
+  const fireDb = adminDb()
+  const userSnap = await fireDb.doc(`users/${uid}`).get()
+  const subscription = userSnap.data()?.subscription || null
+  const plan = planForSubscription(subscription)
+  const toolId = 'alt-text'
+  const limit = dailyLimitFor(plan, toolId)
+
+  const date = todayStr()
+  const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
+  const usageSnap = await usageRef.get()
+  const used = usageSnap.data()?.[toolId] || 0
+
+  if (used >= limit) {
+    return res.status(429).json({
+      error: 'Daily limit reached',
+      usage: { used, limit, remaining: 0 },
+      plan: plan.id,
+    })
   }
 
   const { image, mimeType, context } = req.body || {}
-  if (!image || !mimeType) {
-    return res.status(400).json({ error: 'image (base64) and mimeType required' })
-  }
+  if (!image || !mimeType) return res.status(400).json({ error: 'image (base64) and mimeType required' })
   if (!/^image\/(jpeg|png|webp|gif|heic|heif)$/.test(mimeType)) {
     return res.status(400).json({ error: 'unsupported mimeType' })
   }
 
+  const model = modelFor(plan, toolId)
   const userPrompt = context
     ? `${PROMPT}\n\nAdditional context from the author: ${context.slice(0, 500)}`
     : PROMPT
 
   try {
-    const r = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    const r = await fetch(OPENROUTER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': process.env.SITE_URL || 'https://uil4b.vercel.app',
+        'X-Title': 'UIL4B',
+      },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: userPrompt },
-            { inline_data: { mime_type: mimeType, data: image } },
+        model,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: userPrompt },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${image}` } },
           ],
         }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
+        max_tokens: 500,
+        temperature: 0.4,
       }),
     })
 
     if (!r.ok) {
       const text = await r.text()
-      console.error('Gemini API error:', r.status, text.slice(0, 1000))
-      let detail = text.slice(0, 500)
-      try {
-        const parsed = JSON.parse(text)
-        detail = parsed?.error?.message || detail
-      } catch {}
-
+      console.error('OpenRouter error:', r.status, text.slice(0, 1000))
       if (r.status === 429) {
-        return res.status(429).json({ error: `Gemini 429: ${detail}`, model: GEMINI_MODEL, retryAfter: 10 })
+        return res.status(429).json({ error: 'Rate limited by provider. Try again shortly.', retryAfter: 10 })
       }
-      return res.status(502).json({ error: `Gemini ${r.status}: ${detail}`, model: GEMINI_MODEL })
+      return res.status(502).json({ error: `AI provider error (${r.status})`, model })
     }
 
     const data = await r.json()
-    const altText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
-    if (!altText) {
-      return res.status(502).json({ error: 'Empty response from Gemini' })
-    }
-    return res.status(200).json({ altText })
+    const altText = data?.choices?.[0]?.message?.content?.trim() || ''
+    if (!altText) return res.status(502).json({ error: 'Empty response from AI provider' })
+
+    const inc = await FieldValueIncrement(1)
+    await usageRef.set({ [toolId]: inc }, { merge: true })
+
+    return res.status(200).json({
+      altText,
+      model,
+      plan: plan.id,
+      usage: { used: used + 1, limit, remaining: limit - used - 1 },
+    })
   } catch (err) {
     return res.status(500).json({ error: 'Request failed', detail: String(err).slice(0, 300) })
   }

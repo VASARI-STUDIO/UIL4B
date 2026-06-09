@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 
 const STORAGE_DISCLOSURE = [
   { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
@@ -235,7 +236,8 @@ function NavIcon({ id }) {
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { theme, setTheme } = useTheme()
-  const { rounding, density, setRounding, setDensity } = useAppearance()
+  const { rounding, density, reducedMotion, setRounding, setDensity, setReducedMotion } = useAppearance()
+  const { isPro, subscription, plan, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -310,31 +312,71 @@ export default function Settings({ toast }) {
 
         <div className="settings-content">
 
-          {/* Support */}
+          {/* Subscription */}
           <section id="set-support" className="settings-section">
             <div className="settings-section-h">
-              <h2>Support</h2>
-              <p>UIL4B is free for everyone. If you find it useful, consider supporting development.</p>
+              <h2>Subscription</h2>
+              <p>{isPro ? 'You\'re on UIL4B Pro. Thank you for your support.' : 'Unlock higher AI generation limits, quality models, and more.'}</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
-                  <path d="M18 8h1a4 4 0 010 8h-1" /><path d="M6 8H5a4 4 0 000 8h1" /><path d="M6 8a6 6 0 0112 0v1a2 2 0 01-2 2H8a2 2 0 01-2-2V8z" /><line x1="12" y1="16" x2="12" y2="20" /><line x1="8" y1="20" x2="16" y2="20" />
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={isPro ? '#3b82f6' : 'var(--accent)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
+                  {isPro
+                    ? <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>
+                    : <><path d="M20 12V8H6a2 2 0 1 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></>
+                  }
                 </svg>
-                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>Buy me a coffee</div>
-                <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20, lineHeight: 1.6 }}>
-                  Your support helps keep UIL4B free, maintained, and improving.
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>
+                  {isPro ? 'UIL4B Pro' : 'Free Plan'}
                 </div>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer" className="btn btn-accent" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                    Support UIL4B
-                  </a>
-                  <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer" className="btn" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
-                    Portfolio
-                  </a>
-                </div>
+
+                {isPro ? (
+                  <>
+                    <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 6, lineHeight: 1.6 }}>
+                      {subscription?.interval === 'year' ? 'Yearly' : 'Monthly'} subscription
+                      {subscription?.cancelAtPeriodEnd && ' — cancels at end of period'}
+                    </div>
+                    {subscription?.currentPeriodEnd && (
+                      <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 20 }}>
+                        {subscription.cancelAtPeriodEnd ? 'Access until' : 'Next billing'}: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                      </div>
+                    )}
+                    <button className="btn" onClick={openPortal} style={{ padding: '10px 24px' }}>
+                      Manage subscription
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20, lineHeight: 1.6 }}>
+                      Higher AI limits, quality models, and Pro-only features.
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+                      <button
+                        className="btn btn-accent"
+                        onClick={() => checkout('monthly')}
+                        disabled={!user || subLoading}
+                        style={{ display: 'inline-flex', flexDirection: 'column', gap: 2, padding: '14px 28px', minWidth: 140 }}
+                      >
+                        <span style={{ fontSize: 15, fontWeight: 700 }}>$4.99/mo</span>
+                        <span style={{ fontSize: 10, opacity: .7, fontWeight: 400 }}>AUD, billed monthly</span>
+                      </button>
+                      <button
+                        className="btn btn-accent"
+                        onClick={() => checkout('yearly')}
+                        disabled={!user || subLoading}
+                        style={{ display: 'inline-flex', flexDirection: 'column', gap: 2, padding: '14px 28px', minWidth: 140 }}
+                      >
+                        <span style={{ fontSize: 15, fontWeight: 700 }}>$39.99/yr</span>
+                        <span style={{ fontSize: 10, opacity: .7, fontWeight: 400 }}>AUD, save 33%</span>
+                      </button>
+                    </div>
+                    {!user && (
+                      <div style={{ fontSize: 12, color: 'var(--t2)' }}>
+                        <NavLink to="/login" style={{ color: 'var(--accent)', fontWeight: 500 }}>Sign in</NavLink> to upgrade
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </section>
@@ -395,6 +437,14 @@ export default function Settings({ toast }) {
                     <div className="toggle-row-meta">Reduce spacing for denser layouts</div>
                   </div>
                   <button className={`toggle-switch${density === 'compact' ? ' on' : ''}`} onClick={() => setDensity(density === 'compact' ? 'cozy' : 'compact')} />
+                </div>
+
+                <div className="toggle-row">
+                  <div className="toggle-row-info">
+                    <div className="toggle-row-label">Reduced motion</div>
+                    <div className="toggle-row-meta">Minimise animations and transitions</div>
+                  </div>
+                  <button className={`toggle-switch${reducedMotion ? ' on' : ''}`} onClick={() => setReducedMotion(!reducedMotion)} />
                 </div>
               </div>
             </div>
