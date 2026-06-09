@@ -2,6 +2,9 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import { useLocation } from 'react-router-dom'
 import { TOOLS } from '../data/tools'
 
+// Custom drag MIME type for dragging a tool from the sidebar onto the dashboard.
+export const TOOL_DRAG_TYPE = 'application/x-vs-tool'
+
 const RECENT_KEY = 'vs-recent-tools'
 const PINNED_KEY = 'vs-pinned-tools'
 const MAX_RECENT = 6
@@ -48,6 +51,19 @@ export function WorkspaceProvider({ children }) {
     })
   }, [])
 
+  // Add to pinned without toggling off — used by drag-to-dashboard.
+  // Optionally insert at a specific index, otherwise append.
+  const addPinned = useCallback((toolId, atIndex = null) => {
+    setPinned(prev => {
+      if (prev.includes(toolId)) return prev
+      const next = [...prev]
+      if (atIndex == null || atIndex >= next.length) next.push(toolId)
+      else next.splice(Math.max(0, atIndex), 0, toolId)
+      saveList(PINNED_KEY, next)
+      return next
+    })
+  }, [])
+
   const reorderPinned = useCallback((fromIdx, toIdx) => {
     setPinned(prev => {
       const next = [...prev]
@@ -65,7 +81,7 @@ export function WorkspaceProvider({ children }) {
     if (tool) trackVisit(tool.id)
   }, [location.pathname, trackVisit])
 
-  const value = { recent, pinned, trackVisit, togglePinned, reorderPinned }
+  const value = { recent, pinned, trackVisit, togglePinned, addPinned, reorderPinned }
 
   return (
     <WorkspaceContext.Provider value={value}>

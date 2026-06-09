@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
-import { useWorkspace } from '../contexts/WorkspaceContext'
+import { useWorkspace, TOOL_DRAG_TYPE } from '../contexts/WorkspaceContext'
 import { CATEGORIES, toolsByCategory, localiseCategories, localiseTools } from '../data/tools'
 
 const STORAGE_KEY = 'vs-nav-open'
@@ -249,9 +249,15 @@ export default function Sidebar({ isOpen, onClose }) {
                       <NavLink
                         key={tool.id}
                         to={tool.path}
-                        className={({ isActive: linkActive }) => `nav-item nav-item-sub${linkActive ? ' active' : ''}`}
+                        className={({ isActive: linkActive }) => `nav-item nav-item-sub${linkActive ? ' active' : ''}${pinned.includes(tool.id) ? ' is-pinned' : ''}`}
                         onClick={onClose}
                         onContextMenu={(e) => handleContextMenu(e, tool)}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'copy'
+                          e.dataTransfer.setData(TOOL_DRAG_TYPE, tool.id)
+                          e.dataTransfer.setData('text/plain', tool.label)
+                        }}
                       >
                         <span className="nav-item-num">{idx + 1}.{ti + 1}</span>
                         {tool.icon && (

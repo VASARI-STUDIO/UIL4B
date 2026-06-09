@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import { localiseTools, localiseCategories } from '../data/tools'
-import { useWorkspace } from '../contexts/WorkspaceContext'
+import { useWorkspace, TOOL_DRAG_TYPE } from '../contexts/WorkspaceContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
@@ -79,10 +79,75 @@ const CATEGORY_CLASS = {
 
 export default function Dashboard() {
   const { user, userProfile } = useAuth()
-  const { pinned, recent } = useWorkspace()
+  const { pinned, recent, addPinned, reorderPinned } = useWorkspace()
   const { t } = useI18n()
   const { design } = useProject()
   const [now, setNow] = useState(() => new Date())
+
+  // Drag-and-drop: pin tools from the sidebar by dropping them here, and
+  // reorder existing bento cells by dragging one over another.
+  const [dropActive, setDropActive] = useState(false)
+  const [dragIdx, setDragIdx] = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+  const dragDepth = useRef(0)
+
+  const hasToolPayload = (e) => Array.from(e.dataTransfer.types || []).includes(TOOL_DRAG_TYPE)
+
+  const onZoneDragEnter = (e) => {
+    if (!hasToolPayload(e)) return
+    e.preventDefault()
+    dragDepth.current += 1
+    setDropActive(true)
+  }
+  const onZoneDragOver = (e) => {
+    if (!hasToolPayload(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+  const onZoneDragLeave = (e) => {
+    if (!hasToolPayload(e)) return
+    dragDepth.current -= 1
+    if (dragDepth.current <= 0) { dragDepth.current = 0; setDropActive(false) }
+  }
+  const onZoneDrop = (e) => {
+    if (!hasToolPayload(e)) return
+    e.preventDefault()
+    const id = e.dataTransfer.getData(TOOL_DRAG_TYPE)
+    if (id) addPinned(id)
+    dragDepth.current = 0
+    setDropActive(false)
+    setDragOverIdx(null)
+  }
+
+  const onCellDragStart = (e, idx) => {
+    setDragIdx(idx)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('application/x-vs-pin-reorder', String(idx))
+  }
+  const onCellDragOver = (e, idx) => {
+    if (dragIdx === null && !hasToolPayload(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = dragIdx !== null ? 'move' : 'copy'
+    setDragOverIdx(idx)
+  }
+  const onCellDrop = (e, idx) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (dragIdx !== null && dragIdx !== idx) {
+      reorderPinned(dragIdx, idx)
+    } else if (hasToolPayload(e)) {
+      const id = e.dataTransfer.getData(TOOL_DRAG_TYPE)
+      if (id) addPinned(id, idx)
+    }
+    setDragIdx(null)
+    setDragOverIdx(null)
+    dragDepth.current = 0
+    setDropActive(false)
+  }
+  const onCellDragEnd = () => {
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }
 
   const headingFont = design?.fonts?.heading?.family || 'Inter'
   const bodyFont = design?.fonts?.body?.family || 'Inter'
@@ -247,7 +312,13 @@ export default function Dashboard() {
 
   return (
     <div className="dash">
-      <div className="bento">
+      <div
+        className={`bento${dropActive ? ' bento-drop-active' : ''}`}
+        onDragEnter={onZoneDragEnter}
+        onDragOver={onZoneDragOver}
+        onDragLeave={onZoneDragLeave}
+        onDrop={onZoneDrop}
+      >
         {/* HERO — greeting + completion */}
         <div className="bento-card bento-hero" style={{ gridColumn: 'span 4' }}>
           <div className="bento-hero-top">
@@ -292,8 +363,19 @@ export default function Dashboard() {
         {pinnedTools.map((tool, i) => {
           const gridStyle = getGridStyle(i, pinnedTools.length)
           const catClass = CATEGORY_CLASS[tool.category] || 'bento-cat'
+          const dndClass = `${dragIdx === i ? ' dragging' : ''}${dragOverIdx === i ? ' drag-over' : ''}`
           return (
-            <NavLink key={tool.id} to={tool.path} className={`bento-card ${catClass} bento-pin-cell`} style={gridStyle}>
+            <NavLink
+              key={tool.id}
+              to={tool.path}
+              className={`bento-card ${catClass} bento-pin-cell${dndClass}`}
+              style={gridStyle}
+              draggable
+              onDragStart={(e) => onCellDragStart(e, i)}
+              onDragOver={(e) => onCellDragOver(e, i)}
+              onDrop={(e) => onCellDrop(e, i)}
+              onDragEnd={onCellDragEnd}
+            >
               {renderPreview(tool)}
             </NavLink>
           )
@@ -307,8 +389,18 @@ export default function Dashboard() {
               <path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
             </svg>
             <p style={{ color: 'var(--t2)', fontSize: 13, maxWidth: 320 }}>
-              Pin tools from the sidebar to build your personalised dashboard.
+              Drag a tool from the sidebar onto this grid — or right-click it — to build your personalised dashboard.
             </p>
+          </div>
+        )}
+
+        {/* DROP HINT — shown while dragging a tool from the sidebar */}
+        {dropActive && (
+          <div className="bento-drop-hint" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14" /><path d="M5 12h14" />
+            </svg>
+            <span>Drop to pin to your dashboard</span>
           </div>
         )}
       </div>
