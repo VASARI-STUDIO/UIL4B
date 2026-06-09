@@ -7,7 +7,39 @@ import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { setPendingImages } from '../utils/imageHandoff'
+import { loadFont } from '../utils/googleFonts'
 import { UIKIT_GUIDE_KEY } from '../components/UIKitGuide'
+
+// Curated, characterful Google Fonts rotated through one-per-day for the
+// "Font of the Day" panel. The pick is deterministic per calendar day (see
+// fontOfDay below) so everyone sees the same font on a given date.
+const FONTS_OF_DAY = [
+  { family: 'Playfair Display', cat: 'Serif', weight: 700, fallback: 'serif' },
+  { family: 'Poppins', cat: 'Geometric sans', weight: 600, fallback: 'sans-serif' },
+  { family: 'Space Grotesk', cat: 'Sans-serif', weight: 500, fallback: 'sans-serif' },
+  { family: 'Fraunces', cat: 'Serif', weight: 600, fallback: 'serif' },
+  { family: 'Montserrat', cat: 'Sans-serif', weight: 700, fallback: 'sans-serif' },
+  { family: 'DM Serif Display', cat: 'Display serif', weight: 400, fallback: 'serif' },
+  { family: 'Sora', cat: 'Sans-serif', weight: 600, fallback: 'sans-serif' },
+  { family: 'Lora', cat: 'Serif', weight: 600, fallback: 'serif' },
+  { family: 'Syne', cat: 'Display', weight: 700, fallback: 'sans-serif' },
+  { family: 'Manrope', cat: 'Sans-serif', weight: 700, fallback: 'sans-serif' },
+  { family: 'Cormorant Garamond', cat: 'Serif', weight: 600, fallback: 'serif' },
+  { family: 'Outfit', cat: 'Sans-serif', weight: 600, fallback: 'sans-serif' },
+  { family: 'Bricolage Grotesque', cat: 'Display', weight: 600, fallback: 'sans-serif' },
+  { family: 'Spectral', cat: 'Serif', weight: 600, fallback: 'serif' },
+  { family: 'Epilogue', cat: 'Sans-serif', weight: 600, fallback: 'sans-serif' },
+  { family: 'Libre Baskerville', cat: 'Serif', weight: 700, fallback: 'serif' },
+  { family: 'Archivo', cat: 'Grotesque', weight: 700, fallback: 'sans-serif' },
+  { family: 'Crimson Pro', cat: 'Serif', weight: 600, fallback: 'serif' },
+  { family: 'Figtree', cat: 'Sans-serif', weight: 600, fallback: 'sans-serif' },
+  { family: 'Unbounded', cat: 'Display', weight: 600, fallback: 'sans-serif' },
+  { family: 'Newsreader', cat: 'Serif', weight: 500, fallback: 'serif' },
+  { family: 'Hanken Grotesk', cat: 'Sans-serif', weight: 600, fallback: 'sans-serif' },
+  { family: 'Instrument Serif', cat: 'Display serif', weight: 400, fallback: 'serif' },
+  { family: 'Schibsted Grotesk', cat: 'Sans-serif', weight: 600, fallback: 'sans-serif' },
+  { family: 'Gloock', cat: 'Display serif', weight: 400, fallback: 'serif' },
+]
 
 const BRAND_PALETTES = [
   { n: 'Google', colors: ['#4285F4', '#DB4437', '#F4B400', '#0F9D58', '#1A1A1A'] },
@@ -194,6 +226,15 @@ export default function Dashboard() {
     return DESIGN_TIPS[dayOfYear % DESIGN_TIPS.length]
   }, [now])
 
+  // Font of the Day: index a curated list by the absolute day number so it
+  // advances one font per calendar day and cycles through the whole list.
+  const dayNumber = Math.floor(now.getTime() / 86_400_000)
+  const fontOfDay = useMemo(() => FONTS_OF_DAY[dayNumber % FONTS_OF_DAY.length], [dayNumber])
+
+  useEffect(() => {
+    loadFont(fontOfDay.family, [400, fontOfDay.weight])
+  }, [fontOfDay])
+
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(id)
@@ -256,6 +297,26 @@ export default function Dashboard() {
             <div className="bento-label">{tool.catLabel}</div>
             <h3>{tool.label}</h3>
             <p>{tool.description}</p>
+          </div>
+        </>
+      )
+    }
+    // Font Gallery panel shows a daily-rotating "Font of the Day", rendered in
+    // the actual typeface, instead of the generic typography preview.
+    if (tool.id === 'fontgallery') {
+      const fontStack = `'${fontOfDay.family}', ${fontOfDay.fallback}`
+      return (
+        <>
+          <div className="bento-fotd">
+            <span className="bento-fotd-tag">Font of the day</span>
+            <span className="bento-fotd-sample" style={{ fontFamily: fontStack, fontWeight: fontOfDay.weight }}>Ag</span>
+            <span className="bento-fotd-name" style={{ fontFamily: fontStack, fontWeight: fontOfDay.weight }}>{fontOfDay.family}</span>
+            <span className="bento-fotd-cat">{fontOfDay.cat}</span>
+          </div>
+          <div className="bento-cat-body">
+            <div className="bento-label">{tool.catLabel}</div>
+            <h3>{tool.label}</h3>
+            <p>Today's pick — browse the full gallery.</p>
           </div>
         </>
       )
