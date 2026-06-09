@@ -1,9 +1,36 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { CATEGORIES } from '../data/tools'
+import { loadFont } from '../utils/googleFonts'
 
 const VISITED_KEY = 'vs-visited'
+
+// Reveal-on-scroll helper — fades/slides sections in as they enter the viewport.
+function useReveal() {
+  const ref = useRef(null)
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') { setShown(true); return }
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setShown(true); obs.disconnect() }
+    }, { rootMargin: '0px 0px -60px 0px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return [ref, shown]
+}
+
+function Reveal({ as: Tag = 'section', className = '', style, children, ...rest }) {
+  const [ref, shown] = useReveal()
+  return (
+    <Tag ref={ref} className={`${className} landing-reveal${shown ? ' is-shown' : ''}`} style={style} {...rest}>
+      {children}
+    </Tag>
+  )
+}
 
 const FEATURES = [
   {
@@ -42,19 +69,52 @@ const HIGHLIGHTS = [
   },
 ]
 
-const DEMO_PALETTE = ['#635BFF', '#0A2540', '#00D4AA', '#7A73FF', '#FBFCFE']
 const DEMO_LABELS = ['Primary', 'Dark', 'Accent', 'Light', 'Base']
+
+const DEMO_PALETTES = [
+  { name: 'Stripe', colors: ['#635BFF', '#0A2540', '#00D4AA', '#7A73FF', '#FBFCFE'], hue: 244 },
+  { name: 'Spotify', colors: ['#1DB954', '#191414', '#1ED760', '#535353', '#FFFFFF'], hue: 141 },
+  { name: 'Linear', colors: ['#5E6AD2', '#1B1B25', '#26B5CE', '#7B61FF', '#F2F2F2'], hue: 232 },
+  { name: 'Figma', colors: ['#A259FF', '#F24E1E', '#FF7262', '#1ABCFE', '#0ACF83'], hue: 267 },
+  { name: 'Sunset', colors: ['#FF6B6B', '#2B2D42', '#FFD93D', '#FF8E72', '#FFF3E0'], hue: 12 },
+]
 
 function PaletteDemo() {
   const [hovered, setHovered] = useState(null)
+  const [idx, setIdx] = useState(0)
+  const [copied, setCopied] = useState(null)
+  const palette = DEMO_PALETTES[idx]
+
+  const shuffle = (e) => {
+    e?.stopPropagation()
+    setIdx(prev => (prev + 1) % DEMO_PALETTES.length)
+    setCopied(null)
+  }
+
+  const copy = (c, i) => {
+    try { navigator.clipboard?.writeText(c) } catch { /* ignore */ }
+    setCopied(i)
+    setTimeout(() => setCopied(prev => (prev === i ? null : prev)), 1100)
+  }
+
   return (
     <div className="landing-demo landing-demo-palette">
+      <div className="landing-demo-palette-head">
+        <span className="landing-demo-tag">{palette.name}</span>
+        <button type="button" className="landing-demo-shuffle" onClick={shuffle} title="Shuffle palette">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" /><polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" /><line x1="4" y1="4" x2="9" y2="9" />
+          </svg>
+          Shuffle
+        </button>
+      </div>
       <div style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', height: 120 }}>
-        {DEMO_PALETTE.map((c, i) => (
+        {palette.colors.map((c, i) => (
           <div
             key={i}
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
+            onClick={() => copy(c, i)}
             style={{
               flex: hovered === i ? 2.5 : 1,
               background: c,
@@ -70,15 +130,16 @@ function PaletteDemo() {
               fontFamily: 'var(--mono)',
               fontSize: 9,
               fontWeight: 700,
-              color: 'rgba(255,255,255,.9)',
+              color: 'rgba(255,255,255,.92)',
               opacity: hovered === i ? 1 : 0,
               transition: 'opacity .2s',
-              background: 'rgba(0,0,0,.32)',
+              background: 'rgba(0,0,0,.36)',
               padding: '3px 7px',
               borderRadius: 4,
               backdropFilter: 'blur(8px)',
+              whiteSpace: 'nowrap',
             }}>
-              {c}
+              {copied === i ? 'Copied!' : c}
             </span>
           </div>
         ))}
@@ -105,14 +166,14 @@ function PaletteDemo() {
               flex: 1,
               height: 24,
               borderRadius: 3,
-              background: `hsl(250, 100%, ${l}%)`,
-              transition: 'transform .2s',
+              background: `hsl(${palette.hue}, 70%, ${l}%)`,
+              transition: 'background .4s ease',
             }} />
           )
         })}
       </div>
       <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', textAlign: 'center' }}>
-        Tint Scale · 50–900
+        Tint Scale · 50–900 · click a swatch to copy
       </div>
     </div>
   )
@@ -126,9 +187,21 @@ const FONT_PAIRS = [
 
 function FontDemo() {
   const [pair, setPair] = useState(0)
+  const [word, setWord] = useState('Typography')
   const p = FONT_PAIRS[pair]
+
+  useEffect(() => {
+    FONT_PAIRS.forEach(fp => {
+      loadFont(fp.heading, [fp.hWeight])
+      loadFont(fp.body, [fp.bWeight])
+    })
+  }, [])
+
+  const headingFam = `'${p.heading}', Georgia, serif`
+  const bodyFam = `'${p.body}', system-ui, sans-serif`
+
   return (
-    <div className="landing-demo" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="landing-demo" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', gap: 6 }}>
         {FONT_PAIRS.map((fp, i) => (
           <button key={i} onClick={() => setPair(i)} style={{
@@ -146,17 +219,21 @@ function FontDemo() {
           }}>{fp.heading.split(' ')[0]}</button>
         ))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20, flex: 1, justifyContent: 'center', minHeight: 100 }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: `'${p.heading}', serif`, fontWeight: p.hWeight, fontSize: 'clamp(32px,4vw,48px)', lineHeight: 1, color: 'var(--t0)', transition: 'all .3s' }}>Aa</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 600, color: 'var(--t3)', marginTop: 6 }}>Heading</div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, minHeight: 100 }}>
+        <div style={{ fontFamily: headingFam, fontWeight: p.hWeight, fontSize: 'clamp(26px,3.4vw,40px)', lineHeight: 1.1, color: 'var(--t0)', transition: 'font-family .3s', wordBreak: 'break-word' }}>
+          {word || 'Typography'}
         </div>
-        <div style={{ width: 1, height: 50, background: 'var(--border)' }} />
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: `'${p.body}', sans-serif`, fontWeight: p.bWeight, fontSize: 'clamp(24px,3vw,36px)', lineHeight: 1, color: 'var(--t1)', transition: 'all .3s' }}>Aa</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 600, color: 'var(--t3)', marginTop: 6 }}>Body</div>
+        <div style={{ fontFamily: bodyFam, fontWeight: p.bWeight, fontSize: 14, lineHeight: 1.6, color: 'var(--t1)', transition: 'font-family .3s' }}>
+          Good type pairing balances contrast and harmony between headline and body.
         </div>
       </div>
+      <input
+        type="text"
+        value={word}
+        onChange={e => setWord(e.target.value)}
+        placeholder="Type to preview…"
+        className="landing-demo-input"
+      />
       <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)', fontWeight: 600 }}>
         {p.heading} / {p.body}
       </div>
@@ -295,7 +372,7 @@ export default function Landing() {
         </section>
 
         {/* Category cards */}
-        <section className="landing-cats">
+        <Reveal className="landing-cats">
           {CATEGORIES.map(cat => (
             <div key={cat.id} className="landing-cat-card">
               <span className="landing-cat-icon">
@@ -305,13 +382,13 @@ export default function Landing() {
               <span className="landing-cat-desc">{cat.description}</span>
             </div>
           ))}
-        </section>
+        </Reveal>
 
         {/* Feature sections with interactive demos */}
         {FEATURES.map((f, i) => {
           const Demo = FEATURE_DEMOS[i]
           return (
-            <section key={f.title} className={`landing-feature${i % 2 === 1 ? ' landing-feature-reverse' : ''}`}>
+            <Reveal key={f.title} className={`landing-feature${i % 2 === 1 ? ' landing-feature-reverse' : ''}`}>
               <div className="landing-feature-text">
                 <h2>{f.title}</h2>
                 <p>{f.body}</p>
@@ -319,12 +396,12 @@ export default function Landing() {
               <div className="landing-feature-img">
                 {Demo && <Demo />}
               </div>
-            </section>
+            </Reveal>
           )
         })}
 
         {/* Value highlights */}
-        <section className="landing-highlights">
+        <Reveal className="landing-highlights">
           {HIGHLIGHTS.map(h => (
             <div key={h.title} className="landing-highlight">
               <span className="landing-highlight-icon">
@@ -334,17 +411,17 @@ export default function Landing() {
               <p>{h.body}</p>
             </div>
           ))}
-        </section>
+        </Reveal>
 
         {/* Closing CTA */}
-        <section className="landing-closing">
+        <Reveal className="landing-closing">
           <h2>Start designing in seconds.</h2>
           <p>Jump straight into the toolkit. Your work is saved locally, and an account unlocks AI tools and synced projects whenever you are ready.</p>
           <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
             Open the toolkit
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
           </button>
-        </section>
+        </Reveal>
       </main>
 
       <footer className="landing-footer">
