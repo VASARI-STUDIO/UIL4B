@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
+import { useWorkspace } from '../contexts/WorkspaceContext'
+import { TOOLS } from '../data/tools'
 import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
 import { useAppearance } from '../contexts/AppearanceContext'
 
@@ -398,9 +400,15 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
   const { saveProject } = useProject()
+  const { pinned, togglePinned } = useWorkspace()
   const navigate = useNavigate()
+  const location = useLocation()
   const [saveOpen, setSaveOpen] = useState(false)
   const isMac = IS_MAC
+
+  // The tool that owns the current route, so the page can be pinned from itself.
+  const currentTool = TOOLS.find(tl => tl.path === location.pathname)
+  const isPinned = currentTool ? pinned.includes(currentTool.id) : false
 
   const handleSaveProject = (name) => {
     try {
@@ -438,6 +446,19 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
       </div>
 
       <div className="topbar-right">
+        {currentTool && (
+          <button
+            className={`topbar-icon-btn topbar-pin${isPinned ? ' is-pinned' : ''}`}
+            onClick={() => togglePinned(currentTool.id)}
+            aria-pressed={isPinned}
+            title={isPinned ? 'Unpin from dashboard' : 'Pin this page to dashboard'}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 17v5" /><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
+            </svg>
+          </button>
+        )}
+
         <ExportDropdown
           onSaveProject={() => setSaveOpen(true)}
         />
