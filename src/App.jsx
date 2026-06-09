@@ -92,14 +92,14 @@ export default function App() {
   // it is the first page that loads and is indexable; logged-in users are sent
   // straight to their dashboard but can still reach it via /welcome.
   if (location.pathname === '/welcome') {
-    return <Landing />
+    return <><Landing /><GoogleOneTap /></>
   }
   if (location.pathname === '/') {
     // Render the sales page immediately — first paint must not depend on Firebase
     // auth resolving (otherwise a slow/misconfigured auth init leaves a blank page).
     // Once we positively know the visitor is logged in, send them to their dashboard.
     if (!authLoading && authUser) return <Navigate to="/dashboard" replace />
-    return <Landing />
+    return <><Landing /><GoogleOneTap /></>
   }
 
   return (
