@@ -90,20 +90,18 @@ export default function About() {
           <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--t0)' }}>Support the Project</span>
         </div>
         <p style={{ fontSize: 14, color: 'var(--t1)', lineHeight: 1.8, marginBottom: 20 }}>
-          UIL4B is free and always will be. If you find it useful and want to support continued development, you can buy Dylan a coffee. Every contribution helps keep the toolkit maintained, improved, and accessible to everyone.
+          Upgrade to UIL4B Pro for higher AI generation limits, quality models, and exclusive features. Your subscription directly supports continued development and keeps the toolkit accessible to everyone.
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a
-            href="https://buymeacoffee.com/dylan.coleman"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/settings"
             className="btn btn-accent"
             style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
             </svg>
-            Buy Me a Coffee
+            Upgrade to Pro
           </a>
           <a
             href="https://dylan-coleman.com/"

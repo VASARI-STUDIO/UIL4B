@@ -57,7 +57,7 @@ const QUICK_ACTIONS = {
   ],
   documentation: [
     { label: 'Visual hierarchy', desc: 'Layout fundamentals', to: '/docs-design' },
-    { label: 'Spacing & shadows', desc: 'Token reference sheet', to: '/design-reference' },
+    { label: 'AI prompts', desc: 'Curated prompt library', to: '/prompts' },
     { label: 'Social post sizes', desc: 'Platform-specific specs', to: '/docs-social' },
     { label: 'External resources', desc: 'Curated tools and reads', to: '/resources' },
   ],

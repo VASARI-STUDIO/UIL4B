@@ -350,7 +350,7 @@ export default function Landing() {
       <footer className="landing-footer">
         <span>Made by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>
         <span className="landing-footer-sep">·</span>
-        <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer">Buy me a coffee</a>
+        <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer">Donate</a>
       </footer>
     </div>
   )

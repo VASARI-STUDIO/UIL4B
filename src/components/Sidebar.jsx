@@ -64,7 +64,7 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className={`sidebar-overlay${isOpen ? ' visible' : ''}`} onClick={onClose} />
       <nav className={`sidebar${isOpen ? ' open' : ''}`} id="sidebar">
         {/* Brand */}
-        <NavLink to="/" className="sidebar-brand" onClick={onClose}>
+        <NavLink to="/dashboard" className="sidebar-brand" onClick={onClose}>
           <div className="sidebar-brand-text">
             <span className="sidebar-brand-name">{t('brand.name')}</span>
             <span className="sidebar-brand-sub">{t('brand.tagline')}</span>
@@ -74,9 +74,8 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Primary Navigation */}
         <div className="sidebar-nav">
           <NavLink
-            to="/"
-            end
-            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            to="/dashboard"
+            className={({ isActive }) => `nav-item${isActive || location.pathname === '/' ? ' active' : ''}`}
             onClick={onClose}
           >
             <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
