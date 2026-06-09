@@ -28,7 +28,6 @@ import Feedback from './pages/Feedback'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import CategoryDashboard from './pages/CategoryDashboard'
-import DesignReference from './pages/DesignReference'
 import VideoToFrames from './pages/VideoToFrames'
 import Admin from './pages/Admin'
 import Projects from './pages/Projects'
@@ -49,14 +48,13 @@ function RequireAuth({ children }) {
   return children
 }
 
-// First-time, signed-out visitors land on the welcome page. Returning
-// visitors and signed-in users go straight to the dashboard.
 function Home() {
   const { user, loading } = useAuth()
   const hasVisited = (() => {
     try { return localStorage.getItem(VISITED_KEY) === '1' } catch { return false }
   })()
-  if (hasVisited || user) return <Dashboard />
+  if (user) return <Navigate to="/dashboard" replace />
+  if (hasVisited) return <Navigate to="/dashboard" replace />
   if (loading) return null
   return <Navigate to="/welcome" replace />
 }
@@ -117,6 +115,7 @@ export default function App() {
         <main className="main" key={location.pathname}>
           <Routes location={location}>
             <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
             <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
@@ -138,7 +137,7 @@ export default function App() {
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
-            <Route path="/design-reference" element={<DesignReference onCopy={copy} />} />
+            <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/login" element={<Login toast={toast} />} />
             <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />

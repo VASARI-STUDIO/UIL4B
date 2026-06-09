@@ -235,7 +235,7 @@ function NavIcon({ id }) {
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { theme, setTheme } = useTheme()
-  const { rounding, density, setRounding, setDensity } = useAppearance()
+  const { rounding, density, reducedMotion, setRounding, setDensity, setReducedMotion } = useAppearance()
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -310,30 +310,26 @@ export default function Settings({ toast }) {
 
         <div className="settings-content">
 
-          {/* Support */}
+          {/* Subscription */}
           <section id="set-support" className="settings-section">
             <div className="settings-section-h">
-              <h2>Support</h2>
-              <p>UIL4B is free for everyone. If you find it useful, consider supporting development.</p>
+              <h2>Subscription</h2>
+              <p>Unlock higher AI generation limits, quality models, extra documentation, and more.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
-                  <path d="M18 8h1a4 4 0 010 8h-1" /><path d="M6 8H5a4 4 0 000 8h1" /><path d="M6 8a6 6 0 0112 0v1a2 2 0 01-2 2H8a2 2 0 01-2-2V8z" /><line x1="12" y1="16" x2="12" y2="20" /><line x1="8" y1="20" x2="16" y2="20" />
+                  <path d="M20 12V8H6a2 2 0 1 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
                 </svg>
-                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>Buy me a coffee</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>UIL4B Pro</div>
                 <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20, lineHeight: 1.6 }}>
-                  Your support helps keep UIL4B free, maintained, and improving.
+                  From $4.99 AUD/month. Higher AI limits, quality models, and Pro-only features.
                 </div>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer" className="btn btn-accent" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                    Support UIL4B
-                  </a>
-                  <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer" className="btn" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
-                    Portfolio
-                  </a>
+                  <NavLink to="/settings" className="btn btn-accent" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    Upgrade to Pro
+                  </NavLink>
                 </div>
               </div>
             </div>
@@ -395,6 +391,14 @@ export default function Settings({ toast }) {
                     <div className="toggle-row-meta">Reduce spacing for denser layouts</div>
                   </div>
                   <button className={`toggle-switch${density === 'compact' ? ' on' : ''}`} onClick={() => setDensity(density === 'compact' ? 'cozy' : 'compact')} />
+                </div>
+
+                <div className="toggle-row">
+                  <div className="toggle-row-info">
+                    <div className="toggle-row-label">Reduced motion</div>
+                    <div className="toggle-row-meta">Minimise animations and transitions</div>
+                  </div>
+                  <button className={`toggle-switch${reducedMotion ? ' on' : ''}`} onClick={() => setReducedMotion(!reducedMotion)} />
                 </div>
               </div>
             </div>
