@@ -197,10 +197,10 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .sub{margin-bottom:48px}
 
 /* ─── Color Studio Nav & Sections ─── */
-.cs-sticky-nav{position:sticky;top:0;z-index:20;display:flex;gap:2px;margin:0 calc(-1 * clamp(16px,5vw,64px)) 24px;padding:10px clamp(16px,5vw,64px);background:var(--bg-0);border-bottom:1px solid var(--border)}
-.cs-nav-item{padding:9px 14px;border-radius:var(--radius-s);font-size:12px;font-weight:500;color:var(--t2);background:none;border:none;cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;min-height:36px}
+.cs-sticky-nav{position:sticky;top:0;z-index:20;display:flex;gap:2px;margin:0 calc(-1 * clamp(16px,5vw,64px)) 24px;padding:10px clamp(16px,5vw,64px);background:var(--card);border-bottom:2px solid var(--accent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.cs-nav-item{padding:9px 14px;border-radius:var(--radius-s);font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;min-height:36px}
 .cs-nav-item:hover{color:var(--t0);background:var(--hvr)}
-.cs-nav-item.active{color:var(--accent);font-weight:600;background:var(--accent-bg)}
+.cs-nav-item.active{color:var(--bg-0);font-weight:700;background:var(--accent)}
 .cs-section-header{user-select:none;transition:opacity .15s}
 .cs-section-header:hover{opacity:.8}
 
