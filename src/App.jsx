@@ -38,6 +38,7 @@ import About from './pages/About'
 import FAQ from './pages/FAQ'
 import HelpCentre from './pages/HelpCentre'
 import Landing from './pages/Landing'
+import Onboarding from './pages/Onboarding'
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
@@ -94,11 +95,17 @@ export default function App() {
   if (location.pathname === '/welcome') {
     return <><Landing /><GoogleOneTap /></>
   }
+  if (location.pathname === '/onboarding') {
+    return <Onboarding />
+  }
   if (location.pathname === '/') {
     // Render the sales page immediately — first paint must not depend on Firebase
     // auth resolving (otherwise a slow/misconfigured auth init leaves a blank page).
     // Once we positively know the visitor is logged in, send them to their dashboard.
-    if (!authLoading && authUser) return <Navigate to="/dashboard" replace />
+    if (!authLoading && authUser) {
+      const onboarded = (() => { try { return localStorage.getItem('vs-onboarded') === '1' } catch { return true } })()
+      return <Navigate to={onboarded ? '/dashboard' : '/onboarding'} replace />
+    }
     return <><Landing /><GoogleOneTap /></>
   }
 
@@ -135,6 +142,7 @@ export default function App() {
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
             <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
             <Route path="/resources" element={<ExternalResources />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/login" element={<Login toast={toast} />} />
             <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
             <Route path="/settings" element={<Settings toast={toast} />} />
