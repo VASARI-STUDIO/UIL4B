@@ -8,6 +8,7 @@ import { AppearanceProvider } from './contexts/AppearanceContext'
 import { ProjectProvider } from './contexts/ProjectContext'
 import { WorkspaceProvider } from './contexts/WorkspaceContext'
 import { ExportProvider } from './contexts/ExportContext'
+import { SubscriptionProvider } from './contexts/SubscriptionContext'
 import { I18nProvider } from './contexts/I18nContext'
 import './styles/global.css'
 
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')).render(
         <AppearanceProvider>
           <I18nProvider>
             <AuthProvider>
+            <SubscriptionProvider>
             <ProjectProvider>
               <WorkspaceProvider>
                 <ExportProvider>
@@ -25,6 +27,7 @@ createRoot(document.getElementById('root')).render(
                 </ExportProvider>
               </WorkspaceProvider>
             </ProjectProvider>
+            </SubscriptionProvider>
             </AuthProvider>
           </I18nProvider>
         </AppearanceProvider>

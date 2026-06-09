@@ -185,7 +185,12 @@ export default function ImageConverter({ toast }) {
               </div>
               <div>
                 <div className="seg-label">Max Width</div>
-                <input type="number" value={maxWidth} min="0" max="8000" style={{ width: 80 }} onChange={e => setMaxWidth(+e.target.value)} />
+                <input type="number" value={maxWidth || ''} min="0" max="8000" placeholder="0" style={{ width: 80 }} onChange={e => {
+                  const raw = e.target.value
+                  if (raw === '') { setMaxWidth(0); return }
+                  const n = parseInt(raw, 10)
+                  if (!isNaN(n)) setMaxWidth(Math.min(8000, Math.max(0, n)))
+                }} />
               </div>
             </div>
             <div className="row" style={{ marginTop: 14 }}>

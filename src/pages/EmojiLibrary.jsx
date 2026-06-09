@@ -1,6 +1,19 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 
+const CATEGORY_KEYWORDS = {
+  Smileys: ['smile', 'happy', 'sad', 'angry', 'face', 'laugh', 'cry', 'love', 'think', 'sick', 'cool', 'wink', 'tongue', 'skull', 'ghost', 'robot', 'devil', 'poop', 'scared', 'nervous', 'silly', 'party', 'nerd', 'sleepy', 'disguise', 'vomit', 'hot', 'cold', 'dizzy', 'explode', 'cowboy', 'clown', 'alien', 'demon'],
+  Hands: ['hand', 'wave', 'point', 'thumb', 'fist', 'clap', 'finger', 'muscle', 'pray', 'shake', 'peace', 'ok', 'punch', 'pinch', 'rock', 'call', 'nail', 'selfie', 'write', 'ear', 'nose', 'brain', 'eye', 'tooth', 'bone', 'leg', 'foot', 'lip', 'tongue'],
+  People: ['person', 'man', 'woman', 'boy', 'girl', 'baby', 'old', 'walk', 'run', 'dance', 'swim', 'climb', 'ninja', 'prince', 'princess', 'santa', 'hero', 'fairy', 'zombie', 'mage', 'elf', 'genie', 'vampire', 'mermaid', 'troll', 'angel', 'guard', 'detective', 'construction', 'bride'],
+  Animals: ['animal', 'dog', 'cat', 'bird', 'fish', 'bear', 'monkey', 'horse', 'cow', 'pig', 'chicken', 'snake', 'rabbit', 'bug', 'spider', 'whale', 'shark', 'elephant', 'lion', 'tiger', 'frog', 'fox', 'panda', 'unicorn', 'butterfly', 'bee', 'turtle', 'octopus', 'penguin', 'koala', 'wolf', 'bat', 'owl', 'crab', 'snail', 'ant', 'dragon', 'dinosaur', 'mouse', 'hamster', 'deer', 'giraffe', 'gorilla', 'parrot', 'duck'],
+  Food: ['food', 'fruit', 'vegetable', 'meat', 'drink', 'beer', 'wine', 'coffee', 'tea', 'pizza', 'burger', 'cake', 'ice cream', 'bread', 'cheese', 'rice', 'sushi', 'candy', 'apple', 'banana', 'grape', 'strawberry', 'taco', 'donut', 'cookie', 'egg', 'bacon', 'fries', 'chocolate', 'pie', 'lemon', 'watermelon', 'avocado', 'corn', 'carrot', 'tomato', 'salad', 'noodle', 'soup'],
+  Travel: ['travel', 'car', 'bus', 'train', 'plane', 'boat', 'ship', 'house', 'building', 'city', 'mountain', 'beach', 'rocket', 'helicopter', 'taxi', 'truck', 'bike', 'motorcycle', 'tent', 'church', 'castle', 'bridge', 'tower', 'statue', 'sunset', 'sunrise', 'firework', 'camping', 'island', 'volcano'],
+  Objects: ['object', 'phone', 'computer', 'camera', 'clock', 'watch', 'money', 'key', 'tool', 'hammer', 'wrench', 'bulb', 'battery', 'pill', 'knife', 'book', 'pencil', 'guitar', 'piano', 'game', 'joystick', 'tv', 'radio', 'candle', 'lock', 'magnet', 'gem', 'diamond', 'toilet', 'shower', 'bed', 'chair', 'door', 'lamp', 'microscope', 'telescope', 'syringe', 'dna'],
+  Symbols: ['symbol', 'heart', 'star', 'arrow', 'warning', 'check', 'cross', 'circle', 'square', 'diamond', 'sign', 'number', 'letter', 'music', 'zodiac', 'love', 'peace', 'recycle', 'infinity', 'question', 'exclamation', 'triangle', 'color', 'colour', 'red', 'blue', 'green', 'purple', 'orange', 'yellow', 'black', 'white', 'pink', 'brown'],
+  Flags: ['flag', 'country', 'nation', 'australia', 'usa', 'uk', 'japan', 'france', 'germany', 'canada', 'brazil', 'india', 'china', 'korea', 'mexico', 'rainbow', 'pirate', 'pride', 'trans', 'ireland', 'italy', 'spain', 'sweden', 'norway', 'finland', 'denmark', 'portugal', 'russia', 'vietnam', 'thailand', 'turkey', 'ukraine'],
+  Nature: ['nature', 'flower', 'tree', 'plant', 'leaf', 'sun', 'moon', 'star', 'cloud', 'rain', 'snow', 'wind', 'fire', 'water', 'rainbow', 'mushroom', 'earth', 'globe', 'rose', 'tulip', 'cherry', 'blossom', 'cactus', 'clover', 'lightning', 'thunder', 'umbrella', 'wave', 'ocean', 'weather', 'storm', 'tornado'],
+}
+
 const EMOJI_DATA = [
   { cat: 'Smileys', emojis: '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😗 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🫣 🤫 🤔 🫡 🤐 🤨 😐 😑 😶 🫥 😏 😒 🙄 😬 🤥 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🥵 🥶 🥴 😵 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 🫤 😟 🙁 😮 😯 😲 😳 🥺 🥹 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖' },
   { cat: 'Hands', emojis: '👋 🤚 🖐️ ✋ 🖖 🫱 🫲 🫳 🫴 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 🫵 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🦿 🦵 🦶 👂 🦻 👃 🧠 🫀 🫁 🦷 🦴 👀 👁️ 👅 👄 🫦' },
@@ -32,8 +45,9 @@ export default function EmojiLibrary({ onCopy }) {
     let data = activeCat ? EMOJI_DATA.filter(d => d.cat === activeCat) : EMOJI_DATA
     if (!q) return data
     return data.map(group => {
-      const emojis = parseEmojis(group.emojis)
-      return { ...group, emojis: emojis.filter(() => group.cat.toLowerCase().includes(q)).join(' ') }
+      const keywords = CATEGORY_KEYWORDS[group.cat] || []
+      const catMatch = group.cat.toLowerCase().includes(q) || keywords.some(k => k.includes(q) || q.includes(k))
+      return { ...group, emojis: catMatch ? group.emojis : '' }
     }).filter(g => parseEmojis(g.emojis).length > 0)
   }, [search, activeCat])
 
@@ -63,7 +77,7 @@ export default function EmojiLibrary({ onCopy }) {
           <input
             type="text"
             className="pl-search"
-            placeholder="Search by category..."
+            placeholder="Search emojis..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />

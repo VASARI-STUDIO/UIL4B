@@ -1,11 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
-import { useWorkspace } from '../contexts/WorkspaceContext'
+import { useWorkspace, TOOL_DRAG_TYPE } from '../contexts/WorkspaceContext'
 import { CATEGORIES, toolsByCategory, localiseCategories, localiseTools } from '../data/tools'
 
 const STORAGE_KEY = 'vs-nav-open'
+const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 
 function loadOpenState() {
   try {
@@ -17,11 +18,56 @@ function loadOpenState() {
   }
 }
 
+function ContextMenu({ x, y, tool, isPinned, onPin, onClose }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    if (rect.right > window.innerWidth) el.style.left = `${x - rect.width}px`
+    if (rect.bottom > window.innerHeight) el.style.top = `${y - rect.height}px`
+  }, [x, y])
+
+  useEffect(() => {
+    const close = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose()
+    }
+    const esc = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [onClose])
+
+  return (
+    <div
+      ref={ref}
+      className="nav-ctx-menu"
+      style={{ position: 'fixed', left: x, top: y, zIndex: 9999 }}
+    >
+      <button type="button" onClick={() => { onPin(tool.id); onClose() }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 17v5" /><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
+        </svg>
+        {isPinned ? 'Unpin from sidebar' : 'Pin to sidebar'}
+      </button>
+    </div>
+  )
+}
+
 export default function Sidebar({ isOpen, onClose }) {
   const { user, userProfile, logout } = useAuth()
   const { t } = useI18n()
-  const { pinned } = useWorkspace()
+  const { pinned, togglePinned, reorderPinned } = useWorkspace()
   const location = useLocation()
+  const [ctxMenu, setCtxMenu] = useState(null)
+  const [dragIdx, setDragIdx] = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email)
 
   const activeCategoryId = (() => {
     for (const cat of CATEGORIES) {
@@ -34,7 +80,6 @@ export default function Sidebar({ isOpen, onClose }) {
   const [openCats, setOpenCats] = useState(() => {
     const stored = loadOpenState()
     if (stored) return stored
-    // Default: every category expanded so users see all tools immediately.
     return CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: true }), {})
   })
 
@@ -48,12 +93,41 @@ export default function Sidebar({ isOpen, onClose }) {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(openCats))
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }, [openCats])
 
   const toggleCat = (id) => setOpenCats(prev => ({ ...prev, [id]: !prev[id] }))
+
+  const handleContextMenu = useCallback((e, tool) => {
+    e.preventDefault()
+    setCtxMenu({ x: e.clientX, y: e.clientY, tool })
+  }, [])
+
+  const handleDragStart = useCallback((e, idx) => {
+    setDragIdx(idx)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(idx))
+  }, [])
+
+  const handleDragOver = useCallback((e, idx) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverIdx(idx)
+  }, [])
+
+  const handleDrop = useCallback((e, toIdx) => {
+    e.preventDefault()
+    if (dragIdx !== null && dragIdx !== toIdx) {
+      reorderPinned(dragIdx, toIdx)
+    }
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }, [dragIdx, reorderPinned])
+
+  const handleDragEnd = useCallback(() => {
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }, [])
 
   const cats = localiseCategories(t)
   const allTools = localiseTools(t)
@@ -64,7 +138,7 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className={`sidebar-overlay${isOpen ? ' visible' : ''}`} onClick={onClose} />
       <nav className={`sidebar${isOpen ? ' open' : ''}`} id="sidebar">
         {/* Brand */}
-        <NavLink to="/" className="sidebar-brand" onClick={onClose}>
+        <NavLink to="/dashboard" className="sidebar-brand" onClick={onClose}>
           <div className="sidebar-brand-text">
             <span className="sidebar-brand-name">{t('brand.name')}</span>
             <span className="sidebar-brand-sub">{t('brand.tagline')}</span>
@@ -74,9 +148,8 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Primary Navigation */}
         <div className="sidebar-nav">
           <NavLink
-            to="/"
-            end
-            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            to="/dashboard"
+            className={({ isActive }) => `nav-item${isActive || location.pathname === '/' ? ' active' : ''}`}
             onClick={onClose}
           >
             <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -101,20 +174,35 @@ export default function Sidebar({ isOpen, onClose }) {
           {pinnedTools.length > 0 && (
             <div className="nav-pinned">
               <div className="nav-pinned-label">{t('dash.pinned')}</div>
-              {pinnedTools.map(tool => (
+              {pinnedTools.map((tool, idx) => (
                 <NavLink
                   key={tool.id}
                   to={tool.path}
-                  className={({ isActive }) => `nav-item nav-item-pinned${isActive ? ' active' : ''}`}
+                  className={({ isActive }) =>
+                    `nav-item nav-item-pinned${isActive ? ' active' : ''}${dragOverIdx === idx ? ' drag-over' : ''}${dragIdx === idx ? ' dragging' : ''}`
+                  }
                   onClick={onClose}
+                  onContextMenu={(e) => handleContextMenu(e, tool)}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
                 >
                   <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     {tool.icon}
                   </svg>
                   <span className="nav-item-label">{tool.label}</span>
-                  <svg className="nav-item-pin" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 17v5" /><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
-                  </svg>
+                  <button
+                    type="button"
+                    className="nav-item-pin"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePinned(tool.id) }}
+                    title="Unpin"
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+                      <path d="M12 17v5" /><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
+                    </svg>
+                  </button>
                 </NavLink>
               ))}
             </div>
@@ -161,8 +249,15 @@ export default function Sidebar({ isOpen, onClose }) {
                       <NavLink
                         key={tool.id}
                         to={tool.path}
-                        className={({ isActive: linkActive }) => `nav-item nav-item-sub${linkActive ? ' active' : ''}`}
+                        className={({ isActive: linkActive }) => `nav-item nav-item-sub${linkActive ? ' active' : ''}${pinned.includes(tool.id) ? ' is-pinned' : ''}`}
                         onClick={onClose}
+                        onContextMenu={(e) => handleContextMenu(e, tool)}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'copy'
+                          e.dataTransfer.setData(TOOL_DRAG_TYPE, tool.id)
+                          e.dataTransfer.setData('text/plain', tool.label)
+                        }}
                       >
                         <span className="nav-item-num">{idx + 1}.{ti + 1}</span>
                         {tool.icon && (
@@ -182,6 +277,14 @@ export default function Sidebar({ isOpen, onClose }) {
 
         {/* Footer */}
         <div className="sidebar-footer">
+          {isAdmin && (
+            <NavLink to="/admin" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
+              <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Admin</span>
+            </NavLink>
+          )}
           <NavLink to="/settings" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
             <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
@@ -222,6 +325,17 @@ export default function Sidebar({ isOpen, onClose }) {
           )}
         </div>
       </nav>
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          tool={ctxMenu.tool}
+          isPinned={pinned.includes(ctxMenu.tool.id)}
+          onPin={togglePinned}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </>
   )
 }
