@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { fetchFonts, loadFont, getFontCSSRule } from '../utils/googleFonts'
+import { useProject } from '../contexts/ProjectContext'
 
 const CATS = [
   { id: 'all', label: 'All' },
@@ -49,7 +50,10 @@ function GalleryCard({ font, onSelect, index, inCompare, onToggleCompare }) {
     if (!el) return
     const obs = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
-        loadFont(font.family, font.variants.slice(0, 4))
+        // Load the two weights the card actually renders (regular + heading)
+        // so the preview never falls back to a synthesised face.
+        const reg = font.variants.includes(400) ? 400 : font.variants[0]
+        loadFont(font.family, [reg, hw(font)])
         setLoaded(true)
         obs.disconnect()
       }
@@ -182,7 +186,7 @@ function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
   )
 }
 
-function FontDetail({ font, onClose, onCopy }) {
+function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
   useEffect(() => {
     loadFont(font.family, font.variants)
   }, [font])
@@ -250,8 +254,24 @@ function FontDetail({ font, onClose, onCopy }) {
           </div>
         </div>
 
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Add to your kit</div>
+          <div className="fg-detail-apply">
+            <button className="btn" onClick={() => onApply?.(font, 'heading')}>Use for headings</button>
+            <button className="btn" onClick={() => onApply?.(font, 'body')}>Use for body</button>
+          </div>
+        </div>
+
         <div className="fg-detail-actions">
-          <button className="btn btn-accent" onClick={() => {
+          <button className="btn btn-accent" onClick={() => onCompare?.(font)}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {inCompare
+                ? <polyline points="20 6 9 17 4 12" />
+                : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
+            </svg>
+            {inCompare ? 'Added to compare' : 'Compare'}
+          </button>
+          <button className="btn" onClick={() => {
             const url = `https://fonts.googleapis.com/css2?family=${font.family.replace(/ /g, '+')}:wght@${font.variants.join(';')}&display=swap`
             if (onCopy) onCopy(url)
           }}>
@@ -271,7 +291,8 @@ function FontDetail({ font, onClose, onCopy }) {
   )
 }
 
-export default function FontGallery({ onCopy }) {
+export default function FontGallery({ onCopy, toast }) {
+  const { setFonts } = useProject()
   const [allFonts, setAllFonts] = useState([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('all')
@@ -280,7 +301,7 @@ export default function FontGallery({ onCopy }) {
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
   const [showCompare, setShowCompare] = useState(false)
-  const MAX_COMPARE = 4
+  const MAX_COMPARE = 2
   const PAGE_SIZE = 48
 
   const compareIds = useMemo(() => new Set(compare.map(f => f.family)), [compare])
@@ -290,10 +311,32 @@ export default function FontGallery({ onCopy }) {
       if (prev.some(f => f.family === font.family)) {
         return prev.filter(f => f.family !== font.family)
       }
-      if (prev.length >= MAX_COMPARE) return prev
+      if (prev.length >= MAX_COMPARE) {
+        toast?.(`You can compare ${MAX_COMPARE} fonts at a time — remove one first`)
+        return prev
+      }
       return [...prev, font]
     })
-  }, [])
+  }, [toast])
+
+  // From the detail modal: add the font to the comparison and return to the gallery.
+  const compareFromDetail = useCallback((font) => {
+    const already = compare.some(f => f.family === font.family)
+    if (!already && compare.length >= MAX_COMPARE) {
+      toast?.(`You can compare ${MAX_COMPARE} fonts at a time — remove one first`)
+      return
+    }
+    if (!already) setCompare(prev => [...prev, font])
+    setSelected(null)
+  }, [compare, toast])
+
+  // Apply a gallery font straight into the active design (heading or body role).
+  const applyFont = useCallback((font, role) => {
+    const weight = role === 'heading' ? hw(font) : (font.variants.includes(400) ? 400 : font.variants[0])
+    loadFont(font.family, font.variants)
+    setFonts({ [role]: { family: font.family, weight, category: font.category } })
+    toast?.(`${font.family} set as ${role} font`)
+  }, [setFonts, toast])
   const observerRef = useRef(null)
   const sentinelRef = useRef(null)
 
@@ -489,6 +532,9 @@ export default function FontGallery({ onCopy }) {
           font={selected}
           onClose={() => setSelected(null)}
           onCopy={onCopy}
+          onCompare={compareFromDetail}
+          onApply={applyFont}
+          inCompare={compareIds.has(selected.family)}
         />
       )}
     </div>

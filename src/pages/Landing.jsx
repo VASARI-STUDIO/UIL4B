@@ -90,11 +90,9 @@ const PRICING = [
   {
     id: 'pro',
     name: 'Pro',
-    monthly: '$4.99',
-    yearly: '$39.99',
-    period: 'per month',
-    yearlyPeriod: 'per year',
-    note: 'Save ~33% billed yearly',
+    price: { monthly: '$4.99', yearly: '$3.33' },
+    period: { monthly: 'per month', yearly: 'per month, billed yearly' },
+    note: { monthly: 'or $39.99 / year — save ~33%', yearly: '$39.99 billed once a year' },
     tagline: 'For designers who lean on AI and want more headroom.',
     featured: true,
     features: [
@@ -357,6 +355,17 @@ function TokenDemo() {
 const ICON_DEMO_LIMIT = 23
 const ICON_TOTAL = '200,000+'
 
+// Iconify collections that ship multi-colour artwork (brand logos, flags,
+// flat/emoji icons). These must NOT be colour-inverted in dark mode — only
+// monochrome icons get the --icon-inv treatment so black icons stay visible.
+const COLORED_PACKS = new Set([
+  'logos', 'flat-color-icons', 'fxemoji', 'noto', 'noto-v1', 'twemoji', 'emojione',
+  'emojione-v1', 'openmoji', 'fluent-emoji', 'fluent-emoji-flat', 'circle-flags',
+  'flag', 'flagpack', 'cif', 'skill-icons', 'devicon', 'vscode-icons', 'unjs',
+  'logos-light', 'token-branded',
+])
+const iconFilter = (pack) => (COLORED_PACKS.has(pack) ? 'none' : 'var(--icon-inv)')
+
 // A mini version of the in-app Icon Library — live search via Iconify with an
 // embedded fallback, click-to-copy, and a final tile that funnels into the full tool.
 function IconSearchDemo({ onView }) {
@@ -437,7 +446,7 @@ function IconSearchDemo({ onView }) {
             title={`Copy ${icon.name}`}
           >
             {icon.cdn ? (
-              <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" style={{ filter: 'var(--icon-inv)' }} loading="lazy" alt={icon.name} />
+              <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" style={{ filter: iconFilter(icon.pack) }} loading="lazy" alt={icon.name} />
             ) : (
               <svg viewBox="0 0 24 24" width="24" height="24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={icon.d} /></svg>
             )}
@@ -524,7 +533,7 @@ export default function Landing() {
   const { theme, toggleTheme } = useTheme()
   const { user, userProfile } = useAuth()
   const { checkout, isPro } = useSubscription()
-  const [billing, setBilling] = useState('yearly')
+  const [billing, setBilling] = useState('monthly')
   const loggedIn = !!user
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0]
 
@@ -538,12 +547,13 @@ export default function Landing() {
     navigate('/login')
   }
 
-  const goPro = async (interval = 'monthly') => {
+  const goPro = async (interval = billing) => {
     if (!loggedIn) { signIn(); return }
     try { await checkout(interval) } catch { navigate('/settings', { state: { section: 'support' } }) }
   }
 
-  const choosePlan = (id) => { if (id === 'pro') goPro(billing === 'yearly' ? 'yearly' : 'monthly'); else enter() }
+  // "Start for free" drops the visitor straight into the dashboard; Pro opens checkout.
+  const choosePlan = (id) => { if (id === 'pro') goPro(billing); else enter() }
 
   const viewIcons = () => {
     try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
@@ -705,31 +715,35 @@ export default function Landing() {
 
         {/* Pricing */}
         <Reveal className="landing-pricing" id="pricing">
-          <header className="landing-section-head">
-            <span className="landing-kicker">Pricing</span>
-            <h2>Free to start. Upgrade only when you need more AI.</h2>
-            <p>Every core tool is free forever. Pro unlocks higher AI limits, better models, and synced projects.</p>
-            <div className="landing-billing">
-              <button className={billing === 'monthly' ? 'is-active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
-              <button className={billing === 'yearly' ? 'is-active' : ''} onClick={() => setBilling('yearly')}>
-                Yearly <span className="landing-billing-save">−33%</span>
-              </button>
-            </div>
-          </header>
+          <div className="landing-pricing-head">
+            <span className="landing-eyebrow">Simple, fair pricing</span>
+            <h2>Most of UIL4B is free. Upgrade only when you need more AI.</h2>
+            <p>Every core tool is free forever. Pro unlocks higher daily AI limits, better models, and synced projects — for less than a coffee a month.</p>
+          </div>
+          <div className="landing-billing-toggle" data-interval={billing} role="group" aria-label="Billing period">
+            <span className="landing-billing-thumb" aria-hidden="true" />
+            <button type="button" className={`landing-billing-opt${billing === 'monthly' ? ' is-active' : ''}`} onClick={() => setBilling('monthly')} aria-pressed={billing === 'monthly'}>
+              Monthly
+            </button>
+            <button type="button" className={`landing-billing-opt${billing === 'yearly' ? ' is-active' : ''}`} onClick={() => setBilling('yearly')} aria-pressed={billing === 'yearly'}>
+              Yearly <span className="landing-billing-save">Save 33%</span>
+            </button>
+          </div>
           <div className="landing-pricing-grid">
             {PRICING.map(tier => {
               const isCurrentPro = tier.id === 'pro' && isPro
-              const amount = billing === 'yearly' ? tier.yearly : tier.monthly
-              const per = tier.id === 'free' ? tier.period : (billing === 'yearly' ? tier.yearlyPeriod : tier.period)
+              const price = typeof tier.price === 'object' ? tier.price[billing] : tier.price
+              const period = typeof tier.period === 'object' ? tier.period[billing] : tier.period
+              const note = typeof tier.note === 'object' ? tier.note?.[billing] : tier.note
               return (
                 <div key={tier.id} className={`landing-tier${tier.featured ? ' landing-tier-featured' : ''}`}>
                   {tier.featured && <span className="landing-tier-badge">Most popular</span>}
                   <div className="landing-tier-name">{tier.name}</div>
                   <div className="landing-tier-price">
-                    <span className="landing-tier-amount">{amount}</span>
-                    <span className="landing-tier-period">{per}</span>
+                    <span className="landing-tier-amount">{price}</span>
+                    <span className="landing-tier-period">{period}</span>
                   </div>
-                  {tier.featured && billing === 'yearly' && <div className="landing-tier-note">{tier.note}</div>}
+                  {note && <div className="landing-tier-note">{note}</div>}
                   <p className="landing-tier-tagline">{tier.tagline}</p>
                   <ul className="landing-tier-features">
                     {tier.features.map((f, i) => (
