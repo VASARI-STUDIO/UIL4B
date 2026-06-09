@@ -21,6 +21,14 @@ const STORAGE_DISCLOSURE = [
   { key: 'vs-admin-unlocked', purpose: 'Admin panel access flag', pii: 'no' },
 ]
 
+function Check() {
+  return (
+    <svg className="sub-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
 function EditField({ label, value, onSave, type = 'text', placeholder }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value || '')
@@ -241,7 +249,20 @@ export default function Settings({ toast }) {
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)
+  const [billing, setBilling] = useState('yearly')
+  const [checkingOut, setCheckingOut] = useState(false)
   const location = useLocation()
+
+  const startCheckout = async (interval) => {
+    if (!user || checkingOut) return
+    setCheckingOut(true)
+    try {
+      await checkout(interval)
+    } catch (e) {
+      toast?.(e?.message || 'Could not start checkout')
+      setCheckingOut(false)
+    }
+  }
 
   // Jump to a section when navigated from the profile quick-menu.
   useEffect(() => {
@@ -316,69 +337,90 @@ export default function Settings({ toast }) {
           <section id="set-support" className="settings-section">
             <div className="settings-section-h">
               <h2>Subscription</h2>
-              <p>{isPro ? 'You\'re on UIL4B Pro. Thank you for your support.' : 'Unlock higher AI generation limits, quality models, and more.'}</p>
+              <p>{isPro ? 'You\'re on UIL4B Pro — thank you for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
             </div>
-            <div className="settings-card">
-              <div className="settings-card-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={isPro ? '#3b82f6' : 'var(--accent)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
-                  {isPro
-                    ? <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>
-                    : <><path d="M20 12V8H6a2 2 0 1 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></>
-                  }
-                </svg>
-                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>
-                  {isPro ? 'UIL4B Pro' : 'Free Plan'}
+
+            {isPro ? (
+              <div className="sub-active">
+                <div className="sub-active-top">
+                  <div className="sub-active-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                    Pro
+                  </div>
+                  <div className="sub-active-info">
+                    <div className="sub-active-title">UIL4B Pro is active</div>
+                    <div className="sub-active-meta">
+                      {subscription?.interval === 'year' ? 'Billed yearly' : 'Billed monthly'}
+                      {subscription?.cancelAtPeriodEnd && ' · cancels at period end'}
+                      {subscription?.currentPeriodEnd && (
+                        <> · {subscription.cancelAtPeriodEnd ? 'access until' : 'renews'} {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <button className="btn" onClick={openPortal}>Manage billing</button>
+              </div>
+            ) : (
+              <>
+                {!user && (
+                  <div className="sub-signin-note">
+                    <NavLink to="/login">Sign in</NavLink> to upgrade to Pro.
+                  </div>
+                )}
+                <div className="sub-billing-toggle" role="tablist" aria-label="Billing interval">
+                  <button role="tab" aria-selected={billing === 'monthly'} className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
+                  <button role="tab" aria-selected={billing === 'yearly'} className={billing === 'yearly' ? 'active' : ''} onClick={() => setBilling('yearly')}>
+                    Yearly <span className="sub-save">Save 33%</span>
+                  </button>
                 </div>
 
-                {isPro ? (
-                  <>
-                    <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 6, lineHeight: 1.6 }}>
-                      {subscription?.interval === 'year' ? 'Yearly' : 'Monthly'} subscription
-                      {subscription?.cancelAtPeriodEnd && ' — cancels at end of period'}
+                <div className="sub-tiers">
+                  {/* Free */}
+                  <div className="sub-tier">
+                    <div className="sub-tier-head">
+                      <div className="sub-tier-name">Free</div>
+                      <div className="sub-tier-price"><span className="sub-tier-amount">$0</span><span className="sub-tier-per">forever</span></div>
                     </div>
-                    {subscription?.currentPeriodEnd && (
-                      <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 20 }}>
-                        {subscription.cancelAtPeriodEnd ? 'Access until' : 'Next billing'}: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                    <ul className="sub-tier-list">
+                      <li><Check /> All core design tools</li>
+                      <li><Check /> Unlimited palettes, scales &amp; exports</li>
+                      <li><Check /> 40 AI generations per day</li>
+                      <li><Check /> Local browser saves</li>
+                    </ul>
+                    <button className="btn sub-tier-btn" disabled>Your current plan</button>
+                  </div>
+
+                  {/* Pro */}
+                  <div className="sub-tier sub-tier-pro">
+                    <span className="sub-tier-flag">Recommended</span>
+                    <div className="sub-tier-head">
+                      <div className="sub-tier-name">Pro</div>
+                      <div className="sub-tier-price">
+                        <span className="sub-tier-amount">{billing === 'yearly' ? '$39.99' : '$4.99'}</span>
+                        <span className="sub-tier-per">{billing === 'yearly' ? 'per year' : 'per month'}</span>
                       </div>
-                    )}
-                    <button className="btn" onClick={openPortal} style={{ padding: '10px 24px' }}>
-                      Manage subscription
+                      <div className="sub-tier-sub">{billing === 'yearly' ? 'AUD · ~$3.33/mo, save 33%' : 'AUD · billed monthly'}</div>
+                    </div>
+                    <ul className="sub-tier-list">
+                      <li><Check /> <strong>Everything in Free, plus:</strong></li>
+                      <li><Check /> 1,000 AI generations per day</li>
+                      <li><Check /> Higher-quality AI models</li>
+                      <li><Check /> Projects synced across devices</li>
+                      <li><Check /> Advanced design-system exports</li>
+                      <li><Check /> Priority support</li>
+                    </ul>
+                    <button
+                      className="btn btn-accent sub-tier-btn"
+                      onClick={() => startCheckout(billing)}
+                      disabled={!user || subLoading || checkingOut}
+                    >
+                      {checkingOut ? 'Redirecting to Stripe…' : `Upgrade — ${billing === 'yearly' ? '$39.99/yr' : '$4.99/mo'}`}
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20, lineHeight: 1.6 }}>
-                      Higher AI limits, quality models, and Pro-only features.
-                    </div>
-                    <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-                      <button
-                        className="btn btn-accent"
-                        onClick={() => checkout('monthly')}
-                        disabled={!user || subLoading}
-                        style={{ display: 'inline-flex', flexDirection: 'column', gap: 2, padding: '14px 28px', minWidth: 140 }}
-                      >
-                        <span style={{ fontSize: 15, fontWeight: 700 }}>$4.99/mo</span>
-                        <span style={{ fontSize: 10, opacity: .7, fontWeight: 400 }}>AUD, billed monthly</span>
-                      </button>
-                      <button
-                        className="btn btn-accent"
-                        onClick={() => checkout('yearly')}
-                        disabled={!user || subLoading}
-                        style={{ display: 'inline-flex', flexDirection: 'column', gap: 2, padding: '14px 28px', minWidth: 140 }}
-                      >
-                        <span style={{ fontSize: 15, fontWeight: 700 }}>$39.99/yr</span>
-                        <span style={{ fontSize: 10, opacity: .7, fontWeight: 400 }}>AUD, save 33%</span>
-                      </button>
-                    </div>
-                    {!user && (
-                      <div style={{ fontSize: 12, color: 'var(--t2)' }}>
-                        <NavLink to="/login" style={{ color: 'var(--accent)', fontWeight: 500 }}>Sign in</NavLink> to upgrade
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
+                    <div className="sub-tier-foot">Secure checkout via Stripe · cancel anytime</div>
+                  </div>
+                </div>
+              </>
+            )}
           </section>
 
           {/* Appearance */}
