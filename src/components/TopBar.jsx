@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useI18n } from '../contexts/I18nContext'
@@ -421,9 +421,9 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
           </svg>
         </button>
 
-        <div className="topbar-brand">
+        <Link to="/welcome" className="topbar-brand" title={t('brand.full')}>
           <span className="topbar-title">{t('brand.full')}</span>
-        </div>
+        </Link>
 
         <button type="button" className="cmdk-hint" onClick={onCommandPalette} aria-label={t('cmd.placeholder')}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
