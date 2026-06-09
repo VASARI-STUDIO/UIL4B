@@ -42,14 +42,15 @@ export function dailyLimitFor(plan, toolId) {
   return plan.limits[toolId] ?? plan.limits['ai-default'] ?? 40
 }
 
+// Gemini model ids (called directly via the Generative Language API).
 const MODELS = {
-  free: { 'alt-text': 'google/gemini-2.0-flash-exp:free' },
-  pro: { 'alt-text': 'google/gemini-2.5-pro-preview' },
+  free: { 'alt-text': 'gemini-2.5-flash-lite' },
+  pro: { 'alt-text': 'gemini-2.5-flash-lite' },
 }
 
 export function modelFor(plan, toolId) {
   if (plan.id === 'pro') {
-    return process.env.OPENROUTER_MODEL_PRO || MODELS.pro[toolId] || MODELS.pro['alt-text']
+    return process.env.GEMINI_MODEL_PRO || MODELS.pro[toolId] || MODELS.pro['alt-text']
   }
-  return process.env.OPENROUTER_MODEL_FREE || MODELS.free[toolId] || MODELS.free['alt-text']
+  return process.env.GEMINI_MODEL_FREE || MODELS.free[toolId] || MODELS.free['alt-text']
 }

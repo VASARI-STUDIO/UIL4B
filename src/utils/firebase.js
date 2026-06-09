@@ -7,7 +7,7 @@ import { getFirestore } from 'firebase/firestore'
 // IMPORTANT: Set Firestore region to australia-southeast1 (Sydney)
 // when creating the database in Firebase Console.
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyADQoAyU3qwAls2bUW6rfE1csZa0Ud6EKE',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'uil4b-357c5.firebaseapp.com',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'uil4b-357c5',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'uil4b-357c5.firebasestorage.app',
