@@ -1436,7 +1436,8 @@ img,svg,video{max-width:100%;height:auto}
 .usage-gate-text{font-size:13px;color:var(--t2);max-width:360px;line-height:1.6}
 .usage-gate-text strong{color:var(--t1);font-weight:600}
 .usage-gate-counter{font-size:12px;font-weight:500;color:var(--t2);padding:6px 14px;background:var(--bg-2);border-radius:var(--radius-s)}
-.usage-gate-remaining{font-size:11px;color:var(--t2);text-align:right;margin-bottom:8px}
+.usage-gate-remaining{font-size:11px;color:var(--t2);text-align:right;margin-bottom:8px;display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.usage-gate-badge{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
 
 /* ─── State preset responsive show/hide ─── */
 .state-preset-full{display:inline}

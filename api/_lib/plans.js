@@ -41,3 +41,15 @@ export function planForSubscription(subscription) {
 export function dailyLimitFor(plan, toolId) {
   return plan.limits[toolId] ?? plan.limits['ai-default'] ?? 40
 }
+
+const MODELS = {
+  free: { 'alt-text': 'google/gemini-2.0-flash-exp:free' },
+  pro: { 'alt-text': 'google/gemini-2.5-pro-preview' },
+}
+
+export function modelFor(plan, toolId) {
+  if (plan.id === 'pro') {
+    return process.env.OPENROUTER_MODEL_PRO || MODELS.pro[toolId] || MODELS.pro['alt-text']
+  }
+  return process.env.OPENROUTER_MODEL_FREE || MODELS.free[toolId] || MODELS.free['alt-text']
+}
