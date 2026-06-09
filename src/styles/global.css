@@ -117,9 +117,17 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 /* Pinned quick-access group */
 .nav-pinned{display:flex;flex-direction:column;gap:1px;margin:6px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .nav-pinned-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:4px 14px 6px}
-.nav-item-pinned{font-size:12.5px;padding:8px 14px}
-.nav-item-pin{width:11px;height:11px;flex-shrink:0;margin-left:auto;color:var(--accent);opacity:.55}
-.nav-item-pinned:hover .nav-item-pin{opacity:.9}
+.nav-item-pinned{font-size:12.5px;padding:8px 14px;cursor:grab}
+.nav-item-pinned.dragging{opacity:.4}
+.nav-item-pinned.drag-over{border-top:2px solid #3b82f6;padding-top:6px}
+.nav-item-pin{display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:auto;color:var(--accent);opacity:.45;background:none;border:none;cursor:pointer;padding:4px;border-radius:var(--radius-s);transition:all var(--t)}
+.nav-item-pin:hover{opacity:1;background:var(--hvr)}
+.nav-item-pinned:hover .nav-item-pin{opacity:.8}
+
+/* Right-click context menu */
+.nav-ctx-menu{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);padding:4px;min-width:180px;animation:cp-rise .12s cubic-bezier(.2,0,0,1)}
+.nav-ctx-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:500;color:var(--t0);border-radius:var(--radius-s);transition:background var(--t);text-align:left}
+.nav-ctx-menu button:hover{background:var(--hvr)}
 
 /* Collapsible Categories */
 .nav-cat{display:flex;flex-direction:column;margin-top:2px}
