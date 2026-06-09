@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
+import UIKitGuide from '../components/UIKitGuide'
 
 const NAMES = ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl']
 const EXPS = [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
@@ -221,6 +222,7 @@ export default function TypeScale({ onCopy }) {
           {currentExport}
         </div>
       </div>
+      <UIKitGuide step="typescale" />
     </div>
   )
 }
