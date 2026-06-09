@@ -670,6 +670,18 @@ a.bento-card:hover{border-color:var(--bh);transform:translateY(-2px)}
 .bento-pin-cell:hover .bento-docs-num{color:var(--t1)}
 .bento-empty{justify-content:center;align-items:center;text-align:center;padding:40px 20px!important}
 
+/* Drag-and-drop: pin tools from sidebar, reorder bento cells */
+.bento-pin-cell{cursor:grab}
+.bento-pin-cell:active{cursor:grabbing}
+.bento-pin-cell.dragging{opacity:.4;transform:scale(.98)}
+.bento-pin-cell.drag-over{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
+.bento-drop-active{outline:2px dashed color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:6px;border-radius:var(--radius-l)}
+.bento-drop-hint{grid-column:span 6;display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;border-radius:var(--radius-l);border:1.5px dashed color-mix(in srgb,var(--accent) 50%,var(--border));background:color-mix(in srgb,var(--accent) 8%,var(--card));color:var(--accent);font-size:13px;font-weight:600;pointer-events:none}
+.bento-drop-hint svg{width:20px;height:20px}
+.nav-item-sub{cursor:grab}
+.nav-item-sub:active{cursor:grabbing}
+.nav-item-sub.is-pinned .nav-item-label{color:var(--accent)}
+
 /* Dashboard responsive */
 @media(max-width:980px){
   .bento{grid-template-columns:repeat(2,1fr)}
