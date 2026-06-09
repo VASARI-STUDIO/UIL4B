@@ -14,14 +14,22 @@ const FALLBACK = { 'serif': 'serif', 'sans-serif': 'sans-serif', 'display': 'cur
 const css = (f) => getFontCSSRule(f.family, FALLBACK[f.category] || 'sans-serif')
 const hw = (f) => f.variants.includes(700) ? 700 : f.variants[f.variants.length - 1] || 400
 
-const FEATURED_NAMES = [
-  'Inter', 'Playfair Display', 'Space Grotesk', 'DM Serif Display',
-  'Outfit', 'Fraunces', 'Sora', 'Crimson Pro',
-  'Manrope', 'Bricolage Grotesque', 'Cormorant Garamond', 'JetBrains Mono',
+const FEATURED = [
+  { family: 'Playfair Display', phrase: 'Beauty in every serif', tag: 'Editorial' },
+  { family: 'Space Grotesk', phrase: 'Clean, geometric, modern', tag: 'UI' },
+  { family: 'DM Serif Display', phrase: 'Bold statements', tag: 'Display' },
+  { family: 'Inter', phrase: 'The workhorse of the web', tag: 'Interface' },
+  { family: 'Outfit', phrase: 'Friendly & versatile', tag: 'Modern' },
+  { family: 'Fraunces', phrase: 'Soft serif character', tag: 'Variable' },
+  { family: 'Sora', phrase: 'Geometric precision', tag: 'Sans Serif' },
+  { family: 'Crimson Pro', phrase: 'Elegant body text', tag: 'Reading' },
+  { family: 'Manrope', phrase: 'Open & approachable', tag: 'Geometric' },
+  { family: 'Bricolage Grotesque', phrase: 'Expressive grotesk', tag: 'Display' },
+  { family: 'Cormorant Garamond', phrase: 'Classical refinement', tag: 'Serif' },
+  { family: 'JetBrains Mono', phrase: '0Oo 1Il {}();', tag: 'Code' },
 ]
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-const HERO_PHRASE = 'Typography is the voice of design'
 
 const SIZES = [
   { label: 'Display', px: 64 },
@@ -60,7 +68,7 @@ function GalleryCard({ font, onSelect, index }) {
     >
       <div className="fg-card-preview" style={{ fontFamily: loaded ? css(font) : 'var(--font)' }}>
         <span className="fg-card-sample" style={{ fontWeight: hw(font) }}>
-          Aa
+          {font.family.length <= 18 ? font.family : 'Aa'}
         </span>
         <span className="fg-card-pangram" style={{ fontWeight: font.variants.includes(400) ? 400 : font.variants[0] }}>
           {PANGRAM}
@@ -183,7 +191,10 @@ export default function FontGallery({ onCopy }) {
 
   const featured = useMemo(() => {
     if (!allFonts.length) return []
-    return FEATURED_NAMES.map(n => allFonts.find(f => f.family === n)).filter(Boolean)
+    return FEATURED.map(f => {
+      const font = allFonts.find(af => af.family === f.family)
+      return font ? { ...font, phrase: f.phrase, tag: f.tag } : null
+    }).filter(Boolean)
   }, [allFonts])
 
   useEffect(() => {
@@ -259,12 +270,13 @@ export default function FontGallery({ onCopy }) {
               className={`fg-feat-card${i < 2 ? ' fg-feat-large' : ''}`}
               onClick={() => setSelected(font)}
             >
+              <div className="fg-feat-tag">{font.tag}</div>
               <div className="fg-feat-text" style={{ fontFamily: css(font), fontWeight: hw(font) }}>
-                {i < 2 ? font.family : 'Aa'}
+                {i < 2 ? font.phrase : font.family}
               </div>
               <div className="fg-feat-info">
                 <span className="fg-feat-name">{font.family}</span>
-                <span className="fg-feat-cat">{font.category}</span>
+                <span className="fg-feat-cat">{font.variants.length} weight{font.variants.length !== 1 ? 's' : ''}</span>
               </div>
             </div>
           ))}
