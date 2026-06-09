@@ -20,6 +20,7 @@ import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
 
 const AuthContext = createContext()
 const PROFILE_CACHE_KEY = 'vs-profile-cache'
+const GOOGLE_RETURNING_KEY = 'vs-google-returning'
 
 const DEFAULT_PROFILE = {
   displayName: '',
@@ -74,7 +75,7 @@ export function AuthProvider({ children }) {
   const profileRef = useRef(null)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(firebaseAuth, async (fbUser) => {
+    const unsub = onAuthStateChanged(firebaseAuth, (fbUser) => {
       if (fbUser) {
         setFirebaseUser(fbUser)
 
@@ -88,22 +89,27 @@ export function AuthProvider({ children }) {
         setProfile(initial)
         profileRef.current = initial
 
-        const fsProfile = await loadProfileFromFirestore(fbUser.uid)
-        if (fsProfile) {
-          const merged = { ...initial, ...fsProfile, email: fbUser.email || fsProfile.email }
-          setProfile(merged)
-          profileRef.current = merged
-          setCachedProfile(fbUser.uid, merged)
-        } else {
-          setCachedProfile(fbUser.uid, initial)
-          saveProfileToFirestore(fbUser.uid, initial)
-        }
+        // Resolve auth state immediately so the UI never blocks (a blank page)
+        // on a slow or failing Firestore read. Hydrate the profile in the
+        // background and merge it in once it arrives.
+        setLoading(false)
+        loadProfileFromFirestore(fbUser.uid).then((fsProfile) => {
+          if (fsProfile) {
+            const merged = { ...initial, ...fsProfile, email: fbUser.email || fsProfile.email }
+            setProfile(merged)
+            profileRef.current = merged
+            setCachedProfile(fbUser.uid, merged)
+          } else {
+            setCachedProfile(fbUser.uid, initial)
+            saveProfileToFirestore(fbUser.uid, initial)
+          }
+        }).catch(() => { /* keep cached/initial profile */ })
       } else {
         setFirebaseUser(null)
         setProfile(null)
         profileRef.current = null
+        setLoading(false)
       }
-      setLoading(false)
     })
     return unsub
   }, [])
@@ -145,6 +151,7 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = useCallback(async () => {
     try {
       await signInWithPopup(firebaseAuth, googleProvider)
+      try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
     } catch (err) {
       if (err?.code === 'auth/configuration-not-found' || err?.code === 'auth/invalid-api-key' || err?.code === 'auth/api-key-not-valid') {
         throw { code: 'auth/google-unavailable' }
@@ -157,6 +164,7 @@ export function AuthProvider({ children }) {
   const loginWithGoogleCredential = useCallback(async (idToken) => {
     const credential = GoogleAuthProvider.credential(idToken)
     await signInWithCredential(firebaseAuth, credential)
+    try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
   }, [])
 
   const updateProfile = useCallback((fields) => {

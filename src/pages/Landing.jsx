@@ -354,6 +354,111 @@ function TokenDemo() {
 
 const FEATURE_DEMOS = [PaletteDemo, FontDemo, IconDemo, TokenDemo]
 
+const ICON_DEMO_LIMIT = 23
+const ICON_TOTAL = '200,000+'
+
+// A mini version of the in-app Icon Library — live search via Iconify with an
+// embedded fallback, click-to-copy, and a final tile that funnels into the full tool.
+function IconSearchDemo({ onView }) {
+  const [query, setQuery] = useState('arrow')
+  const [icons, setIcons] = useState([])
+  const [copied, setCopied] = useState(null)
+  const timer = useRef(null)
+  const cdnOk = useRef(null)
+  const copyTimer = useRef(null)
+
+  const renderLocal = useCallback((q) => {
+    const localIcons = window.icons || []
+    const PACKS = window.PACKS || {}
+    const ql = (q || '').toLowerCase()
+    const filtered = localIcons.filter(i => !ql || i.n.indexOf(ql) !== -1 || i.c.indexOf(ql) !== -1).slice(0, ICON_DEMO_LIMIT)
+    setIcons(filtered.map(i => ({ id: i.n, name: i.n, pack: PACKS[i.p] || i.p, d: i.d, filled: i.p === 'S', cdn: false })))
+  }, [])
+
+  const doSearch = useCallback((q) => {
+    const qt = (q || '').trim()
+    if (qt.length < 2 || cdnOk.current === false) { renderLocal(qt); return }
+    fetch(`https://api.iconify.design/search?query=${encodeURIComponent(qt)}&limit=${ICON_DEMO_LIMIT}`, { signal: AbortSignal.timeout(4000) })
+      .then(r => r.json())
+      .then(d => {
+        cdnOk.current = true
+        if (!d.icons?.length) { renderLocal(qt); return }
+        setIcons(d.icons.slice(0, ICON_DEMO_LIMIT).map(id => { const [p, name] = id.split(':'); return { id, pack: p, name, cdn: true } }))
+      })
+      .catch(() => { cdnOk.current = false; renderLocal(qt) })
+  }, [renderLocal])
+
+  useEffect(() => { doSearch('arrow') }, [doSearch])
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(copyTimer.current) }, [])
+
+  const onChange = (e) => {
+    const q = e.target.value
+    setQuery(q)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => doSearch(q), 300)
+  }
+
+  const flagCopied = (name) => {
+    setCopied(name)
+    clearTimeout(copyTimer.current)
+    copyTimer.current = setTimeout(() => setCopied(prev => (prev === name ? null : prev)), 1200)
+  }
+
+  const copyIcon = (icon) => {
+    if (icon.cdn) {
+      fetch(`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`)
+        .then(r => r.text())
+        .then(s => { try { navigator.clipboard?.writeText(s) } catch { /* ignore */ } flagCopied(icon.name) })
+        .catch(() => { /* ignore */ })
+    } else {
+      const svg = icon.filled
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="${icon.d}"/></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${icon.d}"/></svg>`
+      try { navigator.clipboard?.writeText(svg) } catch { /* ignore */ }
+      flagCopied(icon.name)
+    }
+  }
+
+  return (
+    <div className="landing-icontool-panel">
+      <div className="landing-icontool-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" value={query} onChange={onChange} placeholder="Search icons — try ‘arrow’, ‘home’, ‘heart’…" aria-label="Search icons" />
+      </div>
+      <div className="landing-icontool-grid">
+        {icons.map((icon, idx) => (
+          <button
+            key={`${idx}-${icon.id}`}
+            type="button"
+            className={`landing-icontool-cell${copied === icon.name ? ' is-copied' : ''}`}
+            onClick={() => copyIcon(icon)}
+            title={`Copy ${icon.name}`}
+          >
+            {icon.cdn ? (
+              <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" style={{ filter: 'var(--icon-inv)' }} loading="lazy" alt={icon.name} />
+            ) : (
+              <svg viewBox="0 0 24 24" width="24" height="24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={icon.d} /></svg>
+            )}
+            {copied === icon.name && (
+              <span className="landing-icontool-copied">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              </span>
+            )}
+          </button>
+        ))}
+        <button type="button" className="landing-icontool-more" onClick={onView}>
+          <span className="landing-icontool-more-count">{ICON_TOTAL}</span>
+          <span className="landing-icontool-more-label">View all icons</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+        </button>
+      </div>
+      <div className="landing-icontool-hint">Click any icon to copy its SVG · {ICON_TOTAL} icons and pack filters inside the app</div>
+    </div>
+  )
+}
+
 export default function Landing() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
@@ -378,6 +483,11 @@ export default function Landing() {
   }
 
   const choosePlan = (id) => { if (id === 'pro') goPro(); else enter() }
+
+  const viewIcons = () => {
+    try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
+    navigate('/icons')
+  }
 
   return (
     <div className="landing">
@@ -458,6 +568,16 @@ export default function Landing() {
             </Reveal>
           )
         })}
+
+        {/* Interactive icon search */}
+        <Reveal className="landing-icontool">
+          <div className="landing-icontool-head">
+            <span className="landing-eyebrow">Icons &amp; illustrations</span>
+            <h2>Search thousands of icons, copy in one click.</h2>
+            <p>Try it right here — search and click any icon to copy its SVG. The full tool inside UIL4B adds pack filters, more styles, and {ICON_TOTAL} icons.</p>
+          </div>
+          <IconSearchDemo onView={viewIcons} />
+        </Reveal>
 
         {/* Value highlights */}
         <Reveal className="landing-highlights">
