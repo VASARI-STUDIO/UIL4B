@@ -137,8 +137,8 @@ export default function Sidebar({ isOpen, onClose }) {
     <>
       <div className={`sidebar-overlay${isOpen ? ' visible' : ''}`} onClick={onClose} />
       <nav className={`sidebar${isOpen ? ' open' : ''}`} id="sidebar">
-        {/* Brand */}
-        <NavLink to="/dashboard" className="sidebar-brand" onClick={onClose}>
+        {/* Brand — returns to the public sales / home page */}
+        <NavLink to="/welcome" className="sidebar-brand" onClick={onClose}>
           <div className="sidebar-brand-text">
             <span className="sidebar-brand-name">{t('brand.name')}</span>
             <span className="sidebar-brand-sub">{t('brand.tagline')}</span>
