@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { CATEGORIES } from '../data/tools'
 import { loadFont } from '../utils/googleFonts'
 
@@ -67,6 +68,42 @@ const HIGHLIGHTS = [
     title: 'Built for real workflows',
     body: 'Export production-ready design systems, generate palettes from colour theory, and reference the tokens you actually use day to day.',
     icon: (<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
+  },
+]
+
+const PRICING = [
+  {
+    id: 'free',
+    name: 'Free',
+    price: '$0',
+    period: 'forever',
+    tagline: 'Everything you need for everyday design work.',
+    features: [
+      'All core tools — colour, type, icons, images',
+      'Unlimited palettes, type scales & CSS exports',
+      '40 AI generations per day',
+      'Work saved locally in your browser',
+      'Light & dark themes, multiple languages',
+    ],
+    cta: 'Start for free',
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: '$4.99',
+    period: 'per month',
+    note: 'or $39.99 / year — save ~33%',
+    tagline: 'For designers who lean on AI and want more headroom.',
+    featured: true,
+    features: [
+      'Everything in Free, plus:',
+      '1,000 AI generations per day',
+      'Higher-quality AI models',
+      'Projects synced across devices',
+      'Advanced design-system exports',
+      'Priority support',
+    ],
+    cta: 'Go Pro',
   },
 ]
 
@@ -321,6 +358,7 @@ export default function Landing() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const { user, userProfile } = useAuth()
+  const { checkout, isPro } = useSubscription()
   const loggedIn = !!user
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0]
 
@@ -333,6 +371,13 @@ export default function Landing() {
     try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
     navigate('/login')
   }
+
+  const goPro = async (interval = 'monthly') => {
+    if (!loggedIn) { signIn(); return }
+    try { await checkout(interval) } catch { navigate('/settings', { state: { section: 'support' } }) }
+  }
+
+  const choosePlan = (id) => { if (id === 'pro') goPro(); else enter() }
 
   return (
     <div className="landing">
@@ -425,6 +470,51 @@ export default function Landing() {
               <p>{h.body}</p>
             </div>
           ))}
+        </Reveal>
+
+        {/* Pricing tiers */}
+        <Reveal className="landing-pricing" id="pricing">
+          <div className="landing-pricing-head">
+            <span className="landing-eyebrow">Simple, fair pricing</span>
+            <h2>Most of UIL4B is free. Upgrade only when you need more AI.</h2>
+            <p>Every core tool is free forever. Pro unlocks higher daily AI limits, better models, and synced projects — for less than a coffee a month.</p>
+          </div>
+          <div className="landing-pricing-grid">
+            {PRICING.map(tier => {
+              const isCurrentPro = tier.id === 'pro' && isPro
+              return (
+                <div key={tier.id} className={`landing-tier${tier.featured ? ' landing-tier-featured' : ''}`}>
+                  {tier.featured && <span className="landing-tier-badge">Most popular</span>}
+                  <div className="landing-tier-name">{tier.name}</div>
+                  <div className="landing-tier-price">
+                    <span className="landing-tier-amount">{tier.price}</span>
+                    <span className="landing-tier-period">{tier.period}</span>
+                  </div>
+                  {tier.note && <div className="landing-tier-note">{tier.note}</div>}
+                  <p className="landing-tier-tagline">{tier.tagline}</p>
+                  <ul className="landing-tier-features">
+                    {tier.features.map((f, i) => (
+                      <li key={i} className={f.endsWith('plus:') ? 'landing-tier-feature-head' : ''}>
+                        {!f.endsWith('plus:') && (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        )}
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    className={`btn landing-tier-cta${tier.featured ? ' btn-accent' : ''}`}
+                    onClick={() => choosePlan(tier.id)}
+                    disabled={isCurrentPro}
+                  >
+                    {isCurrentPro ? 'Your current plan' : tier.cta}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          <p className="landing-pricing-foot">Prices in AUD. Cancel anytime — your free access never expires.</p>
         </Reveal>
 
         {/* Closing CTA */}
