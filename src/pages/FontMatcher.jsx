@@ -8,6 +8,7 @@ import {
   getFontImportUrl,
   getFontCSSRule,
 } from '../utils/googleFonts'
+import UIKitGuide from '../components/UIKitGuide'
 
 const CATS = [
   { id: 'all', label: 'All' },
@@ -704,6 +705,7 @@ export default function FontMatcher({ onCopy, toast }) {
           </div>
         </>
       )}
+      <UIKitGuide step="fontpairs" />
     </div>
   )
 }

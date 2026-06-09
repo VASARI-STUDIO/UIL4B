@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import UIKitGuide from '../components/UIKitGuide'
 
 const API_LIMIT = 999
 
@@ -214,6 +215,7 @@ export default function IconLibrary({ onCopy }) {
           {count} icons &middot; {mode}
         </p>
       </div>
+      <UIKitGuide step="icons" />
     </div>
   )
 }
