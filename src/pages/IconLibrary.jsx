@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import UIKitGuide from '../components/UIKitGuide'
+import { addRecentIcon } from '../utils/recentIcons'
 
 const API_LIMIT = 999
 
@@ -129,12 +130,14 @@ export default function IconLibrary({ onCopy }) {
     if (icon.cdn) {
       const [p, n] = icon.id.split(':')
       fetchCdnSvg(p, n)
+      addRecentIcon({ cdn: true, pack: p, name: n })
     } else {
       const fill = icon.filled
       const svg = fill
         ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="${icon.d}"/></svg>`
         : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${icon.d}"/></svg>`
       onCopy(svg)
+      addRecentIcon({ cdn: false, name: icon.name, d: icon.d, filled: icon.filled })
     }
   }
 
