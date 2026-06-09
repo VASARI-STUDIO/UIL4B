@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { CATEGORIES } from '../data/tools'
 import { loadFont } from '../utils/googleFonts'
 
 const VISITED_KEY = 'vs-visited'
@@ -34,39 +33,39 @@ function Reveal({ as: Tag = 'section', className = '', style, children, ...rest 
   )
 }
 
-const FEATURES = [
-  {
-    title: 'Build complete colour systems',
-    body: 'Create harmonious palettes from colour theory, generate Material-style state colours, fine-tune tints and gradients, and export everything as production-ready CSS or JSON.',
-  },
-  {
-    title: 'Pair fonts and preview typography',
-    body: 'Browse hundreds of Google Fonts in a visual gallery, find curated pairings for headings and body, and dial in a modular type scale with live preview.',
-  },
-  {
-    title: 'Icons, images and AI tools',
-    body: 'Search thousands of icons via Iconify, convert and compress images locally, generate accessible alt text with AI, and save AI prompt templates for reuse.',
-  },
-  {
-    title: 'Design tokens at your fingertips',
-    body: 'Reference spacing scales, shadows, border radii, and font sizes from popular frameworks. Export a complete design system from your palette, fonts, and type scale in one click.',
-  },
+const NAV_LINKS = [
+  { label: 'Features', href: '#features' },
+  { label: 'Tools', href: '#tools' },
+  { label: 'Pricing', href: '#pricing' },
+]
+
+const MARQUEE = [
+  'Colour systems', 'Type scales', 'Font pairing', 'Icon library', 'Image converter',
+  'Alt-text AI', 'Gradients', 'Design tokens', 'CSS export', 'Prompt library',
+  'Emoji library', 'Video frames', 'Contrast checker', 'Tint generator',
+]
+
+const STATS = [
+  { n: '200k+', l: 'Icons to search' },
+  { n: '1,500+', l: 'Google Fonts' },
+  { n: '15+', l: 'Pro-grade tools' },
+  { n: '$0', l: 'To get started' },
 ]
 
 const HIGHLIGHTS = [
   {
-    title: 'Everything in one place',
-    body: 'Colour systems, typography, image tools, AI generators and design references — no more juggling a dozen browser tabs.',
+    title: 'Everything in one canvas',
+    body: 'Colour, type, icons, images, AI generators and design references — no more juggling a dozen browser tabs.',
     icon: (<><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>),
   },
   {
     title: 'Mostly free, always fair',
-    body: 'Explore the full toolkit for free. Upgrade for AI tools, extra prompts, and advanced exports — from just $4.99/month.',
+    body: 'Explore the full toolkit for free. Upgrade for AI tools, more prompts, and advanced exports — from just $4.99/month.',
     icon: (<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></>),
   },
   {
     title: 'Built for real workflows',
-    body: 'Export production-ready design systems, generate palettes from colour theory, and reference the tokens you actually use day to day.',
+    body: 'Export production-ready design systems, generate palettes from colour theory, and reference the tokens you actually use.',
     icon: (<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
   },
 ]
@@ -75,7 +74,8 @@ const PRICING = [
   {
     id: 'free',
     name: 'Free',
-    price: '$0',
+    monthly: '$0',
+    yearly: '$0',
     period: 'forever',
     tagline: 'Everything you need for everyday design work.',
     features: [
@@ -352,8 +352,6 @@ function TokenDemo() {
   )
 }
 
-const FEATURE_DEMOS = [PaletteDemo, FontDemo, IconDemo, TokenDemo]
-
 const ICON_DEMO_LIMIT = 23
 const ICON_TOTAL = '200,000+'
 
@@ -470,6 +468,66 @@ function IconSearchDemo({ onView }) {
   )
 }
 
+// A stylised "app window" screenshot for the hero — a fake browser frame wrapping
+// a mini composition of the toolkit so visitors see the product before signing in.
+function HeroWindow() {
+  const swatches = ['#635BFF', '#0A2540', '#00D4AA', '#7A73FF', '#FF8E72']
+  const navItems = ['Colour', 'Typography', 'Icons', 'Imagery', 'Docs']
+  return (
+    <div className="landing-window">
+      <div className="landing-window-bar">
+        <span className="landing-window-dots"><i /><i /><i /></span>
+        <span className="landing-window-url">uil4b.com/dashboard</span>
+        <span className="landing-window-spacer" />
+      </div>
+      <div className="landing-window-body">
+        <aside className="landing-window-side">
+          <div className="landing-window-side-brand">UIL4B</div>
+          {navItems.map((n, i) => (
+            <div key={n} className={`landing-window-side-item${i === 0 ? ' is-active' : ''}`}>
+              <span className="landing-window-side-dot" />{n}
+            </div>
+          ))}
+        </aside>
+        <div className="landing-window-canvas">
+          <div className="landing-window-card landing-window-card-wide">
+            <span className="landing-window-card-label">Palette</span>
+            <div className="landing-window-swatches">
+              {swatches.map(c => <span key={c} style={{ background: c }} />)}
+            </div>
+            <div className="landing-window-tints">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span key={i} style={{ background: `hsl(244,72%,${92 - i * 8}%)` }} />
+              ))}
+            </div>
+          </div>
+          <div className="landing-window-card">
+            <span className="landing-window-card-label">Type</span>
+            <div className="landing-window-type">Aa</div>
+            <div className="landing-window-typemeta">Space Grotesk · 600</div>
+          </div>
+          <div className="landing-window-card">
+            <span className="landing-window-card-label">Icons</span>
+            <div className="landing-window-icons">
+              {DEMO_ICONS.slice(0, 6).map((g, i) => (
+                <span key={i}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{g}</svg></span>
+              ))}
+            </div>
+          </div>
+          <div className="landing-window-card landing-window-card-wide">
+            <span className="landing-window-card-label">Spacing tokens</span>
+            <div className="landing-window-bars">
+              {[20, 35, 55, 78, 100].map((w, i) => (
+                <div key={i} className="landing-window-bar"><span style={{ width: `${w}%` }} /></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Landing() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
@@ -504,11 +562,21 @@ export default function Landing() {
 
   return (
     <div className="landing">
+      <div className="landing-aurora" aria-hidden="true">
+        <span className="landing-orb landing-orb-1" />
+        <span className="landing-orb landing-orb-2" />
+        <span className="landing-orb landing-orb-3" />
+        <span className="landing-grid-lines" />
+      </div>
+
       <header className="landing-nav">
         <div className="landing-brand">
           <span className="landing-brand-mark">UIL4B</span>
           <span className="landing-brand-sub">Design Toolkit</span>
         </div>
+        <nav className="landing-nav-links">
+          {NAV_LINKS.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
+        </nav>
         <div className="landing-nav-actions">
           <button type="button" className="landing-theme" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === 'dark' ? (
@@ -517,79 +585,119 @@ export default function Landing() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
             )}
           </button>
-          {loggedIn ? (
-            <button type="button" className="btn landing-signin" onClick={enter}>Resume</button>
-          ) : (
-            <button type="button" className="btn landing-signin" onClick={signIn}>Sign in</button>
-          )}
+          <button type="button" className="landing-signin-text" onClick={loggedIn ? enter : signIn}>
+            {loggedIn ? 'Open app' : 'Sign in'}
+          </button>
+          <button type="button" className="landing-btn-grad" onClick={loggedIn ? enter : signIn}>
+            {loggedIn ? 'Resume' : 'Start for free'}
+          </button>
         </div>
       </header>
 
       <main className="landing-main">
         {/* Hero */}
         <section className="landing-hero">
-          <span className="landing-eyebrow">A design toolkit for designers and developers</span>
+          <span className="landing-eyebrow">
+            <span className="landing-eyebrow-dot" />
+            The all-in-one toolkit for designers &amp; developers
+          </span>
           <h1 className="landing-title">
-            Every design tool<br /><em>you reach for</em>, together.
+            Every design tool<br />you reach for, <span className="landing-grad">in one place.</span>
           </h1>
           <p className="landing-lede">
             UIL4B brings your most-used graphic design tools into one fast, unified workspace.
             Build colour systems, pair fonts, convert images, write AI prompts and export a
-            complete design system without leaving the page.
+            complete design system — without leaving the page.
           </p>
           <div className="landing-cta-row">
-            <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-              {loggedIn ? 'Resume where you left off' : 'Open the toolkit'}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+            <button type="button" className="landing-btn-grad landing-btn-lg" onClick={enter}>
+              {loggedIn ? 'Resume where you left off' : 'Start for free'}
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
             </button>
-            <button type="button" className="btn landing-cta-secondary" onClick={signIn}>
-              {loggedIn ? 'Log in to another account' : 'Create free account'}
+            <button type="button" className="landing-btn-ghost landing-btn-lg" onClick={loggedIn ? signIn : signIn}>
+              {loggedIn ? 'Log in to another account' : 'Create an account'}
             </button>
           </div>
           <span className="landing-cta-note">
             {loggedIn
               ? `Signed in${firstName ? ` as ${firstName}` : ''}. Pick up right where you left off.`
-              : 'No signup required to explore. Free tier included.'}
+              : 'No credit card required · Free tier included · Cancel anytime'}
           </span>
         </section>
 
-        {/* Category cards */}
-        <Reveal className="landing-cats">
-          {CATEGORIES.map(cat => (
-            <div key={cat.id} className="landing-cat-card">
-              <span className="landing-cat-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{cat.icon}</svg>
-              </span>
-              <span className="landing-cat-label">{cat.label}</span>
-              <span className="landing-cat-desc">{cat.description}</span>
-            </div>
-          ))}
+        {/* Hero product window */}
+        <Reveal className="landing-window-wrap">
+          <HeroWindow />
         </Reveal>
 
-        {/* Feature sections with interactive demos */}
-        {FEATURES.map((f, i) => {
-          const Demo = FEATURE_DEMOS[i]
-          return (
-            <Reveal key={f.title} className={`landing-feature${i % 2 === 1 ? ' landing-feature-reverse' : ''}`}>
-              <div className="landing-feature-text">
-                <h2>{f.title}</h2>
-                <p>{f.body}</p>
+        {/* Marquee */}
+        <section className="landing-marquee" aria-hidden="true">
+          <div className="landing-marquee-fade landing-marquee-fade-l" />
+          <div className="landing-marquee-fade landing-marquee-fade-r" />
+          <div className="landing-marquee-track">
+            {[...MARQUEE, ...MARQUEE].map((m, i) => (
+              <span key={i} className="landing-marquee-item">{m}<i>·</i></span>
+            ))}
+          </div>
+        </section>
+
+        {/* Bento tools */}
+        <Reveal as="section" id="tools" className="landing-section">
+          <header className="landing-section-head">
+            <span className="landing-kicker">The toolkit</span>
+            <h2>One canvas. Every tool you need.</h2>
+            <p>Each tool below is live — play with it right here. The full workspace adds saving, AI, and exports.</p>
+          </header>
+          <div className="landing-bento">
+            <div className="landing-bento-tile landing-bento-wide">
+              <div className="landing-bento-head">
+                <h3>Build complete colour systems</h3>
+                <p>Generate harmonious palettes, tints and gradients — export production-ready CSS or JSON.</p>
               </div>
-              <div className="landing-feature-img">
-                {Demo && <Demo />}
+              <div className="landing-bento-demo"><PaletteDemo /></div>
+            </div>
+            <div className="landing-bento-tile">
+              <div className="landing-bento-head">
+                <h3>Pair &amp; preview type</h3>
+                <p>Curated font pairings with live preview.</p>
               </div>
-            </Reveal>
-          )
-        })}
+              <div className="landing-bento-demo"><FontDemo /></div>
+            </div>
+            <div className="landing-bento-tile">
+              <div className="landing-bento-head">
+                <h3>Design tokens, ready</h3>
+                <p>Spacing, radius and scale references.</p>
+              </div>
+              <div className="landing-bento-demo"><TokenDemo /></div>
+            </div>
+            <div className="landing-bento-tile landing-bento-wide">
+              <div className="landing-bento-head">
+                <h3>Icons, images &amp; AI tools</h3>
+                <p>Search {ICON_TOTAL} icons, convert images locally, and generate accessible alt text with AI.</p>
+              </div>
+              <div className="landing-bento-demo landing-bento-demo-pad"><IconDemo /></div>
+            </div>
+          </div>
+        </Reveal>
 
         {/* Interactive icon search */}
-        <Reveal className="landing-icontool">
-          <div className="landing-icontool-head">
-            <span className="landing-eyebrow">Icons &amp; illustrations</span>
+        <Reveal as="section" id="features" className="landing-icontool">
+          <header className="landing-section-head">
+            <span className="landing-kicker">Try it now</span>
             <h2>Search thousands of icons, copy in one click.</h2>
-            <p>Try it right here — search and click any icon to copy its SVG. The full tool inside UIL4B adds pack filters, more styles, and {ICON_TOTAL} icons.</p>
-          </div>
+            <p>Search and click any icon to copy its SVG. The full tool adds pack filters, more styles, and {ICON_TOTAL} icons.</p>
+          </header>
           <IconSearchDemo onView={viewIcons} />
+        </Reveal>
+
+        {/* Stats band */}
+        <Reveal className="landing-stats">
+          {STATS.map(s => (
+            <div key={s.l} className="landing-stat">
+              <span className="landing-stat-num">{s.n}</span>
+              <span className="landing-stat-label">{s.l}</span>
+            </div>
+          ))}
         </Reveal>
 
         {/* Value highlights */}
@@ -605,7 +713,7 @@ export default function Landing() {
           ))}
         </Reveal>
 
-        {/* Pricing tiers */}
+        {/* Pricing */}
         <Reveal className="landing-pricing" id="pricing">
           <div className="landing-pricing-head">
             <span className="landing-eyebrow">Simple, fair pricing</span>
@@ -649,7 +757,7 @@ export default function Landing() {
                   </ul>
                   <button
                     type="button"
-                    className={`btn landing-tier-cta${tier.featured ? ' btn-accent' : ''}`}
+                    className={tier.featured ? 'landing-btn-grad landing-tier-cta' : 'landing-btn-ghost landing-tier-cta'}
                     onClick={() => choosePlan(tier.id)}
                     disabled={isCurrentPro}
                   >
@@ -664,23 +772,50 @@ export default function Landing() {
 
         {/* Closing CTA */}
         <Reveal className="landing-closing">
+          <div className="landing-closing-glow" aria-hidden="true" />
           <h2>{loggedIn ? 'Pick up where you left off.' : 'Start designing in seconds.'}</h2>
           <p>
             {loggedIn
               ? 'Your projects and design tokens are ready and waiting. Jump back into the toolkit any time.'
               : 'Jump straight into the toolkit. Your work is saved locally, and an account unlocks AI tools and synced projects whenever you are ready.'}
           </p>
-          <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-            {loggedIn ? 'Resume where you left off' : 'Open the toolkit'}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+          <button type="button" className="landing-btn-grad landing-btn-lg" onClick={enter}>
+            {loggedIn ? 'Resume where you left off' : 'Start for free'}
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
           </button>
         </Reveal>
       </main>
 
       <footer className="landing-footer">
-        <span>Made by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>
-        <span className="landing-footer-sep">·</span>
-        <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer">Donate</a>
+        <div className="landing-footer-inner">
+          <div className="landing-footer-brand">
+            <span className="landing-brand-mark">UIL4B</span>
+            <p>The all-in-one design toolkit for the modern web.</p>
+          </div>
+          <div className="landing-footer-cols">
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Product</span>
+              <a href="#tools">Tools</a>
+              <a href="#features">Features</a>
+              <a href="#pricing">Pricing</a>
+            </div>
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Get started</span>
+              <button type="button" onClick={enter}>Open the app</button>
+              <button type="button" onClick={signIn}>Sign in</button>
+            </div>
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Made by</span>
+              <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a>
+              <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer">Donate</a>
+            </div>
+          </div>
+        </div>
+        <div className="landing-footer-base">
+          <span>© {new Date().getFullYear()} UIL4B</span>
+          <span className="landing-footer-sep">·</span>
+          <span>Made for designers &amp; developers</span>
+        </div>
       </footer>
     </div>
   )
