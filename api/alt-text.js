@@ -5,7 +5,13 @@ export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 }
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+// Gemini API key — accept the common env var names so it works regardless of
+// what it was named in Vercel. Server-side only (never exposed to the client).
+const GEMINI_KEY =
+  process.env.GEMINI_API_KEY ||
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+  process.env.GOOGLE_API_KEY ||
+  ''
 
 const PROMPT = `You are writing alt text for a website. Describe the image in 1-2 sentences, under 125 characters when possible.
 - Be concise and specific. Lead with the most important subject.
@@ -25,8 +31,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY
-  if (!apiKey) return res.status(500).json({ error: 'AI provider not configured' })
+  if (!GEMINI_KEY) return res.status(500).json({ error: 'AI provider not configured' })
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -72,32 +77,30 @@ export default async function handler(req, res) {
     ? `${PROMPT}\n\nAdditional context from the author: ${context.slice(0, 500)}`
     : PROMPT
 
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`
+
   try {
-    const r = await fetch(OPENROUTER_URL, {
+    const r = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': process.env.SITE_URL || 'https://uil4b.vercel.app',
-        'X-Title': 'UIL4B',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
-        messages: [{
+        contents: [{
           role: 'user',
-          content: [
-            { type: 'text', text: userPrompt },
-            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${image}` } },
+          parts: [
+            { text: userPrompt },
+            { inline_data: { mime_type: mimeType, data: image } },
           ],
         }],
-        max_tokens: 500,
-        temperature: 0.4,
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 500,
+        },
       }),
     })
 
     if (!r.ok) {
       const text = await r.text()
-      console.error('OpenRouter error:', r.status, text.slice(0, 1000))
+      console.error('Gemini error:', r.status, text.slice(0, 1000))
       if (r.status === 429) {
         return res.status(429).json({ error: 'Rate limited by provider. Try again shortly.', retryAfter: 10 })
       }
@@ -105,7 +108,7 @@ export default async function handler(req, res) {
     }
 
     const data = await r.json()
-    const altText = data?.choices?.[0]?.message?.content?.trim() || ''
+    const altText = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim() || ''
     if (!altText) return res.status(502).json({ error: 'Empty response from AI provider' })
 
     const inc = await FieldValueIncrement(1)
