@@ -221,6 +221,7 @@ function fmtDateTime(iso) {
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'submissions', label: 'Submissions' },
+  { id: 'prompts', label: 'Prompts' },
   { id: 'pages', label: 'Pages' },
   { id: 'users', label: 'Users' },
 ]
@@ -236,6 +237,8 @@ export default function Admin({ toast }) {
   const [filterType, setFilterType] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
+  const [pendingPrompts, setPendingPrompts] = useState([])
+  const [promptFilter, setPromptFilter] = useState('pending')
 
   const refresh = useCallback(async () => {
     setData(getAnalyticsSummary())
@@ -249,6 +252,10 @@ export default function Admin({ toast }) {
       fsFeedback.forEach(f => { if (!localIds.has(f.id)) merged.push(f) })
     } catch { /* firestore unavailable — fall back to local feedback */ }
     setFeedback(merged)
+    try {
+      const promptSnap = await getDocs(query(collection(db, 'community-prompts'), orderBy('createdAt', 'desc')))
+      setPendingPrompts(promptSnap.docs.map(d => ({ ...d.data(), id: d.id })))
+    } catch { /* firestore unavailable */ }
   }, [])
 
   const effectiveUnlocked = unlocked || isAdminUser
@@ -655,6 +662,70 @@ export default function Admin({ toast }) {
               joined: fmtDate(u.createdAt),
             }))}
           />
+        </Section>
+      )}
+
+      {/* PROMPTS TAB */}
+      {tab === 'prompts' && (
+        <Section
+          title={`Community Prompts (${pendingPrompts.length})`}
+          right={
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['pending', 'approved', 'rejected', 'all'].map(f => (
+                <button
+                  key={f}
+                  className={`pt-t${promptFilter === f ? ' on' : ''}`}
+                  onClick={() => setPromptFilter(f)}
+                  style={{ padding: '4px 10px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {pendingPrompts
+            .filter(p => promptFilter === 'all' || p.status === promptFilter)
+            .map(prompt => (
+              <div key={prompt.id} className="card" style={{ padding: 16, marginBottom: 8, borderLeft: `3px solid ${prompt.status === 'approved' ? 'var(--ok)' : prompt.status === 'rejected' ? 'var(--err)' : 'var(--warn)'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                  <Badge color={prompt.status === 'approved' ? 'var(--ok)' : prompt.status === 'rejected' ? 'var(--err)' : 'var(--warn)'} bg={prompt.status === 'approved' ? 'rgba(16,185,129,.1)' : prompt.status === 'rejected' ? 'rgba(239,68,68,.1)' : 'rgba(245,158,11,.1)'}>
+                    {prompt.status}
+                  </Badge>
+                  <span style={{ fontSize: 11, color: 'var(--t2)' }}>{prompt.authorName || prompt.authorEmail || 'Anonymous'}</span>
+                  <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>{prompt.title}</div>
+                <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 12, maxHeight: 200, overflow: 'auto' }}>{prompt.text}</p>
+                {prompt.tags && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 10 }}>Tags: {prompt.tags}</div>}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {prompt.status !== 'approved' && (
+                    <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--ok)' }} onClick={async () => {
+                      await updateDoc(doc(db, 'community-prompts', prompt.id), { status: 'approved', updatedAt: new Date().toISOString() })
+                      setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, status: 'approved' } : p))
+                      toast('Prompt approved')
+                    }}>Approve</button>
+                  )}
+                  {prompt.status !== 'rejected' && (
+                    <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--err)' }} onClick={async () => {
+                      await updateDoc(doc(db, 'community-prompts', prompt.id), { status: 'rejected', updatedAt: new Date().toISOString() })
+                      setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, status: 'rejected' } : p))
+                      toast('Prompt rejected')
+                    }}>Reject</button>
+                  )}
+                  <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }} onClick={async () => {
+                    await deleteDoc(doc(db, 'community-prompts', prompt.id))
+                    setPendingPrompts(prev => prev.filter(p => p.id !== prompt.id))
+                    toast('Prompt deleted')
+                  }}>Delete</button>
+                </div>
+              </div>
+            ))}
+          {pendingPrompts.filter(p => promptFilter === 'all' || p.status === promptFilter).length === 0 && (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--t2)', fontSize: 13 }}>
+              No {promptFilter === 'all' ? '' : promptFilter} prompts yet.
+            </div>
+          )}
         </Section>
       )}
     </div>

@@ -1,20 +1,15 @@
 import { useAuth } from '../contexts/AuthContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { useNavigate } from 'react-router-dom'
-import { canUseFeature, getRemainingUses, getUsageCount, getResetTime } from '../utils/usageTracker'
+import { canUseFeature, getRemainingUses, getUsageCount } from '../utils/usageTracker'
 
-/**
- * UsageGate — wraps AI-powered actions with authentication + daily limit checks.
- *
- * Props:
- *   toolId      — unique identifier for the tool (e.g. "alt-text")
- *   dailyLimit  — max number of uses per day
- *   children    — the content to render when access is allowed
- */
-export default function UsageGate({ toolId, dailyLimit, children }) {
+export default function UsageGate({ toolId, children }) {
   const { user } = useAuth()
+  const { plan, isPro, checkout } = useSubscription()
   const navigate = useNavigate()
 
-  // ---------- Not authenticated ----------
+  const dailyLimit = plan?.limits?.[toolId] ?? plan?.limits?.['ai-default'] ?? 40
+
   if (!user) {
     return (
       <div className="usage-gate-card">
@@ -35,14 +30,7 @@ export default function UsageGate({ toolId, dailyLimit, children }) {
     )
   }
 
-  // ---------- Limit reached ----------
   if (!canUseFeature(toolId, dailyLimit)) {
-    const reset = getResetTime()
-    const now = new Date()
-    const diffMs = reset - now
-    const diffH = Math.floor(diffMs / 3600000)
-    const diffM = Math.floor((diffMs % 3600000) / 60000)
-
     return (
       <div className="usage-gate-card">
         <div className="usage-gate-icon limit">
@@ -54,8 +42,12 @@ export default function UsageGate({ toolId, dailyLimit, children }) {
         <div className="usage-gate-title">Daily limit reached</div>
         <div className="usage-gate-text">
           You have used all <strong>{dailyLimit}</strong> daily uses for this tool.
-          Your limit resets in <strong>{diffH > 0 ? `${diffH}h ` : ''}{diffM}m</strong>.
         </div>
+        {!isPro && (
+          <button className="btn btn-accent" onClick={() => checkout('monthly')}>
+            Upgrade to Pro for 1,000/day
+          </button>
+        )}
         <div className="usage-gate-counter">
           {getUsageCount(toolId)} / {dailyLimit} used today
         </div>
@@ -63,11 +55,11 @@ export default function UsageGate({ toolId, dailyLimit, children }) {
     )
   }
 
-  // ---------- Allowed ----------
   return (
     <>
       <div className="usage-gate-remaining">
         {getRemainingUses(toolId, dailyLimit)} / {dailyLimit} uses remaining today
+        {isPro && <span className="usage-gate-badge">Pro</span>}
       </div>
       {children}
     </>
