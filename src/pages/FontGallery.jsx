@@ -40,7 +40,7 @@ const SIZES = [
   { label: 'Small', px: 13 },
 ]
 
-function GalleryCard({ font, onSelect, index }) {
+function GalleryCard({ font, onSelect, index, inCompare, onToggleCompare }) {
   const [loaded, setLoaded] = useState(false)
   const ref = useRef(null)
 
@@ -63,9 +63,22 @@ function GalleryCard({ font, onSelect, index }) {
   return (
     <div
       ref={ref}
-      className={`fg-card${isWide ? ' fg-card-wide' : ''}`}
+      className={`fg-card${isWide ? ' fg-card-wide' : ''}${inCompare ? ' fg-card-comparing' : ''}`}
       onClick={() => onSelect(font)}
     >
+      <button
+        type="button"
+        className={`fg-card-compare${inCompare ? ' active' : ''}`}
+        onClick={(e) => { e.stopPropagation(); onToggleCompare(font) }}
+        title={inCompare ? 'Remove from comparison' : 'Add to comparison'}
+        aria-pressed={inCompare}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {inCompare
+            ? <polyline points="20 6 9 17 4 12" />
+            : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
+        </svg>
+      </button>
       <div className="fg-card-preview" style={{ fontFamily: loaded ? css(font) : 'var(--font)' }}>
         <span className="fg-card-sample" style={{ fontWeight: hw(font) }}>
           {font.family.length <= 18 ? font.family : 'Aa'}
@@ -77,6 +90,93 @@ function GalleryCard({ font, onSelect, index }) {
       <div className="fg-card-meta">
         <span className="fg-card-name">{font.family}</span>
         <span className="fg-card-info">{font.category} · {font.variants.length}w</span>
+      </div>
+    </div>
+  )
+}
+
+function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
+  const [text, setText] = useState(PANGRAM)
+  const [size, setSize] = useState(40)
+  const [weightMode, setWeightMode] = useState('heading') // 'heading' | 'regular'
+
+  useEffect(() => {
+    fonts.forEach(f => loadFont(f.family, f.variants))
+  }, [fonts])
+
+  const weightFor = (f) => weightMode === 'regular'
+    ? (f.variants.includes(400) ? 400 : f.variants[0])
+    : hw(f)
+
+  return (
+    <div className="fg-detail-overlay" onClick={onClose}>
+      <div className="fg-compare" onClick={e => e.stopPropagation()}>
+        <div className="fg-compare-head">
+          <div>
+            <div className="fg-detail-label">Compare</div>
+            <h2 className="fg-compare-title">{fonts.length} typefaces, side by side</h2>
+          </div>
+          <button className="fg-detail-close fg-compare-close" onClick={onClose}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="fg-compare-controls">
+          <input
+            className="fg-compare-input"
+            type="text"
+            value={text}
+            placeholder="Type to preview…"
+            onChange={e => setText(e.target.value)}
+          />
+          <div className="fg-compare-control">
+            <span>{size}px</span>
+            <input type="range" min="12" max="96" value={size} onChange={e => setSize(+e.target.value)} />
+          </div>
+          <div className="fg-compare-toggle">
+            <button className={weightMode === 'heading' ? 'active' : ''} onClick={() => setWeightMode('heading')}>Bold</button>
+            <button className={weightMode === 'regular' ? 'active' : ''} onClick={() => setWeightMode('regular')}>Regular</button>
+          </div>
+        </div>
+
+        <div className="fg-compare-cols" style={{ gridTemplateColumns: `repeat(${fonts.length}, minmax(220px, 1fr))` }}>
+          {fonts.map(font => {
+            const fam = css(font)
+            return (
+              <div key={font.family} className="fg-compare-col">
+                <div className="fg-compare-col-head">
+                  <button className="fg-compare-col-name" onClick={() => onSelect(font)} title="Open details">
+                    {font.family}
+                  </button>
+                  <button className="fg-compare-col-remove" onClick={() => onRemove(font)} title="Remove">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="fg-compare-meta">{font.category} · {font.variants.length} weight{font.variants.length !== 1 ? 's' : ''}</div>
+                <div className="fg-compare-sample" style={{ fontFamily: fam, fontSize: size, fontWeight: weightFor(font) }}>
+                  {text || PANGRAM}
+                </div>
+                <div className="fg-compare-charset" style={{ fontFamily: fam, fontWeight: weightFor(font) }}>
+                  <div>AaBbCcDd</div>
+                  <div>0123456789</div>
+                </div>
+                <button
+                  className="fg-compare-copy"
+                  onClick={() => {
+                    const url = `https://fonts.googleapis.com/css2?family=${font.family.replace(/ /g, '+')}:wght@${font.variants.join(';')}&display=swap`
+                    if (onCopy) onCopy(url)
+                  }}
+                >
+                  Copy import
+                </button>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -178,7 +278,22 @@ export default function FontGallery({ onCopy }) {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
+  const [compare, setCompare] = useState([])
+  const [showCompare, setShowCompare] = useState(false)
+  const MAX_COMPARE = 4
   const PAGE_SIZE = 48
+
+  const compareIds = useMemo(() => new Set(compare.map(f => f.family)), [compare])
+
+  const toggleCompare = useCallback((font) => {
+    setCompare(prev => {
+      if (prev.some(f => f.family === font.family)) {
+        return prev.filter(f => f.family !== font.family)
+      }
+      if (prev.length >= MAX_COMPARE) return prev
+      return [...prev, font]
+    })
+  }, [])
   const observerRef = useRef(null)
   const sentinelRef = useRef(null)
 
@@ -229,13 +344,13 @@ export default function FontGallery({ onCopy }) {
   }, [hasMore, paged.length])
 
   useEffect(() => {
-    if (selected) {
+    if (selected || showCompare) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
     }
     return () => { document.body.style.overflow = '' }
-  }, [selected])
+  }, [selected, showCompare])
 
   if (loading) {
     return (
@@ -322,11 +437,51 @@ export default function FontGallery({ onCopy }) {
             font={font}
             index={i}
             onSelect={setSelected}
+            inCompare={compareIds.has(font.family)}
+            onToggleCompare={toggleCompare}
           />
         ))}
       </div>
 
       {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+
+      {/* Compare tray */}
+      {compare.length > 0 && !showCompare && (
+        <div className="fg-compare-tray">
+          <div className="fg-compare-tray-chips">
+            <span className="fg-compare-tray-label">Comparing</span>
+            {compare.map(f => (
+              <button key={f.family} className="fg-compare-chip" onClick={() => toggleCompare(f)} title="Remove">
+                {f.family}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            ))}
+          </div>
+          <div className="fg-compare-tray-actions">
+            <button className="btn btn-s" onClick={() => setCompare([])}>Clear</button>
+            <button className="btn btn-accent btn-s" onClick={() => setShowCompare(true)} disabled={compare.length < 2}>
+              Compare {compare.length}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Compare view */}
+      {showCompare && compare.length > 0 && (
+        <CompareView
+          fonts={compare}
+          onClose={() => setShowCompare(false)}
+          onRemove={(f) => {
+            const next = compare.filter(c => c.family !== f.family)
+            setCompare(next)
+            if (next.length < 2) setShowCompare(false)
+          }}
+          onSelect={(f) => { setShowCompare(false); setSelected(f) }}
+          onCopy={onCopy}
+        />
+      )}
 
       {/* Detail modal */}
       {selected && (
