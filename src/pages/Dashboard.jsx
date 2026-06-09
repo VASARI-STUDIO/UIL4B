@@ -8,6 +8,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { setPendingImages } from '../utils/imageHandoff'
 import { loadFont } from '../utils/googleFonts'
+import { getRecentIcons, iconToSvg } from '../utils/recentIcons'
 import { UIKIT_GUIDE_KEY } from '../components/UIKitGuide'
 
 // Curated, characterful Google Fonts rotated through one-per-day for the
@@ -54,23 +55,6 @@ const BRAND_PALETTES = [
   { n: 'Figma', colors: ['#F24E1E', '#FF7262', '#A259FF', '#1ABCFE', '#0ACF83'] },
 ]
 
-const DESIGN_TIPS = [
-  { tip: 'Use no more than 2-3 typefaces in a single project for visual cohesion.', topic: 'Typography' },
-  { tip: 'The 60-30-10 rule: 60% dominant colour, 30% secondary, 10% accent.', topic: 'Colour' },
-  { tip: 'White space is not empty space — it gives your design room to breathe.', topic: 'Layout' },
-  { tip: 'Contrast ratio of at least 4.5:1 ensures text is readable for most users.', topic: 'Accessibility' },
-  { tip: 'Align elements to a consistent grid to create order and visual rhythm.', topic: 'Layout' },
-  { tip: 'Limit your palette to 5 colours max — constraints breed creativity.', topic: 'Colour' },
-  { tip: 'Body text should be 16px minimum on screen for comfortable reading.', topic: 'Typography' },
-  { tip: 'Group related items together — proximity implies relationship.', topic: 'Gestalt' },
-  { tip: 'Use a modular type scale (e.g. 1.25 ratio) for harmonious heading sizes.', topic: 'Typography' },
-  { tip: 'Test your colours in both light and dark mode before finalising.', topic: 'Colour' },
-  { tip: 'Icons should be consistent in style — do not mix outlined and filled.', topic: 'Imagery' },
-  { tip: 'The golden ratio (1.618) can guide proportions in layout and spacing.', topic: 'Layout' },
-  { tip: 'Warm colours advance, cool colours recede — use this for visual depth.', topic: 'Colour' },
-  { tip: 'Repetition of visual elements creates unity across your design system.', topic: 'Principles' },
-]
-
 const ICON_GLYPHS = [
   <path key="1" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
   <><circle key="1" cx="12" cy="12" r="10" /><path key="2" d="M8 14s1.5 2 4 2 4-2 4-2" /><line key="3" x1="9" y1="9" x2="9.01" y2="9" /><line key="4" x1="15" y1="9" x2="15.01" y2="9" /></>,
@@ -88,20 +72,12 @@ function ArrowIcon() {
   )
 }
 
-function getGridStyle(index, total) {
-  if (total === 1) return { gridColumn: 'span 6' }
-  if (total === 2) return { gridColumn: 'span 3' }
-  if (total === 3) {
-    if (index === 0) return { gridColumn: 'span 4', gridRow: 'span 2' }
-    return { gridColumn: 'span 2' }
-  }
-  if (total === 4) return { gridColumn: 'span 3' }
-  if (total === 5) {
-    if (index < 2) return { gridColumn: 'span 3' }
-    return { gridColumn: 'span 2' }
-  }
-  if (index < 2) return { gridColumn: 'span 3' }
-  if (index < 5) return { gridColumn: 'span 2' }
+// Bento spans on a 6-column grid. Colour Studio and the Font Gallery get a
+// prominent half-width cell; the Icon Library spans the full width so its
+// "quick access" recent-icon strip has room to breathe. Everything else (and
+// any tool the user pins themselves) defaults to a tidy half-width cell.
+function getGridStyle(tool) {
+  if (tool.id === 'icons') return { gridColumn: 'span 6' }
   return { gridColumn: 'span 3' }
 }
 
@@ -142,6 +118,30 @@ export default function Dashboard() {
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const dragDepth = useRef(0)
   const uploadRef = useRef(null)
+
+  // Recently-copied icons power the Icon Library "quick access" strip. Read once
+  // on mount (re-read on every dashboard visit since the route remounts).
+  const [recentIcons] = useState(getRecentIcons)
+  const [copiedIcon, setCopiedIcon] = useState(null)
+
+  // Re-copy a quick-access icon without leaving the dashboard. CDN icons are
+  // fetched on demand; embedded icons are rebuilt locally.
+  const copyIcon = async (e, icon) => {
+    e.preventDefault()
+    e.stopPropagation()
+    let svg = iconToSvg(icon)
+    if (!svg && icon.cdn) {
+      try {
+        svg = await fetch(`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`).then(r => r.text())
+      } catch { svg = null }
+    }
+    if (!svg) return
+    try {
+      await navigator.clipboard.writeText(svg)
+      setCopiedIcon(icon.key)
+      setTimeout(() => setCopiedIcon(prev => (prev === icon.key ? null : prev)), 1100)
+    } catch { /* clipboard blocked */ }
+  }
 
   const hasToolPayload = (e) => Array.from(e.dataTransfer.types || []).includes(TOOL_DRAG_TYPE)
 
@@ -221,11 +221,6 @@ export default function Dashboard() {
     ? null
     : fallbackPalette.n
 
-  const dailyTip = useMemo(() => {
-    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
-    return DESIGN_TIPS[dayOfYear % DESIGN_TIPS.length]
-  }, [now])
-
   // Font of the Day: index a curated list by the absolute day number so it
   // advances one font per calendar day and cycles through the whole list.
   const dayNumber = Math.floor(now.getTime() / 86_400_000)
@@ -297,6 +292,42 @@ export default function Dashboard() {
             <div className="bento-label">{tool.catLabel}</div>
             <h3>{tool.label}</h3>
             <p>{tool.description}</p>
+          </div>
+        </>
+      )
+    }
+    // Icon Library panel doubles as a "quick access" strip for the icons you've
+    // most recently copied — click one to copy it again without leaving home.
+    if (tool.id === 'icons') {
+      const stop = (e) => { e.preventDefault(); e.stopPropagation() }
+      return (
+        <>
+          <div className="bento-icons-quick" onClick={stop}>
+            {recentIcons.length > 0 ? (
+              recentIcons.slice(0, 10).map(ic => (
+                <button
+                  key={ic.key}
+                  type="button"
+                  className={`bento-icons-cell${copiedIcon === ic.key ? ' is-copied' : ''}`}
+                  title={`Copy ${ic.name}`}
+                  onClick={(e) => copyIcon(e, ic)}
+                >
+                  {ic.cdn ? (
+                    <img src={`https://api.iconify.design/${ic.pack}/${ic.name}.svg?width=24&height=24`} width="22" height="22" loading="lazy" alt={ic.name} style={{ filter: 'var(--icon-inv)' }} />
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill={ic.filled ? 'currentColor' : 'none'} stroke={ic.filled ? 'none' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={ic.d} /></svg>
+                  )}
+                  {copiedIcon === ic.key && <span className="bento-icons-copied">Copied</span>}
+                </button>
+              ))
+            ) : (
+              <span className="bento-icons-empty">Icons you copy will show here for quick access.</span>
+            )}
+          </div>
+          <div className="bento-cat-body">
+            <div className="bento-label">{recentIcons.length > 0 ? 'Quick access' : tool.catLabel}</div>
+            <h3>{tool.label}</h3>
+            <p>{recentIcons.length > 0 ? 'Recently copied — click to copy again, or open the full library.' : tool.description}</p>
           </div>
         </>
       )
@@ -422,7 +453,7 @@ export default function Dashboard() {
         onDrop={onZoneDrop}
       >
         {/* HERO — greeting + completion */}
-        <div className="bento-card bento-hero" style={{ gridColumn: 'span 4' }}>
+        <div className="bento-card bento-hero" style={{ gridColumn: 'span 3' }}>
           <div className="bento-hero-top">
             <div>
               <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr} · {timeStr}</div>
@@ -452,7 +483,7 @@ export default function Dashboard() {
         </div>
 
         {/* WORKSPACE STATS */}
-        <div className="bento-card bento-time" style={{ gridColumn: 'span 2' }}>
+        <div className="bento-card bento-time" style={{ gridColumn: 'span 3' }}>
           <div className="bento-label">{t('dash.localTime')}</div>
           <div className="bento-time-big">{timeStr}</div>
           <div className="bento-time-stats">
@@ -464,7 +495,7 @@ export default function Dashboard() {
 
         {/* PINNED TOOLS — dynamic bento cells */}
         {pinnedTools.map((tool, i) => {
-          const gridStyle = getGridStyle(i, pinnedTools.length)
+          const gridStyle = getGridStyle(tool)
           const catClass = CATEGORY_CLASS[tool.category] || 'bento-cat'
           const dndClass = `${dragIdx === i ? ' dragging' : ''}${dragOverIdx === i ? ' drag-over' : ''}`
           return (
@@ -506,12 +537,6 @@ export default function Dashboard() {
             <span>Drop to pin to your dashboard</span>
           </div>
         )}
-      </div>
-
-      {/* Daily tip */}
-      <div className="dash-tip">
-        <span className="dash-tip-badge">{dailyTip.topic}</span>
-        <span className="dash-tip-text">{dailyTip.tip}</span>
       </div>
 
       {/* Recent tools */}

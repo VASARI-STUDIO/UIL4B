@@ -615,13 +615,24 @@ a.bento-card:hover{border-color:var(--bh);transform:translateY(-2px)}
 .bento-typo:hover .bento-typo-h,.bento-typo:hover .bento-typo-b{color:var(--accent);transform:translateY(-2px)}
 .bento-typo:hover .bento-typo-b{transition-delay:.05s}
 
-/* Font of the Day preview (Font Gallery panel) */
-.bento-fotd{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 16px;min-height:96px;position:relative;text-align:center}
-.bento-fotd-tag{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);white-space:nowrap}
-.bento-fotd-sample{font-size:clamp(34px,3.4vw,46px);line-height:1;color:var(--t0);transition:color .3s,transform .3s}
-.bento-fotd-name{font-size:clamp(14px,1.4vw,17px);color:var(--t1);line-height:1.1}
+/* Font of the Day preview (Font Gallery panel) — sized larger so the typeface
+   has room to make an impression. */
+.bento-fotd{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px 16px 16px;min-height:150px;position:relative;text-align:center}
+.bento-fotd-tag{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);white-space:nowrap}
+.bento-fotd-sample{font-size:clamp(52px,6vw,76px);line-height:1;color:var(--t0);transition:color .3s,transform .3s}
+.bento-fotd-name{font-size:clamp(16px,1.7vw,21px);color:var(--t1);line-height:1.1}
 .bento-fotd-cat{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--t3)}
 .bento-typo:hover .bento-fotd-sample{color:var(--accent);transform:translateY(-2px)}
+
+/* Icon Library quick-access strip (recently copied icons) */
+.bento-icons-quick{flex:1;display:flex;flex-wrap:wrap;align-content:center;gap:8px;padding:16px;min-height:96px}
+.bento-icons-empty{align-self:center;font-size:12px;color:var(--t3);line-height:1.5;max-width:280px}
+.bento-icons-cell{position:relative;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--bg-2);border:1px solid var(--border);color:var(--t1);cursor:pointer;transition:all .2s cubic-bezier(.16,1,.3,1)}
+.bento-icons-cell:hover{background:var(--accent-bg);border-color:color-mix(in srgb,var(--accent) 24%,transparent);color:var(--accent);transform:translateY(-2px)}
+.bento-icons-cell.is-copied{border-color:var(--accent);color:var(--accent)}
+.bento-icons-cell svg{width:20px;height:20px}
+.bento-icons-cell img{width:22px;height:22px}
+.bento-icons-copied{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--bg-0);background:var(--accent);padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none}
 
 /* Imagery preview */
 .bento-img-preview{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:14px;min-height:96px}
@@ -644,11 +655,6 @@ a.bento-card:hover{border-color:var(--bh);transform:translateY(-2px)}
 .bento-docs:hover .bento-docs-row:nth-child(1) .bento-docs-num{color:var(--accent)}
 .bento-docs:hover .bento-docs-row:nth-child(2) .bento-docs-bar{background:color-mix(in srgb,var(--accent) 60%,var(--bg-3))}
 .bento-docs .bento-cat-body{margin-top:0;padding:0;flex:1;min-width:0}
-
-/* Design tip banner */
-.dash-tip{display:flex;align-items:baseline;gap:10px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;line-height:1.5;box-shadow:var(--warm-shadow);flex-shrink:0}
-.dash-tip-badge{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-bg);padding:2px 8px;border-radius:var(--radius-s);border:1px solid color-mix(in srgb,var(--accent) 15%,transparent);flex-shrink:0;white-space:nowrap}
-.dash-tip-text{color:var(--t2);font-size:12px}
 
 /* Section titles */
 .dash-section-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
@@ -1755,6 +1761,23 @@ img,svg,video{max-width:100%;height:auto}
 .landing-demo-shuffle:active{transform:scale(.95)}
 .landing-demo-input{padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--t0);font-size:13px;font-family:var(--font);width:100%}
 .landing-demo-input:focus{outline:none;border-color:var(--accent)}
+
+/* Typography pairing demo — labelled heading/body so visitors see what each
+   font does and why the pair works. */
+.landing-demo-type{gap:14px}
+.landing-type-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.landing-type-tab{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .2s}
+.landing-type-tab span{color:var(--t3);font-weight:500}
+.landing-type-tab:hover{border-color:var(--bh);color:var(--t1)}
+.landing-type-tab.is-active{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
+.landing-type-tab.is-active span{color:var(--accent)}
+.landing-type-stage{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;min-height:140px}
+.landing-type-row{display:flex;flex-direction:column;gap:5px}
+.landing-type-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.landing-type-h{font-size:clamp(28px,3.6vw,42px);line-height:1.05;color:var(--t0);transition:font-family .3s;word-break:break-word}
+.landing-type-b{font-size:14px;line-height:1.65;color:var(--t1);transition:font-family .3s;margin:0}
+.landing-type-note{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--t2);line-height:1.45}
+.landing-type-note::before{content:"";flex-shrink:0;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 
 /* Scroll reveal */
 .landing-reveal{opacity:0;transform:translateY(22px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
