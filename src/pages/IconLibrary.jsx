@@ -3,6 +3,16 @@ import { useI18n } from '../contexts/I18nContext'
 
 const API_LIMIT = 999
 
+// Multi-colour Iconify collections (brand logos, flags, flat/emoji art) must not
+// be colour-inverted in dark mode, or their colours break. Only monochrome icons
+// get the --icon-inv treatment so black glyphs stay visible on dark backgrounds.
+const COLORED_PACKS = new Set([
+  'logos', 'flat-color-icons', 'fxemoji', 'noto', 'noto-v1', 'twemoji', 'emojione',
+  'emojione-v1', 'openmoji', 'fluent-emoji', 'fluent-emoji-flat', 'circle-flags',
+  'flag', 'flagpack', 'cif', 'skill-icons', 'devicon', 'vscode-icons', 'token-branded',
+])
+const iconFilter = (pack) => (COLORED_PACKS.has(pack) ? 'none' : 'var(--icon-inv)')
+
 export default function IconLibrary({ onCopy }) {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
@@ -143,13 +153,37 @@ export default function IconLibrary({ onCopy }) {
             <div className="seg-label">Pack</div>
             <select style={{ width: '100%' }} value={pack} onChange={handlePackChange}>
               <option value="">All packs</option>
-              <option value="tabler">Tabler</option>
-              <option value="lucide">Lucide</option>
-              <option value="iconoir">Iconoir</option>
-              <option value="heroicons">Heroicons</option>
-              <option value="simple-icons">Simple Icons</option>
-              <option value="ph">Phosphor</option>
-              <option value="mdi">Material Design</option>
+              <optgroup label="Interface">
+                <option value="tabler">Tabler</option>
+                <option value="lucide">Lucide</option>
+                <option value="iconoir">Iconoir</option>
+                <option value="heroicons">Heroicons</option>
+                <option value="ph">Phosphor</option>
+                <option value="mdi">Material Design</option>
+                <option value="material-symbols">Material Symbols</option>
+                <option value="solar">Solar</option>
+                <option value="fa6-solid">Font Awesome</option>
+                <option value="carbon">Carbon</option>
+              </optgroup>
+              <optgroup label="Brand logos">
+                <option value="simple-icons">Simple Icons</option>
+                <option value="logos">Logos (colour)</option>
+                <option value="devicon">Devicon</option>
+                <option value="skill-icons">Skill Icons</option>
+              </optgroup>
+              <optgroup label="Flags">
+                <option value="circle-flags">Circle Flags</option>
+                <option value="flag">Flag Icons</option>
+                <option value="flagpack">Flagpack</option>
+                <option value="cif">Currency Flags</option>
+              </optgroup>
+              <optgroup label="Flat & emoji">
+                <option value="flat-color-icons">Flat Color Icons</option>
+                <option value="twemoji">Twemoji</option>
+                <option value="noto">Noto Emoji</option>
+                <option value="fluent-emoji">Fluent Emoji</option>
+                <option value="openmoji">OpenMoji</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -161,7 +195,7 @@ export default function IconLibrary({ onCopy }) {
                 <img
                   src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`}
                   width="24" height="24"
-                  style={{ filter: 'var(--icon-inv)' }}
+                  style={{ filter: iconFilter(icon.pack) }}
                   loading="lazy"
                   alt={icon.name}
                 />
