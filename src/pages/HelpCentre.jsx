@@ -5,13 +5,13 @@ const TABS = ['about', 'faq', 'support']
 
 const faqs = [
   { q: 'What is UIL4B?', a: 'UIL4B (pronounced "UI LAB") is a free, community-driven design toolkit that combines frequently-used graphic design tools into one place. It includes colour systems, typography tools, image converters, AI generators, prompt libraries, and more, all designed to streamline your web design workflow.' },
-  { q: 'Is UIL4B free to use?', a: 'Yes, UIL4B is completely free for everyone. It started as a personal project and grew into a community resource. There are no paid tiers or paywalls. If you find it helpful and want to support development, you can buy the creator a coffee at buymeacoffee.com/dylan.coleman.' },
+  { q: 'Is UIL4B free to use?', a: 'UIL4B offers a generous free tier with all core tools and limited daily AI generations. For higher limits, quality AI models, and Pro-only features, you can upgrade to UIL4B Pro from $4.99 AUD/month.' },
   { q: 'Do I need an account to use UIL4B?', a: 'No. You can use all the tools without creating an account. Signing in with Google is optional and unlocks additional features like saving projects and syncing your preferences across devices.' },
   { q: 'What tools are included?', a: 'UIL4B includes a wide range of tools: a full Colour Studio (palette builder, tint/shade generator, gradient creator, contrast checker, and export), Type Scale calculator, Font Matcher, Font Gallery, Icon Library, Image Converter, Video to Frames extractor, AI Alt Text Generator, Prompt Library, Emoji Library, Design Reference guides, and more.' },
   { q: 'How does the colour system work?', a: 'The Colour Studio lets you build complete colour palettes from scratch or from a base colour. You can generate tints and shades, create gradients, check contrast ratios for accessibility compliance (WCAG), and export your palette in multiple formats including CSS variables, Tailwind config, and JSON.' },
   { q: 'Can I export my designs?', a: 'Yes. Most tools support exporting your work. Colour palettes can be exported as CSS, Tailwind, JSON, or image files. Typography scales can be copied as CSS. Projects can be saved and exported as JSON backups from the Settings page.' },
   { q: 'Is my data private and secure?', a: 'Absolutely. UIL4B stores your preferences and projects locally in your browser using localStorage. There are no third-party analytics trackers, no ad networks, and no data sold to anyone. When you sign in, data syncs securely through Firebase. You can export or delete your data at any time from the Settings page.' },
-  { q: 'How can I support the project?', a: 'The best way to support UIL4B is to use it and share it with others. If you want to contribute financially, you can buy the creator a coffee at buymeacoffee.com/dylan.coleman. You can also contribute by submitting feedback, reporting bugs, or suggesting new features through the Support tab.' },
+  { q: 'How can I support the project?', a: 'The best way to support UIL4B is to upgrade to Pro or share it with others. You can also contribute by submitting feedback, reporting bugs, or suggesting new features through the Support tab.' },
   { q: 'What browsers are supported?', a: 'UIL4B works in all modern browsers including Chrome, Firefox, Safari, and Edge. It is built as a responsive web application, so it also works on tablets and mobile devices, though the full desktop experience provides the most complete workflow.' },
   { q: 'What AI features are available, and are there usage limits?', a: 'UIL4B includes AI-powered tools like the Alt Text Generator (which creates descriptive alt text for images) and the Prompt Library (a curated collection of AI prompts for design tasks). AI features that run locally in your browser have no usage limits. Features that rely on external AI services may have reasonable rate limits to keep the service free and available for everyone.' },
 ]
@@ -51,13 +51,13 @@ function AboutTab() {
           <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)' }}>Support the Project</span>
         </div>
         <p style={{ fontSize: 13.5, color: 'var(--t1)', lineHeight: 1.75, marginBottom: 18 }}>
-          UIL4B is free and always will be. If you find it useful and want to support continued development, you can buy Dylan a coffee. Every contribution helps keep the toolkit maintained, improved, and accessible to everyone.
+          Upgrade to Pro for higher AI generation limits, quality models, and exclusive features. Your subscription directly supports continued development and keeps UIL4B accessible to everyone.
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer" className="btn btn-accent" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-            Buy Me a Coffee
-          </a>
+          <NavLink to="/settings" className="btn btn-accent" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Upgrade to Pro
+          </NavLink>
           <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer" className="btn" style={{ display: 'inline-flex', gap: 8, padding: '10px 24px' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" /></svg>
             View Portfolio

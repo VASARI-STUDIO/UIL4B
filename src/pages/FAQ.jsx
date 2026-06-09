@@ -7,7 +7,7 @@ const faqs = [
   },
   {
     q: 'Is UIL4B free to use?',
-    a: 'Yes, UIL4B is completely free for everyone. It started as a personal project and grew into a community resource. There are no paid tiers or paywalls. If you find it helpful and want to support development, you can buy the creator a coffee at buymeacoffee.com/dylan.coleman.',
+    a: 'UIL4B offers a generous free tier with access to all core tools and limited daily AI generations. For higher limits, quality AI models, and Pro-only features, you can upgrade to UIL4B Pro from $4.99 AUD/month.',
   },
   {
     q: 'Do I need an account to use UIL4B?',
@@ -31,7 +31,7 @@ const faqs = [
   },
   {
     q: 'How can I support the project?',
-    a: 'The best way to support UIL4B is to use it and share it with others. If you want to contribute financially, you can buy the creator a coffee at buymeacoffee.com/dylan.coleman. You can also contribute by submitting feedback, reporting bugs, or suggesting new features through the Feedback page.',
+    a: 'The best way to support UIL4B is to upgrade to Pro or share it with others. You can also contribute by submitting feedback, reporting bugs, or suggesting new features through the Feedback page.',
   },
   {
     q: 'Can I contribute to the community?',
@@ -51,7 +51,7 @@ const faqs = [
   },
   {
     q: 'What AI features are available, and are there usage limits?',
-    a: 'UIL4B includes AI-powered tools like the Alt Text Generator (which creates descriptive alt text for images) and the Prompt Library (a curated collection of AI prompts for design tasks). AI features that run locally in your browser have no usage limits. Features that rely on external AI services may have reasonable rate limits to keep the service free and available for everyone.',
+    a: 'UIL4B includes AI-powered tools like the Alt Text Generator (which creates descriptive alt text for images) and the Prompt Library (a curated collection of AI prompts for design tasks). Free-tier users get a limited number of daily AI generations using efficient models. Pro subscribers get higher daily limits and access to quality AI models.',
   },
 ]
 
