@@ -8,6 +8,16 @@ import { loadFont } from '../utils/googleFonts'
 
 const VISITED_KEY = 'vs-visited'
 
+// Optional looping background animation for the hero. Drop a video file in
+// /public (e.g. /hero-loop.webm) and set its path here — it will sit behind the
+// hero copy and parallax with the cursor. Leave empty to use the animated
+// accent-orb field instead. Provide a .webm first (smaller) with an .mp4
+// fallback by listing both, comma-separated, in HERO_LOOP_SOURCES.
+const HERO_LOOP_SOURCES = [
+  // { src: '/hero-loop.webm', type: 'video/webm' },
+  // { src: '/hero-loop.mp4', type: 'video/mp4' },
+]
+
 // Reveal-on-scroll helper — fades/slides sections in as they enter the viewport.
 function useReveal() {
   const ref = useRef(null)
@@ -502,6 +512,33 @@ export default function Landing() {
     navigate('/icons')
   }
 
+  // Hero hover parallax — track the cursor over the hero and expose its position
+  // as --px/--py (each -0.5…0.5) on the wrapper. The background layers read those
+  // vars and shift at different depths for a tactile, high-quality feel. Updates
+  // are throttled to one per animation frame and skipped under reduced-motion.
+  const heroRef = useRef(null)
+  const heroRaf = useRef(0)
+  const onHeroMove = useCallback((e) => {
+    const el = heroRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const px = (e.clientX - r.left) / r.width - 0.5
+    const py = (e.clientY - r.top) / r.height - 0.5
+    cancelAnimationFrame(heroRaf.current)
+    heroRaf.current = requestAnimationFrame(() => {
+      el.style.setProperty('--px', px.toFixed(4))
+      el.style.setProperty('--py', py.toFixed(4))
+    })
+  }, [])
+  const onHeroLeave = useCallback(() => {
+    cancelAnimationFrame(heroRaf.current)
+    const el = heroRef.current
+    if (!el) return
+    el.style.setProperty('--px', '0')
+    el.style.setProperty('--py', '0')
+  }, [])
+  useEffect(() => () => cancelAnimationFrame(heroRaf.current), [])
+
   return (
     <div className="landing">
       <header className="landing-nav">
@@ -526,7 +563,24 @@ export default function Landing() {
       </header>
 
       <main className="landing-main">
-        {/* Hero */}
+        {/* Hero — hover parallax background reacts to the cursor */}
+        <div
+          className="landing-hero-wrap"
+          ref={heroRef}
+          onMouseMove={onHeroMove}
+          onMouseLeave={onHeroLeave}
+        >
+          <div className="landing-hero-bg" aria-hidden="true">
+            {HERO_LOOP_SOURCES.length > 0 && (
+              <video className="landing-hero-media" autoPlay loop muted playsInline preload="auto">
+                {HERO_LOOP_SOURCES.map(s => <source key={s.src} src={s.src} type={s.type} />)}
+              </video>
+            )}
+            <span className="landing-hero-orb landing-hero-orb-1" />
+            <span className="landing-hero-orb landing-hero-orb-2" />
+            <span className="landing-hero-orb landing-hero-orb-3" />
+            <span className="landing-hero-glow" />
+          </div>
         <section className="landing-hero">
           <span className="landing-eyebrow">A design toolkit for designers and developers</span>
           <h1 className="landing-title">
@@ -552,6 +606,7 @@ export default function Landing() {
               : 'No signup required to explore. Free tier included.'}
           </span>
         </section>
+        </div>
 
         {/* Category cards */}
         <Reveal className="landing-cats">
