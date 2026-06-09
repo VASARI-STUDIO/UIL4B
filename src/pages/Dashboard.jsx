@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { localiseTools, localiseCategories } from '../data/tools'
 import { useWorkspace, TOOL_DRAG_TYPE } from '../contexts/WorkspaceContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { setPendingImages } from '../utils/imageHandoff'
+import { UIKIT_GUIDE_KEY } from '../components/UIKitGuide'
 
 const BRAND_PALETTES = [
   { n: 'Google', colors: ['#4285F4', '#DB4437', '#F4B400', '#0F9D58', '#1A1A1A'] },
@@ -82,7 +85,23 @@ export default function Dashboard() {
   const { pinned, recent, addPinned, reorderPinned } = useWorkspace()
   const { t } = useI18n()
   const { design } = useProject()
+  const { plan, isPro } = useSubscription()
+  const navigate = useNavigate()
   const [now, setNow] = useState(() => new Date())
+  const freePerDay = plan?.limits?.['ai-default'] ?? 40
+
+  // Launch the guided UI-kit builder starting at the colour palette.
+  const buildUIKit = () => {
+    try { sessionStorage.setItem(UIKIT_GUIDE_KEY, '1') } catch { /* ignore */ }
+    navigate('/color')
+  }
+
+  // Quick-upload from the Image Converter tile — stash the files and jump in.
+  const quickUpload = (files) => {
+    if (!files?.length) return
+    setPendingImages(files)
+    navigate('/imgconvert')
+  }
 
   // Drag-and-drop: pin tools from the sidebar by dropping them here, and
   // reorder existing bento cells by dragging one over another.
@@ -90,6 +109,7 @@ export default function Dashboard() {
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const dragDepth = useRef(0)
+  const uploadRef = useRef(null)
 
   const hasToolPayload = (e) => Array.from(e.dataTransfer.types || []).includes(TOOL_DRAG_TYPE)
 
@@ -174,18 +194,6 @@ export default function Dashboard() {
     return DESIGN_TIPS[dayOfYear % DESIGN_TIPS.length]
   }, [now])
 
-  const completionStatus = useMemo(() => {
-    const sections = [
-      { key: 'colours', label: 'Colours', done: (design?.palette?.colors?.length || 0) > 1 },
-      { key: 'typography', label: 'Fonts', done: design?.fonts?.heading?.family !== 'Inter' || design?.fonts?.body?.family !== 'Inter' },
-      { key: 'typeScale', label: 'Scale', done: design?.typeScale?.ratio !== 1.25 || design?.typeScale?.base !== 16 },
-      { key: 'tints', label: 'Tints', done: (design?.tints?.scale?.length || 0) > 0 },
-      { key: 'gradients', label: 'Gradients', done: design?.gradient?.stops?.some(s => s.color != null) || false },
-    ]
-    const doneCount = sections.filter(s => s.done).length
-    return { sections, doneCount, total: sections.length, pct: Math.round((doneCount / sections.length) * 100) }
-  }, [design])
-
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(id)
@@ -219,6 +227,39 @@ export default function Dashboard() {
   }, [pinned, lTools, lCats])
 
   const renderPreview = (tool) => {
+    // Image Converter gets a working quick-upload dropzone instead of a static graphic.
+    if (tool.id === 'imgconvert') {
+      const stop = (e) => { e.preventDefault(); e.stopPropagation() }
+      return (
+        <>
+          <div
+            className="bento-img-quick"
+            onClick={(e) => { stop(e); uploadRef.current?.click() }}
+            onDragOver={stop}
+            onDrop={(e) => { stop(e); quickUpload(e.dataTransfer.files) }}
+          >
+            <input
+              ref={uploadRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => quickUpload(e.target.files)}
+            />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span>Drop or click to convert</span>
+          </div>
+          <div className="bento-cat-body">
+            <div className="bento-label">{tool.catLabel}</div>
+            <h3>{tool.label}</h3>
+            <p>{tool.description}</p>
+          </div>
+        </>
+      )
+    }
     switch (tool.category) {
       case 'color':
         return (
@@ -326,25 +367,26 @@ export default function Dashboard() {
               <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr} · {timeStr}</div>
               <h1 className="bento-hero-title">{greeting}, <em>{firstName}</em></h1>
             </div>
+            <button type="button" className="bento-hero-cta" onClick={buildUIKit}>
+              <span>Build a UI Kit</span>
+              <ArrowIcon />
+            </button>
+          </div>
+          <div className="bento-hero-foot">
             {lastTool && (
-              <NavLink to={lastTool.path} className="bento-hero-cta">
-                <span>{t('dash.continueWith', { name: lastTool.label })}</span>
+              <NavLink to={lastTool.path} className="bento-hero-resume">
+                <span className="bento-pulse" />
+                {t('dash.continueWith', { name: lastTool.label })}
                 <ArrowIcon />
               </NavLink>
             )}
-          </div>
-          <div className="bento-hero-foot">
-            <div className="bento-hero-completion">
-              <div className="bento-hero-completion-bar">
-                <div style={{ width: `${completionStatus.pct}%` }} />
-              </div>
-              <span className="bento-hero-completion-label">{completionStatus.doneCount}/{completionStatus.total} design tokens</span>
-            </div>
-            <div className="bento-hero-checks">
-              {completionStatus.sections.map(s => (
-                <span key={s.key} className={`bento-hero-check${s.done ? ' done' : ''}`}>{s.done ? '✓' : '·'} {s.label}</span>
-              ))}
-            </div>
+            <span className="bento-hero-tokens">
+              {isPro ? (
+                <><strong>{freePerDay.toLocaleString()}</strong> AI generations a day</>
+              ) : (
+                <><strong>{freePerDay}</strong> free AI generations a day</>
+              )}
+            </span>
           </div>
         </div>
 
