@@ -10,12 +10,12 @@ const PINNED_KEY = 'vs-pinned-tools'
 const MAX_RECENT = 6
 // The dashboard ships with Colour Studio and the Font Gallery (Font of the Day)
 // pinned by default, alongside the image converter and resources.
-const DEFAULT_PINNED = ['color-studio', 'fontgallery', 'imgconvert', 'icons', 'resources']
+const DEFAULT_PINNED = ['color-studio', 'fontgallery', 'icons', 'imgconvert', 'resources']
 // Tools that should be back-filled into existing users' boards once, so an
 // added default (the Font Gallery) shows up without wiping their layout.
 const PIN_VERSION_KEY = 'vs-pinned-v'
-const PIN_VERSION = '2'
-const PIN_BACKFILL = ['fontgallery']
+const PIN_VERSION = '3'
+const PIN_BACKFILL = ['color-studio', 'fontgallery']
 const WorkspaceContext = createContext()
 
 function loadList(key, fallback = []) {

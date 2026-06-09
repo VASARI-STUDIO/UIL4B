@@ -228,9 +228,9 @@ function PaletteDemo() {
 }
 
 const FONT_PAIRS = [
-  { heading: 'Playfair Display', body: 'Source Sans 3', hWeight: 700, bWeight: 400 },
-  { heading: 'Space Grotesk', body: 'Inter', hWeight: 600, bWeight: 400 },
-  { heading: 'DM Serif Display', body: 'DM Sans', hWeight: 400, bWeight: 400 },
+  { heading: 'Playfair Display', body: 'Source Sans 3', hWeight: 700, bWeight: 400, note: 'Editorial high-contrast serif over a clean, neutral sans.' },
+  { heading: 'Space Grotesk', body: 'Inter', hWeight: 600, bWeight: 400, note: 'Geometric display sans with a workhorse UI body — modern and technical.' },
+  { heading: 'DM Serif Display', body: 'DM Sans', hWeight: 400, bWeight: 400, note: 'A serif and sans from the same family — effortless harmony.' },
 ]
 
 function FontDemo() {
@@ -249,42 +249,43 @@ function FontDemo() {
   const bodyFam = `'${p.body}', system-ui, sans-serif`
 
   return (
-    <div className="landing-demo" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', gap: 6 }}>
+    <div className="landing-demo landing-demo-type">
+      <div className="landing-type-tabs">
         {FONT_PAIRS.map((fp, i) => (
-          <button key={i} onClick={() => setPair(i)} style={{
-            padding: '5px 12px',
-            borderRadius: 'var(--radius-s)',
-            border: '1px solid',
-            borderColor: pair === i ? 'var(--accent)' : 'var(--border)',
-            background: pair === i ? 'var(--accent-bg)' : 'transparent',
-            color: pair === i ? 'var(--accent)' : 'var(--t2)',
-            fontSize: 10,
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'var(--font)',
-            transition: 'all .2s',
-          }}>{fp.heading.split(' ')[0]}</button>
+          <button
+            key={i}
+            type="button"
+            className={`landing-type-tab${pair === i ? ' is-active' : ''}`}
+            onClick={() => setPair(i)}
+          >
+            {fp.heading.split(' ')[0]} <span>×</span> {fp.body.split(' ')[0]}
+          </button>
         ))}
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, minHeight: 100 }}>
-        <div style={{ fontFamily: headingFam, fontWeight: p.hWeight, fontSize: 'clamp(26px,3.4vw,40px)', lineHeight: 1.1, color: 'var(--t0)', transition: 'font-family .3s', wordBreak: 'break-word' }}>
-          {word || 'Typography'}
+
+      <div className="landing-type-stage">
+        <div className="landing-type-row">
+          <span className="landing-type-role">Heading — {p.heading} {p.hWeight}</span>
+          <div className="landing-type-h" style={{ fontFamily: headingFam, fontWeight: p.hWeight }}>
+            {word || 'Typography'}
+          </div>
         </div>
-        <div style={{ fontFamily: bodyFam, fontWeight: p.bWeight, fontSize: 14, lineHeight: 1.6, color: 'var(--t1)', transition: 'font-family .3s' }}>
-          Good type pairing balances contrast and harmony between headline and body.
+        <div className="landing-type-row">
+          <span className="landing-type-role">Body — {p.body} {p.bWeight}</span>
+          <p className="landing-type-b" style={{ fontFamily: bodyFam, fontWeight: p.bWeight }}>
+            Body copy carries the reading — it should stay comfortable and even-toned beneath an expressive headline.
+          </p>
         </div>
       </div>
+
       <input
         type="text"
         value={word}
         onChange={e => setWord(e.target.value)}
-        placeholder="Type to preview…"
+        placeholder="Type to preview the headline…"
         className="landing-demo-input"
       />
-      <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)', fontWeight: 600 }}>
-        {p.heading} / {p.body}
-      </div>
+      <div className="landing-type-note">{p.note}</div>
     </div>
   )
 }
