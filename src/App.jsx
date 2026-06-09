@@ -95,8 +95,10 @@ export default function App() {
     return <Landing />
   }
   if (location.pathname === '/') {
-    if (authLoading) return null
-    if (authUser) return <Navigate to="/dashboard" replace />
+    // Render the sales page immediately — first paint must not depend on Firebase
+    // auth resolving (otherwise a slow/misconfigured auth init leaves a blank page).
+    // Once we positively know the visitor is logged in, send them to their dashboard.
+    if (!authLoading && authUser) return <Navigate to="/dashboard" replace />
     return <Landing />
   }
 
