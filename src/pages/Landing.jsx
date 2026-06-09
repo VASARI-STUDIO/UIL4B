@@ -16,7 +16,7 @@ const FEATURES = [
   },
   {
     title: 'Icons, images and AI tools',
-    body: 'Search thousands of icons via Iconify, convert and compress images locally, generate accessible alt text with Gemini, and save AI prompt templates for reuse.',
+    body: 'Search thousands of icons via Iconify, convert and compress images locally, generate accessible alt text with AI, and save AI prompt templates for reuse.',
   },
   {
     title: 'Design tokens at your fingertips',
