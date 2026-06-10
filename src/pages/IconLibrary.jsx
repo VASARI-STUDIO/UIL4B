@@ -5,15 +5,276 @@ import { addRecentIcon } from '../utils/recentIcons'
 
 const API_LIMIT = 999
 
-// Multi-colour Iconify collections (brand logos, flags, flat/emoji art) must not
-// be colour-inverted in dark mode, or their colours break. Only monochrome icons
-// get the --icon-inv treatment so black glyphs stay visible on dark backgrounds.
+const API_HOSTS = [
+  'https://api.iconify.design',
+  'https://api.simplesvg.com',
+  'https://api.unisvg.com',
+]
+
 const COLORED_PACKS = new Set([
   'logos', 'flat-color-icons', 'fxemoji', 'noto', 'noto-v1', 'twemoji', 'emojione',
   'emojione-v1', 'openmoji', 'fluent-emoji', 'fluent-emoji-flat', 'circle-flags',
   'flag', 'flagpack', 'cif', 'skill-icons', 'devicon', 'vscode-icons', 'token-branded',
 ])
 const iconFilter = (pack) => (COLORED_PACKS.has(pack) ? 'none' : 'var(--icon-inv)')
+
+function buildSvgUrl(host, pack, name, params = {}) {
+  let url = `${host}/${pack}/${name}.svg`
+  const parts = []
+  if (params.size) { parts.push(`width=${params.size}`, `height=${params.size}`) }
+  if (params.color) parts.push(`color=${encodeURIComponent(params.color)}`)
+  if (params.rotate) parts.push(`rotate=${params.rotate}deg`)
+  const flipVal = [params.flipH && 'horizontal', params.flipV && 'vertical'].filter(Boolean).join(',')
+  if (flipVal) parts.push(`flip=${flipVal}`)
+  if (params.download) parts.push('download=1')
+  if (parts.length) url += '?' + parts.join('&')
+  return url
+}
+
+async function fetchWithFallback(path, timeout = 4000) {
+  for (const host of API_HOSTS) {
+    try {
+      const r = await fetch(`${host}${path}`, { signal: AbortSignal.timeout(timeout) })
+      if (r.ok) return r
+    } catch { /* try next host */ }
+  }
+  throw new Error('All API hosts failed')
+}
+
+async function fetchSvgText(pack, name, params = {}) {
+  for (const host of API_HOSTS) {
+    try {
+      const url = buildSvgUrl(host, pack, name, params)
+      const r = await fetch(url, { signal: AbortSignal.timeout(3000) })
+      if (r.ok) return await r.text()
+    } catch { /* try next host */ }
+  }
+  throw new Error('Failed to fetch icon SVG')
+}
+
+function IconDetail({ icon, onClose, onCopy }) {
+  const [size, setSize] = useState(48)
+  const [color, setColor] = useState('')
+  const [colorInput, setColorInput] = useState('')
+  const [rotate, setRotate] = useState(0)
+  const [flipH, setFlipH] = useState(false)
+  const [flipV, setFlipV] = useState(false)
+  const [svgCode, setSvgCode] = useState('')
+  const [copied, setCopied] = useState('')
+  const [tab, setTab] = useState('svg')
+  const fetchRef = useRef(null)
+
+  const isCdn = icon.cdn
+  const pack = isCdn ? icon.pack : null
+  const name = icon.name
+  const isColored = pack && COLORED_PACKS.has(pack)
+
+  const transforms = []
+  if (rotate) transforms.push(`rotate(${rotate}deg)`)
+  if (flipH) transforms.push('scaleX(-1)')
+  if (flipV) transforms.push('scaleY(-1)')
+  const transformStyle = transforms.length ? transforms.join(' ') : undefined
+
+  useEffect(() => {
+    clearTimeout(fetchRef.current)
+    fetchRef.current = setTimeout(() => {
+      if (!isCdn) {
+        const c = color || 'currentColor'
+        const svg = icon.filled
+          ? `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${c}"><path d="${icon.d}"/></svg>`
+          : `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${icon.d}"/></svg>`
+        setSvgCode(svg)
+        return
+      }
+      const p = { size }
+      if (color) p.color = color
+      if (rotate) p.rotate = rotate
+      if (flipH) p.flipH = true
+      if (flipV) p.flipV = true
+      fetchSvgText(pack, name, p)
+        .then(setSvgCode)
+        .catch(() => setSvgCode('<!-- Failed to load SVG -->'))
+    }, 350)
+    return () => clearTimeout(fetchRef.current)
+  }, [isCdn, icon, pack, name, size, color, rotate, flipH, flipV])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  const previewParams = { size }
+  if (color && !isColored) previewParams.color = color
+  if (rotate) previewParams.rotate = rotate
+  if (flipH) previewParams.flipH = true
+  if (flipV) previewParams.flipV = true
+  const previewUrl = isCdn ? buildSvgUrl(API_HOSTS[0], pack, name, previewParams) : null
+
+  const cssLines = [`width: ${size}px;`, `height: ${size}px;`]
+  if (color) cssLines.push(`color: ${color};`)
+  if (transforms.length) cssLines.push(`transform: ${transforms.join(' ')};`)
+  const cssCode = `.icon {\n  ${cssLines.join('\n  ')}\n}`
+
+  const iconUrl = isCdn ? buildSvgUrl(API_HOSTS[0], pack, name, previewParams) : ''
+
+  const doCopy = (text, label) => {
+    navigator.clipboard.writeText(text)
+    setCopied(label)
+    setTimeout(() => setCopied(''), 2000)
+  }
+
+  const handleColorInput = (val) => {
+    setColorInput(val)
+    if (!val) { setColor(''); return }
+    if (/^#[0-9a-f]{3,8}$/i.test(val)) setColor(val)
+  }
+
+  return (
+    <div className="fg-detail-overlay" onClick={onClose}>
+      <div className="il-detail" onClick={e => e.stopPropagation()}>
+        <button className="fg-detail-close" onClick={onClose}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="il-detail-preview">
+          {isCdn ? (
+            <img
+              src={previewUrl}
+              width={size}
+              height={size}
+              alt={name}
+              style={{ filter: !color && !isColored ? iconFilter(pack) : 'none' }}
+            />
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              width={size}
+              height={size}
+              fill={icon.filled ? (color || 'currentColor') : 'none'}
+              stroke={icon.filled ? 'none' : (color || 'currentColor')}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ transform: transformStyle }}
+            >
+              <path d={icon.d} />
+            </svg>
+          )}
+        </div>
+
+        <div className="fg-detail-tags">
+          <span className="fg-tag">{pack || 'embedded'}</span>
+          <span className="fg-tag">{name}</span>
+          {isCdn && <span className="fg-tag">CDN</span>}
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Customize</div>
+          <div className="il-detail-controls">
+            <div className="il-detail-row">
+              <label>Size</label>
+              <input type="range" min="12" max="128" value={size} onChange={e => setSize(+e.target.value)} />
+              <span className="il-detail-value">{size}px</span>
+            </div>
+            <div className="il-detail-row">
+              <label>Color</label>
+              <input
+                type="color"
+                value={color || '#000000'}
+                onChange={e => { setColor(e.target.value); setColorInput(e.target.value) }}
+              />
+              <input
+                type="text"
+                className="il-detail-color-input"
+                value={colorInput}
+                placeholder="currentColor"
+                onChange={e => handleColorInput(e.target.value)}
+              />
+              {color && (
+                <button className="il-detail-reset" onClick={() => { setColor(''); setColorInput('') }} title="Reset color">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="il-detail-row">
+              <label>Rotate</label>
+              <div className="il-detail-seg">
+                {[0, 90, 180, 270].map(deg => (
+                  <button key={deg} className={rotate === deg ? 'active' : ''} onClick={() => setRotate(deg)}>
+                    {deg}°
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="il-detail-row">
+              <label>Flip</label>
+              <div className="il-detail-seg">
+                <button className={flipH ? 'active' : ''} onClick={() => setFlipH(!flipH)}>Horizontal</button>
+                <button className={flipV ? 'active' : ''} onClick={() => setFlipV(!flipV)}>Vertical</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Code</div>
+          <div className="il-detail-code-tabs">
+            <button className={tab === 'svg' ? 'active' : ''} onClick={() => setTab('svg')}>SVG</button>
+            <button className={tab === 'css' ? 'active' : ''} onClick={() => setTab('css')}>CSS</button>
+            {isCdn && <button className={tab === 'url' ? 'active' : ''} onClick={() => setTab('url')}>URL</button>}
+          </div>
+          <div
+            className="il-detail-code"
+            onClick={() => doCopy(tab === 'svg' ? svgCode : tab === 'css' ? cssCode : iconUrl, 'code')}
+          >
+            <span className="il-detail-code-hint">{copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
+            {tab === 'svg' && svgCode}
+            {tab === 'css' && cssCode}
+            {tab === 'url' && iconUrl}
+          </div>
+        </div>
+
+        <div className="fg-detail-actions">
+          <button className="btn btn-accent" onClick={() => { doCopy(svgCode, 'svg'); if (onCopy) onCopy(svgCode) }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
+          </button>
+          {isCdn && (
+            <a
+              href={buildSvgUrl(API_HOSTS[0], pack, name, { ...previewParams, download: true })}
+              className="btn"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download
+            </a>
+          )}
+          {isCdn && (
+            <a
+              href={`https://icon-sets.iconify.design/${pack}/${name}/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn"
+            >
+              View on Iconify
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function IconLibrary({ onCopy }) {
   const { t } = useI18n()
@@ -23,6 +284,7 @@ export default function IconLibrary({ onCopy }) {
   const [activeCat] = useState('all')
   const [pack, setPack] = useState('')
   const [count, setCount] = useState(0)
+  const [selected, setSelected] = useState(null)
   const timer = useRef(null)
   const cdnOk = useRef(null)
   const didInit = useRef(false)
@@ -61,9 +323,7 @@ export default function IconLibrary({ onCopy }) {
       return
     }
     const pfx = packFilter ? `prefix=${packFilter}&` : ''
-    fetch(`https://api.iconify.design/search?${pfx}query=${encodeURIComponent(q)}&limit=${API_LIMIT}`, {
-      signal: AbortSignal.timeout(4000)
-    })
+    fetchWithFallback(`/search?${pfx}query=${encodeURIComponent(q)}&limit=${API_LIMIT}`)
       .then(r => r.json())
       .then(d => {
         cdnOk.current = true
@@ -72,8 +332,8 @@ export default function IconLibrary({ onCopy }) {
           return
         }
         setIcons(d.icons.map(id => {
-          const [p, name] = id.split(':')
-          return { id, pack: p, name, cdn: true }
+          const [p, n] = id.split(':')
+          return { id, pack: p, name: n, cdn: true }
         }))
         setCount(d.icons.length)
         setMode('Live via Iconify')
@@ -87,12 +347,12 @@ export default function IconLibrary({ onCopy }) {
   useEffect(() => {
     if (didInit.current) return
     didInit.current = true
-    fetch(`https://api.iconify.design/search?query=arrow&limit=${API_LIMIT}`, { signal: AbortSignal.timeout(4000) })
+    fetchWithFallback(`/search?query=arrow&limit=${API_LIMIT}`)
       .then(r => r.json())
       .then(d => {
         cdnOk.current = true
         if (d.icons?.length) {
-          setIcons(d.icons.map(id => { const [p, name] = id.split(':'); return { id, pack: p, name, cdn: true } }))
+          setIcons(d.icons.map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } }))
           setCount(d.icons.length)
           setMode('Live via Iconify')
         } else {
@@ -119,24 +379,11 @@ export default function IconLibrary({ onCopy }) {
     debounceSearch(query, p)
   }
 
-  const fetchCdnSvg = (packName, name) => {
-    fetch(`https://api.iconify.design/${packName}/${name}.svg?width=24&height=24`)
-      .then(r => r.text())
-      .then(s => onCopy(s))
-      .catch(() => onCopy('Failed to fetch SVG'))
-  }
-
   const handleIconClick = (icon) => {
+    setSelected(icon)
     if (icon.cdn) {
-      const [p, n] = icon.id.split(':')
-      fetchCdnSvg(p, n)
-      addRecentIcon({ cdn: true, pack: p, name: n })
+      addRecentIcon({ cdn: true, pack: icon.pack, name: icon.name })
     } else {
-      const fill = icon.filled
-      const svg = fill
-        ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="${icon.d}"/></svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${icon.d}"/></svg>`
-      onCopy(svg)
       addRecentIcon({ cdn: false, name: icon.name, d: icon.d, filled: icon.filled })
     }
   }
@@ -219,6 +466,14 @@ export default function IconLibrary({ onCopy }) {
         </p>
       </div>
       <UIKitGuide step="icons" />
+
+      {selected && (
+        <IconDetail
+          icon={selected}
+          onClose={() => setSelected(null)}
+          onCopy={onCopy}
+        />
+      )}
     </div>
   )
 }

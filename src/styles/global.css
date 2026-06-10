@@ -201,7 +201,10 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .cs-nav-item{padding:9px 14px;border-radius:var(--radius-s);font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;min-height:36px}
 .cs-nav-item:hover{color:var(--t0);background:var(--hvr)}
 .cs-nav-item.active{color:var(--bg-0);font-weight:700;background:var(--accent)}
-.cs-section-header{user-select:none;transition:opacity .15s}
+/* position+z-index keeps the header (and its "Add Colour" dropdown) above the
+   palette swatches below it. Without this the :hover opacity creates a stacking
+   context that traps the dropdown behind later DOM siblings. */
+.cs-section-header{user-select:none;transition:opacity .15s;position:relative;z-index:30}
 .cs-section-header:hover{opacity:.8}
 
 /* State preset label: full name on desktop, abbreviation on mobile */
@@ -319,6 +322,31 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .ic svg,.ic img{width:24px;height:24px;flex-shrink:0}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .ic span{font-size:8.5px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.2}
+
+/* ─── Icon Detail popup ─── */
+.il-detail{position:relative;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);max-width:560px;width:100%;padding:40px;box-shadow:var(--warm-shadow-lg);animation:fg-rise .3s cubic-bezier(.16,1,.3,1)}
+.il-detail-preview{display:flex;align-items:center;justify-content:center;padding:32px;margin-bottom:20px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);min-height:140px;background-image:radial-gradient(circle,color-mix(in srgb,var(--border) 60%,transparent) .5px,transparent .5px);background-size:12px 12px}
+.il-detail-preview img,.il-detail-preview svg{transition:all .15s ease}
+.il-detail-controls{display:flex;flex-direction:column;gap:14px}
+.il-detail-row{display:flex;align-items:center;gap:10px}
+.il-detail-row>label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);min-width:52px;flex-shrink:0}
+.il-detail-row input[type="range"]{flex:1;accent-color:var(--accent)}
+.il-detail-row input[type="color"]{width:28px;height:28px;border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;padding:1px;background:var(--bg-1);flex-shrink:0}
+.il-detail-value{font-family:var(--mono);font-size:11px;color:var(--t2);min-width:36px;text-align:right;flex-shrink:0}
+.il-detail-color-input{flex:1;font-family:var(--mono);font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t0)}
+.il-detail-reset{width:24px;height:24px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--t)}
+.il-detail-reset:hover{background:var(--bg-2);color:var(--t0)}
+.il-detail-seg{display:flex;gap:2px;flex:1}
+.il-detail-seg button{font-family:var(--mono);font-size:10px;font-weight:600;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t2);cursor:pointer;transition:all var(--t);flex:1;text-align:center}
+.il-detail-seg button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.il-detail-seg button:hover:not(.active){background:var(--bg-2);color:var(--t0)}
+.il-detail-code-tabs{display:flex;gap:2px;margin-bottom:8px}
+.il-detail-code-tabs button{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t2);cursor:pointer;transition:all var(--t)}
+.il-detail-code-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.il-detail-code{position:relative;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);padding:14px 14px 14px 14px;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--t1);max-height:120px;overflow:auto;word-break:break-all;white-space:pre-wrap;cursor:pointer;transition:border-color var(--t)}
+.il-detail-code:hover{border-color:var(--accent)}
+.il-detail-code-hint{position:absolute;top:6px;right:8px;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--t)}
+.il-detail-code:hover .il-detail-code-hint{color:var(--accent)}
 
 /* ─── Type scale ─── */
 .ts-row{display:flex;align-items:baseline;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
