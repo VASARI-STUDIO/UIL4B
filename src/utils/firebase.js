@@ -2,12 +2,16 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
-// Firebase config — these are client-side keys (not secret).
-// Replace with your own Firebase project config.
+// Firebase config — these are client-side keys, NOT secrets. The Firebase web
+// API key is a public project identifier that ships in every Firebase web app's
+// bundle; access is secured by Firebase Security Rules and authorised domains,
+// not by keeping this value hidden. We keep a hardcoded fallback so the app
+// always boots even when VITE_FIREBASE_API_KEY isn't present at build time
+// (Vite inlines env vars at build time, so a missing var = blank-page crash).
 // IMPORTANT: Set Firestore region to australia-southeast1 (Sydney)
 // when creating the database in Firebase Console.
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyADQoAyU3qwAls2bUW6rfE1csZa0Ud6EKE',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'uil4b-357c5.firebaseapp.com',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'uil4b-357c5',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'uil4b-357c5.firebasestorage.app',
