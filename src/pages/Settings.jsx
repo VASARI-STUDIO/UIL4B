@@ -399,10 +399,11 @@ export default function Settings({ toast }) {
                         <span className="sub-tier-amount">{billing === 'yearly' ? '$39.99' : '$4.99'}</span>
                         <span className="sub-tier-per">{billing === 'yearly' ? 'per year' : 'per month'}</span>
                       </div>
-                      <div className="sub-tier-sub">{billing === 'yearly' ? 'AUD · ~$3.33/mo, save 33%' : 'AUD · billed monthly'}</div>
+                      <div className="sub-tier-sub">{billing === 'yearly' ? 'AUD · ~$3.33/mo, save 33% · 7-day free trial' : 'AUD · billed monthly'}</div>
                     </div>
                     <ul className="sub-tier-list">
                       <li><Check /> <strong>Everything in Free, plus:</strong></li>
+                      {billing === 'yearly' && <li><Check /> <strong>7-day free trial</strong> — cancel anytime</li>}
                       <li><Check /> 1,000 AI generations per day</li>
                       <li><Check /> Higher-quality AI models</li>
                       <li><Check /> Projects synced across devices</li>
@@ -414,7 +415,7 @@ export default function Settings({ toast }) {
                       onClick={() => startCheckout(billing)}
                       disabled={!user || subLoading || checkingOut}
                     >
-                      {checkingOut ? 'Redirecting to Stripe…' : `Upgrade — ${billing === 'yearly' ? '$39.99/yr' : '$4.99/mo'}`}
+                      {checkingOut ? 'Redirecting to Stripe…' : billing === 'yearly' ? 'Start 7-day free trial' : 'Upgrade — $4.99/mo'}
                     </button>
                     <div className="sub-tier-foot">Secure checkout via Stripe · cancel anytime</div>
                   </div>
