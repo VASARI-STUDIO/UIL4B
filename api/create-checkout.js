@@ -61,14 +61,18 @@ export default async function handler(req, res) {
     }
   }
 
+  // Embedded Checkout: the payment form renders inside our own /checkout page
+  // (see src/pages/Checkout.jsx) rather than redirecting to a Stripe-hosted
+  // page. We return the session's client_secret for the embedded component and
+  // the customer returns to /checkout/return to confirm the result.
   const session = await stripe.checkout.sessions.create({
+    ui_mode: 'embedded',
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${origin}/settings?subscription=success`,
-    cancel_url: `${origin}/settings?subscription=cancelled`,
+    return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     subscription_data: subscriptionData,
   })
 
-  return res.status(200).json({ url: session.url })
+  return res.status(200).json({ clientSecret: session.client_secret })
 }
