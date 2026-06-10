@@ -43,7 +43,16 @@ export function SubscriptionProvider({ children }) {
   const plan = planForSubscription(subscription)
   const isPro = plan.id === 'pro'
 
+  // Sends the user to our own embedded checkout page (/checkout) instead of a
+  // Stripe-hosted page, so the flow keeps the site's branding and chrome.
   const checkout = useCallback(async (interval = 'monthly') => {
+    const plan = interval === 'yearly' ? 'yearly' : 'monthly'
+    window.location.href = `/checkout?plan=${plan}`
+  }, [])
+
+  // Creates an embedded Checkout session and returns its client_secret, used by
+  // the /checkout page to mount Stripe's <EmbeddedCheckout />.
+  const createCheckoutSession = useCallback(async (interval = 'monthly') => {
     const token = await firebaseAuth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
     const res = await fetch('/api/create-checkout', {
@@ -53,7 +62,19 @@ export function SubscriptionProvider({ children }) {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Checkout failed')
-    window.location.href = data.url
+    return data.clientSecret
+  }, [])
+
+  // Reads the result of a completed embedded checkout (used by /checkout/return).
+  const getCheckoutStatus = useCallback(async (sessionId) => {
+    const token = await firebaseAuth.currentUser?.getIdToken()
+    if (!token) throw new Error('Not authenticated')
+    const res = await fetch(`/api/checkout-status?session_id=${encodeURIComponent(sessionId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Could not verify checkout')
+    return data
   }, [])
 
   const openPortal = useCallback(async () => {
@@ -72,7 +93,7 @@ export function SubscriptionProvider({ children }) {
   return (
     <SubscriptionContext.Provider value={{
       subscription, plan, isPro, loading,
-      checkout, openPortal,
+      checkout, createCheckoutSession, getCheckoutStatus, openPortal,
     }}>
       {children}
     </SubscriptionContext.Provider>

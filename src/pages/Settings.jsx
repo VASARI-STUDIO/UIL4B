@@ -415,7 +415,7 @@ export default function Settings({ toast }) {
                       onClick={() => startCheckout(billing)}
                       disabled={!user || subLoading || checkingOut}
                     >
-                      {checkingOut ? 'Redirecting to Stripe…' : billing === 'yearly' ? 'Start 7-day free trial' : 'Upgrade — $4.99/mo'}
+                      {checkingOut ? 'Opening checkout…' : billing === 'yearly' ? 'Start 7-day free trial' : 'Upgrade — $4.99/mo'}
                     </button>
                     <div className="sub-tier-foot">Secure checkout via Stripe · cancel anytime</div>
                   </div>
