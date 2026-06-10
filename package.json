@@ -11,6 +11,8 @@
     "setup:stripe": "node scripts/setup-stripe.js"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.6.0",
+    "@stripe/stripe-js": "^9.8.0",
     "dxf-parser": "^1.1.2",
     "firebase": "^11.9.0",
     "firebase-admin": "^13.0.0",
