@@ -1,0 +1,54 @@
+import Stripe from 'stripe'
+import { adminAuth, adminDb } from './_lib/firebase-admin.js'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+
+// Returns the status of an embedded Checkout session so the /checkout/return
+// page can confirm the result. The session is verified to belong to the
+// authenticated user's Stripe customer before any details are returned.
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+  if (req.method === 'OPTIONS') return res.status(200).end()
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing auth token' })
+  }
+
+  let uid
+  try {
+    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
+    uid = decoded.uid
+  } catch {
+    return res.status(401).json({ error: 'Invalid auth token' })
+  }
+
+  const sessionId = req.query.session_id
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Missing session_id' })
+  }
+
+  let session
+  try {
+    session = await stripe.checkout.sessions.retrieve(sessionId)
+  } catch {
+    return res.status(404).json({ error: 'Session not found' })
+  }
+
+  // Only let a user read their own checkout session.
+  const userDoc = await adminDb().collection('users').doc(uid).get()
+  const customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
+  if (!customerId || session.customer !== customerId) {
+    return res.status(403).json({ error: 'Session does not belong to this account' })
+  }
+
+  return res.status(200).json({
+    status: session.status, // 'open' | 'complete' | 'expired'
+    paymentStatus: session.payment_status, // 'paid' | 'unpaid' | 'no_payment_required'
+    customerEmail: session.customer_details?.email || null,
+  })
+}
