@@ -30,7 +30,8 @@ export default async function handler(req, res) {
   }
 
   const { interval } = req.body || {}
-  const priceId = interval === 'yearly' ? PRICES.yearly : PRICES.monthly
+  const isYearly = interval === 'yearly'
+  const priceId = isYearly ? PRICES.yearly : PRICES.monthly
   if (!priceId) {
     return res.status(500).json({ error: 'Stripe price not configured' })
   }
@@ -51,15 +52,22 @@ export default async function handler(req, res) {
 
   const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, '') || 'https://uil4b.vercel.app'
 
+  const subscriptionData = { metadata: { firebaseUid: uid } }
+  // Yearly plans include a 7-day free trial. Monthly bills immediately.
+  if (isYearly) {
+    subscriptionData.trial_period_days = 7
+    subscriptionData.trial_settings = {
+      end_behavior: { missing_payment_method: 'cancel' },
+    }
+  }
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/settings?subscription=success`,
     cancel_url: `${origin}/settings?subscription=cancelled`,
-    subscription_data: {
-      metadata: { firebaseUid: uid },
-    },
+    subscription_data: subscriptionData,
   })
 
   return res.status(200).json({ url: session.url })
