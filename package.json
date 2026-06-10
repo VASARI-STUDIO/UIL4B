@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:stripe": "node scripts/setup-stripe.js"
   },
   "dependencies": {
     "dxf-parser": "^1.1.2",
