@@ -31,6 +31,8 @@ import CategoryDashboard from './pages/CategoryDashboard'
 import VideoToFrames from './pages/VideoToFrames'
 import Admin from './pages/Admin'
 import Projects from './pages/Projects'
+import Checkout from './pages/Checkout'
+import CheckoutReturn from './pages/CheckoutReturn'
 import FontGallery from './pages/FontGallery'
 import AltTextGenerator from './pages/AltTextGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
@@ -145,6 +147,8 @@ export default function App() {
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/login" element={<Login toast={toast} />} />
             <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
+            <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+            <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
             <Route path="/settings" element={<Settings toast={toast} />} />
             <Route path="/community" element={<Community />} />
             <Route path="/feedback" element={<Feedback toast={toast} />} />
