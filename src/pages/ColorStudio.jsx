@@ -108,7 +108,7 @@ const PREVIEW_RADIUS = {
   none:        { xs: 0, s: 0, m: 0, l: 0, pill: 0 },
   subtle:      { xs: 2, s: 3, m: 4, l: 6, pill: 8 },
   default:     { xs: 3, s: 6, m: 8, l: 12, pill: 20 },
-  pronounced:  { xs: 6, s: 10, m: 14, l: 20, pill: 28 },
+  pronounced:  { xs: 8, s: 16, m: 24, l: 32, pill: 9999 },
 }
 
 const ROUNDING_OPTIONS = [
@@ -169,6 +169,7 @@ function PreviewToast({ icon, msg, accentColor, iconBg, iconColor, bg, border, t
 function StateShade({ shade, label, onCopy }) {
   const [hover, setHover] = useState(false)
   const fg = textColorForBg(shade)
+  const rgb = hover ? hexToRgb(shade) : null
   return (
     <div onClick={() => onCopy(shade)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{ flex: 1, padding: '16px 0 6px', textAlign: 'center', background: shade, cursor: 'pointer', minHeight: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', transition: 'filter .15s', filter: hover ? 'brightness(1.05)' : 'none' }}
@@ -176,6 +177,40 @@ function StateShade({ shade, label, onCopy }) {
       <span style={{ fontSize: 9, fontFamily: 'var(--mono)', fontWeight: 700, color: fg, opacity: hover ? 1 : .6, transition: 'opacity .15s' }}>
         {hover ? shade.toUpperCase().replace('#', '') : label}
       </span>
+      {hover && rgb && (
+        <span style={{ fontSize: 7, fontFamily: 'var(--mono)', color: fg, opacity: .5, marginTop: 1 }}>
+          {rgb[0]},{rgb[1]},{rgb[2]}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function TintSwatch({ color, label, onCopy }) {
+  const [hover, setHover] = useState(false)
+  const fg = textColorForBg(color)
+  const rgb = hover ? hexToRgb(color) : null
+  return (
+    <div onClick={() => onCopy(color)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{
+        flex: 1, padding: '22px 0 10px', textAlign: 'center', background: color, cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 2,
+        minHeight: 80, transition: 'filter .15s, transform .12s',
+        filter: hover ? 'brightness(1.08)' : 'none',
+        transform: hover ? 'scaleY(1.08)' : 'none',
+      }}
+    >
+      <span style={{ fontSize: 9, fontFamily: 'var(--mono)', fontWeight: 700, color: fg, opacity: hover ? 1 : .7 }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 8, fontFamily: 'var(--mono)', fontWeight: 600, color: fg, opacity: hover ? .9 : .5 }}>
+        {hover ? color.toUpperCase().replace('#', '') : color.toUpperCase().replace('#', '')}
+      </span>
+      {hover && rgb && (
+        <span style={{ fontSize: 7, fontFamily: 'var(--mono)', color: fg, opacity: .5 }}>
+          {rgb[0]},{rgb[1]},{rgb[2]}
+        </span>
+      )}
     </div>
   )
 }
@@ -203,7 +238,7 @@ export default function ColorStudio({ onCopy }) {
   const { t } = useI18n()
   const { theme } = useTheme()
   const { rounding } = useAppearance()
-  const { design, setPalette, setStates, setTints, setGradient } = useProject()
+  const { design, setPalette, setStates, setTints, setGradient, saveProject, projects, loadProject, overwriteProject, canSaveProjects } = useProject()
 
   const [baseColor, setBaseColor] = useState(() => design?.palette?.base || '#2563EB')
   const [harmony, setHarmony] = useState(() => design?.palette?.harmony || 'analogous')
@@ -241,8 +276,8 @@ export default function ColorStudio({ onCopy }) {
     { id: 'tints', label: 'Tints' },
     { id: 'states', label: 'States' },
     { id: 'systems', label: 'Systems' },
-    { id: 'preview', label: 'Preview' },
     { id: 'gradients', label: 'Gradients' },
+    { id: 'preview', label: 'Preview' },
   ], [])
   const [collapsed, setCollapsed] = useState({})
   const [activeSection, setActiveSection] = useState('palette')
@@ -555,12 +590,66 @@ ${stateVars}
   }, [])
 
   const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const editColorRef = useRef(null)
+  const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
+  const [saveProjectName, setSaveProjectName] = useState('')
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false)
+
+  const allTintScales = useMemo(() => {
+    return allColors.map(c => generateTintScale({
+      hex: c, anchor: 5, hueShift: 0,
+      satMin: -satDecay, satMax: satDecay / 2,
+      lMin: oled ? 3 : 5, lMax: lumBias, mode: 'perceived',
+    }))
+  }, [allColors, lumBias, satDecay, oled])
+
+  const paletteGradients = useMemo(() => {
+    if (allColors.length < 2) return []
+    const results = []
+    for (let i = 0; i < allColors.length && results.length < 10; i++) {
+      for (let j = i + 1; j < allColors.length && results.length < 10; j++) {
+        results.push({
+          n: `${(ROLES[i] || 'C' + (i + 1))} → ${(ROLES[j] || 'C' + (j + 1))}`,
+          stops: [{ color: allColors[i], position: 0 }, { color: allColors[j], position: 100 }],
+          angle: 135, type: 'Linear',
+        })
+      }
+    }
+    if (results.length < 10 && tintScale.length >= 3) {
+      results.push({ n: 'Tint fade', stops: [{ color: tintScale[1], position: 0 }, { color: tintScale[5], position: 50 }, { color: tintScale[9], position: 100 }], angle: 135, type: 'Linear' })
+    }
+    if (results.length < 10 && allColors.length >= 3) {
+      results.push({ n: 'Trio sweep', stops: [{ color: allColors[0], position: 0 }, { color: allColors[1], position: 50 }, { color: allColors[2], position: 100 }], angle: 90, type: 'Linear' })
+    }
+    return results.slice(0, 10)
+  }, [allColors, tintScale])
 
   const addColor = () => {
     const [h] = hexToHsl(baseColor)
     const offset = (extraColors.length + 1) * 47
     setExtraColors([...extraColors, hslToHex((h + offset) % 360, 55, 55)])
     setAddMenuOpen(false)
+  }
+
+  const addCustomColor = (hex) => {
+    setExtraColors([...extraColors, hex])
+    setAddMenuOpen(false)
+  }
+
+  const editPaletteColor = (idx, hex) => {
+    if (idx < colors.length) {
+      const overrides = [...extraColors]
+      const overrideIdx = idx - colors.length
+      if (overrideIdx >= 0) {
+        overrides[overrideIdx] = hex
+        setExtraColors(overrides)
+      } else {
+        setExtraColors([...extraColors, hex])
+      }
+    } else {
+      const eIdx = idx - colors.length
+      setExtraColors(extraColors.map((c, i) => i === eIdx ? hex : c))
+    }
   }
 
   const addComplement = () => {
@@ -644,8 +733,6 @@ ${stateVars}
   const primary = allColors[0]
   const secondary = allColors[1] || allColors[0]
   const accent = allColors[2] || allColors[0]
-  const previewBg = '#ffffff'
-  const previewDarkBg = '#1a1814'
 
   return (
     <div className="sec">
@@ -653,6 +740,49 @@ ${stateVars}
         <div className="sec-h-eyebrow">Colour</div>
         <h1>{t('color.title')}</h1>
         <p>{t('tools.colorStudio.description')}</p>
+        {canSaveProjects && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'relative' }}>
+            <button className="btn btn-s" onClick={() => setSaveMenuOpen(!saveMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+              </svg>
+              Save Project
+            </button>
+            {projects.length > 0 && (
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600 }}>Load:</span>
+                {projects.slice(-5).map(p => (
+                  <button key={p.id} className="btn btn-s" onClick={() => { loadProject(p.id); onCopy?.('Loaded: ' + p.name) }}
+                    style={{ padding: '3px 10px', fontSize: 10 }}
+                  >{p.name}</button>
+                ))}
+              </div>
+            )}
+            {saveMenuOpen && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--warm-shadow-lg)', padding: 14, marginTop: 4, width: 280 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>Save current design as a project</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input type="text" value={saveProjectName} onChange={e => setSaveProjectName(e.target.value)}
+                    placeholder="Project name..." style={{ flex: 1, fontSize: 12 }}
+                    onKeyDown={e => { if (e.key === 'Enter' && saveProjectName.trim()) { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); onCopy?.('Project saved') } }}
+                  />
+                  <button className="btn btn-accent btn-s" onClick={() => { if (saveProjectName.trim()) { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); onCopy?.('Project saved') } }}
+                    style={{ padding: '4px 12px', fontSize: 11 }}>Save</button>
+                </div>
+                {projects.length > 0 && (
+                  <>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t3)', marginTop: 12, marginBottom: 6 }}>Overwrite existing</div>
+                    {projects.slice(-5).map(p => (
+                      <button key={p.id} onClick={() => { overwriteProject(p.id); setSaveMenuOpen(false); onCopy?.('Updated: ' + p.name) }}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '6px 0', fontSize: 11, color: 'var(--t1)', cursor: 'pointer', fontFamily: 'var(--font)', borderBottom: '1px solid var(--border)' }}
+                      >{p.name} <span style={{ fontSize: 9, color: 'var(--t3)' }}>{new Date(p.updatedAt).toLocaleDateString()}</span></button>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <nav className="cs-sticky-nav">
@@ -683,6 +813,16 @@ ${stateVars}
             </button>
             {addMenuOpen && (
               <div className="cs-add-menu">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    Pick Colour
+                    <input ref={editColorRef} type="color" value={baseColor}
+                      onChange={e => addCustomColor(e.target.value)}
+                      style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', padding: 0 }}
+                    />
+                  </label>
+                </div>
+                <div className="cs-add-menu-sep" />
                 <button onClick={addColor}>Custom (Hue Offset)</button>
                 <button onClick={addComplement}>Complementary</button>
                 <button onClick={addAnalogous}>Analogous</button>
@@ -766,9 +906,16 @@ ${stateVars}
                   </div>
                 </div>
                 {isExtra && (
-                  <button onClick={() => removeExtra(i - colors.length)}
-                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                  >&times;</button>
+                  <>
+                    <input type="color" value={color}
+                      onChange={e => editPaletteColor(i, e.target.value)}
+                      style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
+                      title="Edit colour"
+                    />
+                    <button onClick={() => removeExtra(i - colors.length)}
+                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                    >&times;</button>
+                  </>
                 )}
               </div>
             )
@@ -848,21 +995,50 @@ ${stateVars}
         {/* Tint strip */}
         <div style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
           {tintScale.map((c, i) => (
-            <div key={i} onClick={() => onCopy(c)}
-              style={{
-                flex: 1, padding: '22px 0 10px', textAlign: 'center', background: c, cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 4,
-                minHeight: 80, transition: 'transform .1s',
-              }}
-            >
-              <span style={{ fontSize: 9, fontFamily: 'var(--mono)', fontWeight: 700, color: textColorForBg(c), opacity: .7 }}>
-                {T_LABELS[i]}
-              </span>
-              <span style={{ fontSize: 8, fontFamily: 'var(--mono)', fontWeight: 600, color: textColorForBg(c), opacity: .5 }}>
-                {c.toUpperCase().replace('#', '')}
-              </span>
-            </div>
+            <TintSwatch key={i} color={c} label={T_LABELS[i]} onCopy={onCopy} />
           ))}
+        </div>
+
+        {/* Tint dropdown: all palette colours */}
+        <div style={{ marginTop: 14 }}>
+          <button onClick={() => setTintDropdownOpen(!tintDropdownOpen)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font)', fontSize: 12, fontWeight: 600, color: 'var(--t1)', padding: '8px 0' }}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transition: 'transform .2s', transform: tintDropdownOpen ? 'rotate(90deg)' : 'none' }}>
+              <polyline points="9 6 15 12 9 18" />
+            </svg>
+            All Palette Tints
+            <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 400 }}>{allColors.length} colours</span>
+          </button>
+          {tintDropdownOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+              {allColors.map((c, ci) => {
+                const scale = allTintScales[ci]
+                if (!scale) return null
+                return (
+                  <div key={ci}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <div style={{ width: 14, height: 14, borderRadius: 3, background: c, border: '1px solid var(--border)' }} />
+                      <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t2)' }}>
+                        {ROLES[ci] || `Custom ${ci - colors.length + 1}`}
+                      </span>
+                      <button className="btn btn-s" onClick={() => {
+                        const css = ':root {\n' + scale.map((t, ti) => `  --${(ROLES[ci] || 'custom-' + (ci - colors.length + 1)).toLowerCase()}-${T_LABELS[ti]}: ${t};`).join('\n') + '\n}'
+                        onCopy(css)
+                      }} style={{ marginLeft: 'auto', padding: '2px 8px', fontSize: 9 }}>
+                        <CopyIcon size={9} /> Copy
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', borderRadius: 'var(--radius-s)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                      {scale.map((t, ti) => (
+                        <TintSwatch key={ti} color={t} label={T_LABELS[ti]} onCopy={onCopy} />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
         </>}
       </section>
@@ -950,7 +1126,197 @@ ${stateVars}
         </>}
       </section>
 
-      {/* ═══ SECTION 5: UI PREVIEW COMPONENTS ═══ */}
+      {/* ═══ SECTION 5: GRADIENT TOOL ═══ */}
+      <section id="gradients" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('gradients')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.gradients ? 0 : 14 }}>
+          <svg className={`cs-chevron${collapsed.gradients ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
+          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
+            <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
+          </div>
+        </div>
+
+        {!collapsed.gradients && <>
+        <div className="grad-big" style={{ background: gradCSS, borderRadius: 'var(--radius)' }}>
+          <div className="grad-tags">
+            <span className="grad-tag">{gradFn.toUpperCase()}</span>
+            <span className="grad-tag">{gradAngle}&deg;</span>
+            <span className="grad-tag">{gradStops.length} stops</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px,100%),1fr))', gap: 14, marginBottom: 20 }}>
+          {/* Stop controls */}
+          <div className="card" style={{ padding: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Color Stops</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {gradStops.map((stop, si) => {
+                const resolved = resolveStop(stop, si)
+                return (
+                  <div key={si} style={{ display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
+                    <button type="button" onClick={() => setStopPickerIdx(stopPickerIdx === si ? null : si)}
+                      style={{ width: 32, height: 32, borderRadius: 6, cursor: 'pointer', background: resolved, border: '2px solid var(--border)', padding: 0, flexShrink: 0, transition: 'border-color .15s' }}
+                      title="Pick from palette & tints"
+                    />
+                    <input type="text" value={resolved.toUpperCase()} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, minWidth: 0 }}
+                      onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
+                    />
+                    <input type="number" min="0" max="100" value={stop.position} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
+                      style={{ width: 52, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center' }}
+                    />
+                    <span style={{ fontSize: 9, color: 'var(--t3)' }}>%</span>
+                    {gradStops.length > 2 && (
+                      <button onClick={() => removeGradStop(si)}
+                        style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 14, padding: '2px 4px', lineHeight: 1 }}
+                      >&times;</button>
+                    )}
+                    {stopPickerIdx === si && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--warm-shadow-lg)', padding: 12, marginTop: 4, width: 300 }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Custom</div>
+                          <input type="color" value={resolved} onChange={e => { updateStop(si, { color: e.target.value }) }}
+                            style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', padding: 0 }}
+                          />
+                        </div>
+                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 6 }}>From Palette</div>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
+                          {allColors.map((c, ci) => (
+                            <div key={ci} onClick={() => { updateStop(si, { color: c }); setStopPickerIdx(null) }}
+                              style={{ width: 24, height: 24, borderRadius: 4, background: c, cursor: 'pointer', border: '1px solid var(--border)' }} title={`${ROLES[ci] || 'Custom'}: ${c}`}
+                            />
+                          ))}
+                        </div>
+                        {allColors.map((c, ci) => {
+                          const scale = allTintScales[ci]
+                          if (!scale) return null
+                          return (
+                            <div key={ci} style={{ marginBottom: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+                                <div style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
+                                <span style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t3)' }}>
+                                  {ROLES[ci] || `Custom ${ci - colors.length + 1}`} tints
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                                {scale.map((t, ti) => (
+                                  <div key={ti} onClick={() => { updateStop(si, { color: t }); setStopPickerIdx(null) }}
+                                    style={{ width: 18, height: 18, borderRadius: 2, background: t, cursor: 'pointer', border: '1px solid var(--border)' }} title={`${T_LABELS[ti]}: ${t}`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+              <button className="btn btn-s" onClick={() => setGradStops(gradStops.map((s) => ({ ...s, color: null })))} style={{ fontSize: 10 }}>Auto from palette</button>
+              <button className="btn btn-s" onClick={addGradStop} style={{ fontSize: 10 }}>+ Stop</button>
+            </div>
+          </div>
+
+          {/* Properties */}
+          <div className="card" style={{ padding: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Properties</div>
+            <div className="seg-label">Type</div>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
+              {GRAD_TYPES.map(t => (
+                <button key={t} className={`pt-t${gradType === t ? ' on' : ''}`} onClick={() => setGradType(t)} style={{ flex: 1, justifyContent: 'center', padding: '5px 10px', fontSize: 11 }}>{t}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div className="seg-label" style={{ marginBottom: 0 }}>Angle</div>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t1)' }}>{gradAngle}&deg;</span>
+            </div>
+            <input type="range" min="0" max="360" value={gradAngle} onChange={e => setGradAngle(snap(+e.target.value, 135, 5))} />
+
+            {/* CSS Export */}
+            <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>CSS</span>
+                <button className="btn btn-s" onClick={() => onCopy(`background: ${gradCSS};`)} style={{ padding: '4px 10px', fontSize: 10 }}>
+                  <CopyIcon /> Copy
+                </button>
+              </div>
+              <div className="code" onClick={() => onCopy(`background: ${gradCSS};`)} style={{ fontSize: 11 }}>
+                {`background: ${gradCSS};`}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Palette-based gradients */}
+        {paletteGradients.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div className="seg-label">From Your Palette</div>
+            <div className="grad-presets">
+              {paletteGradients.map(g => {
+                const previewCss = `linear-gradient(${g.angle}deg, ${g.stops.map(s => `${s.color} ${s.position}%`).join(', ')})`
+                return (
+                  <div key={g.n} className="grad-p" onClick={() => applyPreset({ ...g, stops: g.stops.map(s => ({ color: s.color, pos: s.position })) })}>
+                    <div className="grad-p-preview" style={{ background: previewCss }} />
+                    <div className="grad-p-info">
+                      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'var(--t0)' }}>{g.n}</div>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {g.stops.map((s, si) => (
+                          <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <div style={{ width: 12, height: 12, borderRadius: 3, background: s.color, border: '1px solid var(--border)' }} />
+                            <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{s.color.toUpperCase()}</span>
+                            {si < g.stops.length - 1 && <span style={{ color: 'var(--t3)', fontSize: 9 }}>→</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <button className="btn btn-s" style={{ marginTop: 6, padding: '3px 8px', fontSize: 9 }}
+                        onClick={e => { e.stopPropagation(); onCopy(`background: ${previewCss};`) }}
+                      ><CopyIcon size={9} /> CSS</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Community presets */}
+        <div style={{ marginBottom: 14 }}>
+          <div className="seg-label">Community Presets</div>
+          <div className="grad-presets">
+            {GRAD_PRESETS.map(g => {
+              const previewCss = `${g.type === 'Radial' ? 'radial-gradient' : g.type === 'Conic' ? 'conic-gradient' : 'linear-gradient'}(${g.type === 'Linear' ? g.angle + 'deg, ' : g.type === 'Conic' ? 'from ' + g.angle + 'deg, ' : ''}${g.stops.map(s => `${s.color} ${s.pos}%`).join(', ')})`
+              return (
+                <div key={g.n} className="grad-p" onClick={() => applyPreset(g)}>
+                  <div className="grad-p-preview" style={{ background: previewCss }} />
+                  <div className="grad-p-info">
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'var(--t0)' }}>{g.n}</div>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {g.stops.map((s, si) => (
+                        <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <div style={{ width: 12, height: 12, borderRadius: 3, background: s.color, border: '1px solid var(--border)' }} />
+                          <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{s.color.toUpperCase()}</span>
+                          {si < g.stops.length - 1 && <span style={{ color: 'var(--t3)', fontSize: 9 }}>→</span>}
+                        </div>
+                      ))}
+                    </div>
+                    <button className="btn btn-s" style={{ marginTop: 6, padding: '3px 8px', fontSize: 9 }}
+                      onClick={e => { e.stopPropagation(); onCopy(`background: ${previewCss};`) }}
+                    ><CopyIcon size={9} /> CSS</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        </>}
+      </section>
+
+      {/* ═══ SECTION 6: UI PREVIEW COMPONENTS ═══ */}
       <section id="preview" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
         <div className="cs-section-header" onClick={() => toggleCollapse('preview')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.preview ? 0 : 14 }}>
           <svg className={`cs-chevron${collapsed.preview ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1301,148 +1667,6 @@ ${stateVars}
         </div>
         </>
         })()}
-      </section>
-
-      {/* ═══ SECTION 6: GRADIENT TOOL ═══ */}
-      <section id="gradients" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className="cs-section-header" onClick={() => toggleCollapse('gradients')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.gradients ? 0 : 14 }}>
-          <svg className={`cs-chevron${collapsed.gradients ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
-          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
-            <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
-          </div>
-        </div>
-
-        {!collapsed.gradients && <>
-        <div className="grad-big" style={{ background: gradCSS, borderRadius: 'var(--radius)' }}>
-          <div className="grad-tags">
-            <span className="grad-tag">{gradFn.toUpperCase()}</span>
-            <span className="grad-tag">{gradAngle}&deg;</span>
-            <span className="grad-tag">{gradStops.length} stops</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px,100%),1fr))', gap: 14, marginBottom: 20 }}>
-          {/* Stop controls */}
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Color Stops</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {gradStops.map((stop, si) => {
-                const resolved = resolveStop(stop, si)
-                return (
-                  <div key={si} style={{ display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
-                    <input type="color" value={resolved} onChange={e => updateStop(si, { color: e.target.value })} style={{ width: 32, height: 32, borderRadius: 6, cursor: 'pointer' }} />
-                    <input type="text" value={resolved.toUpperCase()} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, minWidth: 0 }}
-                      onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
-                    />
-                    <input type="number" min="0" max="100" value={stop.position} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
-                      style={{ width: 52, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center' }}
-                    />
-                    <span style={{ fontSize: 9, color: 'var(--t3)' }}>%</span>
-                    <button type="button" onClick={() => setStopPickerIdx(stopPickerIdx === si ? null : si)}
-                      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 6px', cursor: 'pointer', fontSize: 10, color: 'var(--t2)', transition: 'all .15s' }}
-                      title="Fill from palette or tints"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a7 7 0 007-7c0-2-1-3.9-3-5.5s-3.3-3.5-4-6.5c-.7 3-2 4.5-4 6.5S5 13 5 15a7 7 0 007 7z"/></svg>
-                    </button>
-                    {gradStops.length > 2 && (
-                      <button onClick={() => removeGradStop(si)}
-                        style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 14, padding: '2px 4px', lineHeight: 1 }}
-                      >&times;</button>
-                    )}
-                    {stopPickerIdx === si && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--warm-shadow-lg)', padding: 12, marginTop: 4, width: 260 }}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 6 }}>From Palette</div>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
-                          {allColors.map((c, ci) => (
-                            <div key={ci} onClick={() => { updateStop(si, { color: c }); setStopPickerIdx(null) }}
-                              style={{ width: 24, height: 24, borderRadius: 4, background: c, cursor: 'pointer', border: '1px solid var(--border)' }} title={c}
-                            />
-                          ))}
-                        </div>
-                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 6 }}>From Tints</div>
-                        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                          {tintScale.map((c, ti) => (
-                            <div key={ti} onClick={() => { updateStop(si, { color: c }); setStopPickerIdx(null) }}
-                              style={{ width: 20, height: 20, borderRadius: 3, background: c, cursor: 'pointer', border: '1px solid var(--border)' }} title={c}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-              <button className="btn btn-s" onClick={() => setGradStops(gradStops.map((s, i) => ({ ...s, color: null })))} style={{ fontSize: 10 }}>Auto from palette</button>
-              <button className="btn btn-s" onClick={addGradStop} style={{ fontSize: 10 }}>+ Stop</button>
-            </div>
-          </div>
-
-          {/* Properties */}
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Properties</div>
-            <div className="seg-label">Type</div>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
-              {GRAD_TYPES.map(t => (
-                <button key={t} className={`pt-t${gradType === t ? ' on' : ''}`} onClick={() => setGradType(t)} style={{ flex: 1, justifyContent: 'center', padding: '5px 10px', fontSize: 11 }}>{t}</button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <div className="seg-label" style={{ marginBottom: 0 }}>Angle</div>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t1)' }}>{gradAngle}&deg;</span>
-            </div>
-            <input type="range" min="0" max="360" value={gradAngle} onChange={e => setGradAngle(snap(+e.target.value, 135, 5))} />
-
-            {/* CSS Export */}
-            <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600 }}>CSS</span>
-                <button className="btn btn-s" onClick={() => onCopy(`background: ${gradCSS};`)} style={{ padding: '4px 10px', fontSize: 10 }}>
-                  <CopyIcon /> Copy
-                </button>
-              </div>
-              <div className="code" onClick={() => onCopy(`background: ${gradCSS};`)} style={{ fontSize: 11 }}>
-                {`background: ${gradCSS};`}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Presets — large vertical cards */}
-        <div style={{ marginBottom: 14 }}>
-          <div className="seg-label">Presets</div>
-          <div className="grad-presets">
-            {GRAD_PRESETS.map(g => {
-              const previewCss = `${g.type === 'Radial' ? 'radial-gradient' : g.type === 'Conic' ? 'conic-gradient' : 'linear-gradient'}(${g.type === 'Linear' ? g.angle + 'deg, ' : g.type === 'Conic' ? 'from ' + g.angle + 'deg, ' : ''}${g.stops.map(s => `${s.color} ${s.pos}%`).join(', ')})`
-              return (
-                <div key={g.n} className="grad-p" onClick={() => applyPreset(g)}>
-                  <div className="grad-p-preview" style={{ background: previewCss }} />
-                  <div className="grad-p-info">
-                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'var(--t0)' }}>{g.n}</div>
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {g.stops.map((s, si) => (
-                        <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <div style={{ width: 12, height: 12, borderRadius: 3, background: s.color, border: '1px solid var(--border)' }} />
-                          <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{s.color.toUpperCase()}</span>
-                          {si < g.stops.length - 1 && <span style={{ color: 'var(--t3)', fontSize: 9 }}>→</span>}
-                        </div>
-                      ))}
-                    </div>
-                    <button className="btn btn-s" style={{ marginTop: 6, padding: '3px 8px', fontSize: 9 }}
-                      onClick={e => { e.stopPropagation(); onCopy(`background: ${previewCss};`) }}
-                    ><CopyIcon size={9} /> CSS</button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-        </>}
       </section>
 
       {/* ── Flow CTA: Next step → Typography ── */}
