@@ -45,7 +45,7 @@ function Check() {
 export default function Checkout() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const { isPro, createCheckoutSession } = useSubscription()
 
   const planKey = params.get('plan') === 'monthly' ? 'monthly' : 'yearly'
@@ -62,12 +62,14 @@ export default function Checkout() {
   }, [createCheckoutSession, plan.interval])
 
   // Send signed-out users to login, and already-Pro users back to settings.
+  // Wait for auth to resolve first so we don't bounce a logged-in user on load.
   useEffect(() => {
+    if (loading) return
     if (!user) navigate('/login', { state: { from: '/checkout' }, replace: true })
     else if (isPro) navigate('/settings', { replace: true })
-  }, [user, isPro, navigate])
+  }, [user, loading, isPro, navigate])
 
-  if (!user || isPro) return null
+  if (loading || !user || isPro) return null
 
   return (
     <div className="sec checkout-page">

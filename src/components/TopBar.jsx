@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
 import { useWorkspace } from '../contexts/WorkspaceContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { TOOLS } from '../data/tools'
 import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
 import { useAppearance } from '../contexts/AppearanceContext'
@@ -289,6 +290,7 @@ function SaveProjectModal({ open, onClose, onSave }) {
 
 function ProfileMenu() {
   const { user, userProfile, logout } = useAuth()
+  const { isPro } = useSubscription()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const navigate = useNavigate()
@@ -336,7 +338,20 @@ function ProfileMenu() {
                   <div className="profile-menu-name">{userProfile?.displayName || user.email?.split('@')[0]}</div>
                   <div className="profile-menu-email">{user.email}</div>
                 </div>
+                {isPro && <span className="profile-menu-probadge">PRO</span>}
               </div>
+              <button
+                className={`profile-menu-item profile-menu-upgrade${isPro ? ' is-pro' : ''}`}
+                role="menuitem"
+                onClick={() => goSection('subscription')}
+              >
+                {isPro ? (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                ) : (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                )}
+                {isPro ? 'Manage subscription' : 'Upgrade to Pro'}
+              </button>
               <button className="profile-menu-item" role="menuitem" onClick={() => goSection('account')}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Account

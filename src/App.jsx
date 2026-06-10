@@ -43,8 +43,18 @@ import Landing from './pages/Landing'
 import Onboarding from './pages/Onboarding'
 
 function RequireAuth({ children }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const location = useLocation()
+  // Wait for Firebase auth to resolve before deciding — otherwise a fresh load
+  // or refresh of a protected route (e.g. /checkout) bounces a logged-in user
+  // to /login because onAuthStateChanged hasn't fired yet.
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+        <div className="fg-loader" />
+      </div>
+    )
+  }
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
   return children
 }
