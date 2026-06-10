@@ -276,18 +276,36 @@ function IconDetail({ icon, onClose, onCopy }) {
   )
 }
 
+// Flatten a /collection response into a flat, de-duplicated list of icon names.
+// Combines categorised + uncategorised icons; aliases/hidden are skipped so the
+// grid only shows canonical, renderable icons.
+function collectionToNames(d) {
+  const seen = new Set()
+  const names = []
+  const push = (n) => { if (n && !seen.has(n)) { seen.add(n); names.push(n) } }
+  if (Array.isArray(d.uncategorized)) d.uncategorized.forEach(push)
+  if (d.categories) Object.values(d.categories).forEach(arr => Array.isArray(arr) && arr.forEach(push))
+  return names
+}
+
+const PAGE_SIZE = 120
+const DEFAULT_PACK = 'lucide'
+
 export default function IconLibrary({ onCopy }) {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
-  const [icons, setIcons] = useState([])
-  const [mode, setMode] = useState('Embedded')
+  const [icons, setIcons] = useState([])      // full result set (browse or search)
+  const [visible, setVisible] = useState(PAGE_SIZE)
+  const [mode, setMode] = useState('')
+  const [loading, setLoading] = useState(true)
   const [activeCat] = useState('all')
-  const [pack, setPack] = useState('')
-  const [count, setCount] = useState(0)
+  const [pack, setPack] = useState(DEFAULT_PACK)
   const [selected, setSelected] = useState(null)
   const timer = useRef(null)
   const cdnOk = useRef(null)
+  const reqId = useRef(0)            // guards against out-of-order async responses
   const didInit = useRef(false)
+  const sentinelRef = useRef(null)
 
   const renderLocal = useCallback((q, packFilter) => {
     const localIcons = window.icons || []
@@ -308,24 +326,54 @@ export default function IconLibrary({ onCopy }) {
       filled: i.p === 'S',
       cdn: false
     })))
-    setCount(filtered.length)
+    setVisible(PAGE_SIZE)
     setMode(cdnOk.current === false ? 'Offline' : 'Embedded')
+    setLoading(false)
   }, [activeCat])
+
+  // Browse an entire icon set via the /collection endpoint — this is what fills
+  // the grid with thousands of icons instead of a handful of search hits.
+  const browsePack = useCallback((packFilter) => {
+    if (!packFilter) { renderLocal('', '') ; return }
+    const rid = ++reqId.current
+    setLoading(true)
+    fetchWithFallback(`/collection?prefix=${packFilter}`, 6000)
+      .then(r => r.json())
+      .then(d => {
+        if (rid !== reqId.current) return
+        cdnOk.current = true
+        const names = collectionToNames(d)
+        if (!names.length) { renderLocal('', packFilter); return }
+        setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
+        setVisible(PAGE_SIZE)
+        setMode(`${d.title || packFilter} · ${names.length.toLocaleString()} icons`)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (rid !== reqId.current) return
+        cdnOk.current = false
+        renderLocal('', packFilter)
+      })
+  }, [renderLocal])
 
   const doSearch = useCallback((q, packFilter) => {
     q = (q || '').trim()
+    // Empty query: browse the whole selected pack (or fall back to the local set).
     if (!q || q.length < 2) {
-      renderLocal(q, packFilter)
+      browsePack(packFilter)
       return
     }
     if (cdnOk.current === false) {
       renderLocal(q, packFilter)
       return
     }
+    const rid = ++reqId.current
+    setLoading(true)
     const pfx = packFilter ? `prefix=${packFilter}&` : ''
     fetchWithFallback(`/search?${pfx}query=${encodeURIComponent(q)}&limit=${API_LIMIT}`)
       .then(r => r.json())
       .then(d => {
+        if (rid !== reqId.current) return
         cdnOk.current = true
         if (!d.icons || !d.icons.length) {
           renderLocal(q, packFilter)
@@ -335,32 +383,36 @@ export default function IconLibrary({ onCopy }) {
           const [p, n] = id.split(':')
           return { id, pack: p, name: n, cdn: true }
         }))
-        setCount(d.icons.length)
-        setMode('Live via Iconify')
+        setVisible(PAGE_SIZE)
+        setMode(`${d.icons.length.toLocaleString()} matches${d.total > d.icons.length ? '+' : ''} · Iconify`)
+        setLoading(false)
       })
       .catch(() => {
+        if (rid !== reqId.current) return
         cdnOk.current = false
         renderLocal(q, packFilter)
       })
-  }, [renderLocal])
+  }, [renderLocal, browsePack])
 
+  // Initial load: browse the default pack so the grid is full on first paint.
   useEffect(() => {
     if (didInit.current) return
     didInit.current = true
-    fetchWithFallback(`/search?query=arrow&limit=${API_LIMIT}`)
-      .then(r => r.json())
-      .then(d => {
-        cdnOk.current = true
-        if (d.icons?.length) {
-          setIcons(d.icons.map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } }))
-          setCount(d.icons.length)
-          setMode('Live via Iconify')
-        } else {
-          renderLocal('', '')
-        }
-      })
-      .catch(() => { cdnOk.current = false; renderLocal('', '') })
-  }, [renderLocal])
+    // Defer out of the effect body so the kickoff fetch's setState isn't synchronous.
+    const id = setTimeout(() => browsePack(DEFAULT_PACK), 0)
+    return () => clearTimeout(id)
+  }, [browsePack])
+
+  // Infinite scroll — reveal another page as the sentinel comes into view.
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) setVisible(v => Math.min(v + PAGE_SIZE, icons.length))
+    }, { rootMargin: '600px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [icons.length])
 
   const debounceSearch = useCallback((q, p) => {
     clearTimeout(timer.current)
@@ -376,7 +428,10 @@ export default function IconLibrary({ onCopy }) {
   const handlePackChange = (e) => {
     const p = e.target.value
     setPack(p)
-    debounceSearch(query, p)
+    // Switching packs with no query browses the new pack immediately (no debounce).
+    clearTimeout(timer.current)
+    if (query.trim().length >= 2) doSearch(query, p)
+    else browsePack(p)
   }
 
   const handleIconClick = (icon) => {
@@ -387,6 +442,9 @@ export default function IconLibrary({ onCopy }) {
       addRecentIcon({ cdn: false, name: icon.name, d: icon.d, filled: icon.filled })
     }
   }
+
+  const shown = icons.slice(0, visible)
+  const hasMore = visible < icons.length
 
   return (
     <div className="sec">
@@ -403,10 +461,10 @@ export default function IconLibrary({ onCopy }) {
           <div style={{ minWidth: 130 }}>
             <div className="seg-label">Pack</div>
             <select style={{ width: '100%' }} value={pack} onChange={handlePackChange}>
-              <option value="">All packs</option>
+              <option value="">All packs (search)</option>
               <optgroup label="Interface">
-                <option value="tabler">Tabler</option>
                 <option value="lucide">Lucide</option>
+                <option value="tabler">Tabler</option>
                 <option value="iconoir">Iconoir</option>
                 <option value="heroicons">Heroicons</option>
                 <option value="ph">Phosphor</option>
@@ -439,8 +497,14 @@ export default function IconLibrary({ onCopy }) {
           </div>
         </div>
 
+        {!pack && query.trim().length < 2 && !loading && (
+          <p style={{ fontSize: 12, color: 'var(--t2)', padding: '8px 0 4px' }}>
+            Pick a pack to browse, or type at least 2 characters to search across every Iconify set.
+          </p>
+        )}
+
         <div className="ig">
-          {icons.map((icon, idx) => (
+          {shown.map((icon, idx) => (
             <div key={`${idx}-${icon.pack || ''}-${icon.name || ''}`} className="ic" onClick={() => handleIconClick(icon)}>
               {icon.cdn ? (
                 <img
@@ -461,9 +525,17 @@ export default function IconLibrary({ onCopy }) {
           ))}
         </div>
 
-        <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 12 }}>
-          {count} icons &middot; {mode}
-        </p>
+        {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+
+        {loading && (
+          <p style={{ fontSize: 12, color: 'var(--t2)', marginTop: 16, textAlign: 'center' }}>Loading icons…</p>
+        )}
+
+        {!loading && (
+          <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 12 }}>
+            Showing {shown.length.toLocaleString()} of {icons.length.toLocaleString()} &middot; {mode}
+          </p>
+        )}
       </div>
       <UIKitGuide step="icons" />
 
