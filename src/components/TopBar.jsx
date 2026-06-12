@@ -37,6 +37,8 @@ function ExportDropdown({ onSaveProject }) {
   const { theme } = useTheme()
   const { rounding, density } = useAppearance()
   const { user } = useAuth()
+  const { isPro } = useSubscription()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -102,6 +104,7 @@ function ExportDropdown({ onSaveProject }) {
       theme,
       projectName: 'My Style Guide',
       appearance: { rounding: exportRoundingVal(), density },
+      watermark: !isPro,
     })
     downloadFile(html, 'style-guide.html', 'text/html')
     setOpen(false)
@@ -217,9 +220,46 @@ function ExportDropdown({ onSaveProject }) {
                 Copy CSS
                 <span className="export-dropdown-hint">To clipboard</span>
               </button>
+
+              {/* Pro-locked formats */}
               <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              {isPro ? (
+                <>
+                  <button className="export-dropdown-item" onClick={() => {
+                    const tokens = JSON.stringify({ palette: design.palette, tints: design.tints, fonts: design.fonts, typeScale: design.typeScale, gradient: design.gradient }, null, 2)
+                    downloadFile(tokens, 'design-tokens.json', 'application/json')
+                    setOpen(false)
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    Export JSON tokens
+                    <span className="export-dropdown-hint">Structured design data</span>
+                  </button>
+                  <button className="export-dropdown-item" onClick={() => {
+                    const tw = `/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n${(design.palette?.colors || []).map((c, i) => `        '${['primary','secondary','accent','neutral','surface'][i] || `color-${i+1}`}': '${c}',`).join('\n')}\n      },\n${design.fonts?.heading ? `      fontFamily: {\n        heading: ['${design.fonts.heading.family}', 'system-ui', 'sans-serif'],\n${design.fonts?.body ? `        body: ['${design.fonts.body.family}', 'system-ui', 'sans-serif'],\n` : ''}      },\n` : ''}    },\n  },\n}\n`
+                    downloadFile(tw, 'tailwind.config.js', 'text/javascript')
+                    setOpen(false)
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
+                    </svg>
+                    Export Tailwind config
+                    <span className="export-dropdown-hint">tailwind.config.js</span>
+                  </button>
+                </>
+              ) : (
+                <button className="export-dropdown-item" onClick={() => { navigate('/checkout?plan=yearly'); setOpen(false) }} style={{ opacity: 0.65 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                  </svg>
+                  JSON Tokens · Tailwind Config
+                  <span className="export-dropdown-hint" style={{ color: 'var(--accent)' }}>Pro feature — Upgrade</span>
+                </button>
+              )}
+
               <div style={{ padding: '8px 12px 10px', fontSize: 10, color: 'var(--t3)', lineHeight: 1.5 }}>
-                Includes: palette · tints · states · fonts · type scale · gradient
+                Includes: palette · tints · states · fonts · type scale · gradient{!isPro && ' · Free exports include UIL4B watermark'}
               </div>
             </>
           )}

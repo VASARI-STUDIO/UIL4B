@@ -1133,6 +1133,7 @@ ${stateVars}
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
           <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
+            <button className="btn btn-s" onClick={() => setGradStops(prev => [...prev].reverse().map((s, i, arr) => ({ ...s, position: 100 - arr[arr.length - 1 - i].position })))} title="Flip gradient direction" style={{ fontSize: 10 }}>⇄ Flip</button>
             <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
           </div>
         </div>
