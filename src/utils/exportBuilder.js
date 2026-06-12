@@ -91,7 +91,7 @@ export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateSh
 }
 
 // Style guide HTML — uses the user's actual palette + fonts as page styling.
-export function buildStyleGuideHTML({ design, stateShades, theme = 'light', projectName = 'Design System', appearance }) {
+export function buildStyleGuideHTML({ design, stateShades, theme = 'light', projectName = 'Design System', appearance, watermark = false }) {
   const primary = design?.palette?.colors?.[0] || '#2563EB'
   const secondary = design?.palette?.colors?.[1] || primary
   const accent = design?.palette?.colors?.[2] || primary
@@ -448,6 +448,17 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
         Built with UIL4B · ${date}
       </a>
     </footer>
+${watermark ? `    <div class="sg-watermark">
+      <div class="sg-watermark-inner">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <div>
+          <strong>Free Export — Made with UIL4B</strong>
+          <div style="font-size:11px;margin-top:2px">Upgrade to Pro to remove this watermark and unlock JSON &amp; Tailwind exports</div>
+        </div>
+        <a href="https://uil4b.com/checkout?plan=yearly" target="_blank" rel="noopener" style="padding:6px 14px;border-radius:6px;background:${primary};color:${contrastText(primary)};font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">Upgrade</a>
+      </div>
+    </div>
+    <style>.sg-watermark{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#f8fafc,#eef2ff);border-top:2px solid ${primary};padding:14px 24px;font-family:system-ui,sans-serif;font-size:13px;color:#1e293b}.sg-watermark-inner{max-width:800px;margin:0 auto;display:flex;align-items:center;gap:14px}.sg-watermark *{user-select:none!important;pointer-events:auto}</style>` : ''}
   </main>
   <div class="sg-toast" id="sgt"></div>
   <script>

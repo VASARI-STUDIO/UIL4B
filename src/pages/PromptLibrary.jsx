@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import { NavLink } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../utils/firebase'
@@ -24,13 +26,20 @@ function parseTags(tagStr) {
   return tagStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
 }
 
-function PromptCard({ p, onOpen, isCommunity, isSaved }) {
+function PromptCard({ p, onOpen, isCommunity, isSaved, isLocked }) {
   const pTags = parseTags(p.tags)
 
   return (
-    <div className="pl-card no-img" onClick={() => onOpen(p)}>
+    <div className={`pl-card no-img${isLocked ? ' pl-card-locked' : ''}`} onClick={() => !isLocked && onOpen(p)} style={isLocked ? { cursor: 'default', opacity: 0.7 } : undefined}>
       <div className="pl-card-text-hero">
-        <div className="pl-card-title">{p.title || p.text.slice(0, 60)}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="pl-card-title" style={{ flex: 1 }}>{p.title || p.text.slice(0, 60)}</div>
+          {isLocked && (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+          )}
+        </div>
         {pTags.length > 0 && (
           <div className="pl-card-tags">
             {pTags.slice(0, 3).map(tag => <span key={tag} className="pl-tag">{tag}</span>)}
@@ -39,7 +48,7 @@ function PromptCard({ p, onOpen, isCommunity, isSaved }) {
         )}
         {isCommunity && (
           <div className="pl-card-author">
-            <span>{p.author}</span>
+            <span>{p.author}{p.authorProfile ? '' : ''}</span>
             {p.saves > 0 && <span className="pl-card-saves">{p.saves} saves</span>}
             {isSaved && (
               <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto' }}>
@@ -49,6 +58,11 @@ function PromptCard({ p, onOpen, isCommunity, isSaved }) {
           </div>
         )}
         {!isCommunity && <div className="pl-card-date-inline">{p.date}</div>}
+        {isLocked && (
+          <div style={{ fontSize: 10, color: 'var(--accent)', marginTop: 4, fontWeight: 600 }}>
+            Pro only
+          </div>
+        )}
       </div>
     </div>
   )
@@ -82,6 +96,17 @@ function PromptModal({ prompt, onClose, onCopy, onSave, onRemove, isCommunity, i
           {isCommunity && prompt.author && (
             <div className="pl-modal-author">
               <span>{prompt.author}</span>
+              {prompt.authorProfile && (
+                <a
+                  href={prompt.authorProfile}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', marginLeft: 4 }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  View profile
+                </a>
+              )}
               {prompt.saves > 0 && <span className="pl-card-saves">{prompt.saves} saves</span>}
             </div>
           )}
@@ -135,9 +160,12 @@ const TAG_CATEGORIES = [
   { label: 'Branding', tags: ['branding', 'identity', 'creative', 'premium', 'elegant', 'warm', 'typography'] },
 ]
 
+const FREE_PROMPT_LIMIT = 5
+
 export default function PromptLibrary({ onCopy, toast }) {
   const { t } = useI18n()
   const { user, userProfile } = useAuth()
+  const { isPro } = useSubscription()
   const [prompts, setPrompts] = useState(getPrompts)
   const [submitOpen, setSubmitOpen] = useState(false)
   const [text, setText] = useState('')
@@ -226,8 +254,15 @@ export default function PromptLibrary({ onCopy, toast }) {
     onCopy(txt)
   }, [onCopy])
 
+  const [communitySort, setCommunitySort] = useState('popular') // 'popular' | 'new'
+
   const isCommunity = tab === 'community'
-  const sourceList = isCommunity ? COMMUNITY_PROMPTS : prompts
+  const sortedCommunity = useMemo(() => {
+    const list = [...COMMUNITY_PROMPTS]
+    if (communitySort === 'new') return list.reverse()
+    return list.sort((a, b) => (b.saves || 0) - (a.saves || 0))
+  }, [communitySort])
+  const sourceList = isCommunity ? sortedCommunity : prompts
 
   const q = search.toLowerCase()
   const activeTags = activeCategory ? TAG_CATEGORIES.find(c => c.label === activeCategory)?.tags || [] : []
@@ -255,6 +290,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   const [submitTitle, setSubmitTitle] = useState('')
   const [submitText, setSubmitText] = useState('')
   const [submitTags, setSubmitTags] = useState('')
+  const [submitProfile, setSubmitProfile] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const submitToComm = useCallback(async () => {
@@ -269,19 +305,21 @@ export default function PromptLibrary({ onCopy, toast }) {
         authorEmail: user.email,
         authorName: userProfile?.displayName || user.email?.split('@')[0],
         authorUid: user.uid,
+        authorProfile: submitProfile.trim() || null,
         status: 'pending',
         createdAt: new Date().toISOString(),
       })
-      toast('Prompt submitted for review')
+      toast('Prompt submitted for review — you\'ll get +25 AI generations if approved!')
       setSubmitTitle('')
       setSubmitText('')
       setSubmitTags('')
+      setSubmitProfile('')
       setSubmitOpen(false)
     } catch {
       toast('Failed to submit — try again')
     }
     setSubmitting(false)
-  }, [submitTitle, submitText, submitTags, user, userProfile, toast])
+  }, [submitTitle, submitText, submitTags, submitProfile, user, userProfile, toast])
 
   return (
     <div className="sec">
@@ -330,19 +368,29 @@ export default function PromptLibrary({ onCopy, toast }) {
         </div>
 
         {isCommunity && (
-          <div className="pl-chips">
-            <button
-              className={`pl-chip${!activeCategory ? ' active' : ''}`}
-              onClick={() => setActiveCategory(null)}
-            >All</button>
-            {TAG_CATEGORIES.map(cat => (
+          <>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+              <button className={`pl-chip${communitySort === 'popular' ? ' active' : ''}`} onClick={() => setCommunitySort('popular')}>
+                Popular
+              </button>
+              <button className={`pl-chip${communitySort === 'new' ? ' active' : ''}`} onClick={() => setCommunitySort('new')}>
+                Newest
+              </button>
+            </div>
+            <div className="pl-chips">
               <button
-                key={cat.label}
-                className={`pl-chip${activeCategory === cat.label ? ' active' : ''}`}
-                onClick={() => setActiveCategory(activeCategory === cat.label ? null : cat.label)}
-              >{cat.label}</button>
-            ))}
-          </div>
+                className={`pl-chip${!activeCategory ? ' active' : ''}`}
+                onClick={() => setActiveCategory(null)}
+              >All</button>
+              {TAG_CATEGORIES.map(cat => (
+                <button
+                  key={cat.label}
+                  className={`pl-chip${activeCategory === cat.label ? ' active' : ''}`}
+                  onClick={() => setActiveCategory(activeCategory === cat.label ? null : cat.label)}
+                >{cat.label}</button>
+              ))}
+            </div>
+          </>
         )}
 
         {isCommunity && user && (
@@ -418,6 +466,7 @@ export default function PromptLibrary({ onCopy, toast }) {
               <input type="text" value={submitTitle} onChange={e => setSubmitTitle(e.target.value)} placeholder="Prompt title" className="pl-input-title" />
               <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} placeholder="Your prompt..." className="pl-textarea" />
               <input type="text" value={submitTags} onChange={e => setSubmitTags(e.target.value)} placeholder="Tags (comma separated)" />
+              <input type="url" value={submitProfile} onChange={e => setSubmitProfile(e.target.value)} placeholder="Your profile link (optional — portfolio, X, Dribbble)" />
             </div>
             <div className="pl-add-actions">
               <button className="btn" onClick={() => setSubmitOpen(false)}>Cancel</button>
@@ -426,24 +475,43 @@ export default function PromptLibrary({ onCopy, toast }) {
               </button>
             </div>
             <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>
-              Submissions are reviewed before appearing in the community library.
+              Submissions are reviewed before appearing in the community library. Approved prompts earn you <strong style={{ color: 'var(--accent)' }}>+25 bonus AI generations</strong>.
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Pro CTA cards */}
+      {isCommunity && !isPro && (
+        <div className="card" style={{ padding: 20, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', borderLeft: '3px solid var(--accent)' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Unlock all community prompts</div>
+            <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.5 }}>
+              Free users can access {FREE_PROMPT_LIMIT} prompts. Upgrade to Pro to unlock the full library and get +25 bonus AI generations for every approved prompt you submit.
+            </div>
+          </div>
+          <NavLink to="/checkout?plan=yearly" className="btn btn-accent" style={{ whiteSpace: 'nowrap' }}>
+            Upgrade to Pro
+          </NavLink>
         </div>
       )}
 
       {/* Gallery Grid */}
       {filtered.length > 0 ? (
         <div className="pl-gallery">
-          {filtered.map(p => (
-            <PromptCard
-              key={p.id}
-              p={p}
-              onOpen={setModalPrompt}
-              isCommunity={isCommunity}
-              isSaved={savedIds.has(p.id)}
-            />
-          ))}
+          {filtered.map((p, idx) => {
+            const isLocked = isCommunity && !isPro && idx >= FREE_PROMPT_LIMIT
+            return (
+              <PromptCard
+                key={p.id}
+                p={p}
+                onOpen={isLocked ? () => toast?.('Upgrade to Pro to access this prompt') : setModalPrompt}
+                isCommunity={isCommunity}
+                isSaved={savedIds.has(p.id)}
+                isLocked={isLocked}
+              />
+            )
+          })}
         </div>
       ) : (
         <div className="pl-empty">

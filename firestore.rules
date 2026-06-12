@@ -19,5 +19,15 @@ service cloud.firestore {
       allow read, update, delete: if request.auth != null
         && request.auth.token.admin == true;
     }
+
+    // Community prompts — signed-in users can create, admin can manage
+    match /community-prompts/{promptId} {
+      allow create: if request.auth != null
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && request.auth.token.admin == true;
+    }
   }
 }

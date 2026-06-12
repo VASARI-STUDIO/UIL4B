@@ -15,18 +15,18 @@ function ColorRow({ colors }) {
   )
 }
 
-function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite }) {
+function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(project.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   const headingFamily = project.design?.fonts?.heading?.family || 'Inter'
   const bodyFamily = project.design?.fonts?.body?.family || 'Inter'
   const updated = new Date(project.updatedAt || project.createdAt)
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Preview header — uses project's own palette as background */}
+    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: project.archived ? 0.6 : 1 }}>
       <div style={{ padding: '20px 18px', background: project.design?.palette?.colors?.[0] || 'var(--bg-2)', position: 'relative' }}>
         <div style={{ fontFamily: `'${headingFamily}', sans-serif`, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 8px rgba(0,0,0,.2)' }}>
           {project.design?.palette?.colors?.[0]?.toUpperCase() || '#'}
@@ -34,9 +34,13 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
         <div style={{ fontFamily: `'${bodyFamily}', sans-serif`, fontSize: 11, color: 'rgba(255,255,255,.85)', marginTop: 2, textShadow: '0 1px 6px rgba(0,0,0,.2)' }}>
           {headingFamily} / {bodyFamily}
         </div>
+        {project.archived && (
+          <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', background: 'rgba(0,0,0,.5)', color: '#fff', padding: '2px 8px', borderRadius: 4 }}>
+            Archived
+          </span>
+        )}
       </div>
 
-      {/* Body */}
       <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {editing ? (
           <div style={{ display: 'flex', gap: 6 }}>
@@ -76,21 +80,46 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
         </div>
 
         {confirmDelete ? (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--err)', flex: 1 }}>Delete this project?</span>
-            <button className="btn btn-s" onClick={() => onDelete(project.id)} style={{ color: 'var(--err)', fontSize: 10 }}>Delete</button>
-            <button className="btn btn-s" onClick={() => setConfirmDelete(false)} style={{ fontSize: 10 }}>Cancel</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--err)', lineHeight: 1.5 }}>
+              Type <strong>{project.name}</strong> to confirm deletion:
+            </div>
+            <input
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              placeholder={project.name}
+              autoFocus
+              style={{ fontSize: 12 }}
+            />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                className="btn btn-s"
+                onClick={() => { onDelete(project.id); setConfirmDelete(false); setDeleteConfirmText('') }}
+                disabled={deleteConfirmText !== project.name}
+                style={{ color: '#fff', background: deleteConfirmText === project.name ? 'var(--err)' : 'var(--bg-2)', borderColor: 'var(--err)', fontSize: 10, opacity: deleteConfirmText === project.name ? 1 : 0.5 }}
+              >
+                Permanently delete
+              </button>
+              <button className="btn btn-s" onClick={() => { setConfirmDelete(false); setDeleteConfirmText('') }} style={{ fontSize: 10 }}>Cancel</button>
+            </div>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 6, marginTop: 'auto', flexWrap: 'wrap' }}>
-            <button className="btn btn-s btn-accent" onClick={() => onLoad(project.id)} style={{ fontSize: 11, flex: 1 }}>
-              {isCurrent ? 'Reload' : 'Load'}
-            </button>
-            <button className="btn btn-s" onClick={() => onOverwrite(project.id)} style={{ fontSize: 11 }} title="Save current design over this project">
-              Overwrite
-            </button>
+            {!project.archived && (
+              <>
+                <button className="btn btn-s btn-accent" onClick={() => onLoad(project.id)} style={{ fontSize: 11, flex: 1 }}>
+                  {isCurrent ? 'Reload' : 'Load'}
+                </button>
+                <button className="btn btn-s" onClick={() => onOverwrite(project.id)} style={{ fontSize: 11 }} title="Save current design over this project">
+                  Overwrite
+                </button>
+              </>
+            )}
             <button className="btn btn-s" onClick={() => setEditing(true)} style={{ fontSize: 11 }}>
               Rename
+            </button>
+            <button className="btn btn-s" onClick={() => onArchive(project.id)} style={{ fontSize: 11 }}>
+              {project.archived ? 'Restore' : 'Archive'}
             </button>
             <button className="btn btn-s" onClick={() => setConfirmDelete(true)} style={{ fontSize: 11, color: 'var(--err)' }}>
               Delete
@@ -109,11 +138,14 @@ export default function Projects({ toast }) {
   const {
     design, projects, canSaveProjects,
     saveProject, loadProject, deleteProject, renameProject, overwriteProject,
-    resetDesign,
+    archiveProject, resetDesign,
   } = useProject()
   const [newName, setNewName] = useState('')
   const [showSaveForm, setShowSaveForm] = useState(false)
   const [loadedId, setLoadedId] = useState(null)
+  const [showArchived, setShowArchived] = useState(false)
+  const activeProjects = projects.filter(p => !p.archived)
+  const archivedProjects = projects.filter(p => p.archived)
 
   if (!canSaveProjects) {
     return (
@@ -177,6 +209,13 @@ export default function Projects({ toast }) {
     toast(`Saved over "${project?.name}"`)
   }
 
+  const handleArchive = (id) => {
+    archiveProject(id)
+    const project = projects.find(p => p.id === id)
+    toast(project?.archived ? `"${project?.name}" restored` : `"${project?.name}" archived`)
+    if (loadedId === id) setLoadedId(null)
+  }
+
   return (
     <div className="sec">
       <div className="sec-h" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -187,7 +226,7 @@ export default function Projects({ toast }) {
         <div style={{ display: 'flex', gap: 8 }}>
           {!showSaveForm && (
             <button className="btn btn-accent" onClick={() => setShowSaveForm(true)}>
-              + Save current
+              + Add to Project
             </button>
           )}
           <button className="btn" onClick={() => { resetDesign(); setLoadedId(null); toast('Reset to defaults') }} title="Start fresh">
@@ -196,11 +235,10 @@ export default function Projects({ toast }) {
         </div>
       </div>
 
-      {/* Save form */}
       {showSaveForm && (
         <div className="card" style={{ padding: 20, marginBottom: 24, maxWidth: 560 }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 10 }}>
-            Save current design as
+            Add current design to project
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -220,29 +258,58 @@ export default function Projects({ toast }) {
         </div>
       )}
 
-      {/* Empty state */}
-      {projects.length === 0 ? (
+      {activeProjects.length === 0 && archivedProjects.length === 0 ? (
         <div className="card" style={{ padding: 48, textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }}>📁</div>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No projects yet</h3>
           <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>
-            Build a palette in <NavLink to="/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/fontpairs">Font Pair Finder</NavLink>, then save your design here.
+            Build a palette in <NavLink to="/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/fontpairs">Font Pair Finder</NavLink>, then add your design to a project.
           </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
-          {[...projects].reverse().map(p => (
-            <ProjectCard
-              key={p.id}
-              project={p}
-              isCurrent={loadedId === p.id}
-              onLoad={handleLoad}
-              onDelete={handleDelete}
-              onRename={handleRename}
-              onOverwrite={handleOverwrite}
-            />
-          ))}
-        </div>
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
+            {[...activeProjects].reverse().map(p => (
+              <ProjectCard
+                key={p.id}
+                project={p}
+                isCurrent={loadedId === p.id}
+                onLoad={handleLoad}
+                onDelete={handleDelete}
+                onRename={handleRename}
+                onOverwrite={handleOverwrite}
+                onArchive={handleArchive}
+              />
+            ))}
+          </div>
+
+          {archivedProjects.length > 0 && (
+            <div style={{ marginTop: 32 }}>
+              <button className="btn btn-s" onClick={() => setShowArchived(!showArchived)} style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>
+                {showArchived ? 'Hide' : 'Show'} archived ({archivedProjects.length})
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ marginLeft: 4, transition: 'transform .2s', transform: showArchived ? 'rotate(180deg)' : 'none' }}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {showArchived && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
+                  {[...archivedProjects].reverse().map(p => (
+                    <ProjectCard
+                      key={p.id}
+                      project={p}
+                      isCurrent={false}
+                      onLoad={handleLoad}
+                      onDelete={handleDelete}
+                      onRename={handleRename}
+                      onOverwrite={handleOverwrite}
+                      onArchive={handleArchive}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

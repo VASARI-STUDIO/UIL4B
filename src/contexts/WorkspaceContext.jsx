@@ -92,6 +92,8 @@ export function WorkspaceProvider({ children }) {
 
   const reorderPinned = useCallback((fromIdx, toIdx) => {
     setPinned(prev => {
+      if (fromIdx === toIdx) return prev
+      if (fromIdx < 0 || fromIdx >= prev.length || toIdx < 0 || toIdx >= prev.length) return prev
       const next = [...prev]
       const [moved] = next.splice(fromIdx, 1)
       next.splice(toIdx, 0, moved)

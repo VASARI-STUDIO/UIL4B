@@ -192,6 +192,38 @@ export function ProjectProvider({ children }) {
     setDesign(DEFAULT_DESIGN)
   }, [])
 
+  const archiveProject = useCallback((id) => {
+    if (!userKey) return
+    setAllProjects(prev => {
+      const list = (prev[userKey] || []).map(p =>
+        p.id === id ? { ...p, archived: !p.archived, updatedAt: new Date().toISOString() } : p
+      )
+      const next = { ...prev, [userKey]: list }
+      saveAllProjects(next)
+      return next
+    })
+  }, [userKey])
+
+  // Auto-create a default project on first sign-in if user has none
+  useEffect(() => {
+    if (!userKey) return
+    const list = allProjects[userKey]
+    if (list && list.length > 0) return
+    const id = newId()
+    const project = {
+      id,
+      name: 'Default Project',
+      design: JSON.parse(JSON.stringify(design)),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    setAllProjects(prev => {
+      const next = { ...prev, [userKey]: [project] }
+      saveAllProjects(next)
+      return next
+    })
+  }, [userKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = {
     design,
     projects,
@@ -208,6 +240,7 @@ export function ProjectProvider({ children }) {
     renameProject,
     loadProject,
     deleteProject,
+    archiveProject,
     resetDesign,
   }
 

@@ -104,6 +104,45 @@ export function deleteFeedback(id) {
   return feedback
 }
 
+// Design analytics tracking
+const DESIGN_ANALYTICS_KEY = 'vs-design-analytics'
+
+function loadDesignAnalytics() {
+  try { return JSON.parse(localStorage.getItem(DESIGN_ANALYTICS_KEY)) || { fontCopies: {}, colourPicks: {}, toolUsage: {} } }
+  catch { return { fontCopies: {}, colourPicks: {}, toolUsage: {} } }
+}
+
+function saveDesignAnalytics(data) {
+  try { localStorage.setItem(DESIGN_ANALYTICS_KEY, JSON.stringify(data)) } catch { /* quota */ }
+}
+
+export function trackFontCopy(fontFamily) {
+  if (!fontFamily) return
+  const data = loadDesignAnalytics()
+  data.fontCopies[fontFamily] = (data.fontCopies[fontFamily] || 0) + 1
+  saveDesignAnalytics(data)
+}
+
+export function trackColourPick(hex) {
+  if (!hex) return
+  const normalised = hex.toUpperCase().replace(/[^#0-9A-F]/g, '')
+  if (!normalised) return
+  const data = loadDesignAnalytics()
+  data.colourPicks[normalised] = (data.colourPicks[normalised] || 0) + 1
+  saveDesignAnalytics(data)
+}
+
+export function trackToolAction(toolId) {
+  if (!toolId) return
+  const data = loadDesignAnalytics()
+  data.toolUsage[toolId] = (data.toolUsage[toolId] || 0) + 1
+  saveDesignAnalytics(data)
+}
+
+export function getDesignAnalytics() {
+  return loadDesignAnalytics()
+}
+
 // Analytics data retrieval
 export function getPageViews() {
   return load(ANALYTICS_KEY, [])
