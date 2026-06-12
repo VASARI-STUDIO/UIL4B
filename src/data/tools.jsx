@@ -48,6 +48,21 @@ export const CATEGORIES = [
     ),
   },
   {
+    id: 'ui-builder',
+    labelKey: 'categories.uiBuilder.label',
+    descKey: 'categories.uiBuilder.description',
+    label: 'UI Builder',
+    path: '/ui-builder',
+    description: 'Design dashboard components with live previews and CSS export.',
+    icon: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 9h18" />
+        <path d="M9 21V9" />
+      </>
+    ),
+  },
+  {
     id: 'documentation',
     labelKey: 'categories.documentation.label',
     descKey: 'categories.documentation.description',
@@ -80,6 +95,7 @@ const TOOL_I18N_MAP = {
   'emoji': 'tools.emojiLibrary',
   'resources': 'tools.externalResources',
   'box-shadow': 'tools.boxShadow',
+  'ui-builder': 'tools.uiBuilder',
 }
 
 export const TOOLS = [
@@ -93,7 +109,8 @@ export const TOOLS = [
   { id: 'alt-text', label: 'Alt Text Generator', path: '/alt-text', category: 'imagery', description: 'Generate accessible alt text for images in batch using AI.', keywords: ['alt', 'text', 'accessibility', 'a11y', 'ai', 'description', 'batch'], icon: (<><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l2-5 2 5"/><path d="M7.5 12.5h3"/><path d="M14 14V9h2.5a1.5 1.5 0 010 3H14"/></>) },
   { id: 'video-frames', label: 'Video to Frames', path: '/video-frames', category: 'imagery', description: 'Extract frames from video as images with scaling and compression controls.', keywords: ['video', 'frames', 'extract', 'screenshot', 'capture', 'export'], icon: (<><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 4v16"/><path d="M17 4v16"/><path d="M2 9h5"/><path d="M2 15h5"/><path d="M17 9h5"/><path d="M17 15h5"/></>) },
 
-  { id: 'box-shadow', label: 'Box Shadow', path: '/box-shadow', category: 'color', description: 'Design layered CSS box shadows with live preview.', keywords: ['box', 'shadow', 'css', 'elevation', 'layer', 'drop shadow', 'neumorphic'], icon: (<><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 21h14a2 2 0 002-2V7" opacity=".5"/></>) },
+  { id: 'ui-builder', label: 'Component Designer', path: '/ui-builder', category: 'ui-builder', description: 'Design buttons, cards, tables, inputs and more with live previews.', keywords: ['ui', 'builder', 'component', 'button', 'card', 'table', 'input', 'dashboard', 'design'], icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>) },
+  { id: 'box-shadow', label: 'Box Shadow', path: '/box-shadow', category: 'ui-builder', description: 'Design layered CSS box shadows with live preview.', keywords: ['box', 'shadow', 'css', 'elevation', 'layer', 'drop shadow', 'neumorphic'], icon: (<><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 21h14a2 2 0 002-2V7" opacity=".5"/></>) },
 
   { id: 'prompts', label: 'Prompt Library', path: '/prompts', category: 'documentation', description: 'AI image generation prompts with output previews.', keywords: ['prompt', 'ai', 'midjourney', 'dalle', 'stable diffusion', 'library'], icon: (<><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2v-4"/><path d="M14.5 3.5l4 4L12 14l-4 1 1-4z"/></>) },
   { id: 'docs-design', label: 'Design Principles', path: '/docs-design', category: 'documentation', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'], icon: (<><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/><circle cx="12" cy="12" r="2.5"/></>) },
