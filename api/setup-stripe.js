@@ -1,5 +1,5 @@
 import { getStripeServer } from './_lib/stripe.js'
-import { adminAuth } from './_lib/firebase-admin.js'
+import { adminAuth, credentialProblem } from './_lib/firebase-admin.js'
 const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 
 const CURRENCY = 'aud'
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Admin access required' })
     }
   } catch {
-    return res.status(401).json({ error: 'Invalid auth token' })
+    return res.status(401).json({ error: credentialProblem() || 'Invalid auth token' })
   }
 
   try {
