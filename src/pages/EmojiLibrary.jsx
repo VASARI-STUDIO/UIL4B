@@ -88,6 +88,20 @@ export default function EmojiLibrary({ onCopy }) {
           )}
         </div>
 
+        <div className="emoji-skin-tones">
+          {['', '\u{1F3FB}', '\u{1F3FC}', '\u{1F3FD}', '\u{1F3FE}', '\u{1F3FF}'].map((tone, i) => (
+            <button
+              key={i}
+              className={`emoji-skin-btn${skinTone === tone ? ' active' : ''}`}
+              onClick={() => setSkinTone(tone)}
+              title={i === 0 ? 'Default' : `Skin tone ${i}`}
+              aria-label={i === 0 ? 'Default skin tone' : `Skin tone ${i}`}
+            >
+              {i === 0 ? '👋' : `👋${tone}`}
+            </button>
+          ))}
+        </div>
+
         <div className="pl-chips">
           <button className={`pl-chip${!activeCat ? ' active' : ''}`} onClick={() => setActiveCat(null)}>
             All ({totalCount})
