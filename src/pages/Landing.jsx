@@ -443,7 +443,7 @@ const iconFilter = (pack) => (COLORED_PACKS.has(pack) ? 'none' : 'var(--icon-inv
 // A mini version of the in-app Icon Library — live search via Iconify with an
 // embedded fallback, click-to-copy, and a final tile that funnels into the full tool.
 function IconSearchDemo({ onView }) {
-  const [query, setQuery] = useState('arrow')
+  const [query, setQuery] = useState('')
   const [icons, setIcons] = useState([])
   const [copied, setCopied] = useState(null)
   const timer = useRef(null)
@@ -471,7 +471,7 @@ function IconSearchDemo({ onView }) {
       .catch(() => { cdnOk.current = false; renderLocal(qt) })
   }, [renderLocal])
 
-  useEffect(() => { doSearch('arrow') }, [doSearch])
+  useEffect(() => { doSearch('') }, [doSearch])
   useEffect(() => () => { clearTimeout(timer.current); clearTimeout(copyTimer.current) }, [])
 
   const onChange = (e) => {
@@ -531,13 +531,14 @@ function IconSearchDemo({ onView }) {
             )}
           </button>
         ))}
-        <button type="button" className="landing-icontool-more" onClick={onView}>
-          <span className="landing-icontool-more-count">{ICON_TOTAL}</span>
-          <span className="landing-icontool-more-label">View all icons</span>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+      </div>
+      <div className="landing-icontool-footer">
+        <span className="landing-icontool-hint">Click any icon to copy its SVG</span>
+        <button type="button" className="btn btn-accent landing-icontool-cta" onClick={onView}>
+          Explore {ICON_TOTAL} icons
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
         </button>
       </div>
-      <div className="landing-icontool-hint">Click any icon to copy its SVG · {ICON_TOTAL} icons and pack filters inside the app</div>
     </div>
   )
 }
