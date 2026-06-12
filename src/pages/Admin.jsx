@@ -322,6 +322,7 @@ const TABS = [
   { id: 'prompts', label: 'Prompts' },
   { id: 'pages', label: 'Pages' },
   { id: 'users', label: 'Users' },
+  { id: 'stripe', label: 'Stripe' },
 ]
 
 export default function Admin({ toast }) {
@@ -901,6 +902,84 @@ export default function Admin({ toast }) {
           )}
         </Section>
       )}
+
+      {/* STRIPE TAB */}
+      {tab === 'stripe' && <StripeSetupPanel toast={toast} />}
     </div>
+  )
+}
+
+function StripeSetupPanel({ toast }) {
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const runSetup = async () => {
+    setLoading(true)
+    setError('')
+    setResult(null)
+    try {
+      const { auth: fbAuth } = await import('../utils/firebase')
+      const token = await fbAuth.currentUser?.getIdToken()
+      if (!token) throw new Error('Not authenticated')
+      const res = await fetch('/api/setup-stripe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`)
+      setResult(data)
+      toast?.('Stripe setup complete')
+    } catch (err) {
+      setError(err.message)
+      toast?.('Setup failed: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Section title="Stripe Configuration">
+      <div className="card" style={{ padding: 20, marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.7, marginBottom: 16 }}>
+          Creates (or reuses) the <strong>UIL4B Pro</strong> product and monthly/yearly prices in your Stripe account.
+          Prices are auto-discovered by lookup key at checkout — no extra env vars needed for price IDs.
+        </p>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className="btn btn-accent" onClick={runSetup} disabled={loading}>
+            {loading ? 'Setting up…' : 'Setup Stripe Products & Prices'}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--err)', marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Error</div>
+          <div style={{ fontSize: 12, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{error}</div>
+        </div>
+      )}
+
+      {result && (
+        <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--ok)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ok)', marginBottom: 10 }}>Setup Complete</div>
+          <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2, color: 'var(--t0)' }}>
+            <div>Product: <strong>{result.product}</strong></div>
+            <div>Monthly: <strong>{result.prices?.monthly?.id}</strong> {result.prices?.monthly?.reused ? '(existing)' : '(created)'}</div>
+            <div>Yearly: <strong>{result.prices?.yearly?.id}</strong> {result.prices?.yearly?.reused ? '(existing)' : '(created)'}</div>
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 10 }}>{result.note}</p>
+        </div>
+      )}
+
+      <div className="card" style={{ padding: 16, marginTop: 16, background: 'var(--bg-1)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t2)', marginBottom: 10 }}>Required Vercel Env Vars</div>
+        <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2.2, color: 'var(--t1)' }}>
+          <div>STRIPE_SECRET_KEY <span style={{ color: 'var(--t3)' }}>— sk_live_… or sk_test_…</span></div>
+          <div>VITE_STRIPE_PUBLISHABLE_KEY <span style={{ color: 'var(--t3)' }}>— pk_live_… or pk_test_…</span></div>
+          <div>STRIPE_WEBHOOK_SECRET <span style={{ color: 'var(--t3)' }}>— whsec_… (from Stripe dashboard → Webhooks)</span></div>
+          <div>FIREBASE_SERVICE_ACCOUNT_KEY <span style={{ color: 'var(--t3)' }}>— JSON string (for auth token verification)</span></div>
+        </div>
+      </div>
+    </Section>
   )
 }
