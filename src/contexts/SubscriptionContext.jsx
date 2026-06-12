@@ -60,8 +60,8 @@ export function SubscriptionProvider({ children }) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ interval }),
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Checkout failed')
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || `Checkout failed (server returned ${res.status})`)
     return data.clientSecret
   }, [])
 
@@ -72,8 +72,8 @@ export function SubscriptionProvider({ children }) {
     const res = await fetch(`/api/checkout-status?session_id=${encodeURIComponent(sessionId)}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Could not verify checkout')
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || `Could not verify checkout (server returned ${res.status})`)
     return data
   }, [])
 
@@ -85,8 +85,8 @@ export function SubscriptionProvider({ children }) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({}),
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Portal failed')
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || `Portal failed (server returned ${res.status})`)
     window.location.href = data.url
   }, [])
 
