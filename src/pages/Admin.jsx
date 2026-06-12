@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback } from '../utils/analytics'
+import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { ADMIN_EMAILS } from '../utils/constants'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 const ADMIN_KEY = 'vs-admin-unlocked'
-// Owner accounts that get admin access automatically when signed in.
-const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 const STATUSES = ['new', 'in-progress', 'done']
 const STATUS_LABELS = { new: 'New', 'in-progress': 'In Progress', done: 'Done' }
 const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--accent)', done: 'var(--ok)' }
@@ -203,6 +202,104 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
   )
 }
 
+function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState(prompt.title || '')
+  const [text, setText] = useState(prompt.text || '')
+  const [tags, setTags] = useState((prompt.tags || []).join(', '))
+  const [busy, setBusy] = useState(false)
+
+  const updatePrompt = async (updates) => {
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'community-prompts', prompt.id), { ...updates, updatedAt: new Date().toISOString() })
+      setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, ...updates } : p))
+      toast('Prompt updated')
+    } catch { toast('Update failed') }
+    setBusy(false)
+  }
+
+  const handleSave = () => {
+    const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean)
+    updatePrompt({ title, text, tags: parsedTags })
+    setEditing(false)
+  }
+
+  const handleApprove = () => updatePrompt({ status: 'approved' })
+  const handleReject = () => updatePrompt({ status: 'rejected' })
+
+  const handleDelete = async () => {
+    setBusy(true)
+    try {
+      await deleteDoc(doc(db, 'community-prompts', prompt.id))
+      setPendingPrompts(prev => prev.filter(p => p.id !== prompt.id))
+      toast('Prompt deleted')
+    } catch { toast('Delete failed') }
+    setBusy(false)
+  }
+
+  const statusColor = { pending: 'var(--warn)', approved: 'var(--ok)', rejected: 'var(--err)' }[prompt.status] || 'var(--t2)'
+  const statusBg = { pending: 'rgba(245,158,11,.1)', approved: 'rgba(16,185,129,.1)', rejected: 'rgba(239,68,68,.1)' }[prompt.status] || 'var(--bg-2)'
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden', borderLeft: `3px solid ${statusColor}`, marginBottom: 8 }}>
+      <div style={{ padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          <Badge color={statusColor} bg={statusBg}>{prompt.status}</Badge>
+          {prompt.authorName && <span style={{ fontSize: 11, color: 'var(--t2)' }}>by {prompt.authorName}</span>}
+          {prompt.authorEmail && <span style={{ fontSize: 10, color: 'var(--t3)' }}>({prompt.authorEmail})</span>}
+          <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
+        </div>
+
+        {editing ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Title</label>
+              <input value={title} onChange={e => setTitle(e.target.value)} style={{ width: '100%', fontSize: 13 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Prompt Text</label>
+              <textarea value={text} onChange={e => setText(e.target.value)} style={{ width: '100%', minHeight: 100, resize: 'vertical', fontSize: 12 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Tags (comma-separated)</label>
+              <input value={tags} onChange={e => setTags(e.target.value)} style={{ width: '100%', fontSize: 12 }} placeholder="e.g. landing-page, hero, modern" />
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-s btn-accent" onClick={handleSave} disabled={busy}>Save</button>
+              <button className="btn btn-s" onClick={() => { setTitle(prompt.title || ''); setText(prompt.text || ''); setTags((prompt.tags || []).join(', ')); setEditing(false) }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 4 }}>{prompt.title || 'Untitled'}</div>
+            <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{prompt.text}</p>
+            {(prompt.tags || []).length > 0 && (
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+                {prompt.tags.map(tag => (
+                  <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'var(--bg-2)', color: 'var(--t2)', fontWeight: 600 }}>{tag}</span>
+                ))}
+              </div>
+            )}
+            {prompt.profileLink && (
+              <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 8 }}>
+                Profile: <a href={prompt.profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>{prompt.profileLink}</a>
+              </div>
+            )}
+          </>
+        )}
+
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+          {!editing && <button className="btn btn-s" onClick={() => setEditing(true)} disabled={busy} style={{ fontSize: 10 }}>Edit</button>}
+          {prompt.status !== 'approved' && <button className="btn btn-s" onClick={handleApprove} disabled={busy} style={{ fontSize: 10, color: 'var(--ok)' }}>Approve</button>}
+          {prompt.status !== 'rejected' && <button className="btn btn-s" onClick={handleReject} disabled={busy} style={{ fontSize: 10, color: 'var(--warn)' }}>Reject</button>}
+          <button className="btn btn-s" onClick={handleDelete} disabled={busy} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function fmtDuration(s) {
   if (s < 60) return `${s}s`
   return `${Math.floor(s / 60)}m ${s % 60}s`
@@ -220,6 +317,7 @@ function fmtDateTime(iso) {
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'design', label: 'Design Analytics' },
   { id: 'submissions', label: 'Submissions' },
   { id: 'prompts', label: 'Prompts' },
   { id: 'pages', label: 'Pages' },
@@ -229,7 +327,7 @@ const TABS = [
 export default function Admin({ toast }) {
   const { user } = useAuth()
   const isAdminUser = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
-  const [unlocked, setUnlocked] = useState(() => localStorage.getItem(ADMIN_KEY) === 'true')
+  const [unlocked, setUnlocked] = useState(false)
   const [code, setCode] = useState('')
   const [tab, setTab] = useState('overview')
   const [data, setData] = useState(null)
@@ -240,8 +338,11 @@ export default function Admin({ toast }) {
   const [pendingPrompts, setPendingPrompts] = useState([])
   const [promptFilter, setPromptFilter] = useState('pending')
 
+  const [designData, setDesignData] = useState(null)
+
   const refresh = useCallback(async () => {
     setData(getAnalyticsSummary())
+    setDesignData(getDesignAnalytics())
     const localFeedback = getFeedback()
     let merged = [...localFeedback]
     try {
@@ -258,17 +359,36 @@ export default function Admin({ toast }) {
     } catch { /* firestore unavailable */ }
   }, [])
 
+  const [serverVerified, setServerVerified] = useState(false)
+
+  useEffect(() => {
+    if (!isAdminUser || serverVerified) return
+    const verify = async () => {
+      try {
+        const { auth: fbAuth } = await import('../utils/firebase')
+        const token = await fbAuth.currentUser?.getIdToken()
+        if (!token) return
+        const res = await fetch('/api/verify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (data.isAdmin) setServerVerified(true)
+        else { setServerVerified(false); toast?.('Admin verification failed') }
+      } catch { /* offline — trust client-side for now */ }
+    }
+    verify()
+  }, [isAdminUser, serverVerified]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const effectiveUnlocked = unlocked || isAdminUser
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (effectiveUnlocked) refresh()
   }, [effectiveUnlocked, refresh])
 
   const handleUnlock = (e) => {
     e.preventDefault()
     if (code.trim() === ADMIN_CODE) {
-      localStorage.setItem(ADMIN_KEY, 'true')
       setUnlocked(true)
       toast('Admin access granted')
     } else {
@@ -278,7 +398,6 @@ export default function Admin({ toast }) {
   }
 
   const handleLock = () => {
-    localStorage.removeItem(ADMIN_KEY)
     setUnlocked(false)
     toast('Admin access revoked')
   }
@@ -527,6 +646,92 @@ export default function Admin({ toast }) {
         </>
       )}
 
+      {/* DESIGN ANALYTICS TAB */}
+      {tab === 'design' && designData && (
+        <>
+          <Section title="Most Copied Fonts">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%), 1fr))', gap: 14 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Top Fonts</div>
+                {Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([font, count], i) => (
+                  <div key={font} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
+                    <span style={{ fontWeight: 500, color: 'var(--t0)' }}>{font}</span>
+                    <span style={{ color: 'var(--accent)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{count} copies</span>
+                  </div>
+                ))}
+                {Object.keys(designData.fontCopies || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No font copy data yet — users need to copy fonts from Font Pair Finder or Font Gallery.</div>}
+              </div>
+
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Font Copy Distribution</div>
+                {(() => {
+                  const entries = Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                  const max = entries[0]?.[1] || 1
+                  return entries.map(([font, count]) => (
+                    <div key={font} style={{ marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
+                        <span style={{ color: 'var(--t0)', fontWeight: 500 }}>{font}</span>
+                        <span style={{ color: 'var(--t2)' }}>{count}</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${(count / max) * 100}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width .3s' }} />
+                      </div>
+                    </div>
+                  ))
+                })()}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Most Picked Colours">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%), 1fr))', gap: 14 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Top Colours</div>
+                {Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([hex, count], i) => (
+                  <div key={hex} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 'var(--radius-s)', background: hex, border: '1px solid var(--border)', flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'var(--mono)', color: 'var(--t0)', fontWeight: 500, flex: 1 }}>{hex}</span>
+                    <span style={{ color: 'var(--accent)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{count}×</span>
+                  </div>
+                ))}
+                {Object.keys(designData.colourPicks || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No colour pick data yet — users need to select colours in Colour Studio.</div>}
+              </div>
+
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Colour Palette Overview</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 30).map(([hex, count]) => (
+                    <div key={hex} title={`${hex} — ${count} picks`} style={{
+                      width: Math.max(24, Math.min(48, count * 6)),
+                      height: Math.max(24, Math.min(48, count * 6)),
+                      borderRadius: 'var(--radius-s)',
+                      background: hex,
+                      border: '1px solid var(--border)',
+                      cursor: 'default',
+                      transition: 'transform .15s',
+                    }} />
+                  ))}
+                </div>
+                {Object.keys(designData.colourPicks || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No data yet</div>}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Tool Usage">
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Most Used Tools (by action)</div>
+              {Object.entries(designData.toolUsage || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tool, count], i) => (
+                <div key={tool} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
+                  <span style={{ fontFamily: 'var(--mono)', color: 'var(--t0)', fontWeight: 500 }}>{tool}</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{count}</span>
+                </div>
+              ))}
+              {Object.keys(designData.toolUsage || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No tool usage data yet</div>}
+            </div>
+          </Section>
+        </>
+      )}
+
       {/* SUBMISSIONS TAB */}
       {tab === 'submissions' && (
         <Section
@@ -687,39 +892,7 @@ export default function Admin({ toast }) {
           {pendingPrompts
             .filter(p => promptFilter === 'all' || p.status === promptFilter)
             .map(prompt => (
-              <div key={prompt.id} className="card" style={{ padding: 16, marginBottom: 8, borderLeft: `3px solid ${prompt.status === 'approved' ? 'var(--ok)' : prompt.status === 'rejected' ? 'var(--err)' : 'var(--warn)'}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                  <Badge color={prompt.status === 'approved' ? 'var(--ok)' : prompt.status === 'rejected' ? 'var(--err)' : 'var(--warn)'} bg={prompt.status === 'approved' ? 'rgba(16,185,129,.1)' : prompt.status === 'rejected' ? 'rgba(239,68,68,.1)' : 'rgba(245,158,11,.1)'}>
-                    {prompt.status}
-                  </Badge>
-                  <span style={{ fontSize: 11, color: 'var(--t2)' }}>{prompt.authorName || prompt.authorEmail || 'Anonymous'}</span>
-                  <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>{prompt.title}</div>
-                <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 12, maxHeight: 200, overflow: 'auto' }}>{prompt.text}</p>
-                {prompt.tags && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 10 }}>Tags: {prompt.tags}</div>}
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {prompt.status !== 'approved' && (
-                    <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--ok)' }} onClick={async () => {
-                      await updateDoc(doc(db, 'community-prompts', prompt.id), { status: 'approved', updatedAt: new Date().toISOString() })
-                      setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, status: 'approved' } : p))
-                      toast('Prompt approved')
-                    }}>Approve</button>
-                  )}
-                  {prompt.status !== 'rejected' && (
-                    <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--err)' }} onClick={async () => {
-                      await updateDoc(doc(db, 'community-prompts', prompt.id), { status: 'rejected', updatedAt: new Date().toISOString() })
-                      setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, status: 'rejected' } : p))
-                      toast('Prompt rejected')
-                    }}>Reject</button>
-                  )}
-                  <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }} onClick={async () => {
-                    await deleteDoc(doc(db, 'community-prompts', prompt.id))
-                    setPendingPrompts(prev => prev.filter(p => p.id !== prompt.id))
-                    toast('Prompt deleted')
-                  }}>Delete</button>
-                </div>
-              </div>
+              <PromptAdminCard key={prompt.id} prompt={prompt} setPendingPrompts={setPendingPrompts} toast={toast} />
             ))}
           {pendingPrompts.filter(p => promptFilter === 'all' || p.status === promptFilter).length === 0 && (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--t2)', fontSize: 13 }}>

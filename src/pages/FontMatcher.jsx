@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
+import { trackFontCopy } from '../utils/analytics'
 import {
   fetchFonts,
   loadFont,
@@ -206,6 +207,7 @@ export default function FontMatcher({ onCopy, toast }) {
 
   const copyImport = useCallback((families) => {
     const url = getFontImportUrl(families)
+    families.forEach(f => trackFontCopy(f.family))
     onCopy(url)
   }, [onCopy])
 
