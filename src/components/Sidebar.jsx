@@ -61,11 +61,13 @@ function ContextMenu({ x, y, tool, isPinned, onPin, onClose }) {
 export default function Sidebar({ isOpen, onClose }) {
   const { user, userProfile, logout } = useAuth()
   const { t } = useI18n()
-  const { pinned, togglePinned, reorderPinned } = useWorkspace()
+  const { pinned, togglePinned, reorderPinned, addPinned } = useWorkspace()
   const location = useLocation()
   const [ctxMenu, setCtxMenu] = useState(null)
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
+  const [pinDropActive, setPinDropActive] = useState(false)
+  const pinDropDepth = useRef(0)
 
   const isAdmin = user && ADMIN_EMAILS.includes(user.email)
 
@@ -129,6 +131,35 @@ export default function Sidebar({ isOpen, onClose }) {
     setDragOverIdx(null)
   }, [])
 
+  // Pinned list as a drop target for tools dragged out of the category nav.
+  // Sub-items carry TOOL_DRAG_TYPE; internal reorder drags don't, so this only
+  // fires for "pin this tool" drops and leaves reordering untouched.
+  const hasToolPayload = (e) => Array.from(e.dataTransfer.types || []).includes(TOOL_DRAG_TYPE)
+  const onPinZoneDragEnter = useCallback((e) => {
+    if (!hasToolPayload(e)) return
+    e.preventDefault()
+    pinDropDepth.current += 1
+    setPinDropActive(true)
+  }, [])
+  const onPinZoneDragOver = useCallback((e) => {
+    if (!hasToolPayload(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }, [])
+  const onPinZoneDragLeave = useCallback((e) => {
+    if (!hasToolPayload(e)) return
+    pinDropDepth.current -= 1
+    if (pinDropDepth.current <= 0) { pinDropDepth.current = 0; setPinDropActive(false) }
+  }, [])
+  const onPinZoneDrop = useCallback((e) => {
+    if (!hasToolPayload(e)) return
+    e.preventDefault()
+    const id = e.dataTransfer.getData(TOOL_DRAG_TYPE)
+    if (id) addPinned(id)
+    pinDropDepth.current = 0
+    setPinDropActive(false)
+  }, [addPinned])
+
   const cats = localiseCategories(t)
   const allTools = localiseTools(t)
   const pinnedTools = pinned.map(id => allTools.find(tl => tl.id === id)).filter(Boolean)
@@ -171,9 +202,18 @@ export default function Sidebar({ isOpen, onClose }) {
             </NavLink>
           )}
 
-          {pinnedTools.length > 0 && (
-            <div className="nav-pinned">
+          {user && (
+            <div
+              className={`nav-pinned${pinDropActive ? ' drop-active' : ''}`}
+              onDragEnter={onPinZoneDragEnter}
+              onDragOver={onPinZoneDragOver}
+              onDragLeave={onPinZoneDragLeave}
+              onDrop={onPinZoneDrop}
+            >
               <div className="nav-pinned-label">{t('dash.pinned')}</div>
+              {pinnedTools.length === 0 && (
+                <div className="nav-pinned-empty">Drop here to pin</div>
+              )}
               {pinnedTools.map((tool, idx) => (
                 <NavLink
                   key={tool.id}

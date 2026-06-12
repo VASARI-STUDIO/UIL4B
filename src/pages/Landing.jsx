@@ -365,6 +365,67 @@ function TokenDemo() {
 
 const FEATURE_DEMOS = [PaletteDemo, FontDemo, IconDemo, TokenDemo]
 
+const STATS = [
+  { num: '40+', label: 'Design tools' },
+  { num: '200K+', label: 'Icons' },
+  { num: '1,200+', label: 'Google Fonts' },
+  { num: '100%', label: 'Client-side' },
+]
+
+function StickyFeatures() {
+  const [active, setActive] = useState(0)
+  const stepsRef = useRef([])
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return
+    const observers = []
+    stepsRef.current.forEach((el, i) => {
+      if (!el) return
+      const obs = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) setActive(i) },
+        { rootMargin: '-35% 0px -35% 0px' }
+      )
+      obs.observe(el)
+      observers.push(obs)
+    })
+    return () => observers.forEach(o => o.disconnect())
+  }, [])
+
+  return (
+    <section className="landing-sticky">
+      <div className="landing-sticky-head">
+        <span className="landing-eyebrow">What's inside</span>
+        <h2>A toolkit built for real design work.</h2>
+        <p>Four categories of tools, each with interactive previews and production-ready exports.</p>
+      </div>
+      <div className="landing-sticky-grid">
+        <div className="landing-sticky-steps">
+          {FEATURES.map((f, i) => (
+            <div
+              key={i}
+              ref={el => { stepsRef.current[i] = el }}
+              className={`landing-sticky-step${active === i ? ' is-active' : ''}`}
+            >
+              <span className="landing-sticky-num">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{f.title}</h3>
+              <p>{f.body}</p>
+            </div>
+          ))}
+        </div>
+        <div className="landing-sticky-visual">
+          <div className="landing-sticky-visual-card">
+            {FEATURE_DEMOS.map((Demo, i) => (
+              <div key={i} className={`landing-sticky-demo${active === i ? ' is-active' : ''}`}>
+                <Demo />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 const ICON_DEMO_LIMIT = 23
 const ICON_TOTAL = '200,000+'
 
@@ -609,6 +670,16 @@ export default function Landing() {
         </section>
         </div>
 
+        {/* Stats */}
+        <Reveal className="landing-stats">
+          {STATS.map(s => (
+            <div key={s.label} className="landing-stat">
+              <span className="landing-stat-num">{s.num}</span>
+              <span className="landing-stat-label">{s.label}</span>
+            </div>
+          ))}
+        </Reveal>
+
         {/* Category cards */}
         <Reveal className="landing-cats">
           {CATEGORIES.map(cat => (
@@ -622,21 +693,8 @@ export default function Landing() {
           ))}
         </Reveal>
 
-        {/* Feature sections with interactive demos */}
-        {FEATURES.map((f, i) => {
-          const Demo = FEATURE_DEMOS[i]
-          return (
-            <Reveal key={f.title} className={`landing-feature${i % 2 === 1 ? ' landing-feature-reverse' : ''}`}>
-              <div className="landing-feature-text">
-                <h2>{f.title}</h2>
-                <p>{f.body}</p>
-              </div>
-              <div className="landing-feature-img">
-                {Demo && <Demo />}
-              </div>
-            </Reveal>
-          )
-        })}
+        {/* Sticky scroll feature showcase */}
+        <StickyFeatures />
 
         {/* Interactive icon search */}
         <Reveal className="landing-icontool">

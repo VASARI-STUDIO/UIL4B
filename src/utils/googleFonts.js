@@ -1,6 +1,9 @@
+import { FALLBACK_FONTS } from '../data/fallbackFonts'
+
 const API_KEY = import.meta.env.VITE_GOOGLE_FONTS_API_KEY || ''
 const API_URL = `https://www.googleapis.com/webfonts/v1/webfonts?key=${API_KEY}&sort=popularity`
-const CACHE_TTL = 60 * 60 * 1000
+const CACHE_TTL = 24 * 60 * 60 * 1000
+const LS_KEY = 'vs-gf-catalog'
 
 let cache = null
 let cacheTimestamp = 0
@@ -26,22 +29,59 @@ function transformFont(item, index) {
   }
 }
 
+// Catalog sources, in order of preference:
+//   1. Google WebFonts API directly (needs VITE_GOOGLE_FONTS_API_KEY)
+//   2. /api/fonts serverless proxy (works without any client key)
+//   3. Bundled FALLBACK_FONTS so the font tools never render empty
+// Successful fetches are cached in localStorage for a day.
 async function getRawFonts() {
   if (cache && Date.now() - cacheTimestamp < CACHE_TTL) return cache
-  if (!API_KEY) {
-    console.warn('Google Fonts API key missing — set VITE_GOOGLE_FONTS_API_KEY')
-    return cache || []
-  }
+
   try {
-    const res = await fetch(API_URL)
-    if (!res.ok) return cache || []
-    const data = await res.json()
-    cache = (data.items || []).map(transformFont)
-    cacheTimestamp = Date.now()
-    return cache
-  } catch {
-    return cache || []
+    const stored = JSON.parse(localStorage.getItem(LS_KEY) || 'null')
+    if (stored && Array.isArray(stored.fonts) && stored.fonts.length && Date.now() - stored.t < CACHE_TTL) {
+      cache = stored.fonts
+      cacheTimestamp = stored.t
+      return cache
+    }
+  } catch {}
+
+  let fonts = null
+
+  if (API_KEY) {
+    try {
+      const res = await fetch(API_URL)
+      if (res.ok) {
+        const data = await res.json()
+        const items = (data.items || []).map(transformFont)
+        if (items.length) fonts = items
+      }
+    } catch {}
   }
+
+  if (!fonts) {
+    try {
+      const res = await fetch('/api/fonts')
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data.fonts) && data.fonts.length) fonts = data.fonts
+      }
+    } catch {}
+  }
+
+  if (fonts) {
+    cache = fonts
+    cacheTimestamp = Date.now()
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ t: cacheTimestamp, fonts })) } catch {}
+    return cache
+  }
+
+  console.warn('Google Fonts catalog unavailable — using bundled fallback list')
+  // Don't poison the long-lived cache with the fallback: keep it for 5 minutes
+  // so a transient network failure recovers quickly.
+  cache = FALLBACK_FONTS
+  cacheTimestamp = Date.now() - CACHE_TTL + 5 * 60 * 1000
+  return cache
 }
 
 export async function fetchFonts() {
