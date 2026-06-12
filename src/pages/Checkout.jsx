@@ -62,7 +62,6 @@ export default function Checkout() {
   }, [createCheckoutSession, plan.interval])
 
   // Send signed-out users to login, and already-Pro users back to settings.
-  // Wait for auth to resolve first so we don't bounce a logged-in user on load.
   useEffect(() => {
     if (loading) return
     if (!user) navigate('/login', { state: { from: '/checkout' }, replace: true })
