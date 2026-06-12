@@ -4,6 +4,50 @@ All notable changes to the Vasari Obsidian Web Design Toolkit.
 
 ---
 
+## v2.5.0 — Projects, Pro Features, Admin Tools & Security Hardening
+
+### Projects
+- Auto-created "Default Project" on first sign-in
+- "Save current" renamed to "Add to Project" across the app
+- Archive/restore projects; deletion now requires typing the project name to confirm
+- Colour Studio: sticky "Add to Project" bar with colour pick tracking
+
+### Pro & Monetisation
+- Stripe Embedded Checkout with monthly/yearly plans (7-day trial on yearly)
+- Cancellation retention flow: reason survey + tailored offers (discount, pause, free month)
+- Rotating price comparison on the Pro tier ("less than 2 coffees" and friends)
+- Premium Plus coming-soon tier preview
+- Export watermark for free users; Pro unlocks all export formats
+- Prompt Library: community prompts Pro-gated beyond the first 5; +25 AI generations for approved contributor submissions
+
+### UI Builder
+- New Component Designer: buttons, cards, inputs, badges, toggles, tables, tabs with shared design tokens and CSS export
+- Guided mode: step-by-step progress bar walking through each component type
+
+### Admin
+- Design Analytics tab: most copied fonts, most picked colours (with swatch visualisations), tool usage
+- Community prompt review with inline editing (title, text, tags) before approval
+- Server-side admin verification via `/api/verify-admin` (Firebase Admin SDK)
+- Admin-only `/style-guide` page documenting the internal design system
+
+### Internationalisation
+- New English (US) locale; English (AU) gains Aussie slang
+- Browser language auto-detection for first-time visitors
+
+### Security
+- Removed spoofable localStorage admin unlock (session-only now)
+- Input validation on the support endpoint (email format, length limits, type whitelist)
+- HTML escaping in feedback email notifications
+- Origin whitelist for Stripe checkout/portal return URLs
+- Firestore rules for the community-prompts collection
+
+### Consistency & Quality
+- All modals standardised on the Font Gallery popup pattern
+- `ADMIN_EMAILS` extracted to a shared constant; case-insensitive email checks
+- External Resources: user-added custom resources with name, URL, and colour
+
+---
+
 ## v2.4.0 — Bug Fixes & Visual Polish
 
 ### Bug Fixes
