@@ -475,6 +475,10 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .pl-empty p{font-size:14px;margin:0}
 
 /* ─── Emoji Library ─── */
+.emoji-skin-tones{display:flex;gap:4px;flex-shrink:0}
+.emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:all .15s}
+.emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
+.emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
 .emoji-sections{display:flex;flex-direction:column;gap:32px}
 .emoji-section-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .emoji-section-head h3{font-size:14px;font-weight:700;letter-spacing:-.01em}
@@ -484,6 +488,35 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2)}
 .emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent)}
 .emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;font-family:var(--font)}
+
+/* ─── Box Shadow Generator ─── */
+.bsg-layout{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start}
+.bsg-preview{display:flex;align-items:center;justify-content:center;min-height:360px;border:1px solid var(--border);border-radius:var(--radius-l);transition:background .2s}
+.bsg-box{width:180px;height:180px;transition:box-shadow .15s,border-radius .15s}
+.bsg-controls{display:flex;flex-direction:column;gap:16px}
+.bsg-layers{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bsg-layer-tabs{display:flex;gap:4px}
+.bsg-layer-tab{width:32px;height:32px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);color:var(--t1);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:var(--mono)}
+.bsg-layer-tab:hover{border-color:var(--bh);color:var(--t0)}
+.bsg-layer-tab.active{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
+.bsg-layer-add{color:var(--t2)}
+.bsg-layer-actions{display:flex;gap:4px}
+.bsg-fields{display:flex;flex-direction:column;gap:10px}
+.bsg-field{display:grid;grid-template-columns:72px 1fr 54px;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--t1)}
+.bsg-field input[type="range"]{width:100%;accent-color:var(--accent)}
+.bsg-num{width:54px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--t0);font-size:12px;font-family:var(--mono);text-align:center}
+.bsg-row{display:flex;gap:12px;align-items:center}
+.bsg-field-color{grid-template-columns:72px 28px;gap:8px}
+.bsg-field-color input[type="color"]{width:28px;height:28px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;background:none}
+.bsg-field-check{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--t1)}
+.bsg-field-check input[type="checkbox"]{accent-color:var(--accent)}
+.bsg-box-settings{display:flex;gap:12px;align-items:center;padding-top:12px;border-top:1px solid var(--border)}
+.bsg-code-wrap{margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden}
+.bsg-code{padding:16px 20px;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--t1);margin:0;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.bsg-code-actions{display:flex;gap:8px;padding:10px 20px;border-top:1px solid var(--border);background:var(--bg-1)}
+@media(max-width:880px){
+  .bsg-layout{grid-template-columns:1fr}
+}
 
 /* ─── CAD Converter ─── */
 .cad-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:80px 40px;border:2px dashed var(--border);border-radius:var(--radius-l);cursor:pointer;transition:all var(--t);text-align:center;background:var(--card)}

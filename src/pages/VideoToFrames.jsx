@@ -168,47 +168,51 @@ export default function VideoToFrames({ toast }) {
     let currentTime = 0
     let frameIdx = 0
 
-    while (currentTime < videoMeta.duration && frameIdx < totalFrames) {
-      video.currentTime = currentTime
+    try {
+      while (currentTime < videoMeta.duration && frameIdx < totalFrames) {
+        video.currentTime = currentTime
 
-      await new Promise((resolve) => {
-        video.onseeked = resolve
-      })
-
-      // Clear canvas for transparency support
-      ctx.clearRect(0, 0, outW, outH)
-      if (format === 'image/jpeg') {
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, outW, outH)
-      }
-      ctx.drawImage(video, 0, 0, outW, outH)
-
-      const blob = await new Promise((resolve) => {
-        canvas.toBlob(resolve, format, qualityVal)
-      })
-
-      if (blob) {
-        const thumbUrl = URL.createObjectURL(blob)
-        extractedFrames.push({
-          blob,
-          thumbUrl,
-          name: `frame-${String(frameIdx + 1).padStart(5, '0')}.${ext}`,
-          time: currentTime,
-          size: blob.size,
-          width: outW,
-          height: outH,
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Seek timed out')), 5000)
+          video.onseeked = () => { clearTimeout(timeout); resolve() }
         })
-      }
 
-      frameIdx++
-      currentTime += timeStep
-      setProgress(Math.round((frameIdx / totalFrames) * 100))
+        ctx.clearRect(0, 0, outW, outH)
+        if (format === 'image/jpeg') {
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, outW, outH)
+        }
+        ctx.drawImage(video, 0, 0, outW, outH)
+
+        const blob = await new Promise((resolve) => {
+          canvas.toBlob(resolve, format, qualityVal)
+        })
+
+        if (blob) {
+          const thumbUrl = URL.createObjectURL(blob)
+          extractedFrames.push({
+            blob,
+            thumbUrl,
+            name: `frame-${String(frameIdx + 1).padStart(5, '0')}.${ext}`,
+            time: currentTime,
+            size: blob.size,
+            width: outW,
+            height: outH,
+          })
+        }
+
+        frameIdx++
+        currentTime += timeStep
+        setProgress(Math.round((frameIdx / totalFrames) * 100))
+      }
+    } catch (err) {
+      toast(extractedFrames.length > 0 ? `Extracted ${extractedFrames.length} frames (stopped: ${err.message})` : `Extraction failed: ${err.message}`)
     }
 
     setFrames(extractedFrames)
     setExtracting(false)
     setProgress(100)
-    toast(`Extracted ${extractedFrames.length} frames`)
+    if (extractedFrames.length > 0) toast(`Extracted ${extractedFrames.length} frames`)
   }, [videoUrl, videoMeta, format, quality, scale, computeTimeStep, computeFrameCount, toast])
 
   const downloadFrame = useCallback((frame) => {
