@@ -1,4 +1,4 @@
-import { adminAuth } from './_lib/firebase-admin.js'
+import { adminAuth, credentialProblem } from './_lib/firebase-admin.js'
 
 const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 
@@ -21,6 +21,6 @@ export default async function handler(req, res) {
     const isAdmin = !!email && ADMIN_EMAILS.includes(email)
     return res.status(200).json({ isAdmin, uid: decoded.uid, email })
   } catch {
-    return res.status(401).json({ error: 'Invalid token', isAdmin: false })
+    return res.status(401).json({ error: credentialProblem() || 'Invalid token', isAdmin: false })
   }
 }

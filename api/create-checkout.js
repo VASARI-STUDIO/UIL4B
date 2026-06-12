@@ -1,4 +1,4 @@
-import { adminAuth, adminDb } from './_lib/firebase-admin.js'
+import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
 
 const LOOKUP_KEYS = { monthly: 'uil4b_pro_monthly', yearly: 'uil4b_pro_yearly' }
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
   } catch {
-    return res.status(401).json({ error: 'Invalid auth token' })
+    return res.status(401).json({ error: credentialProblem() || 'Invalid auth token' })
   }
 
   try {
