@@ -203,6 +203,104 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
   )
 }
 
+function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState(prompt.title || '')
+  const [text, setText] = useState(prompt.text || '')
+  const [tags, setTags] = useState((prompt.tags || []).join(', '))
+  const [busy, setBusy] = useState(false)
+
+  const updatePrompt = async (updates) => {
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'community-prompts', prompt.id), { ...updates, updatedAt: new Date().toISOString() })
+      setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, ...updates } : p))
+      toast('Prompt updated')
+    } catch { toast('Update failed') }
+    setBusy(false)
+  }
+
+  const handleSave = () => {
+    const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean)
+    updatePrompt({ title, text, tags: parsedTags })
+    setEditing(false)
+  }
+
+  const handleApprove = () => updatePrompt({ status: 'approved' })
+  const handleReject = () => updatePrompt({ status: 'rejected' })
+
+  const handleDelete = async () => {
+    setBusy(true)
+    try {
+      await deleteDoc(doc(db, 'community-prompts', prompt.id))
+      setPendingPrompts(prev => prev.filter(p => p.id !== prompt.id))
+      toast('Prompt deleted')
+    } catch { toast('Delete failed') }
+    setBusy(false)
+  }
+
+  const statusColor = { pending: 'var(--warn)', approved: 'var(--ok)', rejected: 'var(--err)' }[prompt.status] || 'var(--t2)'
+  const statusBg = { pending: 'rgba(245,158,11,.1)', approved: 'rgba(16,185,129,.1)', rejected: 'rgba(239,68,68,.1)' }[prompt.status] || 'var(--bg-2)'
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden', borderLeft: `3px solid ${statusColor}`, marginBottom: 8 }}>
+      <div style={{ padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          <Badge color={statusColor} bg={statusBg}>{prompt.status}</Badge>
+          {prompt.authorName && <span style={{ fontSize: 11, color: 'var(--t2)' }}>by {prompt.authorName}</span>}
+          {prompt.authorEmail && <span style={{ fontSize: 10, color: 'var(--t3)' }}>({prompt.authorEmail})</span>}
+          <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
+        </div>
+
+        {editing ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Title</label>
+              <input value={title} onChange={e => setTitle(e.target.value)} style={{ width: '100%', fontSize: 13 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Prompt Text</label>
+              <textarea value={text} onChange={e => setText(e.target.value)} style={{ width: '100%', minHeight: 100, resize: 'vertical', fontSize: 12 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Tags (comma-separated)</label>
+              <input value={tags} onChange={e => setTags(e.target.value)} style={{ width: '100%', fontSize: 12 }} placeholder="e.g. landing-page, hero, modern" />
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-s btn-accent" onClick={handleSave} disabled={busy}>Save</button>
+              <button className="btn btn-s" onClick={() => { setTitle(prompt.title || ''); setText(prompt.text || ''); setTags((prompt.tags || []).join(', ')); setEditing(false) }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 4 }}>{prompt.title || 'Untitled'}</div>
+            <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{prompt.text}</p>
+            {(prompt.tags || []).length > 0 && (
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+                {prompt.tags.map(tag => (
+                  <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'var(--bg-2)', color: 'var(--t2)', fontWeight: 600 }}>{tag}</span>
+                ))}
+              </div>
+            )}
+            {prompt.profileLink && (
+              <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 8 }}>
+                Profile: <a href={prompt.profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>{prompt.profileLink}</a>
+              </div>
+            )}
+          </>
+        )}
+
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+          {!editing && <button className="btn btn-s" onClick={() => setEditing(true)} disabled={busy} style={{ fontSize: 10 }}>Edit</button>}
+          {prompt.status !== 'approved' && <button className="btn btn-s" onClick={handleApprove} disabled={busy} style={{ fontSize: 10, color: 'var(--ok)' }}>Approve</button>}
+          {prompt.status !== 'rejected' && <button className="btn btn-s" onClick={handleReject} disabled={busy} style={{ fontSize: 10, color: 'var(--warn)' }}>Reject</button>}
+          <button className="btn btn-s" onClick={handleDelete} disabled={busy} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function fmtDuration(s) {
   if (s < 60) return `${s}s`
   return `${Math.floor(s / 60)}m ${s % 60}s`
@@ -797,39 +895,7 @@ export default function Admin({ toast }) {
           {pendingPrompts
             .filter(p => promptFilter === 'all' || p.status === promptFilter)
             .map(prompt => (
-              <div key={prompt.id} className="card" style={{ padding: 16, marginBottom: 8, borderLeft: `3px solid ${prompt.status === 'approved' ? 'var(--ok)' : prompt.status === 'rejected' ? 'var(--err)' : 'var(--warn)'}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                  <Badge color={prompt.status === 'approved' ? 'var(--ok)' : prompt.status === 'rejected' ? 'var(--err)' : 'var(--warn)'} bg={prompt.status === 'approved' ? 'rgba(16,185,129,.1)' : prompt.status === 'rejected' ? 'rgba(239,68,68,.1)' : 'rgba(245,158,11,.1)'}>
-                    {prompt.status}
-                  </Badge>
-                  <span style={{ fontSize: 11, color: 'var(--t2)' }}>{prompt.authorName || prompt.authorEmail || 'Anonymous'}</span>
-                  <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 6 }}>{prompt.title}</div>
-                <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 12, maxHeight: 200, overflow: 'auto' }}>{prompt.text}</p>
-                {prompt.tags && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 10 }}>Tags: {prompt.tags}</div>}
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {prompt.status !== 'approved' && (
-                    <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--ok)' }} onClick={async () => {
-                      await updateDoc(doc(db, 'community-prompts', prompt.id), { status: 'approved', updatedAt: new Date().toISOString() })
-                      setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, status: 'approved' } : p))
-                      toast('Prompt approved')
-                    }}>Approve</button>
-                  )}
-                  {prompt.status !== 'rejected' && (
-                    <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--err)' }} onClick={async () => {
-                      await updateDoc(doc(db, 'community-prompts', prompt.id), { status: 'rejected', updatedAt: new Date().toISOString() })
-                      setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, status: 'rejected' } : p))
-                      toast('Prompt rejected')
-                    }}>Reject</button>
-                  )}
-                  <button className="btn btn-s" style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }} onClick={async () => {
-                    await deleteDoc(doc(db, 'community-prompts', prompt.id))
-                    setPendingPrompts(prev => prev.filter(p => p.id !== prompt.id))
-                    toast('Prompt deleted')
-                  }}>Delete</button>
-                </div>
-              </div>
+              <PromptAdminCard key={prompt.id} prompt={prompt} setPendingPrompts={setPendingPrompts} toast={toast} />
             ))}
           {pendingPrompts.filter(p => promptFilter === 'all' || p.status === promptFilter).length === 0 && (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--t2)', fontSize: 13 }}>
