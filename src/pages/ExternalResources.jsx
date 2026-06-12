@@ -2,12 +2,24 @@ import { useState, useCallback } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 
 const BOOKMARKS_KEY = 'vs-bookmarked-resources'
+const USER_RESOURCES_KEY = 'vs-user-resources'
 
 function getBookmarks() {
   try { return JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || '[]') } catch { return [] }
 }
 function setBookmarks(urls) {
   try { localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(urls)) } catch {}
+}
+
+function getUserResources() {
+  try { return JSON.parse(localStorage.getItem(USER_RESOURCES_KEY) || '[]') } catch { return [] }
+}
+function saveUserResources(resources) {
+  try { localStorage.setItem(USER_RESOURCES_KEY, JSON.stringify(resources)) } catch {}
+}
+
+function makeInitials(name) {
+  return (name || '').slice(0, 2).toUpperCase() || '??'
 }
 
 const categories = [
@@ -167,6 +179,29 @@ const bookmarkIcon = (filled) => (
   </svg>
 )
 
+const deleteIcon = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+  </svg>
+)
+
+const plusIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+)
+
+const userIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+)
+
 function BrandPreview({ color, initials }) {
   return (
     <div
@@ -207,7 +242,7 @@ function BrandPreview({ color, initials }) {
   )
 }
 
-function ResourceCard({ link, isBookmarked, onToggleBookmark }) {
+function ResourceCard({ link, isBookmarked, onToggleBookmark, onDelete }) {
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', position: 'relative' }}>
       <a
@@ -248,13 +283,45 @@ function ResourceCard({ link, isBookmarked, onToggleBookmark }) {
       >
         {bookmarkIcon(isBookmarked)}
       </button>
+      {onDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          style={{
+            position: 'absolute',
+            top: 6,
+            left: 6,
+            background: 'rgba(0,0,0,.45)',
+            border: 'none',
+            borderRadius: 'var(--radius-s)',
+            color: 'rgba(255,255,255,.7)',
+            cursor: 'pointer',
+            padding: '4px 6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'color .15s, background .15s',
+            zIndex: 2,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(0,0,0,.65)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.7)'; e.currentTarget.style.background = 'rgba(0,0,0,.45)' }}
+          aria-label="Delete resource"
+          title="Delete this resource"
+        >
+          {deleteIcon}
+        </button>
+      )}
     </div>
   )
 }
 
+const defaultAddForm = { name: '', url: '', desc: '', color: '#6366F1' }
+
 export default function ExternalResources() {
   const { t } = useI18n()
   const [bookmarked, setBookmarked] = useState(getBookmarks)
+  const [userResources, setUserResources] = useState(getUserResources)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState(defaultAddForm)
 
   const toggleBookmark = useCallback((url) => {
     setBookmarked(prev => {
@@ -264,14 +331,210 @@ export default function ExternalResources() {
     })
   }, [])
 
+  const deleteUserResource = useCallback((id) => {
+    setUserResources(prev => {
+      const next = prev.filter(r => r.id !== id)
+      saveUserResources(next)
+      return next
+    })
+  }, [])
+
+  const handleAddSubmit = useCallback(() => {
+    const name = addForm.name.trim()
+    const url = addForm.url.trim()
+    if (!name || !url) return
+    const resource = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name,
+      desc: addForm.desc.trim(),
+      url: url.startsWith('http') ? url : `https://${url}`,
+      color: addForm.color,
+      initials: makeInitials(name),
+      addedAt: new Date().toISOString(),
+    }
+    setUserResources(prev => {
+      const next = [resource, ...prev]
+      saveUserResources(next)
+      return next
+    })
+    setAddForm(defaultAddForm)
+    setAddOpen(false)
+  }, [addForm])
+
   const bookmarkedLinks = allLinks.filter(l => bookmarked.includes(l.url))
 
   return (
     <div className="sec">
-      <div className="sec-h">
+      <div className="sec-h" style={{ position: 'relative' }}>
         <h1>{t('resources.title')}</h1>
         <p>{t('resources.subtitle')}</p>
+        <button
+          className="btn btn-s btn-accent"
+          onClick={() => setAddOpen(!addOpen)}
+          style={{ position: 'absolute', right: 0, top: 0, display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          {plusIcon}
+          <span>Add resource</span>
+        </button>
       </div>
+
+      {/* Add resource form */}
+      <div
+        style={{
+          maxHeight: addOpen ? 500 : 0,
+          opacity: addOpen ? 1 : 0,
+          overflow: 'hidden',
+          transition: 'max-height .35s cubic-bezier(.16,1,.3,1), opacity .25s',
+          marginBottom: addOpen ? 28 : 0,
+        }}
+      >
+        <div
+          className="card"
+          style={{ padding: 24 }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 4 }}>Add a custom resource</div>
+            <input
+              type="text"
+              placeholder="Resource name"
+              value={addForm.name}
+              onChange={(e) => setAddForm(f => ({ ...f, name: e.target.value }))}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                fontSize: 14,
+                fontWeight: 600,
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg1)',
+                color: 'var(--t0)',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            <input
+              type="url"
+              placeholder="https://example.com"
+              value={addForm.url}
+              onChange={(e) => setAddForm(f => ({ ...f, url: e.target.value }))}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                fontSize: 13,
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg1)',
+                color: 'var(--t0)',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Short description (optional)"
+              value={addForm.desc}
+              onChange={(e) => setAddForm(f => ({ ...f, desc: e.target.value }))}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                fontSize: 13,
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg1)',
+                color: 'var(--t0)',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <label style={{ fontSize: 12, color: 'var(--t2)', flexShrink: 0 }}>Card accent</label>
+              <input
+                type="color"
+                value={addForm.color}
+                onChange={(e) => setAddForm(f => ({ ...f, color: e.target.value }))}
+                style={{
+                  width: 36,
+                  height: 28,
+                  padding: 0,
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-s)',
+                  background: 'none',
+                  cursor: 'pointer',
+                }}
+              />
+              {addForm.name && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--t3)',
+                    fontFamily: 'var(--mono)',
+                  }}
+                >
+                  Initials: {makeInitials(addForm.name)}
+                </span>
+              )}
+            </div>
+            {/* Preview */}
+            {addForm.name && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 28,
+                    borderRadius: 'var(--radius-s)',
+                    background: `linear-gradient(135deg, ${addForm.color}, ${addForm.color}cc)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', fontFamily: 'var(--mono)' }}>
+                    {makeInitials(addForm.name)}
+                  </span>
+                </div>
+                <span style={{ fontSize: 12, color: 'var(--t2)' }}>Preview</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+            <button
+              className="btn btn-s"
+              onClick={() => { setAddOpen(false); setAddForm(defaultAddForm) }}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-s btn-accent"
+              onClick={handleAddSubmit}
+              disabled={!addForm.name.trim() || !addForm.url.trim()}
+            >
+              Add resource
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* User-added resources */}
+      {userResources.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--t1)' }}>
+            <span style={{ display: 'flex', color: 'var(--accent)' }}>{userIcon}</span>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>My Resources</span>
+            <span style={{ fontSize: 11, color: 'var(--t3)', fontFamily: 'var(--mono)', marginLeft: 4 }}>{userResources.length}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+            {userResources.map(res => (
+              <ResourceCard
+                key={res.id}
+                link={res}
+                isBookmarked={bookmarked.includes(res.url)}
+                onToggleBookmark={toggleBookmark}
+                onDelete={() => deleteUserResource(res.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {bookmarkedLinks.length > 0 && (
         <div style={{ marginBottom: 32 }}>

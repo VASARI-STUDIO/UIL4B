@@ -9,8 +9,8 @@
     "cancel": "Cancel",
     "submit": "Submit",
     "search": "Search",
-    "loading": "Hang on a sec…",
-    "noResults": "No results, mate",
+    "loading": "Loading…",
+    "noResults": "No results",
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "signUp": "Sign Up",
@@ -27,8 +27,8 @@
     "jumpToCategory": "Jump to category",
     "pin": "Pin {name}",
     "unpin": "Unpin {name}",
-    "colour": "Colour",
-    "colours": "Colours"
+    "colour": "Color",
+    "colours": "Colors"
   },
   "brand": {
     "name": "UIL4B",
@@ -71,12 +71,12 @@
       "afternoon": "Good afternoon",
       "evening": "Good evening"
     },
-    "heroSub": "Pick up where you left off, or have a squiz at a category below.",
+    "heroSub": "Pick up where you left off, or explore a category below.",
     "yourTools": "Your Tools",
     "pinnedCount": "{count} pinned",
     "explore": "Explore",
     "categoryCount": "{count} categories",
-    "emptyPinned": "Pin tools from any category to chuck them here.",
+    "emptyPinned": "Pin tools from any category to see them here.",
     "toolCount": "{count} tools",
     "localTime": "Local time",
     "pinned": "Pinned",
@@ -87,11 +87,11 @@
     "visitToolHint": "Visit a tool to see it here",
     "featured": "Featured",
     "category": "Category {num}",
-    "pinHint": "Pin tools from any category to keep them handy right here."
+    "pinHint": "Pin tools from any category to see them here for quick access."
   },
   "categories": {
     "color": {
-      "label": "Colour Studio",
+      "label": "Color Studio",
       "description": "Build palettes, scales, gradients and verify accessibility."
     },
     "typography": {
@@ -109,8 +109,8 @@
   },
   "tools": {
     "colorStudio": {
-      "label": "Colour Studio",
-      "description": "Complete colour system builder with palette, tints, contrast, and gradients."
+      "label": "Color Studio",
+      "description": "Complete color system builder with palette, tints, contrast, and gradients."
     },
     "typeScale": {
       "label": "Type Scale",
@@ -162,7 +162,7 @@
     },
     "externalResources": {
       "label": "External Resources",
-      "description": "Curated links to fonts, colours, AI tools, and inspiration."
+      "description": "Curated links to fonts, colors, AI tools, and inspiration."
     },
     "promptLibrary": {
       "label": "Prompt Library",
@@ -170,16 +170,16 @@
     },
     "emojiLibrary": {
       "label": "Emoji Library",
-      "description": "Browse and copy emojis organised by category."
+      "description": "Browse and copy emojis organized by category."
     }
   },
   "color": {
-    "title": "Colour Studio",
-    "baseColour": "Base Colour",
+    "title": "Color Studio",
+    "baseColour": "Base Color",
     "palette": "Palette",
     "harmony": "Harmony",
     "tints": "Tints",
-    "stateColours": "State Colours",
+    "stateColours": "State Colors",
     "gradients": "Gradients",
     "preview": "Preview",
     "harmonyModes": {
@@ -332,7 +332,7 @@
   },
   "promptLibrary": {
     "title": "Prompt Library",
-    "subtitle": "Save, organise, and reuse your favourite design prompts. She'll be right.",
+    "subtitle": "Save, organize, and reuse your favorite design prompts.",
     "addPrompt": "Add Prompt",
     "promptPlaceholder": "Enter your prompt…",
     "tagsPlaceholder": "Tags (comma separated)",
@@ -375,7 +375,7 @@
     "author": "Author",
     "version": "Version",
     "description": "Description",
-    "colourTokens": "Colour Tokens",
+    "colourTokens": "Color Tokens",
     "typographyTokens": "Typography Tokens",
     "headingFont": "Heading Font",
     "bodyFont": "Body Font",
@@ -390,17 +390,17 @@
     "copyCssVars": "Copy CSS Variables",
     "cssVarsCopied": "CSS variables copied",
     "importFromPalette": "Import from Palette",
-    "paletteImported": "Palette colours imported",
+    "paletteImported": "Palette colors imported",
     "noPaletteData": "No palette data found",
-    "addColour": "Add Colour",
+    "addColour": "Add Color",
     "removeColour": "Remove"
   },
   "resources": {
     "title": "External Resources",
-    "subtitle": "Ripper links to tools, inspo, and references for web design.",
+    "subtitle": "Curated links to tools, inspiration, and references for web design.",
     "categories": {
       "typography": "Typography",
-      "colour": "Colour",
+      "colour": "Color",
       "aiImageVideo": "AI Image & Video",
       "framer": "Framer",
       "designInspiration": "Design Inspiration",
@@ -502,14 +502,14 @@
   },
   "feedback": {
     "title": "Feedback",
-    "subtitle": "Help us make UIL4B even better. Chuck us your bugs, feature ideas, or a good yarn.",
+    "subtitle": "Help us make UIL4B even better. Share your bugs, feature ideas, or general feedback.",
     "featureRequest": "Feature Request",
     "bugReport": "Bug Report",
     "general": "General",
     "messagePlaceholder": "Tell us what you think…",
     "submitFeedback": "Submit Feedback",
     "enterFeedback": "Please enter your feedback",
-    "thankYou": "Legend! Thanks for the feedback.",
+    "thankYou": "Thank you for your feedback!",
     "sendViaEmail": "Send via Email",
     "openGitHubIssue": "Open GitHub Issue"
   },
@@ -588,7 +588,7 @@
     "s5Intro": "You agree not to:",
     "s5Items": [
       "Use the Service for any unlawful purpose",
-      "Attempt to gain unauthorised access to other users' accounts",
+      "Attempt to gain unauthorized access to other users' accounts",
       "Reverse engineer, decompile, or disassemble the Service",
       "Use automated systems to scrape or extract data from the Service"
     ],

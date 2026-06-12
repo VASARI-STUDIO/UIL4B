@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { fetchFonts, loadFont, getFontCSSRule } from '../utils/googleFonts'
 import { useProject } from '../contexts/ProjectContext'
+import { trackFontCopy } from '../utils/analytics'
 
 const CATS = [
   { id: 'all', label: 'All' },
@@ -273,6 +274,7 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
           </button>
           <button className="btn" onClick={() => {
             const url = `https://fonts.googleapis.com/css2?family=${font.family.replace(/ /g, '+')}:wght@${font.variants.join(';')}&display=swap`
+            trackFontCopy(font.family)
             if (onCopy) onCopy(url)
           }}>
             Copy Import URL
