@@ -1,7 +1,5 @@
-import Stripe from 'stripe'
 import { adminAuth, adminDb } from './_lib/firebase-admin.js'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+import { getStripeServer } from './_lib/stripe.js'
 
 const PRICES = {
   monthly: process.env.STRIPE_PRICE_MONTHLY,
@@ -33,48 +31,55 @@ export default async function handler(req, res) {
   const isYearly = interval === 'yearly'
   const priceId = isYearly ? PRICES.yearly : PRICES.monthly
   if (!priceId) {
-    return res.status(500).json({ error: 'Stripe price not configured' })
+    return res.status(500).json({ error: `Stripe price not configured: set ${isYearly ? 'STRIPE_PRICE_YEARLY' : 'STRIPE_PRICE_MONTHLY'} in the server environment` })
   }
 
-  const userDoc = await adminDb().collection('users').doc(uid).get()
-  let customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
+  try {
+    const stripe = getStripeServer()
 
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      metadata: { firebaseUid: uid },
-    })
-    customerId = customer.id
-    await adminDb().collection('users').doc(uid).set(
-      { stripeCustomerId: customerId },
-      { merge: true }
-    )
-  }
+    const userDoc = await adminDb().collection('users').doc(uid).get()
+    let customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
 
-  const ALLOWED_ORIGINS = ['https://uil4b.vercel.app', 'https://uil4b.com', 'https://www.uil4b.com', 'http://localhost:5173']
-  const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
-  const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
-
-  const subscriptionData = { metadata: { firebaseUid: uid } }
-  // Yearly plans include a 7-day free trial. Monthly bills immediately.
-  if (isYearly) {
-    subscriptionData.trial_period_days = 7
-    subscriptionData.trial_settings = {
-      end_behavior: { missing_payment_method: 'cancel' },
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        metadata: { firebaseUid: uid },
+      })
+      customerId = customer.id
+      await adminDb().collection('users').doc(uid).set(
+        { stripeCustomerId: customerId },
+        { merge: true }
+      )
     }
+
+    const ALLOWED_ORIGINS = ['https://uil4b.vercel.app', 'https://uil4b.com', 'https://www.uil4b.com', 'http://localhost:5173']
+    const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
+    const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
+
+    const subscriptionData = { metadata: { firebaseUid: uid } }
+    // Yearly plans include a 7-day free trial. Monthly bills immediately.
+    if (isYearly) {
+      subscriptionData.trial_period_days = 7
+      subscriptionData.trial_settings = {
+        end_behavior: { missing_payment_method: 'cancel' },
+      }
+    }
+
+    // Embedded Checkout: the payment form renders inside our own /checkout page
+    // (see src/pages/Checkout.jsx) rather than redirecting to a Stripe-hosted
+    // page. We return the session's client_secret for the embedded component and
+    // the customer returns to /checkout/return to confirm the result.
+    const session = await stripe.checkout.sessions.create({
+      ui_mode: 'embedded',
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+      subscription_data: subscriptionData,
+    })
+
+    return res.status(200).json({ clientSecret: session.client_secret })
+  } catch (err) {
+    console.error('create-checkout failed:', err)
+    return res.status(500).json({ error: err?.message || 'Could not create checkout session' })
   }
-
-  // Embedded Checkout: the payment form renders inside our own /checkout page
-  // (see src/pages/Checkout.jsx) rather than redirecting to a Stripe-hosted
-  // page. We return the session's client_secret for the embedded component and
-  // the customer returns to /checkout/return to confirm the result.
-  const session = await stripe.checkout.sessions.create({
-    ui_mode: 'embedded',
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
-    return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-    subscription_data: subscriptionData,
-  })
-
-  return res.status(200).json({ clientSecret: session.client_secret })
 }
