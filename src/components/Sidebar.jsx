@@ -4,9 +4,9 @@ import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useWorkspace, TOOL_DRAG_TYPE } from '../contexts/WorkspaceContext'
 import { CATEGORIES, toolsByCategory, localiseCategories, localiseTools } from '../data/tools'
+import { ADMIN_EMAILS } from '../utils/constants'
 
 const STORAGE_KEY = 'vs-nav-open'
-const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 
 function loadOpenState() {
   try {
@@ -69,7 +69,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const [pinDropActive, setPinDropActive] = useState(false)
   const pinDropDepth = useRef(0)
 
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email)
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
   const activeCategoryId = (() => {
     for (const cat of CATEGORIES) {
@@ -318,12 +318,20 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Footer */}
         <div className="sidebar-footer">
           {isAdmin && (
-            <NavLink to="/admin" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
-              <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Admin</span>
-            </NavLink>
+            <>
+              <NavLink to="/admin" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
+                <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Admin</span>
+              </NavLink>
+              <NavLink to="/style-guide" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
+                <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+                </svg>
+                <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Style Guide</span>
+              </NavLink>
+            </>
           )}
           <NavLink to="/settings" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
             <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
