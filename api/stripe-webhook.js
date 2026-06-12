@@ -1,8 +1,5 @@
-import Stripe from 'stripe'
 import { adminDb } from './_lib/firebase-admin.js'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
+import { getStripeServer } from './_lib/stripe.js'
 
 export const config = { api: { bodyParser: false } }
 
@@ -44,6 +41,20 @@ async function writeSubscription(uid, sub) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
+
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!endpointSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not set — webhook events cannot be verified')
+    return res.status(500).json({ error: 'Webhook not configured' })
+  }
+
+  let stripe
+  try {
+    stripe = getStripeServer()
+  } catch (err) {
+    console.error(err.message)
+    return res.status(500).json({ error: 'Stripe not configured' })
+  }
 
   const buf = await buffer(req)
   const sig = req.headers['stripe-signature']
