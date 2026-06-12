@@ -4,7 +4,8 @@ const I18nContext = createContext()
 const STORAGE_KEY = 'vs-lang'
 
 const LANGUAGES = [
-  { code: 'en', label: 'English', native: 'English (AU)', flag: '🇦🇺', region: 'AU' },
+  { code: 'en', label: 'English (AU)', native: 'English (AU)', flag: '🇦🇺', region: 'AU' },
+  { code: 'en-US', label: 'English (US)', native: 'English (US)', flag: '🇺🇸', region: 'US' },
   { code: 'es', label: 'Spanish', native: 'Español', flag: '🇪🇸', region: 'ES' },
   { code: 'fr', label: 'French', native: 'Français', flag: '🇫🇷', region: 'FR' },
   { code: 'de', label: 'German', native: 'Deutsch', flag: '🇩🇪', region: 'DE' },
@@ -15,6 +16,17 @@ const LANGUAGES = [
   { code: 'ko', label: 'Korean', native: '한국어', flag: '🇰🇷', region: 'KR' },
 ]
 
+function detectBrowserLang() {
+  try {
+    const nav = navigator.language || navigator.languages?.[0] || ''
+    if (nav.startsWith('en-US') || nav.startsWith('en-GB')) return 'en-US'
+    if (nav.startsWith('en')) return 'en'
+    const base = nav.split('-')[0].toLowerCase()
+    if (LANGUAGES.some(l => l.code === base)) return base
+  } catch { /* SSR safety */ }
+  return 'en'
+}
+
 let localeCache = {}
 
 function resolve(obj, path) {
@@ -23,7 +35,7 @@ function resolve(obj, path) {
 
 export function I18nProvider({ children }) {
   const [lang, setLangState] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) || 'en' } catch { return 'en' }
+    try { return localStorage.getItem(STORAGE_KEY) || detectBrowserLang() } catch { return 'en' }
   })
   const [messages, setMessages] = useState(null)
 
@@ -35,7 +47,8 @@ export function I18nProvider({ children }) {
         return
       }
       try {
-        const mod = await import(`../locales/${lang}.json`)
+        const fileKey = lang === 'en-US' ? 'en-US' : lang
+        const mod = await import(`../locales/${fileKey}.json`)
         const data = mod.default || mod
         localeCache[lang] = data
         if (!cancelled) setMessages(data)
