@@ -1,7 +1,5 @@
-import Stripe from 'stripe'
 import { adminAuth, adminDb } from './_lib/firebase-admin.js'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+import { getStripeServer } from './_lib/stripe.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -24,21 +22,28 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid auth token' })
   }
 
-  const userDoc = await adminDb().collection('users').doc(uid).get()
-  const customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
+  try {
+    const stripe = getStripeServer()
 
-  if (!customerId) {
-    return res.status(400).json({ error: 'No subscription found' })
+    const userDoc = await adminDb().collection('users').doc(uid).get()
+    const customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
+
+    if (!customerId) {
+      return res.status(400).json({ error: 'No subscription found' })
+    }
+
+    const ALLOWED_ORIGINS = ['https://uil4b.vercel.app', 'https://uil4b.com', 'https://www.uil4b.com', 'http://localhost:5173']
+    const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
+    const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${origin}/settings`,
+    })
+
+    return res.status(200).json({ url: session.url })
+  } catch (err) {
+    console.error('create-portal failed:', err)
+    return res.status(500).json({ error: err?.message || 'Could not open billing portal' })
   }
-
-  const ALLOWED_ORIGINS = ['https://uil4b.vercel.app', 'https://uil4b.com', 'https://www.uil4b.com', 'http://localhost:5173']
-  const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
-  const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${origin}/settings`,
-  })
-
-  return res.status(200).json({ url: session.url })
 }
