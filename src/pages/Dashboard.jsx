@@ -72,13 +72,18 @@ function ArrowIcon() {
   )
 }
 
-// Bento spans on a 6-column grid. Colour Studio and the Font Gallery get a
-// prominent half-width cell; the Icon Library spans the full width so its
-// "quick access" recent-icon strip has room to breathe. Everything else (and
-// any tool the user pins themselves) defaults to a tidy half-width cell.
+// Bento spans on a 6-column grid. All spans are even (2 or 4) so every row
+// tiles cleanly, and feature cards take two rows so the grid (with
+// grid-auto-flow:dense) interlocks tall and short cells without leaving gaps.
+//   • Colour Studio  → 4×2 hero feature (palette strip needs the room)
+//   • Font Gallery   → 2×2 tall tile (font-of-the-day is vertical)
+//   • Icon Library   → 4×1 wide strip (recent icons read left-to-right)
+//   • everything else → 2×1 standard tile (three per row)
 function getGridStyle(tool) {
-  if (tool.id === 'icons') return { gridColumn: 'span 6' }
-  return { gridColumn: 'span 3' }
+  if (tool.id === 'icons') return { gridColumn: 'span 4' }
+  if (tool.id === 'fontgallery') return { gridColumn: 'span 2', gridRow: 'span 2' }
+  if (tool.category === 'color') return { gridColumn: 'span 4', gridRow: 'span 2' }
+  return { gridColumn: 'span 2' }
 }
 
 const CATEGORY_CLASS = {
@@ -453,7 +458,7 @@ export default function Dashboard() {
         onDrop={onZoneDrop}
       >
         {/* HERO — greeting + completion */}
-        <div className="bento-card bento-hero" style={{ gridColumn: 'span 3' }}>
+        <div className="bento-card bento-hero" style={{ gridColumn: 'span 4', gridRow: 'span 2' }}>
           <div className="bento-hero-top">
             <div>
               <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr} · {timeStr}</div>
@@ -483,7 +488,7 @@ export default function Dashboard() {
         </div>
 
         {/* WORKSPACE STATS */}
-        <div className="bento-card bento-time" style={{ gridColumn: 'span 3' }}>
+        <div className="bento-card bento-time" style={{ gridColumn: 'span 2' }}>
           <div className="bento-label">{t('dash.localTime')}</div>
           <div className="bento-time-big">{timeStr}</div>
           <div className="bento-time-stats">
@@ -538,22 +543,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
-      {/* Recent tools */}
-      {recentTools.length > 0 && (
-        <section>
-          <h2 className="dash-section-title">{t('dash.jumpBackIn')}</h2>
-          <div className="dash-recent-row">
-            {recentTools.map(tl => (
-              <NavLink key={tl.id} to={tl.path} className="dash-recent-item">
-                <span className="dash-recent-dot" />
-                <span>{tl.label}</span>
-                <ArrowIcon />
-              </NavLink>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   )
 }

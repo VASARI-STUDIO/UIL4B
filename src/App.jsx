@@ -36,6 +36,7 @@ import CheckoutReturn from './pages/CheckoutReturn'
 import FontGallery from './pages/FontGallery'
 import AltTextGenerator from './pages/AltTextGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
+import BoxShadowGenerator from './pages/BoxShadowGenerator'
 import About from './pages/About'
 import FAQ from './pages/FAQ'
 import HelpCentre from './pages/HelpCentre'
@@ -43,8 +44,18 @@ import Landing from './pages/Landing'
 import Onboarding from './pages/Onboarding'
 
 function RequireAuth({ children }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const location = useLocation()
+  // Wait for Firebase auth to resolve before deciding — otherwise a fresh load
+  // or refresh of a protected route (e.g. /checkout) bounces a logged-in user
+  // to /login because onAuthStateChanged hasn't fired yet.
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+        <div className="fg-loader" />
+      </div>
+    )
+  }
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
   return children
 }
@@ -142,6 +153,7 @@ export default function App() {
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
+            <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
             <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/onboarding" element={<Onboarding />} />
