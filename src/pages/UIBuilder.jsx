@@ -294,6 +294,8 @@ export default function UIBuilder({ onCopy, toast }) {
   })
 
   const [codeSection, setCodeSection] = useState(null)
+  const [guided, setGuided] = useState(false)
+  const [guidedStep, setGuidedStep] = useState(0)
 
   const setVariant = useCallback((section, variantId) => {
     setSelections(prev => ({ ...prev, [section]: variantId }))
@@ -331,11 +333,59 @@ export default function UIBuilder({ onCopy, toast }) {
         <p>Design dashboard components with live previews. Pick styles, tune tokens, copy CSS.</p>
       </div>
 
+      {/* Guided mode toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <button
+          className={`btn btn-s${guided ? ' btn-accent' : ''}`}
+          onClick={() => { setGuided(!guided); setGuidedStep(0) }}
+        >
+          {guided ? 'Exit Guided Mode' : 'Guided Mode'}
+        </button>
+        {!guided && <span style={{ fontSize: 11, color: 'var(--t2)' }}>Step through each component type one at a time</span>}
+      </div>
+
+      {/* Guided mode progress bar */}
+      {guided && (
+        <div className="uib-guided-bar" style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 2, marginBottom: 12 }}>
+            {COMPONENT_SECTIONS.map((s, i) => (
+              <div
+                key={s.id}
+                onClick={() => setGuidedStep(i)}
+                style={{
+                  flex: 1, height: 4, borderRadius: 2, cursor: 'pointer',
+                  background: i <= guidedStep ? 'var(--accent)' : 'var(--bg-3)',
+                  transition: 'background .2s',
+                }}
+              />
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                Step {guidedStep + 1} of {COMPONENT_SECTIONS.length}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)' }}>
+                {COMPONENT_SECTIONS[guidedStep].label}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-s" disabled={guidedStep === 0} onClick={() => setGuidedStep(s => s - 1)}>Back</button>
+              {guidedStep < COMPONENT_SECTIONS.length - 1 ? (
+                <button className="btn btn-s btn-accent" onClick={() => setGuidedStep(s => s + 1)}>Next</button>
+              ) : (
+                <button className="btn btn-s btn-accent" onClick={() => { copyAllCSS(); setGuided(false) }}>Finish & Copy CSS</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="uib-layout">
         <TokenPanel tokens={tokens} setTokens={setTokens} />
 
         <div className="uib-components">
-          {COMPONENT_SECTIONS.map(section => {
+          {COMPONENT_SECTIONS.filter((_, i) => !guided || i === guidedStep).map(section => {
             const selectedId = selections[section.id]
 
             return (
