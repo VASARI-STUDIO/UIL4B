@@ -36,6 +36,7 @@ import CheckoutReturn from './pages/CheckoutReturn'
 import FontGallery from './pages/FontGallery'
 import AltTextGenerator from './pages/AltTextGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
+import BoxShadowGenerator from './pages/BoxShadowGenerator'
 import About from './pages/About'
 import FAQ from './pages/FAQ'
 import HelpCentre from './pages/HelpCentre'
@@ -152,6 +153,7 @@ export default function App() {
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
+            <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
             <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/onboarding" element={<Onboarding />} />
