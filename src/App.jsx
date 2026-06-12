@@ -37,6 +37,7 @@ import FontGallery from './pages/FontGallery'
 import AltTextGenerator from './pages/AltTextGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
 import BoxShadowGenerator from './pages/BoxShadowGenerator'
+import UIBuilder from './pages/UIBuilder'
 import About from './pages/About'
 import FAQ from './pages/FAQ'
 import HelpCentre from './pages/HelpCentre'
@@ -135,6 +136,7 @@ export default function App() {
             <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
             <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
+            <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
             <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
             <Route path="/color-studio" element={<Navigate to="/color" replace />} />
             <Route path="/palette" element={<Navigate to="/color" replace />} />
@@ -154,6 +156,7 @@ export default function App() {
             <Route path="/docs-social" element={<DocsSocial />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
             <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
+            <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
             <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/onboarding" element={<Onboarding />} />
