@@ -1,7 +1,5 @@
-import Stripe from 'stripe'
 import { adminAuth, adminDb } from './_lib/firebase-admin.js'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+import { getStripeServer } from './_lib/stripe.js'
 
 // Returns the status of an embedded Checkout session so the /checkout/return
 // page can confirm the result. The session is verified to belong to the
@@ -32,23 +30,30 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing session_id' })
   }
 
-  let session
   try {
-    session = await stripe.checkout.sessions.retrieve(sessionId)
-  } catch {
-    return res.status(404).json({ error: 'Session not found' })
-  }
+    const stripe = getStripeServer()
 
-  // Only let a user read their own checkout session.
-  const userDoc = await adminDb().collection('users').doc(uid).get()
-  const customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
-  if (!customerId || session.customer !== customerId) {
-    return res.status(403).json({ error: 'Session does not belong to this account' })
-  }
+    let session
+    try {
+      session = await stripe.checkout.sessions.retrieve(sessionId)
+    } catch {
+      return res.status(404).json({ error: 'Session not found' })
+    }
 
-  return res.status(200).json({
-    status: session.status, // 'open' | 'complete' | 'expired'
-    paymentStatus: session.payment_status, // 'paid' | 'unpaid' | 'no_payment_required'
-    customerEmail: session.customer_details?.email || null,
-  })
+    // Only let a user read their own checkout session.
+    const userDoc = await adminDb().collection('users').doc(uid).get()
+    const customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
+    if (!customerId || session.customer !== customerId) {
+      return res.status(403).json({ error: 'Session does not belong to this account' })
+    }
+
+    return res.status(200).json({
+      status: session.status, // 'open' | 'complete' | 'expired'
+      paymentStatus: session.payment_status, // 'paid' | 'unpaid' | 'no_payment_required'
+      customerEmail: session.customer_details?.email || null,
+    })
+  } catch (err) {
+    console.error('checkout-status failed:', err)
+    return res.status(500).json({ error: err?.message || 'Could not verify checkout' })
+  }
 }
