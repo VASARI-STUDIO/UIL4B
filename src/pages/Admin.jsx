@@ -3,11 +3,10 @@ import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackN
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { ADMIN_EMAILS } from '../utils/constants'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 const ADMIN_KEY = 'vs-admin-unlocked'
-// Owner accounts that get admin access automatically when signed in.
-const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 const STATUSES = ['new', 'in-progress', 'done']
 const STATUS_LABELS = { new: 'New', 'in-progress': 'In Progress', done: 'Done' }
 const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--accent)', done: 'var(--ok)' }

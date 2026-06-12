@@ -38,6 +38,7 @@ import AltTextGenerator from './pages/AltTextGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
 import BoxShadowGenerator from './pages/BoxShadowGenerator'
 import UIBuilder from './pages/UIBuilder'
+import StyleGuide from './pages/StyleGuide'
 import About from './pages/About'
 import FAQ from './pages/FAQ'
 import HelpCentre from './pages/HelpCentre'
@@ -173,6 +174,7 @@ export default function App() {
             <Route path="/about" element={<Navigate to="/help#about" replace />} />
             <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
             <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
+            <Route path="/style-guide" element={<RequireAuth><StyleGuide toast={toast} /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
