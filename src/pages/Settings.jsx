@@ -251,7 +251,28 @@ export default function Settings({ toast }) {
   const [confirmClear, setConfirmClear] = useState(false)
   const [billing, setBilling] = useState('yearly')
   const [checkingOut, setCheckingOut] = useState(false)
+  const [cancelFlow, setCancelFlow] = useState(null) // null | 'reasons' | 'offer'
+  const [cancelReason, setCancelReason] = useState('')
+  const [coffeeIdx, setCoffeeIdx] = useState(0)
   const location = useLocation()
+
+  const PRICE_COMPARISONS = [
+    { item: 'coffees', emoji: '☕', text: 'less than 2 coffees a month' },
+    { item: 'smoothie', emoji: '🥤', text: 'less than one smoothie a month' },
+    { item: 'streaming', emoji: '🎬', text: 'less than most streaming services' },
+    { item: 'lunch', emoji: '🍔', text: 'less than one lunch out' },
+    { item: 'parking', emoji: '🅿️', text: 'less than 2 hours of city parking' },
+    { item: 'beer', emoji: '🍺', text: 'less than one pint at the pub' },
+    { item: 'uber', emoji: '🚗', text: 'less than one short Uber ride' },
+    { item: 'cinema', emoji: '🎬', text: 'less than one movie ticket' },
+    { item: 'magazine', emoji: '📖', text: 'less than a magazine subscription' },
+    { item: 'snack', emoji: '🍩', text: 'less than a daily snack run' },
+  ]
+
+  useEffect(() => {
+    const timer = setInterval(() => setCoffeeIdx(i => (i + 1) % PRICE_COMPARISONS.length), 4000)
+    return () => clearInterval(timer)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startCheckout = async (interval) => {
     if (!user || checkingOut) return
@@ -341,6 +362,7 @@ export default function Settings({ toast }) {
             </div>
 
             {isPro ? (
+              <>
               <div className="sub-active">
                 <div className="sub-active-top">
                   <div className="sub-active-badge">
@@ -358,8 +380,53 @@ export default function Settings({ toast }) {
                     </div>
                   </div>
                 </div>
-                <button className="btn" onClick={openPortal}>Manage billing</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn" onClick={openPortal}>Manage billing</button>
+                  {!subscription?.cancelAtPeriodEnd && (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, color: 'var(--t2)' }} onClick={() => setCancelFlow('reasons')}>Cancel plan</button>
+                  )}
+                </div>
               </div>
+
+              {cancelFlow === 'reasons' && (
+                <div className="card" style={{ marginTop: 16, padding: 24 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>We&apos;re sorry to see you go</h3>
+                  <p style={{ fontSize: 13, color: 'var(--t1)', marginBottom: 16 }}>Can you let us know why you&apos;re cancelling? We&apos;d love to improve.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                    {[
+                      { id: 'expensive', label: 'Too expensive for my budget' },
+                      { id: 'not-using', label: 'Not using it enough' },
+                      { id: 'missing', label: 'Missing features I need' },
+                      { id: 'other', label: 'Other reason' },
+                    ].map(r => (
+                      <button key={r.id} className={`btn btn-s${cancelReason === r.id ? ' btn-accent' : ''}`} style={{ justifyContent: 'flex-start', textAlign: 'left' }} onClick={() => { setCancelReason(r.id); setCancelFlow('offer') }}>
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button className="btn btn-s btn-ghost" onClick={() => setCancelFlow(null)} style={{ fontSize: 11 }}>Never mind, I&apos;ll stay</button>
+                </div>
+              )}
+
+              {cancelFlow === 'offer' && (
+                <div className="card" style={{ marginTop: 16, padding: 24 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
+                    {cancelReason === 'expensive' ? 'How about 50% off for 3 months?' : cancelReason === 'not-using' ? 'How about pausing instead?' : cancelReason === 'missing' ? 'Here’s a free month on us' : 'Before you go…'}
+                  </h3>
+                  <p style={{ fontSize: 13, color: 'var(--t1)', marginBottom: 16, lineHeight: 1.6 }}>
+                    {cancelReason === 'expensive' ? 'We’d hate to lose you over price. We can give you 50% off for the next 3 months — that’s just $2.50/mo.' : cancelReason === 'not-using' ? 'Life gets busy. You can pause your subscription for up to 3 months and come back when you’re ready — no charge in between.' : cancelReason === 'missing' ? 'Your feedback matters. Tell us what you need and we’ll give you a free month while we work on it.' : 'We appreciate you giving Pro a try. If you proceed, you’ll keep access until the end of your current billing period.'}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-accent btn-s" onClick={() => { setCancelFlow(null); toast?.('Thanks for staying! We’ll apply your offer shortly.') }}>
+                      {cancelReason === 'expensive' ? 'Apply 50% discount' : cancelReason === 'not-using' ? 'Pause my plan' : cancelReason === 'missing' ? 'Get free month' : 'Keep my plan'}
+                    </button>
+                    <button className="btn btn-s" style={{ color: 'var(--t2)' }} onClick={() => { setCancelFlow(null); openPortal() }}>
+                      Cancel anyway
+                    </button>
+                  </div>
+                </div>
+              )}
+              </>
             ) : (
               <>
                 {!user && (
@@ -418,6 +485,28 @@ export default function Settings({ toast }) {
                       {checkingOut ? 'Opening checkout…' : billing === 'yearly' ? 'Start 7-day free trial' : 'Upgrade — $4.99/mo'}
                     </button>
                     <div className="sub-tier-foot">Secure checkout via Stripe · cancel anytime</div>
+                    <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: 'var(--t1)', transition: 'opacity .3s' }}>
+                      <span style={{ marginRight: 4 }}>{PRICE_COMPARISONS[coffeeIdx].emoji}</span>
+                      That&apos;s {PRICE_COMPARISONS[coffeeIdx].text}
+                    </div>
+                  </div>
+
+                  {/* Premium Plus — coming soon */}
+                  <div className="sub-tier" style={{ opacity: 0.55, pointerEvents: 'none', position: 'relative' }}>
+                    <span className="sub-tier-flag" style={{ background: 'var(--bg-2)', color: 'var(--t2)' }}>Coming Soon</span>
+                    <div className="sub-tier-head">
+                      <div className="sub-tier-name">Premium Plus</div>
+                      <div className="sub-tier-price"><span className="sub-tier-amount">—</span><span className="sub-tier-per">TBA</span></div>
+                    </div>
+                    <ul className="sub-tier-list">
+                      <li><Check /> Everything in Pro</li>
+                      <li><Check /> Unlimited AI generations</li>
+                      <li><Check /> Team collaboration</li>
+                      <li><Check /> Custom branding on exports</li>
+                      <li><Check /> White-label option</li>
+                      <li><Check /> Dedicated support</li>
+                    </ul>
+                    <button className="btn sub-tier-btn" disabled>Coming soon</button>
                   </div>
                 </div>
               </>

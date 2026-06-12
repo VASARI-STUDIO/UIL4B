@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, T_LABELS } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
+import { trackColourPick } from '../utils/analytics'
 import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
@@ -741,12 +742,12 @@ ${stateVars}
         <h1>{t('color.title')}</h1>
         <p>{t('tools.colorStudio.description')}</p>
         {canSaveProjects && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'relative' }}>
-            <button className="btn btn-s" onClick={() => setSaveMenuOpen(!saveMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'sticky', bottom: 16, zIndex: 20, background: 'var(--card)', padding: '10px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--warm-shadow-lg)' }}>
+            <button className="btn btn-accent btn-s" onClick={() => setSaveMenuOpen(!saveMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              Save Project
+              Add to Project
             </button>
             {projects.length > 0 && (
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -760,7 +761,7 @@ ${stateVars}
             )}
             {saveMenuOpen && (
               <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--warm-shadow-lg)', padding: 14, marginTop: 4, width: 280 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>Save current design as a project</div>
+                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>Add current design to project</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input type="text" value={saveProjectName} onChange={e => setSaveProjectName(e.target.value)}
                     placeholder="Project name..." style={{ flex: 1, fontSize: 12 }}
@@ -858,7 +859,7 @@ ${stateVars}
                   ref={colorRef}
                   type="color"
                   value={baseColor}
-                  onChange={e => setBaseColor(e.target.value)}
+                  onChange={e => { setBaseColor(e.target.value); trackColourPick(e.target.value) }}
                   aria-label="Pick base colour"
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0, background: 'none', appearance: 'none', WebkitAppearance: 'none' }}
                 />

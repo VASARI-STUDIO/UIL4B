@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback } from '../utils/analytics'
+import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { useAuth } from '../contexts/AuthContext'
@@ -220,6 +220,7 @@ function fmtDateTime(iso) {
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'design', label: 'Design Analytics' },
   { id: 'submissions', label: 'Submissions' },
   { id: 'prompts', label: 'Prompts' },
   { id: 'pages', label: 'Pages' },
@@ -240,8 +241,11 @@ export default function Admin({ toast }) {
   const [pendingPrompts, setPendingPrompts] = useState([])
   const [promptFilter, setPromptFilter] = useState('pending')
 
+  const [designData, setDesignData] = useState(null)
+
   const refresh = useCallback(async () => {
     setData(getAnalyticsSummary())
+    setDesignData(getDesignAnalytics())
     const localFeedback = getFeedback()
     let merged = [...localFeedback]
     try {
@@ -258,10 +262,30 @@ export default function Admin({ toast }) {
     } catch { /* firestore unavailable */ }
   }, [])
 
+  const [serverVerified, setServerVerified] = useState(false)
+
+  useEffect(() => {
+    if (!isAdminUser || serverVerified) return
+    const verify = async () => {
+      try {
+        const { auth: fbAuth } = await import('../utils/firebase')
+        const token = await fbAuth.currentUser?.getIdToken()
+        if (!token) return
+        const res = await fetch('/api/verify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (data.isAdmin) setServerVerified(true)
+        else { setServerVerified(false); toast?.('Admin verification failed') }
+      } catch { /* offline — trust client-side for now */ }
+    }
+    verify()
+  }, [isAdminUser, serverVerified]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const effectiveUnlocked = unlocked || isAdminUser
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (effectiveUnlocked) refresh()
   }, [effectiveUnlocked, refresh])
 
@@ -522,6 +546,92 @@ export default function Admin({ toast }) {
                   </div>
                 ))}
               </div>
+            </div>
+          </Section>
+        </>
+      )}
+
+      {/* DESIGN ANALYTICS TAB */}
+      {tab === 'design' && designData && (
+        <>
+          <Section title="Most Copied Fonts">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%), 1fr))', gap: 14 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Top Fonts</div>
+                {Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([font, count], i) => (
+                  <div key={font} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
+                    <span style={{ fontWeight: 500, color: 'var(--t0)' }}>{font}</span>
+                    <span style={{ color: 'var(--accent)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{count} copies</span>
+                  </div>
+                ))}
+                {Object.keys(designData.fontCopies || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No font copy data yet — users need to copy fonts from Font Pair Finder or Font Gallery.</div>}
+              </div>
+
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Font Copy Distribution</div>
+                {(() => {
+                  const entries = Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                  const max = entries[0]?.[1] || 1
+                  return entries.map(([font, count]) => (
+                    <div key={font} style={{ marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
+                        <span style={{ color: 'var(--t0)', fontWeight: 500 }}>{font}</span>
+                        <span style={{ color: 'var(--t2)' }}>{count}</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${(count / max) * 100}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width .3s' }} />
+                      </div>
+                    </div>
+                  ))
+                })()}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Most Picked Colours">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%), 1fr))', gap: 14 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Top Colours</div>
+                {Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([hex, count], i) => (
+                  <div key={hex} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 'var(--radius-s)', background: hex, border: '1px solid var(--border)', flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'var(--mono)', color: 'var(--t0)', fontWeight: 500, flex: 1 }}>{hex}</span>
+                    <span style={{ color: 'var(--accent)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{count}×</span>
+                  </div>
+                ))}
+                {Object.keys(designData.colourPicks || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No colour pick data yet — users need to select colours in Colour Studio.</div>}
+              </div>
+
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Colour Palette Overview</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 30).map(([hex, count]) => (
+                    <div key={hex} title={`${hex} — ${count} picks`} style={{
+                      width: Math.max(24, Math.min(48, count * 6)),
+                      height: Math.max(24, Math.min(48, count * 6)),
+                      borderRadius: 'var(--radius-s)',
+                      background: hex,
+                      border: '1px solid var(--border)',
+                      cursor: 'default',
+                      transition: 'transform .15s',
+                    }} />
+                  ))}
+                </div>
+                {Object.keys(designData.colourPicks || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No data yet</div>}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Tool Usage">
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Most Used Tools (by action)</div>
+              {Object.entries(designData.toolUsage || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tool, count], i) => (
+                <div key={tool} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
+                  <span style={{ fontFamily: 'var(--mono)', color: 'var(--t0)', fontWeight: 500 }}>{tool}</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{count}</span>
+                </div>
+              ))}
+              {Object.keys(designData.toolUsage || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No tool usage data yet</div>}
             </div>
           </Section>
         </>
