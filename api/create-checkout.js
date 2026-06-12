@@ -1,9 +1,19 @@
 import { adminAuth, adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
 
-const PRICES = {
-  monthly: process.env.STRIPE_PRICE_MONTHLY,
-  yearly: process.env.STRIPE_PRICE_YEARLY,
+const LOOKUP_KEYS = { monthly: 'uil4b_pro_monthly', yearly: 'uil4b_pro_yearly' }
+
+let priceCache = {}
+
+async function resolvePrice(stripe, interval) {
+  const key = interval === 'yearly' ? 'yearly' : 'monthly'
+  const envPrice = key === 'yearly' ? process.env.STRIPE_PRICE_YEARLY : process.env.STRIPE_PRICE_MONTHLY
+  if (envPrice) return envPrice
+  if (priceCache[key]) return priceCache[key]
+  const found = await stripe.prices.list({ lookup_keys: [LOOKUP_KEYS[key]], active: true, limit: 1 })
+  if (!found.data.length) return null
+  priceCache[key] = found.data[0].id
+  return found.data[0].id
 }
 
 export default async function handler(req, res) {
@@ -27,15 +37,15 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid auth token' })
   }
 
-  const { interval } = req.body || {}
-  const isYearly = interval === 'yearly'
-  const priceId = isYearly ? PRICES.yearly : PRICES.monthly
-  if (!priceId) {
-    return res.status(500).json({ error: `Stripe price not configured: set ${isYearly ? 'STRIPE_PRICE_YEARLY' : 'STRIPE_PRICE_MONTHLY'} in the server environment` })
-  }
-
   try {
     const stripe = getStripeServer()
+
+    const { interval } = req.body || {}
+    const isYearly = interval === 'yearly'
+    const priceId = await resolvePrice(stripe, interval)
+    if (!priceId) {
+      return res.status(500).json({ error: 'Stripe prices not found. Visit /admin and run Setup Stripe, or set STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY in Vercel.' })
+    }
 
     const userDoc = await adminDb().collection('users').doc(uid).get()
     let customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
@@ -56,7 +66,6 @@ export default async function handler(req, res) {
     const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
 
     const subscriptionData = { metadata: { firebaseUid: uid } }
-    // Yearly plans include a 7-day free trial. Monthly bills immediately.
     if (isYearly) {
       subscriptionData.trial_period_days = 7
       subscriptionData.trial_settings = {
@@ -64,10 +73,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Embedded Checkout: the payment form renders inside our own /checkout page
-    // (see src/pages/Checkout.jsx) rather than redirecting to a Stripe-hosted
-    // page. We return the session's client_secret for the embedded component and
-    // the customer returns to /checkout/return to confirm the result.
     const session = await stripe.checkout.sessions.create({
       ui_mode: 'embedded',
       customer: customerId,
