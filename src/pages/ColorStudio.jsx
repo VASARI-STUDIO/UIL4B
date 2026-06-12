@@ -593,6 +593,8 @@ ${stateVars}
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const editColorRef = useRef(null)
   const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
+  const [tintFlipped, setTintFlipped] = useState(false)
+  const [tintAnimating, setTintAnimating] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
 
@@ -994,10 +996,28 @@ ${stateVars}
         </div>
 
         {/* Tint strip */}
-        <div style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-          {tintScale.map((c, i) => (
-            <TintSwatch key={i} color={c} label={T_LABELS[i]} onCopy={onCopy} />
-          ))}
+        <div className={`cs-tint-strip${tintAnimating ? ' cs-tint-flipping' : ''}`} style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+          {(tintFlipped ? [...tintScale].reverse() : tintScale).map((c, i) => {
+            const label = tintFlipped ? [...T_LABELS].reverse()[i] : T_LABELS[i]
+            return <TintSwatch key={`${tintFlipped ? 'r' : 'f'}-${i}`} color={c} label={label} onCopy={onCopy} />
+          })}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <button className="btn btn-s" onClick={() => {
+            setTintAnimating(true)
+            setTimeout(() => {
+              setTintFlipped(f => !f)
+              setTimeout(() => setTintAnimating(false), 300)
+            }, 10)
+          }} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
+              <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+            </svg>
+            Flip Scale
+          </button>
+          <span style={{ fontSize: 10, color: 'var(--t3)' }}>{tintFlipped ? 'Dark → Light' : 'Light → Dark'}</span>
         </div>
 
         {/* Tint dropdown: all palette colours */}
