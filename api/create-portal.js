@@ -31,7 +31,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No subscription found' })
   }
 
-  const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, '') || 'https://uil4b.vercel.app'
+  const ALLOWED_ORIGINS = ['https://uil4b.vercel.app', 'https://uil4b.com', 'https://www.uil4b.com', 'http://localhost:5173']
+  const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
+  const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
 
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,

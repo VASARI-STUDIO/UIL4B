@@ -327,7 +327,7 @@ const TABS = [
 export default function Admin({ toast }) {
   const { user } = useAuth()
   const isAdminUser = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
-  const [unlocked, setUnlocked] = useState(() => localStorage.getItem(ADMIN_KEY) === 'true')
+  const [unlocked, setUnlocked] = useState(false)
   const [code, setCode] = useState('')
   const [tab, setTab] = useState('overview')
   const [data, setData] = useState(null)
@@ -389,7 +389,6 @@ export default function Admin({ toast }) {
   const handleUnlock = (e) => {
     e.preventDefault()
     if (code.trim() === ADMIN_CODE) {
-      localStorage.setItem(ADMIN_KEY, 'true')
       setUnlocked(true)
       toast('Admin access granted')
     } else {
@@ -399,7 +398,6 @@ export default function Admin({ toast }) {
   }
 
   const handleLock = () => {
-    localStorage.removeItem(ADMIN_KEY)
     setUnlocked(false)
     toast('Admin access revoked')
   }

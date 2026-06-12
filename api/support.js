@@ -19,6 +19,13 @@ if (!getApps().length) {
 
 const db = getFirestore()
 
+const VALID_TYPES = ['bug', 'feature', 'general', 'help']
+const VALID_SOURCES = ['feedback-form', 'inline', 'email']
+
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -32,13 +39,25 @@ export default async function handler(req, res) {
   if (!message || !message.trim()) {
     return res.status(400).json({ error: 'Message is required' })
   }
+  if (message.length > 5000) {
+    return res.status(400).json({ error: 'Message must be under 5000 characters' })
+  }
+  if (subject && subject.length > 200) {
+    return res.status(400).json({ error: 'Subject must be under 200 characters' })
+  }
+  if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    return res.status(400).json({ error: 'Invalid email format' })
+  }
+
+  const safeType = VALID_TYPES.includes(type) ? type : 'general'
+  const safeSource = VALID_SOURCES.includes(source) ? source : 'feedback-form'
 
   const entry = {
-    type: type || 'general',
-    subject: (subject || '').trim() || `[${type || 'general'}] Submission`,
-    message: message.trim(),
-    email: (email || '').trim(),
-    source: source || 'feedback-form',
+    type: safeType,
+    subject: (subject || '').trim().slice(0, 200) || `[${safeType}] Submission`,
+    message: message.trim().slice(0, 5000),
+    email: (email || '').trim().slice(0, 254),
+    source: safeSource,
     status: 'new',
     adminNotes: '',
     createdAt: new Date().toISOString(),
@@ -94,12 +113,12 @@ export default async function handler(req, res) {
             <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
               <div style="background:#f8f8f6;border:1px solid #e5e5e0;border-radius:12px;padding:24px;margin-bottom:16px">
                 <div style="display:flex;gap:8px;margin-bottom:12px">
-                  <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:4px;background:#eef;color:#55e">${entry.type}</span>
-                  <span style="font-size:11px;color:#888">${entry.source}</span>
+                  <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:4px;background:#eef;color:#55e">${escHtml(entry.type)}</span>
+                  <span style="font-size:11px;color:#888">${escHtml(entry.source)}</span>
                 </div>
-                <h2 style="font-size:18px;font-weight:700;margin:0 0 8px">${entry.subject}</h2>
-                <p style="font-size:14px;line-height:1.6;color:#333;white-space:pre-wrap">${entry.message}</p>
-                ${entry.email ? `<p style="font-size:12px;color:#666;margin-top:12px">From: <strong>${entry.email}</strong></p>` : ''}
+                <h2 style="font-size:18px;font-weight:700;margin:0 0 8px">${escHtml(entry.subject)}</h2>
+                <p style="font-size:14px;line-height:1.6;color:#333;white-space:pre-wrap">${escHtml(entry.message)}</p>
+                ${entry.email ? `<p style="font-size:12px;color:#666;margin-top:12px">From: <strong>${escHtml(entry.email)}</strong></p>` : ''}
               </div>
               <p style="font-size:11px;color:#aaa;text-align:center">UIL4B Support · ${new Date().toISOString().slice(0, 16)}</p>
             </div>
