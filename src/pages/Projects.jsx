@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 
 function ColorRow({ colors }) {
   if (!colors?.length) return null
@@ -15,7 +16,7 @@ function ColorRow({ colors }) {
   )
 }
 
-function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive, folder, onFolderChange, folders }) {
+function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive, folder, onFolderChange, folders, onOpenDetail }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(project.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -27,7 +28,11 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: project.archived ? 0.6 : 1 }}>
-      <div style={{ padding: '20px 18px', background: project.design?.palette?.colors?.[0] || 'var(--bg-2)', position: 'relative' }}>
+      <div
+        onClick={() => onOpenDetail?.(project)}
+        title="View project details"
+        style={{ padding: '20px 18px', background: project.design?.palette?.colors?.[0] || 'var(--bg-2)', position: 'relative', cursor: 'pointer' }}
+      >
         <div style={{ fontFamily: `'${headingFamily}', sans-serif`, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 8px rgba(0,0,0,.2)' }}>
           {project.design?.palette?.colors?.[0]?.toUpperCase() || '#'}
         </div>
@@ -56,7 +61,11 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
         ) : (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', flex: 1 }}>{project.name}</h3>
+              <h3
+                onClick={() => onOpenDetail?.(project)}
+                title="View project details"
+                style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', flex: 1, cursor: 'pointer' }}
+              >{project.name}</h3>
               {isCurrent && (
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '2px 6px', borderRadius: 4 }}>
                   Loaded
@@ -142,10 +151,135 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
   )
 }
 
+function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename, onOverwrite, onArchive }) {
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(project.name)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  const d = project.design || {}
+  const colors = d.palette?.colors || []
+  const headingFamily = d.fonts?.heading?.family || 'Inter'
+  const bodyFamily = d.fonts?.body?.family || 'Inter'
+  const base = d.typeScale?.base || 16
+  const ratio = d.typeScale?.ratio || 1.25
+  const created = new Date(project.createdAt)
+  const updated = new Date(project.updatedAt || project.createdAt)
+  const fmtDate = (dt) => dt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+
+  return (
+    <div className="fg-detail-overlay" onClick={onClose}>
+      <div className="il-detail proj-detail" onClick={e => e.stopPropagation()}>
+        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="fg-detail-section" style={{ marginBottom: 24 }}>
+          {editing ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input value={name} onChange={e => setName(e.target.value)} autoFocus style={{ flex: 1, fontSize: 16, fontWeight: 700 }} />
+              <button className="btn btn-s" onClick={() => { onRename(project.id, name); setEditing(false) }}>Save</button>
+              <button className="btn btn-s" onClick={() => { setName(project.name); setEditing(false) }}>Cancel</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', flex: 1 }}>{project.name}</h2>
+              {isCurrent && (
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '3px 8px', borderRadius: 4 }}>Loaded</span>
+              )}
+              {project.archived && (
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', background: 'var(--bg-2)', color: 'var(--t2)', padding: '3px 8px', borderRadius: 4 }}>Archived</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Palette · {colors.length} colour{colors.length === 1 ? '' : 's'}</div>
+          {colors.length ? (
+            <div className="proj-detail-swatches">
+              {colors.map((c, i) => (
+                <div key={i} className="proj-detail-swatch">
+                  <div className="proj-detail-swatch-chip" style={{ background: c }} />
+                  <span className="proj-detail-swatch-hex">{(c || '').toUpperCase()}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--t2)' }}>No colours saved.</p>
+          )}
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Typography</div>
+          <div className="proj-detail-meta">
+            <div className="proj-detail-meta-row"><span>Heading</span><strong style={{ fontFamily: `'${headingFamily}', sans-serif` }}>{headingFamily}</strong></div>
+            <div className="proj-detail-meta-row"><span>Body</span><strong style={{ fontFamily: `'${bodyFamily}', sans-serif` }}>{bodyFamily}</strong></div>
+            <div className="proj-detail-meta-row"><span>Type scale</span><strong>{base}px / {Number(ratio).toFixed(2)}×</strong></div>
+          </div>
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Details</div>
+          <div className="proj-detail-meta">
+            <div className="proj-detail-meta-row"><span>Created</span><strong>{fmtDate(created)}</strong></div>
+            <div className="proj-detail-meta-row"><span>Updated</span><strong>{fmtDate(updated)}</strong></div>
+            <div className="proj-detail-meta-row"><span>Tints</span><strong>{d.tints?.scale?.length || 0}</strong></div>
+          </div>
+        </div>
+
+        {confirmDelete ? (
+          <div className="fg-detail-actions" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--err)', lineHeight: 1.5 }}>
+              Type <strong>{project.name}</strong> to confirm deletion:
+            </div>
+            <input value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder={project.name} autoFocus style={{ fontSize: 13 }} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-s"
+                onClick={() => { onDelete(project.id); setConfirmDelete(false); setDeleteConfirmText(''); onClose() }}
+                disabled={deleteConfirmText !== project.name}
+                style={{ color: '#fff', background: deleteConfirmText === project.name ? 'var(--err)' : 'var(--bg-2)', borderColor: 'var(--err)', opacity: deleteConfirmText === project.name ? 1 : 0.5 }}
+              >
+                Permanently delete
+              </button>
+              <button className="btn btn-s" onClick={() => { setConfirmDelete(false); setDeleteConfirmText('') }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div className="fg-detail-actions">
+            {!project.archived && (
+              <>
+                <button className="btn btn-accent" onClick={() => { onLoad(project.id); onClose() }}>
+                  {isCurrent ? 'Reload' : 'Load'}
+                </button>
+                <button className="btn" onClick={() => onOverwrite(project.id)} title="Save current design over this project">Overwrite</button>
+              </>
+            )}
+            <button className="btn" onClick={() => setEditing(true)}>Rename</button>
+            <button className="btn" onClick={() => { onArchive(project.id); onClose() }}>{project.archived ? 'Restore' : 'Archive'}</button>
+            <button className="btn" onClick={() => setConfirmDelete(true)} style={{ color: 'var(--err)' }}>Delete</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Projects({ toast }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { t } = useI18n()
+  const { isPro } = useSubscription()
   const {
     design, projects, canSaveProjects,
     saveProject, loadProject, deleteProject, renameProject, overwriteProject,
@@ -158,7 +292,9 @@ export default function Projects({ toast }) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('recent')
   const [activeFolder, setActiveFolder] = useState('all')
+  const [detailProject, setDetailProject] = useState(null)
   const FOLDERS = ['all', 'brand', 'app', 'marketing', 'personal']
+  const folderLimit = isPro ? 10 : 3
   const [folderMap, setFolderMap] = useState(() => {
     try { return JSON.parse(localStorage.getItem('vs-project-folders') || '{}') } catch { return {} }
   })
@@ -300,6 +436,13 @@ export default function Projects({ toast }) {
                 {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
+            <span className="proj-folder-note">
+              {isPro ? (
+                <>{folderLimit} folders</>
+              ) : (
+                <>{folderLimit} folders · <NavLink to="/pricing">Upgrade for 10</NavLink></>
+              )}
+            </span>
           </div>
           <div className="proj-toolbar">
             <div className="proj-search">
@@ -348,6 +491,7 @@ export default function Projects({ toast }) {
                 folder={folderMap[p.id]}
                 onFolderChange={setProjectFolder}
                 folders={FOLDERS}
+                onOpenDetail={setDetailProject}
               />
             ))}
           </div>
@@ -375,6 +519,7 @@ export default function Projects({ toast }) {
                       folder={folderMap[p.id]}
                       onFolderChange={setProjectFolder}
                       folders={FOLDERS}
+                      onOpenDetail={setDetailProject}
                     />
                   ))}
                 </div>
@@ -382,6 +527,19 @@ export default function Projects({ toast }) {
             </div>
           )}
         </>
+      )}
+
+      {detailProject && (
+        <ProjectDetail
+          project={detailProject}
+          isCurrent={loadedId === detailProject.id}
+          onClose={() => setDetailProject(null)}
+          onLoad={handleLoad}
+          onDelete={handleDelete}
+          onRename={(id, name) => { handleRename(id, name); setDetailProject(prev => prev ? { ...prev, name: name.trim() } : prev) }}
+          onOverwrite={handleOverwrite}
+          onArchive={handleArchive}
+        />
       )}
     </div>
   )

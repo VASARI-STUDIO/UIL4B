@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, describeColor, T_LABELS } from '../utils/colors'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, hexToHsv, mixHex, describeColor, T_LABELS } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
 import { trackColourPick } from '../utils/analytics'
@@ -217,16 +217,26 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
   const [h, s, l] = hexToHsl(color)
   const [r, g, b] = hexToRgb(color)
   const [c, m, y, k] = hexToCmyk(color)
+  const [hv, sv, bv] = hexToHsv(color)
   const fg = textColorForBg(color)
   const onWhite = contrastRatio(color, '#FFFFFF')
   const onBlack = contrastRatio(color, '#000000')
   const grade = (ratio) => ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA Large' : 'Fail'
-  const shades = Array.from({ length: 9 }, (_, i) => hslToHex(h, s, Math.round(8 + i * 10.5)))
+
+  // Text-on-this-colour: how readable white vs black text is over the colour.
+  const whiteText = contrastRatio('#FFFFFF', color)
+  const blackText = contrastRatio('#000000', color)
+
+  // Tints (blended toward white) and shades (toward black), 5 steps each + base.
+  const tints = [0.85, 0.65, 0.45, 0.25].map(t => mixHex(color, '#FFFFFF', t)).reverse()
+  const darks = [0.15, 0.3, 0.45, 0.6, 0.75].map(t => mixHex(color, '#000000', t))
+  const tintShade = [...tints, color, ...darks]
 
   const rows = [
     ['HEX', color.toUpperCase()],
     ['RGB', `${r}, ${g}, ${b}`],
     ['HSL', `${h}, ${s}%, ${l}%`],
+    ['HSB', `${hv}, ${sv}%, ${bv}%`],
     ['CMYK', `${c}, ${m}, ${y}, ${k}`],
   ]
 
@@ -264,11 +274,37 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
               <em style={{ color: '#fff' }}>{grade(onBlack)}</em>
             </div>
           </div>
-          <div className="ci-shades-label">Shades</div>
-          <div className="ci-shades">
-            {shades.map((sh, i) => (
-              <button key={i} className="ci-shade" style={{ background: sh }} onClick={() => onCopy(sh)} title={sh.toUpperCase()} />
-            ))}
+          <div className="ci-shades-label">Text on this colour</div>
+          <div className="ci-text-contrast">
+            <div className="ci-text-row" style={{ background: color }}>
+              <span style={{ color: '#fff' }}>White text</span>
+              <span className="ci-text-ratio" style={{ color: '#fff' }}>
+                {whiteText.toFixed(1)}:1 {whiteText >= 4.5 ? '✓ AA' : whiteText >= 3 ? '✓ AA Large' : '✗'}
+              </span>
+            </div>
+            <div className="ci-text-row" style={{ background: color }}>
+              <span style={{ color: '#000' }}>Black text</span>
+              <span className="ci-text-ratio" style={{ color: '#000' }}>
+                {blackText.toFixed(1)}:1 {blackText >= 4.5 ? '✓ AA' : blackText >= 3 ? '✓ AA Large' : '✗'}
+              </span>
+            </div>
+          </div>
+          <div className="ci-shades-label">Tints &amp; Shades</div>
+          <div className="ci-tintshade">
+            {tintShade.map((sh, i) => {
+              const isBase = sh.toLowerCase() === color.toLowerCase()
+              return (
+                <button
+                  key={i}
+                  className={'ci-ts-cell' + (isBase ? ' ci-ts-base' : '')}
+                  style={{ background: sh, color: textColorForBg(sh) }}
+                  onClick={() => onCopy(sh.toUpperCase())}
+                  title={'Copy ' + sh.toUpperCase()}
+                >
+                  <span className="ci-ts-hex">{sh.toUpperCase().replace('#', '')}</span>
+                </button>
+              )
+            })}
           </div>
           {(() => {
             const psych = colorPsychology(h, s, l)
