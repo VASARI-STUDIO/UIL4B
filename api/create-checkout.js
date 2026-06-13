@@ -30,12 +30,17 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Missing auth token' })
   }
 
+  const cred = credentialProblem()
+  if (cred) {
+    return res.status(500).json({ error: `Server configuration issue: ${cred}` })
+  }
+
   let uid
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
-  } catch {
-    return res.status(401).json({ error: credentialProblem() || 'Invalid auth token' })
+  } catch (e) {
+    return res.status(401).json({ error: e?.code === 'auth/id-token-expired' ? 'Session expired — please sign in again' : 'Invalid auth token' })
   }
 
   try {

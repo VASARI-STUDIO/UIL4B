@@ -128,7 +128,14 @@ export default function Checkout() {
             </div>
           ) : error ? (
             <div className="checkout-error">
-              {error}
+              <strong style={{ display: 'block', marginBottom: 6 }}>Checkout unavailable</strong>
+              <span style={{ fontSize: 12, color: 'var(--t2)' }}>{error}</span>
+              {error.includes('Server configuration') && (
+                <p style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+                  This usually means the Firebase service account key isn't configured on the server.
+                  If you're the site owner, check Vercel environment variables.
+                </p>
+              )}
               <button className="btn btn-s" style={{ marginTop: 12 }} onClick={() => { setError(''); }}>Try again</button>
             </div>
           ) : (

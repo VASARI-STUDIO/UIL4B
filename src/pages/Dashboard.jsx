@@ -461,7 +461,7 @@ export default function Dashboard() {
         <div className="bento-card bento-hero" style={{ gridColumn: 'span 4', gridRow: 'span 2' }}>
           <div className="bento-hero-top">
             <div>
-              <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr} · {timeStr}</div>
+              <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr}</div>
               <h1 className="bento-hero-title">{greeting}, <em>{firstName}</em></h1>
             </div>
             <button type="button" className="bento-hero-cta" onClick={buildUIKit}>
@@ -479,9 +479,9 @@ export default function Dashboard() {
             )}
             <span className="bento-hero-tokens">
               {isPro ? (
-                <><strong>{freePerDay.toLocaleString()}</strong> AI generations a day</>
+                <><strong>{freePerDay.toLocaleString()}</strong> AI generations per day · Pro</>
               ) : (
-                <><strong>{freePerDay}</strong> free AI generations a day</>
+                <>AI: <strong>{freePerDay}</strong> / day · resets daily</>
               )}
             </span>
           </div>
@@ -491,6 +491,7 @@ export default function Dashboard() {
         <div className="bento-card bento-time" style={{ gridColumn: 'span 2' }}>
           <div className="bento-label">{t('dash.localTime')}</div>
           <div className="bento-time-big">{timeStr}</div>
+          <div className="bento-time-sub">{now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
           <div className="bento-time-stats">
             <div><span className="bento-time-num">{pinned.length}</span><span className="bento-time-lbl">{t('dash.pinned')}</span></div>
             <div><span className="bento-time-num">{lTools.length}</span><span className="bento-time-lbl">{t('dash.tools')}</span></div>

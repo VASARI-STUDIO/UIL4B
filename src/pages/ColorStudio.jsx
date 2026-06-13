@@ -9,10 +9,10 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
 
-const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic']
+const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic', 'custom']
 const HARM_LABELS = {
   analogous: 'Analogous', complement: 'Complementary', triadic: 'Triadic',
-  split: 'Split Comp.', tetradic: 'Tetradic', monochromatic: 'Mono',
+  split: 'Split Comp.', tetradic: 'Tetradic', monochromatic: 'Mono', custom: 'Custom',
 }
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 
@@ -837,17 +837,20 @@ ${stateVars}
                     {color.toUpperCase()}
                   </div>
                 </div>
+                {(isExtra || harmony === 'custom') && (
+                  <input type="color" value={color}
+                    onChange={e => {
+                      if (!isExtra && harmony !== 'custom') setHarmony('custom')
+                      editPaletteColor(i, e.target.value)
+                    }}
+                    style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
+                    title="Edit colour"
+                  />
+                )}
                 {isExtra && (
-                  <>
-                    <input type="color" value={color}
-                      onChange={e => editPaletteColor(i, e.target.value)}
-                      style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
-                      title="Edit colour"
-                    />
-                    <button onClick={() => removeExtra(i - colors.length)}
-                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                    >&times;</button>
-                  </>
+                  <button onClick={() => removeExtra(i - colors.length)}
+                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                  >&times;</button>
                 )}
               </div>
             )
@@ -1096,7 +1099,7 @@ ${stateVars}
                       onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
                     />
                     <input type="number" min="0" max="100" value={stop.position} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
-                      style={{ width: 52, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center' }}
+                      style={{ width: 60, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center' }}
                     />
                     <span style={{ fontSize: 9, color: 'var(--t3)' }}>%</span>
                     {gradStops.length > 2 && (
