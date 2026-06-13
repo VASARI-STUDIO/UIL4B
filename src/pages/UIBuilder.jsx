@@ -42,6 +42,8 @@ const BUTTON_VARIANTS = [
   { id: 'outline', label: 'Outlined', render: (t) => ({ background: 'transparent', color: t.primary, border: `${t.borderWidth}px solid ${t.primary}`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
   { id: 'ghost', label: 'Ghost', render: (t) => ({ background: 'transparent', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
   { id: 'soft', label: 'Soft', render: (t) => ({ background: t.primary + '18', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'gradient', label: 'Gradient', render: (t) => ({ background: `linear-gradient(135deg, ${t.primary}, ${t.primary}99)`, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
+  { id: 'glass', label: 'Glass', render: (t) => ({ background: t.primary + '22', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: t.primary, border: `1px solid ${t.primary}55`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
 ]
 
 const CARD_VARIANTS = [
@@ -62,6 +64,8 @@ const BADGE_VARIANTS = [
   { id: 'soft', label: 'Soft', render: (t) => ({ background: t.primary + '1a', color: t.primary, borderRadius: 999, padding: '3px 10px', fontSize: t.fontSize - 3, fontWeight: 700, fontFamily: t.fontFamily, letterSpacing: '.02em' }) },
   { id: 'outline', label: 'Outlined', render: (t) => ({ background: 'transparent', color: t.primary, border: `1px solid ${t.primary}`, borderRadius: 999, padding: '2px 9px', fontSize: t.fontSize - 3, fontWeight: 700, fontFamily: t.fontFamily, letterSpacing: '.02em' }) },
   { id: 'dot', label: 'Dot', render: (t) => ({ background: t.primary + '14', color: t.primary, borderRadius: 999, padding: '3px 10px 3px 8px', fontSize: t.fontSize - 3, fontWeight: 700, fontFamily: t.fontFamily, display: 'inline-flex', alignItems: 'center', gap: 5 }) },
+  { id: 'square', label: 'Square', render: (t) => ({ background: t.primary + '1a', color: t.primary, borderRadius: Math.max(3, t.radius * 0.4), padding: '3px 9px', fontSize: t.fontSize - 3, fontWeight: 700, fontFamily: t.fontFamily, letterSpacing: '.02em' }) },
+  { id: 'gradient', label: 'Gradient', render: (t) => ({ background: `linear-gradient(135deg, ${t.primary}, ${t.primary}aa)`, color: '#fff', borderRadius: 999, padding: '3px 10px', fontSize: t.fontSize - 3, fontWeight: 700, fontFamily: t.fontFamily, letterSpacing: '.02em' }) },
 ]
 
 const TOGGLE_VARIANTS = [
