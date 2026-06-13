@@ -88,6 +88,43 @@ const TAB_VARIANTS = [
   { id: 'segment', label: 'Segmented' },
 ]
 
+const ALERT_TONES = { info: '#3b82f6', success: '#10b981', warning: '#f59e0b', error: '#ef4444' }
+
+const ALERT_VARIANTS = [
+  { id: 'soft', label: 'Soft', render: (t, c = t.primary) => ({ background: c + '14', color: t.text, border: `1px solid ${c}33`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 1.3}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, display: 'flex', gap: 10, alignItems: 'flex-start' }) },
+  { id: 'left', label: 'Left accent', render: (t, c = t.primary) => ({ background: t.surface, color: t.text, border: `${t.borderWidth}px solid ${t.surfaceBorder}`, borderLeft: `3px solid ${c}`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 1.3}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, display: 'flex', gap: 10, alignItems: 'flex-start' }) },
+  { id: 'outlined', label: 'Outlined', render: (t, c = t.primary) => ({ background: 'transparent', color: t.text, border: `1px solid ${c}`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 1.3}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, display: 'flex', gap: 10, alignItems: 'flex-start' }) },
+  { id: 'solid', label: 'Solid', render: (t, c = t.primary) => ({ background: c, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 1.3}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, display: 'flex', gap: 10, alignItems: 'flex-start' }) },
+]
+
+function AlertPreview({ variant, tokens }) {
+  if (!variant?.render) return null
+  const labels = { info: 'Heads up', success: 'Success', warning: 'Warning', error: 'Something went wrong' }
+  const bodies = {
+    info: 'This is an informational message for the user.',
+    success: 'Your changes have been saved successfully.',
+    warning: 'Double-check this before continuing.',
+    error: 'We couldn’t complete that action. Please retry.',
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 420 }}>
+      {Object.entries(ALERT_TONES).map(([tone, color]) => {
+        const style = variant.render(tokens, color)
+        const fg = variant.id === 'solid' ? '#fff' : color
+        return (
+          <div key={tone} style={style}>
+            <span style={{ width: 18, height: 18, borderRadius: 999, background: variant.id === 'solid' ? 'rgba(255,255,255,.25)' : color + '22', color: fg, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>!</span>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>{labels[tone]}</div>
+              <div style={{ fontSize: tokens.fontSize - 2, opacity: variant.id === 'solid' ? 0.9 : 0.75 }}>{bodies[tone]}</div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 const COMPONENT_SECTIONS = [
   { id: 'buttons', label: 'Buttons', variants: BUTTON_VARIANTS },
   { id: 'cards', label: 'Cards', variants: CARD_VARIANTS },
@@ -96,6 +133,7 @@ const COMPONENT_SECTIONS = [
   { id: 'toggles', label: 'Toggles', variants: TOGGLE_VARIANTS },
   { id: 'tables', label: 'Tables', variants: TABLE_VARIANTS },
   { id: 'tabs', label: 'Tabs', variants: TAB_VARIANTS },
+  { id: 'alerts', label: 'Alerts', variants: ALERT_VARIANTS },
 ]
 
 // ── Token Editor Panel ────────────────────────────────────────────────────────
@@ -295,6 +333,7 @@ export default function UIBuilder({ onCopy, toast }) {
     toggles: 'pill',
     tables: 'striped',
     tabs: 'underline',
+    alerts: 'soft',
   })
 
   const [codeSection, setCodeSection] = useState(null)
@@ -490,6 +529,10 @@ export default function UIBuilder({ onCopy, toast }) {
 
                   {section.id === 'tabs' && (
                     <TabPreview variant={section.variants.find(v => v.id === selectedId)} tokens={tokens} />
+                  )}
+
+                  {section.id === 'alerts' && (
+                    <AlertPreview variant={section.variants.find(v => v.id === selectedId)} tokens={tokens} />
                   )}
                 </div>
 
