@@ -105,65 +105,11 @@ const GRAD_PRESETS = [
 
 const GRAD_TYPES = ['Linear', 'Radial', 'Conic']
 
-const PREVIEW_RADIUS = {
-  none:        { xs: 0, s: 0, m: 0, l: 0, pill: 0 },
-  subtle:      { xs: 2, s: 3, m: 4, l: 6, pill: 8 },
-  default:     { xs: 3, s: 6, m: 8, l: 12, pill: 20 },
-  pronounced:  { xs: 8, s: 16, m: 24, l: 32, pill: 9999 },
-}
-
-const ROUNDING_OPTIONS = [
-  { id: 'none', label: 'Square' },
-  { id: 'subtle', label: 'Subtle' },
-  { id: 'default', label: 'Medium' },
-  { id: 'pronounced', label: 'Round' },
-]
-
 function CopyIcon({ size = 12 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </svg>
-  )
-}
-
-function themeTokens(isDark) {
-  if (isDark) return { bg: '#1e1c18', surface: '#161412', surfaceAlt: '#28251f', border: '#353028', borderStrong: '#423c32', text: '#f3efe8', textMuted: '#a8a29e', textFaint: '#706b64', textGhost: '#4a453e', card: '#1e1c18', inputBg: '#28251f' }
-  return { bg: '#ffffff', surface: '#f9f6f1', surfaceAlt: '#eee9e0', border: '#eee9e0', borderStrong: '#e2dcd2', text: '#1a1814', textMuted: '#5c5650', textFaint: '#8a847e', textGhost: '#b8b2aa', card: '#ffffff', inputBg: '#ffffff' }
-}
-
-function PreviewBtn({ children, bg, color, border, hoverBg, hoverBorder, radius = 8, style = {} }) {
-  const [hover, setHover] = useState(false)
-  const [active, setActive] = useState(false)
-  const base = { padding: '8px 20px', borderRadius: radius, border: border || 'none', background: bg, color, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all .15s ease', transform: active ? 'scale(.97)' : hover ? 'translateY(-1px)' : 'none', opacity: active ? .9 : 1, boxShadow: hover && !active ? '0 2px 8px rgba(0,0,0,.1)' : 'none', ...style }
-  if (hover && hoverBg) base.background = hoverBg
-  if (hover && hoverBorder) base.border = hoverBorder
-  return <button style={base} onMouseEnter={() => setHover(true)} onMouseLeave={() => { setHover(false); setActive(false) }} onMouseDown={() => setActive(true)} onMouseUp={() => setActive(false)}>{children}</button>
-}
-
-function PreviewNavItem({ label, isActive, activeBg, activeColor, idleBg, idleColor, hoverBg, radius = 6, onClick }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={onClick}
-      style={{ padding: '7px 16px', borderRadius: radius, fontSize: 12, fontWeight: isActive ? 600 : 400, cursor: 'pointer', transition: 'all .15s ease', background: isActive ? activeBg : hover ? (hoverBg || 'rgba(128,128,128,.08)') : (idleBg || 'transparent'), color: isActive ? activeColor : idleColor }}
-    >{label}</div>
-  )
-}
-
-function PreviewTableRow({ children, bg, hoverBg, style = {} }) {
-  const [hover, setHover] = useState(false)
-  return <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ ...style, background: hover ? hoverBg : bg, transition: 'background .12s ease', cursor: 'default' }}>{children}</div>
-}
-
-function PreviewToast({ icon, msg, accentColor, iconBg, iconColor, bg, border, textColor, radius = 8, iconRadius = 6 }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6, borderRadius: radius, background: bg, border: `1px solid ${border}`, borderLeft: `3px solid ${accentColor}`, transition: 'all .15s ease', transform: hover ? 'translateX(2px)' : 'none', cursor: 'default' }}
-    >
-      <div style={{ width: 22, height: 22, borderRadius: iconRadius, background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{icon}</div>
-      <span style={{ fontSize: 12, color: textColor, flex: 1 }}>{msg}</span>
-    </div>
   )
 }
 
@@ -258,27 +204,12 @@ export default function ColorStudio({ onCopy }) {
   const [gradType, setGradType] = useState(() => design?.gradient?.type || 'Linear')
   const [stopPickerIdx, setStopPickerIdx] = useState(null)
 
-  const [previewRounding, setPreviewRounding] = useState(() => {
-    try { return localStorage.getItem('vs-preview-rounding') || 'default' } catch { return 'default' }
-  })
-  const [previewTab, setPreviewTab] = useState('Dashboard')
-  const [previewEmail, setPreviewEmail] = useState('')
-  const [previewEmailFocused, setPreviewEmailFocused] = useState(false)
-  const [previewCheckbox, setPreviewCheckbox] = useState(false)
-  const [previewRadio, setPreviewRadio] = useState('option1')
-  const [previewFormToast, setPreviewFormToast] = useState(false)
-
-  useEffect(() => {
-    try { localStorage.setItem('vs-preview-rounding', previewRounding) } catch {}
-  }, [previewRounding])
-
   const SECTIONS = useMemo(() => [
     { id: 'palette', label: 'Palette' },
     { id: 'tints', label: 'Tints' },
     { id: 'states', label: 'States' },
     { id: 'systems', label: 'Systems' },
     { id: 'gradients', label: 'Gradients' },
-    { id: 'preview', label: 'Preview' },
   ], [])
   const [collapsed, setCollapsed] = useState({})
   const [activeSection, setActiveSection] = useState('palette')
@@ -593,8 +524,6 @@ ${stateVars}
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const editColorRef = useRef(null)
   const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
-  const [tintFlipped, setTintFlipped] = useState(false)
-  const [tintAnimating, setTintAnimating] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
 
@@ -996,28 +925,10 @@ ${stateVars}
         </div>
 
         {/* Tint strip */}
-        <div className={`cs-tint-strip${tintAnimating ? ' cs-tint-flipping' : ''}`} style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-          {(tintFlipped ? [...tintScale].reverse() : tintScale).map((c, i) => {
-            const label = tintFlipped ? [...T_LABELS].reverse()[i] : T_LABELS[i]
-            return <TintSwatch key={`${tintFlipped ? 'r' : 'f'}-${i}`} color={c} label={label} onCopy={onCopy} />
-          })}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-          <button className="btn btn-s" onClick={() => {
-            setTintAnimating(true)
-            setTimeout(() => {
-              setTintFlipped(f => !f)
-              setTimeout(() => setTintAnimating(false), 300)
-            }, 10)
-          }} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10 }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
-              <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
-            </svg>
-            Flip Scale
-          </button>
-          <span style={{ fontSize: 10, color: 'var(--t3)' }}>{tintFlipped ? 'Dark → Light' : 'Light → Dark'}</span>
+        <div className="cs-tint-strip" style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+          {tintScale.map((c, i) => (
+            <TintSwatch key={i} color={c} label={T_LABELS[i]} onCopy={onCopy} />
+          ))}
         </div>
 
         {/* Tint dropdown: all palette colours */}
@@ -1338,358 +1249,6 @@ ${stateVars}
         </>}
       </section>
 
-      {/* ═══ SECTION 6: UI PREVIEW COMPONENTS ═══ */}
-      <section id="preview" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className="cs-section-header" onClick={() => toggleCollapse('preview')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.preview ? 0 : 14 }}>
-          <svg className={`cs-chevron${collapsed.preview ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI Preview</h2>
-        </div>
-        {!collapsed.preview && (() => {
-          const isDark = theme === 'dark'
-          const tk = themeTokens(isDark)
-          const sidebarTk = themeTokens(!isDark)
-          const okShade = STATE_PRESETS.success[stateColors.success].shades
-          const rd = PREVIEW_RADIUS[previewRounding] || PREVIEW_RADIUS.default
-          return <>
-        <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16, lineHeight: 1.6 }}>
-          Preview your colour system on real UI components. Switch your theme to see both modes.
-        </p>
-
-        {/* Rounding selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t3)', letterSpacing: '.04em', textTransform: 'uppercase' }}>Shaping</span>
-          <div style={{ display: 'flex', gap: 4, background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: 3 }}>
-            {ROUNDING_OPTIONS.map(opt => (
-              <button key={opt.id} onClick={() => setPreviewRounding(opt.id)}
-                style={{ padding: '5px 14px', borderRadius: (PREVIEW_RADIUS[opt.id] || PREVIEW_RADIUS.default).l, fontSize: 11, fontWeight: previewRounding === opt.id ? 600 : 400, border: 'none', cursor: 'pointer', transition: 'all .15s ease', background: previewRounding === opt.id ? 'var(--accent)' : 'transparent', color: previewRounding === opt.id ? 'var(--bg-0)' : 'var(--t2)' }}
-              >{opt.label}</button>
-            ))}
-          </div>
-          <span style={{ fontSize: 10, color: 'var(--t3)' }}>Affects preview &amp; export</span>
-        </div>
-
-        {/* ── App Layout ── */}
-        <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, marginBottom: 24 }}>
-          <div className="uip-layout">
-            <div className="uip-sidebar" style={{ background: sidebarTk.bg, borderRight: `1px solid ${sidebarTk.border}` }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: sidebarTk.text, marginBottom: 12 }}>AppName</span>
-              {['Dashboard', 'Projects', 'Analytics', 'Settings'].map((item, idx) => (
-                <PreviewNavItem key={item} label={item} isActive={idx === 0} activeBg={primary} activeColor={textColorForBg(primary)} idleColor={sidebarTk.textMuted} hoverBg={sidebarTk.surfaceAlt} radius={rd.s} />
-              ))}
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', background: accent, color: textColorForBg(accent), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>A</div>
-                <span style={{ fontSize: 11, color: sidebarTk.textMuted }}>Alex M.</span>
-              </div>
-            </div>
-            <div style={{ flex: 1, background: tk.bg, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: tk.text }}>Dashboard</div>
-                <PreviewBtn bg={primary} color={textColorForBg(primary)} radius={rd.s} style={{ fontSize: 11, padding: '6px 16px' }}>New Project</PreviewBtn>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
-                {allColors.slice(0, 4).map((c, i) => (
-                  <div key={i} style={{ borderRadius: rd.m, border: `1px solid ${tk.border}`, padding: 14, background: tk.card }}>
-                    <div style={{ width: '100%', height: 4, borderRadius: rd.xs, background: c, marginBottom: 10 }} />
-                    <div style={{ fontSize: 20, fontWeight: 700, color: tk.text }}>{[247, '1.2k', '89%', '4.8s'][i]}</div>
-                    <div style={{ fontSize: 10, color: tk.textFaint, marginTop: 2 }}>{['Views', 'Revenue', 'Uptime', 'Latency'][i]}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1 }}>
-                <div style={{ borderRadius: rd.m, border: `1px solid ${tk.border}`, padding: 14, background: tk.card }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: tk.textFaint, marginBottom: 8 }}>Recent Activity</div>
-                  {['Design tokens updated', 'New team member added', 'Export completed'].map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: i < 2 ? `1px solid ${tk.border}` : 'none' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: allColors[i] || primary }} />
-                      <span style={{ fontSize: 11, color: tk.textMuted }}>{item}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ borderRadius: rd.m, border: `1px solid ${tk.border}`, padding: 14, background: tk.card }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: tk.textFaint, marginBottom: 8 }}>Quick Actions</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <PreviewBtn bg={primary} color={textColorForBg(primary)} radius={rd.s} style={{ width: '100%', justifyContent: 'center', fontSize: 11 }}>Export Design System</PreviewBtn>
-                    <PreviewBtn bg="transparent" color={tk.text} border={`1px solid ${tk.border}`} hoverBg={tk.surfaceAlt} radius={rd.s} style={{ width: '100%', justifyContent: 'center', fontSize: 11 }}>View Documentation</PreviewBtn>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Component Showcase ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 16 }}>
-          {/* Card */}
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.bg }}>
-            <div style={{ padding: 22 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, color: tk.text }}>Dashboard Overview</h3>
-              <p style={{ fontSize: 13, color: tk.textMuted, lineHeight: 1.6, marginBottom: 16 }}>Your design system is ready. Review the metrics below.</p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <PreviewBtn bg={primary} color={textColorForBg(primary)} radius={rd.m}>Get Started</PreviewBtn>
-                <PreviewBtn bg="transparent" color={secondary} border={`1px solid ${secondary}`} hoverBg={`${secondary}12`} radius={rd.m}>Learn More</PreviewBtn>
-              </div>
-            </div>
-          </div>
-
-          {/* Profile Card */}
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.bg }}>
-            <div style={{ height: 56, background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />
-            <div style={{ padding: '0 18px 18px' }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: primary, color: textColorForBg(primary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, border: `3px solid ${tk.bg}`, marginTop: -24, marginBottom: 10 }}>A</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, color: tk.text }}>Alex Morgan</div>
-              <div style={{ fontSize: 12, color: tk.textFaint, marginBottom: 10 }}>Senior Product Designer</div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                <span style={{ padding: '3px 10px', borderRadius: rd.pill, fontSize: 10, fontWeight: 600, background: `${primary}18`, color: primary }}>Design</span>
-                <span style={{ padding: '3px 10px', borderRadius: rd.pill, fontSize: 10, fontWeight: 600, background: `${secondary}18`, color: secondary }}>Systems</span>
-                <span style={{ padding: '3px 10px', borderRadius: rd.pill, fontSize: 10, fontWeight: 600, background: `${accent}18`, color: accent }}>Research</span>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <PreviewBtn bg={primary} color={textColorForBg(primary)} radius={rd.s} style={{ flex: 1, padding: '7px', fontSize: 11 }}>Follow</PreviewBtn>
-                <PreviewBtn bg={tk.card} color={tk.text} border={`1px solid ${tk.border}`} hoverBg={tk.surfaceAlt} radius={rd.s} style={{ flex: 1, padding: '7px', fontSize: 11 }}>Message</PreviewBtn>
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.bg }}>
-            <div style={{ padding: 22 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: rd.xs, background: primary, color: textColorForBg(primary), display: 'inline-block', marginBottom: 6 }}>PRO</span>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 14 }}>
-                <span style={{ fontSize: 32, fontWeight: 800, color: tk.text }}>$29</span>
-                <span style={{ fontSize: 13, color: tk.textFaint }}>/month</span>
-              </div>
-              {['Unlimited projects', 'Priority support', 'Custom branding', 'API access'].map(f => (
-                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: isDark ? `${okShade[6]}30` : okShade[1], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 10, color: okShade[isDark ? 3 : 6], fontWeight: 700 }}>&#10003;</span>
-                  </div>
-                  <span style={{ fontSize: 12, color: tk.textMuted }}>{f}</span>
-                </div>
-              ))}
-              <PreviewBtn bg={primary} color={textColorForBg(primary)} radius={rd.m} style={{ width: '100%', justifyContent: 'center', marginTop: 14 }}>Get Started</PreviewBtn>
-            </div>
-          </div>
-
-          {/* Alerts */}
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.bg, padding: 18 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: tk.textFaint, display: 'block', marginBottom: 12 }}>Alerts</span>
-            {['success', 'warning', 'error', 'info'].map(state => {
-              const shade = STATE_PRESETS[state][stateColors[state]].shades
-              return (
-                <div key={state} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: rd.m, background: isDark ? `${shade[8]}22` : shade[0], border: `1px solid ${isDark ? shade[8] : shade[2]}`, marginBottom: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: shade[5], flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: isDark ? shade[2] : shade[8], fontWeight: 500, flex: 1, textTransform: 'capitalize' }}>{state} alert message</span>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Chat */}
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.surface, padding: 18 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: tk.textFaint, display: 'block', marginBottom: 12 }}>Chat</span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', background: secondary, color: textColorForBg(secondary), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>J</div>
-                <div style={{ padding: '8px 14px', borderRadius: `${rd.l}px ${rd.l}px ${rd.l}px ${rd.xs}px`, background: tk.card, border: `1px solid ${tk.border}`, fontSize: 12, color: tk.text, maxWidth: '80%' }}>
-                  How does this palette look?
-                  <div style={{ fontSize: 9, color: tk.textGhost, marginTop: 4 }}>10:32 AM</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', justifyContent: 'flex-end' }}>
-                <div style={{ padding: '8px 14px', borderRadius: `${rd.l}px ${rd.l}px ${rd.xs}px ${rd.l}px`, background: primary, color: textColorForBg(primary), fontSize: 12, maxWidth: '80%' }}>
-                  Looks great! Ready to ship.
-                  <div style={{ fontSize: 9, opacity: .7, marginTop: 4 }}>10:33 AM</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Badges */}
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.bg, padding: 18 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: tk.textFaint, display: 'block', marginBottom: 12 }}>Badges & Tags</span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-              {allColors.map((c, i) => (
-                <span key={i} style={{ padding: '4px 12px', borderRadius: rd.pill, fontSize: 11, fontWeight: 600, background: c, color: textColorForBg(c) }}>
-                  {ROLES[i] || `Tag ${i + 1}`}
-                </span>
-              ))}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {allColors.map((c, i) => (
-                <span key={i} style={{ padding: '4px 12px', borderRadius: rd.pill, fontSize: 11, fontWeight: 500, border: `1px solid ${c}`, color: c }}>
-                  Outline {i + 1}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Data Table ── */}
-        <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, marginTop: 16 }}>
-          <div style={{ padding: '14px 18px', background: tk.bg }}>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: tk.textFaint, display: 'block', marginBottom: 12 }}>Data Table</span>
-            <div style={{ borderRadius: rd.m, border: `1px solid ${tk.border}`, overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 80px', padding: '8px 14px', background: tk.surfaceAlt, fontSize: 10, fontWeight: 700, color: tk.textMuted, letterSpacing: '.04em', textTransform: 'uppercase' }}>
-                <span>Name</span><span>Status</span><span>Role</span><span></span>
-              </div>
-              {[
-                { name: 'Sarah Chen', status: 'Active', role: 'Admin', stateKey: 'success' },
-                { name: 'James Wilson', status: 'Pending', role: 'Editor', stateKey: 'warning' },
-                { name: 'Eva Martinez', status: 'Inactive', role: 'Viewer', stateKey: 'error' },
-              ].map((row, ri) => {
-                const stShade = STATE_PRESETS[row.stateKey][stateColors[row.stateKey]].shades
-                return (
-                  <PreviewTableRow key={ri} bg={tk.card} hoverBg={tk.surfaceAlt}
-                    style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 80px', padding: '10px 14px', borderTop: `1px solid ${tk.border}`, alignItems: 'center', fontSize: 12 }}
-                  >
-                    <span style={{ fontWeight: 600, color: tk.text }}>{row.name}</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: stShade[5] }} />
-                      <span style={{ fontSize: 11, color: stShade[isDark ? 3 : 7] }}>{row.status}</span>
-                    </span>
-                    <span style={{ fontSize: 11, color: tk.textFaint }}>{row.role}</span>
-                    <PreviewBtn bg={`${primary}12`} color={primary} border={`1px solid ${primary}30`} hoverBg={`${primary}22`} radius={rd.xs} style={{ padding: '4px 10px', fontSize: 10 }}>Edit</PreviewBtn>
-                  </PreviewTableRow>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Toasts */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 16, marginTop: 16 }}>
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.bg, padding: 18 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: tk.textFaint, display: 'block', marginBottom: 12 }}>Notifications</span>
-            {[
-              { type: 'success', msg: 'Changes saved', icon: '✓' },
-              { type: 'error', msg: 'Upload failed', icon: '✕' },
-              { type: 'warning', msg: 'Storage at 90%', icon: '!' },
-              { type: 'info', msg: 'Update available', icon: 'i' },
-            ].map(toast => {
-              const shade = STATE_PRESETS[toast.type][stateColors[toast.type]].shades
-              return <PreviewToast key={toast.type} icon={toast.icon} msg={toast.msg} accentColor={shade[5]} iconBg={isDark ? `${shade[7]}30` : shade[1]} iconColor={shade[isDark ? 3 : 7]} bg={tk.card} border={tk.border} textColor={tk.text} radius={rd.m} iconRadius={rd.s} />
-            })}
-          </div>
-
-          {/* Progress */}
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.bg, padding: 18 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: tk.textFaint, display: 'block', marginBottom: 12 }}>Progress</span>
-            {[
-              { label: 'Design tokens', pct: 85, color: primary },
-              { label: 'Component library', pct: 62, color: secondary },
-              { label: 'Documentation', pct: 34, color: accent },
-              { label: 'Testing', pct: 91, color: allColors[3] || primary },
-            ].map(p => (
-              <div key={p.label} style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: tk.textMuted }}>{p.label}</span>
-                  <span style={{ fontSize: 11, fontFamily: 'var(--mono)', fontWeight: 600, color: p.color }}>{p.pct}%</span>
-                </div>
-                <div style={{ height: 6, borderRadius: rd.xs, background: tk.surfaceAlt, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${p.pct}%`, borderRadius: rd.xs, background: p.color }} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Navigation + Form */}
-          <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, background: tk.bg, padding: 18, position: 'relative' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: tk.textFaint, display: 'block', marginBottom: 10 }}>Form</span>
-            <div style={{ display: 'flex', gap: 4, background: tk.surfaceAlt, borderRadius: rd.m, padding: 4, marginBottom: 14 }}>
-              {['Dashboard', 'Projects', 'Settings'].map(tab => (
-                <PreviewNavItem key={tab} label={tab} isActive={previewTab === tab} activeBg={primary} activeColor={textColorForBg(primary)} idleColor={tk.textMuted} hoverBg={tk.border} radius={rd.s} onClick={() => setPreviewTab(tab)} />
-              ))}
-            </div>
-
-            {/* Tab content */}
-            {previewTab === 'Dashboard' && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: tk.text, marginBottom: 8 }}>Welcome back</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                  {[{ label: 'Tasks', val: '12' }, { label: 'Done', val: '8' }].map(s => (
-                    <div key={s.label} style={{ padding: '8px 10px', borderRadius: rd.s, background: tk.surfaceAlt, border: `1px solid ${tk.border}` }}>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: primary }}>{s.val}</div>
-                      <div style={{ fontSize: 9, color: tk.textFaint }}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {previewTab === 'Projects' && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: tk.text, marginBottom: 8 }}>Your projects</div>
-                {['Brand Redesign', 'Mobile App', 'Marketing Site'].map((p, i) => (
-                  <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: i < 2 ? `1px solid ${tk.border}` : 'none' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: allColors[i] || primary }} />
-                    <span style={{ fontSize: 11, color: tk.textMuted, flex: 1 }}>{p}</span>
-                    <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: tk.textFaint }}>{['Active', 'Draft', 'Review'][i]}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {previewTab === 'Settings' && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: tk.text, marginBottom: 8 }}>Preferences</div>
-                {['Dark mode', 'Notifications', 'Auto-save'].map((s, i) => (
-                  <div key={s} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < 2 ? `1px solid ${tk.border}` : 'none' }}>
-                    <span style={{ fontSize: 11, color: tk.textMuted }}>{s}</span>
-                    <div style={{ width: 28, height: 16, borderRadius: 8, background: i === 0 ? primary : tk.surfaceAlt, border: `1px solid ${i === 0 ? primary : tk.borderStrong}`, position: 'relative', cursor: 'default' }}>
-                      <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#fff', position: 'absolute', top: 1, left: i === 0 ? 14 : 1, transition: 'left .15s', boxShadow: '0 1px 2px rgba(0,0,0,.2)' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: tk.textMuted, marginBottom: 4 }}>Email Address</label>
-            <input
-              type="email"
-              value={previewEmail}
-              onChange={e => setPreviewEmail(e.target.value)}
-              onFocus={() => setPreviewEmailFocused(true)}
-              onBlur={() => setPreviewEmailFocused(false)}
-              placeholder="user@example.com"
-              style={{ display: 'block', width: '100%', padding: '8px 12px', borderRadius: rd.m, border: `1px solid ${previewEmailFocused ? primary : tk.borderStrong}`, background: tk.inputBg, fontSize: 13, color: tk.text, marginBottom: 10, outline: 'none', transition: 'border-color .15s ease', boxShadow: previewEmailFocused ? `0 0 0 2px ${primary}25` : 'none', fontFamily: 'inherit' }}
-            />
-
-            {/* Checkbox */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: tk.textMuted, cursor: 'pointer', marginBottom: 8 }} onClick={() => setPreviewCheckbox(!previewCheckbox)}>
-              <div style={{ width: 16, height: 16, borderRadius: rd.xs, border: `1.5px solid ${previewCheckbox ? primary : tk.borderStrong}`, background: previewCheckbox ? primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s', flexShrink: 0 }}>
-                {previewCheckbox && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={textColorForBg(primary)} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-              </div>
-              Remember me
-            </label>
-
-            {/* Radio buttons */}
-            <div style={{ display: 'flex', gap: 14, marginBottom: 12 }}>
-              {[{ id: 'option1', label: 'Personal' }, { id: 'option2', label: 'Business' }].map(opt => (
-                <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: tk.textMuted, cursor: 'pointer' }} onClick={() => setPreviewRadio(opt.id)}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `1.5px solid ${previewRadio === opt.id ? primary : tk.borderStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s', flexShrink: 0 }}>
-                    {previewRadio === opt.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: primary }} />}
-                  </div>
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-
-            <PreviewBtn bg={primary} color={textColorForBg(primary)} radius={rd.m} style={{ width: '100%', justifyContent: 'center' }}>
-              <span onClick={() => { setPreviewFormToast(true); setTimeout(() => setPreviewFormToast(false), 2000) }}>Submit</span>
-            </PreviewBtn>
-
-            {/* Form success toast */}
-            {previewFormToast && (
-              <div style={{ position: 'absolute', bottom: 14, left: 14, right: 14, padding: '8px 12px', borderRadius: rd.s, background: okShade[isDark ? 8 : 1], border: `1px solid ${okShade[isDark ? 6 : 3]}`, display: 'flex', alignItems: 'center', gap: 8, animation: 'fadeIn .2s ease', zIndex: 2 }}>
-                <div style={{ width: 18, height: 18, borderRadius: '50%', background: okShade[5], color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>&#10003;</div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: okShade[isDark ? 2 : 7] }}>Submitted successfully!</span>
-              </div>
-            )}
-          </div>
-        </div>
-        </>
-        })()}
-      </section>
 
       {/* ── Flow CTA: Next step → Typography ── */}
       <div style={{ textAlign: 'center', padding: '40px 0 20px', borderTop: '1px solid var(--border)' }}>
