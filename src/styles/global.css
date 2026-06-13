@@ -1807,6 +1807,22 @@ img,svg,video{max-width:100%;height:auto}
 .proj-sort{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
 .proj-sort select{padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--bg-1);color:var(--t1);font-size:13px;cursor:pointer}
 .proj-count{margin-left:auto;font-size:12px;color:var(--t2);font-weight:500}
+/* Alt text examples panel */
+.alt-examples{margin-top:18px;padding:20px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
+.alt-examples-title{font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--t0);margin-bottom:14px}
+.alt-examples-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:560px){.alt-examples-grid{grid-template-columns:1fr}}
+.alt-example{padding:14px;border-radius:var(--radius-s);border:1px solid var(--border);position:relative}
+.alt-example.good{background:color-mix(in srgb,var(--ok) 8%,var(--bg-0));border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.alt-example.bad{background:color-mix(in srgb,var(--err) 7%,var(--bg-0));border-color:color-mix(in srgb,var(--err) 25%,transparent)}
+.alt-example-tag{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:99px}
+.alt-example.good .alt-example-tag{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.alt-example.bad .alt-example-tag{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
+.alt-example-text{font-size:13px;color:var(--t0);margin:8px 0 6px;line-height:1.5}
+.alt-example-why{font-size:11.5px;color:var(--t2);line-height:1.5}
+.alt-tips{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.alt-tips li{font-size:12.5px;color:var(--t1);line-height:1.55}
+.alt-tips code{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px;background:var(--bg-2)}
 
 /* ─── State preset responsive show/hide ─── */
 .state-preset-full{display:inline}

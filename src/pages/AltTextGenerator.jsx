@@ -235,6 +235,30 @@ export default function AltTextGenerator({ toast }) {
         />
       </div>
 
+      {items.length === 0 && (
+        <div className="alt-examples">
+          <div className="alt-examples-title">What good alt text looks like</div>
+          <div className="alt-examples-grid">
+            <div className="alt-example good">
+              <span className="alt-example-tag">Good</span>
+              <p className="alt-example-text">“Golden retriever puppy curled asleep on a grey wool blanket”</p>
+              <span className="alt-example-why">Specific subject, setting, and detail — describes what matters.</span>
+            </div>
+            <div className="alt-example bad">
+              <span className="alt-example-tag">Avoid</span>
+              <p className="alt-example-text">“image of a dog” · “IMG_4821.jpg” · “photo”</p>
+              <span className="alt-example-why">Vague or filename-based — adds nothing for screen-reader users.</span>
+            </div>
+          </div>
+          <ul className="alt-tips">
+            <li>Keep it under ~125 characters — screen readers cut off long descriptions.</li>
+            <li>Don&rsquo;t start with “image of” or “picture of” — that&rsquo;s already announced.</li>
+            <li>Add a <strong>context</strong> note above (e.g. the article topic) for sharper results.</li>
+            <li>For purely decorative images, leave alt text empty (<code>alt=&quot;&quot;</code>).</li>
+          </ul>
+        </div>
+      )}
+
       {items.length > 0 && (
         <>
           <UsageGate toolId={ALT_TEXT_TOOL_ID}>
