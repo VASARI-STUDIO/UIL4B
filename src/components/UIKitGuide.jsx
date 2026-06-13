@@ -12,7 +12,7 @@ export const UIKIT_GUIDE_KEY = 'vs-uikit-guide'
 // <UIKitGuide step="..."> so it knows where it sits and where to send the user next.
 export const UIKIT_STEPS = [
   { id: 'color', path: '/color', label: 'Colours', blurb: 'Pick your palette' },
-  { id: 'fontpairs', path: '/fontpairs', label: 'Fonts', blurb: 'Pair your type' },
+  { id: 'fonts', path: '/fonts', label: 'Fonts', blurb: 'Pick your fonts' },
   { id: 'typescale', path: '/typescale', label: 'Type scale', blurb: 'Set your sizes' },
   { id: 'icons', path: '/icons', label: 'Icons', blurb: 'Choose icons' },
 ]
@@ -87,6 +87,9 @@ export default function UIKitGuide({ step }) {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
           </button>
         )}
+        <button type="button" className="uikit-stepbar-close" onClick={finish} aria-label="Close guide" title="Exit guided flow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
       </div>
     </>
   )

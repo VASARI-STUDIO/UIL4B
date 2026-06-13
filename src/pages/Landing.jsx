@@ -1,22 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { CATEGORIES } from '../data/tools'
 import { loadFont } from '../utils/googleFonts'
 
 const VISITED_KEY = 'vs-visited'
 
-// Optional looping background animation for the hero. Drop a video file in
-// /public (e.g. /hero-loop.webm) and set its path here — it will sit behind the
-// hero copy and parallax with the cursor. Leave empty to use the animated
-// accent-orb field instead. Provide a .webm first (smaller) with an .mp4
-// fallback by listing both, comma-separated, in HERO_LOOP_SOURCES.
-const HERO_LOOP_SOURCES = [
-  // { src: '/hero-loop.webm', type: 'video/webm' },
-  // { src: '/hero-loop.mp4', type: 'video/mp4' },
-]
+const HERO_LOOP_SOURCES = []
 
 // Reveal-on-scroll helper — fades/slides sections in as they enter the viewport.
 function useReveal() {
@@ -71,7 +62,7 @@ const HIGHLIGHTS = [
   },
   {
     title: 'Mostly free, always fair',
-    body: 'Explore the full toolkit for free. Upgrade for AI tools, extra prompts, and advanced exports — from just $4.99/month.',
+    body: 'Explore the full toolkit for free. Upgrade for AI tools, extra prompts, and advanced exports at a fraction of what other tools charge.',
     icon: (<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></>),
   },
   {
@@ -81,41 +72,39 @@ const HIGHLIGHTS = [
   },
 ]
 
-const PRICING = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    tagline: 'Everything you need for everyday design work.',
-    features: [
-      'All core tools — colour, type, icons, images',
-      'Unlimited palettes, type scales & CSS exports',
-      '40 AI generations per day',
-      'Work saved locally in your browser',
-      'Light & dark themes, multiple languages',
-    ],
-    cta: 'Start for free',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: { monthly: '$4.99', yearly: '$3.33' },
-    period: { monthly: 'per month', yearly: 'per month, billed yearly' },
-    note: { monthly: 'or $39.99 / year — save ~33%', yearly: '$39.99 billed once a year' },
-    tagline: 'For designers who lean on AI and want more headroom.',
-    featured: true,
-    features: [
-      'Everything in Free, plus:',
-      '1,000 AI generations per day',
-      'Higher-quality AI models',
-      'Projects synced across devices',
-      'Advanced design-system exports',
-      'Priority support',
-    ],
-    cta: 'Go Pro',
-  },
+const FREE_FEATURES = [
+  'All core tools — colour, type, icons, images',
+  'Unlimited palettes, type scales & CSS exports',
+  '40 AI generations per day',
+  'Work saved locally in your browser',
+  'Light & dark themes, multiple languages',
 ]
+
+const PRO_FEATURES = [
+  'Everything in Free, plus:',
+  '1,000 AI generations per day',
+  'Higher-quality AI models',
+  'Projects synced across devices',
+  'Advanced design-system exports',
+  'Priority support',
+]
+
+function useDynamicPrices() {
+  const [prices, setPrices] = useState(null)
+  useEffect(() => {
+    fetch('/api/get-prices')
+      .then(r => r.json())
+      .then(d => setPrices(d))
+      .catch(() => {})
+  }, [])
+  return prices
+}
+
+function formatPrice(amount, currency = 'usd') {
+  const symbols = { usd: '$', eur: '€', gbp: '£', aud: 'A$', nzd: 'NZ$', cad: 'C$', sgd: 'S$', chf: 'Fr' }
+  const sym = symbols[currency] || '$'
+  return `${sym}${Number(amount).toFixed(2)}`
+}
 
 const DEMO_LABELS = ['Primary', 'Dark', 'Accent', 'Light', 'Base']
 
@@ -366,11 +355,43 @@ function TokenDemo() {
 const FEATURE_DEMOS = [PaletteDemo, FontDemo, IconDemo, TokenDemo]
 
 const STATS = [
-  { num: '40+', label: 'Design tools' },
-  { num: '200K+', label: 'Icons' },
-  { num: '1,200+', label: 'Google Fonts' },
-  { num: '100%', label: 'Client-side' },
+  { value: 40, suffix: '+', label: 'Design tools' },
+  { value: 200, suffix: 'K+', label: 'Icons' },
+  { value: 1200, suffix: '+', label: 'Google Fonts' },
+  { value: 100, suffix: '%', label: 'Client-side' },
 ]
+
+function AnimatedNumber({ value, suffix = '', duration = 1600 }) {
+  const [display, setDisplay] = useState(0)
+  const ref = useRef(null)
+  const started = useRef(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') { setDisplay(value); return }
+    const obs = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting || started.current) return
+      started.current = true
+      obs.disconnect()
+      const start = performance.now()
+      const tick = (now) => {
+        const t = Math.min((now - start) / duration, 1)
+        const eased = 1 - Math.pow(1 - t, 3)
+        setDisplay(Math.round(eased * value))
+        if (t < 1) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    }, { threshold: 0.3 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [value, duration])
+
+  const formatted = value >= 1000 && !suffix.startsWith('K') && !suffix.startsWith('%')
+    ? display.toLocaleString()
+    : String(display)
+
+  return <span ref={ref} className="landing-stat-num">{formatted}{suffix}</span>
+}
 
 function StickyFeatures() {
   const [active, setActive] = useState(0)
@@ -551,6 +572,19 @@ export default function Landing() {
   const [billing, setBilling] = useState('monthly')
   const loggedIn = !!user
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0]
+  const dynamicPrices = useDynamicPrices()
+
+  const proPrice = useMemo(() => {
+    const cur = 'aud'
+    if (!dynamicPrices) return { monthly: 'A$4.99', yearly: 'A$3.33', yearlyTotal: 'A$39.99' }
+    const m = dynamicPrices.monthly?.[cur]
+    const y = dynamicPrices.yearly?.[cur]
+    return {
+      monthly: m ? formatPrice(m, cur) : 'A$4.99',
+      yearly: y ? formatPrice(y / 12, cur) : 'A$3.33',
+      yearlyTotal: y ? formatPrice(y, cur) : 'A$39.99',
+    }
+  }, [dynamicPrices])
 
   const enter = () => {
     try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
@@ -567,7 +601,6 @@ export default function Landing() {
     try { await checkout(interval) } catch { navigate('/settings', { state: { section: 'support' } }) }
   }
 
-  // "Start for free" drops the visitor straight into the dashboard; Pro opens checkout.
   const choosePlan = (id) => { if (id === 'pro') goPro(billing); else enter() }
 
   const viewIcons = () => {
@@ -575,10 +608,6 @@ export default function Landing() {
     navigate('/icons')
   }
 
-  // Hero hover parallax — track the cursor over the hero and expose its position
-  // as --px/--py (each -0.5…0.5) on the wrapper. The background layers read those
-  // vars and shift at different depths for a tactile, high-quality feel. Updates
-  // are throttled to one per animation frame and skipped under reduced-motion.
   const heroRef = useRef(null)
   const heroRaf = useRef(0)
   const onHeroMove = useCallback((e) => {
@@ -602,9 +631,45 @@ export default function Landing() {
   }, [])
   useEffect(() => () => cancelAnimationFrame(heroRaf.current), [])
 
+  // Hide nav on scroll down, show on scroll up
+  const navRef = useRef(null)
+  const lastScrollY = useRef(0)
+  const navHidden = useRef(false)
+  const heroBottom = useRef(0)
+
+  useEffect(() => {
+    const hero = heroRef.current
+    if (hero) heroBottom.current = hero.offsetTop + hero.offsetHeight
+
+    const onScroll = () => {
+      const nav = navRef.current
+      if (!nav) return
+      const y = window.scrollY
+      const pastHero = y > heroBottom.current
+
+      if (!pastHero) {
+        nav.classList.remove('landing-nav-hidden')
+        nav.classList.remove('landing-nav-solid')
+        navHidden.current = false
+      } else if (y > lastScrollY.current + 8 && !navHidden.current) {
+        nav.classList.add('landing-nav-hidden')
+        navHidden.current = true
+      } else if (y < lastScrollY.current - 8 && navHidden.current) {
+        nav.classList.remove('landing-nav-hidden')
+        nav.classList.add('landing-nav-solid')
+        navHidden.current = false
+      }
+
+      lastScrollY.current = y
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
     <div className="landing">
-      <header className="landing-nav">
+      <header className="landing-nav" ref={navRef}>
         <div className="landing-brand">
           <span className="landing-brand-mark">UIL4B</span>
           <span className="landing-brand-sub">Design Toolkit</span>
@@ -626,7 +691,6 @@ export default function Landing() {
       </header>
 
       <main className="landing-main">
-        {/* Hero — hover parallax background reacts to the cursor */}
         <div
           className="landing-hero-wrap"
           ref={heroRef}
@@ -644,52 +708,57 @@ export default function Landing() {
             <span className="landing-hero-orb landing-hero-orb-3" />
             <span className="landing-hero-glow" />
           </div>
-        <section className="landing-hero">
-          <span className="landing-eyebrow">A design toolkit for designers and developers</span>
-          <h1 className="landing-title">
-            Every design tool<br /><em>you reach for</em>, together.
-          </h1>
-          <p className="landing-lede">
-            UIL4B brings your most-used graphic design tools into one fast, unified workspace.
-            Build colour systems, pair fonts, convert images, write AI prompts and export a
-            complete design system without leaving the page.
-          </p>
-          <div className="landing-cta-row">
-            <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-              {loggedIn ? 'Resume where you left off' : 'Open the toolkit'}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
-            </button>
-            <button type="button" className="btn landing-cta-secondary" onClick={signIn}>
-              {loggedIn ? 'Log in to another account' : 'Create free account'}
-            </button>
+          <section className="landing-hero">
+            <span className="landing-eyebrow">A design toolkit for designers and developers</span>
+            <h1 className="landing-title">
+              Every design tool<br /><em>you reach for</em>, together.
+            </h1>
+            <p className="landing-lede">
+              UIL4B brings your most-used graphic design tools into one fast, unified workspace.
+              Build colour systems, pair fonts, convert images, write AI prompts and export a
+              complete design system without leaving the page.
+            </p>
+            <div className="landing-cta-row">
+              <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
+                {loggedIn ? 'Resume where you left off' : 'Open the toolkit'}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+              </button>
+              <button type="button" className="btn landing-cta-secondary" onClick={signIn}>
+                {loggedIn ? 'Log in to another account' : 'Create free account'}
+              </button>
+            </div>
+            <span className="landing-cta-note">
+              {loggedIn
+                ? `Signed in${firstName ? ` as ${firstName}` : ''}. Pick up right where you left off.`
+                : 'No signup required to explore. Free tier included.'}
+            </span>
+          </section>
+
+          {/* Hero graphic — animated floating tool preview cards */}
+          <div className="landing-hero-graphic" aria-hidden="true">
+            <div className="landing-hero-card landing-hero-card-1">
+              <div className="landing-hero-card-bar" />
+              <div className="landing-hero-card-swatches">
+                <span style={{ background: '#635BFF' }} /><span style={{ background: '#0A2540' }} /><span style={{ background: '#00D4AA' }} /><span style={{ background: '#7A73FF' }} />
+              </div>
+            </div>
+            <div className="landing-hero-card landing-hero-card-2">
+              <div className="landing-hero-card-bar" />
+              <div className="landing-hero-card-lines"><span /><span /><span /></div>
+            </div>
+            <div className="landing-hero-card landing-hero-card-3">
+              <div className="landing-hero-card-bar" />
+              <div className="landing-hero-card-grid"><span /><span /><span /><span /><span /><span /></div>
+            </div>
           </div>
-          <span className="landing-cta-note">
-            {loggedIn
-              ? `Signed in${firstName ? ` as ${firstName}` : ''}. Pick up right where you left off.`
-              : 'No signup required to explore. Free tier included.'}
-          </span>
-        </section>
         </div>
 
-        {/* Stats */}
+        {/* Stats with animated count-up */}
         <Reveal className="landing-stats">
           {STATS.map(s => (
             <div key={s.label} className="landing-stat">
-              <span className="landing-stat-num">{s.num}</span>
+              <AnimatedNumber value={s.value} suffix={s.suffix} />
               <span className="landing-stat-label">{s.label}</span>
-            </div>
-          ))}
-        </Reveal>
-
-        {/* Category cards */}
-        <Reveal className="landing-cats">
-          {CATEGORIES.map(cat => (
-            <div key={cat.id} className="landing-cat-card">
-              <span className="landing-cat-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{cat.icon}</svg>
-              </span>
-              <span className="landing-cat-label">{cat.label}</span>
-              <span className="landing-cat-desc">{cat.description}</span>
             </div>
           ))}
         </Reveal>
@@ -720,12 +789,12 @@ export default function Landing() {
           ))}
         </Reveal>
 
-        {/* Pricing tiers */}
+        {/* Pricing tiers — visually differentiated */}
         <Reveal className="landing-pricing" id="pricing">
           <div className="landing-pricing-head">
             <span className="landing-eyebrow">Simple, fair pricing</span>
             <h2>Most of UIL4B is free. Upgrade only when you need more AI.</h2>
-            <p>Every core tool is free forever. Pro unlocks higher daily AI limits, better models, and synced projects — for less than a coffee a month.</p>
+            <p>Every core tool is free forever. Pro unlocks higher daily AI limits, better models, and synced projects.</p>
           </div>
           <div className="landing-billing-toggle" data-interval={billing} role="group" aria-label="Billing period">
             <span className="landing-billing-thumb" aria-hidden="true" />
@@ -737,65 +806,100 @@ export default function Landing() {
             </button>
           </div>
           <div className="landing-pricing-grid">
-            {PRICING.map(tier => {
-              const isCurrentPro = tier.id === 'pro' && isPro
-              const price = typeof tier.price === 'object' ? tier.price[billing] : tier.price
-              const period = typeof tier.period === 'object' ? tier.period[billing] : tier.period
-              const note = typeof tier.note === 'object' ? tier.note?.[billing] : tier.note
-              return (
-                <div key={tier.id} className={`landing-tier${tier.featured ? ' landing-tier-featured' : ''}`}>
-                  {tier.featured && <span className="landing-tier-badge">Most popular</span>}
-                  <div className="landing-tier-name">{tier.name}</div>
-                  <div className="landing-tier-price">
-                    <span className="landing-tier-amount">{price}</span>
-                    <span className="landing-tier-period">{period}</span>
-                  </div>
-                  {note && <div className="landing-tier-note">{note}</div>}
-                  <p className="landing-tier-tagline">{tier.tagline}</p>
-                  <ul className="landing-tier-features">
-                    {tier.features.map((f, i) => (
-                      <li key={i} className={f.endsWith('plus:') ? 'landing-tier-feature-head' : ''}>
-                        {!f.endsWith('plus:') && (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                        )}
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    className={`btn landing-tier-cta${tier.featured ? ' btn-accent' : ''}`}
-                    onClick={() => choosePlan(tier.id)}
-                    disabled={isCurrentPro}
-                  >
-                    {isCurrentPro ? 'Your current plan' : tier.cta}
-                  </button>
-                </div>
-              )
-            })}
+            {/* Free tier */}
+            <div className="landing-tier landing-tier-free">
+              <div className="landing-tier-name">Free</div>
+              <div className="landing-tier-price">
+                <span className="landing-tier-amount">$0</span>
+                <span className="landing-tier-period">forever</span>
+              </div>
+              <p className="landing-tier-tagline">Everything you need for everyday design work.</p>
+              <ul className="landing-tier-features">
+                {FREE_FEATURES.map((f, i) => (
+                  <li key={i}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="btn landing-tier-cta" onClick={() => choosePlan('free')}>
+                Start for free
+              </button>
+            </div>
+
+            {/* Pro tier — visually prominent */}
+            <div className={`landing-tier landing-tier-featured${isPro ? ' landing-tier-active' : ''}`}>
+              <span className="landing-tier-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15 9 22 9.3 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.3 9 9" /></svg>
+                Recommended
+              </span>
+              <div className="landing-tier-name">Pro</div>
+              <div className="landing-tier-price">
+                <span className="landing-tier-amount">{billing === 'yearly' ? proPrice.yearly : proPrice.monthly}</span>
+                <span className="landing-tier-period">{billing === 'yearly' ? 'per month, billed yearly' : 'per month'}</span>
+              </div>
+              <div className="landing-tier-note">
+                {billing === 'yearly'
+                  ? `${proPrice.yearlyTotal} billed once a year`
+                  : `or ${proPrice.yearlyTotal} / year — save ~33%`}
+              </div>
+              <p className="landing-tier-tagline">For designers who lean on AI and want more headroom.</p>
+              <ul className="landing-tier-features">
+                {PRO_FEATURES.map((f, i) => (
+                  <li key={i} className={f.endsWith('plus:') ? 'landing-tier-feature-head' : ''}>
+                    {!f.endsWith('plus:') && (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    )}
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="btn btn-accent landing-tier-cta"
+                onClick={() => choosePlan('pro')}
+                disabled={isPro}
+              >
+                {isPro ? 'Your current plan' : 'Go Pro'}
+              </button>
+            </div>
           </div>
           <p className="landing-pricing-foot">Prices in AUD. Cancel anytime — your free access never expires.</p>
         </Reveal>
 
-        {/* Closing CTA */}
+        {/* Closing CTA — redesigned with more personality */}
         <Reveal className="landing-closing">
-          <h2>{loggedIn ? 'Pick up where you left off.' : 'Start designing in seconds.'}</h2>
+          <div className="landing-closing-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+          </div>
+          <h2>{loggedIn ? 'Pick up where you left off.' : 'Start building your design system.'}</h2>
           <p>
             {loggedIn
               ? 'Your projects and design tokens are ready and waiting. Jump back into the toolkit any time.'
-              : 'Jump straight into the toolkit. Your work is saved locally, and an account unlocks AI tools and synced projects whenever you are ready.'}
+              : 'Colour, type, icons, images and AI — all in one workspace. Your work saves locally, and an account unlocks synced projects whenever you are ready.'}
           </p>
-          <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-            {loggedIn ? 'Resume where you left off' : 'Open the toolkit'}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
-          </button>
+          <div className="landing-cta-row">
+            <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
+              {loggedIn ? 'Resume where you left off' : 'Get started for free'}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+            </button>
+          </div>
         </Reveal>
       </main>
 
       <footer className="landing-footer">
-        <span>Made by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>
-        <span className="landing-footer-sep">·</span>
-        <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer">Donate</a>
+        <div className="landing-footer-inner">
+          <div className="landing-footer-brand">
+            <span className="landing-footer-mark">UIL4B</span>
+            <span className="landing-footer-tagline">Design toolkit for everyone.</span>
+          </div>
+          <div className="landing-footer-links">
+            <a href="#pricing">Pricing</a>
+            <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">About</a>
+            <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer">Donate</a>
+          </div>
+          <span className="landing-footer-copy">Built by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>
+        </div>
       </footer>
     </div>
   )
