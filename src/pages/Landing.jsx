@@ -56,18 +56,18 @@ const FEATURES = [
 
 const HIGHLIGHTS = [
   {
-    title: 'Everything in one place',
-    body: 'Colour systems, typography, image tools, AI generators and design references — no more juggling a dozen browser tabs.',
+    title: 'Replace a dozen browser tabs',
+    body: 'Colour palettes, type scales, font pairing, icon search, image conversion, alt text, and CSS export — all in one workspace with zero context switching.',
     icon: (<><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>),
   },
   {
-    title: 'Mostly free, always fair',
-    body: 'Explore the full toolkit for free. Upgrade for AI tools, extra prompts, and advanced exports at a fraction of what other tools charge.',
-    icon: (<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></>),
+    title: 'Export production-ready code',
+    body: 'Generate CSS custom properties, JSON design tokens, and complete style guides from your palette and typography in one click — ready for your codebase.',
+    icon: (<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></>),
   },
   {
-    title: 'Built for real workflows',
-    body: 'Export production-ready design systems, generate palettes from colour theory, and reference the tokens you actually use day to day.',
+    title: 'AI-powered, privacy-first',
+    body: '40 free AI generations daily for alt text and prompts. All core tools run entirely in your browser — your designs never leave your machine.',
     icon: (<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
   },
 ]
@@ -793,8 +793,8 @@ export default function Landing() {
         <Reveal className="landing-pricing" id="pricing">
           <div className="landing-pricing-head">
             <span className="landing-eyebrow">Simple, fair pricing</span>
-            <h2>Most of UIL4B is free. Upgrade only when you need more AI.</h2>
-            <p>Every core tool is free forever. Pro unlocks higher daily AI limits, better models, and synced projects.</p>
+            <h2>Start free, scale when you're ready.</h2>
+            <p>Every core tool is free with no time limit. Pro unlocks 1,000 daily AI generations, higher-quality models, cross-device project sync, and priority support.</p>
           </div>
           <div className="landing-billing-toggle" data-interval={billing} role="group" aria-label="Billing period">
             <span className="landing-billing-thumb" aria-hidden="true" />

@@ -85,6 +85,35 @@ export default function App() {
     trackPageView(location.pathname)
     trackSessionPage(location.pathname)
     setMenuOpen(false)
+    const PAGE_TITLES = {
+      '/': 'UI L4B | Design Toolkit',
+      '/welcome': 'UI L4B | Design Toolkit',
+      '/dashboard': 'UI L4B | Dashboard',
+      '/color': 'UI L4B | Colour Studio',
+      '/typography': 'UI L4B | Typography',
+      '/typescale': 'UI L4B | Type Scale',
+      '/fontpairs': 'UI L4B | Font Pairs',
+      '/fontgallery': 'UI L4B | Font Gallery',
+      '/icons': 'UI L4B | Icon Library',
+      '/imgconvert': 'UI L4B | Image Converter',
+      '/alt-text': 'UI L4B | Alt Text Generator',
+      '/prompts': 'UI L4B | Prompt Library',
+      '/emoji': 'UI L4B | Emoji Library',
+      '/video-frames': 'UI L4B | Video to Frames',
+      '/box-shadow': 'UI L4B | Box Shadow',
+      '/ui-builder': 'UI L4B | UI Builder',
+      '/projects': 'UI L4B | Projects',
+      '/settings': 'UI L4B | Settings',
+      '/login': 'UI L4B | Sign In',
+      '/checkout': 'UI L4B | Checkout',
+      '/community': 'UI L4B | Community',
+      '/feedback': 'UI L4B | Feedback',
+      '/help': 'UI L4B | Help Centre',
+      '/privacy': 'UI L4B | Privacy',
+      '/terms': 'UI L4B | Terms',
+      '/admin': 'UI L4B | Admin',
+    }
+    document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
   }, [location.pathname])
 
   useEffect(() => {

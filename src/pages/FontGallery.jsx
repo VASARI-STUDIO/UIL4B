@@ -194,10 +194,9 @@ function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
 }
 
 function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
-  // 'checking' until we know whether the webfont actually rendered; 'blocked'
-  // if the Font Loading API reports it never arrived (network / extension).
   const [loadState, setLoadState] = useState('checking')
   const [pairings, setPairings] = useState([])
+  const [previewWeight, setPreviewWeight] = useState(() => hw(font))
 
   useEffect(() => {
     loadFont(font.family, font.variants)
@@ -247,7 +246,7 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
           </div>
         )}
 
-        <div className="fg-detail-hero" style={{ fontFamily: fam, fontWeight: hw(font) }}>
+        <div className="fg-detail-hero" style={{ fontFamily: fam, fontWeight: previewWeight }}>
           {font.family}
         </div>
 
@@ -258,11 +257,30 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
         </div>
 
         <div className="fg-detail-section">
+          <div className="fg-detail-label">Weight</div>
+          <div className="fg-weight-slider-row">
+            <input
+              type="range"
+              min={Math.min(...font.variants)}
+              max={Math.max(...font.variants)}
+              step={1}
+              value={previewWeight}
+              onChange={e => setPreviewWeight(+e.target.value)}
+              list={`wt-${font.family.replace(/\s/g, '-')}`}
+            />
+            <span className="fg-weight-slider-val">{previewWeight}</span>
+            <datalist id={`wt-${font.family.replace(/\s/g, '-')}`}>
+              {font.variants.map(w => <option key={w} value={w} />)}
+            </datalist>
+          </div>
+        </div>
+
+        <div className="fg-detail-section">
           <div className="fg-detail-label">Type Scale</div>
           {SIZES.map(s => (
             <div key={s.label} className="fg-scale-row">
               <span className="fg-scale-label">{s.label}<br /><span>{s.px}px</span></span>
-              <span className="fg-scale-text" style={{ fontFamily: fam, fontSize: s.px, fontWeight: hw(font) }}>
+              <span className="fg-scale-text" style={{ fontFamily: fam, fontSize: s.px, fontWeight: previewWeight }}>
                 {PANGRAM}
               </span>
             </div>
@@ -293,7 +311,7 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
         <div className="fg-detail-section">
           <div className="fg-detail-label">Paragraph</div>
           <div className="fg-paragraph" style={{ fontFamily: fam }}>
-            <p style={{ fontWeight: hw(font), fontSize: 28, lineHeight: 1.2, marginBottom: 16 }}>The fundamentals of great typography</p>
+            <p style={{ fontWeight: previewWeight, fontSize: 28, lineHeight: 1.2, marginBottom: 16 }}>The fundamentals of great typography</p>
             <p style={{ fontWeight: font.variants.includes(400) ? 400 : font.variants[0], fontSize: 16, lineHeight: 1.75 }}>
               Typography is the art and technique of arranging type to make written language legible, readable, and appealing when displayed. The arrangement of type involves selecting typefaces, point sizes, line lengths, line-spacing, and letter-spacing, and adjusting the space between pairs of letters. Good typography enhances readability and creates visual hierarchy.
             </p>

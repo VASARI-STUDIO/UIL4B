@@ -328,7 +328,7 @@ export default function UIBuilder({ onCopy, toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">UI Builder</div>
+        <div className="sec-h-eyebrow">UI Builder <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', padding: '2px 8px', borderRadius: 100, background: 'var(--brand-bg)', color: 'var(--brand)', marginLeft: 6, verticalAlign: 'middle' }}>ALPHA</span></div>
         <h1>Component Designer</h1>
         <p>Design dashboard components with live previews. Pick styles, tune tokens, copy CSS.</p>
       </div>
