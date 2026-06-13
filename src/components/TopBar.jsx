@@ -9,6 +9,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { TOOLS } from '../data/tools'
 import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
 import { useAppearance } from '../contexts/AppearanceContext'
+import UIPreviewModal from './UIPreviewModal'
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
@@ -459,6 +460,7 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [saveOpen, setSaveOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const isMac = IS_MAC
 
   // The tool that owns the current route, so the page can be pinned from itself.
@@ -514,6 +516,17 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
           </button>
         )}
 
+        <button
+          className="topbar-icon-btn"
+          onClick={() => setPreviewOpen(true)}
+          aria-label="Preview your colour system on UI"
+          title="Preview UI"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" /><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+          </svg>
+        </button>
+
         <ExportDropdown
           onSaveProject={() => setSaveOpen(true)}
         />
@@ -543,6 +556,8 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
         onClose={() => setSaveOpen(false)}
         onSave={handleSaveProject}
       />
+
+      <UIPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
     </header>
   )
 }
