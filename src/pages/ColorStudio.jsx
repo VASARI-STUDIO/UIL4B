@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, T_LABELS } from '../utils/colors'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, describeColor, T_LABELS } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
 import { trackColourPick } from '../utils/analytics'
@@ -181,6 +181,80 @@ function snap(value, target, threshold = 3) {
   return Math.abs(value - target) <= threshold ? target : value
 }
 
+// Coolors-style detail popup — full breakdown of a single colour with every
+// notation, contrast ratings, a shade ramp, and inline editing.
+function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onDown)
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown) }
+  }, [onClose])
+
+  const [h, s, l] = hexToHsl(color)
+  const [r, g, b] = hexToRgb(color)
+  const [c, m, y, k] = hexToCmyk(color)
+  const fg = textColorForBg(color)
+  const onWhite = contrastRatio(color, '#FFFFFF')
+  const onBlack = contrastRatio(color, '#000000')
+  const grade = (ratio) => ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA Large' : 'Fail'
+  const shades = Array.from({ length: 9 }, (_, i) => hslToHex(h, s, Math.round(8 + i * 10.5)))
+
+  const rows = [
+    ['HEX', color.toUpperCase()],
+    ['RGB', `${r}, ${g}, ${b}`],
+    ['HSL', `${h}, ${s}%, ${l}%`],
+    ['CMYK', `${c}, ${m}, ${y}, ${k}`],
+  ]
+
+  return (
+    <div className="ci-overlay">
+      <div className="ci-popup" ref={ref}>
+        <button className="ci-close" onClick={onClose} aria-label="Close">&times;</button>
+        <div className="ci-hero" style={{ background: color, color: fg }}>
+          <span className="ci-name">{describeColor(color)}</span>
+          <span className="ci-hero-hex">{color.toUpperCase()}</span>
+          <label className="ci-edit" style={{ color: fg, borderColor: fg }}>
+            Edit
+            <input type="color" value={color} onChange={e => onChange(e.target.value)} />
+          </label>
+        </div>
+        <div className="ci-body">
+          <div className="ci-values">
+            {rows.map(([label, val]) => (
+              <button key={label} className="ci-value-row" onClick={() => onCopy(val)} title="Copy">
+                <span className="ci-value-label">{label}</span>
+                <span className="ci-value-val">{val}</span>
+                <CopyIcon size={11} />
+              </button>
+            ))}
+          </div>
+          <div className="ci-contrast">
+            <div className="ci-contrast-cell" style={{ background: '#fff', color }}>
+              <span>On white</span>
+              <strong>{onWhite.toFixed(2)}</strong>
+              <em>{grade(onWhite)}</em>
+            </div>
+            <div className="ci-contrast-cell" style={{ background: '#000', color }}>
+              <span style={{ color: '#fff' }}>On black</span>
+              <strong style={{ color: '#fff' }}>{onBlack.toFixed(2)}</strong>
+              <em style={{ color: '#fff' }}>{grade(onBlack)}</em>
+            </div>
+          </div>
+          <div className="ci-shades-label">Shades</div>
+          <div className="ci-shades">
+            {shades.map((sh, i) => (
+              <button key={i} className="ci-shade" style={{ background: sh }} onClick={() => onCopy(sh)} title={sh.toUpperCase()} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ColorStudio({ onCopy }) {
   const { t } = useI18n()
   const { theme } = useTheme()
@@ -193,6 +267,7 @@ export default function ColorStudio({ onCopy }) {
   const [stateColors, setStateColors] = useState(() => design?.states || { success: 4, warning: 4, error: 4, info: 4 })
   const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
   const [cssExpanded, setCssExpanded] = useState(false)
+  const [infoColor, setInfoColor] = useState(null)
   const colorRef = useRef(null)
 
   const [lumBias, setLumBias] = useState(() => design?.tints?.lumBias ?? 82)
@@ -847,6 +922,10 @@ ${stateVars}
                     title="Edit colour"
                   />
                 )}
+                <button onClick={(e) => { e.stopPropagation(); setInfoColor(color) }}
+                  title="Colour details"
+                  style={{ position: 'absolute', top: 4, right: isExtra ? 26 : 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 11, fontWeight: 700, fontStyle: 'italic', fontFamily: 'Georgia,serif', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                >i</button>
                 {isExtra && (
                   <button onClick={() => removeExtra(i - colors.length)}
                     style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
@@ -1262,6 +1341,22 @@ ${stateVars}
         </NavLink>
       </div>
       <UIKitGuide step="color" />
+
+      {infoColor && (
+        <ColorInfoPopup
+          color={infoColor}
+          onClose={() => setInfoColor(null)}
+          onCopy={onCopy}
+          onChange={(hex) => {
+            const idx = allColors.indexOf(infoColor)
+            if (idx >= 0) {
+              if (idx < colors.length && harmony !== 'custom') setHarmony('custom')
+              editPaletteColor(idx, hex)
+            }
+            setInfoColor(hex)
+          }}
+        />
+      )}
     </div>
   )
 }

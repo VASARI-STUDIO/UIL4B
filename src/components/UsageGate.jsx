@@ -55,11 +55,31 @@ export default function UsageGate({ toolId, children }) {
     )
   }
 
+  const remaining = getRemainingUses(toolId, dailyLimit)
+  const used = getUsageCount(toolId)
+  const pct = Math.min(100, Math.round((used / dailyLimit) * 100))
+  const low = remaining <= Math.max(2, Math.round(dailyLimit * 0.1))
+
   return (
     <>
-      <div className="usage-gate-remaining">
-        {getRemainingUses(toolId, dailyLimit)} / {dailyLimit} uses remaining today
-        {isPro && <span className="usage-gate-badge">Pro</span>}
+      <div className="usage-gate-meter">
+        <div className="usage-gate-meter-head">
+          <span className="usage-gate-meter-label">
+            AI generations today
+            {isPro && <span className="usage-gate-badge">Pro</span>}
+          </span>
+          <span className={`usage-gate-meter-count${low ? ' low' : ''}`}>
+            <strong>{remaining}</strong> / {dailyLimit} left
+          </span>
+        </div>
+        <div className="usage-gate-meter-track">
+          <div className={`usage-gate-meter-fill${low ? ' low' : ''}`} style={{ width: `${pct}%` }} />
+        </div>
+        {low && !isPro && (
+          <button type="button" className="usage-gate-meter-upgrade" onClick={() => checkout('monthly')}>
+            Running low — upgrade to Pro for 1,000/day
+          </button>
+        )}
       </div>
       {children}
     </>

@@ -6,6 +6,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../utils/firebase'
+import { processImageForUpload } from '../utils/imageProcessing'
 
 function getPrompts() {
   try { return JSON.parse(localStorage.getItem('vs-prompts') || '[]') }
@@ -211,10 +212,20 @@ export default function PromptLibrary({ onCopy, toast }) {
       toast(t('promptLibrary.promptSaved'))
     }
 
-    if (fileInput?.files?.[0]) {
+    const picked = fileInput?.files?.[0]
+    if (picked && picked.type.startsWith('image/')) {
+      // Compress images to WebP before persisting locally (SVGs pass through).
+      processImageForUpload(picked, { maxDimension: 1200, quality: 0.8 })
+        .then(({ dataUrl }) => { prompt.img = dataUrl; finish(prompt) })
+        .catch(() => {
+          const reader = new FileReader()
+          reader.onload = (e) => { prompt.img = e.target.result; finish(prompt) }
+          reader.readAsDataURL(picked)
+        })
+    } else if (picked) {
       const reader = new FileReader()
       reader.onload = (e) => { prompt.img = e.target.result; finish(prompt) }
-      reader.readAsDataURL(fileInput.files[0])
+      reader.readAsDataURL(picked)
     } else {
       finish(prompt)
     }
@@ -296,15 +307,25 @@ export default function PromptLibrary({ onCopy, toast }) {
   const [submitMediaPreview, setSubmitMediaPreview] = useState(null)
   const submitFileRef = useRef(null)
 
-  const handleSubmitMedia = useCallback((file) => {
+  const handleSubmitMedia = useCallback(async (file) => {
     if (!file) return
     const isImage = file.type.startsWith('image/')
     const isVideo = file.type.startsWith('video/')
     if (!isImage && !isVideo) { toast('Only images and videos are supported'); return }
     if (file.size > 10 * 1024 * 1024) { toast('File must be under 10 MB'); return }
     setSubmitMedia(file)
+    if (isImage) {
+      // Compress to WebP (SVGs pass through) so the stored demo stays small.
+      try {
+        const { dataUrl } = await processImageForUpload(file, { maxDimension: 1200, quality: 0.8 })
+        setSubmitMediaPreview({ url: dataUrl, type: 'image' })
+      } catch (err) {
+        toast(err.message || 'Could not process image')
+      }
+      return
+    }
     const reader = new FileReader()
-    reader.onload = (e) => setSubmitMediaPreview({ url: e.target.result, type: isVideo ? 'video' : 'image' })
+    reader.onload = (e) => setSubmitMediaPreview({ url: e.target.result, type: 'video' })
     reader.readAsDataURL(file)
   }, [toast])
 
