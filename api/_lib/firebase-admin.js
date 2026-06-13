@@ -19,7 +19,7 @@ function ensureApp() {
     return
   }
   const projectId =
-    process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'uil4b'
+    process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'uil4b-357c5'
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
   let serviceAccount = null
   if (raw) {
