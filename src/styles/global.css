@@ -1612,6 +1612,28 @@ img,svg,video{max-width:100%;height:auto}
 .fg-detail-apply{display:flex;gap:10px;flex-wrap:wrap}
 .fg-detail-actions{display:flex;gap:10px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--border)}
 
+/* Blocked-font info banner */
+.fg-blocked-banner{display:flex;gap:12px;align-items:flex-start;margin:0 0 24px;padding:14px 16px;border-radius:var(--radius);background:color-mix(in srgb,var(--warn) 10%,var(--bg-0));border:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
+.fg-blocked-banner>svg{color:var(--warn);flex-shrink:0;margin-top:1px}
+.fg-blocked-banner div{display:flex;flex-direction:column;gap:4px}
+.fg-blocked-banner strong{font-size:13px;font-weight:700;color:var(--t0)}
+.fg-blocked-banner span{font-size:12.5px;color:var(--t1);line-height:1.55}
+.fg-blocked-banner code{font-family:var(--mono);font-size:11.5px;padding:1px 5px;border-radius:4px;background:var(--bg-2);color:var(--t0)}
+
+/* Font pairing suggestions */
+.fg-pair-hint{font-size:12.5px;color:var(--t2);line-height:1.5;margin:-8px 0 14px}
+.fg-pair-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fg-pair-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color var(--t)}
+.fg-pair-card:hover{border-color:var(--bh)}
+.fg-pair-preview{padding:18px;display:flex;flex-direction:column;gap:8px;background:var(--bg-1);min-height:120px}
+.fg-pair-heading{font-size:26px;line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
+.fg-pair-body{font-size:13px;line-height:1.55;color:var(--t1)}
+.fg-pair-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-top:1px solid var(--border)}
+.fg-pair-name{font-size:12.5px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fg-pair-apply{flex-shrink:0;font-family:var(--font);font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--t1);cursor:pointer;transition:all var(--t)}
+.fg-pair-apply:hover{border-color:var(--accent);background:var(--accent);color:var(--bg-0)}
+@media(max-width:640px){.fg-pair-grid{grid-template-columns:1fr}}
+
 /* Loader */
 .fg-loader{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:fg-spin .7s linear infinite;margin:0 auto}
 @keyframes fg-spin{to{transform:rotate(360deg)}}
