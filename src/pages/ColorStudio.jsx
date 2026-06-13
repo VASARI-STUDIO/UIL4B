@@ -639,6 +639,7 @@ ${stateVars}
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const editColorRef = useRef(null)
   const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
+  const [gradPresetsExpanded, setGradPresetsExpanded] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
 
@@ -1236,7 +1237,7 @@ ${stateVars}
                       onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
                     />
                     <input type="number" min="0" max="100" value={stop.position} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
-                      style={{ width: 60, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center' }}
+                      style={{ width: 52, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center', padding: '4px 2px', MozAppearance: 'textfield' }}
                     />
                     <span style={{ fontSize: 9, color: 'var(--t3)' }}>%</span>
                     {gradStops.length > 2 && (
@@ -1342,6 +1343,7 @@ ${stateVars}
                           <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                             <div style={{ width: 12, height: 12, borderRadius: 3, background: s.color, border: '1px solid var(--border)' }} />
                             <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{s.color.toUpperCase()}</span>
+                            <span style={{ fontSize: 8, color: 'var(--t3)' }}>{describeColor(s.color)}</span>
                             {si < g.stops.length - 1 && <span style={{ color: 'var(--t3)', fontSize: 9 }}>→</span>}
                           </div>
                         ))}
@@ -1359,9 +1361,16 @@ ${stateVars}
 
         {/* Community presets */}
         <div style={{ marginBottom: 14 }}>
-          <div className="seg-label">Community Presets</div>
+          <div className="seg-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            Community Presets
+            {GRAD_PRESETS.length > 6 && (
+              <button className="btn btn-s" style={{ fontSize: 10, padding: '3px 10px' }} onClick={() => setGradPresetsExpanded(!gradPresetsExpanded)}>
+                {gradPresetsExpanded ? 'Show less' : `Show all (${GRAD_PRESETS.length})`}
+              </button>
+            )}
+          </div>
           <div className="grad-presets">
-            {GRAD_PRESETS.map(g => {
+            {(gradPresetsExpanded ? GRAD_PRESETS : GRAD_PRESETS.slice(0, 6)).map(g => {
               const previewCss = `${g.type === 'Radial' ? 'radial-gradient' : g.type === 'Conic' ? 'conic-gradient' : 'linear-gradient'}(${g.type === 'Linear' ? g.angle + 'deg, ' : g.type === 'Conic' ? 'from ' + g.angle + 'deg, ' : ''}${g.stops.map(s => `${s.color} ${s.pos}%`).join(', ')})`
               return (
                 <div key={g.n} className="grad-p" onClick={() => applyPreset(g)}>
