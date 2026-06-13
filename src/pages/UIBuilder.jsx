@@ -89,6 +89,7 @@ const TABLE_VARIANTS = [
   { id: 'bordered', label: 'Bordered' },
   { id: 'minimal', label: 'Minimal' },
   { id: 'card', label: 'Card Rows' },
+  { id: 'dense', label: 'Dense' },
 ]
 
 const TAB_VARIANTS = [
@@ -247,17 +248,30 @@ function TogglePreview({ variant, tokens }) {
 
 function TablePreview({ variant, tokens }) {
   const rows = [
-    { name: 'Fan Speed', status: 'Permit', value: 'Auto' },
-    { name: 'Set Temp', status: 'Permit', value: '22°C' },
-    { name: 'Mode', status: 'Permit', value: 'Cool' },
-    { name: 'Fan On/Off', status: 'Permit', value: 'On' },
+    { name: 'Heading / H1', status: 'Ready', value: '32 / 700' },
+    { name: 'Body / Regular', status: 'Ready', value: '14 / 400' },
+    { name: 'Caption / Small', status: 'Draft', value: '11 / 500' },
+    { name: 'Label / Mono', status: 'Ready', value: '12 / 600' },
   ]
-  const cellBase = { padding: `${tokens.spacing}px ${tokens.spacing * 1.2}px`, fontFamily: tokens.fontFamily, fontSize: tokens.fontSize - 1, color: tokens.text }
+
+  const denseRows = [
+    { name: 'primary-500', status: 'Active', value: '#635BFF' },
+    { name: 'success-500', status: 'Active', value: '#10B981' },
+    { name: 'warning-400', status: 'Review', value: '#F59E0B' },
+    { name: 'danger-500', status: 'Active', value: '#EF4444' },
+    { name: 'neutral-200', status: 'Active', value: '#E5E7EB' },
+    { name: 'neutral-800', status: 'Active', value: '#1F2937' },
+  ]
+
+  const isDense = variant.id === 'dense'
+  const activeRows = isDense ? denseRows : rows
+  const denseFactor = isDense ? 0.6 : 1
+  const cellBase = { padding: `${tokens.spacing * denseFactor}px ${tokens.spacing * 1.2 * denseFactor}px`, fontFamily: tokens.fontFamily, fontSize: (tokens.fontSize - 1) * (isDense ? 0.85 : 1), color: tokens.text, lineHeight: isDense ? 1.2 : 'normal' }
 
   if (variant.id === 'card') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {rows.map((r, i) => (
+        {activeRows.map((r, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: tokens.surface, border: `${tokens.borderWidth}px solid ${tokens.surfaceBorder}`, borderRadius: tokens.radius, padding: `${tokens.spacing}px ${tokens.spacing * 1.2}px`, fontFamily: tokens.fontFamily, fontSize: tokens.fontSize - 1 }}>
             <span style={{ fontWeight: 600, color: tokens.text }}>{r.name}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -274,22 +288,22 @@ function TablePreview({ variant, tokens }) {
   const isBordered = variant.id === 'bordered'
 
   return (
-    <table style={{ width: '100%', borderCollapse: isBordered ? 'collapse' : 'separate', borderSpacing: 0, fontFamily: tokens.fontFamily, fontSize: tokens.fontSize - 1, borderRadius: tokens.radius, overflow: 'hidden', border: isBordered ? `${tokens.borderWidth}px solid ${tokens.surfaceBorder}` : 'none' }}>
+    <table style={{ width: '100%', borderCollapse: isBordered || isDense ? 'collapse' : 'separate', borderSpacing: 0, fontFamily: tokens.fontFamily, fontSize: (tokens.fontSize - 1) * (isDense ? 0.85 : 1), borderRadius: tokens.radius, overflow: 'hidden', border: isBordered || isDense ? `${tokens.borderWidth}px solid ${tokens.surfaceBorder}` : 'none' }}>
       <thead>
-        <tr style={{ background: isStriped || isBordered ? tokens.primary + '0d' : 'transparent', borderBottom: `2px solid ${tokens.surfaceBorder}` }}>
-          <th style={{ ...cellBase, fontWeight: 700, textAlign: 'left' }}>Property</th>
+        <tr style={{ background: isStriped || isBordered || isDense ? tokens.primary + '0d' : 'transparent', borderBottom: `2px solid ${tokens.surfaceBorder}` }}>
+          <th style={{ ...cellBase, fontWeight: 700, textAlign: 'left' }}>{isDense ? 'Token' : 'Type Style'}</th>
           <th style={{ ...cellBase, fontWeight: 700, textAlign: 'left' }}>Status</th>
-          <th style={{ ...cellBase, fontWeight: 700, textAlign: 'right' }}>Value</th>
+          <th style={{ ...cellBase, fontWeight: 700, textAlign: 'right' }}>{isDense ? 'Hex' : 'Size / Weight'}</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((r, i) => (
+        {activeRows.map((r, i) => (
           <tr key={i} style={{ background: isStriped && i % 2 === 1 ? '#f9fafb' : 'transparent', borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
-            <td style={{ ...cellBase, fontWeight: 500 }}>{r.name}</td>
+            <td style={{ ...cellBase, fontWeight: 500, fontFamily: isDense ? `'SF Mono', 'Fira Code', monospace` : tokens.fontFamily }}>{r.name}</td>
             <td style={cellBase}>
-              <span style={{ background: tokens.primary + '1a', color: tokens.primary, padding: '2px 10px', borderRadius: 999, fontSize: tokens.fontSize - 3, fontWeight: 700 }}>{r.status}</span>
+              <span style={{ background: tokens.primary + '1a', color: tokens.primary, padding: isDense ? '1px 7px' : '2px 10px', borderRadius: 999, fontSize: (tokens.fontSize - 3) * (isDense ? 0.9 : 1), fontWeight: 700 }}>{r.status}</span>
             </td>
-            <td style={{ ...cellBase, textAlign: 'right', color: tokens.textSub }}>{r.value}</td>
+            <td style={{ ...cellBase, textAlign: 'right', color: tokens.textSub, fontFamily: isDense ? `'SF Mono', 'Fira Code', monospace` : 'inherit' }}>{r.value}</td>
           </tr>
         ))}
       </tbody>
@@ -363,6 +377,7 @@ export default function UIBuilder({ onCopy, toast }) {
   })
 
   const [codeSection, setCodeSection] = useState(null)
+  const [codeMode, setCodeMode] = useState('css')
   const [guided, setGuided] = useState(false)
   const [guidedStep, setGuidedStep] = useState(0)
 
@@ -378,6 +393,22 @@ export default function UIBuilder({ onCopy, toast }) {
     const style = variant.render(tokens)
     return `.${sectionId.slice(0, -1)} {\n${styleToCSS(style)}\n}`
   }, [tokens, selections])
+
+  const generateHTML = useCallback((sectionId) => {
+    const variant = COMPONENT_SECTIONS.find(s => s.id === sectionId)?.variants.find(v => v.id === selections[sectionId])
+    const label = variant?.label || ''
+    switch (sectionId) {
+      case 'buttons': return `<button class="btn btn-${selections.buttons}">\n  ${label} Button\n</button>\n\n<button class="btn btn-${selections.buttons}" disabled>\n  Disabled\n</button>\n\n<button class="btn btn-${selections.buttons} btn-sm">\n  Small\n</button>`
+      case 'cards': return `<div class="card card-${selections.cards}">\n  <h3 class="card-title">Card Title</h3>\n  <p class="card-body">Card content goes here.</p>\n</div>`
+      case 'inputs': return `<div class="form-group">\n  <label class="form-label" for="email">Email address</label>\n  <input class="input input-${selections.inputs}" id="email" type="email" placeholder="name@example.com" />\n</div>`
+      case 'badges': return `<span class="badge badge-${selections.badges}">Active</span>\n<span class="badge badge-${selections.badges} badge-success">Success</span>\n<span class="badge badge-${selections.badges} badge-warning">Warning</span>`
+      case 'toggles': return `<label class="toggle toggle-${selections.toggles}">\n  <input type="checkbox" />\n  <span class="toggle-track">\n    <span class="toggle-thumb"></span>\n  </span>\n</label>`
+      case 'tables': return `<table class="table table-${selections.tables}">\n  <thead>\n    <tr>\n      <th>Type Style</th>\n      <th>Status</th>\n      <th>Size / Weight</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>Heading / H1</td>\n      <td><span class="badge">Ready</span></td>\n      <td>32 / 700</td>\n    </tr>\n    <tr>\n      <td>Body / Regular</td>\n      <td><span class="badge">Ready</span></td>\n      <td>14 / 400</td>\n    </tr>\n  </tbody>\n</table>`
+      case 'tabs': return `<div class="tabs tabs-${selections.tabs}">\n  <button class="tab active">Overview</button>\n  <button class="tab">Settings</button>\n  <button class="tab">Users</button>\n</div>`
+      case 'alerts': return `<div class="alert alert-info alert-${selections.alerts}">\n  <span class="alert-icon">!</span>\n  <div>\n    <div class="alert-title">Heads up</div>\n    <div class="alert-body">This is an informational message.</div>\n  </div>\n</div>`
+      default: return `<!-- ${sectionId} -->`
+    }
+  }, [selections])
 
   const copyCSS = useCallback((sectionId) => {
     const css = generateCSS(sectionId)
@@ -564,7 +595,16 @@ export default function UIBuilder({ onCopy, toast }) {
 
                 {/* Code output */}
                 {codeSection === section.id && (
-                  <pre className="uib-code"><code>{generateCSS(section.id)}</code></pre>
+                  <div>
+                    <div className="uib-code-tabs">
+                      <button className={`uib-code-tab${codeMode === 'css' ? ' active' : ''}`} onClick={() => setCodeMode('css')}>CSS</button>
+                      <button className={`uib-code-tab${codeMode === 'html' ? ' active' : ''}`} onClick={() => setCodeMode('html')}>HTML</button>
+                      <button className="btn-xs" style={{ marginLeft: 'auto' }} onClick={() => { const code = codeMode === 'css' ? generateCSS(section.id) : generateHTML(section.id); navigator.clipboard.writeText(code); if (toast) toast(`${codeMode.toUpperCase()} copied`) }} title="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+                      </button>
+                    </div>
+                    <pre className="uib-code"><code>{codeMode === 'css' ? generateCSS(section.id) : generateHTML(section.id)}</code></pre>
+                  </div>
                 )}
               </div>
             )
@@ -574,7 +614,16 @@ export default function UIBuilder({ onCopy, toast }) {
           <div className="uib-export-bar">
             <button className="btn btn-s" onClick={copyAllCSS}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
-              Copy Full Design System CSS
+              Copy Full CSS
+            </button>
+            <button className="btn btn-s" onClick={() => {
+              const html = COMPONENT_SECTIONS.map(s => `<!-- ${s.label} -->\n${generateHTML(s.id)}`).join('\n\n')
+              navigator.clipboard.writeText(html)
+              if (onCopy) onCopy(html)
+              if (toast) toast('Full HTML copied')
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+              Copy Full HTML
             </button>
           </div>
         </div>

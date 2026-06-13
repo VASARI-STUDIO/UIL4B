@@ -188,8 +188,22 @@ function snap(value, target, threshold = 3) {
   return Math.abs(value - target) <= threshold ? target : value
 }
 
-// Coolors-style detail popup — full breakdown of a single colour with every
-// notation, contrast ratings, a shade ramp, and inline editing.
+function colorPsychology(h, s, l) {
+  if (s < 10) {
+    if (l > 85) return { mood: 'Clean, minimal', audience: 'Luxury, tech, healthcare', pros: ['Clean and modern', 'Universal appeal', 'Great for backgrounds'], cons: ['Can feel sterile', 'Low visual impact alone'] }
+    if (l < 20) return { mood: 'Authoritative, bold', audience: 'Premium, editorial, fashion', pros: ['Conveys sophistication', 'High contrast pairing', 'Timeless feel'], cons: ['Can feel heavy', 'Needs lighter accents'] }
+    return { mood: 'Balanced, neutral', audience: 'Corporate, professional', pros: ['Versatile and safe', 'Easy to pair', 'Professional feel'], cons: ['Non-distinctive', 'Needs accent colours'] }
+  }
+  if (h < 30) return { mood: 'Energetic, urgent', audience: 'Food, retail, entertainment', pros: ['Grabs attention fast', 'Creates urgency', 'Evokes passion'], cons: ['Can feel aggressive', 'Overuse causes fatigue'] }
+  if (h < 60) return { mood: 'Warm, optimistic', audience: 'Creative, youth, wellness', pros: ['Friendly and inviting', 'Conveys warmth', 'High visibility'], cons: ['Hard to read as text', 'Can feel childish if overused'] }
+  if (h < 90) return { mood: 'Fresh, natural', audience: 'Eco, organic, outdoor', pros: ['Calming and fresh', 'Signals growth', 'Natural associations'], cons: ['Common — needs distinction', 'Cool tones may clash'] }
+  if (h < 150) return { mood: 'Trustworthy, calm', audience: 'Health, fintech, sustainability', pros: ['Balanced energy', 'Associated with health', 'Works light and dark'], cons: ['Less common in branding', 'Can feel clinical'] }
+  if (h < 210) return { mood: 'Reliable, professional', audience: 'Tech, finance, corporate', pros: ['Builds trust instantly', 'Universal appeal', 'Pairs with most palettes'], cons: ['Overused in tech', 'Can feel cold'] }
+  if (h < 270) return { mood: 'Creative, luxurious', audience: 'Beauty, gaming, premium', pros: ['Evokes creativity', 'Feels premium', 'Distinctive and memorable'], cons: ['Can feel mystical', 'Hard to match casually'] }
+  if (h < 330) return { mood: 'Playful, bold', audience: 'Fashion, beauty, social media', pros: ['Eye-catching and fun', 'Modern and energetic', 'Appeals to younger demos'], cons: ['Can feel unserious', 'Gender associations'] }
+  return { mood: 'Energetic, urgent', audience: 'Food, retail, entertainment', pros: ['Grabs attention fast', 'Creates urgency', 'Evokes passion'], cons: ['Can feel aggressive', 'Overuse causes fatigue'] }
+}
+
 function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
   const ref = useRef(null)
   useEffect(() => {
@@ -256,6 +270,25 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
               <button key={i} className="ci-shade" style={{ background: sh }} onClick={() => onCopy(sh)} title={sh.toUpperCase()} />
             ))}
           </div>
+          {(() => {
+            const psych = colorPsychology(h, s, l)
+            return (
+              <div className="ci-psychology">
+                <div className="ci-psych-header">
+                  <div className="ci-psych-row"><span className="ci-psych-label">Mood</span><span>{psych.mood}</span></div>
+                  <div className="ci-psych-row"><span className="ci-psych-label">Best for</span><span>{psych.audience}</span></div>
+                </div>
+                <div className="ci-psych-lists">
+                  <div className="ci-psych-list">
+                    {psych.pros.map((p, i) => <div key={i} className="ci-psych-item ci-psych-pro"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>{p}</div>)}
+                  </div>
+                  <div className="ci-psych-list">
+                    {psych.cons.map((c, i) => <div key={i} className="ci-psych-item ci-psych-con"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{c}</div>)}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>
@@ -941,6 +974,24 @@ ${stateVars}
               </div>
             )
           })}
+          {/* Quick-add colour swatch */}
+          <div style={{ position: 'relative', flex: '0 0 80px', minWidth: 80 }}>
+            <label
+              style={{
+                borderRadius: 'var(--radius-s)', padding: '16px 12px',
+                minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                cursor: 'pointer', transition: 'background .15s, border-color .15s',
+                border: '2px dashed var(--border)', background: 'var(--hvr)',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Add</span>
+              <input type="color" value={baseColor}
+                onChange={e => addCustomColor(e.target.value)}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+              />
+            </label>
+          </div>
         </div>
 
         {/* Compact CSS output */}

@@ -415,15 +415,20 @@ export default function Dashboard() {
         return (
           <>
             <div className="bento-docs-grid" style={{ padding: 16 }}>
-              {[3, 2, 1, 0].map(step => {
-                const size = Math.round(typeBase * Math.pow(typeRatio, step))
-                return (
-                  <div key={step} className="bento-docs-row">
-                    <span className="bento-docs-num">{size}</span>
-                    <span className="bento-docs-bar" style={{ width: `${100 - step * 14}%` }} />
-                  </div>
-                )
-              })}
+              <div className="bento-docs-page">
+                <div className="bento-docs-line" style={{ width: '45%', height: 6, borderRadius: 3 }} />
+                <div className="bento-docs-line" style={{ width: '100%', height: 3, opacity: .5 }} />
+                <div className="bento-docs-line" style={{ width: '90%', height: 3, opacity: .5 }} />
+                <div className="bento-docs-line" style={{ width: '60%', height: 5, borderRadius: 3, marginTop: 6 }} />
+                <div className="bento-docs-line" style={{ width: '100%', height: 3, opacity: .4 }} />
+                <div className="bento-docs-line" style={{ width: '80%', height: 3, opacity: .4 }} />
+                <div className="bento-docs-line" style={{ width: '95%', height: 3, opacity: .4 }} />
+                <div className="bento-docs-swatch-row">
+                  {palette.slice(0, 3).map((c, ci) => (
+                    <span key={ci} style={{ width: 16, height: 16, borderRadius: 4, background: c }} />
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="bento-cat-body">
               <div className="bento-label">{tool.catLabel}</div>
@@ -468,6 +473,20 @@ export default function Dashboard() {
               <span>Build a UI Kit</span>
               <ArrowIcon />
             </button>
+          </div>
+          <div className="bento-hero-quickstart">
+            <NavLink to="/color" className="bento-qs-chip">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg>
+              Start with colour
+            </NavLink>
+            <NavLink to="/fontpairs" className="bento-qs-chip">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              Pick fonts
+            </NavLink>
+            <NavLink to="/icons" className="bento-qs-chip">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Browse icons
+            </NavLink>
           </div>
           <div className="bento-hero-foot">
             {lastTool && (
@@ -533,6 +552,24 @@ export default function Dashboard() {
             </p>
           </div>
         )}
+
+        {/* COMMUNITY */}
+        <div className="bento-card bento-community" style={{ gridColumn: 'span 6' }}>
+          <div className="bento-community-inner">
+            <NavLink to="/community" className="bento-community-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Community
+            </NavLink>
+            <NavLink to="/feedback" className="bento-community-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Send Feedback
+            </NavLink>
+            <NavLink to="/help" className="bento-community-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Help Centre
+            </NavLink>
+          </div>
+        </div>
 
         {/* DROP HINT — shown while dragging a tool from the sidebar */}
         {dropActive && (

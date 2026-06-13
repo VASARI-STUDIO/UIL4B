@@ -198,7 +198,9 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .avatar-circle img{width:100%;height:100%;object-fit:cover}
 
 /* ─── Main ─── */
-.main{flex:1;min-width:0;padding:0 clamp(16px,5vw,64px) clamp(40px,8vw,100px);width:100%;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+.main{flex:1;min-width:0;padding:0 clamp(16px,5vw,64px) 0;width:100%;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;display:flex;flex-direction:column}
+.main>*:not(.app-footer){flex-shrink:0}
+.app-footer{margin-top:auto}
 .sec{max-width:1400px;margin-left:auto;margin-right:auto;width:100%}
 .main>*:first-child{padding-top:clamp(20px,4vw,56px)}
 .sec-h{margin-bottom:48px;position:relative;padding-left:0;border-left:none}
@@ -1827,7 +1829,7 @@ img,svg,video{max-width:100%;height:auto}
 .alt-tips li{font-size:12.5px;color:var(--t1);line-height:1.55}
 .alt-tips code{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px;background:var(--bg-2)}
 /* Shared in-app footer */
-.app-footer{margin-top:56px;padding:28px clamp(20px,4vw,48px);border-top:1px solid var(--border);background:var(--bg-0)}
+.app-footer{padding:28px clamp(20px,4vw,48px);border-top:1px solid var(--border);background:var(--bg-0)}
 .app-footer-inner{display:flex;align-items:center;gap:20px 32px;flex-wrap:wrap;max-width:1200px;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;gap:2px}
 .app-footer-mark{font-family:var(--serif);font-size:16px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
@@ -2089,6 +2091,15 @@ img,svg,video{max-width:100%;height:auto}
 .ci-shades{display:flex;border-radius:10px;overflow:hidden;height:42px;border:1px solid var(--border)}
 .ci-shade{flex:1;border:none;cursor:pointer;transition:flex .15s}
 .ci-shade:hover{flex:1.6}
+.ci-psychology{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.ci-psych-header{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.ci-psych-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t0)}
+.ci-psych-label{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t2);min-width:50px}
+.ci-psych-lists{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ci-psych-list{display:flex;flex-direction:column;gap:4px}
+.ci-psych-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t1)}
+.ci-psych-pro svg{color:var(--ok)}
+.ci-psych-con svg{color:var(--err)}
 
 /* Landing button hover states */
 /* Match button corners to the panel/card radius for a cohesive look. */
@@ -2248,3 +2259,33 @@ img,svg,video{max-width:100%;height:auto}
   .onb-card{padding:24px 20px}
   .onb-tiers{grid-template-columns:1fr}
 }
+
+/* ─── Dashboard: Quick-start chips ─── */
+.bento-hero-quickstart{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.bento-qs-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:10px;font-weight:600;color:var(--t2);background:var(--accent-bg);text-decoration:none!important;transition:all var(--t);letter-spacing:.01em}
+.bento-qs-chip:hover{color:var(--t0);background:var(--accent-glow)}
+.bento-qs-chip svg{flex-shrink:0}
+
+/* ─── Dashboard: Community section ─── */
+.bento-community{background:var(--card);padding:16px 20px!important}
+.bento-community-inner{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.bento-community-link{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:var(--radius-s);font-size:12px;font-weight:600;color:var(--t1);text-decoration:none!important;transition:all var(--t)}
+.bento-community-link:hover{color:var(--t0);background:var(--hvr)}
+.bento-community-link svg{color:var(--t2);flex-shrink:0}
+
+/* ─── Dashboard: Docs page preview ─── */
+.bento-docs-page{display:flex;flex-direction:column;gap:4px;padding:4px 0}
+.bento-docs-line{height:3px;border-radius:2px;background:var(--t3);opacity:.6}
+.bento-docs-swatch-row{display:flex;gap:4px;margin-top:8px}
+
+/* ─── UI Builder: Code tabs ─── */
+.uib-code-tabs{display:flex;align-items:center;gap:2px;padding:4px 0 0;margin-bottom:-1px}
+.uib-code-tab{padding:5px 14px;border:none;background:none;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;transition:all var(--t)}
+.uib-code-tab:hover{color:var(--t0)}
+.uib-code-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ─── Projects: Folder chips ─── */
+.proj-folders{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.proj-folder-chip{padding:5px 14px;border-radius:999px;font-size:11px;font-weight:600;font-family:var(--font);border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;transition:all var(--t)}
+.proj-folder-chip:hover{color:var(--t0);border-color:var(--bh)}
+.proj-folder-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}

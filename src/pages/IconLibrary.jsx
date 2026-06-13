@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import { useProject } from '../contexts/ProjectContext'
 import UIKitGuide from '../components/UIKitGuide'
 import { addRecentIcon } from '../utils/recentIcons'
 
@@ -52,7 +53,7 @@ async function fetchSvgText(pack, name, params = {}) {
   throw new Error('Failed to fetch icon SVG')
 }
 
-function IconDetail({ icon, onClose, onCopy }) {
+function IconDetail({ icon, onClose, onCopy, paletteColors }) {
   const [size, setSize] = useState(48)
   const [color, setColor] = useState('')
   const [colorInput, setColorInput] = useState('')
@@ -211,10 +212,15 @@ function IconDetail({ icon, onClose, onCopy }) {
             {!isColored && (
               <div className="il-detail-row">
                 <label>Preset</label>
-                <div className="il-detail-seg">
+                <div className="il-detail-seg" style={{ flexWrap: 'wrap' }}>
                   <button className={!color ? 'active' : ''} onClick={() => { setColor(''); setColorInput('') }}>Default</button>
                   <button className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); setColorInput('#000000') }}>Black</button>
                   <button className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); setColorInput('#ffffff') }}>White</button>
+                  {paletteColors?.slice(0, 5).map((c, i) => (
+                    <button key={i} className={color === c ? 'active' : ''} onClick={() => { setColor(c); setColorInput(c) }} title={c} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: c, border: '1px solid rgba(0,0,0,.15)', flexShrink: 0 }} />
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -263,6 +269,23 @@ function IconDetail({ icon, onClose, onCopy }) {
             </svg>
             {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
           </button>
+          <button className="btn" onClick={() => {
+            try {
+              const saved = JSON.parse(localStorage.getItem('vs-saved-icons') || '[]')
+              const key = `${pack || 'emb'}-${name}`
+              if (!saved.find(s => s.key === key)) {
+                saved.push({ key, pack, name, cdn: !!isCdn, d: icon.d, filled: icon.filled, color })
+                localStorage.setItem('vs-saved-icons', JSON.stringify(saved))
+              }
+              setCopied('saved')
+              setTimeout(() => setCopied(p => p === 'saved' ? '' : p), 1500)
+            } catch {}
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+            {copied === 'saved' ? 'Saved!' : 'Save to Project'}
+          </button>
           {isCdn && (
             <a
               href={buildSvgUrl(API_HOSTS[0], pack, name, { ...previewParams, download: true })}
@@ -309,6 +332,7 @@ const DEFAULT_PACK = 'lucide'
 
 export default function IconLibrary({ onCopy }) {
   const { t } = useI18n()
+  const { design } = useProject()
   const [query, setQuery] = useState('')
   const [icons, setIcons] = useState([])      // full result set (browse or search)
   const [visible, setVisible] = useState(PAGE_SIZE)
@@ -576,6 +600,7 @@ export default function IconLibrary({ onCopy }) {
           icon={selected}
           onClose={() => setSelected(null)}
           onCopy={onCopy}
+          paletteColors={design?.palette?.colors}
         />
       )}
     </div>

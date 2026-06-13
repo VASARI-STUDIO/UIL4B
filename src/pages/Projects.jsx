@@ -15,7 +15,7 @@ function ColorRow({ colors }) {
   )
 }
 
-function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive }) {
+function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive, folder, onFolderChange, folders }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(project.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -71,12 +71,23 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
 
         <ColorRow colors={project.design?.palette?.colors} />
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 10, color: 'var(--t2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 10, color: 'var(--t2)' }}>
           <span>{project.design?.palette?.colors?.length || 0} colours</span>
           <span>·</span>
           <span>{project.design?.tints?.scale?.length || 0} tints</span>
           <span>·</span>
           <span>{project.design?.typeScale?.base || 16}px / {(project.design?.typeScale?.ratio || 1.25).toFixed(2)}×</span>
+          <select
+            value={folder || ''}
+            onChange={e => onFolderChange(project.id, e.target.value)}
+            style={{ marginLeft: 'auto', fontSize: 9, padding: '1px 4px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-2)', color: 'var(--t1)', cursor: 'pointer' }}
+            title="Assign folder"
+          >
+            <option value="">No folder</option>
+            {(folders || []).filter(f => f !== 'all').map(f => (
+              <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+            ))}
+          </select>
         </div>
 
         {confirmDelete ? (
@@ -146,6 +157,16 @@ export default function Projects({ toast }) {
   const [showArchived, setShowArchived] = useState(false)
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('recent')
+  const [activeFolder, setActiveFolder] = useState('all')
+  const FOLDERS = ['all', 'brand', 'app', 'marketing', 'personal']
+  const [folderMap, setFolderMap] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('vs-project-folders') || '{}') } catch { return {} }
+  })
+  const setProjectFolder = (projectId, folder) => {
+    const next = { ...folderMap, [projectId]: folder }
+    setFolderMap(next)
+    try { localStorage.setItem('vs-project-folders', JSON.stringify(next)) } catch {}
+  }
 
   const sortFn = (a, b) => {
     if (sortBy === 'name') return a.name.localeCompare(b.name)
@@ -153,7 +174,8 @@ export default function Projects({ toast }) {
     return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
   }
   const matchesSearch = (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
-  const activeProjects = projects.filter(p => !p.archived && matchesSearch(p)).sort(sortFn)
+  const matchesFolder = (p) => activeFolder === 'all' || (folderMap[p.id] || '').toLowerCase() === activeFolder
+  const activeProjects = projects.filter(p => !p.archived && matchesSearch(p) && matchesFolder(p)).sort(sortFn)
   const archivedProjects = projects.filter(p => p.archived && matchesSearch(p)).sort(sortFn)
 
   if (!canSaveProjects) {
@@ -268,22 +290,31 @@ export default function Projects({ toast }) {
       )}
 
       {projects.length > 0 && (
-        <div className="proj-toolbar">
-          <div className="proj-search">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects…" />
-            {search && <button onClick={() => setSearch('')} aria-label="Clear">&times;</button>}
+        <>
+          <div className="proj-folders">
+            {FOLDERS.map(f => (
+              <button key={f} className={`proj-folder-chip${activeFolder === f ? ' active' : ''}`} onClick={() => setActiveFolder(f)}>
+                {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
           </div>
-          <label className="proj-sort">
-            <span>Sort</span>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              <option value="recent">Recently updated</option>
-              <option value="created">Newest</option>
-              <option value="name">Name (A–Z)</option>
-            </select>
-          </label>
-          <span className="proj-count">{projects.filter(p => !p.archived).length} project{projects.filter(p => !p.archived).length === 1 ? '' : 's'}</span>
-        </div>
+          <div className="proj-toolbar">
+            <div className="proj-search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects…" />
+              {search && <button onClick={() => setSearch('')} aria-label="Clear">&times;</button>}
+            </div>
+            <label className="proj-sort">
+              <span>Sort</span>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="recent">Recently updated</option>
+                <option value="created">Newest</option>
+                <option value="name">Name (A–Z)</option>
+              </select>
+            </label>
+            <span className="proj-count">{activeProjects.length} project{activeProjects.length === 1 ? '' : 's'}</span>
+          </div>
+        </>
       )}
 
       {projects.length === 0 ? (
@@ -311,6 +342,9 @@ export default function Projects({ toast }) {
                 onRename={handleRename}
                 onOverwrite={handleOverwrite}
                 onArchive={handleArchive}
+                folder={folderMap[p.id]}
+                onFolderChange={setProjectFolder}
+                folders={FOLDERS}
               />
             ))}
           </div>
@@ -335,6 +369,9 @@ export default function Projects({ toast }) {
                       onRename={handleRename}
                       onOverwrite={handleOverwrite}
                       onArchive={handleArchive}
+                      folder={folderMap[p.id]}
+                      onFolderChange={setProjectFolder}
+                      folders={FOLDERS}
                     />
                   ))}
                 </div>
