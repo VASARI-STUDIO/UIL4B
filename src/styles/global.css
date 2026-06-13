@@ -2317,6 +2317,10 @@ img,svg,video{max-width:100%;height:auto}
 .uib-code-tab{padding:5px 14px;border:none;background:none;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;transition:all var(--t)}
 .uib-code-tab:hover{color:var(--t0)}
 .uib-code-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.uib-palette-row{display:flex;gap:5px;flex-wrap:wrap;margin:2px 0 6px}
+.uib-palette-swatch{width:22px;height:22px;border-radius:6px;border:1px solid var(--border);cursor:pointer;padding:0;transition:transform var(--t),box-shadow var(--t)}
+.uib-palette-swatch:hover{transform:scale(1.1)}
+.uib-palette-swatch.active{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--brand)}
 .uib-alpha-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-s);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand);margin-left:8px;vertical-align:middle}
 .uib-intro{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius);background:var(--brand-bg);border:1px solid rgba(59,130,246,.2);margin-bottom:20px;font-size:12px;color:var(--t0);line-height:1.5}
 .uib-intro a{color:var(--brand);font-weight:600}

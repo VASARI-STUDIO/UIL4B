@@ -58,6 +58,7 @@ const BUTTON_VARIANTS = [
   { id: 'soft', label: 'Soft', render: (t) => ({ background: t.primary + '18', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
   { id: 'gradient', label: 'Gradient', render: (t) => ({ background: `linear-gradient(135deg, ${t.primary}, ${t.primary}99)`, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
   { id: 'glass', label: 'Glass', render: (t) => ({ background: t.primary + '22', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: t.primary, border: `1px solid ${t.primary}55`, borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'neumorph', label: 'Neumorphic', render: (t) => ({ background: t.surface, color: t.primary, border: 'none', borderRadius: Math.max(t.radius, 10), padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', boxShadow: `6px 6px 12px ${hexToRgba(t.text, 12)}, -6px -6px 12px ${hexToRgba('#ffffff', 70)}`, transition: 'all .15s' }) },
 ]
 
 const CARD_VARIANTS = [
@@ -170,7 +171,7 @@ function TokenField({ label, type, value, onChange, min, max, step }) {
   )
 }
 
-function TokenPanel({ tokens, setTokens }) {
+function TokenPanel({ tokens, setTokens, paletteColors }) {
   const set = (k, v) => setTokens(prev => ({ ...prev, [k]: v }))
 
   return (
@@ -194,6 +195,21 @@ function TokenPanel({ tokens, setTokens }) {
       <div className="uib-token-group">
         <div className="uib-token-group-label">Colours</div>
         <TokenField label="Primary" type="color" value={tokens.primary} onChange={v => set('primary', v)} />
+        {paletteColors?.length > 1 && (
+          <div className="uib-palette-row" title="Apply a palette colour as the primary (drives buttons, badges, accents)">
+            {paletteColors.slice(0, 6).map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`uib-palette-swatch${tokens.primary?.toLowerCase() === c.toLowerCase() ? ' active' : ''}`}
+                style={{ background: c }}
+                onClick={() => set('primary', c)}
+                title={c}
+                aria-label={`Use ${c} as primary`}
+              />
+            ))}
+          </div>
+        )}
         <TokenField label="Surface" type="color" value={tokens.surface} onChange={v => set('surface', v)} />
         <TokenField label="Text" type="color" value={tokens.text} onChange={v => set('text', v)} />
         <TokenField label="Subtle" type="color" value={tokens.textSub} onChange={v => set('textSub', v)} />
@@ -506,7 +522,7 @@ export default function UIBuilder({ onCopy, toast }) {
       )}
 
       <div className="uib-layout">
-        <TokenPanel tokens={tokens} setTokens={setTokens} />
+        <TokenPanel tokens={tokens} setTokens={setTokens} paletteColors={palette?.colors} />
 
         <div className="uib-components">
           {COMPONENT_SECTIONS.filter((_, i) => !guided || i === guidedStep).map(section => {
