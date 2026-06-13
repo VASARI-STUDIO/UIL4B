@@ -925,76 +925,177 @@ export default function Admin({ toast }) {
 }
 
 function StripeSetupPanel({ toast }) {
+  const [config, setConfig] = useState(null) // { currencies, defaults, baseCurrency }
+  const [draft, setDraft] = useState(null)   // { monthly: {cur: amt}, yearly: {cur: amt} }
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [result, setResult] = useState(null)
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const runSetup = async () => {
-    setLoading(true)
-    setError('')
-    setResult(null)
+  const authedFetch = useCallback(async (opts = {}) => {
+    const { auth: fbAuth } = await import('../utils/firebase')
+    const token = await fbAuth.currentUser?.getIdToken()
+    if (!token) throw new Error('Not authenticated')
+    const res = await fetch('/api/setup-stripe', {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`)
+    return data
+  }, [])
+
+  // Build an editable draft from live Stripe prices, falling back to defaults.
+  const buildDraft = useCallback((data) => {
+    const out = { monthly: {}, yearly: {} }
+    for (const interval of ['monthly', 'yearly']) {
+      const live = data.prices?.[interval]?.currencies
+      for (const c of data.currencies) {
+        out[interval][c.code] = (live && live[c.code] != null) ? live[c.code] : data.defaults[interval][c.code]
+      }
+    }
+    return out
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setLoading(true); setError('')
+      try {
+        const data = await authedFetch({ method: 'GET' })
+        if (cancelled) return
+        setConfig(data)
+        setDraft(buildDraft(data))
+      } catch (err) {
+        if (!cancelled) setError(err.message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [authedFetch, buildDraft])
+
+  const setAmount = (interval, code, value) => {
+    setDraft(d => ({ ...d, [interval]: { ...d[interval], [code]: value } }))
+  }
+
+  const resetDefaults = () => { if (config) setDraft(buildDraft({ ...config, prices: {} })) }
+
+  const save = async () => {
+    setSaving(true); setError(''); setResult(null)
     try {
-      const { auth: fbAuth } = await import('../utils/firebase')
-      const token = await fbAuth.currentUser?.getIdToken()
-      if (!token) throw new Error('Not authenticated')
-      const res = await fetch('/api/setup-stripe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`)
+      // Coerce to numbers before sending.
+      const prices = { monthly: {}, yearly: {} }
+      for (const interval of ['monthly', 'yearly']) {
+        for (const [code, amt] of Object.entries(draft[interval])) prices[interval][code] = Number(amt)
+      }
+      const data = await authedFetch({ method: 'POST', body: JSON.stringify({ prices }) })
       setResult(data)
-      toast?.('Stripe setup complete')
+      toast?.('Prices saved to Stripe')
     } catch (err) {
       setError(err.message)
-      toast?.('Setup failed: ' + err.message)
+      toast?.('Save failed: ' + err.message)
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   return (
-    <Section title="Stripe Configuration">
-      <div className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.7, marginBottom: 16 }}>
-          Creates (or reuses) the <strong>UIL4B Pro</strong> product and monthly/yearly prices in your Stripe account.
-          Prices are auto-discovered by lookup key at checkout — no extra env vars needed for price IDs.
-        </p>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="btn btn-accent" onClick={runSetup} disabled={loading}>
-            {loading ? 'Setting up…' : 'Setup Stripe Products & Prices'}
-          </button>
+    <Section title="Stripe Pricing">
+      {loading ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--t2)', fontSize: 13 }}>
+          Loading current prices…
         </div>
-      </div>
-
-      {error && (
-        <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--err)', marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Error</div>
+      ) : !config ? (
+        <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--err)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Couldn’t load Stripe config</div>
           <div style={{ fontSize: 12, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{error}</div>
         </div>
-      )}
+      ) : (
+        <>
+          <div className="card" style={{ padding: 20, marginBottom: 16 }}>
+            <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.7, marginBottom: 4 }}>
+              Set the monthly and yearly price for the <strong>UIL4B Pro</strong> plan per currency. Each customer is
+              shown their local currency at checkout automatically (detected from their browser locale).
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 16 }}>
+              Tip: keep amounts ending in <strong>.99</strong>. Saving creates fresh Stripe prices and retires the old ones — existing subscribers keep their current rate.
+            </p>
 
-      {result && (
-        <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--ok)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ok)', marginBottom: 10 }}>Setup Complete</div>
-          <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2, color: 'var(--t0)' }}>
-            <div>Product: <strong>{result.product}</strong></div>
-            <div>Monthly: <strong>{result.prices?.monthly?.id}</strong> {result.prices?.monthly?.reused ? '(existing)' : '(created)'}</div>
-            <div>Yearly: <strong>{result.prices?.yearly?.id}</strong> {result.prices?.yearly?.reused ? '(existing)' : '(created)'}</div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 360 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', padding: '8px 10px' }}>Currency</th>
+                    <th style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', padding: '8px 10px' }}>Monthly</th>
+                    <th style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', padding: '8px 10px' }}>Yearly</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {config.currencies.map(c => (
+                    <tr key={c.code} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: 600 }}>{c.code.toUpperCase()}</span>
+                        <span style={{ color: 'var(--t3)', marginLeft: 6 }}>{c.label}</span>
+                        {c.code === config.baseCurrency && <span style={{ color: 'var(--accent)', marginLeft: 6, fontSize: 10 }}>base</span>}
+                      </td>
+                      {['monthly', 'yearly'].map(interval => (
+                        <td key={interval} style={{ padding: '6px 10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: 11, color: 'var(--t3)', minWidth: 24 }}>{c.symbol}</span>
+                            <input
+                              type="number" min="0" step="0.01"
+                              value={draft[interval][c.code]}
+                              onChange={e => setAmount(interval, c.code, e.target.value)}
+                              style={{ width: 90, fontSize: 12, fontFamily: 'var(--mono)' }}
+                            />
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 16 }}>
+              <button className="btn btn-accent" onClick={save} disabled={saving}>
+                {saving ? 'Saving…' : 'Save Prices to Stripe'}
+              </button>
+              <button className="btn btn-s" onClick={resetDefaults} disabled={saving}>Reset to defaults</button>
+            </div>
           </div>
-          <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 10 }}>{result.note}</p>
-        </div>
-      )}
 
-      <div className="card" style={{ padding: 16, marginTop: 16, background: 'var(--bg-1)' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t2)', marginBottom: 10 }}>Required Vercel Env Vars</div>
-        <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2.2, color: 'var(--t1)' }}>
-          <div>STRIPE_SECRET_KEY <span style={{ color: 'var(--t3)' }}>— sk_live_… or sk_test_…</span></div>
-          <div>VITE_STRIPE_PUBLISHABLE_KEY <span style={{ color: 'var(--t3)' }}>— pk_live_… or pk_test_…</span></div>
-          <div>STRIPE_WEBHOOK_SECRET <span style={{ color: 'var(--t3)' }}>— whsec_… (from Stripe dashboard → Webhooks)</span></div>
-          <div>FIREBASE_SERVICE_ACCOUNT_KEY <span style={{ color: 'var(--t3)' }}>— JSON string (for auth token verification)</span></div>
-        </div>
-      </div>
+          {error && (
+            <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--err)', marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Error</div>
+              <div style={{ fontSize: 12, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{error}</div>
+            </div>
+          )}
+
+          {result && (
+            <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--ok)' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ok)', marginBottom: 10 }}>Prices Saved</div>
+              <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2, color: 'var(--t0)' }}>
+                <div>Product: <strong>{result.product}</strong></div>
+                <div>Monthly price: <strong>{result.prices?.monthly?.id}</strong></div>
+                <div>Yearly price: <strong>{result.prices?.yearly?.id}</strong></div>
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 10 }}>{result.note}</p>
+            </div>
+          )}
+
+          <div className="card" style={{ padding: 16, marginTop: 16, background: 'var(--bg-1)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t2)', marginBottom: 10 }}>Required Vercel Env Vars</div>
+            <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2.2, color: 'var(--t1)' }}>
+              <div>STRIPE_SECRET_KEY <span style={{ color: 'var(--t3)' }}>— sk_live_… or sk_test_…</span></div>
+              <div>VITE_STRIPE_PUBLISHABLE_KEY <span style={{ color: 'var(--t3)' }}>— pk_live_… or pk_test_…</span></div>
+              <div>STRIPE_WEBHOOK_SECRET <span style={{ color: 'var(--t3)' }}>— whsec_… (from Stripe dashboard → Webhooks)</span></div>
+              <div>FIREBASE_SERVICE_ACCOUNT_KEY <span style={{ color: 'var(--t3)' }}>— JSON string (for auth token verification)</span></div>
+            </div>
+          </div>
+        </>
+      )}
     </Section>
   )
 }
