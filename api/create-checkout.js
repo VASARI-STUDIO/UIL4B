@@ -1,5 +1,6 @@
 import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
+import { CURRENCY_CODES } from './_lib/pricing.js'
 
 const LOOKUP_KEYS = { monthly: 'uil4b_pro_monthly', yearly: 'uil4b_pro_yearly' }
 
@@ -40,8 +41,11 @@ export default async function handler(req, res) {
   try {
     const stripe = getStripeServer()
 
-    const { interval } = req.body || {}
+    const { interval, currency } = req.body || {}
     const isYearly = interval === 'yearly'
+    const wantCurrency = typeof currency === 'string' && CURRENCY_CODES.includes(currency.toLowerCase())
+      ? currency.toLowerCase()
+      : null
     const priceId = await resolvePrice(stripe, interval)
     if (!priceId) {
       return res.status(500).json({ error: 'Stripe prices not found. Visit /admin and run Setup Stripe, or set STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY in Vercel.' })
@@ -73,14 +77,30 @@ export default async function handler(req, res) {
       }
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       ui_mode: 'embedded',
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
       subscription_data: subscriptionData,
-    })
+    }
+    // Present the customer's local currency (the price carries currency_options
+    // for each supported currency). Falls back gracefully if a returning
+    // customer already has a locked currency from a prior subscription.
+    if (wantCurrency) sessionParams.currency = wantCurrency
+
+    let session
+    try {
+      session = await stripe.checkout.sessions.create(sessionParams)
+    } catch (e) {
+      if (wantCurrency) {
+        delete sessionParams.currency
+        session = await stripe.checkout.sessions.create(sessionParams)
+      } else {
+        throw e
+      }
+    }
 
     return res.status(200).json({ clientSecret: session.client_secret })
   } catch (err) {
