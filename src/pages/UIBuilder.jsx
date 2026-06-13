@@ -24,6 +24,16 @@ const DEFAULT_TOKENS = {
   spacing: 12,
 }
 
+// Brand/style presets — patch the visual tokens to match a design language.
+// Colours are left out so they don't clobber the user's palette-derived primary.
+const STYLE_PRESETS = [
+  { id: 'material', label: 'Material', patch: { radius: 12, borderWidth: 0, shadowY: 1, shadowBlur: 3, shadowOpacity: 20, spacing: 14, fontWeight: 500 } },
+  { id: 'ios', label: 'iOS', patch: { radius: 14, borderWidth: 0, shadowY: 4, shadowBlur: 16, shadowOpacity: 12, spacing: 12, fontWeight: 600 } },
+  { id: 'sharp', label: 'Sharp', patch: { radius: 0, borderWidth: 2, shadowY: 0, shadowBlur: 0, shadowOpacity: 0, spacing: 12, fontWeight: 600 } },
+  { id: 'soft', label: 'Soft', patch: { radius: 20, borderWidth: 1, shadowY: 6, shadowBlur: 24, shadowOpacity: 10, spacing: 16, fontWeight: 500 } },
+  { id: 'flat', label: 'Flat', patch: { radius: 6, borderWidth: 1, shadowY: 0, shadowBlur: 0, shadowOpacity: 0, spacing: 12, fontWeight: 500 } },
+]
+
 function hexToRgba(hex, opacity) {
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
@@ -160,6 +170,22 @@ function TokenPanel({ tokens, setTokens }) {
 
   return (
     <div className="uib-tokens">
+      <div className="uib-token-group uib-token-group-presets">
+        <div className="uib-token-group-label">Style preset</div>
+        <div className="uib-preset-chips">
+          {STYLE_PRESETS.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              className="uib-preset-chip"
+              onClick={() => setTokens(prev => ({ ...prev, ...p.patch }))}
+              title={`Apply ${p.label} style (keeps your colours)`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="uib-token-group">
         <div className="uib-token-group-label">Colours</div>
         <TokenField label="Primary" type="color" value={tokens.primary} onChange={v => set('primary', v)} />
