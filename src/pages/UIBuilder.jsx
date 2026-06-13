@@ -23,6 +23,9 @@ const DEFAULT_TOKENS = {
   fontSize: 14,
   fontWeight: 500,
   spacing: 12,
+  btnPadX: 16,
+  btnPadY: 10,
+  letterSpacing: 0,
 }
 
 // Brand/style presets — patch the visual tokens to match a design language.
@@ -49,12 +52,12 @@ function shadow(t) {
 // ── Component Variant Data ────────────────────────────────────────────────────
 
 const BUTTON_VARIANTS = [
-  { id: 'solid', label: 'Solid', render: (t) => ({ background: t.primary, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
-  { id: 'outline', label: 'Outlined', render: (t) => ({ background: 'transparent', color: t.primary, border: `${t.borderWidth}px solid ${t.primary}`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
-  { id: 'ghost', label: 'Ghost', render: (t) => ({ background: 'transparent', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
-  { id: 'soft', label: 'Soft', render: (t) => ({ background: t.primary + '18', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
-  { id: 'gradient', label: 'Gradient', render: (t) => ({ background: `linear-gradient(135deg, ${t.primary}, ${t.primary}99)`, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
-  { id: 'glass', label: 'Glass', render: (t) => ({ background: t.primary + '22', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: t.primary, border: `1px solid ${t.primary}55`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'solid', label: 'Solid', render: (t) => ({ background: t.primary, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
+  { id: 'outline', label: 'Outlined', render: (t) => ({ background: 'transparent', color: t.primary, border: `${t.borderWidth}px solid ${t.primary}`, borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'ghost', label: 'Ghost', render: (t) => ({ background: 'transparent', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'soft', label: 'Soft', render: (t) => ({ background: t.primary + '18', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'gradient', label: 'Gradient', render: (t) => ({ background: `linear-gradient(135deg, ${t.primary}, ${t.primary}99)`, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
+  { id: 'glass', label: 'Glass', render: (t) => ({ background: t.primary + '22', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: t.primary, border: `1px solid ${t.primary}55`, borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
 ]
 
 const CARD_VARIANTS = [
@@ -200,6 +203,9 @@ function TokenPanel({ tokens, setTokens }) {
         <TokenField label="Radius" value={tokens.radius} onChange={v => set('radius', v)} min={0} max={32} />
         <TokenField label="Border" value={tokens.borderWidth} onChange={v => set('borderWidth', v)} min={0} max={4} />
         <TokenField label="Spacing" value={tokens.spacing} onChange={v => set('spacing', v)} min={4} max={24} />
+        <TokenField label="Btn Pad X" value={tokens.btnPadX} onChange={v => set('btnPadX', v)} min={0} max={40} />
+        <TokenField label="Btn Pad Y" value={tokens.btnPadY} onChange={v => set('btnPadY', v)} min={0} max={32} />
+        <TokenField label="Letter Spacing" value={tokens.letterSpacing} onChange={v => set('letterSpacing', v)} min={-2} max={4} step={0.5} />
       </div>
       <div className="uib-token-group">
         <div className="uib-token-group-label">Shadow</div>
