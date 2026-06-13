@@ -166,6 +166,13 @@ export default function ImageConverter({ toast }) {
           <p style={{ fontSize: 11, color: 'var(--t2)' }}>PNG, JPG, GIF, BMP, SVG, WebP, AVIF</p>
           <input ref={fileInputRef} type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
         </div>
+        {originals.length === 0 && (
+          <div className="ic-howto">
+            <div className="ic-howto-step"><span>1</span> Drop or select one or more images — everything is processed locally in your browser, nothing is uploaded.</div>
+            <div className="ic-howto-step"><span>2</span> Pick an output format and quality. <strong>WebP</strong> gives the best size-to-quality ratio for the web; use PNG for transparency-critical graphics.</div>
+            <div className="ic-howto-step"><span>3</span> Optionally cap the max width to shrink oversized photos, then download individually or all together as a ZIP.</div>
+          </div>
+        )}
       </div>
 
       {originals.length > 0 && (
@@ -211,6 +218,22 @@ export default function ImageConverter({ toast }) {
               Preview
               {previewing && <span style={{ fontSize: 10, color: 'var(--t2)', fontWeight: 500 }}>updating…</span>}
             </div>
+            {(() => {
+              const done = previews.filter(Boolean)
+              if (!done.length) return null
+              const origTotal = originals.filter(Boolean).reduce((s, o) => s + o.size, 0)
+              const newTotal = done.reduce((s, p) => s + p.convertedSize, 0)
+              const saved = origTotal - newTotal
+              const savedPct = origTotal ? Math.round((saved / origTotal) * 100) : 0
+              return (
+                <div className="ic-stats">
+                  <div className="ic-stat"><span className="ic-stat-val">{done.length}</span><span className="ic-stat-label">Images</span></div>
+                  <div className="ic-stat"><span className="ic-stat-val">{formatBytes(origTotal)}</span><span className="ic-stat-label">Original</span></div>
+                  <div className="ic-stat"><span className="ic-stat-val">{formatBytes(newTotal)}</span><span className="ic-stat-label">Converted</span></div>
+                  <div className="ic-stat"><span className="ic-stat-val" style={{ color: saved >= 0 ? 'var(--ok)' : 'var(--err)' }}>{saved >= 0 ? '−' : '+'}{Math.abs(savedPct)}%</span><span className="ic-stat-label">{formatBytes(Math.abs(saved))} saved</span></div>
+                </div>
+              )
+            })()}
             <div className="img-grid">
               {originals.map((orig, idx) => {
                 if (!orig) return null

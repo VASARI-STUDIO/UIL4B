@@ -242,6 +242,15 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
                 Allow Google Fonts for this site (or pause the extension) to preview {font.family} accurately —
                 copied exports are unaffected.
               </span>
+              <button
+                type="button"
+                className="fg-blocked-retry"
+                onClick={() => {
+                  setLoadState('checking')
+                  loadFont(font.family, font.variants)
+                  verifyFontLoaded(font.family, hw(font)).then(ok => setLoadState(ok ? 'ok' : 'blocked'))
+                }}
+              >Retry</button>
             </div>
           </div>
         )}
@@ -434,7 +443,9 @@ export default function FontGallery({ onCopy, toast }) {
     const weight = role === 'heading' ? hw(font) : (font.variants.includes(400) ? 400 : font.variants[0])
     loadFont(font.family, font.variants)
     setFonts({ [role]: { family: font.family, weight, category: font.category } })
-    toast?.(`${font.family} set as ${role} font`)
+    toast?.(`${font.family} set as ${role === 'heading' ? 'heading' : 'body'} font`)
+    // Close the detail popup so the choice feels committed and returns focus to the gallery.
+    setSelected(null)
   }, [setFonts, toast])
   const observerRef = useRef(null)
   const sentinelRef = useRef(null)
