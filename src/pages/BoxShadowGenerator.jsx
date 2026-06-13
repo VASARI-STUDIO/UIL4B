@@ -22,6 +22,30 @@ const PRESETS = [
   ]},
 ]
 
+const SYSTEM_PRESETS = {
+  'Material Design': [
+    { name: 'MD Elevation 1', layers: [{ x: 0, y: 1, blur: 3, spread: 1, color: '#000000', opacity: 15, inset: false }, { x: 0, y: 1, blur: 2, spread: 0, color: '#000000', opacity: 30, inset: false }] },
+    { name: 'MD Elevation 2', layers: [{ x: 0, y: 2, blur: 6, spread: 2, color: '#000000', opacity: 15, inset: false }, { x: 0, y: 1, blur: 2, spread: 0, color: '#000000', opacity: 30, inset: false }] },
+    { name: 'MD Elevation 3', layers: [{ x: 0, y: 4, blur: 8, spread: 3, color: '#000000', opacity: 15, inset: false }, { x: 0, y: 1, blur: 3, spread: 0, color: '#000000', opacity: 30, inset: false }] },
+    { name: 'MD Elevation 4', layers: [{ x: 0, y: 6, blur: 10, spread: 4, color: '#000000', opacity: 15, inset: false }, { x: 0, y: 2, blur: 3, spread: 0, color: '#000000', opacity: 30, inset: false }] },
+    { name: 'MD Elevation 5', layers: [{ x: 0, y: 8, blur: 12, spread: 6, color: '#000000', opacity: 15, inset: false }, { x: 0, y: 4, blur: 4, spread: 0, color: '#000000', opacity: 30, inset: false }] },
+  ],
+  'Tailwind CSS': [
+    { name: 'shadow-sm', layers: [{ x: 0, y: 1, blur: 2, spread: 0, color: '#000000', opacity: 5, inset: false }] },
+    { name: 'shadow', layers: [{ x: 0, y: 1, blur: 3, spread: 0, color: '#000000', opacity: 10, inset: false }, { x: 0, y: 1, blur: 2, spread: -1, color: '#000000', opacity: 10, inset: false }] },
+    { name: 'shadow-md', layers: [{ x: 0, y: 4, blur: 6, spread: -1, color: '#000000', opacity: 10, inset: false }, { x: 0, y: 2, blur: 4, spread: -2, color: '#000000', opacity: 10, inset: false }] },
+    { name: 'shadow-lg', layers: [{ x: 0, y: 10, blur: 15, spread: -3, color: '#000000', opacity: 10, inset: false }, { x: 0, y: 4, blur: 6, spread: -4, color: '#000000', opacity: 10, inset: false }] },
+    { name: 'shadow-xl', layers: [{ x: 0, y: 20, blur: 25, spread: -5, color: '#000000', opacity: 10, inset: false }, { x: 0, y: 8, blur: 10, spread: -6, color: '#000000', opacity: 10, inset: false }] },
+    { name: 'shadow-2xl', layers: [{ x: 0, y: 25, blur: 50, spread: -12, color: '#000000', opacity: 25, inset: false }] },
+  ],
+  'Apple HIG': [
+    { name: 'Apple Small', layers: [{ x: 0, y: 0, blur: 1, spread: 0, color: '#000000', opacity: 4, inset: false }, { x: 0, y: 0, blur: 6, spread: 0, color: '#000000', opacity: 4, inset: false }] },
+    { name: 'Apple Medium', layers: [{ x: 0, y: 2, blur: 12, spread: 0, color: '#000000', opacity: 8, inset: false }] },
+    { name: 'Apple Large', layers: [{ x: 0, y: 8, blur: 32, spread: 0, color: '#000000', opacity: 12, inset: false }] },
+    { name: 'Apple XL', layers: [{ x: 0, y: 14, blur: 48, spread: 0, color: '#000000', opacity: 16, inset: false }] },
+  ],
+}
+
 function hexToRgba(hex, opacity) {
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
@@ -95,11 +119,21 @@ export default function BoxShadowGenerator({ onCopy, toast }) {
       </div>
 
       {/* Presets */}
-      <div className="pl-chips" style={{ marginBottom: 20 }}>
+      <div className="pl-chips" style={{ marginBottom: 10 }}>
         {PRESETS.map(p => (
           <button key={p.name} className="pl-chip" onClick={() => applyPreset(p)}>{p.name}</button>
         ))}
       </div>
+      {Object.entries(SYSTEM_PRESETS).map(([system, presets]) => (
+        <div key={system} style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 6 }}>{system}</div>
+          <div className="pl-chips">
+            {presets.map(p => (
+              <button key={p.name} className="pl-chip" onClick={() => applyPreset(p)}>{p.name}</button>
+            ))}
+          </div>
+        </div>
+      ))}
 
       <div className="bsg-layout">
         {/* Preview */}

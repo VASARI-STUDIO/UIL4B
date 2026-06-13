@@ -182,26 +182,42 @@ function IconDetail({ icon, onClose, onCopy }) {
             </div>
             <div className="il-detail-row">
               <label>Color</label>
-              <input
-                type="color"
-                value={color || '#000000'}
-                onChange={e => { setColor(e.target.value); setColorInput(e.target.value) }}
-              />
-              <input
-                type="text"
-                className="il-detail-color-input"
-                value={colorInput}
-                placeholder="currentColor"
-                onChange={e => handleColorInput(e.target.value)}
-              />
-              {color && (
-                <button className="il-detail-reset" onClick={() => { setColor(''); setColorInput('') }} title="Reset color">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
+              {isColored ? (
+                <span style={{ fontSize: 11, color: 'var(--t2)' }}>Original colours preserved</span>
+              ) : (
+                <>
+                  <input
+                    type="color"
+                    value={color || '#000000'}
+                    onChange={e => { setColor(e.target.value); setColorInput(e.target.value) }}
+                  />
+                  <input
+                    type="text"
+                    className="il-detail-color-input"
+                    value={colorInput}
+                    placeholder="currentColor"
+                    onChange={e => handleColorInput(e.target.value)}
+                  />
+                  {color && (
+                    <button className="il-detail-reset" onClick={() => { setColor(''); setColorInput('') }} title="Reset color">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  )}
+                </>
               )}
             </div>
+            {!isColored && (
+              <div className="il-detail-row">
+                <label>Preset</label>
+                <div className="il-detail-seg">
+                  <button className={!color ? 'active' : ''} onClick={() => { setColor(''); setColorInput('') }}>Default</button>
+                  <button className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); setColorInput('#000000') }}>Black</button>
+                  <button className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); setColorInput('#ffffff') }}>White</button>
+                </div>
+              </div>
+            )}
             <div className="il-detail-row">
               <label>Rotate</label>
               <div className="il-detail-seg">
@@ -453,47 +469,63 @@ export default function IconLibrary({ onCopy }) {
         <p>{t('tools.iconLibrary.description')}</p>
       </div>
       <div className="sub">
-        <div className="row" style={{ marginBottom: 14, gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div className="seg-label">Search</div>
-            <input type="text" placeholder="Search icons..." style={{ width: '100%' }} value={query} onChange={handleQueryChange} />
+        <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'var(--bg-0)', paddingTop: 8, paddingBottom: 8 }}>
+          <div className="row" style={{ marginBottom: 10, gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div className="seg-label">Search</div>
+              <input type="text" placeholder="Search icons..." style={{ width: '100%' }} value={query} onChange={handleQueryChange} />
+            </div>
+            <div style={{ minWidth: 130 }}>
+              <div className="seg-label">Pack</div>
+              <select style={{ width: '100%' }} value={pack} onChange={handlePackChange}>
+                <option value="">All packs (search)</option>
+                <optgroup label="Interface (outlined)">
+                  <option value="lucide">Lucide</option>
+                  <option value="tabler">Tabler</option>
+                  <option value="iconoir">Iconoir</option>
+                  <option value="heroicons">Heroicons</option>
+                  <option value="ph">Phosphor</option>
+                </optgroup>
+                <optgroup label="Interface (solid)">
+                  <option value="mdi">Material Design</option>
+                  <option value="material-symbols">Material Symbols</option>
+                  <option value="solar">Solar</option>
+                  <option value="fa6-solid">Font Awesome</option>
+                  <option value="carbon">Carbon</option>
+                </optgroup>
+                <optgroup label="Brand logos (coloured)">
+                  <option value="simple-icons">Simple Icons</option>
+                  <option value="logos">Logos (colour)</option>
+                  <option value="devicon">Devicon</option>
+                  <option value="skill-icons">Skill Icons</option>
+                </optgroup>
+                <optgroup label="Flags">
+                  <option value="circle-flags">Circle Flags</option>
+                  <option value="flag">Flag Icons</option>
+                  <option value="flagpack">Flagpack</option>
+                  <option value="cif">Currency Flags</option>
+                </optgroup>
+                <optgroup label="Flat & emoji">
+                  <option value="flat-color-icons">Flat Color Icons</option>
+                  <option value="twemoji">Twemoji</option>
+                  <option value="noto">Noto Emoji</option>
+                  <option value="fluent-emoji">Fluent Emoji</option>
+                  <option value="openmoji">OpenMoji</option>
+                </optgroup>
+              </select>
+            </div>
           </div>
-          <div style={{ minWidth: 130 }}>
-            <div className="seg-label">Pack</div>
-            <select style={{ width: '100%' }} value={pack} onChange={handlePackChange}>
-              <option value="">All packs (search)</option>
-              <optgroup label="Interface">
-                <option value="lucide">Lucide</option>
-                <option value="tabler">Tabler</option>
-                <option value="iconoir">Iconoir</option>
-                <option value="heroicons">Heroicons</option>
-                <option value="ph">Phosphor</option>
-                <option value="mdi">Material Design</option>
-                <option value="material-symbols">Material Symbols</option>
-                <option value="solar">Solar</option>
-                <option value="fa6-solid">Font Awesome</option>
-                <option value="carbon">Carbon</option>
-              </optgroup>
-              <optgroup label="Brand logos">
-                <option value="simple-icons">Simple Icons</option>
-                <option value="logos">Logos (colour)</option>
-                <option value="devicon">Devicon</option>
-                <option value="skill-icons">Skill Icons</option>
-              </optgroup>
-              <optgroup label="Flags">
-                <option value="circle-flags">Circle Flags</option>
-                <option value="flag">Flag Icons</option>
-                <option value="flagpack">Flagpack</option>
-                <option value="cif">Currency Flags</option>
-              </optgroup>
-              <optgroup label="Flat & emoji">
-                <option value="flat-color-icons">Flat Color Icons</option>
-                <option value="twemoji">Twemoji</option>
-                <option value="noto">Noto Emoji</option>
-                <option value="fluent-emoji">Fluent Emoji</option>
-                <option value="openmoji">OpenMoji</option>
-              </optgroup>
-            </select>
+          <div className="pl-chips" style={{ marginBottom: 0 }}>
+            {[
+              { label: 'Outlined', packs: ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'] },
+              { label: 'Solid', packs: ['mdi', 'material-symbols', 'fa6-solid', 'solar', 'carbon'] },
+              { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack'] },
+              { label: 'Coloured', packs: ['logos', 'devicon', 'skill-icons', 'flat-color-icons'] },
+            ].map(f => (
+              <button key={f.label} className={`pl-chip${f.packs.includes(pack) ? ' active' : ''}`}
+                onClick={() => { const p = f.packs.includes(pack) ? DEFAULT_PACK : f.packs[0]; setPack(p); browsePack(p) }}
+              >{f.label}</button>
+            ))}
           </div>
         </div>
 

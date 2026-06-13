@@ -122,6 +122,14 @@ export function generateHarmony(hex, type) {
         hslToHex(h, s, lShift(l, -depth * .7))
       )
       break
+    case 'custom':
+      colors.push(
+        hslToHex(h + 60, s, l),
+        hslToHex(h + 180, s, l),
+        hslToHex(h, soften(s, .6), lShift(l, headroom * .5)),
+        hslToHex(h, s, lShift(l, -depth * .5))
+      )
+      break
   }
   return colors
 }
