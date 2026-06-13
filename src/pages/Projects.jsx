@@ -144,8 +144,17 @@ export default function Projects({ toast }) {
   const [showSaveForm, setShowSaveForm] = useState(false)
   const [loadedId, setLoadedId] = useState(null)
   const [showArchived, setShowArchived] = useState(false)
-  const activeProjects = projects.filter(p => !p.archived)
-  const archivedProjects = projects.filter(p => p.archived)
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState('recent')
+
+  const sortFn = (a, b) => {
+    if (sortBy === 'name') return a.name.localeCompare(b.name)
+    if (sortBy === 'created') return new Date(b.createdAt) - new Date(a.createdAt)
+    return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+  }
+  const matchesSearch = (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
+  const activeProjects = projects.filter(p => !p.archived && matchesSearch(p)).sort(sortFn)
+  const archivedProjects = projects.filter(p => p.archived && matchesSearch(p)).sort(sortFn)
 
   if (!canSaveProjects) {
     return (
@@ -258,7 +267,26 @@ export default function Projects({ toast }) {
         </div>
       )}
 
-      {activeProjects.length === 0 && archivedProjects.length === 0 ? (
+      {projects.length > 0 && (
+        <div className="proj-toolbar">
+          <div className="proj-search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects…" />
+            {search && <button onClick={() => setSearch('')} aria-label="Clear">&times;</button>}
+          </div>
+          <label className="proj-sort">
+            <span>Sort</span>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="recent">Recently updated</option>
+              <option value="created">Newest</option>
+              <option value="name">Name (A–Z)</option>
+            </select>
+          </label>
+          <span className="proj-count">{projects.filter(p => !p.archived).length} project{projects.filter(p => !p.archived).length === 1 ? '' : 's'}</span>
+        </div>
+      )}
+
+      {projects.length === 0 ? (
         <div className="card" style={{ padding: 48, textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }}>📁</div>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No projects yet</h3>
@@ -266,10 +294,14 @@ export default function Projects({ toast }) {
             Build a palette in <NavLink to="/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/fontpairs">Font Pair Finder</NavLink>, then add your design to a project.
           </p>
         </div>
+      ) : activeProjects.length === 0 && archivedProjects.length === 0 ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
+          <p style={{ fontSize: 13, color: 'var(--t2)' }}>No projects match “{search}”.</p>
+        </div>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
-            {[...activeProjects].reverse().map(p => (
+            {activeProjects.map(p => (
               <ProjectCard
                 key={p.id}
                 project={p}
@@ -293,7 +325,7 @@ export default function Projects({ toast }) {
               </button>
               {showArchived && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
-                  {[...archivedProjects].reverse().map(p => (
+                  {archivedProjects.map(p => (
                     <ProjectCard
                       key={p.id}
                       project={p}

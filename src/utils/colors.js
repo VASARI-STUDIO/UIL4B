@@ -43,6 +43,43 @@ export function hexToRgb(hex) {
   ]
 }
 
+export function hexToCmyk(hex) {
+  const [r, g, b] = hexToRgb(hex).map(v => v / 255)
+  const k = 1 - Math.max(r, g, b)
+  if (k === 1) return [0, 0, 0, 100]
+  const c = (1 - r - k) / (1 - k)
+  const m = (1 - g - k) / (1 - k)
+  const y = (1 - b - k) / (1 - k)
+  return [c, m, y, k].map(v => Math.round(v * 100))
+}
+
+// Approximate human-readable colour name from HSL — hue family plus
+// lightness/saturation modifiers. Honest and dataset-free (no giant lookup).
+export function describeColor(hex) {
+  const [h, s, l] = hexToHsl(hex)
+  if (l <= 4) return 'Black'
+  if (l >= 97) return 'White'
+  if (s <= 8) {
+    if (l < 22) return 'Charcoal'
+    if (l < 42) return 'Dark Grey'
+    if (l < 62) return 'Grey'
+    if (l < 82) return 'Light Grey'
+    return 'Off White'
+  }
+  const HUES = [
+    [15, 'Red'], [45, 'Orange'], [65, 'Yellow'], [90, 'Lime'], [150, 'Green'],
+    [175, 'Teal'], [195, 'Cyan'], [240, 'Blue'], [275, 'Indigo'], [300, 'Violet'],
+    [330, 'Magenta'], [345, 'Pink'], [360, 'Red'],
+  ]
+  const family = HUES.find(([max]) => h <= max)?.[1] || 'Red'
+  let prefix = ''
+  if (l < 25) prefix = 'Dark '
+  else if (l > 78) prefix = 'Light '
+  else if (s < 35) prefix = 'Muted '
+  else if (s > 80 && l > 45 && l < 65) prefix = 'Vivid '
+  return prefix + family
+}
+
 export function luminance(r, g, b) {
   const a = [r, g, b].map(v => {
     v /= 255

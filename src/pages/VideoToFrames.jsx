@@ -302,6 +302,14 @@ export default function VideoToFrames({ toast }) {
               onChange={e => handleFiles(e.target.files)}
             />
           </div>
+          <div className="ic-howto" style={{ marginTop: 18 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)', marginBottom: 4 }}>What you can use this for</div>
+            <div className="ic-howto-step"><span>★</span> <strong>Thumbnails &amp; hero stills</strong> — pull the perfect frame from a product or promo clip for a poster image or social card.</div>
+            <div className="ic-howto-step"><span>★</span> <strong>Tutorial screenshots</strong> — turn a screen recording into a sequence of step images for docs or a blog post.</div>
+            <div className="ic-howto-step"><span>★</span> <strong>Animation reference</strong> — extract frames to study motion, or build a sprite sheet / GIF source set.</div>
+            <div className="ic-howto-step"><span>★</span> <strong>AI training / datasets</strong> — sample frames at a fixed interval to feed image models or alt-text generation.</div>
+            <p style={{ fontSize: 11.5, color: 'var(--t3)', marginTop: 6 }}>Everything runs locally in your browser — the video never leaves your device.</p>
+          </div>
         </div>
       )}
 

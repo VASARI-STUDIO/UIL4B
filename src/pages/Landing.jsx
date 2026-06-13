@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { loadFont } from '../utils/googleFonts'
+import { CATEGORIES, TOOLS } from '../data/tools'
 
 const VISITED_KEY = 'vs-visited'
 
@@ -570,6 +571,8 @@ export default function Landing() {
   const { user, userProfile } = useAuth()
   const { checkout, isPro } = useSubscription()
   const [billing, setBilling] = useState('monthly')
+  const [toolsOpen, setToolsOpen] = useState(false)
+  const toolsMenuRef = useRef(null)
   const loggedIn = !!user
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0]
   const dynamicPrices = useDynamicPrices()
@@ -607,6 +610,27 @@ export default function Landing() {
     try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
     navigate('/icons')
   }
+
+  const openTool = (path) => {
+    try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
+    setToolsOpen(false)
+    navigate(path)
+  }
+
+  // Close the Tools mega-menu on outside click or Escape.
+  useEffect(() => {
+    if (!toolsOpen) return
+    const onDown = (e) => {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target)) setToolsOpen(false)
+    }
+    const onKey = (e) => { if (e.key === 'Escape') setToolsOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [toolsOpen])
 
   const heroRef = useRef(null)
   const heroRaf = useRef(0)
@@ -675,6 +699,40 @@ export default function Landing() {
           <span className="landing-brand-sub">Design Toolkit</span>
         </div>
         <div className="landing-nav-actions">
+          <div className="landing-tools-menu" ref={toolsMenuRef}>
+            <button
+              type="button"
+              className={`landing-tools-trigger${toolsOpen ? ' open' : ''}`}
+              onClick={() => setToolsOpen(o => !o)}
+              aria-expanded={toolsOpen}
+              aria-haspopup="true"
+            >
+              Tools
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="landing-tools-chev"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+            {toolsOpen && (
+              <div className="landing-tools-panel" role="menu">
+                {CATEGORIES.map(cat => {
+                  const catTools = TOOLS.filter(tl => tl.category === cat.id)
+                  if (!catTools.length) return null
+                  return (
+                    <div key={cat.id} className="landing-tools-col">
+                      <button type="button" className="landing-tools-cat" onClick={() => openTool(cat.path)}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{cat.icon}</svg>
+                        {cat.label}
+                      </button>
+                      {catTools.map(tl => (
+                        <button key={tl.id} type="button" className="landing-tools-item" onClick={() => openTool(tl.path)} role="menuitem">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{tl.icon}</svg>
+                          {tl.label}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
           <button type="button" className="landing-theme" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === 'dark' ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
