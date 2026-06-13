@@ -101,6 +101,13 @@ const GRAD_PRESETS = [
   { n: 'Malibu', stops: [{ color: '#4facfe', pos: 0 }, { color: '#00f2fe', pos: 100 }], angle: 90, type: 'Linear' },
   { n: 'Plum Plate', stops: [{ color: '#667eea', pos: 0 }, { color: '#764ba2', pos: 100 }], angle: 90, type: 'Radial' },
   { n: 'Rainbow', stops: [{ color: '#ff0000', pos: 0 }, { color: '#ff8800', pos: 20 }, { color: '#ffff00', pos: 40 }, { color: '#00ff00', pos: 60 }, { color: '#0088ff', pos: 80 }, { color: '#8800ff', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Instagram', stops: [{ color: '#feda75', pos: 0 }, { color: '#fa7e1e', pos: 30 }, { color: '#d62976', pos: 60 }, { color: '#962fbf', pos: 80 }, { color: '#4f5bd5', pos: 100 }], angle: 45, type: 'Linear' },
+  { n: 'Cotton Candy', stops: [{ color: '#a18cd1', pos: 0 }, { color: '#fbc2eb', pos: 100 }], angle: 120, type: 'Linear' },
+  { n: 'Mojito', stops: [{ color: '#1d976c', pos: 0 }, { color: '#93f9b9', pos: 100 }], angle: 135, type: 'Linear' },
+  { n: 'Royal', stops: [{ color: '#141e30', pos: 0 }, { color: '#243b55', pos: 100 }], angle: 135, type: 'Linear' },
+  { n: 'Bloody Mary', stops: [{ color: '#ff512f', pos: 0 }, { color: '#dd2476', pos: 100 }], angle: 90, type: 'Linear' },
+  { n: 'Aurora Conic', stops: [{ color: '#5ee7df', pos: 0 }, { color: '#b490ca', pos: 50 }, { color: '#5ee7df', pos: 100 }], angle: 90, type: 'Conic' },
+  { n: 'Spotlight', stops: [{ color: '#ffffff', pos: 0 }, { color: '#6a11cb', pos: 100 }], angle: 90, type: 'Radial' },
 ]
 
 const GRAD_TYPES = ['Linear', 'Radial', 'Conic']
