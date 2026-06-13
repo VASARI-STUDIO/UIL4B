@@ -34,6 +34,47 @@ async function writeSubscription(uid, sub) {
       interval: sub.items?.data?.[0]?.price?.recurring?.interval || null,
       currentPeriodEnd: sub.current_period_end ? sub.current_period_end * 1000 : null,
       cancelAtPeriodEnd: sub.cancel_at_period_end || false,
+      // Cleared by any healthy subscription update so a recovered payment
+      // removes the "payment failed" banner automatically.
+      paymentFailed: false,
+      trialEndsAt: sub.trial_end ? sub.trial_end * 1000 : null,
+      updatedAt: Date.now(),
+    },
+  }, { merge: true })
+}
+
+// Resolves the Firebase uid for a Stripe customer id (used by invoice events
+// that don't carry firebaseUid in metadata).
+async function uidForCustomer(customerId) {
+  if (!customerId) return null
+  const snap = await adminDb()
+    .collection('users')
+    .where('stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get()
+  return snap.empty ? null : snap.docs[0].id
+}
+
+async function flagPaymentFailed(invoice) {
+  const uid = await uidForCustomer(invoice.customer)
+  if (!uid) return
+  await adminDb().collection('users').doc(uid).set({
+    subscription: {
+      paymentFailed: true,
+      // Hosted invoice page the customer can use to retry payment.
+      hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+      updatedAt: Date.now(),
+    },
+  }, { merge: true })
+}
+
+async function flagTrialEnding(subscription) {
+  const uid = subscription.metadata?.firebaseUid || await uidForCustomer(subscription.customer)
+  if (!uid) return
+  await adminDb().collection('users').doc(uid).set({
+    subscription: {
+      trialEndsAt: subscription.trial_end ? subscription.trial_end * 1000 : null,
+      trialEndingSoon: true,
       updatedAt: Date.now(),
     },
   }, { merge: true })
@@ -80,6 +121,24 @@ export default async function handler(req, res) {
         const sub = await stripe.subscriptions.retrieve(session.subscription)
         await upsertSubscription(sub)
       }
+      break
+    }
+    case 'invoice.payment_failed': {
+      await flagPaymentFailed(event.data.object)
+      break
+    }
+    case 'invoice.paid': {
+      // A successful (re)payment clears any prior failure flag.
+      const uid = await uidForCustomer(event.data.object.customer)
+      if (uid) {
+        await adminDb().collection('users').doc(uid).set({
+          subscription: { paymentFailed: false, updatedAt: Date.now() },
+        }, { merge: true })
+      }
+      break
+    }
+    case 'customer.subscription.trial_will_end': {
+      await flagTrialEnding(event.data.object)
       break
     }
   }
