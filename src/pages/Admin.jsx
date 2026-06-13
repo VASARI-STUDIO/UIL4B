@@ -361,6 +361,7 @@ export default function Admin({ toast }) {
   }, [])
 
   const [serverVerified, setServerVerified] = useState(false)
+  const [verifyError, setVerifyError] = useState('')
 
   useEffect(() => {
     if (!isAdminUser || serverVerified) return
@@ -373,9 +374,13 @@ export default function Admin({ toast }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         })
-        const data = await res.json()
-        if (data.isAdmin) setServerVerified(true)
-        else { setServerVerified(false); toast?.('Admin verification failed') }
+        const data = await res.json().catch(() => ({}))
+        if (data.isAdmin) { setServerVerified(true); setVerifyError('') }
+        else {
+          setServerVerified(false)
+          setVerifyError(data.error || `Server returned ${res.status}`)
+          toast?.('Admin verification failed')
+        }
       } catch { /* offline — trust client-side for now */ }
     }
     verify()
@@ -502,6 +507,16 @@ export default function Admin({ toast }) {
           {!isAdminUser && <button className="btn btn-s" onClick={handleLock} style={{ color: 'var(--err)' }}>Lock</button>}
         </div>
       </div>
+
+      {verifyError && (
+        <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--err)', marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>Server admin verification failed</div>
+          <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{verifyError}</div>
+          <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+            Server-backed actions (Stripe setup) won&apos;t work until this is resolved. Local analytics below still function.
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, flexWrap: 'wrap' }}>
