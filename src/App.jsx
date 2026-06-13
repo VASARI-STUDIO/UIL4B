@@ -5,6 +5,7 @@ import TopBar from './components/TopBar'
 import Toast from './components/Toast'
 import CommandPalette from './components/CommandPalette'
 import AppFooter from './components/AppFooter'
+import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/GoogleOneTap'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
@@ -212,6 +213,7 @@ export default function App() {
       </div>
 
       <Toast message={message} visible={visible} />
+      <FeedbackButton />
       <CommandPalette open={paletteOpen} onClose={closePalette} />
       <GoogleOneTap />
     </div>
