@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { fetchFonts, loadFont, getFontCSSRule } from '../utils/googleFonts'
+import { fetchFonts, loadFont, getFontCSSRule, generatePairings, verifyFontLoaded } from '../utils/googleFonts'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
 
@@ -49,18 +49,24 @@ function GalleryCard({ font, onSelect, index, inCompare, onToggleCompare }) {
   useEffect(() => {
     const el = ref.current
     if (!el) return
+    let cancelled = false
     const obs = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
+        obs.disconnect()
         // Load the two weights the card actually renders (regular + heading)
         // so the preview never falls back to a synthesised face.
         const reg = font.variants.includes(400) ? 400 : font.variants[0]
         loadFont(font.family, [reg, hw(font)])
-        setLoaded(true)
-        obs.disconnect()
+        // Only swap the card to the real typeface once the file has actually
+        // arrived — otherwise a blocked/slow font would render a misleading
+        // fallback. If it never loads, the card keeps the neutral system face.
+        verifyFontLoaded(font.family, hw(font)).then(ok => {
+          if (!cancelled && ok) setLoaded(true)
+        })
       }
     }, { rootMargin: '200px' })
     obs.observe(el)
-    return () => obs.disconnect()
+    return () => { cancelled = true; obs.disconnect() }
   }, [font])
 
   const isWide = index % 7 === 0
@@ -188,8 +194,31 @@ function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
 }
 
 function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
+  // 'checking' until we know whether the webfont actually rendered; 'blocked'
+  // if the Font Loading API reports it never arrived (network / extension).
+  const [loadState, setLoadState] = useState('checking')
+  const [pairings, setPairings] = useState([])
+
   useEffect(() => {
     loadFont(font.family, font.variants)
+    let cancelled = false
+    setLoadState('checking')
+    verifyFontLoaded(font.family, hw(font)).then(ok => {
+      if (!cancelled) setLoadState(ok ? 'ok' : 'blocked')
+    })
+    return () => { cancelled = true }
+  }, [font])
+
+  // Curated pairing suggestions for this typeface, preloaded for the preview.
+  useEffect(() => {
+    let cancelled = false
+    generatePairings(font).then(list => {
+      if (cancelled) return
+      const top = list.slice(0, 4)
+      top.forEach(f => loadFont(f.family, [f.variants.includes(400) ? 400 : f.variants[0]]))
+      setPairings(top)
+    })
+    return () => { cancelled = true }
   }, [font])
 
   const fam = css(font)
@@ -201,6 +230,22 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
+
+        {loadState === 'blocked' && (
+          <div className="fg-blocked-banner" role="alert">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <div>
+              <strong>This font couldn&rsquo;t load, so a fallback is shown.</strong>
+              <span>
+                A privacy or ad-blocking extension may be blocking <code>fonts.googleapis.com</code>.
+                Allow Google Fonts for this site (or pause the extension) to preview {font.family} accurately —
+                copied exports are unaffected.
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="fg-detail-hero" style={{ fontFamily: fam, fontWeight: hw(font) }}>
           {font.family}
@@ -255,11 +300,45 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
           </div>
         </div>
 
+        {pairings.length > 0 && (
+          <div className="fg-detail-section">
+            <div className="fg-detail-label">Pairs well with</div>
+            <p className="fg-pair-hint">Common combinations — preview {font.family} as the heading over each body face.</p>
+            <div className="fg-pair-grid">
+              {pairings.map(pair => {
+                const pairFam = css(pair)
+                const pairBodyWeight = pair.variants.includes(400) ? 400 : pair.variants[0]
+                return (
+                  <div key={pair.family} className="fg-pair-card">
+                    <div className="fg-pair-preview">
+                      <span className="fg-pair-heading" style={{ fontFamily: fam, fontWeight: hw(font) }}>{font.family}</span>
+                      <span className="fg-pair-body" style={{ fontFamily: pairFam, fontWeight: pairBodyWeight }}>
+                        {pair.family} keeps body copy clean and readable beneath the headline.
+                      </span>
+                    </div>
+                    <div className="fg-pair-foot">
+                      <span className="fg-pair-name">{pair.family}</span>
+                      <button
+                        type="button"
+                        className="fg-pair-apply"
+                        onClick={() => { onApply?.(font, 'heading'); onApply?.(pair, 'body') }}
+                        title={`Use ${font.family} for headings and ${pair.family} for body`}
+                      >
+                        Apply pair
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="fg-detail-section">
           <div className="fg-detail-label">Add to your kit</div>
           <div className="fg-detail-apply">
-            <button className="btn" onClick={() => onApply?.(font, 'heading')}>Use for headings</button>
-            <button className="btn" onClick={() => onApply?.(font, 'body')}>Use for body</button>
+            <button className="btn" onClick={() => onApply?.(font, 'heading')}>Use as primary (headings)</button>
+            <button className="btn" onClick={() => onApply?.(font, 'body')}>Use as secondary (body)</button>
           </div>
         </div>
 

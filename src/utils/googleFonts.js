@@ -160,6 +160,33 @@ export function unloadFont(family) {
   loadedFonts.delete(family)
 }
 
+// Verify a font actually rendered rather than silently falling back to a system
+// face. Uses the CSS Font Loading API: document.fonts.load() resolves with the
+// matching FontFace objects once the file is fetched and parsed. A network
+// failure or a content blocker that intercepts fonts.googleapis.com leaves the
+// set empty, which is how we detect "this font could not load".
+//
+// Returns a Promise<boolean>: true if at least one face for the family loaded.
+export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } = {}) {
+  if (typeof document === 'undefined' || !document.fonts || !document.fonts.load) {
+    // No Font Loading API — assume success and let the browser fall back.
+    return true
+  }
+  const spec = `${weight} 16px "${family}"`
+  try {
+    const loadPromise = document.fonts.load(spec)
+    const timed = new Promise(resolve => setTimeout(() => resolve(null), timeout))
+    const faces = await Promise.race([loadPromise, timed])
+    if (faces === null) {
+      // Timed out — fall back to a synchronous check.
+      return document.fonts.check(spec)
+    }
+    return Array.isArray(faces) ? faces.length > 0 : document.fonts.check(spec)
+  } catch {
+    return false
+  }
+}
+
 const PAIRING_RULES = {
   serif: ['sans-serif'],
   'sans-serif': ['serif', 'display'],
