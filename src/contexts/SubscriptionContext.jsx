@@ -6,6 +6,24 @@ import { auth as firebaseAuth } from '../utils/firebase'
 
 const SubscriptionContext = createContext()
 
+// Maps the region subtag of the browser locale to a supported Stripe currency
+// so checkout shows each visitor their local pricing. Unknown regions fall
+// through to Stripe's default (USD).
+const REGION_CURRENCY = {
+  AU: 'aud', NZ: 'nzd', GB: 'gbp', US: 'usd', CA: 'cad', SG: 'sgd', CH: 'chf',
+  IE: 'eur', DE: 'eur', FR: 'eur', ES: 'eur', IT: 'eur', NL: 'eur', AT: 'eur',
+  BE: 'eur', FI: 'eur', PT: 'eur', GR: 'eur', LU: 'eur', EE: 'eur', SK: 'eur',
+  SI: 'eur', LV: 'eur', LT: 'eur', CY: 'eur', MT: 'eur',
+}
+
+function detectCurrency() {
+  try {
+    const region = (navigator.language || '').split('-')[1]?.toUpperCase()
+    if (region && REGION_CURRENCY[region]) return REGION_CURRENCY[region]
+  } catch { /* ignore */ }
+  return null
+}
+
 const FREE_PLAN = { id: 'free', label: 'Free', limits: { 'alt-text': 40, 'prompts-ai': 40, 'ai-default': 40 } }
 const PRO_PLAN = { id: 'pro', label: 'Pro', limits: { 'alt-text': 1000, 'prompts-ai': 1000, 'ai-default': 1000 } }
 
@@ -58,7 +76,7 @@ export function SubscriptionProvider({ children }) {
     const res = await fetch('/api/create-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ interval }),
+      body: JSON.stringify({ interval, currency: detectCurrency() }),
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.error || `Checkout failed (server returned ${res.status})`)
