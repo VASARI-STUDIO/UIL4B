@@ -2344,3 +2344,15 @@ img,svg,video{max-width:100%;height:auto}
 .proj-detail-meta-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px}
 .proj-detail-meta-row span{color:var(--t2)}
 .proj-detail-meta-row strong{color:var(--t0);font-weight:600}
+
+/* ─── Projects: Tabs ─── */
+.proj-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.proj-tab{padding:8px 16px;font-size:13px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
+.proj-tab:hover{color:var(--t0)}
+.proj-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ─── Projects: Icons ─── */
+.proj-card-icon{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:6px;object-fit:contain;background:rgba(255,255,255,.9);padding:3px;box-shadow:0 1px 6px rgba(0,0,0,.2)}
+.proj-detail-icon{width:32px;height:32px;border-radius:6px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:2px}
+.proj-detail-icon-lg{width:56px;height:56px;border-radius:8px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:4px}
+.proj-detail-icon-empty{display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:20px}

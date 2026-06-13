@@ -4,6 +4,42 @@ import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { isSvg } from '../utils/imageProcessing'
+
+// Read-only sample design systems shown under the "Community" tab.
+const COMMUNITY_PROJECTS = [
+  { id: 'c-sunset', name: 'Sunset Brand', author: 'Maya R.', colors: ['#FF6B35', '#F7931E', '#FFD23F', '#C1121F', '#6A040F'] },
+  { id: 'c-fintech', name: 'Fintech Blue', author: 'Devon K.', colors: ['#0051FF', '#0A2540', '#3B82F6', '#60A5FA', '#1E3A8A'] },
+  { id: 'c-forest', name: 'Forest Co.', author: 'Sam T.', colors: ['#2D6A4F', '#40916C', '#74C69D', '#1B4332', '#95D5B2'] },
+  { id: 'c-mono', name: 'Mono Minimal', author: 'Alex P.', colors: ['#111111', '#3D3D3D', '#7A7A7A', '#B5B5B5', '#EDEDED'] },
+]
+
+// Validate + read a project icon file (SVG or small PNG) as a data URL.
+function readIconFile(file) {
+  return new Promise((resolve, reject) => {
+    const okType = file.type === 'image/svg+xml' || file.type === 'image/png' || isSvg(file)
+    if (!okType) { reject(new Error('Icon must be an SVG or PNG')); return }
+    if (file.size > 50 * 1024) { reject(new Error('Icon must be under 50KB')); return }
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Could not read file'))
+    reader.onload = () => {
+      const dataUrl = reader.result
+      if (isSvg(file)) { resolve(dataUrl); return }
+      // Raster (PNG): reject if larger than 128px in either dimension.
+      const img = new Image()
+      img.onerror = () => reject(new Error('Could not decode image'))
+      img.onload = () => {
+        if (img.width > 128 || img.height > 128) {
+          reject(new Error('Icon must be 128px or smaller'))
+        } else {
+          resolve(dataUrl)
+        }
+      }
+      img.src = dataUrl
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 function ColorRow({ colors }) {
   if (!colors?.length) return null
@@ -16,7 +52,7 @@ function ColorRow({ colors }) {
   )
 }
 
-function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive, folder, onFolderChange, folders, onOpenDetail }) {
+function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive, folder, onFolderChange, folders, onOpenDetail, icon }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(project.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -33,6 +69,7 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
         title="View project details"
         style={{ padding: '20px 18px', background: project.design?.palette?.colors?.[0] || 'var(--bg-2)', position: 'relative', cursor: 'pointer' }}
       >
+        {icon && <img src={icon} alt="" className="proj-card-icon" />}
         <div style={{ fontFamily: `'${headingFamily}', sans-serif`, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 8px rgba(0,0,0,.2)' }}>
           {project.design?.palette?.colors?.[0]?.toUpperCase() || '#'}
         </div>
@@ -151,7 +188,7 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
   )
 }
 
-function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename, onOverwrite, onArchive }) {
+function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename, onOverwrite, onArchive, icon, onIconChange, onIconRemove }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(project.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -192,6 +229,7 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {icon && <img src={icon} alt="" className="proj-detail-icon" />}
               <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', flex: 1 }}>{project.name}</h2>
               {isCurrent && (
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '3px 8px', borderRadius: 4 }}>Loaded</span>
@@ -225,6 +263,32 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
             <div className="proj-detail-meta-row"><span>Heading</span><strong style={{ fontFamily: `'${headingFamily}', sans-serif` }}>{headingFamily}</strong></div>
             <div className="proj-detail-meta-row"><span>Body</span><strong style={{ fontFamily: `'${bodyFamily}', sans-serif` }}>{bodyFamily}</strong></div>
             <div className="proj-detail-meta-row"><span>Type scale</span><strong>{base}px / {Number(ratio).toFixed(2)}×</strong></div>
+          </div>
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Icon</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {icon ? (
+              <img src={icon} alt="Project icon" className="proj-detail-icon-lg" />
+            ) : (
+              <div className="proj-detail-icon-lg proj-detail-icon-empty">—</div>
+            )}
+            <label className="btn btn-s" style={{ cursor: 'pointer' }}>
+              {icon ? 'Replace' : 'Upload icon'}
+              <input
+                type="file"
+                accept="image/svg+xml,image/png"
+                style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) onIconChange?.(f); e.target.value = '' }}
+              />
+            </label>
+            {icon && (
+              <button className="btn btn-s" onClick={() => onIconRemove?.()} style={{ color: 'var(--err)' }}>
+                Remove icon
+              </button>
+            )}
+            <span style={{ fontSize: 11, color: 'var(--t2)' }}>SVG or PNG, max 128px / 50KB.</span>
           </div>
         </div>
 
@@ -283,7 +347,7 @@ export default function Projects({ toast }) {
   const {
     design, projects, canSaveProjects,
     saveProject, loadProject, deleteProject, renameProject, overwriteProject,
-    archiveProject, resetDesign,
+    archiveProject, resetDesign, setPalette,
   } = useProject()
   const [newName, setNewName] = useState('')
   const [showSaveForm, setShowSaveForm] = useState(false)
@@ -293,6 +357,7 @@ export default function Projects({ toast }) {
   const [sortBy, setSortBy] = useState('recent')
   const [activeFolder, setActiveFolder] = useState('all')
   const [detailProject, setDetailProject] = useState(null)
+  const [view, setView] = useState('mine')
   const FOLDERS = ['all', 'brand', 'app', 'marketing', 'personal']
   const folderLimit = isPro ? 10 : 3
   const [folderMap, setFolderMap] = useState(() => {
@@ -302,6 +367,33 @@ export default function Projects({ toast }) {
     const next = { ...folderMap, [projectId]: folder }
     setFolderMap(next)
     try { localStorage.setItem('vs-project-folders', JSON.stringify(next)) } catch {}
+  }
+  const [iconMap, setIconMap] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('vs-project-icons') || '{}') } catch { return {} }
+  })
+  const setProjectIcon = (projectId, dataUrl) => {
+    const next = { ...iconMap, [projectId]: dataUrl }
+    setIconMap(next)
+    try { localStorage.setItem('vs-project-icons', JSON.stringify(next)) } catch {}
+  }
+  const removeProjectIcon = (projectId) => {
+    const next = { ...iconMap }
+    delete next[projectId]
+    setIconMap(next)
+    try { localStorage.setItem('vs-project-icons', JSON.stringify(next)) } catch {}
+  }
+  const handleIconUpload = async (projectId, file) => {
+    try {
+      const dataUrl = await readIconFile(file)
+      setProjectIcon(projectId, dataUrl)
+      toast('Icon updated')
+    } catch (e) {
+      toast(e.message || 'Could not set icon')
+    }
+  }
+  const handleUseCommunityPalette = (cp) => {
+    setPalette({ colors: cp.colors, activeIdx: 0, base: cp.colors[0] })
+    toast(`Loaded palette from "${cp.name}"`)
   }
 
   const sortFn = (a, b) => {
@@ -428,6 +520,40 @@ export default function Projects({ toast }) {
         </div>
       )}
 
+      <div className="proj-tabs">
+        <button className={`proj-tab${view === 'mine' ? ' active' : ''}`} onClick={() => setView('mine')}>My Projects</button>
+        <button className={`proj-tab${view === 'community' ? ' active' : ''}`} onClick={() => setView('community')}>Community</button>
+      </div>
+
+      {view === 'community' ? (
+        <>
+          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>
+            Explore design systems shared by the community. Load a palette to start from it.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
+            {COMMUNITY_PROJECTS.map(cp => (
+              <div key={cp.id} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '20px 18px', background: cp.colors[0] }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 8px rgba(0,0,0,.2)' }}>
+                    {cp.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.85)', marginTop: 2, textShadow: '0 1px 6px rgba(0,0,0,.2)' }}>
+                    by {cp.author}
+                  </div>
+                </div>
+                <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <ColorRow colors={cp.colors} />
+                  <div style={{ fontSize: 10, color: 'var(--t2)' }}>{cp.colors.length} colours</div>
+                  <button className="btn btn-s btn-accent" onClick={() => handleUseCommunityPalette(cp)} style={{ fontSize: 11, marginTop: 'auto' }}>
+                    Use this palette
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+      <>
       {projects.length > 0 && (
         <>
           <div className="proj-folders">
@@ -492,6 +618,7 @@ export default function Projects({ toast }) {
                 onFolderChange={setProjectFolder}
                 folders={FOLDERS}
                 onOpenDetail={setDetailProject}
+                icon={iconMap[p.id]}
               />
             ))}
           </div>
@@ -520,6 +647,7 @@ export default function Projects({ toast }) {
                       onFolderChange={setProjectFolder}
                       folders={FOLDERS}
                       onOpenDetail={setDetailProject}
+                      icon={iconMap[p.id]}
                     />
                   ))}
                 </div>
@@ -527,6 +655,8 @@ export default function Projects({ toast }) {
             </div>
           )}
         </>
+      )}
+      </>
       )}
 
       {detailProject && (
@@ -539,6 +669,9 @@ export default function Projects({ toast }) {
           onRename={(id, name) => { handleRename(id, name); setDetailProject(prev => prev ? { ...prev, name: name.trim() } : prev) }}
           onOverwrite={handleOverwrite}
           onArchive={handleArchive}
+          icon={iconMap[detailProject.id]}
+          onIconChange={(file) => handleIconUpload(detailProject.id, file)}
+          onIconRemove={() => { removeProjectIcon(detailProject.id); toast('Icon removed') }}
         />
       )}
     </div>
