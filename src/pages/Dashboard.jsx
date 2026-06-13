@@ -348,6 +348,7 @@ export default function Dashboard() {
             <span className="bento-fotd-sample" style={{ fontFamily: fontStack, fontWeight: fontOfDay.weight }}>Ag</span>
             <span className="bento-fotd-name" style={{ fontFamily: fontStack, fontWeight: fontOfDay.weight }}>{fontOfDay.family}</span>
             <span className="bento-fotd-cat">{fontOfDay.cat}</span>
+            <span className="bento-fotd-weights">{fontOfDay.weight} weight</span>
           </div>
           <div className="bento-cat-body">
             <div className="bento-label">{tool.catLabel}</div>
@@ -488,6 +489,12 @@ export default function Dashboard() {
               Browse icons
             </NavLink>
           </div>
+          <NavLink to="/color" className="bento-hero-walkthrough">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+            </svg>
+            New here? Follow the guided flow — colour → fonts → components → export
+          </NavLink>
           <div className="bento-hero-foot">
             {lastTool && (
               <NavLink to={lastTool.path} className="bento-hero-resume">
@@ -498,9 +505,9 @@ export default function Dashboard() {
             )}
             <span className="bento-hero-tokens">
               {isPro ? (
-                <><strong>{freePerDay.toLocaleString()}</strong> AI generations per day · Pro</>
+                <>Unlimited AI · Pro plan</>
               ) : (
-                <>AI: <strong>{freePerDay}</strong> / day · resets daily</>
+                <><strong>{freePerDay}</strong> AI generations today</>
               )}
             </span>
           </div>
@@ -510,7 +517,7 @@ export default function Dashboard() {
         <div className="bento-card bento-time" style={{ gridColumn: 'span 2' }}>
           <div className="bento-label">{t('dash.localTime')}</div>
           <div className="bento-time-big">{timeStr}</div>
-          <div className="bento-time-sub">{now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          <div className="bento-time-sub">{dateStr}</div>
           <div className="bento-time-stats">
             <div><span className="bento-time-num">{pinned.length}</span><span className="bento-time-lbl">{t('dash.pinned')}</span></div>
             <div><span className="bento-time-num">{lTools.length}</span><span className="bento-time-lbl">{t('dash.tools')}</span></div>

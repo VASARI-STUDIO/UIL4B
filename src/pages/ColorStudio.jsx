@@ -681,7 +681,6 @@ ${stateVars}
 
   const addCustomColor = (hex) => {
     setExtraColors([...extraColors, hex])
-    setAddMenuOpen(false)
   }
 
   const editPaletteColor = (idx, hex) => {
@@ -731,11 +730,18 @@ ${stateVars}
     setAddMenuOpen(false)
   }
 
+  const addMenuRef = useRef(null)
   useEffect(() => {
     if (!addMenuOpen) return
-    const close = () => setAddMenuOpen(false)
-    document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
+    const close = (e) => {
+      // Don't close if the click is inside the add-menu (e.g. the native color picker)
+      if (addMenuRef.current && addMenuRef.current.contains(e.target)) return
+      setAddMenuOpen(false)
+    }
+    // Use mousedown instead of click so the native browser colour-picker
+    // popover (which doesn't dispatch mousedown on the document) stays open.
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
   }, [addMenuOpen])
 
   const removeExtra = (i) => {
@@ -854,7 +860,7 @@ ${stateVars}
             </svg>
             Random
           </button>
-          <div className="cs-add-wrap" onClick={(e) => e.stopPropagation()}>
+          <div className="cs-add-wrap" ref={addMenuRef} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
             <button className="btn btn-s" onClick={() => setAddMenuOpen(!addMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               + Add Colour
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1400,11 +1406,13 @@ ${stateVars}
 
 
       {/* ── Flow CTA: Next step → Typography ── */}
-      <div style={{ textAlign: 'center', padding: '40px 0 20px', borderTop: '1px solid var(--border)' }}>
-        <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 14 }}>Colours done? Continue building your design system.</p>
-        <NavLink to="/typography" className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-          Continue to Typography
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+      <div className="cs-next-step">
+        <NavLink to="/fontpairs" className="cs-next-link">
+          <span>Next step</span>
+          <strong>Continue to Typography</strong>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+          </svg>
         </NavLink>
       </div>
       <UIKitGuide step="color" />
