@@ -1,8 +1,45 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { isSvg } from '../utils/imageProcessing'
+
+// Read-only sample design systems shown under the "Community" tab.
+const COMMUNITY_PROJECTS = [
+  { id: 'c-sunset', name: 'Sunset Brand', author: 'Maya R.', colors: ['#FF6B35', '#F7931E', '#FFD23F', '#C1121F', '#6A040F'] },
+  { id: 'c-fintech', name: 'Fintech Blue', author: 'Devon K.', colors: ['#0051FF', '#0A2540', '#3B82F6', '#60A5FA', '#1E3A8A'] },
+  { id: 'c-forest', name: 'Forest Co.', author: 'Sam T.', colors: ['#2D6A4F', '#40916C', '#74C69D', '#1B4332', '#95D5B2'] },
+  { id: 'c-mono', name: 'Mono Minimal', author: 'Alex P.', colors: ['#111111', '#3D3D3D', '#7A7A7A', '#B5B5B5', '#EDEDED'] },
+]
+
+// Validate + read a project icon file (SVG or small PNG) as a data URL.
+function readIconFile(file) {
+  return new Promise((resolve, reject) => {
+    const okType = file.type === 'image/svg+xml' || file.type === 'image/png' || isSvg(file)
+    if (!okType) { reject(new Error('Icon must be an SVG or PNG')); return }
+    if (file.size > 50 * 1024) { reject(new Error('Icon must be under 50KB')); return }
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Could not read file'))
+    reader.onload = () => {
+      const dataUrl = reader.result
+      if (isSvg(file)) { resolve(dataUrl); return }
+      // Raster (PNG): reject if larger than 128px in either dimension.
+      const img = new Image()
+      img.onerror = () => reject(new Error('Could not decode image'))
+      img.onload = () => {
+        if (img.width > 128 || img.height > 128) {
+          reject(new Error('Icon must be 128px or smaller'))
+        } else {
+          resolve(dataUrl)
+        }
+      }
+      img.src = dataUrl
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 function ColorRow({ colors }) {
   if (!colors?.length) return null
@@ -15,7 +52,7 @@ function ColorRow({ colors }) {
   )
 }
 
-function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive }) {
+function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive, folder, onFolderChange, folders, onOpenDetail, icon }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(project.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -27,7 +64,12 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: project.archived ? 0.6 : 1 }}>
-      <div style={{ padding: '20px 18px', background: project.design?.palette?.colors?.[0] || 'var(--bg-2)', position: 'relative' }}>
+      <div
+        onClick={() => onOpenDetail?.(project)}
+        title="View project details"
+        style={{ padding: '20px 18px', background: project.design?.palette?.colors?.[0] || 'var(--bg-2)', position: 'relative', cursor: 'pointer' }}
+      >
+        {icon && <img src={icon} alt="" className="proj-card-icon" />}
         <div style={{ fontFamily: `'${headingFamily}', sans-serif`, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 8px rgba(0,0,0,.2)' }}>
           {project.design?.palette?.colors?.[0]?.toUpperCase() || '#'}
         </div>
@@ -56,7 +98,11 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
         ) : (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', flex: 1 }}>{project.name}</h3>
+              <h3
+                onClick={() => onOpenDetail?.(project)}
+                title="View project details"
+                style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', flex: 1, cursor: 'pointer' }}
+              >{project.name}</h3>
               {isCurrent && (
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '2px 6px', borderRadius: 4 }}>
                   Loaded
@@ -71,12 +117,23 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
 
         <ColorRow colors={project.design?.palette?.colors} />
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 10, color: 'var(--t2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 10, color: 'var(--t2)' }}>
           <span>{project.design?.palette?.colors?.length || 0} colours</span>
           <span>·</span>
           <span>{project.design?.tints?.scale?.length || 0} tints</span>
           <span>·</span>
           <span>{project.design?.typeScale?.base || 16}px / {(project.design?.typeScale?.ratio || 1.25).toFixed(2)}×</span>
+          <select
+            value={folder || ''}
+            onChange={e => onFolderChange(project.id, e.target.value)}
+            style={{ marginLeft: 'auto', fontSize: 9, padding: '1px 4px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-2)', color: 'var(--t1)', cursor: 'pointer' }}
+            title="Assign folder"
+          >
+            <option value="">No folder</option>
+            {(folders || []).filter(f => f !== 'all').map(f => (
+              <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+            ))}
+          </select>
         </div>
 
         {confirmDelete ? (
@@ -131,14 +188,166 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
   )
 }
 
+function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename, onOverwrite, onArchive, icon, onIconChange, onIconRemove }) {
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(project.name)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  const d = project.design || {}
+  const colors = d.palette?.colors || []
+  const headingFamily = d.fonts?.heading?.family || 'Inter'
+  const bodyFamily = d.fonts?.body?.family || 'Inter'
+  const base = d.typeScale?.base || 16
+  const ratio = d.typeScale?.ratio || 1.25
+  const created = new Date(project.createdAt)
+  const updated = new Date(project.updatedAt || project.createdAt)
+  const fmtDate = (dt) => dt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+
+  return (
+    <div className="fg-detail-overlay" onClick={onClose}>
+      <div className="il-detail proj-detail" onClick={e => e.stopPropagation()}>
+        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="fg-detail-section" style={{ marginBottom: 24 }}>
+          {editing ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input value={name} onChange={e => setName(e.target.value)} autoFocus style={{ flex: 1, fontSize: 16, fontWeight: 700 }} />
+              <button className="btn btn-s" onClick={() => { onRename(project.id, name); setEditing(false) }}>Save</button>
+              <button className="btn btn-s" onClick={() => { setName(project.name); setEditing(false) }}>Cancel</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {icon && <img src={icon} alt="" className="proj-detail-icon" />}
+              <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', flex: 1 }}>{project.name}</h2>
+              {isCurrent && (
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '3px 8px', borderRadius: 4 }}>Loaded</span>
+              )}
+              {project.archived && (
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', background: 'var(--bg-2)', color: 'var(--t2)', padding: '3px 8px', borderRadius: 4 }}>Archived</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Palette · {colors.length} colour{colors.length === 1 ? '' : 's'}</div>
+          {colors.length ? (
+            <div className="proj-detail-swatches">
+              {colors.map((c, i) => (
+                <div key={i} className="proj-detail-swatch">
+                  <div className="proj-detail-swatch-chip" style={{ background: c }} />
+                  <span className="proj-detail-swatch-hex">{(c || '').toUpperCase()}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--t2)' }}>No colours saved.</p>
+          )}
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Typography</div>
+          <div className="proj-detail-meta">
+            <div className="proj-detail-meta-row"><span>Heading</span><strong style={{ fontFamily: `'${headingFamily}', sans-serif` }}>{headingFamily}</strong></div>
+            <div className="proj-detail-meta-row"><span>Body</span><strong style={{ fontFamily: `'${bodyFamily}', sans-serif` }}>{bodyFamily}</strong></div>
+            <div className="proj-detail-meta-row"><span>Type scale</span><strong>{base}px / {Number(ratio).toFixed(2)}×</strong></div>
+          </div>
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Icon</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {icon ? (
+              <img src={icon} alt="Project icon" className="proj-detail-icon-lg" />
+            ) : (
+              <div className="proj-detail-icon-lg proj-detail-icon-empty">—</div>
+            )}
+            <label className="btn btn-s" style={{ cursor: 'pointer' }}>
+              {icon ? 'Replace' : 'Upload icon'}
+              <input
+                type="file"
+                accept="image/svg+xml,image/png"
+                style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) onIconChange?.(f); e.target.value = '' }}
+              />
+            </label>
+            {icon && (
+              <button className="btn btn-s" onClick={() => onIconRemove?.()} style={{ color: 'var(--err)' }}>
+                Remove icon
+              </button>
+            )}
+            <span style={{ fontSize: 11, color: 'var(--t2)' }}>SVG or PNG, max 128px / 50KB.</span>
+          </div>
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Details</div>
+          <div className="proj-detail-meta">
+            <div className="proj-detail-meta-row"><span>Created</span><strong>{fmtDate(created)}</strong></div>
+            <div className="proj-detail-meta-row"><span>Updated</span><strong>{fmtDate(updated)}</strong></div>
+            <div className="proj-detail-meta-row"><span>Tints</span><strong>{d.tints?.scale?.length || 0}</strong></div>
+          </div>
+        </div>
+
+        {confirmDelete ? (
+          <div className="fg-detail-actions" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--err)', lineHeight: 1.5 }}>
+              Type <strong>{project.name}</strong> to confirm deletion:
+            </div>
+            <input value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder={project.name} autoFocus style={{ fontSize: 13 }} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-s"
+                onClick={() => { onDelete(project.id); setConfirmDelete(false); setDeleteConfirmText(''); onClose() }}
+                disabled={deleteConfirmText !== project.name}
+                style={{ color: '#fff', background: deleteConfirmText === project.name ? 'var(--err)' : 'var(--bg-2)', borderColor: 'var(--err)', opacity: deleteConfirmText === project.name ? 1 : 0.5 }}
+              >
+                Permanently delete
+              </button>
+              <button className="btn btn-s" onClick={() => { setConfirmDelete(false); setDeleteConfirmText('') }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div className="fg-detail-actions">
+            {!project.archived && (
+              <>
+                <button className="btn btn-accent" onClick={() => { onLoad(project.id); onClose() }}>
+                  {isCurrent ? 'Reload' : 'Load'}
+                </button>
+                <button className="btn" onClick={() => onOverwrite(project.id)} title="Save current design over this project">Overwrite</button>
+              </>
+            )}
+            <button className="btn" onClick={() => setEditing(true)}>Rename</button>
+            <button className="btn" onClick={() => { onArchive(project.id); onClose() }}>{project.archived ? 'Restore' : 'Archive'}</button>
+            <button className="btn" onClick={() => setConfirmDelete(true)} style={{ color: 'var(--err)' }}>Delete</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Projects({ toast }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { t } = useI18n()
+  const { isPro } = useSubscription()
   const {
     design, projects, canSaveProjects,
     saveProject, loadProject, deleteProject, renameProject, overwriteProject,
-    archiveProject, resetDesign,
+    archiveProject, resetDesign, setPalette,
   } = useProject()
   const [newName, setNewName] = useState('')
   const [showSaveForm, setShowSaveForm] = useState(false)
@@ -146,6 +355,46 @@ export default function Projects({ toast }) {
   const [showArchived, setShowArchived] = useState(false)
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('recent')
+  const [activeFolder, setActiveFolder] = useState('all')
+  const [detailProject, setDetailProject] = useState(null)
+  const [view, setView] = useState('mine')
+  const FOLDERS = ['all', 'brand', 'app', 'marketing', 'personal']
+  const folderLimit = isPro ? 10 : 3
+  const [folderMap, setFolderMap] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('vs-project-folders') || '{}') } catch { return {} }
+  })
+  const setProjectFolder = (projectId, folder) => {
+    const next = { ...folderMap, [projectId]: folder }
+    setFolderMap(next)
+    try { localStorage.setItem('vs-project-folders', JSON.stringify(next)) } catch {}
+  }
+  const [iconMap, setIconMap] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('vs-project-icons') || '{}') } catch { return {} }
+  })
+  const setProjectIcon = (projectId, dataUrl) => {
+    const next = { ...iconMap, [projectId]: dataUrl }
+    setIconMap(next)
+    try { localStorage.setItem('vs-project-icons', JSON.stringify(next)) } catch {}
+  }
+  const removeProjectIcon = (projectId) => {
+    const next = { ...iconMap }
+    delete next[projectId]
+    setIconMap(next)
+    try { localStorage.setItem('vs-project-icons', JSON.stringify(next)) } catch {}
+  }
+  const handleIconUpload = async (projectId, file) => {
+    try {
+      const dataUrl = await readIconFile(file)
+      setProjectIcon(projectId, dataUrl)
+      toast('Icon updated')
+    } catch (e) {
+      toast(e.message || 'Could not set icon')
+    }
+  }
+  const handleUseCommunityPalette = (cp) => {
+    setPalette({ colors: cp.colors, activeIdx: 0, base: cp.colors[0] })
+    toast(`Loaded palette from "${cp.name}"`)
+  }
 
   const sortFn = (a, b) => {
     if (sortBy === 'name') return a.name.localeCompare(b.name)
@@ -153,7 +402,8 @@ export default function Projects({ toast }) {
     return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
   }
   const matchesSearch = (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
-  const activeProjects = projects.filter(p => !p.archived && matchesSearch(p)).sort(sortFn)
+  const matchesFolder = (p) => activeFolder === 'all' || (folderMap[p.id] || '').toLowerCase() === activeFolder
+  const activeProjects = projects.filter(p => !p.archived && matchesSearch(p) && matchesFolder(p)).sort(sortFn)
   const archivedProjects = projects.filter(p => p.archived && matchesSearch(p)).sort(sortFn)
 
   if (!canSaveProjects) {
@@ -235,11 +485,14 @@ export default function Projects({ toast }) {
         <div style={{ display: 'flex', gap: 8 }}>
           {!showSaveForm && (
             <button className="btn btn-accent" onClick={() => setShowSaveForm(true)}>
-              + Add to Project
+              Save Current Design
             </button>
           )}
           <button className="btn" onClick={() => { resetDesign(); setLoadedId(null); toast('Reset to defaults') }} title="Start fresh">
-            New
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            New Project
           </button>
         </div>
       </div>
@@ -267,23 +520,73 @@ export default function Projects({ toast }) {
         </div>
       )}
 
-      {projects.length > 0 && (
-        <div className="proj-toolbar">
-          <div className="proj-search">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects…" />
-            {search && <button onClick={() => setSearch('')} aria-label="Clear">&times;</button>}
+      <div className="proj-tabs">
+        <button className={`proj-tab${view === 'mine' ? ' active' : ''}`} onClick={() => setView('mine')}>My Projects</button>
+        <button className={`proj-tab${view === 'community' ? ' active' : ''}`} onClick={() => setView('community')}>Community</button>
+      </div>
+
+      {view === 'community' ? (
+        <>
+          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>
+            Explore design systems shared by the community. Load a palette to start from it.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
+            {COMMUNITY_PROJECTS.map(cp => (
+              <div key={cp.id} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '20px 18px', background: cp.colors[0] }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 8px rgba(0,0,0,.2)' }}>
+                    {cp.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.85)', marginTop: 2, textShadow: '0 1px 6px rgba(0,0,0,.2)' }}>
+                    by {cp.author}
+                  </div>
+                </div>
+                <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <ColorRow colors={cp.colors} />
+                  <div style={{ fontSize: 10, color: 'var(--t2)' }}>{cp.colors.length} colours</div>
+                  <button className="btn btn-s btn-accent" onClick={() => handleUseCommunityPalette(cp)} style={{ fontSize: 11, marginTop: 'auto' }}>
+                    Use this palette
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-          <label className="proj-sort">
-            <span>Sort</span>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              <option value="recent">Recently updated</option>
-              <option value="created">Newest</option>
-              <option value="name">Name (A–Z)</option>
-            </select>
-          </label>
-          <span className="proj-count">{projects.filter(p => !p.archived).length} project{projects.filter(p => !p.archived).length === 1 ? '' : 's'}</span>
-        </div>
+        </>
+      ) : (
+      <>
+      {projects.length > 0 && (
+        <>
+          <div className="proj-folders">
+            {FOLDERS.map(f => (
+              <button key={f} className={`proj-folder-chip${activeFolder === f ? ' active' : ''}`} onClick={() => setActiveFolder(f)}>
+                {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+            <span className="proj-folder-note">
+              {isPro ? (
+                <>{folderLimit} folders</>
+              ) : (
+                <>{folderLimit} folders · <NavLink to="/pricing">Upgrade for 10</NavLink></>
+              )}
+            </span>
+          </div>
+          <div className="proj-toolbar">
+            <div className="proj-search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects…" />
+              {search && <button onClick={() => setSearch('')} aria-label="Clear">&times;</button>}
+            </div>
+            <label className="proj-sort">
+              <span>Sort</span>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="recent">Recently updated</option>
+                <option value="created">Newest</option>
+                <option value="name">Name (A–Z)</option>
+              </select>
+            </label>
+            <span className="proj-count">{activeProjects.length} project{activeProjects.length === 1 ? '' : 's'}</span>
+          </div>
+        </>
       )}
 
       {projects.length === 0 ? (
@@ -311,6 +614,11 @@ export default function Projects({ toast }) {
                 onRename={handleRename}
                 onOverwrite={handleOverwrite}
                 onArchive={handleArchive}
+                folder={folderMap[p.id]}
+                onFolderChange={setProjectFolder}
+                folders={FOLDERS}
+                onOpenDetail={setDetailProject}
+                icon={iconMap[p.id]}
               />
             ))}
           </div>
@@ -335,6 +643,11 @@ export default function Projects({ toast }) {
                       onRename={handleRename}
                       onOverwrite={handleOverwrite}
                       onArchive={handleArchive}
+                      folder={folderMap[p.id]}
+                      onFolderChange={setProjectFolder}
+                      folders={FOLDERS}
+                      onOpenDetail={setDetailProject}
+                      icon={iconMap[p.id]}
                     />
                   ))}
                 </div>
@@ -342,6 +655,24 @@ export default function Projects({ toast }) {
             </div>
           )}
         </>
+      )}
+      </>
+      )}
+
+      {detailProject && (
+        <ProjectDetail
+          project={detailProject}
+          isCurrent={loadedId === detailProject.id}
+          onClose={() => setDetailProject(null)}
+          onLoad={handleLoad}
+          onDelete={handleDelete}
+          onRename={(id, name) => { handleRename(id, name); setDetailProject(prev => prev ? { ...prev, name: name.trim() } : prev) }}
+          onOverwrite={handleOverwrite}
+          onArchive={handleArchive}
+          icon={iconMap[detailProject.id]}
+          onIconChange={(file) => handleIconUpload(detailProject.id, file)}
+          onIconRemove={() => { removeProjectIcon(detailProject.id); toast('Icon removed') }}
+        />
       )}
     </div>
   )

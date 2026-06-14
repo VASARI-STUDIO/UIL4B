@@ -167,10 +167,24 @@ export default function ImageConverter({ toast }) {
           <input ref={fileInputRef} type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
         </div>
         {originals.length === 0 && (
-          <div className="ic-howto">
-            <div className="ic-howto-step"><span>1</span> Drop or select one or more images — everything is processed locally in your browser, nothing is uploaded.</div>
-            <div className="ic-howto-step"><span>2</span> Pick an output format and quality. <strong>WebP</strong> gives the best size-to-quality ratio for the web; use PNG for transparency-critical graphics.</div>
-            <div className="ic-howto-step"><span>3</span> Optionally cap the max width to shrink oversized photos, then download individually or all together as a ZIP.</div>
+          <div className="ic-empty">
+            <div className="ic-empty-icon">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
+            <h2 className="ic-empty-title">Drop images to convert</h2>
+            <p className="ic-empty-text">
+              Convert your images to <strong>WebP</strong>, <strong>PNG</strong>, or <strong>JPEG</strong>,
+              compress them to shrink file size, and resize oversized photos — all locally in your browser.
+            </p>
+            <div className="ic-howto">
+              <div className="ic-howto-step"><span>1</span> Drop or select one or more images — everything is processed locally in your browser, nothing is uploaded.</div>
+              <div className="ic-howto-step"><span>2</span> Pick an output format and quality. <strong>WebP</strong> gives the best size-to-quality ratio for the web; use PNG for transparency-critical graphics.</div>
+              <div className="ic-howto-step"><span>3</span> Optionally cap the max width to shrink oversized photos, then download individually or all together as a ZIP.</div>
+            </div>
           </div>
         )}
       </div>
@@ -225,12 +239,20 @@ export default function ImageConverter({ toast }) {
               const newTotal = done.reduce((s, p) => s + p.convertedSize, 0)
               const saved = origTotal - newTotal
               const savedPct = origTotal ? Math.round((saved / origTotal) * 100) : 0
+              const barPct = Math.max(0, Math.min(100, savedPct))
               return (
-                <div className="ic-stats">
-                  <div className="ic-stat"><span className="ic-stat-val">{done.length}</span><span className="ic-stat-label">Images</span></div>
-                  <div className="ic-stat"><span className="ic-stat-val">{formatBytes(origTotal)}</span><span className="ic-stat-label">Original</span></div>
-                  <div className="ic-stat"><span className="ic-stat-val">{formatBytes(newTotal)}</span><span className="ic-stat-label">Converted</span></div>
-                  <div className="ic-stat"><span className="ic-stat-val" style={{ color: saved >= 0 ? 'var(--ok)' : 'var(--err)' }}>{saved >= 0 ? '−' : '+'}{Math.abs(savedPct)}%</span><span className="ic-stat-label">{formatBytes(Math.abs(saved))} saved</span></div>
+                <div className="ic-stats-wrap">
+                  <div className="ic-stats">
+                    <div className="ic-stat"><span className="ic-stat-val">{done.length}</span><span className="ic-stat-label">Images</span></div>
+                    <div className="ic-stat"><span className="ic-stat-val">{formatBytes(origTotal)}</span><span className="ic-stat-label">Original size</span></div>
+                    <div className="ic-stat"><span className="ic-stat-val">{formatBytes(newTotal)}</span><span className="ic-stat-label">Converted size</span></div>
+                    <div className="ic-stat"><span className="ic-stat-val" style={{ color: saved >= 0 ? 'var(--ok)' : 'var(--err)' }}>{saved >= 0 ? '−' : '+'}{Math.abs(savedPct)}%</span><span className="ic-stat-label">{formatBytes(Math.abs(saved))} saved</span></div>
+                  </div>
+                  {saved > 0 && (
+                    <div className="ic-savings-bar" title={`${savedPct}% smaller after conversion`}>
+                      <div className="ic-savings-fill" style={{ width: barPct + '%' }} />
+                    </div>
+                  )}
                 </div>
               )
             })()}
