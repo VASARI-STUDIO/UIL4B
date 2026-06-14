@@ -340,6 +340,7 @@ export default function ColorStudio({ onCopy }) {
   const [baseColor, setBaseColor] = useState(() => design?.palette?.base || '#2563EB')
   const [harmony, setHarmony] = useState(() => design?.palette?.harmony || 'analogous')
   const [extraColors, setExtraColors] = useState(() => design?.palette?.extraColors || [])
+  const [overrides, setOverrides] = useState(() => design?.palette?.overrides || {})
   const [stateColors, setStateColors] = useState(() => design?.states || { success: 4, warning: 4, error: 4, info: 4 })
   const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
   const [cssExpanded, setCssExpanded] = useState(false)
@@ -379,13 +380,15 @@ export default function ColorStudio({ onCopy }) {
   }, [SECTIONS])
 
   const colors = generateHarmony(baseColor, harmony)
-  const allColors = [...colors, ...extraColors]
+  // Per-index manual overrides applied on top of the harmony-generated colours.
+  const resolvedColors = colors.map((c, i) => overrides[i] || c)
+  const allColors = [...resolvedColors, ...extraColors]
 
   // Sync palette state to ProjectContext (full design persistence)
   useEffect(() => {
-    setPalette({ base: baseColor, harmony, extraColors, activeIdx: activeColorIdx, colors: allColors })
+    setPalette({ base: baseColor, harmony, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseColor, harmony, extraColors, activeColorIdx, allColors.join(',')])
+  }, [baseColor, harmony, extraColors, JSON.stringify(overrides), activeColorIdx, allColors.join(',')])
 
   useEffect(() => {
     setStates(stateColors)
@@ -669,11 +672,19 @@ ${stateVars}
     const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
     setBaseColor(hex)
     setExtraColors([])
+    setOverrides({})
+    setActiveColorIdx(0)
+  }, [])
+
+  const resetPalette = useCallback(() => {
+    setBaseColor('#2563EB')
+    setHarmony('analogous')
+    setExtraColors([])
+    setOverrides({})
     setActiveColorIdx(0)
   }, [])
 
   const [addMenuOpen, setAddMenuOpen] = useState(false)
-  const editColorRef = useRef(null)
   const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
   const [gradPresetsExpanded, setGradPresetsExpanded] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
@@ -715,20 +726,33 @@ ${stateVars}
     setAddMenuOpen(false)
   }
 
+  // The native <input type="color"> fires onChange continuously while the user
+  // drags inside the picker, and a real 'change' event only once on commit.
+  // We append a single swatch on the first onChange of a session, then update
+  // that same swatch in place for the rest of the drag — and reset the session
+  // on commit so the next pick adds a fresh swatch instead of clobbering.
+  const addSessionRef = useRef(null)
   const addCustomColor = (hex) => {
-    setExtraColors([...extraColors, hex])
+    if (addSessionRef.current == null) {
+      addSessionRef.current = extraColors.length
+      setExtraColors([...extraColors, hex])
+    } else {
+      const at = addSessionRef.current
+      setExtraColors(extraColors.map((c, i) => (i === at ? hex : c)))
+    }
   }
+  const endAddSession = useCallback((node) => {
+    if (!node) return
+    node.addEventListener('change', () => { addSessionRef.current = null })
+  }, [])
 
   const editPaletteColor = (idx, hex) => {
-    if (idx < colors.length) {
-      const overrides = [...extraColors]
-      const overrideIdx = idx - colors.length
-      if (overrideIdx >= 0) {
-        overrides[overrideIdx] = hex
-        setExtraColors(overrides)
-      } else {
-        setExtraColors([...extraColors, hex])
-      }
+    if (idx === 0) {
+      // Index 0 is the base colour itself — keep it as the source of truth.
+      setBaseColor(hex)
+    } else if (idx < colors.length) {
+      // Override a harmony-generated swatch in place (visible everywhere).
+      setOverrides(prev => ({ ...prev, [idx]: hex }))
     } else {
       const eIdx = idx - colors.length
       setExtraColors(extraColors.map((c, i) => i === eIdx ? hex : c))
@@ -788,12 +812,14 @@ ${stateVars}
   const applyBrand = (brand) => {
     setBaseColor(brand.colors[0])
     setExtraColors(brand.colors.slice(5))
+    setOverrides({})
     setActiveColorIdx(0)
   }
 
   const applyDesignSystem = (ds) => {
     setBaseColor(ds.base)
     setExtraColors(ds.colors.slice(1))
+    setOverrides({})
     setActiveColorIdx(0)
   }
 
@@ -896,6 +922,12 @@ ${stateVars}
             </svg>
             Random
           </button>
+          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); resetPalette() }} title="Reset palette to default" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+            </svg>
+            Reset
+          </button>
           <div className="cs-add-wrap" ref={addMenuRef} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
             <button className="btn btn-s" onClick={() => setAddMenuOpen(!addMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               + Add Colour
@@ -906,7 +938,7 @@ ${stateVars}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px' }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                     Pick Colour
-                    <input ref={editColorRef} type="color" value={baseColor}
+                    <input ref={endAddSession} type="color" value={baseColor}
                       onChange={e => addCustomColor(e.target.value)}
                       style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', padding: 0 }}
                     />
@@ -949,7 +981,7 @@ ${stateVars}
                   ref={colorRef}
                   type="color"
                   value={baseColor}
-                  onChange={e => { setBaseColor(e.target.value); trackColourPick(e.target.value) }}
+                  onChange={e => { setBaseColor(e.target.value); setOverrides({}); trackColourPick(e.target.value) }}
                   aria-label="Pick base colour"
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0, background: 'none', appearance: 'none', WebkitAppearance: 'none' }}
                 />
@@ -957,13 +989,13 @@ ${stateVars}
               <input
                 type="text" value={baseColor.toUpperCase()}
                 style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, width: 90 }}
-                onChange={e => { let v = e.target.value; if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-f]{6}$/i.test(v)) setBaseColor(v) }}
+                onChange={e => { let v = e.target.value; if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-f]{6}$/i.test(v)) { setBaseColor(v); setOverrides({}) } }}
               />
             </div>
             <div style={{ height: 28, width: 1, background: 'var(--border)' }} />
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {HARMS.map(h => (
-                <button key={h} className={`pt-t${harmony === h ? ' on' : ''}`} onClick={() => setHarmony(h)}
+                <button key={h} className={`pt-t${harmony === h ? ' on' : ''}`} onClick={() => { setHarmony(h); setOverrides({}) }}
                   style={{ padding: '5px 12px', fontSize: 11 }}
                 >{HARM_LABELS[h]}</button>
               ))}
@@ -996,16 +1028,11 @@ ${stateVars}
                     {color.toUpperCase()}
                   </div>
                 </div>
-                {(isExtra || harmony === 'custom') && (
-                  <input type="color" value={color}
-                    onChange={e => {
-                      if (!isExtra && harmony !== 'custom') setHarmony('custom')
-                      editPaletteColor(i, e.target.value)
-                    }}
-                    style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
-                    title="Edit colour"
-                  />
-                )}
+                <input type="color" value={color}
+                  onChange={e => editPaletteColor(i, e.target.value)}
+                  style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
+                  title="Edit colour"
+                />
                 <button onClick={(e) => { e.stopPropagation(); setInfoColor(color) }}
                   title="Colour details"
                   style={{ position: 'absolute', top: 4, right: isExtra ? 26 : 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 11, fontWeight: 700, fontStyle: 'italic', fontFamily: 'Georgia,serif', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
@@ -1030,7 +1057,7 @@ ${stateVars}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Add</span>
-              <input type="color" value={baseColor}
+              <input ref={endAddSession} type="color" value={baseColor}
                 onChange={e => addCustomColor(e.target.value)}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
               />
