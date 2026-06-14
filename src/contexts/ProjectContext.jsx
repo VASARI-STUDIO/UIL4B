@@ -122,13 +122,14 @@ export function ProjectProvider({ children }) {
     updateDesign({ gradient: patch })
   }, [updateDesign])
 
-  const saveProject = useCallback((name) => {
+  const saveProject = useCallback((name, opts = {}) => {
     if (!userKey) throw new Error('Sign in to save projects')
     const id = newId()
+    const snapshot = opts.blank ? DEFAULT_DESIGN : design
     const project = {
       id,
       name: name.trim() || `Project ${new Date().toLocaleDateString()}`,
-      design: JSON.parse(JSON.stringify(design)),
+      design: JSON.parse(JSON.stringify(snapshot)),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }

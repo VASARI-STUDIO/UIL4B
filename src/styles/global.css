@@ -2368,3 +2368,14 @@ img,svg,video{max-width:100%;height:auto}
 .proj-detail-icon{width:32px;height:32px;border-radius:6px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:2px}
 .proj-detail-icon-lg{width:56px;height:56px;border-radius:8px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:4px}
 .proj-detail-icon-empty{display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:20px}
+
+/* New project modal */
+.proj-new-modal{max-width:460px}
+.proj-new-folders{display:flex;flex-wrap:wrap;gap:6px}
+.proj-new-start{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.proj-new-start-opt{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-m);background:var(--bg-1);cursor:pointer;transition:border-color .15s,background .15s}
+.proj-new-start-opt:hover{border-color:var(--brand)}
+.proj-new-start-opt.active{border-color:var(--brand);background:var(--brand-bg)}
+.proj-new-start-opt strong{font-size:13px;font-weight:700;color:var(--t0)}
+.proj-new-start-opt span{font-size:11px;color:var(--t2);line-height:1.4}
+@media(max-width:520px){.proj-new-start{grid-template-columns:1fr}}
