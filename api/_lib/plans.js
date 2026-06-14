@@ -43,9 +43,11 @@ export function dailyLimitFor(plan, toolId) {
 }
 
 // Gemini model ids (called directly via the Generative Language API).
+// Alt-text uses gemini-2.5-flash for better image understanding.
+// Set GEMINI_ALT_TEXT_MODEL to override (e.g. back to gemini-2.5-flash-lite).
 const MODELS = {
-  free: { 'alt-text': 'gemini-2.5-flash-lite' },
-  pro: { 'alt-text': 'gemini-2.5-flash-lite' },
+  free: { 'alt-text': process.env.GEMINI_ALT_TEXT_MODEL || 'gemini-2.5-flash' },
+  pro: { 'alt-text': process.env.GEMINI_ALT_TEXT_MODEL || 'gemini-2.5-flash' },
 }
 
 export function modelFor(plan, toolId) {
