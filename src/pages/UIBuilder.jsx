@@ -38,6 +38,15 @@ const STYLE_PRESETS = [
   { id: 'flat', label: 'Flat', patch: { radius: 6, borderWidth: 1, shadowY: 0, shadowBlur: 0, shadowOpacity: 0, spacing: 12, fontWeight: 500 } },
 ]
 
+const SHADOW_STEPS = [
+  { label: 'None', y: 0, blur: 0, opacity: 0 },
+  { label: 'xs', y: 1, blur: 2, opacity: 5 },
+  { label: 'sm', y: 1, blur: 3, opacity: 8 },
+  { label: 'md', y: 4, blur: 8, opacity: 10 },
+  { label: 'lg', y: 8, blur: 24, opacity: 12 },
+  { label: 'xl', y: 20, blur: 40, opacity: 15 },
+]
+
 function hexToRgba(hex, opacity) {
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
@@ -171,7 +180,7 @@ function TokenField({ label, type, value, onChange, min, max, step }) {
   )
 }
 
-function TokenPanel({ tokens, setTokens, paletteColors }) {
+function TokenPanel({ tokens, setTokens, paletteColors, designFonts }) {
   const set = (k, v) => setTokens(prev => ({ ...prev, [k]: v }))
 
   return (
@@ -190,6 +199,14 @@ function TokenPanel({ tokens, setTokens, paletteColors }) {
               {p.label}
             </button>
           ))}
+        </div>
+      </div>
+      <div className="uib-token-group">
+        <div className="uib-token-group-label">Import from design</div>
+        <div className="uib-preset-chips">
+          <button type="button" className="uib-preset-chip" onClick={() => { if (paletteColors?.length) setTokens(prev => ({ ...prev, primary: paletteColors[0], surface: paletteColors[paletteColors.length - 1] || '#ffffff' })) }} title="Apply palette colours">Colours only</button>
+          <button type="button" className="uib-preset-chip" onClick={() => { if (designFonts?.heading?.family) setTokens(prev => ({ ...prev, fontFamily: `'${designFonts.heading.family}', system-ui, sans-serif` })) }} title="Apply typography">Typography only</button>
+          <button type="button" className="uib-preset-chip" onClick={() => { setTokens(prev => { const next = { ...prev }; if (paletteColors?.length) { next.primary = paletteColors[0]; next.surface = paletteColors[paletteColors.length - 1] || '#ffffff' }; if (designFonts?.heading?.family) next.fontFamily = `'${designFonts.heading.family}', system-ui, sans-serif`; return next }) }} title="Apply all design tokens">All</button>
         </div>
       </div>
       <div className="uib-token-group">
@@ -225,6 +242,19 @@ function TokenPanel({ tokens, setTokens, paletteColors }) {
       </div>
       <div className="uib-token-group">
         <div className="uib-token-group-label">Shadow</div>
+        <div className="uib-preset-chips">
+          {SHADOW_STEPS.map(s => (
+            <button
+              key={s.label}
+              type="button"
+              className="uib-preset-chip"
+              onClick={() => setTokens(prev => ({ ...prev, shadowY: s.y, shadowBlur: s.blur, shadowOpacity: s.opacity }))}
+              title={`Shadow ${s.label}: y=${s.y} blur=${s.blur} opacity=${s.opacity}%`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
         <TokenField label="Y Offset" value={tokens.shadowY} onChange={v => set('shadowY', v)} min={-20} max={20} />
         <TokenField label="Blur" value={tokens.shadowBlur} onChange={v => set('shadowBlur', v)} min={0} max={40} />
         <TokenField label="Opacity" value={tokens.shadowOpacity} onChange={v => set('shadowOpacity', v)} min={0} max={50} />
@@ -522,7 +552,7 @@ export default function UIBuilder({ onCopy, toast }) {
       )}
 
       <div className="uib-layout">
-        <TokenPanel tokens={tokens} setTokens={setTokens} paletteColors={palette?.colors} />
+        <TokenPanel tokens={tokens} setTokens={setTokens} paletteColors={palette?.colors} designFonts={fonts} />
 
         <div className="uib-components">
           {COMPONENT_SECTIONS.filter((_, i) => !guided || i === guidedStep).map(section => {
