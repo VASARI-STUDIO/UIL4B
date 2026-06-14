@@ -37,6 +37,7 @@ import Checkout from './pages/Checkout'
 import CheckoutReturn from './pages/CheckoutReturn'
 import FontGallery from './pages/FontGallery'
 import AltTextGenerator from './pages/AltTextGenerator'
+import AiPromptGenerator from './pages/AiPromptGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
 import BoxShadowGenerator from './pages/BoxShadowGenerator'
 import UIBuilder from './pages/UIBuilder'
@@ -99,6 +100,7 @@ export default function App() {
       '/icons': 'UI L4B | Icon Library',
       '/imgconvert': 'UI L4B | Image Converter',
       '/alt-text': 'UI L4B | Alt Text Generator',
+      '/ai-prompt': 'UI L4B | AI Prompt Generator',
       '/prompts': 'UI L4B | Prompt Library',
       '/emoji': 'UI L4B | Emoji Library',
       '/video-frames': 'UI L4B | Video to Frames',
@@ -182,6 +184,7 @@ export default function App() {
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
             <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
+            <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
             <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
             <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
