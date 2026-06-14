@@ -247,11 +247,15 @@ function TokenPanel({ tokens, setTokens, paletteColors, designFonts }) {
             <button
               key={s.label}
               type="button"
-              className="uib-preset-chip"
+              className="uib-shadow-chip"
               onClick={() => setTokens(prev => ({ ...prev, shadowY: s.y, shadowBlur: s.blur, shadowOpacity: s.opacity }))}
               title={`Shadow ${s.label}: y=${s.y} blur=${s.blur} opacity=${s.opacity}%`}
             >
-              {s.label}
+              <span
+                className="uib-shadow-swatch"
+                style={{ boxShadow: s.opacity ? `0px ${s.y}px ${s.blur}px rgba(0,0,0,${s.opacity / 100})` : 'none' }}
+              />
+              <span className="uib-shadow-chip-label">{s.label}</span>
             </button>
           ))}
         </div>
