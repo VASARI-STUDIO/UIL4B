@@ -676,6 +676,14 @@ ${stateVars}
     setActiveColorIdx(0)
   }, [])
 
+  const resetPalette = useCallback(() => {
+    setBaseColor('#2563EB')
+    setHarmony('analogous')
+    setExtraColors([])
+    setOverrides({})
+    setActiveColorIdx(0)
+  }, [])
+
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
   const [gradPresetsExpanded, setGradPresetsExpanded] = useState(false)
@@ -913,6 +921,12 @@ ${stateVars}
               <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10" /><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14" />
             </svg>
             Random
+          </button>
+          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); resetPalette() }} title="Reset palette to default" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+            </svg>
+            Reset
           </button>
           <div className="cs-add-wrap" ref={addMenuRef} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
             <button className="btn btn-s" onClick={() => setAddMenuOpen(!addMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
