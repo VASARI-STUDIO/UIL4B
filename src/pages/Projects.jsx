@@ -339,6 +339,110 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
   )
 }
 
+// Modal for starting a new project: capture name, folder, and starting point.
+function NewProjectModal({ folders, onClose, onCreate }) {
+  const [name, setName] = useState('')
+  const [folder, setFolder] = useState('')
+  const [start, setStart] = useState('blank')
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  const submit = () => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    onCreate({ name: trimmed, folder, blank: start === 'blank' })
+  }
+
+  const pickFolders = folders.filter(f => f !== 'all')
+
+  return (
+    <div className="fg-detail-overlay" onClick={onClose}>
+      <div className="il-detail proj-detail proj-new-modal" onClick={e => e.stopPropagation()}>
+        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="fg-detail-section" style={{ marginBottom: 20 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' }}>New project</h2>
+          <p style={{ fontSize: 13, color: 'var(--t2)', marginTop: 4 }}>
+            Give it a name and choose where to begin.
+          </p>
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Project name</div>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submit() }}
+            placeholder="e.g. Brand v1, Marketing site, Mobile app"
+            autoFocus
+            style={{ width: '100%', fontSize: 15, fontWeight: 600 }}
+          />
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Folder</div>
+          <div className="proj-new-folders">
+            <button
+              type="button"
+              className={`pl-chip${folder === '' ? ' active' : ''}`}
+              onClick={() => setFolder('')}
+            >
+              None
+            </button>
+            {pickFolders.map(f => (
+              <button
+                key={f}
+                type="button"
+                className={`pl-chip${folder === f ? ' active' : ''}`}
+                onClick={() => setFolder(f)}
+                style={{ textTransform: 'capitalize' }}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="fg-detail-section">
+          <div className="fg-detail-label">Start from</div>
+          <div className="proj-new-start">
+            <button
+              type="button"
+              className={`proj-new-start-opt${start === 'blank' ? ' active' : ''}`}
+              onClick={() => setStart('blank')}
+            >
+              <strong>Blank canvas</strong>
+              <span>Fresh defaults — palette, fonts, and scale reset.</span>
+            </button>
+            <button
+              type="button"
+              className={`proj-new-start-opt${start === 'current' ? ' active' : ''}`}
+              onClick={() => setStart('current')}
+            >
+              <strong>Current design</strong>
+              <span>Snapshot what you have open right now.</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="fg-detail-actions">
+          <button className="btn btn-accent" onClick={submit} disabled={!name.trim()}>Create project</button>
+          <button className="btn" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Projects({ toast }) {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -357,6 +461,7 @@ export default function Projects({ toast }) {
   const [sortBy, setSortBy] = useState('recent')
   const [activeFolder, setActiveFolder] = useState('all')
   const [detailProject, setDetailProject] = useState(null)
+  const [showNewModal, setShowNewModal] = useState(false)
   const [view, setView] = useState('mine')
   const FOLDERS = ['all', 'brand', 'app', 'marketing', 'personal']
   const folderLimit = isPro ? 10 : 3
@@ -442,6 +547,19 @@ export default function Projects({ toast }) {
     }
   }
 
+  const handleCreateNew = ({ name, folder, blank }) => {
+    try {
+      const id = saveProject(name, { blank })
+      if (folder) setProjectFolder(id, folder)
+      if (blank) resetDesign()
+      setLoadedId(id)
+      setShowNewModal(false)
+      toast(`Created "${name}"`)
+    } catch (e) {
+      toast(e.message || 'Failed to create project')
+    }
+  }
+
   const handleLoad = (id) => {
     loadProject(id)
     setLoadedId(id)
@@ -488,7 +606,7 @@ export default function Projects({ toast }) {
               Save Current Design
             </button>
           )}
-          <button className="btn" onClick={() => { resetDesign(); setLoadedId(null); toast('Reset to defaults') }} title="Start fresh">
+          <button className="btn" onClick={() => setShowNewModal(true)} title="Start a new project">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -672,6 +790,14 @@ export default function Projects({ toast }) {
           icon={iconMap[detailProject.id]}
           onIconChange={(file) => handleIconUpload(detailProject.id, file)}
           onIconRemove={() => { removeProjectIcon(detailProject.id); toast('Icon removed') }}
+        />
+      )}
+
+      {showNewModal && (
+        <NewProjectModal
+          folders={FOLDERS}
+          onClose={() => setShowNewModal(false)}
+          onCreate={handleCreateNew}
         />
       )}
     </div>
