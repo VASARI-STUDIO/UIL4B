@@ -503,24 +503,24 @@ function IconSearchDemo({ onView }) {
     timer.current = setTimeout(() => doSearch(q), 300)
   }
 
-  const flagCopied = (name) => {
-    setCopied(name)
+  const flagCopied = (id) => {
+    setCopied(id)
     clearTimeout(copyTimer.current)
-    copyTimer.current = setTimeout(() => setCopied(prev => (prev === name ? null : prev)), 1200)
+    copyTimer.current = setTimeout(() => setCopied(prev => (prev === id ? null : prev)), 1200)
   }
 
   const copyIcon = (icon) => {
     if (icon.cdn) {
       fetch(`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`)
         .then(r => r.text())
-        .then(s => { try { navigator.clipboard?.writeText(s) } catch { /* ignore */ } flagCopied(icon.name) })
+        .then(s => { try { navigator.clipboard?.writeText(s) } catch { /* ignore */ } flagCopied(icon.id) })
         .catch(() => { /* ignore */ })
     } else {
       const svg = icon.filled
         ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="${icon.d}"/></svg>`
         : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${icon.d}"/></svg>`
       try { navigator.clipboard?.writeText(svg) } catch { /* ignore */ }
-      flagCopied(icon.name)
+      flagCopied(icon.id)
     }
   }
 
@@ -537,7 +537,7 @@ function IconSearchDemo({ onView }) {
           <button
             key={`${idx}-${icon.id}`}
             type="button"
-            className={`landing-icontool-cell${copied === icon.name ? ' is-copied' : ''}`}
+            className={`landing-icontool-cell${copied === icon.id ? ' is-copied' : ''}`}
             onClick={() => copyIcon(icon)}
             title={`Copy ${icon.name}`}
           >
@@ -546,7 +546,7 @@ function IconSearchDemo({ onView }) {
             ) : (
               <svg viewBox="0 0 24 24" width="24" height="24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={icon.d} /></svg>
             )}
-            {copied === icon.name && (
+            {copied === icon.id && (
               <span className="landing-icontool-copied">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
               </span>
@@ -702,7 +702,7 @@ export default function Landing() {
           <div className="landing-tools-menu" ref={toolsMenuRef}>
             <button
               type="button"
-              className={`landing-tools-trigger${toolsOpen ? ' open' : ''}`}
+              className={`btn landing-tools-trigger${toolsOpen ? ' open' : ''}`}
               onClick={() => setToolsOpen(o => !o)}
               aria-expanded={toolsOpen}
               aria-haspopup="true"
@@ -724,7 +724,10 @@ export default function Landing() {
                       {catTools.map(tl => (
                         <button key={tl.id} type="button" className="landing-tools-item" onClick={() => openTool(tl.path)} role="menuitem">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{tl.icon}</svg>
-                          {tl.label}
+                          <span className="landing-tools-item-text">
+                            <span className="landing-tools-item-name">{tl.label}</span>
+                            {tl.description && <span className="landing-tools-item-desc">{tl.description}</span>}
+                          </span>
                         </button>
                       ))}
                     </div>

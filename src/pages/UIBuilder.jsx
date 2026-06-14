@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 
 // ── Design Tokens ────────────────────────────────────────────────────────────
@@ -22,6 +23,9 @@ const DEFAULT_TOKENS = {
   fontSize: 14,
   fontWeight: 500,
   spacing: 12,
+  btnPadX: 16,
+  btnPadY: 10,
+  letterSpacing: 0,
 }
 
 // Brand/style presets — patch the visual tokens to match a design language.
@@ -32,6 +36,15 @@ const STYLE_PRESETS = [
   { id: 'sharp', label: 'Sharp', patch: { radius: 0, borderWidth: 2, shadowY: 0, shadowBlur: 0, shadowOpacity: 0, spacing: 12, fontWeight: 600 } },
   { id: 'soft', label: 'Soft', patch: { radius: 20, borderWidth: 1, shadowY: 6, shadowBlur: 24, shadowOpacity: 10, spacing: 16, fontWeight: 500 } },
   { id: 'flat', label: 'Flat', patch: { radius: 6, borderWidth: 1, shadowY: 0, shadowBlur: 0, shadowOpacity: 0, spacing: 12, fontWeight: 500 } },
+]
+
+const SHADOW_STEPS = [
+  { label: 'None', y: 0, blur: 0, opacity: 0 },
+  { label: 'xs', y: 1, blur: 2, opacity: 5 },
+  { label: 'sm', y: 1, blur: 3, opacity: 8 },
+  { label: 'md', y: 4, blur: 8, opacity: 10 },
+  { label: 'lg', y: 8, blur: 24, opacity: 12 },
+  { label: 'xl', y: 20, blur: 40, opacity: 15 },
 ]
 
 function hexToRgba(hex, opacity) {
@@ -48,12 +61,13 @@ function shadow(t) {
 // ── Component Variant Data ────────────────────────────────────────────────────
 
 const BUTTON_VARIANTS = [
-  { id: 'solid', label: 'Solid', render: (t) => ({ background: t.primary, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
-  { id: 'outline', label: 'Outlined', render: (t) => ({ background: 'transparent', color: t.primary, border: `${t.borderWidth}px solid ${t.primary}`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
-  { id: 'ghost', label: 'Ghost', render: (t) => ({ background: 'transparent', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
-  { id: 'soft', label: 'Soft', render: (t) => ({ background: t.primary + '18', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
-  { id: 'gradient', label: 'Gradient', render: (t) => ({ background: `linear-gradient(135deg, ${t.primary}, ${t.primary}99)`, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
-  { id: 'glass', label: 'Glass', render: (t) => ({ background: t.primary + '22', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: t.primary, border: `1px solid ${t.primary}55`, borderRadius: t.radius, padding: `${t.spacing}px ${t.spacing * 2}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'solid', label: 'Solid', render: (t) => ({ background: t.primary, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
+  { id: 'outline', label: 'Outlined', render: (t) => ({ background: 'transparent', color: t.primary, border: `${t.borderWidth}px solid ${t.primary}`, borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'ghost', label: 'Ghost', render: (t) => ({ background: 'transparent', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'soft', label: 'Soft', render: (t) => ({ background: t.primary + '18', color: t.primary, border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'gradient', label: 'Gradient', render: (t) => ({ background: `linear-gradient(135deg, ${t.primary}, ${t.primary}99)`, color: '#fff', border: 'none', borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', boxShadow: shadow(t), transition: 'all .15s' }) },
+  { id: 'glass', label: 'Glass', render: (t) => ({ background: t.primary + '22', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: t.primary, border: `1px solid ${t.primary}55`, borderRadius: t.radius, padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', transition: 'all .15s' }) },
+  { id: 'neumorph', label: 'Neumorphic', render: (t) => ({ background: t.surface, color: t.primary, border: 'none', borderRadius: Math.max(t.radius, 10), padding: `${t.btnPadY}px ${t.btnPadX}px`, fontFamily: t.fontFamily, fontSize: t.fontSize, fontWeight: 600, letterSpacing: `${t.letterSpacing}px`, cursor: 'pointer', boxShadow: `6px 6px 12px ${hexToRgba(t.text, 12)}, -6px -6px 12px ${hexToRgba('#ffffff', 70)}`, transition: 'all .15s' }) },
 ]
 
 const CARD_VARIANTS = [
@@ -89,6 +103,7 @@ const TABLE_VARIANTS = [
   { id: 'bordered', label: 'Bordered' },
   { id: 'minimal', label: 'Minimal' },
   { id: 'card', label: 'Card Rows' },
+  { id: 'dense', label: 'Dense' },
 ]
 
 const TAB_VARIANTS = [
@@ -165,7 +180,7 @@ function TokenField({ label, type, value, onChange, min, max, step }) {
   )
 }
 
-function TokenPanel({ tokens, setTokens }) {
+function TokenPanel({ tokens, setTokens, paletteColors, designFonts }) {
   const set = (k, v) => setTokens(prev => ({ ...prev, [k]: v }))
 
   return (
@@ -187,8 +202,31 @@ function TokenPanel({ tokens, setTokens }) {
         </div>
       </div>
       <div className="uib-token-group">
+        <div className="uib-token-group-label">Import from design</div>
+        <div className="uib-preset-chips">
+          <button type="button" className="uib-preset-chip" onClick={() => { if (paletteColors?.length) setTokens(prev => ({ ...prev, primary: paletteColors[0], surface: paletteColors[paletteColors.length - 1] || '#ffffff' })) }} title="Apply palette colours">Colours only</button>
+          <button type="button" className="uib-preset-chip" onClick={() => { if (designFonts?.heading?.family) setTokens(prev => ({ ...prev, fontFamily: `'${designFonts.heading.family}', system-ui, sans-serif` })) }} title="Apply typography">Typography only</button>
+          <button type="button" className="uib-preset-chip" onClick={() => { setTokens(prev => { const next = { ...prev }; if (paletteColors?.length) { next.primary = paletteColors[0]; next.surface = paletteColors[paletteColors.length - 1] || '#ffffff' }; if (designFonts?.heading?.family) next.fontFamily = `'${designFonts.heading.family}', system-ui, sans-serif`; return next }) }} title="Apply all design tokens">All</button>
+        </div>
+      </div>
+      <div className="uib-token-group">
         <div className="uib-token-group-label">Colours</div>
         <TokenField label="Primary" type="color" value={tokens.primary} onChange={v => set('primary', v)} />
+        {paletteColors?.length > 1 && (
+          <div className="uib-palette-row" title="Apply a palette colour as the primary (drives buttons, badges, accents)">
+            {paletteColors.slice(0, 6).map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`uib-palette-swatch${tokens.primary?.toLowerCase() === c.toLowerCase() ? ' active' : ''}`}
+                style={{ background: c }}
+                onClick={() => set('primary', c)}
+                title={c}
+                aria-label={`Use ${c} as primary`}
+              />
+            ))}
+          </div>
+        )}
         <TokenField label="Surface" type="color" value={tokens.surface} onChange={v => set('surface', v)} />
         <TokenField label="Text" type="color" value={tokens.text} onChange={v => set('text', v)} />
         <TokenField label="Subtle" type="color" value={tokens.textSub} onChange={v => set('textSub', v)} />
@@ -198,9 +236,25 @@ function TokenPanel({ tokens, setTokens }) {
         <TokenField label="Radius" value={tokens.radius} onChange={v => set('radius', v)} min={0} max={32} />
         <TokenField label="Border" value={tokens.borderWidth} onChange={v => set('borderWidth', v)} min={0} max={4} />
         <TokenField label="Spacing" value={tokens.spacing} onChange={v => set('spacing', v)} min={4} max={24} />
+        <TokenField label="Btn Pad X" value={tokens.btnPadX} onChange={v => set('btnPadX', v)} min={0} max={40} />
+        <TokenField label="Btn Pad Y" value={tokens.btnPadY} onChange={v => set('btnPadY', v)} min={0} max={32} />
+        <TokenField label="Letter Spacing" value={tokens.letterSpacing} onChange={v => set('letterSpacing', v)} min={-2} max={4} step={0.5} />
       </div>
       <div className="uib-token-group">
         <div className="uib-token-group-label">Shadow</div>
+        <div className="uib-preset-chips">
+          {SHADOW_STEPS.map(s => (
+            <button
+              key={s.label}
+              type="button"
+              className="uib-preset-chip"
+              onClick={() => setTokens(prev => ({ ...prev, shadowY: s.y, shadowBlur: s.blur, shadowOpacity: s.opacity }))}
+              title={`Shadow ${s.label}: y=${s.y} blur=${s.blur} opacity=${s.opacity}%`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
         <TokenField label="Y Offset" value={tokens.shadowY} onChange={v => set('shadowY', v)} min={-20} max={20} />
         <TokenField label="Blur" value={tokens.shadowBlur} onChange={v => set('shadowBlur', v)} min={0} max={40} />
         <TokenField label="Opacity" value={tokens.shadowOpacity} onChange={v => set('shadowOpacity', v)} min={0} max={50} />
@@ -247,17 +301,30 @@ function TogglePreview({ variant, tokens }) {
 
 function TablePreview({ variant, tokens }) {
   const rows = [
-    { name: 'Fan Speed', status: 'Permit', value: 'Auto' },
-    { name: 'Set Temp', status: 'Permit', value: '22°C' },
-    { name: 'Mode', status: 'Permit', value: 'Cool' },
-    { name: 'Fan On/Off', status: 'Permit', value: 'On' },
+    { name: 'Heading / H1', status: 'Ready', value: '32 / 700' },
+    { name: 'Body / Regular', status: 'Ready', value: '14 / 400' },
+    { name: 'Caption / Small', status: 'Draft', value: '11 / 500' },
+    { name: 'Label / Mono', status: 'Ready', value: '12 / 600' },
   ]
-  const cellBase = { padding: `${tokens.spacing}px ${tokens.spacing * 1.2}px`, fontFamily: tokens.fontFamily, fontSize: tokens.fontSize - 1, color: tokens.text }
+
+  const denseRows = [
+    { name: 'primary-500', status: 'Active', value: '#635BFF' },
+    { name: 'success-500', status: 'Active', value: '#10B981' },
+    { name: 'warning-400', status: 'Review', value: '#F59E0B' },
+    { name: 'danger-500', status: 'Active', value: '#EF4444' },
+    { name: 'neutral-200', status: 'Active', value: '#E5E7EB' },
+    { name: 'neutral-800', status: 'Active', value: '#1F2937' },
+  ]
+
+  const isDense = variant.id === 'dense'
+  const activeRows = isDense ? denseRows : rows
+  const denseFactor = isDense ? 0.6 : 1
+  const cellBase = { padding: `${tokens.spacing * denseFactor}px ${tokens.spacing * 1.2 * denseFactor}px`, fontFamily: tokens.fontFamily, fontSize: (tokens.fontSize - 1) * (isDense ? 0.85 : 1), color: tokens.text, lineHeight: isDense ? 1.2 : 'normal' }
 
   if (variant.id === 'card') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {rows.map((r, i) => (
+        {activeRows.map((r, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: tokens.surface, border: `${tokens.borderWidth}px solid ${tokens.surfaceBorder}`, borderRadius: tokens.radius, padding: `${tokens.spacing}px ${tokens.spacing * 1.2}px`, fontFamily: tokens.fontFamily, fontSize: tokens.fontSize - 1 }}>
             <span style={{ fontWeight: 600, color: tokens.text }}>{r.name}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -274,22 +341,22 @@ function TablePreview({ variant, tokens }) {
   const isBordered = variant.id === 'bordered'
 
   return (
-    <table style={{ width: '100%', borderCollapse: isBordered ? 'collapse' : 'separate', borderSpacing: 0, fontFamily: tokens.fontFamily, fontSize: tokens.fontSize - 1, borderRadius: tokens.radius, overflow: 'hidden', border: isBordered ? `${tokens.borderWidth}px solid ${tokens.surfaceBorder}` : 'none' }}>
+    <table style={{ width: '100%', borderCollapse: isBordered || isDense ? 'collapse' : 'separate', borderSpacing: 0, fontFamily: tokens.fontFamily, fontSize: (tokens.fontSize - 1) * (isDense ? 0.85 : 1), borderRadius: tokens.radius, overflow: 'hidden', border: isBordered || isDense ? `${tokens.borderWidth}px solid ${tokens.surfaceBorder}` : 'none' }}>
       <thead>
-        <tr style={{ background: isStriped || isBordered ? tokens.primary + '0d' : 'transparent', borderBottom: `2px solid ${tokens.surfaceBorder}` }}>
-          <th style={{ ...cellBase, fontWeight: 700, textAlign: 'left' }}>Property</th>
+        <tr style={{ background: isStriped || isBordered || isDense ? tokens.primary + '0d' : 'transparent', borderBottom: `2px solid ${tokens.surfaceBorder}` }}>
+          <th style={{ ...cellBase, fontWeight: 700, textAlign: 'left' }}>{isDense ? 'Token' : 'Type Style'}</th>
           <th style={{ ...cellBase, fontWeight: 700, textAlign: 'left' }}>Status</th>
-          <th style={{ ...cellBase, fontWeight: 700, textAlign: 'right' }}>Value</th>
+          <th style={{ ...cellBase, fontWeight: 700, textAlign: 'right' }}>{isDense ? 'Hex' : 'Size / Weight'}</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((r, i) => (
+        {activeRows.map((r, i) => (
           <tr key={i} style={{ background: isStriped && i % 2 === 1 ? '#f9fafb' : 'transparent', borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
-            <td style={{ ...cellBase, fontWeight: 500 }}>{r.name}</td>
+            <td style={{ ...cellBase, fontWeight: 500, fontFamily: isDense ? `'SF Mono', 'Fira Code', monospace` : tokens.fontFamily }}>{r.name}</td>
             <td style={cellBase}>
-              <span style={{ background: tokens.primary + '1a', color: tokens.primary, padding: '2px 10px', borderRadius: 999, fontSize: tokens.fontSize - 3, fontWeight: 700 }}>{r.status}</span>
+              <span style={{ background: tokens.primary + '1a', color: tokens.primary, padding: isDense ? '1px 7px' : '2px 10px', borderRadius: 999, fontSize: (tokens.fontSize - 3) * (isDense ? 0.9 : 1), fontWeight: 700 }}>{r.status}</span>
             </td>
-            <td style={{ ...cellBase, textAlign: 'right', color: tokens.textSub }}>{r.value}</td>
+            <td style={{ ...cellBase, textAlign: 'right', color: tokens.textSub, fontFamily: isDense ? `'SF Mono', 'Fira Code', monospace` : 'inherit' }}>{r.value}</td>
           </tr>
         ))}
       </tbody>
@@ -362,7 +429,16 @@ export default function UIBuilder({ onCopy, toast }) {
     alerts: 'soft',
   })
 
+  const [showIntro, setShowIntro] = useState(() => {
+    try { return !sessionStorage.getItem('vs-uib-intro-dismissed') } catch { return true }
+  })
+  const dismissIntro = () => {
+    setShowIntro(false)
+    try { sessionStorage.setItem('vs-uib-intro-dismissed', '1') } catch {}
+  }
+
   const [codeSection, setCodeSection] = useState(null)
+  const [codeMode, setCodeMode] = useState('css')
   const [guided, setGuided] = useState(false)
   const [guidedStep, setGuidedStep] = useState(0)
 
@@ -378,6 +454,22 @@ export default function UIBuilder({ onCopy, toast }) {
     const style = variant.render(tokens)
     return `.${sectionId.slice(0, -1)} {\n${styleToCSS(style)}\n}`
   }, [tokens, selections])
+
+  const generateHTML = useCallback((sectionId) => {
+    const variant = COMPONENT_SECTIONS.find(s => s.id === sectionId)?.variants.find(v => v.id === selections[sectionId])
+    const label = variant?.label || ''
+    switch (sectionId) {
+      case 'buttons': return `<button class="btn btn-${selections.buttons}">\n  ${label} Button\n</button>\n\n<button class="btn btn-${selections.buttons}" disabled>\n  Disabled\n</button>\n\n<button class="btn btn-${selections.buttons} btn-sm">\n  Small\n</button>`
+      case 'cards': return `<div class="card card-${selections.cards}">\n  <h3 class="card-title">Card Title</h3>\n  <p class="card-body">Card content goes here.</p>\n</div>`
+      case 'inputs': return `<div class="form-group">\n  <label class="form-label" for="email">Email address</label>\n  <input class="input input-${selections.inputs}" id="email" type="email" placeholder="name@example.com" />\n</div>`
+      case 'badges': return `<span class="badge badge-${selections.badges}">Active</span>\n<span class="badge badge-${selections.badges} badge-success">Success</span>\n<span class="badge badge-${selections.badges} badge-warning">Warning</span>`
+      case 'toggles': return `<label class="toggle toggle-${selections.toggles}">\n  <input type="checkbox" />\n  <span class="toggle-track">\n    <span class="toggle-thumb"></span>\n  </span>\n</label>`
+      case 'tables': return `<table class="table table-${selections.tables}">\n  <thead>\n    <tr>\n      <th>Type Style</th>\n      <th>Status</th>\n      <th>Size / Weight</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>Heading / H1</td>\n      <td><span class="badge">Ready</span></td>\n      <td>32 / 700</td>\n    </tr>\n    <tr>\n      <td>Body / Regular</td>\n      <td><span class="badge">Ready</span></td>\n      <td>14 / 400</td>\n    </tr>\n  </tbody>\n</table>`
+      case 'tabs': return `<div class="tabs tabs-${selections.tabs}">\n  <button class="tab active">Overview</button>\n  <button class="tab">Settings</button>\n  <button class="tab">Users</button>\n</div>`
+      case 'alerts': return `<div class="alert alert-info alert-${selections.alerts}">\n  <span class="alert-icon">!</span>\n  <div>\n    <div class="alert-title">Heads up</div>\n    <div class="alert-body">This is an informational message.</div>\n  </div>\n</div>`
+      default: return `<!-- ${sectionId} -->`
+    }
+  }, [selections])
 
   const copyCSS = useCallback((sectionId) => {
     const css = generateCSS(sectionId)
@@ -398,9 +490,18 @@ export default function UIBuilder({ onCopy, toast }) {
     <div className="sec">
       <div className="sec-h">
         <div className="sec-h-eyebrow">UI Builder <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', padding: '2px 8px', borderRadius: 100, background: 'var(--brand-bg)', color: 'var(--brand)', marginLeft: 6, verticalAlign: 'middle' }}>ALPHA</span></div>
-        <h1>Component Designer</h1>
+        <h1>Component Designer <span className="uib-alpha-tag">Alpha</span></h1>
         <p>Design dashboard components with live previews. Pick styles, tune tokens, copy CSS.</p>
       </div>
+
+      {showIntro && (
+        <div className="uib-intro">
+          <span>UI Builder is in alpha — components are generated from your design tokens. Missing a component? <Link to="/feedback">Send feedback</Link>.</span>
+          <button className="uib-intro-close" onClick={dismissIntro} aria-label="Dismiss">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      )}
 
       {/* Guided mode toggle */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -451,7 +552,7 @@ export default function UIBuilder({ onCopy, toast }) {
       )}
 
       <div className="uib-layout">
-        <TokenPanel tokens={tokens} setTokens={setTokens} />
+        <TokenPanel tokens={tokens} setTokens={setTokens} paletteColors={palette?.colors} designFonts={fonts} />
 
         <div className="uib-components">
           {COMPONENT_SECTIONS.filter((_, i) => !guided || i === guidedStep).map(section => {
@@ -564,7 +665,16 @@ export default function UIBuilder({ onCopy, toast }) {
 
                 {/* Code output */}
                 {codeSection === section.id && (
-                  <pre className="uib-code"><code>{generateCSS(section.id)}</code></pre>
+                  <div>
+                    <div className="uib-code-tabs">
+                      <button className={`uib-code-tab${codeMode === 'css' ? ' active' : ''}`} onClick={() => setCodeMode('css')}>CSS</button>
+                      <button className={`uib-code-tab${codeMode === 'html' ? ' active' : ''}`} onClick={() => setCodeMode('html')}>HTML</button>
+                      <button className="btn-xs" style={{ marginLeft: 'auto' }} onClick={() => { const code = codeMode === 'css' ? generateCSS(section.id) : generateHTML(section.id); navigator.clipboard.writeText(code); if (toast) toast(`${codeMode.toUpperCase()} copied`) }} title="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+                      </button>
+                    </div>
+                    <pre className="uib-code"><code>{codeMode === 'css' ? generateCSS(section.id) : generateHTML(section.id)}</code></pre>
+                  </div>
                 )}
               </div>
             )
@@ -574,7 +684,16 @@ export default function UIBuilder({ onCopy, toast }) {
           <div className="uib-export-bar">
             <button className="btn btn-s" onClick={copyAllCSS}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
-              Copy Full Design System CSS
+              Copy Full CSS
+            </button>
+            <button className="btn btn-s" onClick={() => {
+              const html = COMPONENT_SECTIONS.map(s => `<!-- ${s.label} -->\n${generateHTML(s.id)}`).join('\n\n')
+              navigator.clipboard.writeText(html)
+              if (onCopy) onCopy(html)
+              if (toast) toast('Full HTML copied')
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+              Copy Full HTML
             </button>
           </div>
         </div>

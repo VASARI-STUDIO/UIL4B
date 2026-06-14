@@ -1,5 +1,7 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+
+const PAGE_SIZE = 200
 
 const CATEGORY_KEYWORDS = {
   Smileys: ['smile', 'happy', 'sad', 'angry', 'face', 'laugh', 'cry', 'love', 'think', 'sick', 'cool', 'wink', 'tongue', 'skull', 'ghost', 'robot', 'devil', 'poop', 'scared', 'nervous', 'silly', 'party', 'nerd', 'sleepy', 'disguise', 'vomit', 'hot', 'cold', 'dizzy', 'explode', 'cowboy', 'clown', 'alien', 'demon'],
@@ -37,6 +39,8 @@ export default function EmojiLibrary({ onCopy }) {
   const [activeCat, setActiveCat] = useState(null)
   const [copied, setCopied] = useState(null)
   const [skinTone, setSkinTone] = useState('')
+  const [visible, setVisible] = useState(PAGE_SIZE)
+  const sentinelRef = useRef(null)
 
   const allCategories = EMOJI_DATA.map(d => d.cat)
 
@@ -50,6 +54,49 @@ export default function EmojiLibrary({ onCopy }) {
       return { ...group, emojis: catMatch ? group.emojis : '' }
     }).filter(g => parseEmojis(g.emojis).length > 0)
   }, [search, activeCat])
+
+  // Pre-parse each group's emoji array and compute the total emoji count so we
+  // can window the render and drive the infinite-scroll sentinel.
+  const parsedGroups = useMemo(
+    () => filteredData.map(g => ({ cat: g.cat, emojis: parseEmojis(g.emojis) })),
+    [filteredData]
+  )
+  const filteredCount = useMemo(
+    () => parsedGroups.reduce((sum, g) => sum + g.emojis.length, 0),
+    [parsedGroups]
+  )
+
+  // Build the windowed list of sections: only render up to `visible` emoji,
+  // truncating the section that straddles the boundary.
+  const shownGroups = useMemo(() => {
+    const out = []
+    let budget = visible
+    for (const g of parsedGroups) {
+      if (budget <= 0) break
+      const slice = g.emojis.slice(0, budget)
+      out.push({ cat: g.cat, total: g.emojis.length, emojis: slice })
+      budget -= slice.length
+    }
+    return out
+  }, [parsedGroups, visible])
+
+  const hasMore = visible < filteredCount
+
+  // Reset the window whenever the filter (search or category) changes. Handled
+  // in the change handlers below so it stays out of an effect.
+  const setSearchReset = useCallback((val) => { setSearch(val); setVisible(PAGE_SIZE) }, [])
+  const setCatReset = useCallback((cat) => { setActiveCat(cat); setVisible(PAGE_SIZE) }, [])
+
+  // Infinite scroll — reveal another page as the sentinel comes into view.
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) setVisible(v => Math.min(v + PAGE_SIZE, filteredCount))
+    }, { rootMargin: '600px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [filteredCount])
 
   const handleCopy = useCallback((emoji) => {
     const text = skinTone ? emoji + skinTone : emoji
@@ -69,6 +116,7 @@ export default function EmojiLibrary({ onCopy }) {
         <p>Browse and copy emojis for your designs. Click any emoji to copy it.</p>
       </div>
 
+      <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'var(--bg-0)', paddingTop: 8, paddingBottom: 8 }}>
       <div className="pl-toolbar">
         <div className="pl-search-wrap">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -79,10 +127,10 @@ export default function EmojiLibrary({ onCopy }) {
             className="pl-search"
             placeholder="Search emojis..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => setSearchReset(e.target.value)}
           />
           {search && (
-            <button className="pl-search-clear" onClick={() => setSearch('')}>
+            <button className="pl-search-clear" onClick={() => setSearchReset('')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           )}
@@ -103,31 +151,31 @@ export default function EmojiLibrary({ onCopy }) {
         </div>
 
         <div className="pl-chips">
-          <button className={`pl-chip${!activeCat ? ' active' : ''}`} onClick={() => setActiveCat(null)}>
+          <button className={`pl-chip${!activeCat ? ' active' : ''}`} onClick={() => setCatReset(null)}>
             All ({totalCount})
           </button>
           {allCategories.map(cat => (
             <button
               key={cat}
               className={`pl-chip${activeCat === cat ? ' active' : ''}`}
-              onClick={() => setActiveCat(activeCat === cat ? null : cat)}
+              onClick={() => setCatReset(activeCat === cat ? null : cat)}
             >{cat}</button>
           ))}
         </div>
       </div>
+      </div>
 
       <div className="emoji-sections">
-        {filteredData.map(group => {
-          const emojis = parseEmojis(group.emojis)
-          if (!emojis.length) return null
+        {shownGroups.map(group => {
+          if (!group.emojis.length) return null
           return (
             <section key={group.cat} className="emoji-section">
               <div className="emoji-section-head">
                 <h3>{group.cat}</h3>
-                <span className="emoji-section-count">{emojis.length}</span>
+                <span className="emoji-section-count">{group.total}</span>
               </div>
               <div className="emoji-grid">
-                {emojis.map((emoji, i) => (
+                {group.emojis.map((emoji, i) => (
                   <button
                     key={i}
                     className={`emoji-cell${copied === emoji ? ' copied' : ''}`}
@@ -142,6 +190,8 @@ export default function EmojiLibrary({ onCopy }) {
           )
         })}
       </div>
+
+      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
     </div>
   )
 }

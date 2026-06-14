@@ -109,15 +109,13 @@ function GalleryCard({ font, onSelect, index, inCompare, onToggleCompare }) {
 function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
   const [text, setText] = useState(PANGRAM)
   const [size, setSize] = useState(40)
-  const [weightMode, setWeightMode] = useState('heading') // 'heading' | 'regular'
+  const [weight, setWeight] = useState(700)
 
   useEffect(() => {
     fonts.forEach(f => loadFont(f.family, f.variants))
   }, [fonts])
 
-  const weightFor = (f) => weightMode === 'regular'
-    ? (f.variants.includes(400) ? 400 : f.variants[0])
-    : hw(f)
+  const weightFor = () => weight
 
   return (
     <div className="fg-detail-overlay" onClick={onClose}>
@@ -146,9 +144,9 @@ function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
             <span>{size}px</span>
             <input type="range" min="12" max="96" value={size} onChange={e => setSize(+e.target.value)} />
           </div>
-          <div className="fg-compare-toggle">
-            <button className={weightMode === 'heading' ? 'active' : ''} onClick={() => setWeightMode('heading')}>Bold</button>
-            <button className={weightMode === 'regular' ? 'active' : ''} onClick={() => setWeightMode('regular')}>Regular</button>
+          <div className="fg-compare-control">
+            <span>{weight}</span>
+            <input type="range" min="100" max="900" step="100" value={weight} onChange={e => setWeight(+e.target.value)} />
           </div>
         </div>
 
@@ -310,7 +308,7 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
 
         <div className="fg-detail-section">
           <div className="fg-detail-label">Character Set</div>
-          <div className="fg-charset" style={{ fontFamily: fam, fontWeight: hw(font) }}>
+          <div className="fg-charset" style={{ fontFamily: fam, fontWeight: previewWeight }}>
             <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
             <div>abcdefghijklmnopqrstuvwxyz</div>
             <div>0123456789 !@#$%^&*()+-=</div>
