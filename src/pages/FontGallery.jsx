@@ -308,7 +308,7 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
 
         <div className="fg-detail-section">
           <div className="fg-detail-label">Character Set</div>
-          <div className="fg-charset" style={{ fontFamily: fam, fontWeight: hw(font) }}>
+          <div className="fg-charset" style={{ fontFamily: fam, fontWeight: previewWeight }}>
             <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
             <div>abcdefghijklmnopqrstuvwxyz</div>
             <div>0123456789 !@#$%^&*()+-=</div>
