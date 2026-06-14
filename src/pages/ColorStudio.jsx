@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, describeColor, T_LABELS } from '../utils/colors'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, hexToHsv, mixHex, describeColor, T_LABELS } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
 import { trackColourPick } from '../utils/analytics'
@@ -188,8 +188,22 @@ function snap(value, target, threshold = 3) {
   return Math.abs(value - target) <= threshold ? target : value
 }
 
-// Coolors-style detail popup — full breakdown of a single colour with every
-// notation, contrast ratings, a shade ramp, and inline editing.
+function colorPsychology(h, s, l) {
+  if (s < 10) {
+    if (l > 85) return { mood: 'Clean, minimal', audience: 'Luxury, tech, healthcare', pros: ['Clean and modern', 'Universal appeal', 'Great for backgrounds'], cons: ['Can feel sterile', 'Low visual impact alone'] }
+    if (l < 20) return { mood: 'Authoritative, bold', audience: 'Premium, editorial, fashion', pros: ['Conveys sophistication', 'High contrast pairing', 'Timeless feel'], cons: ['Can feel heavy', 'Needs lighter accents'] }
+    return { mood: 'Balanced, neutral', audience: 'Corporate, professional', pros: ['Versatile and safe', 'Easy to pair', 'Professional feel'], cons: ['Non-distinctive', 'Needs accent colours'] }
+  }
+  if (h < 30) return { mood: 'Energetic, urgent', audience: 'Food, retail, entertainment', pros: ['Grabs attention fast', 'Creates urgency', 'Evokes passion'], cons: ['Can feel aggressive', 'Overuse causes fatigue'] }
+  if (h < 60) return { mood: 'Warm, optimistic', audience: 'Creative, youth, wellness', pros: ['Friendly and inviting', 'Conveys warmth', 'High visibility'], cons: ['Hard to read as text', 'Can feel childish if overused'] }
+  if (h < 90) return { mood: 'Fresh, natural', audience: 'Eco, organic, outdoor', pros: ['Calming and fresh', 'Signals growth', 'Natural associations'], cons: ['Common — needs distinction', 'Cool tones may clash'] }
+  if (h < 150) return { mood: 'Trustworthy, calm', audience: 'Health, fintech, sustainability', pros: ['Balanced energy', 'Associated with health', 'Works light and dark'], cons: ['Less common in branding', 'Can feel clinical'] }
+  if (h < 210) return { mood: 'Reliable, professional', audience: 'Tech, finance, corporate', pros: ['Builds trust instantly', 'Universal appeal', 'Pairs with most palettes'], cons: ['Overused in tech', 'Can feel cold'] }
+  if (h < 270) return { mood: 'Creative, luxurious', audience: 'Beauty, gaming, premium', pros: ['Evokes creativity', 'Feels premium', 'Distinctive and memorable'], cons: ['Can feel mystical', 'Hard to match casually'] }
+  if (h < 330) return { mood: 'Playful, bold', audience: 'Fashion, beauty, social media', pros: ['Eye-catching and fun', 'Modern and energetic', 'Appeals to younger demos'], cons: ['Can feel unserious', 'Gender associations'] }
+  return { mood: 'Energetic, urgent', audience: 'Food, retail, entertainment', pros: ['Grabs attention fast', 'Creates urgency', 'Evokes passion'], cons: ['Can feel aggressive', 'Overuse causes fatigue'] }
+}
+
 function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
   const ref = useRef(null)
   useEffect(() => {
@@ -203,16 +217,26 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
   const [h, s, l] = hexToHsl(color)
   const [r, g, b] = hexToRgb(color)
   const [c, m, y, k] = hexToCmyk(color)
+  const [hv, sv, bv] = hexToHsv(color)
   const fg = textColorForBg(color)
   const onWhite = contrastRatio(color, '#FFFFFF')
   const onBlack = contrastRatio(color, '#000000')
   const grade = (ratio) => ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA Large' : 'Fail'
-  const shades = Array.from({ length: 9 }, (_, i) => hslToHex(h, s, Math.round(8 + i * 10.5)))
+
+  // Text-on-this-colour: how readable white vs black text is over the colour.
+  const whiteText = contrastRatio('#FFFFFF', color)
+  const blackText = contrastRatio('#000000', color)
+
+  // Tints (blended toward white) and shades (toward black), 5 steps each + base.
+  const tints = [0.85, 0.65, 0.45, 0.25].map(t => mixHex(color, '#FFFFFF', t)).reverse()
+  const darks = [0.15, 0.3, 0.45, 0.6, 0.75].map(t => mixHex(color, '#000000', t))
+  const tintShade = [...tints, color, ...darks]
 
   const rows = [
     ['HEX', color.toUpperCase()],
     ['RGB', `${r}, ${g}, ${b}`],
     ['HSL', `${h}, ${s}%, ${l}%`],
+    ['HSB', `${hv}, ${sv}%, ${bv}%`],
     ['CMYK', `${c}, ${m}, ${y}, ${k}`],
   ]
 
@@ -250,12 +274,57 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
               <em style={{ color: '#fff' }}>{grade(onBlack)}</em>
             </div>
           </div>
-          <div className="ci-shades-label">Shades</div>
-          <div className="ci-shades">
-            {shades.map((sh, i) => (
-              <button key={i} className="ci-shade" style={{ background: sh }} onClick={() => onCopy(sh)} title={sh.toUpperCase()} />
-            ))}
+          <div className="ci-shades-label">Text on this colour</div>
+          <div className="ci-text-contrast">
+            <div className="ci-text-row" style={{ background: color }}>
+              <span style={{ color: '#fff' }}>White text</span>
+              <span className="ci-text-ratio" style={{ color: '#fff' }}>
+                {whiteText.toFixed(1)}:1 {whiteText >= 4.5 ? '✓ AA' : whiteText >= 3 ? '✓ AA Large' : '✗'}
+              </span>
+            </div>
+            <div className="ci-text-row" style={{ background: color }}>
+              <span style={{ color: '#000' }}>Black text</span>
+              <span className="ci-text-ratio" style={{ color: '#000' }}>
+                {blackText.toFixed(1)}:1 {blackText >= 4.5 ? '✓ AA' : blackText >= 3 ? '✓ AA Large' : '✗'}
+              </span>
+            </div>
           </div>
+          <div className="ci-shades-label">Tints &amp; Shades</div>
+          <div className="ci-tintshade">
+            {tintShade.map((sh, i) => {
+              const isBase = sh.toLowerCase() === color.toLowerCase()
+              return (
+                <button
+                  key={i}
+                  className={'ci-ts-cell' + (isBase ? ' ci-ts-base' : '')}
+                  style={{ background: sh, color: textColorForBg(sh) }}
+                  onClick={() => onCopy(sh.toUpperCase())}
+                  title={'Copy ' + sh.toUpperCase()}
+                >
+                  <span className="ci-ts-hex">{sh.toUpperCase().replace('#', '')}</span>
+                </button>
+              )
+            })}
+          </div>
+          {(() => {
+            const psych = colorPsychology(h, s, l)
+            return (
+              <div className="ci-psychology">
+                <div className="ci-psych-header">
+                  <div className="ci-psych-row"><span className="ci-psych-label">Mood</span><span>{psych.mood}</span></div>
+                  <div className="ci-psych-row"><span className="ci-psych-label">Best for</span><span>{psych.audience}</span></div>
+                </div>
+                <div className="ci-psych-lists">
+                  <div className="ci-psych-list">
+                    {psych.pros.map((p, i) => <div key={i} className="ci-psych-item ci-psych-pro"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>{p}</div>)}
+                  </div>
+                  <div className="ci-psych-list">
+                    {psych.cons.map((c, i) => <div key={i} className="ci-psych-item ci-psych-con"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{c}</div>)}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>
@@ -606,6 +675,7 @@ ${stateVars}
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const editColorRef = useRef(null)
   const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
+  const [gradPresetsExpanded, setGradPresetsExpanded] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
 
@@ -647,7 +717,6 @@ ${stateVars}
 
   const addCustomColor = (hex) => {
     setExtraColors([...extraColors, hex])
-    setAddMenuOpen(false)
   }
 
   const editPaletteColor = (idx, hex) => {
@@ -697,11 +766,18 @@ ${stateVars}
     setAddMenuOpen(false)
   }
 
+  const addMenuRef = useRef(null)
   useEffect(() => {
     if (!addMenuOpen) return
-    const close = () => setAddMenuOpen(false)
-    document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
+    const close = (e) => {
+      // Don't close if the click is inside the add-menu (e.g. the native color picker)
+      if (addMenuRef.current && addMenuRef.current.contains(e.target)) return
+      setAddMenuOpen(false)
+    }
+    // Use mousedown instead of click so the native browser colour-picker
+    // popover (which doesn't dispatch mousedown on the document) stays open.
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
   }, [addMenuOpen])
 
   const removeExtra = (i) => {
@@ -820,7 +896,7 @@ ${stateVars}
             </svg>
             Random
           </button>
-          <div className="cs-add-wrap" onClick={(e) => e.stopPropagation()}>
+          <div className="cs-add-wrap" ref={addMenuRef} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
             <button className="btn btn-s" onClick={() => setAddMenuOpen(!addMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               + Add Colour
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -861,7 +937,8 @@ ${stateVars}
 
         {!collapsed.palette && <>
         {/* Base color + harmony row */}
-        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+        <div className="card" style={{ padding: '12px 16px 16px', marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 10 }}>Base colour & Harmony</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ position: 'relative', width: 42, height: 42, flexShrink: 0 }}>
@@ -941,6 +1018,24 @@ ${stateVars}
               </div>
             )
           })}
+          {/* Quick-add colour swatch */}
+          <div style={{ position: 'relative', flex: '0 0 80px', minWidth: 80 }}>
+            <label
+              style={{
+                borderRadius: 'var(--radius-s)', padding: '16px 12px',
+                minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                cursor: 'pointer', transition: 'background .15s, border-color .15s',
+                border: '2px dashed var(--border)', background: 'var(--hvr)',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Add</span>
+              <input type="color" value={baseColor}
+                onChange={e => addCustomColor(e.target.value)}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+              />
+            </label>
+          </div>
         </div>
 
         {/* Compact CSS output */}
@@ -1185,7 +1280,7 @@ ${stateVars}
                       onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
                     />
                     <input type="number" min="0" max="100" value={stop.position} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
-                      style={{ width: 60, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center' }}
+                      style={{ width: 52, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center', padding: '4px 2px', MozAppearance: 'textfield' }}
                     />
                     <span style={{ fontSize: 9, color: 'var(--t3)' }}>%</span>
                     {gradStops.length > 2 && (
@@ -1291,6 +1386,7 @@ ${stateVars}
                           <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                             <div style={{ width: 12, height: 12, borderRadius: 3, background: s.color, border: '1px solid var(--border)' }} />
                             <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{s.color.toUpperCase()}</span>
+                            <span style={{ fontSize: 8, color: 'var(--t3)' }}>{describeColor(s.color)}</span>
                             {si < g.stops.length - 1 && <span style={{ color: 'var(--t3)', fontSize: 9 }}>→</span>}
                           </div>
                         ))}
@@ -1308,9 +1404,16 @@ ${stateVars}
 
         {/* Community presets */}
         <div style={{ marginBottom: 14 }}>
-          <div className="seg-label">Community Presets</div>
+          <div className="seg-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            Community Presets
+            {GRAD_PRESETS.length > 6 && (
+              <button className="btn btn-s" style={{ fontSize: 10, padding: '3px 10px' }} onClick={() => setGradPresetsExpanded(!gradPresetsExpanded)}>
+                {gradPresetsExpanded ? 'Show less' : `Show all (${GRAD_PRESETS.length})`}
+              </button>
+            )}
+          </div>
           <div className="grad-presets">
-            {GRAD_PRESETS.map(g => {
+            {(gradPresetsExpanded ? GRAD_PRESETS : GRAD_PRESETS.slice(0, 6)).map(g => {
               const previewCss = `${g.type === 'Radial' ? 'radial-gradient' : g.type === 'Conic' ? 'conic-gradient' : 'linear-gradient'}(${g.type === 'Linear' ? g.angle + 'deg, ' : g.type === 'Conic' ? 'from ' + g.angle + 'deg, ' : ''}${g.stops.map(s => `${s.color} ${s.pos}%`).join(', ')})`
               return (
                 <div key={g.n} className="grad-p" onClick={() => applyPreset(g)}>
@@ -1340,11 +1443,13 @@ ${stateVars}
 
 
       {/* ── Flow CTA: Next step → Typography ── */}
-      <div style={{ textAlign: 'center', padding: '40px 0 20px', borderTop: '1px solid var(--border)' }}>
-        <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 14 }}>Colours done? Continue building your design system.</p>
-        <NavLink to="/typography" className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-          Continue to Typography
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+      <div className="cs-next-step">
+        <NavLink to="/fontpairs" className="cs-next-link">
+          <span>Next step</span>
+          <strong>Continue to Typography</strong>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+          </svg>
         </NavLink>
       </div>
       <UIKitGuide step="color" />

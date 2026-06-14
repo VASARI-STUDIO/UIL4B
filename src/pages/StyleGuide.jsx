@@ -17,6 +17,10 @@ const TOKENS = {
     { var: '--accent-strong', label: 'Accent Strong', group: 'accent' },
     { var: '--accent-soft', label: 'Accent Soft', group: 'accent' },
     { var: '--accent-bg', label: 'Accent Background', group: 'accent' },
+    { var: '--brand', label: 'Brand Blue', group: 'brand' },
+    { var: '--brand-soft', label: 'Brand Soft', group: 'brand' },
+    { var: '--brand-bg', label: 'Brand Background', group: 'brand' },
+    { var: '--brand-glow', label: 'Brand Glow', group: 'brand' },
     { var: '--ok', label: 'Success', group: 'status' },
     { var: '--warn', label: 'Warning', group: 'status' },
     { var: '--err', label: 'Error', group: 'status' },
@@ -108,13 +112,18 @@ export default function StyleGuide({ toast }) {
 
       {section === 'colours' && (
         <>
-          {['backgrounds', 'text', 'accent', 'borders', 'status'].map(group => (
+          {['backgrounds', 'text', 'accent', 'brand', 'borders', 'status'].map(group => (
             <div key={group} style={{ marginBottom: 32 }}>
               <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>{group}</h2>
               <div className="card" style={{ padding: 16 }}>
                 {TOKENS.colours.filter(c => c.group === group).map(c => (
                   <Swatch key={c.var} varName={c.var} label={c.label} onCopy={copy} />
                 ))}
+                {group === 'brand' && (
+                  <div style={{ fontSize: 11, color: 'var(--t1)', lineHeight: 1.7, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                    <strong style={{ color: 'var(--t0)' }}>Brand blue</strong> is a tech-company blue (#3B82F6 dark / #2563EB light) used <em>sparingly</em> on subtle, high-value moments to make the product feel polished: active toggle/chip states, the preview button, focus accents, and guided-flow hints. It is <strong>not</strong> a general-purpose accent — keep neutral <code style={{ fontFamily: 'var(--mono)' }}>--accent</code> for primary buttons and most UI. Reach for brand blue when an element should feel like a confident, intentional highlight.
+                  </div>
+                )}
               </div>
             </div>
           ))}
