@@ -54,6 +54,7 @@ const QUICK_ACTIONS = {
     { label: 'Convert to WebP', desc: 'Modern format, smaller files', to: '/imgconvert' },
     { label: 'Browse outline icons', desc: 'Iconify-powered search', to: '/icons' },
     { label: 'Extract video frames', desc: 'Pull stills from MP4/MOV', to: '/video-frames' },
+    { label: 'AI image prompts', desc: 'Generate prompts with DeepSeek', to: '/ai-prompt' },
   ],
   documentation: [
     { label: 'Visual hierarchy', desc: 'Layout fundamentals', to: '/docs-design' },
