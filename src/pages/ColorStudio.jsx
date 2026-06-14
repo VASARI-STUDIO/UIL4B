@@ -937,7 +937,8 @@ ${stateVars}
 
         {!collapsed.palette && <>
         {/* Base color + harmony row */}
-        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+        <div className="card" style={{ padding: '12px 16px 16px', marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 10 }}>Base colour & Harmony</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ position: 'relative', width: 42, height: 42, flexShrink: 0 }}>

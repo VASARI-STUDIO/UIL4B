@@ -724,7 +724,10 @@ export default function Landing() {
                       {catTools.map(tl => (
                         <button key={tl.id} type="button" className="landing-tools-item" onClick={() => openTool(tl.path)} role="menuitem">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{tl.icon}</svg>
-                          {tl.label}
+                          <span className="landing-tools-item-text">
+                            <span className="landing-tools-item-name">{tl.label}</span>
+                            {tl.description && <span className="landing-tools-item-desc">{tl.description}</span>}
+                          </span>
                         </button>
                       ))}
                     </div>
