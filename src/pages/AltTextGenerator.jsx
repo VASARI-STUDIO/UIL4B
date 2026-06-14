@@ -8,6 +8,12 @@ const ALT_TEXT_TOOL_ID = 'alt-text'
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif'
 const MAX_DIM = 1600
 
+const TONES = [
+  { id: 'concise', label: 'Concise', desc: '1–2 sentences, ~125 chars' },
+  { id: 'detailed', label: 'Detailed', desc: '2–4 sentences, up to 300 chars' },
+  { id: 'technical', label: 'Technical', desc: 'Data, labels, and precise details' },
+]
+
 function formatBytes(b) {
   if (b < 1024) return b + ' B'
   if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'
@@ -47,6 +53,7 @@ function fileToResizedBase64(file) {
 export default function AltTextGenerator({ toast }) {
   const [items, setItems] = useState([])
   const [context, setContext] = useState('')
+  const [tone, setTone] = useState('concise')
   const [busy, setBusy] = useState(false)
   const fileInputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -117,7 +124,7 @@ export default function AltTextGenerator({ toast }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined }),
+        body: JSON.stringify({ image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined, tone }),
       })
       const data = await r.json().catch(() => ({}))
       if (r.status === 429 && data.retryAfter && retries > 0) {
@@ -224,15 +231,33 @@ export default function AltTextGenerator({ toast }) {
         <div className="alt-dropzone-sub">JPG · PNG · WebP · HEIC · multiple files supported</div>
       </div>
 
-      <div className="alt-context">
-        <label htmlFor="alt-context-input">Context (optional)</label>
-        <input
-          id="alt-context-input"
-          type="text"
-          placeholder="e.g. blog post about hiking in the Alps"
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-        />
+      <div className="alt-options">
+        <div className="alt-context" style={{ flex: 1 }}>
+          <label htmlFor="alt-context-input">Context (optional)</label>
+          <input
+            id="alt-context-input"
+            type="text"
+            placeholder="e.g. blog post about hiking in the Alps"
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+          />
+        </div>
+        <div className="alt-context">
+          <label>Tone</label>
+          <div className="aipg-chips">
+            {TONES.map(t => (
+              <button
+                key={t.id}
+                type="button"
+                className={`pl-chip${tone === t.id ? ' active' : ''}`}
+                onClick={() => setTone(t.id)}
+                title={t.desc}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {items.length === 0 && (
