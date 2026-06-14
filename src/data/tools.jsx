@@ -52,7 +52,7 @@ export const CATEGORIES = [
     labelKey: 'categories.uiBuilder.label',
     descKey: 'categories.uiBuilder.description',
     label: 'UI Builder',
-    path: '/ui-builder',
+    path: '/ui-builder-cat',
     description: 'Design dashboard components with live previews and CSS export.',
     icon: (
       <>
