@@ -764,24 +764,29 @@ export default function Landing() {
                 {HERO_LOOP_SOURCES.map(s => <source key={s.src} src={s.src} type={s.type} />)}
               </video>
             )}
+            <span className="landing-hero-grid" />
             <span className="landing-hero-orb landing-hero-orb-1" />
             <span className="landing-hero-orb landing-hero-orb-2" />
             <span className="landing-hero-orb landing-hero-orb-3" />
             <span className="landing-hero-glow" />
           </div>
           <section className="landing-hero">
-            <span className="landing-eyebrow">A design toolkit for designers and developers</span>
+            <span className="landing-eyebrow landing-eyebrow-live">
+              <span className="landing-live-dot" aria-hidden="true" />
+              40+ design tools · one workspace
+            </span>
             <h1 className="landing-title">
-              Every design tool<br /><em>you reach for</em>, together.
+              Every design tool you reach for,<br />
+              <em>together in one place.</em>
             </h1>
             <p className="landing-lede">
-              UIL4B brings your most-used graphic design tools into one fast, unified workspace.
-              Build colour systems, pair fonts, convert images, write AI prompts and export a
-              complete design system without leaving the page.
+              UIL4B brings colour systems, type pairing, icons, image tools and AI
+              into one fast, unified workspace — and exports a complete design system
+              without leaving the page.
             </p>
             <div className="landing-cta-row">
               <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-                {loggedIn ? 'Resume where you left off' : 'Open the toolkit'}
+                {loggedIn ? 'Resume where you left off' : 'Open the toolkit — free'}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
               </button>
               <button type="button" className="btn landing-cta-secondary" onClick={signIn}>
@@ -791,8 +796,17 @@ export default function Landing() {
             <span className="landing-cta-note">
               {loggedIn
                 ? `Signed in${firstName ? ` as ${firstName}` : ''}. Pick up right where you left off.`
-                : 'No signup required to explore. Free tier included.'}
+                : 'No signup required to explore · Free tier included · No credit card'}
             </span>
+            <div className="landing-trust" aria-hidden="true">
+              <span className="landing-trust-item"><strong>200K+</strong> icons</span>
+              <span className="landing-trust-dot" />
+              <span className="landing-trust-item"><strong>1,200+</strong> Google Fonts</span>
+              <span className="landing-trust-dot" />
+              <span className="landing-trust-item"><strong>100%</strong> client-side</span>
+              <span className="landing-trust-dot" />
+              <span className="landing-trust-item"><strong>Free</strong> forever</span>
+            </div>
           </section>
 
           {/* Hero graphic — animated floating tool preview cards */}
@@ -800,7 +814,7 @@ export default function Landing() {
             <div className="landing-hero-card landing-hero-card-1">
               <div className="landing-hero-card-bar" />
               <div className="landing-hero-card-swatches">
-                <span style={{ background: '#635BFF' }} /><span style={{ background: '#0A2540' }} /><span style={{ background: '#00D4AA' }} /><span style={{ background: '#7A73FF' }} />
+                <span style={{ background: '#3B82F6' }} /><span style={{ background: '#0A2540' }} /><span style={{ background: '#00D4AA' }} /><span style={{ background: '#7A73FF' }} />
               </div>
             </div>
             <div className="landing-hero-card landing-hero-card-2">
