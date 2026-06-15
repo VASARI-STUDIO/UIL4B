@@ -6,8 +6,64 @@ export const config = {
 }
 
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || ''
+const GEMINI_KEY = process.env.GEMINI_API_KEY || ''
+const GEMINI_MODEL = 'gemini-2.0-flash'
 
 const SYSTEM_PROMPT = `You are an expert AI image prompt engineer. Generate a detailed, effective prompt for AI image generation. Include: subject description, art style, lighting, mood, composition, color palette, and technical quality tags. Format for the specified platform if given. Return ONLY the prompt text, no explanations.`
+
+// Primary provider: DeepSeek. Returns the prompt text, or throws on failure so
+// the caller can fall back to Gemini.
+async function callDeepSeek(userMessage) {
+  const r = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}` },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0.8,
+      max_tokens: 500,
+    }),
+  })
+  if (!r.ok) {
+    const text = await r.text()
+    const err = new Error(`DeepSeek ${r.status}`)
+    err.status = r.status
+    err.detail = text.slice(0, 500)
+    throw err
+  }
+  const data = await r.json()
+  const prompt = data?.choices?.[0]?.message?.content?.trim() || ''
+  if (!prompt) throw new Error('DeepSeek returned empty response')
+  return prompt
+}
+
+// Fallback provider: Gemini. Used only when DeepSeek is unavailable so the tool
+// keeps working until DeepSeek is fully proven in production.
+async function callGemini(userMessage) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: `${SYSTEM_PROMPT}\n\n${userMessage}` }] }],
+      generationConfig: { temperature: 0.8, maxOutputTokens: 500 },
+    }),
+  })
+  if (!r.ok) {
+    const text = await r.text()
+    const err = new Error(`Gemini ${r.status}`)
+    err.status = r.status
+    err.detail = text.slice(0, 500)
+    throw err
+  }
+  const data = await r.json()
+  const prompt = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim() || ''
+  if (!prompt) throw new Error('Gemini returned empty response')
+  return prompt
+}
 
 function todayStr() {
   const d = new Date()
@@ -20,7 +76,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  if (!DEEPSEEK_KEY) return res.status(500).json({ error: 'AI provider not configured' })
+  if (!DEEPSEEK_KEY && !GEMINI_KEY) return res.status(500).json({ error: 'AI provider not configured' })
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -64,49 +120,49 @@ export default async function handler(req, res) {
   if (style) userMessage += `\nStyle: ${style.slice(0, 200)}`
   if (platform) userMessage += `\nTarget platform: ${platform.slice(0, 100)}`
 
-  const url = 'https://api.deepseek.com/chat/completions'
+  // Try DeepSeek (primary), then fall back to Gemini so the tool stays up while
+  // DeepSeek is being proven out in production.
+  let prompt = ''
+  let provider = ''
+  let lastErr = null
+
+  if (DEEPSEEK_KEY) {
+    try {
+      prompt = await callDeepSeek(userMessage)
+      provider = 'deepseek'
+    } catch (err) {
+      lastErr = err
+      console.error('DeepSeek failed, will try Gemini fallback:', err.status || '', err.detail || err.message)
+    }
+  }
+
+  if (!prompt && GEMINI_KEY) {
+    try {
+      prompt = await callGemini(userMessage)
+      provider = 'gemini'
+    } catch (err) {
+      lastErr = err
+      console.error('Gemini fallback failed:', err.status || '', err.detail || err.message)
+    }
+  }
+
+  if (!prompt) {
+    if (lastErr?.status === 429) {
+      return res.status(429).json({ error: 'Rate limited by provider. Try again shortly.', retryAfter: 10 })
+    }
+    return res.status(502).json({ error: 'AI providers unavailable', detail: String(lastErr?.message || '').slice(0, 200) })
+  }
 
   try {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userMessage },
-        ],
-        temperature: 0.8,
-        max_tokens: 500,
-      }),
-    })
-
-    if (!r.ok) {
-      const text = await r.text()
-      console.error('DeepSeek error:', r.status, text.slice(0, 1000))
-      if (r.status === 429) {
-        return res.status(429).json({ error: 'Rate limited by provider. Try again shortly.', retryAfter: 10 })
-      }
-      return res.status(502).json({ error: `AI provider error (${r.status})` })
-    }
-
-    const data = await r.json()
-    const prompt = data?.choices?.[0]?.message?.content?.trim() || ''
-    if (!prompt) return res.status(502).json({ error: 'Empty response from AI provider' })
-
     const inc = await FieldValueIncrement(1)
     await usageRef.set({ [toolId]: inc }, { merge: true })
+  } catch { /* usage write best-effort */ }
 
-    return res.status(200).json({
-      prompt,
-      platform: platform || null,
-      plan: plan.id,
-      usage: { used: used + 1, limit, remaining: limit - used - 1 },
-    })
-  } catch (err) {
-    return res.status(500).json({ error: 'Request failed', detail: String(err).slice(0, 300) })
-  }
+  return res.status(200).json({
+    prompt,
+    provider,
+    platform: platform || null,
+    plan: plan.id,
+    usage: { used: used + 1, limit, remaining: limit - used - 1 },
+  })
 }
