@@ -14,14 +14,14 @@ CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k
 CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,TODO,Licensing check needed
 CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,TODO,Have CSS/HTML already
 CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,TODO,
-AIP-01,AI Image Prompt Generator,Nav,Rename to "AI Image Prompt Generator",S,2k,TODO,
+AIP-01,AI Image Prompt Generator,Nav,Rename to "AI Image Prompt Generator",S,2k,DONE,Label + page title updated
 AIP-02,AI Image Prompt Generator,Output,Convert to structured JSON prompt generator,L,30k,TODO,
 AIP-03,AI Image Prompt Generator,Rules,Preset JSON rule strings (ultra-real 4k / landscape) prefill fstop/fov/exposure/composition,L,35k,TODO,Multiple categories
 AIP-04,AI Image Prompt Generator,Rules,Multiple rule categories for max-quality renders,M,20k,TODO,
 AIP-05,AI Image Prompt Generator,Photo,Generate prompt from uploaded photo,L,30k,TODO,Scan -> rules
 AIP-06,AI Image Prompt Generator,Photo,Checkbox list of scanned rules (select/deselect) -> JSON,M,18k,TODO,
 AIP-07,AI Image Prompt Generator,UX,Media upload at TOP of upload popup w/ title field,S,6k,TODO,
-AIP-08,AI Image Prompt Generator,Status,Mark tool as ALPHA,S,2k,TODO,Applies to all AI gens
+AIP-08,AI Image Prompt Generator,Status,Mark tool as ALPHA,S,2k,DONE,alpha flag + nav badge
 AIP-09,AI Image Prompt Generator,Auth,Inline auth gate (stay on page),M,12k,IN PROGRESS,AuthGate component built (staged)
 AIW-01,AI Website Generator,New Section,Create new page + nav section,L,30k,NEEDS DECISION,Output type unclear
 AIW-02,AI Website Generator,Related,Group related tools under section,M,12k,TODO,
@@ -29,16 +29,16 @@ ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,TODO,
 ALT-02,Alt Text Generator,Quality,Strengthen alt-text knowledge / WCAG best practices in prompt,M,12k,TODO,
 DS-01,AI Backend,DeepSeek,Verify DeepSeek API connection,M,10k,TODO,Keep Gemini fallback until proven
 DS-02,AI Backend,DeepSeek,Reference deepseek-ai/awesome-deepseek-agent patterns,M,8k,TODO,
-NAV-01,Navigation,IA,Reorganize nav: submenus + subcategories,L,30k,TODO,
-NAV-02,Navigation,IA,Start all categories expanded,S,3k,TODO,
-NAV-03,Navigation,IA,Nest Style Guide under Admin,S,4k,TODO,
-NAV-04,Navigation,IA,Mark all AI generators as alpha in nav,S,4k,TODO,
-NAV-05,Navigation,IA,Ensure every category has correct pages nested,M,12k,TODO,
+NAV-01,Navigation,IA,Reorganize nav: submenus + subcategories,L,30k,DONE,AI Tools category added
+NAV-02,Navigation,IA,Start all categories expanded,S,3k,DONE,Already defaulted to true
+NAV-03,Navigation,IA,Nest Style Guide under Admin,S,4k,DONE,Grouped under admin footer
+NAV-04,Navigation,IA,Mark all AI generators as alpha in nav,S,4k,DONE,Purple alpha badge
+NAV-05,Navigation,IA,Ensure every category has correct pages nested,M,12k,DONE,AI tools moved to AI category
 NAV-06,Navigation,Theme,Use UI blue for more buttons/accents,M,12k,TODO,Site-wide
 DASH-01,Dashboard,Layout,Fix clipping on small/square screens,M,10k,TODO,Repeated report
-ADM-01,Admin,Dashboard,Rebuild to industry-standard dashboard (graphs/components),XL,50k,TODO,
-ADM-02,Admin,Filters,Add filters: data/timeframes/etc,M,15k,TODO,
-ADM-03,Admin,IA,Nest Style Guide here,S,3k,TODO,Dup of NAV-03
+ADM-01,Admin,Dashboard,Rebuild to industry-standard dashboard (graphs/components),XL,50k,DONE,SVG charts + time filters + CSS classes
+ADM-02,Admin,Filters,Add filters: data/timeframes/etc,M,15k,DONE,Today/7d/30d/All + type/status filters
+ADM-03,Admin,IA,Nest Style Guide here,S,3k,DONE,Dup of NAV-03 (done)
 COM-01,Community Hub,Media,Admin upload images/videos to prompts,L,30k,TODO,
 COM-02,Community Hub,Media,Convert uploads to WebP (high-quality/lossless),M,18k,TODO,Lossless vs size tradeoff
 COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,TODO,
@@ -64,9 +64,9 @@ DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,TODO,
 INF-01,Infra,Branches,Merge & tidy branches,M,8k,PARTIAL,3 stale branches need deletion (proxy blocks)
 INF-02,Infra,Code,Purge unused code,M,15k,TODO,
 INF-03,Infra,Deploy,Purge old Vercel deployments,M,10k,TODO,Vercel MCP connecting
-GOV-01,Process,CLAUDE.md,Update CLAUDE.md (verify-first + validation zones + Murphys law),M,12k,TODO,
+GOV-01,Process,CLAUDE.md,Update CLAUDE.md (verify-first + validation zones + Murphys law),M,12k,DONE,Created with all sections
 GOV-02,Process,Validation,Implement human validation zones (payments etc),M,12k,TODO,Needs zone list
-GOV-03,Process,Verify,Verify-before-build workflow,S,6k,TODO,
+GOV-03,Process,Verify,Verify-before-build workflow,S,6k,DONE,In CLAUDE.md
 GOV-04,Process,Testing,User testing plan,M,12k,PLANNING,
 GOV-05,Process,Agents,Subagent team (designer/dev/PM/QA/security/50-use-cases),L,30k,PLANNING,Orchestration
 META-01,Meta,Spec,Recreate implementation spec,L,25k,IN PROGRESS,This deliverable

@@ -63,6 +63,21 @@ export const CATEGORIES = [
     ),
   },
   {
+    id: 'ai',
+    labelKey: 'categories.ai.label',
+    descKey: 'categories.ai.description',
+    label: 'AI Tools',
+    path: '/ai-tools',
+    description: 'AI-powered generators for images, alt text, and more.',
+    icon: (
+      <>
+        <path d="M12 2v4" /><path d="M12 18v4" /><path d="M4.93 4.93l2.83 2.83" />
+        <path d="M16.24 16.24l2.83 2.83" /><path d="M2 12h4" /><path d="M18 12h4" />
+        <circle cx="12" cy="12" r="4" />
+      </>
+    ),
+  },
+  {
     id: 'documentation',
     labelKey: 'categories.documentation.label',
     descKey: 'categories.documentation.description',
@@ -107,8 +122,8 @@ export const TOOLS = [
   { id: 'icons', label: 'Icon Library', path: '/icons', category: 'imagery', description: 'Search thousands of icons via Iconify API.', keywords: ['icon', 'svg', 'symbol', 'iconify'], icon: (<><polygon points="12 2 15 9 22 9.3 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.3 9 9"/></>) },
   { id: 'emoji', label: 'Emoji Library', path: '/emoji', category: 'imagery', description: 'Browse and copy emojis organised by category.', keywords: ['emoji', 'emoticon', 'smiley', 'unicode', 'copy', 'symbol'], icon: (<><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>) },
   { id: 'imgconvert', label: 'Image Converter', path: '/imgconvert', category: 'imagery', description: 'Convert, compress and resize images locally.', keywords: ['image', 'convert', 'compress', 'resize', 'webp', 'png', 'jpg'], icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>) },
-  { id: 'alt-text', label: 'Alt Text Generator', path: '/alt-text', category: 'imagery', description: 'Generate accessible alt text for images in batch using AI.', keywords: ['alt', 'text', 'accessibility', 'a11y', 'ai', 'description', 'batch'], icon: (<><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l2-5 2 5"/><path d="M7.5 12.5h3"/><path d="M14 14V9h2.5a1.5 1.5 0 010 3H14"/></>) },
-  { id: 'ai-prompt', label: 'AI Prompt Generator', path: '/ai-prompt', category: 'imagery', description: 'Generate detailed AI image prompts from a design brief using DeepSeek.', keywords: ['ai', 'prompt', 'deepseek', 'image', 'generator', 'midjourney', 'dalle', 'stable diffusion'], icon: (<><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><circle cx="12" cy="12" r="4"/></>) },
+  { id: 'alt-text', label: 'Alt Text Generator', path: '/alt-text', category: 'ai', alpha: true, description: 'Generate accessible alt text for images in batch using AI.', keywords: ['alt', 'text', 'accessibility', 'a11y', 'ai', 'description', 'batch'], icon: (<><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l2-5 2 5"/><path d="M7.5 12.5h3"/><path d="M14 14V9h2.5a1.5 1.5 0 010 3H14"/></>) },
+  { id: 'ai-prompt', label: 'AI Image Prompt Generator', path: '/ai-prompt', category: 'ai', alpha: true, description: 'Generate detailed AI image prompts from a design brief using DeepSeek.', keywords: ['ai', 'prompt', 'deepseek', 'image', 'generator', 'midjourney', 'dalle', 'stable diffusion'], icon: (<><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><circle cx="12" cy="12" r="4"/></>) },
   { id: 'video-frames', label: 'Video to Frames', path: '/video-frames', category: 'imagery', description: 'Extract frames from video as images with scaling and compression controls.', keywords: ['video', 'frames', 'extract', 'screenshot', 'capture', 'export'], icon: (<><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 4v16"/><path d="M17 4v16"/><path d="M2 9h5"/><path d="M2 15h5"/><path d="M17 9h5"/><path d="M17 15h5"/></>) },
 
   { id: 'ui-builder', label: 'Component Designer', path: '/ui-builder', category: 'ui-builder', description: 'Design buttons, cards, tables, inputs and more with live previews.', keywords: ['ui', 'builder', 'component', 'button', 'card', 'table', 'input', 'dashboard', 'design'], icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>) },

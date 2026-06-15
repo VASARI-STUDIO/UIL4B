@@ -95,7 +95,7 @@ export default function AiPromptGenerator({ toast }) {
     <div className="sec">
       <div className="sec-h">
         <div className="sec-h-eyebrow">AI Tools</div>
-        <h1>Image Prompt <em>Generator</em></h1>
+        <h1>AI Image Prompt <em>Generator</em></h1>
         <p>
           Describe what you want and get a detailed AI image prompt optimised for your platform.
           {isPro ? ' Pro plan active.' : ''}
