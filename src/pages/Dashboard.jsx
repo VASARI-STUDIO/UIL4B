@@ -90,6 +90,7 @@ const CATEGORY_CLASS = {
   color: 'bento-feature bento-color',
   typography: 'bento-cat bento-typo',
   imagery: 'bento-cat bento-img',
+  ai: 'bento-cat bento-img',
   documentation: 'bento-cat',
 }
 
