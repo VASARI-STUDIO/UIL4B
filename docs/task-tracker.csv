@@ -58,7 +58,7 @@ ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto co
 ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,TODO,
 DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,TODO,
 DOC-02,Documentation,Marketing,Marketing documentation,M,15k,TODO,
-DOC-03,Documentation,Brand,Brand design docs (picking brand colour etc),M,15k,TODO,
+DOC-03,Documentation,Brand,Brand design docs (picking brand colour etc),M,15k,DONE,6 articles: strategy/60-30-10/psychology/palette/a11y/mistakes
 DOC-04,Documentation,AI,Claude tips doc (subagents/interview-me/build-a-skill/gotchas/commands),L,25k,TODO,
 DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,TODO,
 INF-01,Infra,Branches,Merge & tidy branches,M,8k,DONE,All PRs merged (10 73 76-80)

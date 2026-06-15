@@ -23,6 +23,7 @@ import PromptLibrary from './pages/PromptLibrary'
 import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
 import DocsThemes from './pages/DocsThemes'
+import DocsBrand from './pages/DocsBrand'
 import ExternalResources from './pages/ExternalResources'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
@@ -121,6 +122,7 @@ export default function App() {
       '/terms': 'UI L4B | Terms',
       '/admin': 'UI L4B | Admin',
       '/docs-themes': 'UI L4B | UI Design Themes',
+      '/docs-brand': 'UI L4B | Brand Colour Guide',
     }
     document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
   }, [location.pathname])
@@ -197,6 +199,7 @@ export default function App() {
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
             <Route path="/docs-themes" element={<DocsThemes />} />
+            <Route path="/docs-brand" element={<DocsBrand />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
             <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
             <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
