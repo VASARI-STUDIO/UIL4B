@@ -34,7 +34,7 @@ NAV-02,Navigation,IA,Start all categories expanded,S,3k,DONE,Already defaulted t
 NAV-03,Navigation,IA,Nest Style Guide under Admin,S,4k,DONE,Grouped under admin footer
 NAV-04,Navigation,IA,Mark all AI generators as alpha in nav,S,4k,DONE,Purple alpha badge
 NAV-05,Navigation,IA,Ensure every category has correct pages nested,M,12k,DONE,AI tools moved to AI category
-NAV-06,Navigation,Theme,Use UI blue for more buttons/accents,M,12k,TODO,Site-wide
+NAV-06,Navigation,Theme,Use UI blue for more buttons/accents,M,12k,DONE,btn-accent + btn-primary now brand blue site-wide
 DASH-01,Dashboard,Layout,Fix clipping on small/square screens,M,10k,DONE,overflow:hidden only on tall viewports
 ADM-01,Admin,Dashboard,Rebuild to industry-standard dashboard (graphs/components),XL,50k,DONE,SVG charts + time filters + CSS classes
 ADM-02,Admin,Filters,Add filters: data/timeframes/etc,M,15k,DONE,Today/7d/30d/All + type/status filters
