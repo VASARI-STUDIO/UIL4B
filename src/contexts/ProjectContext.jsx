@@ -14,7 +14,7 @@ export const DEFAULT_DESIGN = {
     activeIdx: 0,
     colors: ['#0051FF'],
   },
-  states: { success: 4, warning: 4, error: 4, info: 4 }, // Material palette default
+  states: { success: 1, warning: 0, error: 0, info: 0 },
   tints: { lumBias: 82, satDecay: 12, oled: true, scale: [] },
   gradient: {
     stops: [{ color: null, position: 0 }, { color: null, position: 100 }],

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, hexToHsv, mixHex, describeColor, T_LABELS } from '../utils/colors'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, hexToHsv, hexToOklch, mixHex, describeColor, T_LABELS } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useI18n } from '../contexts/I18nContext'
 import { trackColourPick } from '../utils/analytics'
@@ -75,9 +75,9 @@ const STATE_PRESETS = {
 const STATE_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
 
 const STATE_BUNDLES = [
+  { name: 'Default', config: { success: 1, warning: 0, error: 0, info: 0 } },
   { name: 'Material', config: { success: 4, warning: 4, error: 4, info: 4 } },
-  { name: 'Default', config: { success: 0, warning: 0, error: 0, info: 0 } },
-  { name: 'Vivid', config: { success: 1, warning: 2, error: 1, info: 0 } },
+  { name: 'Vivid', config: { success: 0, warning: 2, error: 1, info: 2 } },
   { name: 'Cool', config: { success: 2, warning: 1, error: 2, info: 1 } },
   { name: 'Warm', config: { success: 1, warning: 0, error: 0, info: 2 } },
   { name: 'Apple', config: { success: 3, warning: 3, error: 3, info: 3 } },
@@ -204,8 +204,22 @@ function colorPsychology(h, s, l) {
   return { mood: 'Energetic, urgent', audience: 'Food, retail, entertainment', pros: ['Grabs attention fast', 'Creates urgency', 'Evokes passion'], cons: ['Can feel aggressive', 'Overuse causes fatigue'] }
 }
 
+const CVD_MATRICES = {
+  protanopia:   [0.567,0.433,0, 0.558,0.442,0, 0,0.242,0.758],
+  deuteranopia: [0.625,0.375,0, 0.7,0.3,0, 0,0.3,0.7],
+  tritanopia:   [0.95,0.05,0, 0,0.433,0.567, 0,0.475,0.525],
+}
+function simCVD(hex, matrix) {
+  const [r, g, b] = hexToRgb(hex)
+  const nr = Math.round(matrix[0]*r + matrix[1]*g + matrix[2]*b)
+  const ng = Math.round(matrix[3]*r + matrix[4]*g + matrix[5]*b)
+  const nb = Math.round(matrix[6]*r + matrix[7]*g + matrix[8]*b)
+  return '#' + [nr,ng,nb].map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('')
+}
+
 function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
   const ref = useRef(null)
+  const [tab, setTab] = useState('values')
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
@@ -218,26 +232,46 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
   const [r, g, b] = hexToRgb(color)
   const [c, m, y, k] = hexToCmyk(color)
   const [hv, sv, bv] = hexToHsv(color)
+  const [oL, oC, oH] = hexToOklch(color)
   const fg = textColorForBg(color)
   const onWhite = contrastRatio(color, '#FFFFFF')
   const onBlack = contrastRatio(color, '#000000')
   const grade = (ratio) => ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA Large' : 'Fail'
+  const gradeBadge = (ratio) => {
+    const pass = ratio >= 4.5
+    const large = ratio >= 3
+    return { text: pass ? 'AA' : large ? 'AA Lg' : 'Fail', ok: pass || large, strong: pass }
+  }
 
-  // Text-on-this-colour: how readable white vs black text is over the colour.
   const whiteText = contrastRatio('#FFFFFF', color)
   const blackText = contrastRatio('#000000', color)
 
-  // Tints (blended toward white) and shades (toward black), 5 steps each + base.
   const tints = [0.85, 0.65, 0.45, 0.25].map(t => mixHex(color, '#FFFFFF', t)).reverse()
   const darks = [0.15, 0.3, 0.45, 0.6, 0.75].map(t => mixHex(color, '#000000', t))
   const tintShade = [...tints, color, ...darks]
 
   const rows = [
     ['HEX', color.toUpperCase()],
-    ['RGB', `${r}, ${g}, ${b}`],
-    ['HSL', `${h}, ${s}%, ${l}%`],
-    ['HSB', `${hv}, ${sv}%, ${bv}%`],
-    ['CMYK', `${c}, ${m}, ${y}, ${k}`],
+    ['RGB', `rgb(${r}, ${g}, ${b})`],
+    ['HSL', `hsl(${h}, ${s}%, ${l}%)`],
+    ['HSB', `hsb(${hv}, ${sv}%, ${bv}%)`],
+    ['CMYK', `cmyk(${c}%, ${m}%, ${y}%, ${k}%)`],
+    ['OKLCH', `oklch(${oL}% ${oC} ${oH})`],
+  ]
+
+  const cvdTypes = [
+    { key: 'protanopia', label: 'Protanopia', desc: 'Red-blind' },
+    { key: 'deuteranopia', label: 'Deuteranopia', desc: 'Green-blind' },
+    { key: 'tritanopia', label: 'Tritanopia', desc: 'Blue-blind' },
+  ]
+
+  const psych = colorPsychology(h, s, l)
+  const TABS = [
+    { id: 'values', label: 'Values' },
+    { id: 'contrast', label: 'Contrast' },
+    { id: 'shades', label: 'Shades' },
+    { id: 'vision', label: 'Vision' },
+    { id: 'usage', label: 'Usage' },
   ]
 
   return (
@@ -252,79 +286,146 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
             <input type="color" value={color} onChange={e => onChange(e.target.value)} />
           </label>
         </div>
+        <div className="ci-tabs">
+          {TABS.map(t => (
+            <button key={t.id} className={`ci-tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+          ))}
+        </div>
         <div className="ci-body">
-          <div className="ci-values">
-            {rows.map(([label, val]) => (
-              <button key={label} className="ci-value-row" onClick={() => onCopy(val)} title="Copy">
-                <span className="ci-value-label">{label}</span>
-                <span className="ci-value-val">{val}</span>
-                <CopyIcon size={11} />
-              </button>
-            ))}
-          </div>
-          <div className="ci-contrast">
-            <div className="ci-contrast-cell" style={{ background: '#fff', color }}>
-              <span>On white</span>
-              <strong>{onWhite.toFixed(2)}</strong>
-              <em>{grade(onWhite)}</em>
-            </div>
-            <div className="ci-contrast-cell" style={{ background: '#000', color }}>
-              <span style={{ color: '#fff' }}>On black</span>
-              <strong style={{ color: '#fff' }}>{onBlack.toFixed(2)}</strong>
-              <em style={{ color: '#fff' }}>{grade(onBlack)}</em>
-            </div>
-          </div>
-          <div className="ci-shades-label">Text on this colour</div>
-          <div className="ci-text-contrast">
-            <div className="ci-text-row" style={{ background: color }}>
-              <span style={{ color: '#fff' }}>White text</span>
-              <span className="ci-text-ratio" style={{ color: '#fff' }}>
-                {whiteText.toFixed(1)}:1 {whiteText >= 4.5 ? '✓ AA' : whiteText >= 3 ? '✓ AA Large' : '✗'}
-              </span>
-            </div>
-            <div className="ci-text-row" style={{ background: color }}>
-              <span style={{ color: '#000' }}>Black text</span>
-              <span className="ci-text-ratio" style={{ color: '#000' }}>
-                {blackText.toFixed(1)}:1 {blackText >= 4.5 ? '✓ AA' : blackText >= 3 ? '✓ AA Large' : '✗'}
-              </span>
-            </div>
-          </div>
-          <div className="ci-shades-label">Tints &amp; Shades</div>
-          <div className="ci-tintshade">
-            {tintShade.map((sh, i) => {
-              const isBase = sh.toLowerCase() === color.toLowerCase()
-              return (
-                <button
-                  key={i}
-                  className={'ci-ts-cell' + (isBase ? ' ci-ts-base' : '')}
-                  style={{ background: sh, color: textColorForBg(sh) }}
-                  onClick={() => onCopy(sh.toUpperCase())}
-                  title={'Copy ' + sh.toUpperCase()}
-                >
-                  <span className="ci-ts-hex">{sh.toUpperCase().replace('#', '')}</span>
-                </button>
-              )
-            })}
-          </div>
-          {(() => {
-            const psych = colorPsychology(h, s, l)
-            return (
-              <div className="ci-psychology">
-                <div className="ci-psych-header">
-                  <div className="ci-psych-row"><span className="ci-psych-label">Mood</span><span>{psych.mood}</span></div>
-                  <div className="ci-psych-row"><span className="ci-psych-label">Best for</span><span>{psych.audience}</span></div>
+          {tab === 'values' && (
+            <>
+              <div className="ci-values">
+                {rows.map(([label, val]) => (
+                  <button key={label} className="ci-value-row" onClick={() => onCopy(val)} title="Copy">
+                    <span className="ci-value-label">{label}</span>
+                    <span className="ci-value-val">{val}</span>
+                    <CopyIcon size={11} />
+                  </button>
+                ))}
+              </div>
+              <div className="ci-quick-contrast">
+                <div className="ci-qc-cell" style={{ background: '#fff' }}>
+                  <span className="ci-qc-sample" style={{ color }}>Aa</span>
+                  <span className="ci-qc-ratio">{onWhite.toFixed(1)}:1</span>
+                  <span className={`ci-qc-badge ${onWhite >= 4.5 ? 'pass' : onWhite >= 3 ? 'warn' : 'fail'}`}>{grade(onWhite)}</span>
                 </div>
-                <div className="ci-psych-lists">
-                  <div className="ci-psych-list">
-                    {psych.pros.map((p, i) => <div key={i} className="ci-psych-item ci-psych-pro"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>{p}</div>)}
-                  </div>
-                  <div className="ci-psych-list">
-                    {psych.cons.map((c, i) => <div key={i} className="ci-psych-item ci-psych-con"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{c}</div>)}
-                  </div>
+                <div className="ci-qc-cell" style={{ background: '#000' }}>
+                  <span className="ci-qc-sample" style={{ color }}>Aa</span>
+                  <span className="ci-qc-ratio" style={{ color: '#fff' }}>{onBlack.toFixed(1)}:1</span>
+                  <span className={`ci-qc-badge ${onBlack >= 4.5 ? 'pass' : onBlack >= 3 ? 'warn' : 'fail'}`}>{grade(onBlack)}</span>
                 </div>
               </div>
-            )
-          })()}
+            </>
+          )}
+
+          {tab === 'contrast' && (
+            <>
+              <div className="ci-shades-label">Colour on backgrounds</div>
+              <div className="ci-contrast">
+                <div className="ci-contrast-cell" style={{ background: '#fff', color }}>
+                  <span className="ci-cc-label">On white</span>
+                  <span className="ci-cc-sample" style={{ color }}>Sample text Aa</span>
+                  <strong>{onWhite.toFixed(2)}</strong>
+                  <em className={onWhite >= 4.5 ? 'pass' : 'fail'}>{grade(onWhite)}</em>
+                </div>
+                <div className="ci-contrast-cell" style={{ background: '#000', color }}>
+                  <span className="ci-cc-label" style={{ color: '#fff' }}>On black</span>
+                  <span className="ci-cc-sample" style={{ color }}>Sample text Aa</span>
+                  <strong style={{ color: '#fff' }}>{onBlack.toFixed(2)}</strong>
+                  <em className={onBlack >= 4.5 ? 'pass' : 'fail'} style={{ color: '#fff' }}>{grade(onBlack)}</em>
+                </div>
+              </div>
+              <div className="ci-shades-label" style={{ marginTop: 16 }}>Text on this colour</div>
+              <div className="ci-text-contrast">
+                {[['#FFFFFF', 'White text', whiteText], ['#000000', 'Black text', blackText]].map(([tc, label, ratio]) => {
+                  const bg = gradeBadge(ratio)
+                  return (
+                    <div key={tc} className="ci-text-row" style={{ background: color }}>
+                      <span style={{ color: tc, fontSize: 14, fontWeight: 700 }}>Aa</span>
+                      <span style={{ color: tc }}>{label}</span>
+                      <span className="ci-text-ratio" style={{ color: tc }}>
+                        {ratio.toFixed(1)}:1
+                      </span>
+                      <span className={`ci-qc-badge ${bg.strong ? 'pass' : bg.ok ? 'warn' : 'fail'}`}>{bg.text}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {tab === 'shades' && (
+            <>
+              <div className="ci-shades-label">Tints &amp; Shades</div>
+              <div className="ci-tintshade">
+                {tintShade.map((sh, i) => {
+                  const isBase = sh.toLowerCase() === color.toLowerCase()
+                  return (
+                    <button key={i} className={'ci-ts-cell' + (isBase ? ' ci-ts-base' : '')}
+                      style={{ background: sh, color: textColorForBg(sh) }}
+                      onClick={() => onCopy(sh.toUpperCase())}
+                      title={'Copy ' + sh.toUpperCase()}>
+                      <span className="ci-ts-hex">{sh.toUpperCase().replace('#', '')}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="ci-shade-list">
+                {tintShade.map((sh, i) => {
+                  const isBase = sh.toLowerCase() === color.toLowerCase()
+                  return (
+                    <button key={i} className={`ci-shade-row${isBase ? ' ci-shade-base' : ''}`} onClick={() => onCopy(sh.toUpperCase())}>
+                      <div className="ci-shade-dot" style={{ background: sh }} />
+                      <span className="ci-shade-hex">{sh.toUpperCase()}</span>
+                      <span className="ci-shade-ratio">{contrastRatio(sh, '#FFFFFF').toFixed(1)}:1</span>
+                      <CopyIcon size={9} />
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {tab === 'vision' && (
+            <>
+              <div className="ci-shades-label">Colour blindness simulation</div>
+              <div className="ci-cvd-grid">
+                <div className="ci-cvd-card">
+                  <div className="ci-cvd-swatch" style={{ background: color }} />
+                  <span className="ci-cvd-name">Normal</span>
+                  <span className="ci-cvd-hex">{color.toUpperCase()}</span>
+                </div>
+                {cvdTypes.map(cvd => {
+                  const sim = simCVD(color, CVD_MATRICES[cvd.key])
+                  return (
+                    <div key={cvd.key} className="ci-cvd-card" onClick={() => onCopy(sim)}>
+                      <div className="ci-cvd-swatch" style={{ background: sim }} />
+                      <span className="ci-cvd-name">{cvd.label}</span>
+                      <span className="ci-cvd-desc">{cvd.desc}</span>
+                      <span className="ci-cvd-hex">{sim.toUpperCase()}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {tab === 'usage' && (
+            <div className="ci-psychology">
+              <div className="ci-psych-header">
+                <div className="ci-psych-row"><span className="ci-psych-label">Mood</span><span>{psych.mood}</span></div>
+                <div className="ci-psych-row"><span className="ci-psych-label">Best for</span><span>{psych.audience}</span></div>
+              </div>
+              <div className="ci-psych-lists">
+                <div className="ci-psych-list">
+                  {psych.pros.map((p, i) => <div key={i} className="ci-psych-item ci-psych-pro"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>{p}</div>)}
+                </div>
+                <div className="ci-psych-list">
+                  {psych.cons.map((c, i) => <div key={i} className="ci-psych-item ci-psych-con"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{c}</div>)}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -337,11 +438,23 @@ export default function ColorStudio({ onCopy }) {
   const { rounding } = useAppearance()
   const { design, setPalette, setStates, setTints, setGradient, saveProject, projects, loadProject, overwriteProject, canSaveProjects } = useProject()
 
+  const [undoToast, setUndoToast] = useState(null)
+  const undoTimerRef = useRef(null)
+  const showUndoToast = useCallback((message, undoFn) => {
+    clearTimeout(undoTimerRef.current)
+    setUndoToast({ message, undoFn })
+    undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000)
+  }, [])
+  const dismissUndo = useCallback(() => {
+    clearTimeout(undoTimerRef.current)
+    setUndoToast(null)
+  }, [])
+
   const [baseColor, setBaseColor] = useState(() => design?.palette?.base || '#2563EB')
   const [harmony, setHarmony] = useState(() => design?.palette?.harmony || 'analogous')
   const [extraColors, setExtraColors] = useState(() => design?.palette?.extraColors || [])
   const [overrides, setOverrides] = useState(() => design?.palette?.overrides || {})
-  const [stateColors, setStateColors] = useState(() => design?.states || { success: 4, warning: 4, error: 4, info: 4 })
+  const [stateColors, setStateColors] = useState(() => design?.states || { success: 1, warning: 0, error: 0, info: 0 })
   const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
   const [cssExpanded, setCssExpanded] = useState(false)
   const [infoColor, setInfoColor] = useState(null)
@@ -677,12 +790,20 @@ ${stateVars}
   }, [])
 
   const resetPalette = useCallback(() => {
+    const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx }
     setBaseColor('#2563EB')
     setHarmony('analogous')
     setExtraColors([])
     setOverrides({})
     setActiveColorIdx(0)
-  }, [])
+    showUndoToast('Palette reset to default', () => {
+      setBaseColor(prev.base)
+      setHarmony(prev.harmony)
+      setExtraColors(prev.extras)
+      setOverrides(prev.ovr)
+      setActiveColorIdx(prev.idx)
+    })
+  }, [baseColor, harmony, extraColors, overrides, activeColorIdx, showUndoToast])
 
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
@@ -1256,7 +1377,7 @@ ${stateVars}
         </div>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Brand Palettes</h3>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8 }}>
+        <div className="cs-brand-scroll">
           {BRANDS.map(brand => (
             <div key={brand.n} className="card-i" style={{ cursor: 'pointer', padding: 10, minWidth: 140, flexShrink: 0 }} onClick={() => applyBrand(brand)}>
               <div style={{ display: 'flex', height: 28, borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
@@ -1276,7 +1397,6 @@ ${stateVars}
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
           <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
-            <button className="btn btn-s" onClick={() => setGradStops(prev => [...prev].reverse().map((s, i, arr) => ({ ...s, position: 100 - arr[arr.length - 1 - i].position })))} title="Flip gradient direction" style={{ fontSize: 10 }}>⇄ Flip</button>
             <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
           </div>
         </div>
@@ -1361,8 +1481,8 @@ ${stateVars}
               })}
             </div>
             <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-              <button className="btn btn-s" onClick={() => setGradStops(gradStops.map((s) => ({ ...s, color: null })))} style={{ fontSize: 10 }}>Auto from palette</button>
               <button className="btn btn-s" onClick={addGradStop} style={{ fontSize: 10 }}>+ Stop</button>
+              <button className="btn btn-s" onClick={() => setGradStops(prev => [...prev].reverse().map((s, i, arr) => ({ ...s, position: 100 - arr[arr.length - 1 - i].position })))} title="Flip gradient direction" style={{ fontSize: 10 }}>&#8644; Flip</button>
             </div>
           </div>
 
@@ -1439,21 +1559,23 @@ ${stateVars}
               </button>
             )}
           </div>
-          <div className="grad-presets">
-            {(gradPresetsExpanded ? GRAD_PRESETS : GRAD_PRESETS.slice(0, 6)).map(g => {
+          <div className="grad-bento">
+            {(gradPresetsExpanded ? GRAD_PRESETS : GRAD_PRESETS.slice(0, 8)).map((g, gi) => {
               const previewCss = `${g.type === 'Radial' ? 'radial-gradient' : g.type === 'Conic' ? 'conic-gradient' : 'linear-gradient'}(${g.type === 'Linear' ? g.angle + 'deg, ' : g.type === 'Conic' ? 'from ' + g.angle + 'deg, ' : ''}${g.stops.map(s => `${s.color} ${s.pos}%`).join(', ')})`
+              const isWide = gi % 5 === 0 || g.stops.length > 3
               return (
-                <div key={g.n} className="grad-p" onClick={() => applyPreset(g)}>
-                  <div className="grad-p-preview" style={{ background: previewCss }} />
-                  <div className="grad-p-info">
-                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'var(--t0)' }}>{g.n}</div>
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div key={g.n} className={`grad-bento-card${isWide ? ' wide' : ''}`} onClick={() => applyPreset(g)}>
+                  <div className="grad-bento-preview" style={{ background: previewCss }} />
+                  <div className="grad-bento-info">
+                    <div className="grad-bento-name">{g.n}</div>
+                    <div className="grad-bento-stops">
                       {g.stops.map((s, si) => (
-                        <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <div style={{ width: 12, height: 12, borderRadius: 3, background: s.color, border: '1px solid var(--border)' }} />
-                          <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{s.color.toUpperCase()}</span>
-                          {si < g.stops.length - 1 && <span style={{ color: 'var(--t3)', fontSize: 9 }}>→</span>}
-                        </div>
+                        <span key={si} className="grad-bento-stop">
+                          <span className="grad-bento-dot" style={{ background: s.color }} />
+                          <span className="grad-bento-hex">{s.color.toUpperCase().replace('#', '')}</span>
+                          <span className="grad-bento-pos">{s.pos}%</span>
+                          {si < g.stops.length - 1 && <span className="grad-bento-arrow">→</span>}
+                        </span>
                       ))}
                     </div>
                     <button className="btn btn-s" style={{ marginTop: 6, padding: '3px 8px', fontSize: 9 }}
@@ -1488,13 +1610,18 @@ ${stateVars}
           onCopy={onCopy}
           onChange={(hex) => {
             const idx = allColors.indexOf(infoColor)
-            if (idx >= 0) {
-              if (idx < colors.length && harmony !== 'custom') setHarmony('custom')
-              editPaletteColor(idx, hex)
-            }
+            if (idx >= 0) editPaletteColor(idx, hex)
             setInfoColor(hex)
           }}
         />
+      )}
+
+      {undoToast && (
+        <div className="cs-undo-toast">
+          <span>{undoToast.message}</span>
+          <button onClick={() => { undoToast.undoFn(); dismissUndo() }}>Undo</button>
+          <button className="cs-undo-dismiss" onClick={dismissUndo}>&times;</button>
+        </div>
       )}
     </div>
   )

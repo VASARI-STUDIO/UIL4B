@@ -79,6 +79,22 @@ export function hexToCmyk(hex) {
   return [c, m, y, k].map(v => Math.round(v * 100))
 }
 
+export function hexToOklch(hex) {
+  const [r, g, b] = hexToRgb(hex).map(v => v / 255)
+  const lin = v => v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+  const lr = lin(r), lg = lin(g), lb = lin(b)
+  const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb)
+  const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb)
+  const s = Math.cbrt(0.0883024619 * lr + 0.2164557872 * lg + 0.6652917509 * lb)
+  const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s
+  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
+  const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+  const C = Math.sqrt(a * a + bb * bb)
+  let H = Math.atan2(bb, a) * 180 / Math.PI
+  if (H < 0) H += 360
+  return [+(L * 100).toFixed(1), +C.toFixed(3), +H.toFixed(1)]
+}
+
 // Approximate human-readable colour name from HSL — hue family plus
 // lightness/saturation modifiers. Honest and dataset-free (no giant lookup).
 export function describeColor(hex) {
