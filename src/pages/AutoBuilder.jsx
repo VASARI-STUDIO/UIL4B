@@ -284,7 +284,9 @@ export default function AutoBuilder({ onCopy, toast }) {
     if (!description.trim()) return
     setGenerating(true)
 
-    // Simulate async — real implementation will call /api/auto-design
+    // Generated client-side (HSL mood profiles + curated font pairs). A future
+    // AI-backed mode can route through /api/generate-prompt to stay within the
+    // Vercel serverless function budget rather than adding a new endpoint.
     await new Promise(r => setTimeout(r, 800))
 
     const palette = generatePalette(mood, description)

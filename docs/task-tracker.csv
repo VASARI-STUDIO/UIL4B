@@ -54,7 +54,7 @@ HELP-03,Help Centre,UX,Make feedback easier to access,S,6k,DONE,Quick-action car
 AUTH-01,Auth,Flow,Keep user on page when login prompted / return them,M,12k,DONE,AuthGate inline on AI tools
 AUTH-02,Auth,Flow,Login via popup or new page when needed,M,10k,DONE,AuthGate inline + Google OAuth
 AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,DONE,Firestore profile sync sets vs-onboarded
-ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,DONE,AutoBuilder page: describe business -> colours/fonts/hero preview + /api/auto-design endpoint
+ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,DONE,AutoBuilder page: describe business -> client-side colours/fonts/hero preview (AI mode deferred to stay under Vercel 12-fn limit)
 ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,DONE,Tab 2: drag-drop logo upload + Canvas quantization color extraction + font input
 DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,DONE,8 articles: GBP/local/technical/on-page/content/links/schema/measuring
 DOC-02,Documentation,Marketing,Marketing documentation,M,15k,DONE,8 articles: positioning/funnel/email/ads/content/landing/analytics/brand voice
