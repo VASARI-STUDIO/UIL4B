@@ -26,7 +26,7 @@ AIP-09,AI Image Prompt Generator,Auth,Inline auth gate (stay on page),M,12k,DONE
 AIW-01,AI Website Generator,New Section,Create new page + nav section,L,30k,DONE,AI Landing Page Prompts page + JSON builder
 AIW-02,AI Website Generator,Related,Group related tools under section,M,12k,DONE,Under AI Tools category
 ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,TODO,
-ALT-02,Alt Text Generator,Quality,Strengthen alt-text knowledge / WCAG best practices in prompt,M,12k,TODO,
+ALT-02,Alt Text Generator,Quality,Strengthen alt-text knowledge / WCAG best practices in prompt,M,12k,DONE,Added functional-image + purpose/context + truncation guidance
 DS-01,AI Backend,DeepSeek,Verify DeepSeek API connection,M,10k,DONE,Added Gemini fallback + provider field in generate-prompt
 DS-02,AI Backend,DeepSeek,Reference deepseek-ai/awesome-deepseek-agent patterns,M,8k,TODO,
 NAV-01,Navigation,IA,Reorganize nav: submenus + subcategories,L,30k,DONE,AI Tools category added
