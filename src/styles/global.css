@@ -276,10 +276,10 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .btn:hover{border-color:var(--bh);background:var(--bg-2);color:var(--t0)}
 .btn:active{background:var(--bg-3);color:var(--t0);transition-duration:.1s}
 .btn-s{padding:6px 12px;font-size:11px}
-.btn-accent{background:var(--accent);color:var(--bg-0);border-color:transparent;transition:all .2s}
-.btn-accent:hover{opacity:.85;transform:translateY(-1px)}
-.btn-accent:active{transform:translateY(0);opacity:.75;transition-duration:.1s}
-.btn-accent:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn-accent,.btn-primary{background:var(--brand);color:#fff;border-color:transparent;transition:all .2s}
+.btn-accent:hover,.btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 14px var(--brand-glow)}
+.btn-accent:active,.btn-primary:active{transform:translateY(0);opacity:.8;transition-duration:.1s}
+.btn-accent:disabled,.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none}
 .tag{display:inline-flex;padding:4px 12px;border-radius:var(--radius-s);font-size:10px;font-weight:600}
 .tag-pass{background:color-mix(in srgb, var(--ok) 8%, transparent);color:var(--ok)}.tag-fail{background:color-mix(in srgb, var(--err) 8%, transparent);color:var(--err)}
 
@@ -2325,7 +2325,7 @@ img,svg,video{max-width:100%;height:auto}
 /* Landing button hover states */
 /* Match button corners to the panel/card radius for a cohesive look. */
 .landing .btn{border-radius:var(--radius-l)}
-.landing .btn-accent:hover{opacity:1;background:var(--accent-strong);box-shadow:0 4px 16px color-mix(in srgb,var(--accent) 20%,transparent)}
+.landing .btn-accent:hover{opacity:1;background:var(--brand-soft);box-shadow:0 4px 16px var(--brand-glow)}
 
 /* Monthly / yearly billing toggle — animated sliding thumb */
 .landing-billing-toggle{position:relative;display:inline-flex;align-self:center;padding:4px;background:var(--bg-2);border:1px solid var(--border);border-radius:999px;gap:2px}

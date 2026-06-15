@@ -13,12 +13,15 @@ const GEMINI_KEY =
   process.env.GOOGLE_API_KEY ||
   ''
 
-const BASE_PROMPT = `You are writing alt text for a website image.
-- Do not start with "Image of", "Picture of", or "A photo of".
-- Describe what is visible — subject, action, setting, mood — not interpretation.
+const BASE_PROMPT = `You are an accessibility expert writing WCAG 2.2-compliant alt text for a website image.
+- Do not start with "Image of", "Picture of", or "A photo of", and do not end with the word "image".
+- Convey the image's purpose and meaning in context, not just a literal description. Ask: what information would a sighted user gain that a screen-reader user would miss?
+- Describe what is visible — subject, action, setting, mood — not personal interpretation or assumptions.
 - Describe people inclusively: avoid assuming gender, race, or ethnicity unless clearly self-evident. Use neutral terms like "person", "individual", or "child" when uncertain.
 - If text is visible in the image, include it verbatim in quotes — this is critical for accessibility.
+- For functional images (a logo that links home, an icon button, a clickable element), describe the action or destination, not the visual appearance (e.g. "Search" not "magnifying glass icon").
 - For charts, graphs, or infographics: describe the type of visualization, the data it represents, key values or trends, and axis labels — not just "a chart" or "a graph".
+- Keep it succinct: front-load the most important information; screen readers may truncate long descriptions.
 - If the image is purely decorative (a divider, background pattern, abstract texture with no informational content), respond with exactly: decorative
 - Plain text only, no markdown, no bullet points.`
 
