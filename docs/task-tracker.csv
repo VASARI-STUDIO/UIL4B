@@ -13,7 +13,7 @@ CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,TODO,Uplo
 CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,TODO,
 CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,TODO,Licensing check needed
 CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,TODO,Have CSS/HTML already
-CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,TODO,
+CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,DONE,Lock button + spacebar shortcut + drag reorder
 AIP-01,AI Image Prompt Generator,Nav,Rename to "AI Image Prompt Generator",S,2k,DONE,Label + page title updated
 AIP-02,AI Image Prompt Generator,Output,Convert to structured JSON prompt generator,L,30k,DONE,JSON Builder mode + live JSON preview
 AIP-03,AI Image Prompt Generator,Rules,Preset JSON rule strings (ultra-real 4k / landscape) prefill fstop/fov/exposure/composition,L,35k,DONE,6 presets in promptRules.jsx
@@ -45,7 +45,7 @@ COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,TODO,
 COM-04,Community Hub,Strategy,Plan community engagement / next steps,M,12k,PLANNING,
 COM-05,Community Hub,Systems,Review community hub page + systems,M,12k,TODO,
 PROJ-01,Projects,Redesign,Redesign UI (currently feels generic/AI-slop),L,28k,TODO,
-LAND-01,Landing,Sticky,Fix sticky-scroll section (not sticking),M,12k,TODO,
+LAND-01,Landing,Sticky,Fix sticky-scroll section (not sticking),M,12k,DONE,Moved sticky to inner card + fixed align-self
 LAND-02,Landing,Redesign,Redesign to clinical/modern SaaS (less AI-slop),L,30k,TODO,
 LAND-03,Landing,Hero,Redesign hero (feels generic),M,18k,TODO,
 HELP-01,Help Centre,Redesign,Overhaul UI + structure,L,30k,TODO,
@@ -53,7 +53,7 @@ HELP-02,Help Centre,Forms,Differentiate feature req / bug / feedback / help,M,15
 HELP-03,Help Centre,UX,Make feedback easier to access,S,6k,TODO,
 AUTH-01,Auth,Flow,Keep user on page when login prompted / return them,M,12k,DONE,AuthGate inline on AI tools
 AUTH-02,Auth,Flow,Login via popup or new page when needed,M,10k,DONE,AuthGate inline + Google OAuth
-AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,TODO,
+AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,DONE,Firestore profile sync sets vs-onboarded
 ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,TODO,
 ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,TODO,
 DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,TODO,
@@ -61,7 +61,7 @@ DOC-02,Documentation,Marketing,Marketing documentation,M,15k,TODO,
 DOC-03,Documentation,Brand,Brand design docs (picking brand colour etc),M,15k,TODO,
 DOC-04,Documentation,AI,Claude tips doc (subagents/interview-me/build-a-skill/gotchas/commands),L,25k,TODO,
 DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,TODO,
-INF-01,Infra,Branches,Merge & tidy branches,M,8k,PARTIAL,3 stale branches need deletion (proxy blocks)
+INF-01,Infra,Branches,Merge & tidy branches,M,8k,DONE,All PRs merged (10 73 76-80)
 INF-02,Infra,Code,Purge unused code,M,15k,TODO,
 INF-03,Infra,Deploy,Purge old Vercel deployments,M,10k,TODO,Vercel MCP connecting
 GOV-01,Process,CLAUDE.md,Update CLAUDE.md (verify-first + validation zones + Murphys law),M,12k,DONE,Created with all sections
@@ -72,3 +72,5 @@ GOV-05,Process,Agents,Subagent team (designer/dev/PM/QA/security/50-use-cases),L
 META-01,Meta,Spec,Recreate implementation spec,L,25k,IN PROGRESS,This deliverable
 META-02,Meta,Tracker,Create interactive task tracker,M,10k,IN PROGRESS,This file
 META-03,Meta,Interview,Interview user on unknowns,S,5k,IN PROGRESS,This deliverable
+DOC-06,Documentation,Themes,UI Design Themes reference (trends + real brands + mobile/desktop examples),L,25k,DONE,8 themes with desktop+mobile mockups + brand links
+DOC-07,Documentation,Meta,Add update dates on all documentation pages,S,4k,DONE,Clock icon + date on all doc pages

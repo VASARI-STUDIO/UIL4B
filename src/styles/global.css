@@ -2398,8 +2398,8 @@ img,svg,video{max-width:100%;height:auto}
 .landing-sticky-num{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--accent)}
 .landing-sticky-step h3{font-family:var(--serif);font-size:clamp(22px,2.8vw,30px);font-weight:500;letter-spacing:-.02em;line-height:1.2}
 .landing-sticky-step p{font-size:14px;color:var(--t1);line-height:1.7;max-width:400px}
-.landing-sticky-visual{position:sticky;top:20vh;align-self:start;height:fit-content}
-.landing-sticky-visual-card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);overflow:hidden;min-height:340px}
+.landing-sticky-visual{align-self:stretch}
+.landing-sticky-visual-card{position:sticky;top:20vh;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);overflow:hidden;min-height:340px}
 .landing-sticky-demo{position:absolute;inset:0;opacity:0;transition:opacity .45s cubic-bezier(.16,1,.3,1);pointer-events:none}
 .landing-sticky-demo.is-active{position:relative;opacity:1;pointer-events:auto}
 
@@ -2410,7 +2410,8 @@ img,svg,video{max-width:100%;height:auto}
   .landing-feature-reverse{direction:ltr}
   .landing-feature-img{order:0}
   .landing-sticky-grid{grid-template-columns:1fr}
-  .landing-sticky-visual{position:relative;top:auto;margin-bottom:32px}
+  .landing-sticky-visual{margin-bottom:32px}
+  .landing-sticky-visual-card{position:relative;top:auto}
   .landing-sticky-step{min-height:auto;padding:32px 0;opacity:1}
   .landing-sticky-step:last-child{min-height:auto}
   .landing-sticky-demo{position:relative;opacity:1;pointer-events:auto}

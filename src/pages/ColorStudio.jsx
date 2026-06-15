@@ -456,6 +456,9 @@ export default function ColorStudio({ onCopy }) {
   const [overrides, setOverrides] = useState(() => design?.palette?.overrides || {})
   const [stateColors, setStateColors] = useState(() => design?.states || { success: 1, warning: 0, error: 0, info: 0 })
   const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
+  const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
+  const [dragIdx, setDragIdx] = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
   const [cssExpanded, setCssExpanded] = useState(false)
   const [infoColor, setInfoColor] = useState(null)
   const colorRef = useRef(null)
@@ -499,7 +502,7 @@ export default function ColorStudio({ onCopy }) {
 
   // Sync palette state to ProjectContext (full design persistence)
   useEffect(() => {
-    setPalette({ base: baseColor, harmony, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors })
+    setPalette({ base: baseColor, harmony, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors, locked: [...locked] })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseColor, harmony, extraColors, JSON.stringify(overrides), activeColorIdx, allColors.join(',')])
 
@@ -520,6 +523,18 @@ export default function ColorStudio({ onCopy }) {
     setGradient({ stops: gradStops, angle: gradAngle, type: gradType })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gradStops, gradAngle, gradType])
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.code !== 'Space') return
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return
+      e.preventDefault()
+      randomPalette()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [randomPalette])
 
   const activeColor = allColors[activeColorIdx] || allColors[0]
 
@@ -781,13 +796,41 @@ ${stateVars}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allColors.join(','), tintScale.join(','), JSON.stringify(stateColors), theme, rounding])
 
+  const toggleLock = useCallback((idx) => {
+    setLocked(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx); else next.add(idx)
+      return next
+    })
+  }, [])
+
   const randomPalette = useCallback(() => {
     const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
-    setBaseColor(hex)
-    setExtraColors([])
-    setOverrides({})
-    setActiveColorIdx(0)
-  }, [])
+    if (locked.size === 0) {
+      setBaseColor(hex)
+      setExtraColors([])
+      setOverrides({})
+      setActiveColorIdx(0)
+    } else {
+      if (!locked.has(0)) setBaseColor(hex)
+      setOverrides(prev => {
+        const next = { ...prev }
+        for (let i = 1; i < colors.length; i++) {
+          if (locked.has(i)) {
+            next[i] = allColors[i]
+          } else {
+            delete next[i]
+          }
+        }
+        return next
+      })
+      setExtraColors(prev => prev.map((c, i) => {
+        const globalIdx = colors.length + i
+        if (locked.has(globalIdx)) return c
+        return hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
+      }))
+    }
+  }, [locked, colors.length, allColors])
 
   const resetPalette = useCallback(() => {
     const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx }
@@ -866,6 +909,32 @@ ${stateVars}
     if (!node) return
     node.addEventListener('change', () => { addSessionRef.current = null })
   }, [])
+
+  const handleDragStart = (idx) => setDragIdx(idx)
+  const handleDragOver = (e, idx) => { e.preventDefault(); setDragOverIdx(idx) }
+  const handleDragEnd = () => {
+    if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
+      const reordered = [...allColors]
+      const [moved] = reordered.splice(dragIdx, 1)
+      reordered.splice(dragOverIdx, 0, moved)
+      const newLocked = new Set()
+      locked.forEach(li => {
+        if (li === dragIdx) newLocked.add(dragOverIdx)
+        else if (dragIdx < dragOverIdx && li > dragIdx && li <= dragOverIdx) newLocked.add(li - 1)
+        else if (dragIdx > dragOverIdx && li >= dragOverIdx && li < dragIdx) newLocked.add(li + 1)
+        else newLocked.add(li)
+      })
+      setLocked(newLocked)
+      setBaseColor(reordered[0])
+      setOverrides(Object.fromEntries(reordered.slice(1, colors.length).map((c, i) => [i + 1, c])))
+      setExtraColors(reordered.slice(colors.length))
+      if (activeColorIdx === dragIdx) setActiveColorIdx(dragOverIdx)
+      else if (dragIdx < dragOverIdx && activeColorIdx > dragIdx && activeColorIdx <= dragOverIdx) setActiveColorIdx(activeColorIdx - 1)
+      else if (dragIdx > dragOverIdx && activeColorIdx >= dragOverIdx && activeColorIdx < dragIdx) setActiveColorIdx(activeColorIdx + 1)
+    }
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }
 
   const editPaletteColor = (idx, hex) => {
     if (idx === 0) {
@@ -1037,11 +1106,12 @@ ${stateVars}
         <div className="cs-section-header" onClick={() => toggleCollapse('palette')} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.palette ? 0 : 20, cursor: 'pointer' }}>
           <svg className={`cs-chevron${collapsed.palette ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Palette Builder</h2>
-          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); randomPalette() }} title="Random palette" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); randomPalette() }} title="Random palette (or press Spacebar)" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10" /><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14" />
             </svg>
             Random
+            <kbd style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--t2)', fontFamily: 'var(--mono)', marginLeft: 2 }}>Space</kbd>
           </button>
           <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); resetPalette() }} title="Reset palette to default" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1129,19 +1199,32 @@ ${stateVars}
           {allColors.map((color, i) => {
             const isActive = i === activeColorIdx
             const isExtra = i >= colors.length
+            const isLocked = locked.has(i)
+            const isDragOver = dragOverIdx === i && dragIdx !== i
             return (
-              <div key={i} style={{ position: 'relative', flex: '1 1 0', minWidth: 80 }}>
+              <div key={i}
+                draggable
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={(e) => handleDragOver(e, i)}
+                onDragEnd={handleDragEnd}
+                style={{ position: 'relative', flex: '1 1 0', minWidth: 80, opacity: dragIdx === i ? .5 : 1, transition: 'opacity .15s, transform .15s', transform: isDragOver ? 'scale(1.04)' : 'none' }}
+              >
                 <div
                   onClick={() => { setActiveColorIdx(i); onCopy(color) }}
                   style={{
                     background: color, borderRadius: 'var(--radius-s)', padding: '16px 12px',
                     minHeight: 110, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-                    cursor: 'pointer', transition: 'transform .12s', color: textColorForBg(color),
-                    border: isActive ? '2px solid var(--accent)' : '1px solid var(--border)',
+                    cursor: 'grab', transition: 'transform .12s', color: textColorForBg(color),
+                    border: isActive ? '2px solid var(--accent)' : isDragOver ? '2px dashed var(--brand)' : '1px solid var(--border)',
                     outline: isActive ? '2px solid var(--accent-soft)' : 'none',
                     outlineOffset: 1,
                   }}
                 >
+                  {isLocked && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', top: 6, left: 6, opacity: .7 }}>
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                    </svg>
+                  )}
                   <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', opacity: .6, marginBottom: 2 }}>
                     {ROLES[i] || `CUSTOM ${i - colors.length + 1}`}
                   </div>
@@ -1154,6 +1237,16 @@ ${stateVars}
                   style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
                   title="Edit colour"
                 />
+                <button onClick={(e) => { e.stopPropagation(); toggleLock(i) }}
+                  title={isLocked ? 'Unlock colour' : 'Lock colour'}
+                  style={{ position: 'absolute', top: 4, left: 4, background: isLocked ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {isLocked
+                      ? <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></>
+                      : <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></>}
+                  </svg>
+                </button>
                 <button onClick={(e) => { e.stopPropagation(); setInfoColor(color) }}
                   title="Colour details"
                   style={{ position: 'absolute', top: 4, right: isExtra ? 26 : 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 11, fontWeight: 700, fontStyle: 'italic', fontFamily: 'Georgia,serif', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}

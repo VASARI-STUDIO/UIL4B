@@ -99,6 +99,11 @@ export function AuthProvider({ children }) {
             setProfile(merged)
             profileRef.current = merged
             setCachedProfile(fbUser.uid, merged)
+            // Returning users who completed onboarding on another device — sync
+            // the flag to localStorage so they skip it here too (AUTH-03).
+            if (fsProfile.onboarding?.completedAt) {
+              try { localStorage.setItem('vs-onboarded', '1') } catch {}
+            }
           } else {
             setCachedProfile(fbUser.uid, initial)
             saveProfileToFirestore(fbUser.uid, initial)

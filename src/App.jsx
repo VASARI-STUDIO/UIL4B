@@ -22,6 +22,7 @@ import ImageConverter from './pages/ImageConverter'
 import PromptLibrary from './pages/PromptLibrary'
 import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
+import DocsThemes from './pages/DocsThemes'
 import ExternalResources from './pages/ExternalResources'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
@@ -119,6 +120,7 @@ export default function App() {
       '/privacy': 'UI L4B | Privacy',
       '/terms': 'UI L4B | Terms',
       '/admin': 'UI L4B | Admin',
+      '/docs-themes': 'UI L4B | UI Design Themes',
     }
     document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
   }, [location.pathname])
@@ -194,6 +196,7 @@ export default function App() {
             <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
+            <Route path="/docs-themes" element={<DocsThemes />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
             <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
             <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
