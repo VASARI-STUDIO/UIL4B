@@ -15,9 +15,9 @@ CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,
 CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,TODO,Have CSS/HTML already
 CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,TODO,
 AIP-01,AI Image Prompt Generator,Nav,Rename to "AI Image Prompt Generator",S,2k,DONE,Label + page title updated
-AIP-02,AI Image Prompt Generator,Output,Convert to structured JSON prompt generator,L,30k,TODO,
-AIP-03,AI Image Prompt Generator,Rules,Preset JSON rule strings (ultra-real 4k / landscape) prefill fstop/fov/exposure/composition,L,35k,TODO,Multiple categories
-AIP-04,AI Image Prompt Generator,Rules,Multiple rule categories for max-quality renders,M,20k,TODO,
+AIP-02,AI Image Prompt Generator,Output,Convert to structured JSON prompt generator,L,30k,DONE,JSON Builder mode + live JSON preview
+AIP-03,AI Image Prompt Generator,Rules,Preset JSON rule strings (ultra-real 4k / landscape) prefill fstop/fov/exposure/composition,L,35k,DONE,6 presets in promptRules.jsx
+AIP-04,AI Image Prompt Generator,Rules,Multiple rule categories for max-quality renders,M,20k,DONE,5 categories: camera/comp/light/render/quality
 AIP-05,AI Image Prompt Generator,Photo,Generate prompt from uploaded photo,L,30k,TODO,Scan -> rules
 AIP-06,AI Image Prompt Generator,Photo,Checkbox list of scanned rules (select/deselect) -> JSON,M,18k,TODO,
 AIP-07,AI Image Prompt Generator,UX,Media upload at TOP of upload popup w/ title field,S,6k,TODO,
