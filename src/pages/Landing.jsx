@@ -966,14 +966,36 @@ export default function Landing() {
         <div className="landing-footer-inner">
           <div className="landing-footer-brand">
             <span className="landing-footer-mark">UIL4B</span>
-            <span className="landing-footer-tagline">Design toolkit for everyone.</span>
+            <span className="landing-footer-tagline">Design toolkit for professionals.</span>
           </div>
-          <div className="landing-footer-links">
-            <a href="#pricing">Pricing</a>
-            <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">About</a>
-            <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer">Donate</a>
+          <div className="landing-footer-cols">
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Product</span>
+              <a href="#pricing">Pricing</a>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/color')}>Colour Studio</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/fontpairs')}>Font Pair Finder</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/icons')}>Icon Library</button>
+            </div>
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Resources</span>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/docs-design')}>Design Principles</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/help')}>Help Centre</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/docs-themes')}>UI Design Themes</button>
+            </div>
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Company</span>
+              <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">About</a>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/privacy')}>Privacy</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/terms')}>Terms</button>
+            </div>
           </div>
-          <span className="landing-footer-copy">Built by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>
+          <div className="landing-footer-bottom">
+            <span className="landing-footer-copy">Built by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>
+            <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer" className="landing-footer-donate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+              Support this project
+            </a>
+          </div>
         </div>
       </footer>
     </div>

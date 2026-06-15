@@ -44,9 +44,9 @@ COM-02,Community Hub,Media,Convert uploads to WebP (high-quality/lossless),M,18k
 COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,TODO,
 COM-04,Community Hub,Strategy,Plan community engagement / next steps,M,12k,PLANNING,
 COM-05,Community Hub,Systems,Review community hub page + systems,M,12k,TODO,
-PROJ-01,Projects,Redesign,Redesign UI (currently feels generic/AI-slop),L,28k,TODO,
+PROJ-01,Projects,Redesign,Redesign UI (currently feels generic/AI-slop),L,28k,DONE,Gradient cards + active highlight + better empty state + stats
 LAND-01,Landing,Sticky,Fix sticky-scroll section (not sticking),M,12k,DONE,Moved sticky to inner card + fixed align-self
-LAND-02,Landing,Redesign,Redesign to clinical/modern SaaS (less AI-slop),L,30k,TODO,
+LAND-02,Landing,Redesign,Redesign to clinical/modern SaaS (less AI-slop),L,30k,DONE,Professional footer with product/resources/company cols + donate link
 LAND-03,Landing,Hero,Redesign hero (feels generic),M,18k,DONE,Tighter copy + subtler orbs + clinical tone
 HELP-01,Help Centre,Redesign,Overhaul UI + structure,L,30k,DONE,Quick-action cards + searchable FAQ + contact tab
 HELP-02,Help Centre,Forms,Differentiate feature req / bug / feedback / help,M,15k,DONE,4-type contact form with contextual placeholders
