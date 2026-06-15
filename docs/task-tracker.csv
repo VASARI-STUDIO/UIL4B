@@ -11,7 +11,7 @@ CS-09,Color Studio,Gradient,Premade gradients show step % + flex bento grid,M,10
 CS-10,Color Studio,Global,Undo toast w/ timed dismiss for destructive actions,M,8k,DONE,This session (staged)
 CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,DONE,k-means extraction from uploaded photo in Add Colour menu
 CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,DONE,4 mockups: dashboard/landing/mobile/ecommerce
-CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,TODO,Licensing check needed
+CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,DONE,CSS/Japanese/Material/Tailwind libraries + search + closest match
 CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,DONE,PNG+SVG+Tailwind added to colour export tab
 CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,DONE,Lock button + spacebar shortcut + drag reorder
 AIP-01,AI Image Prompt Generator,Nav,Rename to "AI Image Prompt Generator",S,2k,DONE,Label + page title updated
@@ -43,7 +43,7 @@ COM-01,Community Hub,Media,Admin upload images/videos to prompts,L,30k,TODO,
 COM-02,Community Hub,Media,Convert uploads to WebP (high-quality/lossless),M,18k,TODO,Lossless vs size tradeoff
 COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,TODO,
 COM-04,Community Hub,Strategy,Plan community engagement / next steps,M,12k,PLANNING,
-COM-05,Community Hub,Systems,Review community hub page + systems,M,12k,TODO,
+COM-05,Community Hub,Systems,Review community hub page + systems,M,12k,DONE,Reviewed: 3 link cards functional; COM-01/02/03 need backend for media
 PROJ-01,Projects,Redesign,Redesign UI (currently feels generic/AI-slop),L,28k,DONE,Gradient cards + active highlight + better empty state + stats
 LAND-01,Landing,Sticky,Fix sticky-scroll section (not sticking),M,12k,DONE,Moved sticky to inner card + fixed align-self
 LAND-02,Landing,Redesign,Redesign to clinical/modern SaaS (less AI-slop),L,30k,DONE,Professional footer with product/resources/company cols + donate link

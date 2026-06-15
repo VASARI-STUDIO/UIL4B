@@ -9,6 +9,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
 import { extractColorsFromImage } from '../utils/extractColors'
+import { COLOR_LIBRARIES, findClosestNamedColor, searchNamedColors } from '../data/namedColors'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic', 'custom']
 const HARM_LABELS = {
@@ -855,6 +856,8 @@ ${stateVars}
   const [gradPresetsExpanded, setGradPresetsExpanded] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
+  const [namedLibrary, setNamedLibrary] = useState('css')
+  const [namedSearch, setNamedSearch] = useState('')
 
   const allTintScales = useMemo(() => {
     return allColors.map(c => generateTintScale({
@@ -1510,6 +1513,44 @@ ${stateVars}
             </div>
           ))}
         </div>
+
+        <h3 style={{ fontSize: 14, fontWeight: 700, marginTop: 24, marginBottom: 10 }}>Named Colour Libraries</h3>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {COLOR_LIBRARIES.map(lib => (
+            <button key={lib.id} className={`pl-chip${namedLibrary === lib.id ? ' active' : ''}`} onClick={() => { setNamedLibrary(lib.id); setNamedSearch('') }}>
+              {lib.name} <span style={{ fontSize: 9, opacity: .6 }}>({lib.colors.length})</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ position: 'relative', marginBottom: 12, maxWidth: 300 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t3)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" value={namedSearch} onChange={e => setNamedSearch(e.target.value)} placeholder="Search colours..." style={{ paddingLeft: 32, width: '100%', fontSize: 12 }} />
+        </div>
+        {(() => {
+          const lib = COLOR_LIBRARIES.find(l => l.id === namedLibrary)
+          if (!lib) return null
+          const q = namedSearch.trim().toLowerCase()
+          const filtered = q ? lib.colors.filter(c => c.name.toLowerCase().includes(q) || c.hex.toLowerCase().includes(q)) : lib.colors
+          const closest = activeColor ? findClosestNamedColor(activeColor, namedLibrary) : null
+          return <>
+            {closest && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-s)', background: 'var(--bg-1)', border: '1px solid var(--border)' }}>
+                <div style={{ width: 20, height: 20, borderRadius: 4, background: closest.hex, border: '1px solid var(--border)', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: 'var(--t1)' }}>Closest match: <strong>{closest.name}</strong> ({closest.hex})</span>
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
+              {filtered.slice(0, 80).map(c => (
+                <div key={c.name} onClick={() => addCustomColor(c.hex)} style={{ cursor: 'pointer', padding: 6, borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)', transition: 'border-color .15s' }} title={`Add ${c.name} (${c.hex}) to palette`}>
+                  <div style={{ height: 28, borderRadius: 4, background: c.hex, marginBottom: 4, border: '1px solid rgba(0,0,0,.06)' }} />
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--t0)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{c.hex}</div>
+                </div>
+              ))}
+            </div>
+            {filtered.length > 80 && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>Showing 80 of {filtered.length} — search to narrow results</div>}
+          </>
+        })()}
         </>}
       </section>
 
