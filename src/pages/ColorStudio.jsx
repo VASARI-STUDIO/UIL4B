@@ -8,6 +8,7 @@ import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
+import { extractColorsFromImage } from '../utils/extractColors'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic', 'custom']
 const HARM_LABELS = {
@@ -980,6 +981,28 @@ ${stateVars}
     setAddMenuOpen(false)
   }
 
+  const [extracting, setExtracting] = useState(false)
+  const extractFileRef = useRef(null)
+  const handleImageExtract = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setExtracting(true)
+    try {
+      const extracted = await extractColorsFromImage(file, 5)
+      if (extracted.length) {
+        setBaseColor(extracted[0])
+        setHarmony('custom')
+        setOverrides({})
+        setExtraColors(extracted.slice(1))
+        setActiveColorIdx(0)
+        setLocked(new Set())
+      }
+    } catch { /* ignore */ }
+    setExtracting(false)
+    setAddMenuOpen(false)
+    if (extractFileRef.current) extractFileRef.current.value = ''
+  }
+
   const addMenuRef = useRef(null)
   useEffect(() => {
     if (!addMenuOpen) return
@@ -1141,6 +1164,12 @@ ${stateVars}
                 <button onClick={addAnalogous}>Analogous</button>
                 <button onClick={addTriadic}>Triadic</button>
                 <button onClick={addSplitComp}>Split Complement</button>
+                <div className="cs-add-menu-sep" />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: 'var(--brand)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  {extracting ? 'Extracting…' : 'Extract from Image'}
+                  <input ref={extractFileRef} type="file" accept="image/*" onChange={handleImageExtract} style={{ display: 'none' }} />
+                </label>
                 <div className="cs-add-menu-sep" />
                 <div className="cs-add-menu-label">From Brand Palette</div>
                 {BRANDS.slice(0, 6).map(b => (

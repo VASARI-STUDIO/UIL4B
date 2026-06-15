@@ -9,7 +9,7 @@ CS-07,Color Studio,Gradient,Remove Flip from header; move into Color Stops panel
 CS-08,Color Studio,Gradient,Remove Auto-from-palette button,S,1k,DONE,This session (staged)
 CS-09,Color Studio,Gradient,Premade gradients show step % + flex bento grid,M,10k,DONE,This session (staged)
 CS-10,Color Studio,Global,Undo toast w/ timed dismiss for destructive actions,M,8k,DONE,This session (staged)
-CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,TODO,Upload photo -> extract palette
+CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,DONE,k-means extraction from uploaded photo in Add Colour menu
 CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,TODO,
 CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,TODO,Licensing check needed
 CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,DONE,PNG+SVG+Tailwind added to colour export tab
