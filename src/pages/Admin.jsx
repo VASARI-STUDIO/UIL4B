@@ -1,125 +1,199 @@
-import { useState, useEffect, useCallback } from 'react'
-import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics } from '../utils/analytics'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
-const ADMIN_KEY = 'vs-admin-unlocked'
 const STATUSES = ['new', 'in-progress', 'done']
 const STATUS_LABELS = { new: 'New', 'in-progress': 'In Progress', done: 'Done' }
 const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--accent)', done: 'var(--ok)' }
 const STATUS_BGS = { new: 'rgba(245,158,11,.1)', 'in-progress': 'var(--accent-bg)', done: 'rgba(16,185,129,.1)' }
 const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: '#a855f7' }
 const TYPE_BGS = { bug: 'rgba(239,68,68,.1)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'rgba(168,85,247,.1)' }
+const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', '#a855f7', 'var(--t3)']
+const DAY = 86400000
+const WEEK = 7 * DAY
 
-function StatCard({ value, label, sub }) {
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'design', label: 'Design' },
+  { id: 'submissions', label: 'Submissions' },
+  { id: 'prompts', label: 'Prompts' },
+  { id: 'pages', label: 'Pages' },
+  { id: 'users', label: 'Users' },
+  { id: 'stripe', label: 'Stripe' },
+]
+
+const TIME_RANGES = [
+  { id: 'today', label: 'Today' },
+  { id: '7d', label: '7 days' },
+  { id: '30d', label: '30 days' },
+  { id: 'all', label: 'All time' },
+]
+
+function fmtDuration(s) {
+  if (s < 60) return `${s}s`
+  return `${Math.floor(s / 60)}m ${s % 60}s`
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function fmtNum(n) {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
+function timeFilter(timestamp, range) {
+  if (range === 'all') return true
+  const now = Date.now()
+  if (range === 'today') return now - timestamp < DAY
+  if (range === '7d') return now - timestamp < WEEK
+  if (range === '30d') return now - timestamp < 30 * DAY
+  return true
+}
+
+// ── SVG Charts ──────────────────────────────────────────────
+
+function AreaChart({ data, height = 120 }) {
+  if (!data.length) return <div className="adm-empty">No data</div>
+  const w = 400
+  const h = height
+  const pad = { t: 8, r: 4, b: 20, l: 36 }
+  const iw = w - pad.l - pad.r
+  const ih = h - pad.t - pad.b
+  const max = Math.max(...data.map(d => d.value), 1)
+  const xStep = data.length > 1 ? iw / (data.length - 1) : iw
+
+  const points = data.map((d, i) => ({
+    x: pad.l + i * xStep,
+    y: pad.t + ih - (d.value / max) * ih,
+  }))
+
+  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+  const area = `${line} L${points[points.length - 1].x},${pad.t + ih} L${points[0].x},${pad.t + ih} Z`
+
+  const yTicks = [0, Math.round(max / 2), max]
+
   return (
-    <div style={{ padding: '18px 20px', borderRadius: 'var(--radius)', background: 'var(--bg-1)', border: '1px solid var(--border)', flex: '1 1 160px', minWidth: 140 }}>
-      <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--accent)', letterSpacing: '-.02em', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t0)', marginTop: 8 }}>{label}</div>
-      {sub && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>{sub}</div>}
+    <div className="adm-chart">
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity=".25" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity=".02" />
+          </linearGradient>
+        </defs>
+        {yTicks.map(v => {
+          const y = pad.t + ih - (v / max) * ih
+          return (
+            <g key={v}>
+              <line x1={pad.l} x2={w - pad.r} y1={y} y2={y} stroke="var(--border)" strokeWidth=".5" />
+              <text x={pad.l - 6} y={y + 3} textAnchor="end" fill="var(--t3)" fontSize="9" fontFamily="var(--mono)">{fmtNum(v)}</text>
+            </g>
+          )
+        })}
+        <path d={area} fill="url(#area-grad)" />
+        <path d={line} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r="3" fill="var(--accent)" opacity="0">
+            <title>{data[i].label}: {data[i].value}</title>
+          </circle>
+        ))}
+        {data.length <= 14 && data.map((d, i) => (
+          <text key={i} x={points[i].x} y={h - 4} textAnchor="middle" fill="var(--t3)" fontSize="8" fontFamily="var(--mono)">{d.label}</text>
+        ))}
+      </svg>
     </div>
   )
 }
 
-function DataTable({ headers, rows }) {
-  const cols = headers.map(h => h.width || 'minmax(120px, 1fr)').join(' ')
+function DonutChart({ segments, size = 120 }) {
+  const total = segments.reduce((s, d) => s + d.value, 0)
+  if (!total) return <div className="adm-empty">No data</div>
+  const r = size / 2
+  const inner = r * 0.6
+  const cx = r
+  const cy = r
+  let cumAngle = -Math.PI / 2
+
+  const paths = segments.map((seg, i) => {
+    const angle = (seg.value / total) * Math.PI * 2
+    const x1 = cx + r * Math.cos(cumAngle)
+    const y1 = cy + r * Math.sin(cumAngle)
+    const x2 = cx + r * Math.cos(cumAngle + angle)
+    const y2 = cy + r * Math.sin(cumAngle + angle)
+    const ix1 = cx + inner * Math.cos(cumAngle + angle)
+    const iy1 = cy + inner * Math.sin(cumAngle + angle)
+    const ix2 = cx + inner * Math.cos(cumAngle)
+    const iy2 = cy + inner * Math.sin(cumAngle)
+    const large = angle > Math.PI ? 1 : 0
+    cumAngle += angle
+    const d = `M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix1},${iy1} A${inner},${inner} 0 ${large} 0 ${ix2},${iy2} Z`
+    return <path key={i} d={d} fill={DONUT_COLORS[i % DONUT_COLORS.length]} opacity=".85"><title>{seg.label}: {seg.value}</title></path>
+  })
+
   return (
-    <div style={{ borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', overflow: 'hidden' }}>
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ minWidth: 'fit-content' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: cols, background: 'var(--bg-2)', borderBottom: '1px solid var(--border)', padding: '10px 14px', gap: 12 }}>
-            {headers.map(h => (
-              <div key={h.key} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>{h.label}</div>
-            ))}
+    <div className="adm-donut-wrap">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {paths}
+        <text x={cx} y={cy - 4} textAnchor="middle" fill="var(--t0)" fontSize="20" fontWeight="800">{total}</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--t3)" fontSize="9">total</text>
+      </svg>
+      <div className="adm-donut-legend">
+        {segments.map((seg, i) => (
+          <div key={i} className="adm-donut-item">
+            <span className="adm-donut-dot" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+            <span>{seg.label}</span>
+            <span className="adm-donut-count">{seg.value}</span>
           </div>
-          {rows.length === 0 && (
-            <div style={{ padding: '20px 14px', fontSize: 12, color: 'var(--t2)', textAlign: 'center' }}>No data yet</div>
-          )}
-          {rows.map((row, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, padding: '10px 14px', gap: 12, borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', background: i % 2 === 0 ? 'transparent' : 'var(--bg-1)', fontSize: 12, alignItems: 'center' }}>
-              {headers.map(h => (
-                <div key={h.key} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: h.mono ? 'var(--t1)' : 'var(--t0)', fontFamily: h.mono ? 'var(--mono)' : 'inherit', fontWeight: h.bold ? 600 : 400 }}>
-                  {typeof row[h.key] === 'function' ? row[h.key]() : row[h.key]}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   )
 }
 
-function Section({ title, right, children }) {
+function Sparkline({ data }) {
+  if (!data.length) return null
+  const max = Math.max(...data, 1)
   return (
-    <div style={{ marginBottom: 36 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 24, height: 2, background: 'var(--accent)', borderRadius: 1 }} />
-          <h2 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-.02em' }}>{title}</h2>
-        </div>
-        {right}
-      </div>
-      {children}
+    <div className="adm-sparkline">
+      {data.map((v, i) => (
+        <div key={i} className="adm-sparkline-bar" style={{ height: `${Math.max(4, (v / max) * 100)}%` }} title={String(v)} />
+      ))}
     </div>
   )
 }
 
-function Badge({ color, bg, children }) {
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase',
-      padding: '2px 8px', borderRadius: 4, background: bg, color, whiteSpace: 'nowrap',
-    }}>
-      {children}
-    </span>
-  )
-}
+// ── Sub-components ──────────────────────────────────────────
 
 function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expanded, onToggle }) {
   const [notes, setNotes] = useState(item.adminNotes || '')
   const [editingNotes, setEditingNotes] = useState(false)
-
-  const nextStatus = () => {
-    const idx = STATUSES.indexOf(item.status)
-    return STATUSES[(idx + 1) % STATUSES.length]
-  }
-
-  const saveNotes = () => {
-    onNotesChange(item.id, notes)
-    setEditingNotes(false)
-  }
+  const nextStatus = () => STATUSES[(STATUSES.indexOf(item.status) + 1) % STATUSES.length]
 
   return (
-    <div className="card" style={{
-      padding: 0, overflow: 'hidden',
-      opacity: item.status === 'done' ? 0.7 : 1,
-      borderLeft: `3px solid ${STATUS_COLORS[item.status] || 'var(--border)'}`,
-      transition: 'opacity .2s',
-    }}>
-      <div
-        style={{ padding: '14px 16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}
-        onClick={onToggle}
-      >
+    <div className={`adm-card adm-submission${item.status === 'done' ? ' done' : ''}`} style={{ borderLeftColor: STATUS_COLORS[item.status] }}>
+      <div className="adm-submission-head" onClick={onToggle}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-            <Badge color={TYPE_COLORS[item.type] || 'var(--t2)'} bg={TYPE_BGS[item.type] || 'var(--bg-2)'}>{item.type}</Badge>
-            <Badge color={STATUS_COLORS[item.status]} bg={STATUS_BGS[item.status]}>{STATUS_LABELS[item.status] || item.status}</Badge>
-            {item.source && <Badge color="var(--t3)" bg="var(--bg-2)">{item.source}</Badge>}
+          <div className="adm-submission-badges">
+            <span className="adm-badge" style={{ color: TYPE_COLORS[item.type], background: TYPE_BGS[item.type] }}>{item.type}</span>
+            <span className="adm-badge" style={{ color: STATUS_COLORS[item.status], background: STATUS_BGS[item.status] }}>{STATUS_LABELS[item.status]}</span>
+            {item.source && <span className="adm-badge" style={{ color: 'var(--t3)', background: 'var(--bg-2)' }}>{item.source}</span>}
             <span style={{ fontSize: 10, color: 'var(--t3)' }}>{fmtDateTime(item.createdAt)}</span>
           </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 2 }}>
-            {item.subject || `[${item.type}] Submission`}
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: expanded ? 'normal' : 'nowrap' }}>
-            {item.message}
-          </p>
-          {!expanded && item.adminNotes && (
-            <div style={{ fontSize: 10, color: 'var(--accent)', marginTop: 4 }}>Has admin notes</div>
-          )}
+          <div className="adm-submission-title">{item.subject || `[${item.type}] Submission`}</div>
+          <p className={`adm-submission-preview${expanded ? ' expanded' : ''}`}>{item.message}</p>
+          {!expanded && item.adminNotes && <div style={{ fontSize: 10, color: 'var(--accent)', marginTop: 4 }}>Has admin notes</div>}
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'transform .2s', transform: expanded ? 'rotate(180deg)' : 'none', marginTop: 4 }}>
           <polyline points="6 9 12 15 18 9" />
@@ -127,74 +201,34 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
       </div>
 
       {expanded && (
-        <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-          <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--t0)', marginBottom: 12, whiteSpace: 'pre-wrap' }}>
-            {item.message}
-          </div>
-
-          {item.email && (
-            <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>
-              From: <strong>{item.email}</strong>
-            </div>
-          )}
-
-          {/* Admin notes */}
-          <div style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius-s)', padding: 12, marginBottom: 12 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 8 }}>Admin Notes</div>
+        <div className="adm-submission-body">
+          <div className="adm-submission-msg">{item.message}</div>
+          {item.email && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong></div>}
+          <div className="adm-submission-notes">
+            <div className="adm-submission-notes-title">Admin Notes</div>
             {editingNotes ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  placeholder="Add internal notes, action items, or a reply draft..."
-                  style={{ width: '100%', minHeight: 80, resize: 'vertical', fontSize: 12 }}
-                  autoFocus
-                />
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add internal notes, action items, or a reply draft..." style={{ width: '100%', minHeight: 80, resize: 'vertical', fontSize: 12 }} autoFocus />
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn btn-s" onClick={saveNotes}>Save</button>
+                  <button className="btn btn-s" onClick={() => { onNotesChange(item.id, notes); setEditingNotes(false) }}>Save</button>
                   <button className="btn btn-s" onClick={() => { setNotes(item.adminNotes || ''); setEditingNotes(false) }}>Cancel</button>
                 </div>
               </div>
             ) : (
               <div>
-                {item.adminNotes ? (
-                  <p style={{ fontSize: 12, color: 'var(--t0)', whiteSpace: 'pre-wrap', lineHeight: 1.6, marginBottom: 8 }}>{item.adminNotes}</p>
-                ) : (
-                  <p style={{ fontSize: 12, color: 'var(--t3)', fontStyle: 'italic', marginBottom: 8 }}>No notes yet</p>
-                )}
-                <button className="btn btn-s" onClick={() => setEditingNotes(true)} style={{ fontSize: 10 }}>
-                  {item.adminNotes ? 'Edit notes' : 'Add notes'}
-                </button>
+                {item.adminNotes
+                  ? <p style={{ fontSize: 12, color: 'var(--t0)', whiteSpace: 'pre-wrap', lineHeight: 1.6, marginBottom: 8 }}>{item.adminNotes}</p>
+                  : <p style={{ fontSize: 12, color: 'var(--t3)', fontStyle: 'italic', marginBottom: 8 }}>No notes yet</p>}
+                <button className="btn btn-s" onClick={() => setEditingNotes(true)} style={{ fontSize: 10 }}>{item.adminNotes ? 'Edit notes' : 'Add notes'}</button>
               </div>
             )}
           </div>
-
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-s"
-              onClick={() => onStatusChange(item.id, nextStatus())}
-              style={{ fontSize: 10, color: STATUS_COLORS[nextStatus()] }}
-            >
-              Mark as {STATUS_LABELS[nextStatus()]}
-            </button>
+          <div className="adm-submission-actions">
+            <button className="btn btn-s" onClick={() => onStatusChange(item.id, nextStatus())} style={{ fontSize: 10, color: STATUS_COLORS[nextStatus()] }}>Mark as {STATUS_LABELS[nextStatus()]}</button>
             {STATUSES.filter(s => s !== item.status && s !== nextStatus()).map(s => (
-              <button
-                key={s}
-                className="btn btn-s"
-                onClick={() => onStatusChange(item.id, s)}
-                style={{ fontSize: 10, color: STATUS_COLORS[s] }}
-              >
-                {STATUS_LABELS[s]}
-              </button>
+              <button key={s} className="btn btn-s" onClick={() => onStatusChange(item.id, s)} style={{ fontSize: 10, color: STATUS_COLORS[s] }}>{STATUS_LABELS[s]}</button>
             ))}
-            <button
-              className="btn btn-s"
-              onClick={() => onDelete(item.id)}
-              style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}
-            >
-              Delete
-            </button>
+            <button className="btn btn-s" onClick={() => onDelete(item.id)} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
           </div>
         </div>
       )}
@@ -220,13 +254,9 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
   }
 
   const handleSave = () => {
-    const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean)
-    updatePrompt({ title, text, tags: parsedTags })
+    updatePrompt({ title, text, tags: tags.split(',').map(t => t.trim()).filter(Boolean) })
     setEditing(false)
   }
-
-  const handleApprove = () => updatePrompt({ status: 'approved' })
-  const handleReject = () => updatePrompt({ status: 'rejected' })
 
   const handleDelete = async () => {
     setBusy(true)
@@ -242,10 +272,10 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
   const statusBg = { pending: 'rgba(245,158,11,.1)', approved: 'rgba(16,185,129,.1)', rejected: 'rgba(239,68,68,.1)' }[prompt.status] || 'var(--bg-2)'
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', borderLeft: `3px solid ${statusColor}`, marginBottom: 8 }}>
-      <div style={{ padding: '14px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-          <Badge color={statusColor} bg={statusBg}>{prompt.status}</Badge>
+    <div className="adm-card adm-prompt" style={{ borderLeftColor: statusColor }}>
+      <div className="adm-card-body">
+        <div className="adm-prompt-header">
+          <span className="adm-badge" style={{ color: statusColor, background: statusBg }}>{prompt.status}</span>
           {prompt.authorName && <span style={{ fontSize: 11, color: 'var(--t2)' }}>by {prompt.authorName}</span>}
           {prompt.authorEmail && <span style={{ fontSize: 10, color: 'var(--t3)' }}>({prompt.authorEmail})</span>}
           <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
@@ -275,10 +305,8 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t0)', marginBottom: 4 }}>{prompt.title || 'Untitled'}</div>
             <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{prompt.text}</p>
             {(prompt.tags || []).length > 0 && (
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
-                {prompt.tags.map(tag => (
-                  <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'var(--bg-2)', color: 'var(--t2)', fontWeight: 600 }}>{tag}</span>
-                ))}
+              <div className="adm-prompt-tags">
+                {prompt.tags.map(tag => <span key={tag} className="adm-prompt-tag">{tag}</span>)}
               </div>
             )}
             {prompt.profileLink && (
@@ -289,10 +317,10 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
           </>
         )}
 
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+        <div className="adm-prompt-actions">
           {!editing && <button className="btn btn-s" onClick={() => setEditing(true)} disabled={busy} style={{ fontSize: 10 }}>Edit</button>}
-          {prompt.status !== 'approved' && <button className="btn btn-s" onClick={handleApprove} disabled={busy} style={{ fontSize: 10, color: 'var(--ok)' }}>Approve</button>}
-          {prompt.status !== 'rejected' && <button className="btn btn-s" onClick={handleReject} disabled={busy} style={{ fontSize: 10, color: 'var(--warn)' }}>Reject</button>}
+          {prompt.status !== 'approved' && <button className="btn btn-s" onClick={() => updatePrompt({ status: 'approved' })} disabled={busy} style={{ fontSize: 10, color: 'var(--ok)' }}>Approve</button>}
+          {prompt.status !== 'rejected' && <button className="btn btn-s" onClick={() => updatePrompt({ status: 'rejected' })} disabled={busy} style={{ fontSize: 10, color: 'var(--warn)' }}>Reject</button>}
           <button className="btn btn-s" onClick={handleDelete} disabled={busy} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
         </div>
       </div>
@@ -300,30 +328,177 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
   )
 }
 
-function fmtDuration(s) {
-  if (s < 60) return `${s}s`
-  return `${Math.floor(s / 60)}m ${s % 60}s`
+function StripeSetupPanel({ toast }) {
+  const [config, setConfig] = useState(null)
+  const [draft, setDraft] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+
+  const authedFetch = useCallback(async (opts = {}) => {
+    const { auth: fbAuth } = await import('../utils/firebase')
+    const token = await fbAuth.currentUser?.getIdToken()
+    if (!token) throw new Error('Not authenticated')
+    const res = await fetch('/api/setup-stripe', {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`)
+    return data
+  }, [])
+
+  const buildDraft = useCallback((data) => {
+    const out = { monthly: {}, yearly: {} }
+    for (const interval of ['monthly', 'yearly']) {
+      const live = data.prices?.[interval]?.currencies
+      for (const c of data.currencies) {
+        out[interval][c.code] = (live && live[c.code] != null) ? live[c.code] : data.defaults[interval][c.code]
+      }
+    }
+    return out
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setLoading(true); setError('')
+      try {
+        const data = await authedFetch({ method: 'GET' })
+        if (cancelled) return
+        setConfig(data)
+        setDraft(buildDraft(data))
+      } catch (err) {
+        if (!cancelled) setError(err.message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [authedFetch, buildDraft])
+
+  const save = async () => {
+    setSaving(true); setError(''); setResult(null)
+    try {
+      const prices = { monthly: {}, yearly: {} }
+      for (const interval of ['monthly', 'yearly']) {
+        for (const [code, amt] of Object.entries(draft[interval])) prices[interval][code] = Number(amt)
+      }
+      const data = await authedFetch({ method: 'POST', body: JSON.stringify({ prices }) })
+      setResult(data)
+      toast?.('Prices saved to Stripe')
+    } catch (err) {
+      setError(err.message)
+      toast?.('Save failed: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="adm-section">
+      <div className="adm-section-h">
+        <div className="adm-section-title"><span className="adm-section-bar" />Stripe Pricing</div>
+      </div>
+      {loading ? (
+        <div className="adm-card"><div className="adm-empty">Loading current prices...</div></div>
+      ) : !config ? (
+        <div className="adm-card adm-verify-error">
+          <div className="adm-card-body">
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Couldn&apos;t load Stripe config</div>
+            <div style={{ fontSize: 12, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{error}</div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="adm-card" style={{ marginBottom: 16 }}>
+            <div className="adm-card-body">
+              <p className="adm-stripe-desc">
+                Set the monthly and yearly price for the <strong>UIL4B Pro</strong> plan per currency. Each customer is
+                shown their local currency at checkout automatically (detected from their browser locale).
+              </p>
+              <p className="adm-stripe-tip">
+                Tip: keep amounts ending in <strong>.99</strong>. Saving creates fresh Stripe prices and retires the old ones — existing subscribers keep their current rate.
+              </p>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="adm-stripe-table">
+                  <thead>
+                    <tr>
+                      <th>Currency</th>
+                      <th>Monthly</th>
+                      <th>Yearly</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {config.currencies.map(c => (
+                      <tr key={c.code}>
+                        <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: 600 }}>{c.code.toUpperCase()}</span>
+                          <span style={{ color: 'var(--t3)', marginLeft: 6 }}>{c.label}</span>
+                          {c.code === config.baseCurrency && <span style={{ color: 'var(--accent)', marginLeft: 6, fontSize: 10 }}>base</span>}
+                        </td>
+                        {['monthly', 'yearly'].map(interval => (
+                          <td key={interval}>
+                            <div className="adm-stripe-input">
+                              <span>{c.symbol}</span>
+                              <input type="number" min="0" step="0.01" value={draft[interval][c.code]} onChange={e => setDraft(d => ({ ...d, [interval]: { ...d[interval], [c.code]: e.target.value } }))} />
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="adm-stripe-actions">
+                <button className="btn btn-accent" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save Prices to Stripe'}</button>
+                <button className="btn btn-s" onClick={() => setDraft(buildDraft({ ...config, prices: {} }))} disabled={saving}>Reset to defaults</button>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="adm-card adm-verify-error" style={{ marginBottom: 16 }}>
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Error</div>
+                <div style={{ fontSize: 12, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{error}</div>
+              </div>
+            </div>
+          )}
+
+          {result && (
+            <div className="adm-card" style={{ borderLeft: '3px solid var(--ok)', marginBottom: 16 }}>
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ok)', marginBottom: 10 }}>Prices Saved</div>
+                <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2, color: 'var(--t0)' }}>
+                  <div>Product: <strong>{result.product}</strong></div>
+                  <div>Monthly price: <strong>{result.prices?.monthly?.id}</strong></div>
+                  <div>Yearly price: <strong>{result.prices?.yearly?.id}</strong></div>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 10 }}>{result.note}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="adm-card" style={{ background: 'var(--bg-1)' }}>
+            <div className="adm-card-header"><span className="adm-card-title">Required Vercel Env Vars</span></div>
+            <div className="adm-card-body">
+              <div className="adm-stripe-env">
+                <div>STRIPE_SECRET_KEY <span>— sk_live_... or sk_test_...</span></div>
+                <div>VITE_STRIPE_PUBLISHABLE_KEY <span>— pk_live_... or pk_test_...</span></div>
+                <div>STRIPE_WEBHOOK_SECRET <span>— whsec_... (from Stripe dashboard)</span></div>
+                <div>FIREBASE_SERVICE_ACCOUNT_KEY <span>— JSON string (for auth token verification)</span></div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function fmtDateTime(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
-const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'design', label: 'Design Analytics' },
-  { id: 'submissions', label: 'Submissions' },
-  { id: 'prompts', label: 'Prompts' },
-  { id: 'pages', label: 'Pages' },
-  { id: 'users', label: 'Users' },
-  { id: 'stripe', label: 'Stripe' },
-]
+// ── Main Component ──────────────────────────────────────────
 
 export default function Admin({ toast }) {
   const { user } = useAuth()
@@ -331,6 +506,7 @@ export default function Admin({ toast }) {
   const [unlocked, setUnlocked] = useState(false)
   const [code, setCode] = useState('')
   const [tab, setTab] = useState('overview')
+  const [timeRange, setTimeRange] = useState('7d')
   const [data, setData] = useState(null)
   const [feedback, setFeedback] = useState([])
   const [filterType, setFilterType] = useState('all')
@@ -338,12 +514,15 @@ export default function Admin({ toast }) {
   const [expandedId, setExpandedId] = useState(null)
   const [pendingPrompts, setPendingPrompts] = useState([])
   const [promptFilter, setPromptFilter] = useState('pending')
-
   const [designData, setDesignData] = useState(null)
+  const [rawViews, setRawViews] = useState([])
+  const [rawSessions, setRawSessions] = useState([])
 
   const refresh = useCallback(async () => {
     setData(getAnalyticsSummary())
     setDesignData(getDesignAnalytics())
+    setRawViews(getPageViews())
+    setRawSessions(getSessions())
     const localFeedback = getFeedback()
     let merged = [...localFeedback]
     try {
@@ -352,7 +531,7 @@ export default function Admin({ toast }) {
       const fsFeedback = snap.docs.map(d => ({ ...d.data(), id: d.id, _fs: true, source: d.data().source || 'firestore' }))
       const localIds = new Set(localFeedback.map(f => f.id))
       fsFeedback.forEach(f => { if (!localIds.has(f.id)) merged.push(f) })
-    } catch { /* firestore unavailable — fall back to local feedback */ }
+    } catch { /* firestore unavailable */ }
     setFeedback(merged)
     try {
       const promptSnap = await getDocs(query(collection(db, 'community-prompts'), orderBy('createdAt', 'desc')))
@@ -365,7 +544,7 @@ export default function Admin({ toast }) {
 
   useEffect(() => {
     if (!isAdminUser || serverVerified) return
-    const verify = async () => {
+    ;(async () => {
       try {
         const { auth: fbAuth } = await import('../utils/firebase')
         const token = await fbAuth.currentUser?.getIdToken()
@@ -376,14 +555,9 @@ export default function Admin({ toast }) {
         })
         const data = await res.json().catch(() => ({}))
         if (data.isAdmin) { setServerVerified(true); setVerifyError('') }
-        else {
-          setServerVerified(false)
-          setVerifyError(data.error || `Server returned ${res.status}`)
-          toast?.('Admin verification failed')
-        }
-      } catch { /* offline — trust client-side for now */ }
-    }
-    verify()
+        else { setVerifyError(data.error || `Server returned ${res.status}`); toast?.('Admin verification failed') }
+      } catch { /* offline */ }
+    })()
   }, [isAdminUser, serverVerified]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const effectiveUnlocked = unlocked || isAdminUser
@@ -392,20 +566,106 @@ export default function Admin({ toast }) {
     if (effectiveUnlocked) refresh()
   }, [effectiveUnlocked, refresh])
 
+  // ── Derived data ──
+
+  const filteredViews = useMemo(() => rawViews.filter(v => timeFilter(v.timestamp, timeRange)), [rawViews, timeRange])
+  const filteredSessions = useMemo(() => rawSessions.filter(s => timeFilter(s.timestamp, timeRange)), [rawSessions, timeRange])
+
+  const viewsChartData = useMemo(() => {
+    if (!filteredViews.length) return []
+    const now = Date.now()
+    let buckets, labels
+    if (timeRange === 'today') {
+      buckets = Array(24).fill(0)
+      labels = Array.from({ length: 24 }, (_, i) => `${i}h`)
+      filteredViews.forEach(v => { const h = new Date(v.timestamp).getHours(); buckets[h]++ })
+    } else if (timeRange === '7d') {
+      buckets = Array(7).fill(0)
+      labels = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now - (6 - i) * DAY)
+        return d.toLocaleDateString([], { weekday: 'short' })
+      })
+      filteredViews.forEach(v => {
+        const daysAgo = Math.floor((now - v.timestamp) / DAY)
+        if (daysAgo < 7) buckets[6 - daysAgo]++
+      })
+    } else if (timeRange === '30d') {
+      buckets = Array(30).fill(0)
+      labels = Array.from({ length: 30 }, (_, i) => {
+        const d = new Date(now - (29 - i) * DAY)
+        return i % 5 === 0 ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''
+      })
+      filteredViews.forEach(v => {
+        const daysAgo = Math.floor((now - v.timestamp) / DAY)
+        if (daysAgo < 30) buckets[29 - daysAgo]++
+      })
+    } else {
+      const oldest = Math.min(...filteredViews.map(v => v.timestamp))
+      const span = now - oldest
+      const numBuckets = Math.min(30, Math.max(7, Math.ceil(span / DAY)))
+      buckets = Array(numBuckets).fill(0)
+      labels = Array.from({ length: numBuckets }, (_, i) => {
+        const d = new Date(oldest + (i / (numBuckets - 1)) * span)
+        return i % Math.ceil(numBuckets / 6) === 0 ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''
+      })
+      filteredViews.forEach(v => {
+        const idx = Math.min(numBuckets - 1, Math.floor(((v.timestamp - oldest) / span) * numBuckets))
+        buckets[idx]++
+      })
+    }
+    return buckets.map((v, i) => ({ value: v, label: labels[i] }))
+  }, [filteredViews, timeRange])
+
+  const bounceRate = useMemo(() => {
+    if (!filteredSessions.length) return 0
+    return Math.round(filteredSessions.filter(s => s.pages <= 1).length / filteredSessions.length * 100)
+  }, [filteredSessions])
+
+  const avgDuration = useMemo(() => {
+    if (!filteredSessions.length) return 0
+    return Math.round(filteredSessions.reduce((s, sess) => s + sess.duration, 0) / filteredSessions.length / 1000)
+  }, [filteredSessions])
+
+  const topPagesFiltered = useMemo(() => {
+    const counts = {}
+    filteredViews.forEach(v => { counts[v.path] = (counts[v.path] || 0) + 1 })
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10)
+  }, [filteredViews])
+
+  const sessionsPerDay = useMemo(() => {
+    const last7 = Array(7).fill(0)
+    const now = Date.now()
+    rawSessions.forEach(s => {
+      const d = Math.floor((now - s.timestamp) / DAY)
+      if (d < 7) last7[6 - d]++
+    })
+    return last7
+  }, [rawSessions])
+
+  // Submission stats
+  const newCount = feedback.filter(f => f.status === 'new').length
+  const inProgressCount = feedback.filter(f => f.status === 'in-progress').length
+
+  const filteredFeedback = useMemo(() =>
+    [...feedback].reverse().filter(item => {
+      if (filterType !== 'all' && item.type !== filterType) return false
+      if (filterStatus !== 'all' && item.status !== filterStatus) return false
+      return true
+    }),
+  [feedback, filterType, filterStatus])
+
+  const feedbackDonut = useMemo(() => {
+    const types = ['bug', 'feature', 'general', 'help']
+    return types.map(t => ({ label: t.charAt(0).toUpperCase() + t.slice(1), value: feedback.filter(f => f.type === t).length })).filter(d => d.value > 0)
+  }, [feedback])
+
+  // ── Handlers ──
+
   const handleUnlock = (e) => {
     e.preventDefault()
-    if (code.trim() === ADMIN_CODE) {
-      setUnlocked(true)
-      toast('Admin access granted')
-    } else {
-      toast('Invalid code')
-    }
+    if (code.trim() === ADMIN_CODE) { setUnlocked(true); toast('Admin access granted') }
+    else toast('Invalid code')
     setCode('')
-  }
-
-  const handleLock = () => {
-    setUnlocked(false)
-    toast('Admin access revoked')
   }
 
   const handleStatusChange = async (id, status) => {
@@ -457,31 +717,17 @@ export default function Admin({ toast }) {
     toast(`Exported ${rows.length} submissions`)
   }
 
-  const filteredFeedback = [...feedback].reverse().filter(item => {
-    if (filterType !== 'all' && item.type !== filterType) return false
-    if (filterStatus !== 'all' && item.status !== filterStatus) return false
-    return true
-  })
-
-  const newCount = feedback.filter(f => f.status === 'new').length
-  const inProgressCount = feedback.filter(f => f.status === 'in-progress').length
+  // ── Lock screen ──
 
   if (!effectiveUnlocked) {
     return (
       <div className="sec">
-        <div style={{ maxWidth: 400, margin: '80px auto', textAlign: 'center' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 16, fontFamily: 'var(--mono)' }}>Admin Access</div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.03em', marginBottom: 8 }}>Developer Dashboard</h1>
-          <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 24 }}>{user ? 'Your account does not have admin access. Enter the admin code to continue.' : 'Sign in with an owner account, or enter the admin code to access analytics and management tools.'}</p>
-          <form onSubmit={handleUnlock} style={{ display: 'flex', gap: 8 }}>
-            <input
-              type="password"
-              value={code}
-              onChange={e => setCode(e.target.value)}
-              placeholder="Enter admin code"
-              style={{ flex: 1, textAlign: 'center', fontSize: 14, letterSpacing: '.04em' }}
-              autoFocus
-            />
+        <div className="adm-lock">
+          <div className="adm-lock-eyebrow">Admin Access</div>
+          <h1>Developer Dashboard</h1>
+          <p>{user ? 'Your account does not have admin access. Enter the admin code to continue.' : 'Sign in with an owner account, or enter the admin code.'}</p>
+          <form onSubmit={handleUnlock}>
+            <input type="password" value={code} onChange={e => setCode(e.target.value)} placeholder="Enter admin code" autoFocus />
             <button className="btn btn-accent" type="submit">Unlock</button>
           </form>
         </div>
@@ -491,300 +737,361 @@ export default function Admin({ toast }) {
 
   if (!data) return null
 
+  // ── Dashboard ──
+
   return (
-    <div className="sec">
-      <div className="sec-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div className="sec-h-eyebrow" style={{ color: 'var(--ok)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ok)', display: 'inline-block', marginRight: 0 }} />
-            Admin Mode
-          </div>
+    <div className="sec adm">
+      {/* Header */}
+      <div className="adm-header">
+        <div className="adm-header-left">
+          <div className="adm-status"><span className="adm-status-dot" /> Admin Mode</div>
           <h1>Dashboard</h1>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="adm-actions">
+          <div className="adm-time-filter">
+            {TIME_RANGES.map(t => (
+              <button key={t.id} className={`adm-time-btn${timeRange === t.id ? ' active' : ''}`} onClick={() => setTimeRange(t.id)}>{t.label}</button>
+            ))}
+          </div>
           <button className="btn btn-s" onClick={refresh}>Refresh</button>
           <button className="btn btn-s" onClick={exportCSV}>Export CSV</button>
-          {!isAdminUser && <button className="btn btn-s" onClick={handleLock} style={{ color: 'var(--err)' }}>Lock</button>}
+          {!isAdminUser && <button className="btn btn-s" onClick={() => { setUnlocked(false); toast('Admin access revoked') }} style={{ color: 'var(--err)' }}>Lock</button>}
         </div>
       </div>
 
       {verifyError && (
-        <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--err)', marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>Server admin verification failed</div>
-          <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{verifyError}</div>
-          <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
-            Server-backed actions (Stripe setup) won&apos;t work until this is resolved. Local analytics below still function.
+        <div className="adm-card adm-verify-error" style={{ marginBottom: 20 }}>
+          <div className="adm-card-body">
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>Server admin verification failed</div>
+            <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{verifyError}</div>
+            <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>Server-backed actions (Stripe setup) won&apos;t work until resolved. Local analytics below still function.</div>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, flexWrap: 'wrap' }}>
+      <div className="adm-tabs">
         {TABS.map(t => (
-          <button
-            key={t.id}
-            className={`pt-t${tab === t.id ? ' on' : ''}`}
-            onClick={() => setTab(t.id)}
-            style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600 }}
-          >
+          <button key={t.id} className={`adm-tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
             {t.label}
             {t.id === 'submissions' && (newCount + inProgressCount) > 0 && (
-              <span style={{ marginLeft: 6, background: 'var(--accent)', color: 'var(--bg-0)', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>
-                {newCount + inProgressCount}
-              </span>
+              <span className="adm-tab-badge">{newCount + inProgressCount}</span>
             )}
           </button>
         ))}
       </div>
 
-      {/* OVERVIEW TAB */}
+      {/* ═══════ OVERVIEW TAB ═══════ */}
       {tab === 'overview' && (
         <>
-          <Section title="Key Metrics">
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <StatCard value={data.totalViews} label="Total Page Views" sub="All time" />
-              <StatCard value={data.viewsToday} label="Views Today" />
-              <StatCard value={data.viewsWeek} label="Views This Week" />
-              <StatCard value={data.totalSessions} label="Sessions" sub="All time" />
-              <StatCard value={`${data.bounceRate}%`} label="Bounce Rate" sub="Single-page sessions" />
-              <StatCard value={fmtDuration(data.avgDuration)} label="Avg Session" sub="Duration" />
-            </div>
-          </Section>
-
-          <Section title="Quick Summary">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Registered Users</div>
-                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--accent)' }}>{data.users.length}</div>
+          {/* Stat cards */}
+          <div className="adm-section">
+            <div className="adm-stats">
+              <div className="adm-stat">
+                <div className="adm-stat-value">{fmtNum(filteredViews.length)}</div>
+                <div className="adm-stat-label">Page Views</div>
+                <div className="adm-stat-sub">{timeRange === 'all' ? 'All time' : TIME_RANGES.find(t => t.id === timeRange)?.label}</div>
               </div>
-              <div
-                className="card"
-                style={{ padding: 16, cursor: 'pointer', transition: 'border-color .2s' }}
-                onClick={() => setTab('submissions')}
-              >
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Submissions</div>
-                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--accent)' }}>{feedback.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 4 }}>
-                  <span style={{ color: 'var(--warn)' }}>{newCount} new</span>
-                  {' · '}
-                  <span style={{ color: 'var(--accent)' }}>{inProgressCount} in progress</span>
-                  {' · '}
-                  {feedback.filter(f => f.status === 'done').length} done
-                </div>
+              <div className="adm-stat">
+                <div className="adm-stat-value">{fmtNum(filteredSessions.length)}</div>
+                <div className="adm-stat-label">Sessions</div>
+                <Sparkline data={sessionsPerDay} />
               </div>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>By Type</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                  {['bug', 'feature', 'general', 'help'].map(type => {
-                    const count = feedback.filter(f => f.type === type).length
-                    if (!count) return null
-                    return (
-                      <Badge key={type} color={TYPE_COLORS[type]} bg={TYPE_BGS[type]}>
-                        {type}: {count}
-                      </Badge>
-                    )
-                  })}
+              <div className="adm-stat">
+                <div className="adm-stat-value">{bounceRate}%</div>
+                <div className="adm-stat-label">Bounce Rate</div>
+                <div className="adm-stat-sub">Single-page sessions</div>
+              </div>
+              <div className="adm-stat">
+                <div className="adm-stat-value">{fmtDuration(avgDuration)}</div>
+                <div className="adm-stat-label">Avg Duration</div>
+                <div className="adm-stat-sub">Per session</div>
+              </div>
+              <div className="adm-stat">
+                <div className="adm-stat-value">{data.users.length}</div>
+                <div className="adm-stat-label">Registered Users</div>
+                <div className="adm-stat-sub">Profile cache</div>
+              </div>
+              <div className="adm-stat">
+                <div className="adm-stat-value">{feedback.length}</div>
+                <div className="adm-stat-label">Submissions</div>
+                <div className="adm-stat-sub">
+                  <span style={{ color: 'var(--warn)' }}>{newCount} new</span>{' / '}
+                  <span style={{ color: 'var(--accent)' }}>{inProgressCount} open</span>
                 </div>
               </div>
             </div>
-          </Section>
+          </div>
 
-          <Section title="Product Insights">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%), 1fr))', gap: 14 }}>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Most Used Tools</div>
-                {data.topPages.filter(([p]) => p && p !== '/' && !['settings','login','admin','community','feedback','privacy','terms','projects'].some(s => p.includes(s))).slice(0, 5).map(([page, count], i) => (
-                  <div key={page} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < 4 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
-                    <span style={{ fontFamily: 'var(--mono)', color: 'var(--t0)', fontWeight: 500 }}>{page.replace('/', '')}</span>
-                    <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{count}</span>
-                  </div>
-                ))}
-                {data.topPages.length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No page data yet</div>}
+          {/* Charts row */}
+          <div className="adm-grid-2" style={{ marginBottom: 32 }}>
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Page Views</span>
+                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{filteredViews.length} total</span>
               </div>
-
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Feature Requests</div>
-                {feedback.filter(f => f.type === 'feature').slice(-5).reverse().map((f, i) => (
-                  <div key={f.id || i} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-                    <div style={{ fontWeight: 500, color: 'var(--t0)', marginBottom: 2 }}>{f.subject || 'No subject'}</div>
-                    <div style={{ color: 'var(--t2)', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.message}</div>
-                  </div>
-                ))}
-                {feedback.filter(f => f.type === 'feature').length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No feature requests yet</div>}
-              </div>
-
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Open Bugs</div>
-                {feedback.filter(f => f.type === 'bug' && f.status !== 'done').map((f, i) => (
-                  <div key={f.id || i} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Badge color={STATUS_COLORS[f.status]} bg={STATUS_BGS[f.status]}>{STATUS_LABELS[f.status]}</Badge>
-                      <span style={{ fontWeight: 500, color: 'var(--t0)' }}>{f.subject || 'No subject'}</span>
-                    </div>
-                  </div>
-                ))}
-                {feedback.filter(f => f.type === 'bug' && f.status !== 'done').length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  No open bugs
-                </div>}
+              <div className="adm-card-body">
+                <AreaChart data={viewsChartData} />
               </div>
             </div>
-          </Section>
 
-          <Section title="Setup Checklist">
-            <div className="card" style={{ padding: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  { label: 'Firebase Auth configured', check: true, note: 'Enable Email/Password + Google providers in Firebase Console' },
-                  { label: 'Firestore database created', check: true, note: 'Set region to australia-southeast1 (Sydney) in Firebase Console' },
-                  { label: 'Firestore security rules deployed', check: false, note: 'Deploy firestore.rules from repo root via Firebase CLI' },
-                  { label: 'Email notifications', check: false, note: 'Set RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL env vars in Vercel' },
-                  { label: 'Google Sheets sync', check: !!import.meta.env.VITE_SHEETS_ENABLED, note: 'Set GOOGLE_SHEETS_WEBHOOK_URL in Vercel — see docs/google-sheets-setup.md. Use Export CSV anytime.' },
-                  { label: 'Custom domain', check: true, note: 'uil4b.com configured' },
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: item.check ? 'rgba(16,185,129,.1)' : 'rgba(245,158,11,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                      {item.check ? (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                      ) : (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" strokeWidth="3" strokeLinecap="round"><circle cx="12" cy="12" r="1" /></svg>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t0)' }}>{item.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--t2)' }}>{item.note}</div>
-                    </div>
-                  </div>
-                ))}
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Submissions by Type</span>
+              </div>
+              <div className="adm-card-body">
+                {feedbackDonut.length > 0
+                  ? <DonutChart segments={feedbackDonut} />
+                  : <div className="adm-empty">No submissions yet</div>}
               </div>
             </div>
-          </Section>
+          </div>
+
+          {/* Top pages + insights */}
+          <div className="adm-grid-3" style={{ marginBottom: 32 }}>
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Top Pages</span>
+              </div>
+              <div className="adm-card-body">
+                {topPagesFiltered.length > 0 ? (
+                  <div className="adm-bar">
+                    {(() => {
+                      const max = topPagesFiltered[0]?.[1] || 1
+                      return topPagesFiltered.slice(0, 8).map(([page, count]) => (
+                        <div key={page} className="adm-bar-row">
+                          <span className="adm-bar-label">{page.replace(/^\//, '') || '/'}</span>
+                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                          <span className="adm-bar-value">{count}</span>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                ) : <div className="adm-empty">No page data yet</div>}
+              </div>
+            </div>
+
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Feature Requests</span>
+                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{feedback.filter(f => f.type === 'feature').length} total</span>
+              </div>
+              <div className="adm-card-body">
+                <div className="adm-list">
+                  {feedback.filter(f => f.type === 'feature').slice(-6).reverse().map((f, i) => (
+                    <div key={f.id || i} className="adm-list-row">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--t0)', marginBottom: 2 }}>{f.subject || 'No subject'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.message}</div>
+                      </div>
+                      <span className="adm-badge" style={{ color: STATUS_COLORS[f.status], background: STATUS_BGS[f.status] }}>{STATUS_LABELS[f.status]}</span>
+                    </div>
+                  ))}
+                  {feedback.filter(f => f.type === 'feature').length === 0 && <div className="adm-empty" style={{ padding: 16 }}>No feature requests yet</div>}
+                </div>
+              </div>
+            </div>
+
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Open Bugs</span>
+              </div>
+              <div className="adm-card-body">
+                <div className="adm-feed">
+                  {feedback.filter(f => f.type === 'bug' && f.status !== 'done').map(f => (
+                    <div key={f.id} className="adm-feed-item">
+                      <span className="adm-feed-dot" style={{ background: STATUS_COLORS[f.status] }} />
+                      <div className="adm-feed-body">
+                        <div className="adm-feed-text">{f.subject || 'No subject'}</div>
+                        <div className="adm-feed-meta">{STATUS_LABELS[f.status]} · {fmtDateTime(f.createdAt)}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {feedback.filter(f => f.type === 'bug' && f.status !== 'done').length === 0 && (
+                    <div style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--ok)' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      No open bugs
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Setup checklist */}
+          <div className="adm-section">
+            <div className="adm-section-h">
+              <div className="adm-section-title"><span className="adm-section-bar" />Setup Checklist</div>
+            </div>
+            <div className="adm-card">
+              <div className="adm-card-body">
+                <div className="adm-checklist">
+                  {[
+                    { label: 'Firebase Auth configured', ok: true, note: 'Enable Email/Password + Google providers in Firebase Console' },
+                    { label: 'Firestore database created', ok: true, note: 'Set region to australia-southeast1 (Sydney) in Firebase Console' },
+                    { label: 'Firestore security rules deployed', ok: false, note: 'Deploy firestore.rules from repo root via Firebase CLI' },
+                    { label: 'Email notifications', ok: false, note: 'Set RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL env vars in Vercel' },
+                    { label: 'Google Sheets sync', ok: !!import.meta.env.VITE_SHEETS_ENABLED, note: 'Set GOOGLE_SHEETS_WEBHOOK_URL in Vercel — see docs/google-sheets-setup.md' },
+                    { label: 'Custom domain', ok: true, note: 'uil4b.com configured' },
+                  ].map((item, i) => (
+                    <div key={i} className="adm-check-row">
+                      <div className={`adm-check-icon ${item.ok ? 'done' : 'pending'}`}>
+                        {item.ok
+                          ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                          : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" strokeWidth="3" strokeLinecap="round"><circle cx="12" cy="12" r="1" /></svg>}
+                      </div>
+                      <div>
+                        <div className="adm-check-label">{item.label}</div>
+                        <div className="adm-check-note">{item.note}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
-      {/* DESIGN ANALYTICS TAB */}
+      {/* ═══════ DESIGN ANALYTICS TAB ═══════ */}
       {tab === 'design' && designData && (
         <>
-          <Section title="Most Copied Fonts">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%), 1fr))', gap: 14 }}>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Top Fonts</div>
-                {Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([font, count], i) => (
-                  <div key={font} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
-                    <span style={{ fontWeight: 500, color: 'var(--t0)' }}>{font}</span>
-                    <span style={{ color: 'var(--accent)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{count} copies</span>
-                  </div>
-                ))}
-                {Object.keys(designData.fontCopies || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No font copy data yet — users need to copy fonts from Font Pair Finder or Font Gallery.</div>}
+          <div className="adm-grid-2" style={{ marginBottom: 32 }}>
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Most Copied Fonts</span>
+                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{Object.keys(designData.fontCopies || {}).length} fonts</span>
               </div>
-
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Font Copy Distribution</div>
+              <div className="adm-card-body">
                 {(() => {
-                  const entries = Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 8)
-                  const max = entries[0]?.[1] || 1
-                  return entries.map(([font, count]) => (
-                    <div key={font} style={{ marginBottom: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
-                        <span style={{ color: 'var(--t0)', fontWeight: 500 }}>{font}</span>
-                        <span style={{ color: 'var(--t2)' }}>{count}</span>
-                      </div>
-                      <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${(count / max) * 100}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width .3s' }} />
-                      </div>
+                  const entries = Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
+                  if (!entries.length) return <div className="adm-empty">No font copy data yet</div>
+                  const max = entries[0][1]
+                  return (
+                    <div className="adm-bar">
+                      {entries.map(([font, count]) => (
+                        <div key={font} className="adm-bar-row">
+                          <span className="adm-bar-label" style={{ fontFamily: 'inherit' }}>{font}</span>
+                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                          <span className="adm-bar-value">{count}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))
+                  )
                 })()}
               </div>
             </div>
-          </Section>
 
-          <Section title="Most Picked Colours">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px,100%), 1fr))', gap: 14 }}>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Top Colours</div>
-                {Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([hex, count], i) => (
-                  <div key={hex} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
-                    <div style={{ width: 24, height: 24, borderRadius: 'var(--radius-s)', background: hex, border: '1px solid var(--border)', flexShrink: 0 }} />
-                    <span style={{ fontFamily: 'var(--mono)', color: 'var(--t0)', fontWeight: 500, flex: 1 }}>{hex}</span>
-                    <span style={{ color: 'var(--accent)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{count}×</span>
-                  </div>
-                ))}
-                {Object.keys(designData.colourPicks || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No colour pick data yet — users need to select colours in Colour Studio.</div>}
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Font Copy Distribution</span>
               </div>
-
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Colour Palette Overview</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 30).map(([hex, count]) => (
-                    <div key={hex} title={`${hex} — ${count} picks`} style={{
-                      width: Math.max(24, Math.min(48, count * 6)),
-                      height: Math.max(24, Math.min(48, count * 6)),
-                      borderRadius: 'var(--radius-s)',
-                      background: hex,
-                      border: '1px solid var(--border)',
-                      cursor: 'default',
-                      transition: 'transform .15s',
-                    }} />
-                  ))}
-                </div>
-                {Object.keys(designData.colourPicks || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No data yet</div>}
+              <div className="adm-card-body">
+                {(() => {
+                  const entries = Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                  if (!entries.length) return <div className="adm-empty">No data yet</div>
+                  return <AreaChart data={entries.map(([font, count]) => ({ label: font.split(' ')[0], value: count }))} height={100} />
+                })()}
               </div>
             </div>
-          </Section>
+          </div>
 
-          <Section title="Tool Usage">
-            <div className="card" style={{ padding: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Most Used Tools (by action)</div>
-              {Object.entries(designData.toolUsage || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tool, count], i) => (
-                <div key={tool} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < 9 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
-                  <span style={{ fontFamily: 'var(--mono)', color: 'var(--t0)', fontWeight: 500 }}>{tool}</span>
-                  <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{count}</span>
-                </div>
-              ))}
-              {Object.keys(designData.toolUsage || {}).length === 0 && <div style={{ fontSize: 12, color: 'var(--t3)' }}>No tool usage data yet</div>}
+          <div className="adm-grid-2" style={{ marginBottom: 32 }}>
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Most Picked Colours</span>
+              </div>
+              <div className="adm-card-body">
+                {(() => {
+                  const entries = Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
+                  if (!entries.length) return <div className="adm-empty">No colour pick data yet</div>
+                  return (
+                    <div className="adm-list">
+                      {entries.map(([hex, count]) => (
+                        <div key={hex} className="adm-swatch-row">
+                          <div className="adm-swatch" style={{ background: hex }} />
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t0)', flex: 1 }}>{hex}</span>
+                          <span className="adm-list-value">{count}x</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
             </div>
-          </Section>
+
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Colour Palette Overview</span>
+              </div>
+              <div className="adm-card-body">
+                {(() => {
+                  const entries = Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 30)
+                  if (!entries.length) return <div className="adm-empty">No data yet</div>
+                  return (
+                    <div className="adm-swatch-grid">
+                      {entries.map(([hex, count]) => (
+                        <div key={hex} className="adm-swatch" title={`${hex} — ${count} picks`} style={{
+                          background: hex,
+                          width: Math.max(24, Math.min(48, count * 6)),
+                          height: Math.max(24, Math.min(48, count * 6)),
+                        }} />
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+
+          <div className="adm-section">
+            <div className="adm-section-h">
+              <div className="adm-section-title"><span className="adm-section-bar" />Tool Usage</div>
+            </div>
+            <div className="adm-card">
+              <div className="adm-card-body">
+                {(() => {
+                  const entries = Object.entries(designData.toolUsage || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
+                  if (!entries.length) return <div className="adm-empty">No tool usage data yet</div>
+                  const max = entries[0][1]
+                  return (
+                    <div className="adm-bar">
+                      {entries.map(([tool, count]) => (
+                        <div key={tool} className="adm-bar-row">
+                          <span className="adm-bar-label">{tool}</span>
+                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                          <span className="adm-bar-value">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
         </>
       )}
 
-      {/* SUBMISSIONS TAB */}
+      {/* ═══════ SUBMISSIONS TAB ═══════ */}
       {tab === 'submissions' && (
-        <Section
-          title={`Submissions (${filteredFeedback.length})`}
-          right={
+        <div className="adm-section">
+          <div className="adm-section-h">
+            <div className="adm-section-title"><span className="adm-section-bar" />Submissions ({filteredFeedback.length})</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {/* Type filter */}
               {['all', 'bug', 'feature', 'general', 'help'].map(t => (
-                <button
-                  key={t}
-                  className={`pt-t${filterType === t ? ' on' : ''}`}
-                  onClick={() => setFilterType(t)}
-                  style={{ padding: '4px 10px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}
-                >
+                <button key={t} className={`adm-time-btn${filterType === t ? ' active' : ''}`} onClick={() => setFilterType(t)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
                   {t === 'all' ? 'All Types' : t}
                 </button>
               ))}
               <span style={{ width: 1, background: 'var(--border)', margin: '0 4px' }} />
-              {/* Status filter */}
               {['all', ...STATUSES].map(s => (
-                <button
-                  key={s}
-                  className={`pt-t${filterStatus === s ? ' on' : ''}`}
-                  onClick={() => setFilterStatus(s)}
-                  style={{ padding: '4px 10px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}
-                >
+                <button key={s} className={`adm-time-btn${filterStatus === s ? ' active' : ''}`} onClick={() => setFilterStatus(s)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
                   {s === 'all' ? 'All' : STATUS_LABELS[s]}
                 </button>
               ))}
             </div>
-          }
-        >
-          {filteredFeedback.length === 0 && (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--t2)', fontSize: 13 }}>
-              {feedback.length === 0 ? 'No submissions yet.' : 'No submissions match filters.'}
-            </div>
-          )}
+          </div>
+          {filteredFeedback.length === 0 && <div className="adm-card"><div className="adm-empty">{feedback.length === 0 ? 'No submissions yet.' : 'No submissions match filters.'}</div></div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filteredFeedback.map(item => (
               <SubmissionCard
@@ -798,304 +1105,144 @@ export default function Admin({ toast }) {
               />
             ))}
           </div>
-        </Section>
+        </div>
       )}
 
-      {/* PAGES TAB */}
+      {/* ═══════ PAGES TAB ═══════ */}
       {tab === 'pages' && (
         <>
-          <Section title="Most Visited Pages">
-            <DataTable
-              headers={[
-                { key: 'page', label: 'Page', mono: true, bold: true },
-                { key: 'views', label: 'Views', width: '80px' },
-                { key: 'pct', label: '% of Total', width: '100px' },
-              ]}
-              rows={data.topPages.map(([page, count]) => ({
-                page: page || '/',
-                views: count,
-                pct: data.totalViews > 0 ? `${Math.round((count / data.totalViews) * 100)}%` : '0%',
-              }))}
-            />
-          </Section>
+          <div className="adm-section">
+            <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Most Visited Pages</div></div>
+            <div className="adm-card">
+              <div className="adm-table-wrap">
+                <table className="adm-table">
+                  <thead><tr><th>Page</th><th>Views</th><th>% of Total</th></tr></thead>
+                  <tbody>
+                    {data.topPages.map(([page, count]) => (
+                      <tr key={page}>
+                        <td className="mono bold">{page || '/'}</td>
+                        <td>{count}</td>
+                        <td className="accent">{data.totalViews > 0 ? `${Math.round((count / data.totalViews) * 100)}%` : '0%'}</td>
+                      </tr>
+                    ))}
+                    {data.topPages.length === 0 && <tr><td colSpan={3}><div className="adm-empty">No data</div></td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-          <Section title="Bounce Rate by Entry Page">
-            <DataTable
-              headers={[
-                { key: 'page', label: 'Entry Page', mono: true, bold: true },
-                { key: 'entries', label: 'Entries', width: '80px' },
-                { key: 'bounces', label: 'Bounces', width: '80px' },
-                { key: 'rate', label: 'Bounce Rate', width: '100px' },
-              ]}
-              rows={data.bounceByPage.map(b => ({
-                page: b.page || '/',
-                entries: b.total,
-                bounces: b.bounces,
-                rate: `${b.rate}%`,
-              }))}
-            />
-          </Section>
+          <div className="adm-section">
+            <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Bounce Rate by Entry Page</div></div>
+            <div className="adm-card">
+              <div className="adm-table-wrap">
+                <table className="adm-table">
+                  <thead><tr><th>Entry Page</th><th>Entries</th><th>Bounces</th><th>Rate</th></tr></thead>
+                  <tbody>
+                    {data.bounceByPage.map(b => (
+                      <tr key={b.page}>
+                        <td className="mono bold">{b.page || '/'}</td>
+                        <td>{b.total}</td>
+                        <td>{b.bounces}</td>
+                        <td className="accent">{b.rate}%</td>
+                      </tr>
+                    ))}
+                    {data.bounceByPage.length === 0 && <tr><td colSpan={4}><div className="adm-empty">No data</div></td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-          <Section title="Top Exit Pages">
-            <DataTable
-              headers={[
-                { key: 'page', label: 'Exit Page', mono: true, bold: true },
-                { key: 'exits', label: 'Exits', width: '80px' },
-                { key: 'pct', label: '% of Exits', width: '100px' },
-              ]}
-              rows={data.topExitPages.map(([page, count]) => ({
-                page: page || '/',
-                exits: count,
-                pct: data.totalSessions > 0 ? `${Math.round((count / data.totalSessions) * 100)}%` : '0%',
-              }))}
-            />
-          </Section>
+          <div className="adm-grid-2">
+            <div className="adm-section">
+              <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Top Exit Pages</div></div>
+              <div className="adm-card">
+                <div className="adm-table-wrap">
+                  <table className="adm-table">
+                    <thead><tr><th>Exit Page</th><th>Exits</th></tr></thead>
+                    <tbody>
+                      {data.topExitPages.map(([page, count]) => (
+                        <tr key={page}><td className="mono bold">{page || '/'}</td><td>{count}</td></tr>
+                      ))}
+                      {data.topExitPages.length === 0 && <tr><td colSpan={2}><div className="adm-empty">No data</div></td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
 
-          <Section title="Top Entry Pages">
-            <DataTable
-              headers={[
-                { key: 'page', label: 'Entry Page', mono: true, bold: true },
-                { key: 'entries', label: 'Entries', width: '80px' },
-              ]}
-              rows={data.topEntryPages.map(([page, count]) => ({
-                page: page || '/',
-                entries: count,
-              }))}
-            />
-          </Section>
+            <div className="adm-section">
+              <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Top Entry Pages</div></div>
+              <div className="adm-card">
+                <div className="adm-table-wrap">
+                  <table className="adm-table">
+                    <thead><tr><th>Entry Page</th><th>Entries</th></tr></thead>
+                    <tbody>
+                      {data.topEntryPages.map(([page, count]) => (
+                        <tr key={page}><td className="mono bold">{page || '/'}</td><td>{count}</td></tr>
+                      ))}
+                      {data.topEntryPages.length === 0 && <tr><td colSpan={2}><div className="adm-empty">No data</div></td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
-      {/* USERS TAB */}
+      {/* ═══════ USERS TAB ═══════ */}
       {tab === 'users' && (
-        <Section title={`Registered Users (${data.users.length})`}>
-          <DataTable
-            headers={[
-              { key: 'email', label: 'Email', mono: true, bold: true },
-              { key: 'name', label: 'Name' },
-              { key: 'provider', label: 'Provider', width: '80px' },
-              { key: 'joined', label: 'Joined', width: '120px' },
-            ]}
-            rows={data.users.map(u => ({
-              email: u.email,
-              name: u.displayName || '—',
-              provider: u.provider || 'email',
-              joined: fmtDate(u.createdAt),
-            }))}
-          />
-        </Section>
+        <div className="adm-section">
+          <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Registered Users ({data.users.length})</div></div>
+          <div className="adm-card">
+            <div className="adm-table-wrap">
+              <table className="adm-table">
+                <thead><tr><th>Email</th><th>Name</th><th>Provider</th><th>Joined</th></tr></thead>
+                <tbody>
+                  {data.users.map(u => (
+                    <tr key={u.uid}>
+                      <td className="mono bold">{u.email}</td>
+                      <td>{u.displayName || '—'}</td>
+                      <td>{u.provider || 'email'}</td>
+                      <td>{fmtDate(u.createdAt)}</td>
+                    </tr>
+                  ))}
+                  {data.users.length === 0 && <tr><td colSpan={4}><div className="adm-empty">No users yet</div></td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* PROMPTS TAB */}
+      {/* ═══════ PROMPTS TAB ═══════ */}
       {tab === 'prompts' && (
-        <Section
-          title={`Community Prompts (${pendingPrompts.length})`}
-          right={
-            <div style={{ display: 'flex', gap: 6 }}>
+        <div className="adm-section">
+          <div className="adm-section-h">
+            <div className="adm-section-title"><span className="adm-section-bar" />Community Prompts ({pendingPrompts.length})</div>
+            <div style={{ display: 'flex', gap: 4 }}>
               {['pending', 'approved', 'rejected', 'all'].map(f => (
-                <button
-                  key={f}
-                  className={`pt-t${promptFilter === f ? ' on' : ''}`}
-                  onClick={() => setPromptFilter(f)}
-                  style={{ padding: '4px 10px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}
-                >
+                <button key={f} className={`adm-time-btn${promptFilter === f ? ' active' : ''}`} onClick={() => setPromptFilter(f)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
                   {f}
                 </button>
               ))}
             </div>
-          }
-        >
+          </div>
           {pendingPrompts
             .filter(p => promptFilter === 'all' || p.status === promptFilter)
             .map(prompt => (
               <PromptAdminCard key={prompt.id} prompt={prompt} setPendingPrompts={setPendingPrompts} toast={toast} />
             ))}
           {pendingPrompts.filter(p => promptFilter === 'all' || p.status === promptFilter).length === 0 && (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--t2)', fontSize: 13 }}>
-              No {promptFilter === 'all' ? '' : promptFilter} prompts yet.
-            </div>
+            <div className="adm-card"><div className="adm-empty">No {promptFilter === 'all' ? '' : promptFilter} prompts yet.</div></div>
           )}
-        </Section>
+        </div>
       )}
 
-      {/* STRIPE TAB */}
+      {/* ═══════ STRIPE TAB ═══════ */}
       {tab === 'stripe' && <StripeSetupPanel toast={toast} />}
     </div>
-  )
-}
-
-function StripeSetupPanel({ toast }) {
-  const [config, setConfig] = useState(null) // { currencies, defaults, baseCurrency }
-  const [draft, setDraft] = useState(null)   // { monthly: {cur: amt}, yearly: {cur: amt} }
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState('')
-
-  const authedFetch = useCallback(async (opts = {}) => {
-    const { auth: fbAuth } = await import('../utils/firebase')
-    const token = await fbAuth.currentUser?.getIdToken()
-    if (!token) throw new Error('Not authenticated')
-    const res = await fetch('/api/setup-stripe', {
-      ...opts,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`)
-    return data
-  }, [])
-
-  // Build an editable draft from live Stripe prices, falling back to defaults.
-  const buildDraft = useCallback((data) => {
-    const out = { monthly: {}, yearly: {} }
-    for (const interval of ['monthly', 'yearly']) {
-      const live = data.prices?.[interval]?.currencies
-      for (const c of data.currencies) {
-        out[interval][c.code] = (live && live[c.code] != null) ? live[c.code] : data.defaults[interval][c.code]
-      }
-    }
-    return out
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoading(true); setError('')
-      try {
-        const data = await authedFetch({ method: 'GET' })
-        if (cancelled) return
-        setConfig(data)
-        setDraft(buildDraft(data))
-      } catch (err) {
-        if (!cancelled) setError(err.message)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [authedFetch, buildDraft])
-
-  const setAmount = (interval, code, value) => {
-    setDraft(d => ({ ...d, [interval]: { ...d[interval], [code]: value } }))
-  }
-
-  const resetDefaults = () => { if (config) setDraft(buildDraft({ ...config, prices: {} })) }
-
-  const save = async () => {
-    setSaving(true); setError(''); setResult(null)
-    try {
-      // Coerce to numbers before sending.
-      const prices = { monthly: {}, yearly: {} }
-      for (const interval of ['monthly', 'yearly']) {
-        for (const [code, amt] of Object.entries(draft[interval])) prices[interval][code] = Number(amt)
-      }
-      const data = await authedFetch({ method: 'POST', body: JSON.stringify({ prices }) })
-      setResult(data)
-      toast?.('Prices saved to Stripe')
-    } catch (err) {
-      setError(err.message)
-      toast?.('Save failed: ' + err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Section title="Stripe Pricing">
-      {loading ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--t2)', fontSize: 13 }}>
-          Loading current prices…
-        </div>
-      ) : !config ? (
-        <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--err)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Couldn’t load Stripe config</div>
-          <div style={{ fontSize: 12, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{error}</div>
-        </div>
-      ) : (
-        <>
-          <div className="card" style={{ padding: 20, marginBottom: 16 }}>
-            <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.7, marginBottom: 4 }}>
-              Set the monthly and yearly price for the <strong>UIL4B Pro</strong> plan per currency. Each customer is
-              shown their local currency at checkout automatically (detected from their browser locale).
-            </p>
-            <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 16 }}>
-              Tip: keep amounts ending in <strong>.99</strong>. Saving creates fresh Stripe prices and retires the old ones — existing subscribers keep their current rate.
-            </p>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 360 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    <th style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', padding: '8px 10px' }}>Currency</th>
-                    <th style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', padding: '8px 10px' }}>Monthly</th>
-                    <th style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', padding: '8px 10px' }}>Yearly</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {config.currencies.map(c => (
-                    <tr key={c.code} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}>
-                        <span style={{ fontWeight: 600 }}>{c.code.toUpperCase()}</span>
-                        <span style={{ color: 'var(--t3)', marginLeft: 6 }}>{c.label}</span>
-                        {c.code === config.baseCurrency && <span style={{ color: 'var(--accent)', marginLeft: 6, fontSize: 10 }}>base</span>}
-                      </td>
-                      {['monthly', 'yearly'].map(interval => (
-                        <td key={interval} style={{ padding: '6px 10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ fontSize: 11, color: 'var(--t3)', minWidth: 24 }}>{c.symbol}</span>
-                            <input
-                              type="number" min="0" step="0.01"
-                              value={draft[interval][c.code]}
-                              onChange={e => setAmount(interval, c.code, e.target.value)}
-                              style={{ width: 90, fontSize: 12, fontFamily: 'var(--mono)' }}
-                            />
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 16 }}>
-              <button className="btn btn-accent" onClick={save} disabled={saving}>
-                {saving ? 'Saving…' : 'Save Prices to Stripe'}
-              </button>
-              <button className="btn btn-s" onClick={resetDefaults} disabled={saving}>Reset to defaults</button>
-            </div>
-          </div>
-
-          {error && (
-            <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--err)', marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Error</div>
-              <div style={{ fontSize: 12, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{error}</div>
-            </div>
-          )}
-
-          {result && (
-            <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--ok)' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ok)', marginBottom: 10 }}>Prices Saved</div>
-              <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2, color: 'var(--t0)' }}>
-                <div>Product: <strong>{result.product}</strong></div>
-                <div>Monthly price: <strong>{result.prices?.monthly?.id}</strong></div>
-                <div>Yearly price: <strong>{result.prices?.yearly?.id}</strong></div>
-              </div>
-              <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 10 }}>{result.note}</p>
-            </div>
-          )}
-
-          <div className="card" style={{ padding: 16, marginTop: 16, background: 'var(--bg-1)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t2)', marginBottom: 10 }}>Required Vercel Env Vars</div>
-            <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2.2, color: 'var(--t1)' }}>
-              <div>STRIPE_SECRET_KEY <span style={{ color: 'var(--t3)' }}>— sk_live_… or sk_test_…</span></div>
-              <div>VITE_STRIPE_PUBLISHABLE_KEY <span style={{ color: 'var(--t3)' }}>— pk_live_… or pk_test_…</span></div>
-              <div>STRIPE_WEBHOOK_SECRET <span style={{ color: 'var(--t3)' }}>— whsec_… (from Stripe dashboard → Webhooks)</span></div>
-              <div>FIREBASE_SERVICE_ACCOUNT_KEY <span style={{ color: 'var(--t3)' }}>— JSON string (for auth token verification)</span></div>
-            </div>
-          </div>
-        </>
-      )}
-    </Section>
   )
 }
