@@ -479,6 +479,7 @@ export default function ColorStudio({ onCopy }) {
     { id: 'states', label: 'States' },
     { id: 'systems', label: 'Systems' },
     { id: 'gradients', label: 'Gradients' },
+    { id: 'visualizer', label: 'Visualizer' },
   ], [])
   const [collapsed, setCollapsed] = useState({})
   const [activeSection, setActiveSection] = useState('palette')
@@ -1712,6 +1713,188 @@ ${stateVars}
         </>}
       </section>
 
+
+      {/* ═══ SECTION 6: PALETTE VISUALIZER ═══ */}
+      <section id="visualizer" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('visualizer')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.visualizer ? 0 : 14 }}>
+          <svg className={`cs-chevron${collapsed.visualizer ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Palette Visualizer</h2>
+          <span style={{ fontSize: 10, color: 'var(--t2)', fontWeight: 500 }}>Preview your palette on real UI layouts</span>
+        </div>
+
+        {!collapsed.visualizer && (() => {
+          const pri = allColors[0] || '#3B82F6'
+          const sec = allColors[1] || '#6366F1'
+          const acc = allColors[2] || '#F59E0B'
+          const neu = allColors[3] || '#6B7280'
+          const surf = allColors[4] || '#F3F4F6'
+          const priText = textColorForBg(pri)
+          const secText = textColorForBg(sec)
+          const accText = textColorForBg(acc)
+          const surfText = textColorForBg(surf)
+          const priDark = mixHex(pri, '#000000', 0.3)
+          const priLight = mixHex(pri, '#FFFFFF', 0.85)
+          const secLight = mixHex(sec, '#FFFFFF', 0.85)
+
+          return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(380px,100%),1fr))', gap: 16 }}>
+            {/* ── Dashboard Mockup ── */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>Dashboard</div>
+              <div style={{ display: 'flex', height: 240 }}>
+                <div style={{ width: 52, background: pri, padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: priText === '#ffffff' ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.1)' }} />
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: priText === '#ffffff' ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.06)' }} />
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: priText === '#ffffff' ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.06)' }} />
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: acc, marginTop: 'auto' }} />
+                </div>
+                <div style={{ flex: 1, background: priLight, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ height: 8, width: 80, borderRadius: 4, background: pri, opacity: .7 }} />
+                    <div style={{ height: 22, width: 60, borderRadius: 4, background: acc, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, color: accText }}>ACTION</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                    {[pri, sec, acc].map((c, i) => (
+                      <div key={i} style={{ background: '#fff', borderRadius: 6, padding: 8, border: '1px solid ' + mixHex(c, '#FFFFFF', 0.7) }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: c }}>{['2.4k', '18%', '$12k'][i]}</div>
+                        <div style={{ fontSize: 7, color: neu, marginTop: 2 }}>{['Users', 'Growth', 'Revenue'][i]}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: '#fff', borderRadius: 6, padding: 8, border: '1px solid rgba(0,0,0,.06)', flex: 1 }}>
+                    <div style={{ fontSize: 7, fontWeight: 600, color: neu, marginBottom: 6 }}>Activity</div>
+                    <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 40 }}>
+                      {[40, 65, 50, 80, 70, 90, 55, 75, 85, 60, 95, 72].map((h, i) => (
+                        <div key={i} style={{ flex: 1, height: h + '%', borderRadius: 2, background: i === 10 ? acc : pri, opacity: i === 10 ? 1 : 0.25 + (h / 200) }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Landing Page Mockup ── */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>Landing Page</div>
+              <div style={{ height: 240, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: '#fff', padding: '6px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 14, height: 14, borderRadius: 3, background: pri }} />
+                    <div style={{ width: 40, height: 5, borderRadius: 2, background: '#222' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {[1,2,3].map(i => <div key={i} style={{ width: 20, height: 4, borderRadius: 2, background: '#ccc' }} />)}
+                    <div style={{ height: 16, width: 36, borderRadius: 3, background: pri, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 6, fontWeight: 700, color: priText }}>CTA</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ flex: 1, background: `linear-gradient(135deg, ${priDark} 0%, ${pri} 100%)`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 20, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', width: 120, height: 120, borderRadius: '50%', background: sec, opacity: .1, top: -20, right: -20 }} />
+                  <div style={{ width: 160, height: 8, borderRadius: 4, background: priText === '#ffffff' ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.8)', marginBottom: 6 }} />
+                  <div style={{ width: 120, height: 5, borderRadius: 3, background: priText === '#ffffff' ? 'rgba(255,255,255,.4)' : 'rgba(0,0,0,.3)', marginBottom: 12 }} />
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ height: 20, width: 52, borderRadius: 4, background: acc, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, color: accText }}>Get Started</span>
+                    </div>
+                    <div style={{ height: 20, width: 52, borderRadius: 4, background: 'transparent', border: `1px solid ${priText === '#ffffff' ? 'rgba(255,255,255,.4)' : 'rgba(0,0,0,.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 7, fontWeight: 600, color: priText === '#ffffff' ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.6)' }}>Learn More</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ background: '#fff', padding: 10, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  {[pri, sec, acc].map((c, i) => (
+                    <div key={i} style={{ textAlign: 'center' }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: mixHex(c, '#FFFFFF', 0.8), margin: '0 auto 4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
+                      </div>
+                      <div style={{ width: '80%', height: 4, borderRadius: 2, background: '#222', margin: '0 auto 2px' }} />
+                      <div style={{ width: '60%', height: 3, borderRadius: 2, background: '#ddd', margin: '0 auto' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Mobile App Mockup ── */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>Mobile App</div>
+              <div style={{ height: 240, display: 'flex', justifyContent: 'center', padding: 12, background: 'var(--bg-1)' }}>
+                <div style={{ width: 130, background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ background: pri, padding: '10px 10px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: 30, height: 5, borderRadius: 2, background: priText === '#ffffff' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.7)' }} />
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: priText === '#ffffff' ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.08)' }} />
+                  </div>
+                  <div style={{ padding: 8, flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ flex: 1, background: priLight, borderRadius: 6, padding: 6, textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: pri }}>24</div>
+                        <div style={{ fontSize: 5, color: neu }}>Tasks</div>
+                      </div>
+                      <div style={{ flex: 1, background: secLight, borderRadius: 6, padding: 6, textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: sec }}>8</div>
+                        <div style={{ fontSize: 5, color: neu }}>Done</div>
+                      </div>
+                    </div>
+                    {[1, 2, 3].map(i => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,.04)' }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 3, border: `1.5px solid ${i === 1 ? acc : 'rgba(0,0,0,.15)'}`, background: i === 1 ? acc : 'transparent', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ width: 60 + i * 5, height: 4, borderRadius: 2, background: i === 1 ? '#ccc' : '#222', textDecoration: i === 1 ? 'line-through' : 'none' }} />
+                          <div style={{ width: 30, height: 3, borderRadius: 2, background: '#eee', marginTop: 2 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ borderTop: '1px solid rgba(0,0,0,.06)', padding: '6px 0', display: 'flex', justifyContent: 'space-around' }}>
+                    {[pri, neu, sec].map((c, i) => (
+                      <div key={i} style={{ width: 18, height: 18, borderRadius: '50%', background: i === 0 ? mixHex(c, '#FFFFFF', 0.85) : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: c, opacity: i === 0 ? 1 : .3 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── E-commerce Mockup ── */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>E-Commerce</div>
+              <div style={{ height: 240, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                <div style={{ padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: 2, background: pri }} />
+                    <div style={{ width: 30, height: 4, borderRadius: 2, background: '#222' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <div style={{ width: 50, height: 14, borderRadius: 7, background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.08)', display: 'flex', alignItems: 'center', padding: '0 6px' }}>
+                      <span style={{ fontSize: 6, color: '#999' }}>Search...</span>
+                    </div>
+                    <div style={{ width: 12, height: 12, borderRadius: 2, background: neu, opacity: .3 }} />
+                  </div>
+                </div>
+                <div style={{ flex: 1, padding: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {[pri, sec, acc, neu].map((c, i) => (
+                    <div key={i} style={{ borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(0,0,0,.06)' }}>
+                      <div style={{ height: 50, background: `linear-gradient(135deg, ${mixHex(c, '#FFFFFF', 0.7)}, ${mixHex(c, '#FFFFFF', 0.9)})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 4, background: c, opacity: .5 }} />
+                      </div>
+                      <div style={{ padding: '5px 6px' }}>
+                        <div style={{ width: '70%', height: 4, borderRadius: 2, background: '#333', marginBottom: 3 }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: 8, fontWeight: 700, color: pri }}>${(19 + i * 10).toFixed(2)}</div>
+                          <div style={{ fontSize: 6, padding: '2px 5px', borderRadius: 3, background: i === 0 ? acc : 'transparent', color: i === 0 ? accText : 'transparent', fontWeight: 600 }}>{i === 0 ? 'SALE' : ''}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        })()}
+      </section>
 
       {/* ── Flow CTA: Next step → Typography ── */}
       <div className="cs-next-step">

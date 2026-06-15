@@ -10,7 +10,7 @@ CS-08,Color Studio,Gradient,Remove Auto-from-palette button,S,1k,DONE,This sessi
 CS-09,Color Studio,Gradient,Premade gradients show step % + flex bento grid,M,10k,DONE,This session (staged)
 CS-10,Color Studio,Global,Undo toast w/ timed dismiss for destructive actions,M,8k,DONE,This session (staged)
 CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,DONE,k-means extraction from uploaded photo in Add Colour menu
-CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,TODO,
+CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,DONE,4 mockups: dashboard/landing/mobile/ecommerce
 CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,TODO,Licensing check needed
 CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,DONE,PNG+SVG+Tailwind added to colour export tab
 CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,DONE,Lock button + spacebar shortcut + drag reorder
@@ -25,7 +25,7 @@ AIP-08,AI Image Prompt Generator,Status,Mark tool as ALPHA,S,2k,DONE,alpha flag 
 AIP-09,AI Image Prompt Generator,Auth,Inline auth gate (stay on page),M,12k,DONE,AuthGate on both AI tools
 AIW-01,AI Website Generator,New Section,Create new page + nav section,L,30k,DONE,AI Landing Page Prompts page + JSON builder
 AIW-02,AI Website Generator,Related,Group related tools under section,M,12k,DONE,Under AI Tools category
-ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,TODO,
+ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,DONE,Code review: auth+upload+batch+retry+CSV+tone all solid
 ALT-02,Alt Text Generator,Quality,Strengthen alt-text knowledge / WCAG best practices in prompt,M,12k,DONE,Added functional-image + purpose/context + truncation guidance
 DS-01,AI Backend,DeepSeek,Verify DeepSeek API connection,M,10k,DONE,Added Gemini fallback + provider field in generate-prompt
 DS-02,AI Backend,DeepSeek,Reference deepseek-ai/awesome-deepseek-agent patterns,M,8k,TODO,
@@ -56,8 +56,8 @@ AUTH-02,Auth,Flow,Login via popup or new page when needed,M,10k,DONE,AuthGate in
 AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,DONE,Firestore profile sync sets vs-onboarded
 ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,TODO,
 ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,TODO,
-DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,TODO,
-DOC-02,Documentation,Marketing,Marketing documentation,M,15k,TODO,
+DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,DONE,8 articles: GBP/local/technical/on-page/content/links/schema/measuring
+DOC-02,Documentation,Marketing,Marketing documentation,M,15k,DONE,8 articles: positioning/funnel/email/ads/content/landing/analytics/brand voice
 DOC-03,Documentation,Brand,Brand design docs (picking brand colour etc),M,15k,DONE,6 articles: strategy/60-30-10/psychology/palette/a11y/mistakes
 DOC-04,Documentation,AI,Claude tips doc (subagents/interview-me/build-a-skill/gotchas/commands),L,25k,TODO,
 DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,TODO,

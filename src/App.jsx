@@ -24,6 +24,8 @@ import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
 import DocsThemes from './pages/DocsThemes'
 import DocsBrand from './pages/DocsBrand'
+import DocsSEO from './pages/DocsSEO'
+import DocsMarketing from './pages/DocsMarketing'
 import ExternalResources from './pages/ExternalResources'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
@@ -123,6 +125,8 @@ export default function App() {
       '/admin': 'UI L4B | Admin',
       '/docs-themes': 'UI L4B | UI Design Themes',
       '/docs-brand': 'UI L4B | Brand Colour Guide',
+      '/docs-seo': 'UI L4B | SEO for Small Business',
+      '/docs-marketing': 'UI L4B | Marketing Fundamentals',
     }
     document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
   }, [location.pathname])
@@ -200,6 +204,8 @@ export default function App() {
             <Route path="/docs-social" element={<DocsSocial />} />
             <Route path="/docs-themes" element={<DocsThemes />} />
             <Route path="/docs-brand" element={<DocsBrand />} />
+            <Route path="/docs-seo" element={<DocsSEO />} />
+            <Route path="/docs-marketing" element={<DocsMarketing />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
             <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
             <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
