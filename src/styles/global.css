@@ -841,11 +841,16 @@ a.bento-card:hover::before{opacity:1}
    bento fills the viewport and its rows flex (1fr) to share the height, so
    pinned cells resize to fit instead of pushing content off-screen. */
 @media(min-width:981px){
-  .main:has(.dash){overflow:hidden;padding-bottom:0}
-  .dash{height:100%;min-height:0;padding:16px 0;overflow:hidden}
-  .bento{flex:1;min-height:0;grid-auto-rows:minmax(0,1fr)}
+  .main:has(.dash){padding-bottom:0}
+  .dash{min-height:0;padding:16px 0}
+  .bento{flex:1;min-height:0;grid-auto-rows:minmax(100px,auto)}
   .bento-color-strip,.bento-fotd,.bento-icons-quick,.bento-typo-preview,
   .bento-img-preview,.bento-pin-icon,.bento-img-quick,.bento-docs-grid{min-height:0}
+}
+@media(min-width:981px) and (min-height:900px){
+  .main:has(.dash){overflow:hidden}
+  .dash{height:100%;overflow:hidden}
+  .bento{grid-auto-rows:minmax(0,1fr)}
 }
 
 /* Dashboard responsive */
