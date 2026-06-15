@@ -47,6 +47,7 @@ import LandingPromptGenerator from './pages/LandingPromptGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
 import BoxShadowGenerator from './pages/BoxShadowGenerator'
 import UIBuilder from './pages/UIBuilder'
+import AutoBuilder from './pages/AutoBuilder'
 import StyleGuide from './pages/StyleGuide'
 import HelpCentre from './pages/HelpCentre'
 import Landing from './pages/Landing'
@@ -127,6 +128,7 @@ export default function App() {
       '/docs-seo': 'UI L4B | SEO for Small Business',
       '/docs-marketing': 'UI L4B | Marketing Fundamentals',
       '/docs-ai': 'UI L4B | AI Coding Assistants',
+      '/auto-builder': 'UI L4B | UI Auto-Builder',
     }
     document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
   }, [location.pathname])
@@ -210,6 +212,7 @@ export default function App() {
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
             <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
             <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
+            <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />
             <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/onboarding" element={<Onboarding />} />
