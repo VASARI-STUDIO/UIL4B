@@ -1,0 +1,74 @@
+ID,Area / Page,Section,Task Request,Complexity,Est. Tokens,Status,Notes
+CS-01,Color Studio,Palette,Fix custom-swatch picker drag spam (one swatch per drag),S,8k,DONE,Shipped PR #76
+CS-02,Color Studio,Palette,In-place per-index overrides for any swatch,M,12k,DONE,Shipped PR #76
+CS-03,Color Studio,Palette,Reset button on palette,S,4k,DONE,Shipped PR #76
+CS-04,Color Studio,UI States,Default states green/amber/red/blue,S,3k,DONE,This session (staged)
+CS-05,Color Studio,Color Info Popup,Rework popup: tabbed UI + OKLCH + CVD sim + shade list,L,25k,DONE,This session (staged)
+CS-06,Color Studio,Systems,Brand palettes scroll horizontally on hover,S,3k,DONE,This session (staged)
+CS-07,Color Studio,Gradient,Remove Flip from header; move into Color Stops panel,S,3k,DONE,This session (staged)
+CS-08,Color Studio,Gradient,Remove Auto-from-palette button,S,1k,DONE,This session (staged)
+CS-09,Color Studio,Gradient,Premade gradients show step % + flex bento grid,M,10k,DONE,This session (staged)
+CS-10,Color Studio,Global,Undo toast w/ timed dismiss for destructive actions,M,8k,DONE,This session (staged)
+CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,TODO,Upload photo -> extract palette
+CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,TODO,
+CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,TODO,Licensing check needed
+CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,TODO,Have CSS/HTML already
+CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,TODO,
+AIP-01,AI Image Prompt Generator,Nav,Rename to "AI Image Prompt Generator",S,2k,TODO,
+AIP-02,AI Image Prompt Generator,Output,Convert to structured JSON prompt generator,L,30k,TODO,
+AIP-03,AI Image Prompt Generator,Rules,Preset JSON rule strings (ultra-real 4k / landscape) prefill fstop/fov/exposure/composition,L,35k,TODO,Multiple categories
+AIP-04,AI Image Prompt Generator,Rules,Multiple rule categories for max-quality renders,M,20k,TODO,
+AIP-05,AI Image Prompt Generator,Photo,Generate prompt from uploaded photo,L,30k,TODO,Scan -> rules
+AIP-06,AI Image Prompt Generator,Photo,Checkbox list of scanned rules (select/deselect) -> JSON,M,18k,TODO,
+AIP-07,AI Image Prompt Generator,UX,Media upload at TOP of upload popup w/ title field,S,6k,TODO,
+AIP-08,AI Image Prompt Generator,Status,Mark tool as ALPHA,S,2k,TODO,Applies to all AI gens
+AIP-09,AI Image Prompt Generator,Auth,Inline auth gate (stay on page),M,12k,IN PROGRESS,AuthGate component built (staged)
+AIW-01,AI Website Generator,New Section,Create new page + nav section,L,30k,NEEDS DECISION,Output type unclear
+AIW-02,AI Website Generator,Related,Group related tools under section,M,12k,TODO,
+ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,TODO,
+ALT-02,Alt Text Generator,Quality,Strengthen alt-text knowledge / WCAG best practices in prompt,M,12k,TODO,
+DS-01,AI Backend,DeepSeek,Verify DeepSeek API connection,M,10k,TODO,Keep Gemini fallback until proven
+DS-02,AI Backend,DeepSeek,Reference deepseek-ai/awesome-deepseek-agent patterns,M,8k,TODO,
+NAV-01,Navigation,IA,Reorganize nav: submenus + subcategories,L,30k,TODO,
+NAV-02,Navigation,IA,Start all categories expanded,S,3k,TODO,
+NAV-03,Navigation,IA,Nest Style Guide under Admin,S,4k,TODO,
+NAV-04,Navigation,IA,Mark all AI generators as alpha in nav,S,4k,TODO,
+NAV-05,Navigation,IA,Ensure every category has correct pages nested,M,12k,TODO,
+NAV-06,Navigation,Theme,Use UI blue for more buttons/accents,M,12k,TODO,Site-wide
+DASH-01,Dashboard,Layout,Fix clipping on small/square screens,M,10k,TODO,Repeated report
+ADM-01,Admin,Dashboard,Rebuild to industry-standard dashboard (graphs/components),XL,50k,TODO,
+ADM-02,Admin,Filters,Add filters: data/timeframes/etc,M,15k,TODO,
+ADM-03,Admin,IA,Nest Style Guide here,S,3k,TODO,Dup of NAV-03
+COM-01,Community Hub,Media,Admin upload images/videos to prompts,L,30k,TODO,
+COM-02,Community Hub,Media,Convert uploads to WebP (high-quality/lossless),M,18k,TODO,Lossless vs size tradeoff
+COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,TODO,
+COM-04,Community Hub,Strategy,Plan community engagement / next steps,M,12k,PLANNING,
+COM-05,Community Hub,Systems,Review community hub page + systems,M,12k,TODO,
+PROJ-01,Projects,Redesign,Redesign UI (currently feels generic/AI-slop),L,28k,TODO,
+LAND-01,Landing,Sticky,Fix sticky-scroll section (not sticking),M,12k,TODO,
+LAND-02,Landing,Redesign,Redesign to clinical/modern SaaS (less AI-slop),L,30k,TODO,
+LAND-03,Landing,Hero,Redesign hero (feels generic),M,18k,TODO,
+HELP-01,Help Centre,Redesign,Overhaul UI + structure,L,30k,TODO,
+HELP-02,Help Centre,Forms,Differentiate feature req / bug / feedback / help,M,15k,TODO,
+HELP-03,Help Centre,UX,Make feedback easier to access,S,6k,TODO,
+AUTH-01,Auth,Flow,Keep user on page when login prompted / return them,M,12k,IN PROGRESS,AuthGate (staged)
+AUTH-02,Auth,Flow,Login via popup or new page when needed,M,10k,PARTIAL,gate=1 exists
+AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,TODO,
+ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,TODO,
+ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,TODO,
+DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,TODO,
+DOC-02,Documentation,Marketing,Marketing documentation,M,15k,TODO,
+DOC-03,Documentation,Brand,Brand design docs (picking brand colour etc),M,15k,TODO,
+DOC-04,Documentation,AI,Claude tips doc (subagents/interview-me/build-a-skill/gotchas/commands),L,25k,TODO,
+DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,TODO,
+INF-01,Infra,Branches,Merge & tidy branches,M,8k,PARTIAL,3 stale branches need deletion (proxy blocks)
+INF-02,Infra,Code,Purge unused code,M,15k,TODO,
+INF-03,Infra,Deploy,Purge old Vercel deployments,M,10k,TODO,Vercel MCP connecting
+GOV-01,Process,CLAUDE.md,Update CLAUDE.md (verify-first + validation zones + Murphys law),M,12k,TODO,
+GOV-02,Process,Validation,Implement human validation zones (payments etc),M,12k,TODO,Needs zone list
+GOV-03,Process,Verify,Verify-before-build workflow,S,6k,TODO,
+GOV-04,Process,Testing,User testing plan,M,12k,PLANNING,
+GOV-05,Process,Agents,Subagent team (designer/dev/PM/QA/security/50-use-cases),L,30k,PLANNING,Orchestration
+META-01,Meta,Spec,Recreate implementation spec,L,25k,IN PROGRESS,This deliverable
+META-02,Meta,Tracker,Create interactive task tracker,M,10k,IN PROGRESS,This file
+META-03,Meta,Interview,Interview user on unknowns,S,5k,IN PROGRESS,This deliverable

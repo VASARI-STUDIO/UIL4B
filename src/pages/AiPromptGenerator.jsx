@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { auth as firebaseAuth } from '../utils/firebase'
+import AuthGate from '../components/AuthGate'
 
 const TOOL_ID = 'prompts-ai'
 
@@ -101,67 +102,69 @@ export default function AiPromptGenerator({ toast }) {
         </p>
       </div>
 
-      <div className="aipg-composer card">
-        <div className="aipg-field">
-          <label htmlFor="aipg-desc">Describe your image</label>
-          <textarea
-            ref={textareaRef}
-            id="aipg-desc"
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="e.g. minimalist logo for a coffee shop with warm tones and a sunrise motif"
-            rows={3}
-            onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) generate() }}
-          />
-        </div>
+      <AuthGate featureLabel="generate AI image prompts">
+        <div className="aipg-composer card">
+          <div className="aipg-field">
+            <label htmlFor="aipg-desc">Describe your image</label>
+            <textarea
+              ref={textareaRef}
+              id="aipg-desc"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="e.g. minimalist logo for a coffee shop with warm tones and a sunrise motif"
+              rows={3}
+              onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) generate() }}
+            />
+          </div>
 
-        <div className="aipg-options">
-          <div className="aipg-option-group">
-            <span className="aipg-option-label">Platform</span>
-            <div className="aipg-chips">
-              {PLATFORMS.map(p => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`pl-chip${platform === p.id ? ' active' : ''}`}
-                  onClick={() => setPlatform(p.id)}
-                >
-                  {p.label}
-                </button>
-              ))}
+          <div className="aipg-options">
+            <div className="aipg-option-group">
+              <span className="aipg-option-label">Platform</span>
+              <div className="aipg-chips">
+                {PLATFORMS.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`pl-chip${platform === p.id ? ' active' : ''}`}
+                    onClick={() => setPlatform(p.id)}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="aipg-option-group">
+              <span className="aipg-option-label">Style</span>
+              <div className="aipg-chips">
+                {STYLES.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`pl-chip${style === s.id ? ' active' : ''}`}
+                    onClick={() => setStyle(s.id)}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="aipg-option-group">
-            <span className="aipg-option-label">Style</span>
-            <div className="aipg-chips">
-              {STYLES.map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`pl-chip${style === s.id ? ' active' : ''}`}
-                  onClick={() => setStyle(s.id)}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
+          <div className="aipg-submit-row">
+            <button
+              className="btn btn-accent"
+              onClick={generate}
+              disabled={busy || !description.trim()}
+            >
+              {busy ? 'Generating…' : 'Generate prompt'}
+            </button>
+            <span className="aipg-hint">⌘ + Enter</span>
           </div>
-        </div>
 
-        <div className="aipg-submit-row">
-          <button
-            className="btn btn-accent"
-            onClick={generate}
-            disabled={busy || !description.trim()}
-          >
-            {busy ? 'Generating…' : 'Generate prompt'}
-          </button>
-          <span className="aipg-hint">⌘ + Enter</span>
+          {error && <div className="aipg-error">{error}</div>}
         </div>
-
-        {error && <div className="aipg-error">{error}</div>}
-      </div>
+      </AuthGate>
 
       {results.length > 0 && (
         <div className="aipg-results">
