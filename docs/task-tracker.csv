@@ -12,7 +12,7 @@ CS-10,Color Studio,Global,Undo toast w/ timed dismiss for destructive actions,M,
 CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,TODO,Upload photo -> extract palette
 CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,TODO,
 CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,TODO,Licensing check needed
-CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,TODO,Have CSS/HTML already
+CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,DONE,PNG+SVG+Tailwind added to colour export tab
 CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,DONE,Lock button + spacebar shortcut + drag reorder
 AIP-01,AI Image Prompt Generator,Nav,Rename to "AI Image Prompt Generator",S,2k,DONE,Label + page title updated
 AIP-02,AI Image Prompt Generator,Output,Convert to structured JSON prompt generator,L,30k,DONE,JSON Builder mode + live JSON preview

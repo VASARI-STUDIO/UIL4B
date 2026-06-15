@@ -74,6 +74,65 @@ function ExportDropdown({ onSaveProject }) {
 
   const exportRoundingVal = () => getPreviewRounding()
 
+  const exportPalettePNG = () => {
+    const colors = design.palette?.colors || []
+    if (!colors.length) return
+    const w = 200, h = 260, sw = Math.max(60, Math.floor((w - 20) / colors.length))
+    const totalW = sw * colors.length + 20
+    const canvas = document.createElement('canvas')
+    canvas.width = totalW
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#111'
+    ctx.fillRect(0, 0, totalW, h)
+    colors.forEach((c, i) => {
+      const x = 10 + i * sw
+      ctx.fillStyle = c
+      ctx.fillRect(x, 10, sw - 4, 180)
+      ctx.fillStyle = '#fff'
+      ctx.font = '600 10px monospace'
+      ctx.fillText(c.toUpperCase(), x + 4, 210)
+    })
+    ctx.fillStyle = '#555'
+    ctx.font = '500 9px sans-serif'
+    ctx.fillText('UIL4B Colour System', 10, h - 12)
+    canvas.toBlob(blob => {
+      if (!blob) return
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'palette.png'
+      a.click()
+      URL.revokeObjectURL(url)
+    }, 'image/png')
+    setOpen(false)
+  }
+
+  const exportPaletteSVG = () => {
+    const colors = design.palette?.colors || []
+    if (!colors.length) return
+    const sw = 80, pad = 10, gap = 4
+    const w = pad * 2 + colors.length * (sw + gap) - gap
+    const h = 220
+    const rects = colors.map((c, i) => {
+      const x = pad + i * (sw + gap)
+      return `<rect x="${x}" y="${pad}" width="${sw}" height="160" rx="6" fill="${c}"/><text x="${x + 4}" y="192" fill="#aaa" font-family="monospace" font-size="10" font-weight="600">${c.toUpperCase()}</text>`
+    }).join('\n  ')
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n  <rect width="${w}" height="${h}" rx="10" fill="#111"/>\n  ${rects}\n  <text x="${pad}" y="${h - 10}" fill="#555" font-family="sans-serif" font-size="9">UIL4B Colour System</text>\n</svg>`
+    downloadFile(svg, 'palette.svg', 'image/svg+xml')
+    setOpen(false)
+  }
+
+  const exportTailwind = () => {
+    const colors = design.palette?.colors || []
+    const names = ['primary', 'secondary', 'accent', 'neutral', 'surface']
+    const colorEntries = colors.map((c, i) => `        '${names[i] || `color-${i + 1}`}': '${c}',`).join('\n')
+    const fontSection = design.fonts?.heading ? `      fontFamily: {\n        heading: ['${design.fonts.heading.family}', 'system-ui', 'sans-serif'],\n${design.fonts?.body ? `        body: ['${design.fonts.body.family}', 'system-ui', 'sans-serif'],\n` : ''}      },\n` : ''
+    const tw = `/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n${colorEntries}\n      },\n${fontSection}    },\n  },\n}\n`
+    downloadFile(tw, 'tailwind.config.js', 'text/javascript')
+    setOpen(false)
+  }
+
   const exportColourCSS = () => {
     const css = buildCSSVars({
       palette: design.palette,
@@ -189,6 +248,27 @@ function ExportDropdown({ onSaveProject }) {
                 <span className="export-dropdown-hint">To clipboard</span>
               </button>
               <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              <button className="export-dropdown-item" onClick={exportPalettePNG}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                </svg>
+                Download PNG
+                <span className="export-dropdown-hint">Palette swatch image</span>
+              </button>
+              <button className="export-dropdown-item" onClick={exportPaletteSVG}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
+                </svg>
+                Download SVG
+                <span className="export-dropdown-hint">Vector palette</span>
+              </button>
+              <button className="export-dropdown-item" onClick={exportTailwind}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
+                </svg>
+                Tailwind config
+                <span className="export-dropdown-hint">tailwind.config.js</span>
+              </button>
               <div style={{ padding: '8px 12px 10px', fontSize: 10, color: 'var(--t3)', lineHeight: 1.5 }}>
                 Includes: palette · tints · state colours
               </div>
@@ -225,8 +305,7 @@ function ExportDropdown({ onSaveProject }) {
               {/* Pro-locked formats */}
               <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
               {isPro ? (
-                <>
-                  <button className="export-dropdown-item" onClick={() => {
+                <button className="export-dropdown-item" onClick={() => {
                     const tokens = JSON.stringify({ palette: design.palette, tints: design.tints, fonts: design.fonts, typeScale: design.typeScale, gradient: design.gradient }, null, 2)
                     downloadFile(tokens, 'design-tokens.json', 'application/json')
                     setOpen(false)
@@ -235,26 +314,14 @@ function ExportDropdown({ onSaveProject }) {
                       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
                     </svg>
                     Export JSON tokens
-                    <span className="export-dropdown-hint">Structured design data</span>
+                    <span className="export-dropdown-hint">Full design data</span>
                   </button>
-                  <button className="export-dropdown-item" onClick={() => {
-                    const tw = `/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n${(design.palette?.colors || []).map((c, i) => `        '${['primary','secondary','accent','neutral','surface'][i] || `color-${i+1}`}': '${c}',`).join('\n')}\n      },\n${design.fonts?.heading ? `      fontFamily: {\n        heading: ['${design.fonts.heading.family}', 'system-ui', 'sans-serif'],\n${design.fonts?.body ? `        body: ['${design.fonts.body.family}', 'system-ui', 'sans-serif'],\n` : ''}      },\n` : ''}    },\n  },\n}\n`
-                    downloadFile(tw, 'tailwind.config.js', 'text/javascript')
-                    setOpen(false)
-                  }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" />
-                    </svg>
-                    Export Tailwind config
-                    <span className="export-dropdown-hint">tailwind.config.js</span>
-                  </button>
-                </>
               ) : (
                 <button className="export-dropdown-item" onClick={() => { navigate('/checkout?plan=yearly'); setOpen(false) }} style={{ opacity: 0.65 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
-                  JSON Tokens · Tailwind Config
+                  JSON Design Tokens
                   <span className="export-dropdown-hint" style={{ color: 'var(--accent)' }}>Pro feature — Upgrade</span>
                 </button>
               )}
