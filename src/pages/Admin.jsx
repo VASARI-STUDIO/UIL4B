@@ -179,6 +179,7 @@ function Sparkline({ data }) {
 function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expanded, onToggle }) {
   const [notes, setNotes] = useState(item.adminNotes || '')
   const [editingNotes, setEditingNotes] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
   const nextStatus = () => STATUSES[(STATUSES.indexOf(item.status) + 1) % STATUSES.length]
 
   return (
@@ -228,7 +229,15 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
             {STATUSES.filter(s => s !== item.status && s !== nextStatus()).map(s => (
               <button key={s} className="btn btn-s" onClick={() => onStatusChange(item.id, s)} style={{ fontSize: 10, color: STATUS_COLORS[s] }}>{STATUS_LABELS[s]}</button>
             ))}
-            <button className="btn btn-s" onClick={() => onDelete(item.id)} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
+            {confirmDel ? (
+              <>
+                <span style={{ fontSize: 10, color: 'var(--err)', fontWeight: 600, marginLeft: 'auto' }}>Delete?</span>
+                <button className="btn btn-s" onClick={() => { onDelete(item.id); setConfirmDel(false) }} style={{ fontSize: 10, color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>Yes</button>
+                <button className="btn btn-s" onClick={() => setConfirmDel(false)} style={{ fontSize: 10 }}>No</button>
+              </>
+            ) : (
+              <button className="btn btn-s" onClick={() => setConfirmDel(true)} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
+            )}
           </div>
         </div>
       )}
@@ -253,10 +262,43 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
     setBusy(false)
   }
 
+  const handleMediaUpload = async (file) => {
+    if (!file) return
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
+    if (!isImage && !isVideo) { toast('Only images and videos'); return }
+    if (file.size > 10 * 1024 * 1024) { toast('File must be under 10 MB'); return }
+    setBusy(true)
+    try {
+      if (isImage) {
+        const { processImageForUpload } = await import('../utils/imageProcessing')
+        const { dataUrl } = await processImageForUpload(file, { maxDimension: 1200, quality: 0.8 })
+        if (dataUrl.length < 900_000) {
+          await updatePrompt({ mediaType: 'image', mediaUrl: dataUrl })
+        } else {
+          toast('Image too large after compression')
+        }
+      } else {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+          if (e.target.result.length < 900_000) {
+            await updatePrompt({ mediaType: 'video', mediaUrl: e.target.result })
+          } else {
+            toast('Video too large for storage')
+          }
+        }
+        reader.readAsDataURL(file)
+      }
+    } catch { toast('Failed to process media') }
+    setBusy(false)
+  }
+
   const handleSave = () => {
     updatePrompt({ title, text, tags: tags.split(',').map(t => t.trim()).filter(Boolean) })
     setEditing(false)
   }
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const handleDelete = async () => {
     setBusy(true)
@@ -266,6 +308,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
       toast('Prompt deleted')
     } catch { toast('Delete failed') }
     setBusy(false)
+    setConfirmingDelete(false)
   }
 
   const statusColor = { pending: 'var(--warn)', approved: 'var(--ok)', rejected: 'var(--err)' }[prompt.status] || 'var(--t2)'
@@ -314,14 +357,45 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
                 Profile: <a href={prompt.profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>{prompt.profileLink}</a>
               </div>
             )}
+            {prompt.mediaUrl && (
+              <div style={{ marginBottom: 8, padding: 8, background: 'var(--bg-1)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                {prompt.mediaType === 'image' ? (
+                  <img src={prompt.mediaUrl} alt="Prompt media" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, display: 'block' }} />
+                ) : (
+                  <video src={prompt.mediaUrl} controls style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, display: 'block' }} />
+                )}
+                <button className="btn btn-s" onClick={() => updatePrompt({ mediaUrl: '', mediaType: '' })} disabled={busy}
+                  style={{ fontSize: 10, color: 'var(--err)', marginTop: 6 }}>Remove media</button>
+              </div>
+            )}
           </>
         )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--accent)', cursor: 'pointer', padding: '4px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            {prompt.mediaUrl ? 'Replace' : 'Add'} media
+            <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={e => handleMediaUpload(e.target.files?.[0])} />
+          </label>
+        </div>
 
         <div className="adm-prompt-actions">
           {!editing && <button className="btn btn-s" onClick={() => setEditing(true)} disabled={busy} style={{ fontSize: 10 }}>Edit</button>}
           {prompt.status !== 'approved' && <button className="btn btn-s" onClick={() => updatePrompt({ status: 'approved' })} disabled={busy} style={{ fontSize: 10, color: 'var(--ok)' }}>Approve</button>}
           {prompt.status !== 'rejected' && <button className="btn btn-s" onClick={() => updatePrompt({ status: 'rejected' })} disabled={busy} style={{ fontSize: 10, color: 'var(--warn)' }}>Reject</button>}
-          <button className="btn btn-s" onClick={handleDelete} disabled={busy} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
+          {confirmingDelete ? (
+            <>
+              <span style={{ fontSize: 10, color: 'var(--err)', fontWeight: 600, marginLeft: 'auto' }}>Delete?</span>
+              <button className="btn btn-s" onClick={handleDelete} disabled={busy} style={{ fontSize: 10, color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>Yes</button>
+              <button className="btn btn-s" onClick={() => setConfirmingDelete(false)} style={{ fontSize: 10 }}>No</button>
+            </>
+          ) : (
+            <button className="btn btn-s" onClick={() => setConfirmingDelete(true)} disabled={busy} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
+          )}
         </div>
       </div>
     </div>

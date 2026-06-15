@@ -28,7 +28,7 @@ AIW-02,AI Website Generator,Related,Group related tools under section,M,12k,DONE
 ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,DONE,Code review: auth+upload+batch+retry+CSV+tone all solid
 ALT-02,Alt Text Generator,Quality,Strengthen alt-text knowledge / WCAG best practices in prompt,M,12k,DONE,Added functional-image + purpose/context + truncation guidance
 DS-01,AI Backend,DeepSeek,Verify DeepSeek API connection,M,10k,DONE,Added Gemini fallback + provider field in generate-prompt
-DS-02,AI Backend,DeepSeek,Reference deepseek-ai/awesome-deepseek-agent patterns,M,8k,TODO,
+DS-02,AI Backend,DeepSeek,Reference deepseek-ai/awesome-deepseek-agent patterns,M,8k,DONE,Chain-of-thought system prompt + tuned sampling params (temp 0.75 / top_p 0.9 / freq_penalty)
 NAV-01,Navigation,IA,Reorganize nav: submenus + subcategories,L,30k,DONE,AI Tools category added
 NAV-02,Navigation,IA,Start all categories expanded,S,3k,DONE,Already defaulted to true
 NAV-03,Navigation,IA,Nest Style Guide under Admin,S,4k,DONE,Grouped under admin footer
@@ -39,10 +39,10 @@ DASH-01,Dashboard,Layout,Fix clipping on small/square screens,M,10k,DONE,overflo
 ADM-01,Admin,Dashboard,Rebuild to industry-standard dashboard (graphs/components),XL,50k,DONE,SVG charts + time filters + CSS classes
 ADM-02,Admin,Filters,Add filters: data/timeframes/etc,M,15k,DONE,Today/7d/30d/All + type/status filters
 ADM-03,Admin,IA,Nest Style Guide here,S,3k,DONE,Dup of NAV-03 (done)
-COM-01,Community Hub,Media,Admin upload images/videos to prompts,L,30k,TODO,
-COM-02,Community Hub,Media,Convert uploads to WebP (high-quality/lossless),M,18k,TODO,Lossless vs size tradeoff
-COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,TODO,
-COM-04,Community Hub,Strategy,Plan community engagement / next steps,M,12k,PLANNING,
+COM-01,Community Hub,Media,Admin upload images/videos to prompts,L,30k,DONE,Admin prompt cards: media preview + upload/replace/remove buttons
+COM-02,Community Hub,Media,Convert uploads to WebP (high-quality/lossless),M,18k,DONE,Already implemented in imageProcessing.js (maxDim 1200 / quality 0.8)
+COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,DONE,Moved media drop zone to top of submit form + richer preview
+COM-04,Community Hub,Strategy,Plan community engagement / next steps,M,12k,DONE,Plan: 1) Launch prompt submission gamification (+25 gens) 2) Weekly featured prompt 3) Community Discord link 4) User profiles with submission history
 COM-05,Community Hub,Systems,Review community hub page + systems,M,12k,DONE,Reviewed: 3 link cards functional; COM-01/02/03 need backend for media
 PROJ-01,Projects,Redesign,Redesign UI (currently feels generic/AI-slop),L,28k,DONE,Gradient cards + active highlight + better empty state + stats
 LAND-01,Landing,Sticky,Fix sticky-scroll section (not sticking),M,12k,DONE,Moved sticky to inner card + fixed align-self
@@ -54,23 +54,23 @@ HELP-03,Help Centre,UX,Make feedback easier to access,S,6k,DONE,Quick-action car
 AUTH-01,Auth,Flow,Keep user on page when login prompted / return them,M,12k,DONE,AuthGate inline on AI tools
 AUTH-02,Auth,Flow,Login via popup or new page when needed,M,10k,DONE,AuthGate inline + Google OAuth
 AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,DONE,Firestore profile sync sets vs-onboarded
-ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,TODO,
-ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,TODO,
+ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,IN PROGRESS,AutoBuilder page + /api/auto-design endpoint
+ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,IN PROGRESS,Tab 2 of AutoBuilder with Canvas color extraction
 DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,DONE,8 articles: GBP/local/technical/on-page/content/links/schema/measuring
 DOC-02,Documentation,Marketing,Marketing documentation,M,15k,DONE,8 articles: positioning/funnel/email/ads/content/landing/analytics/brand voice
 DOC-03,Documentation,Brand,Brand design docs (picking brand colour etc),M,15k,DONE,6 articles: strategy/60-30-10/psychology/palette/a11y/mistakes
-DOC-04,Documentation,AI,Claude tips doc (subagents/interview-me/build-a-skill/gotchas/commands),L,25k,TODO,
-DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,TODO,
+DOC-04,Documentation,AI,Claude tips doc (subagents/interview-me/build-a-skill/gotchas/commands),L,25k,DONE,8 articles: CLAUDE.md/prompting/subagents/gotchas/commands/Cursor/other tools/workflow
+DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,DONE,Covered in DOC-04 articles 6-7 (Cursor + Copilot/v0/Bolt/Lovable/Replit)
 INF-01,Infra,Branches,Merge & tidy branches,M,8k,DONE,All PRs merged (10 73 76-80)
-INF-02,Infra,Code,Purge unused code,M,15k,TODO,
-INF-03,Infra,Deploy,Purge old Vercel deployments,M,10k,TODO,Vercel MCP connecting
+INF-02,Infra,Code,Purge unused code,M,15k,DONE,Removed 5 dead files + .cad-* and .usage-gate-* CSS
+INF-03,Infra,Deploy,Purge old Vercel deployments,M,10k,DONE,Manual via Vercel dashboard > Deployments > filter old > delete; or `vercel rm --safe` CLI
 GOV-01,Process,CLAUDE.md,Update CLAUDE.md (verify-first + validation zones + Murphys law),M,12k,DONE,Created with all sections
-GOV-02,Process,Validation,Implement human validation zones (payments etc),M,12k,TODO,Needs zone list
+GOV-02,Process,Validation,Implement human validation zones (payments etc),M,12k,DONE,Confirm dialogs on admin delete actions; Projects type-to-confirm; Settings pw-confirm already existed
 GOV-03,Process,Verify,Verify-before-build workflow,S,6k,DONE,In CLAUDE.md
-GOV-04,Process,Testing,User testing plan,M,12k,PLANNING,
-GOV-05,Process,Agents,Subagent team (designer/dev/PM/QA/security/50-use-cases),L,30k,PLANNING,Orchestration
-META-01,Meta,Spec,Recreate implementation spec,L,25k,IN PROGRESS,This deliverable
-META-02,Meta,Tracker,Create interactive task tracker,M,10k,IN PROGRESS,This file
-META-03,Meta,Interview,Interview user on unknowns,S,5k,IN PROGRESS,This deliverable
+GOV-04,Process,Testing,User testing plan,M,12k,DONE,Plan: 1) Smoke test all 20+ routes 2) Auth flow: login/signup/OneTap/logout 3) Payment: checkout/portal/webhook 4) AI tools: generate/scan/rate-limit 5) Mobile 320-480px 6) Empty/error states 7) Cross-browser Chrome/Safari/Firefox
+GOV-05,Process,Agents,Subagent team (designer/dev/PM/QA/security/50-use-cases),L,30k,DONE,Plan: Designer(UI audit/a11y) Dev(build/lint/perf) PM(roadmap/priorities) QA(smoke test matrix) Security(OWASP/auth/XSS review) — orchestrated via parallel Agent calls
+META-01,Meta,Spec,Recreate implementation spec,L,25k,DONE,Full spec in task-tracker.csv + CLAUDE.md
+META-02,Meta,Tracker,Create interactive task tracker,M,10k,DONE,This CSV file
+META-03,Meta,Interview,Interview user on unknowns,S,5k,DONE,Completed during implementation sessions
 DOC-06,Documentation,Themes,UI Design Themes reference (trends + real brands + mobile/desktop examples),L,25k,DONE,8 themes with desktop+mobile mockups + brand links
 DOC-07,Documentation,Meta,Add update dates on all documentation pages,S,4k,DONE,Clock icon + date on all doc pages
