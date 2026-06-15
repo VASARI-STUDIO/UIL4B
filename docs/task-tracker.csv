@@ -22,7 +22,7 @@ AIP-05,AI Image Prompt Generator,Photo,Generate prompt from uploaded photo,L,30k
 AIP-06,AI Image Prompt Generator,Photo,Checkbox list of scanned rules (select/deselect) -> JSON,M,18k,TODO,
 AIP-07,AI Image Prompt Generator,UX,Media upload at TOP of upload popup w/ title field,S,6k,TODO,
 AIP-08,AI Image Prompt Generator,Status,Mark tool as ALPHA,S,2k,DONE,alpha flag + nav badge
-AIP-09,AI Image Prompt Generator,Auth,Inline auth gate (stay on page),M,12k,IN PROGRESS,AuthGate component built (staged)
+AIP-09,AI Image Prompt Generator,Auth,Inline auth gate (stay on page),M,12k,DONE,AuthGate on both AI tools
 AIW-01,AI Website Generator,New Section,Create new page + nav section,L,30k,NEEDS DECISION,Output type unclear
 AIW-02,AI Website Generator,Related,Group related tools under section,M,12k,TODO,
 ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,TODO,
@@ -51,8 +51,8 @@ LAND-03,Landing,Hero,Redesign hero (feels generic),M,18k,TODO,
 HELP-01,Help Centre,Redesign,Overhaul UI + structure,L,30k,TODO,
 HELP-02,Help Centre,Forms,Differentiate feature req / bug / feedback / help,M,15k,TODO,
 HELP-03,Help Centre,UX,Make feedback easier to access,S,6k,TODO,
-AUTH-01,Auth,Flow,Keep user on page when login prompted / return them,M,12k,IN PROGRESS,AuthGate (staged)
-AUTH-02,Auth,Flow,Login via popup or new page when needed,M,10k,PARTIAL,gate=1 exists
+AUTH-01,Auth,Flow,Keep user on page when login prompted / return them,M,12k,DONE,AuthGate inline on AI tools
+AUTH-02,Auth,Flow,Login via popup or new page when needed,M,10k,DONE,AuthGate inline + Google OAuth
 AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,TODO,
 ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,TODO,
 ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,TODO,

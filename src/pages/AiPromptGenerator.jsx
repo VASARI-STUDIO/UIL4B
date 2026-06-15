@@ -94,7 +94,7 @@ export default function AiPromptGenerator({ toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">AI Tools</div>
+        <div className="sec-h-eyebrow">AI Tools <span className="nav-alpha-badge" style={{ marginLeft: 8 }}>Alpha</span></div>
         <h1>AI Image Prompt <em>Generator</em></h1>
         <p>
           Describe what you want and get a detailed AI image prompt optimised for your platform.
