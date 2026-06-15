@@ -1881,6 +1881,11 @@ img,svg,video{max-width:100%;height:auto}
 
 /* AI Prompt Generator */
 .aipg-composer{padding:24px;display:flex;flex-direction:column;gap:18px}
+.aipg-ref-section{margin-bottom:16px}
+.aipg-ref-drop{display:flex;align-items:center;gap:10px;padding:16px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background .15s;margin-top:8px}
+.aipg-ref-drop:hover{border-color:var(--accent);background:var(--accent-bg)}
+.aipg-ref-preview{display:flex;align-items:flex-start;gap:12px;margin-top:8px}
+.aipg-scanned{margin-top:12px;padding:12px;background:var(--bg-1);border-radius:var(--radius);border:1px solid var(--border)}
 .aipg-field{display:flex;flex-direction:column;gap:6px}
 .aipg-field label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
 .aipg-field textarea{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--t0);font-family:var(--font);font-size:14px;line-height:1.5;outline:none;resize:vertical;transition:border-color var(--t),box-shadow var(--t)}
