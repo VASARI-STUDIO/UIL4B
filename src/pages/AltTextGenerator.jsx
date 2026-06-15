@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import UsageGate from '../components/UsageGate'
+import AuthGate from '../components/AuthGate'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { auth as firebaseAuth } from '../utils/firebase'
@@ -200,11 +200,12 @@ export default function AltTextGenerator({ toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">Imagery</div>
+        <div className="sec-h-eyebrow">AI Tools</div>
         <h1>Alt Text <em>Generator</em></h1>
         <p>Batch-upload images and generate accessible alt text using AI. {isPro ? 'Pro model active.' : 'Upgrade to Pro for higher-quality models.'}</p>
       </div>
 
+      <AuthGate featureLabel="generate alt text">
       <div
         className={`alt-dropzone${isDragging ? ' dragging' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
@@ -285,28 +286,24 @@ export default function AltTextGenerator({ toast }) {
       )}
 
       {items.length > 0 && (
-        <>
-          <UsageGate toolId={ALT_TEXT_TOOL_ID}>
-            <div className="alt-toolbar">
-              <div className="alt-toolbar-info">
-                <strong>{items.length}</strong> image{items.length === 1 ? '' : 's'}
-                {doneCount > 0 && <> · <strong>{doneCount}</strong> generated</>}
-              </div>
-              <div className="alt-toolbar-actions">
-                <button className="btn btn-s" onClick={clearAll} disabled={busy}>Clear</button>
-                {doneCount > 0 && (
-                  <>
-                    <button className="btn btn-s" onClick={copyAll} disabled={busy}>Copy all</button>
-                    <button className="btn btn-s" onClick={downloadCSV} disabled={busy}>Download CSV</button>
-                  </>
-                )}
-                <button className="btn btn-primary btn-s" onClick={generateAll} disabled={busy || readyCount === 0}>
-                  {busy ? 'Generating…' : `Generate ${readyCount > 0 ? `(${readyCount})` : 'all'}`}
-                </button>
-              </div>
-            </div>
-          </UsageGate>
-        </>
+        <div className="alt-toolbar">
+          <div className="alt-toolbar-info">
+            <strong>{items.length}</strong> image{items.length === 1 ? '' : 's'}
+            {doneCount > 0 && <> · <strong>{doneCount}</strong> generated</>}
+          </div>
+          <div className="alt-toolbar-actions">
+            <button className="btn btn-s" onClick={clearAll} disabled={busy}>Clear</button>
+            {doneCount > 0 && (
+              <>
+                <button className="btn btn-s" onClick={copyAll} disabled={busy}>Copy all</button>
+                <button className="btn btn-s" onClick={downloadCSV} disabled={busy}>Download CSV</button>
+              </>
+            )}
+            <button className="btn btn-primary btn-s" onClick={generateAll} disabled={busy || readyCount === 0}>
+              {busy ? 'Generating…' : `Generate ${readyCount > 0 ? `(${readyCount})` : 'all'}`}
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="alt-grid">
@@ -357,6 +354,7 @@ export default function AltTextGenerator({ toast }) {
           </div>
         ))}
       </div>
+      </AuthGate>
     </div>
   )
 }

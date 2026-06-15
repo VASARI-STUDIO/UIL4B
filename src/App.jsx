@@ -100,7 +100,8 @@ export default function App() {
       '/icons': 'UI L4B | Icon Library',
       '/imgconvert': 'UI L4B | Image Converter',
       '/alt-text': 'UI L4B | Alt Text Generator',
-      '/ai-prompt': 'UI L4B | AI Prompt Generator',
+      '/ai-prompt': 'UI L4B | AI Image Prompt Generator',
+      '/ai-tools': 'UI L4B | AI Tools',
       '/prompts': 'UI L4B | Prompt Library',
       '/emoji': 'UI L4B | Emoji Library',
       '/video-frames': 'UI L4B | Video to Frames',
@@ -170,6 +171,7 @@ export default function App() {
             <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
             <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
             <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
+            <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
             <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
             <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
             <Route path="/color-studio" element={<Navigate to="/color" replace />} />

@@ -306,6 +306,7 @@ export default function Sidebar({ isOpen, onClose }) {
                           </svg>
                         )}
                         <span className="nav-item-label">{tool.label}</span>
+                        {tool.alpha && <span className="nav-alpha-badge">Alpha</span>}
                       </NavLink>
                     ))}
                   </div>
@@ -318,20 +319,20 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Footer */}
         <div className="sidebar-footer">
           {isAdmin && (
-            <>
+            <div className="nav-admin-group">
               <NavLink to="/admin" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
                 <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
                 <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Admin</span>
               </NavLink>
-              <NavLink to="/style-guide" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
-                <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <NavLink to="/style-guide" className={({ isActive }) => `nav-item nav-item-footer nav-item-sub${isActive ? ' active' : ''}`} onClick={onClose}>
+                <svg className="nav-icon nav-icon-sub" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
                 </svg>
-                <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Style Guide</span>
+                <span className="nav-item-label">Style Guide</span>
               </NavLink>
-            </>
+            </div>
           )}
           <NavLink to="/settings" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
             <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
