@@ -9,7 +9,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
 import { extractColorsFromImage } from '../utils/extractColors'
-import { COLOR_LIBRARIES, findClosestNamedColor, searchNamedColors } from '../data/namedColors'
+import { COLOR_LIBRARIES, findClosestNamedColor } from '../data/namedColors'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic', 'custom']
 const HARM_LABELS = {
@@ -160,7 +160,7 @@ function TintSwatch({ color, label, onCopy }) {
         {label}
       </span>
       <span style={{ fontSize: 8, fontFamily: 'var(--mono)', fontWeight: 600, color: fg, opacity: hover ? .9 : .5 }}>
-        {hover ? color.toUpperCase().replace('#', '') : color.toUpperCase().replace('#', '')}
+        {color.toUpperCase().replace('#', '')}
       </span>
       {hover && rgb && (
         <span style={{ fontSize: 7, fontFamily: 'var(--mono)', color: fg, opacity: .5 }}>
@@ -168,21 +168,6 @@ function TintSwatch({ color, label, onCopy }) {
         </span>
       )}
     </div>
-  )
-}
-
-function ContrastBadge({ fg, bg }) {
-  const ratio = contrastRatio(fg, bg)
-  const pass = ratio >= 4.5
-  return (
-    <span style={{
-      fontSize: 9, fontFamily: 'var(--mono)', fontWeight: 700,
-      padding: '2px 6px', borderRadius: 4,
-      background: pass ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)',
-      color: pass ? '#16a34a' : '#dc2626',
-    }}>
-      {ratio.toFixed(1)}:1 {pass ? 'AA' : ''}
-    </span>
   )
 }
 
@@ -434,7 +419,7 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
   )
 }
 
-export default function ColorStudio({ onCopy }) {
+export default function ColorStudio({ onCopy, toast }) {
   const { t } = useI18n()
   const { theme } = useTheme()
   const { rounding } = useAppearance()
@@ -1002,7 +987,9 @@ ${stateVars}
         setActiveColorIdx(0)
         setLocked(new Set())
       }
-    } catch { /* ignore */ }
+    } catch {
+      toast('Could not read colours from that image — try a different file')
+    }
     setExtracting(false)
     setAddMenuOpen(false)
     if (extractFileRef.current) extractFileRef.current.value = ''
@@ -1551,6 +1538,7 @@ ${stateVars}
                 </div>
               ))}
             </div>
+            {q && filtered.length === 0 && <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 8, padding: '12px 0', textAlign: 'center' }}>No colours found</div>}
             {filtered.length > 80 && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>Showing 80 of {filtered.length} — search to narrow results</div>}
           </>
         })()}

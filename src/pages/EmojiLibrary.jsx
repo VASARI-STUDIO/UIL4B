@@ -191,6 +191,15 @@ export default function EmojiLibrary({ onCopy }) {
         })}
       </div>
 
+      {search.trim() && filteredCount === 0 && (
+        <div className="pl-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <p>No emoji found for &ldquo;{search.trim()}&rdquo;</p>
+        </div>
+      )}
+
       {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
     </div>
   )
