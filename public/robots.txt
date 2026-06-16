@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /settings
+Disallow: /checkout
+Disallow: /onboarding
+
+Sitemap: https://www.uil4b.com/sitemap.xml

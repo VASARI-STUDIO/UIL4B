@@ -567,10 +567,10 @@ export default function UIBuilder({ onCopy, toast }) {
                 <div className="uib-section-head">
                   <h3>{section.label}</h3>
                   <div className="uib-section-actions">
-                    <button className="btn-xs" onClick={() => setCodeSection(codeSection === section.id ? null : section.id)} title="View CSS">
+                    <button className="btn-xs" onClick={() => setCodeSection(codeSection === section.id ? null : section.id)} title="View CSS" aria-label="View CSS">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
                     </button>
-                    <button className="btn-xs" onClick={() => copyCSS(section.id)} title="Copy CSS">
+                    <button className="btn-xs" onClick={() => copyCSS(section.id)} title="Copy CSS" aria-label="Copy CSS">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
                     </button>
                   </div>
@@ -673,7 +673,7 @@ export default function UIBuilder({ onCopy, toast }) {
                     <div className="uib-code-tabs">
                       <button className={`uib-code-tab${codeMode === 'css' ? ' active' : ''}`} onClick={() => setCodeMode('css')}>CSS</button>
                       <button className={`uib-code-tab${codeMode === 'html' ? ' active' : ''}`} onClick={() => setCodeMode('html')}>HTML</button>
-                      <button className="btn-xs" style={{ marginLeft: 'auto' }} onClick={() => { const code = codeMode === 'css' ? generateCSS(section.id) : generateHTML(section.id); navigator.clipboard.writeText(code); if (toast) toast(`${codeMode.toUpperCase()} copied`) }} title="Copy">
+                      <button className="btn-xs" style={{ marginLeft: 'auto' }} onClick={() => { const code = codeMode === 'css' ? generateCSS(section.id) : generateHTML(section.id); navigator.clipboard.writeText(code); if (toast) toast(`${codeMode.toUpperCase()} copied`) }} title="Copy" aria-label="Copy code">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
                       </button>
                     </div>

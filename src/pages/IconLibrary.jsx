@@ -135,7 +135,7 @@ function IconDetail({ icon, onClose, onCopy, paletteColors }) {
   return (
     <div className="fg-detail-overlay" onClick={onClose}>
       <div className="il-detail" onClick={e => e.stopPropagation()}>
-        <button className="fg-detail-close" onClick={onClose}>
+        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -200,7 +200,7 @@ function IconDetail({ icon, onClose, onCopy, paletteColors }) {
                     onChange={e => handleColorInput(e.target.value)}
                   />
                   {color && (
-                    <button className="il-detail-reset" onClick={() => { setColor(''); setColorInput('') }} title="Reset color">
+                    <button className="il-detail-reset" onClick={() => { setColor(''); setColorInput('') }} title="Reset color" aria-label="Reset color">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                       </svg>
@@ -217,7 +217,7 @@ function IconDetail({ icon, onClose, onCopy, paletteColors }) {
                   <button className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); setColorInput('#000000') }}>Black</button>
                   <button className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); setColorInput('#ffffff') }}>White</button>
                   {paletteColors?.slice(0, 5).map((c, i) => (
-                    <button key={i} className={color === c ? 'active' : ''} onClick={() => { setColor(c); setColorInput(c) }} title={c} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button key={i} className={color === c ? 'active' : ''} onClick={() => { setColor(c); setColorInput(c) }} title={c} aria-label={`Set color to ${c}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ width: 10, height: 10, borderRadius: 3, background: c, border: '1px solid rgba(0,0,0,.15)', flexShrink: 0 }} />
                     </button>
                   ))}

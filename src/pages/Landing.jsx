@@ -798,7 +798,7 @@ export default function Landing() {
                 ? `Signed in${firstName ? ` as ${firstName}` : ''}.`
                 : 'No account required · Free tier · No credit card'}
             </span>
-            <div className="landing-trust" aria-hidden="true">
+            <div className="landing-trust">
               <span className="landing-trust-item"><strong>200K+</strong> icons</span>
               <span className="landing-trust-dot" />
               <span className="landing-trust-item"><strong>1,200+</strong> fonts</span>
@@ -854,13 +854,13 @@ export default function Landing() {
         {/* Value highlights */}
         <Reveal className="landing-highlights">
           {HIGHLIGHTS.map(h => (
-            <div key={h.title} className="landing-highlight">
+            <article key={h.title} className="landing-highlight">
               <span className="landing-highlight-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{h.icon}</svg>
               </span>
               <h3>{h.title}</h3>
               <p>{h.body}</p>
-            </div>
+            </article>
           ))}
         </Reveal>
 
@@ -882,7 +882,7 @@ export default function Landing() {
           </div>
           <div className="landing-pricing-grid">
             {/* Free tier */}
-            <div className="landing-tier landing-tier-free">
+            <article className="landing-tier landing-tier-free">
               <div className="landing-tier-name">Free</div>
               <div className="landing-tier-price">
                 <span className="landing-tier-amount">$0</span>
@@ -900,10 +900,10 @@ export default function Landing() {
               <button type="button" className="btn landing-tier-cta" onClick={() => choosePlan('free')}>
                 Start for free
               </button>
-            </div>
+            </article>
 
             {/* Pro tier — visually prominent */}
-            <div className={`landing-tier landing-tier-featured${isPro ? ' landing-tier-active' : ''}`}>
+            <article className={`landing-tier landing-tier-featured${isPro ? ' landing-tier-active' : ''}`}>
               <span className="landing-tier-badge">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15 9 22 9.3 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.3 9 9" /></svg>
                 Recommended
@@ -937,7 +937,7 @@ export default function Landing() {
               >
                 {isPro ? 'Your current plan' : 'Go Pro'}
               </button>
-            </div>
+            </article>
           </div>
           <p className="landing-pricing-foot">Prices in AUD. Cancel anytime — your free access never expires.</p>
         </Reveal>
@@ -969,25 +969,25 @@ export default function Landing() {
             <span className="landing-footer-tagline">Design toolkit for professionals.</span>
           </div>
           <div className="landing-footer-cols">
-            <div className="landing-footer-col">
+            <nav className="landing-footer-col" aria-label="Product">
               <span className="landing-footer-col-title">Product</span>
               <a href="#pricing">Pricing</a>
               <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/color')}>Colour Studio</button>
               <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/fontpairs')}>Font Pair Finder</button>
               <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/icons')}>Icon Library</button>
-            </div>
-            <div className="landing-footer-col">
+            </nav>
+            <nav className="landing-footer-col" aria-label="Resources">
               <span className="landing-footer-col-title">Resources</span>
               <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/docs-design')}>Design Principles</button>
               <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/help')}>Help Centre</button>
               <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/docs-themes')}>UI Design Themes</button>
-            </div>
-            <div className="landing-footer-col">
+            </nav>
+            <nav className="landing-footer-col" aria-label="Company">
               <span className="landing-footer-col-title">Company</span>
               <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">About</a>
               <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/privacy')}>Privacy</button>
               <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/terms')}>Terms</button>
-            </div>
+            </nav>
           </div>
           <div className="landing-footer-bottom">
             <span className="landing-footer-copy">Built by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>

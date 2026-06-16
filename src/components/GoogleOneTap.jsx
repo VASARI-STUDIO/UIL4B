@@ -57,7 +57,7 @@ export default function GoogleOneTap() {
               await loginWithGoogleCredential(response.credential)
             } catch (err) {
               // Surface only unexpected failures; closed/declined prompts are silent.
-              console.error('Google One Tap sign-in failed', err)
+              if (import.meta.env.DEV) console.error('Google One Tap sign-in failed', err)
             }
           },
           auto_select: returning,
