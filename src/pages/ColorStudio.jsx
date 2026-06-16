@@ -1273,6 +1273,7 @@ ${stateVars}
                 />
                 <button onClick={(e) => { e.stopPropagation(); toggleLock(i) }}
                   title={isLocked ? 'Unlock colour' : 'Lock colour'}
+                  aria-label={isLocked ? 'Unlock colour' : 'Lock colour'}
                   style={{ position: 'absolute', top: 4, left: 4, background: isLocked ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1283,6 +1284,7 @@ ${stateVars}
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); setInfoColor(color) }}
                   title="Colour details"
+                  aria-label="Colour details"
                   style={{ position: 'absolute', top: 4, right: isExtra ? 26 : 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 11, fontWeight: 700, fontStyle: 'italic', fontFamily: 'Georgia,serif', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
                 >i</button>
                 {isExtra && (
@@ -1587,6 +1589,7 @@ ${stateVars}
                     <button type="button" onClick={() => setStopPickerIdx(stopPickerIdx === si ? null : si)}
                       style={{ width: 32, height: 32, borderRadius: 6, cursor: 'pointer', background: resolved, border: '2px solid var(--border)', padding: 0, flexShrink: 0, transition: 'border-color .15s' }}
                       title="Pick from palette & tints"
+                      aria-label="Pick from palette and tints"
                     />
                     <input type="text" value={resolved.toUpperCase()} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, minWidth: 0 }}
                       onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
@@ -1598,6 +1601,7 @@ ${stateVars}
                     {gradStops.length > 2 && (
                       <button onClick={() => removeGradStop(si)}
                         style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 14, padding: '2px 4px', lineHeight: 1 }}
+                        aria-label="Remove gradient stop"
                       >&times;</button>
                     )}
                     {stopPickerIdx === si && (
