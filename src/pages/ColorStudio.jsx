@@ -8,6 +8,8 @@ import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
+import { extractColorsFromImage } from '../utils/extractColors'
+import { COLOR_LIBRARIES, findClosestNamedColor, searchNamedColors } from '../data/namedColors'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic', 'custom']
 const HARM_LABELS = {
@@ -456,6 +458,9 @@ export default function ColorStudio({ onCopy }) {
   const [overrides, setOverrides] = useState(() => design?.palette?.overrides || {})
   const [stateColors, setStateColors] = useState(() => design?.states || { success: 1, warning: 0, error: 0, info: 0 })
   const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
+  const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
+  const [dragIdx, setDragIdx] = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
   const [cssExpanded, setCssExpanded] = useState(false)
   const [infoColor, setInfoColor] = useState(null)
   const colorRef = useRef(null)
@@ -475,6 +480,7 @@ export default function ColorStudio({ onCopy }) {
     { id: 'states', label: 'States' },
     { id: 'systems', label: 'Systems' },
     { id: 'gradients', label: 'Gradients' },
+    { id: 'visualizer', label: 'Visualizer' },
   ], [])
   const [collapsed, setCollapsed] = useState({})
   const [activeSection, setActiveSection] = useState('palette')
@@ -499,7 +505,7 @@ export default function ColorStudio({ onCopy }) {
 
   // Sync palette state to ProjectContext (full design persistence)
   useEffect(() => {
-    setPalette({ base: baseColor, harmony, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors })
+    setPalette({ base: baseColor, harmony, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors, locked: [...locked] })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseColor, harmony, extraColors, JSON.stringify(overrides), activeColorIdx, allColors.join(',')])
 
@@ -520,6 +526,18 @@ export default function ColorStudio({ onCopy }) {
     setGradient({ stops: gradStops, angle: gradAngle, type: gradType })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gradStops, gradAngle, gradType])
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.code !== 'Space') return
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return
+      e.preventDefault()
+      randomPalette()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [randomPalette])
 
   const activeColor = allColors[activeColorIdx] || allColors[0]
 
@@ -781,13 +799,41 @@ ${stateVars}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allColors.join(','), tintScale.join(','), JSON.stringify(stateColors), theme, rounding])
 
+  const toggleLock = useCallback((idx) => {
+    setLocked(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx); else next.add(idx)
+      return next
+    })
+  }, [])
+
   const randomPalette = useCallback(() => {
     const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
-    setBaseColor(hex)
-    setExtraColors([])
-    setOverrides({})
-    setActiveColorIdx(0)
-  }, [])
+    if (locked.size === 0) {
+      setBaseColor(hex)
+      setExtraColors([])
+      setOverrides({})
+      setActiveColorIdx(0)
+    } else {
+      if (!locked.has(0)) setBaseColor(hex)
+      setOverrides(prev => {
+        const next = { ...prev }
+        for (let i = 1; i < colors.length; i++) {
+          if (locked.has(i)) {
+            next[i] = allColors[i]
+          } else {
+            delete next[i]
+          }
+        }
+        return next
+      })
+      setExtraColors(prev => prev.map((c, i) => {
+        const globalIdx = colors.length + i
+        if (locked.has(globalIdx)) return c
+        return hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
+      }))
+    }
+  }, [locked, colors.length, allColors])
 
   const resetPalette = useCallback(() => {
     const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx }
@@ -810,6 +856,8 @@ ${stateVars}
   const [gradPresetsExpanded, setGradPresetsExpanded] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
+  const [namedLibrary, setNamedLibrary] = useState('css')
+  const [namedSearch, setNamedSearch] = useState('')
 
   const allTintScales = useMemo(() => {
     return allColors.map(c => generateTintScale({
@@ -867,6 +915,32 @@ ${stateVars}
     node.addEventListener('change', () => { addSessionRef.current = null })
   }, [])
 
+  const handleDragStart = (idx) => setDragIdx(idx)
+  const handleDragOver = (e, idx) => { e.preventDefault(); setDragOverIdx(idx) }
+  const handleDragEnd = () => {
+    if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
+      const reordered = [...allColors]
+      const [moved] = reordered.splice(dragIdx, 1)
+      reordered.splice(dragOverIdx, 0, moved)
+      const newLocked = new Set()
+      locked.forEach(li => {
+        if (li === dragIdx) newLocked.add(dragOverIdx)
+        else if (dragIdx < dragOverIdx && li > dragIdx && li <= dragOverIdx) newLocked.add(li - 1)
+        else if (dragIdx > dragOverIdx && li >= dragOverIdx && li < dragIdx) newLocked.add(li + 1)
+        else newLocked.add(li)
+      })
+      setLocked(newLocked)
+      setBaseColor(reordered[0])
+      setOverrides(Object.fromEntries(reordered.slice(1, colors.length).map((c, i) => [i + 1, c])))
+      setExtraColors(reordered.slice(colors.length))
+      if (activeColorIdx === dragIdx) setActiveColorIdx(dragOverIdx)
+      else if (dragIdx < dragOverIdx && activeColorIdx > dragIdx && activeColorIdx <= dragOverIdx) setActiveColorIdx(activeColorIdx - 1)
+      else if (dragIdx > dragOverIdx && activeColorIdx >= dragOverIdx && activeColorIdx < dragIdx) setActiveColorIdx(activeColorIdx + 1)
+    }
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }
+
   const editPaletteColor = (idx, hex) => {
     if (idx === 0) {
       // Index 0 is the base colour itself — keep it as the source of truth.
@@ -909,6 +983,28 @@ ${stateVars}
     const newColors = brand.colors.filter(c => !allColors.map(x => x.toUpperCase()).includes(c.toUpperCase()))
     setExtraColors([...extraColors, ...newColors.slice(0, 3)])
     setAddMenuOpen(false)
+  }
+
+  const [extracting, setExtracting] = useState(false)
+  const extractFileRef = useRef(null)
+  const handleImageExtract = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setExtracting(true)
+    try {
+      const extracted = await extractColorsFromImage(file, 5)
+      if (extracted.length) {
+        setBaseColor(extracted[0])
+        setHarmony('custom')
+        setOverrides({})
+        setExtraColors(extracted.slice(1))
+        setActiveColorIdx(0)
+        setLocked(new Set())
+      }
+    } catch { /* ignore */ }
+    setExtracting(false)
+    setAddMenuOpen(false)
+    if (extractFileRef.current) extractFileRef.current.value = ''
   }
 
   const addMenuRef = useRef(null)
@@ -1037,11 +1133,12 @@ ${stateVars}
         <div className="cs-section-header" onClick={() => toggleCollapse('palette')} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.palette ? 0 : 20, cursor: 'pointer' }}>
           <svg className={`cs-chevron${collapsed.palette ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Palette Builder</h2>
-          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); randomPalette() }} title="Random palette" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); randomPalette() }} title="Random palette (or press Spacebar)" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10" /><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14" />
             </svg>
             Random
+            <kbd style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--t2)', fontFamily: 'var(--mono)', marginLeft: 2 }}>Space</kbd>
           </button>
           <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); resetPalette() }} title="Reset palette to default" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1071,6 +1168,12 @@ ${stateVars}
                 <button onClick={addAnalogous}>Analogous</button>
                 <button onClick={addTriadic}>Triadic</button>
                 <button onClick={addSplitComp}>Split Complement</button>
+                <div className="cs-add-menu-sep" />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: 'var(--brand)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  {extracting ? 'Extracting…' : 'Extract from Image'}
+                  <input ref={extractFileRef} type="file" accept="image/*" onChange={handleImageExtract} style={{ display: 'none' }} />
+                </label>
                 <div className="cs-add-menu-sep" />
                 <div className="cs-add-menu-label">From Brand Palette</div>
                 {BRANDS.slice(0, 6).map(b => (
@@ -1129,19 +1232,32 @@ ${stateVars}
           {allColors.map((color, i) => {
             const isActive = i === activeColorIdx
             const isExtra = i >= colors.length
+            const isLocked = locked.has(i)
+            const isDragOver = dragOverIdx === i && dragIdx !== i
             return (
-              <div key={i} style={{ position: 'relative', flex: '1 1 0', minWidth: 80 }}>
+              <div key={i}
+                draggable
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={(e) => handleDragOver(e, i)}
+                onDragEnd={handleDragEnd}
+                style={{ position: 'relative', flex: '1 1 0', minWidth: 80, opacity: dragIdx === i ? .5 : 1, transition: 'opacity .15s, transform .15s', transform: isDragOver ? 'scale(1.04)' : 'none' }}
+              >
                 <div
                   onClick={() => { setActiveColorIdx(i); onCopy(color) }}
                   style={{
                     background: color, borderRadius: 'var(--radius-s)', padding: '16px 12px',
                     minHeight: 110, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-                    cursor: 'pointer', transition: 'transform .12s', color: textColorForBg(color),
-                    border: isActive ? '2px solid var(--accent)' : '1px solid var(--border)',
+                    cursor: 'grab', transition: 'transform .12s', color: textColorForBg(color),
+                    border: isActive ? '2px solid var(--accent)' : isDragOver ? '2px dashed var(--brand)' : '1px solid var(--border)',
                     outline: isActive ? '2px solid var(--accent-soft)' : 'none',
                     outlineOffset: 1,
                   }}
                 >
+                  {isLocked && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', top: 6, left: 6, opacity: .7 }}>
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                    </svg>
+                  )}
                   <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', opacity: .6, marginBottom: 2 }}>
                     {ROLES[i] || `CUSTOM ${i - colors.length + 1}`}
                   </div>
@@ -1154,6 +1270,16 @@ ${stateVars}
                   style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
                   title="Edit colour"
                 />
+                <button onClick={(e) => { e.stopPropagation(); toggleLock(i) }}
+                  title={isLocked ? 'Unlock colour' : 'Lock colour'}
+                  style={{ position: 'absolute', top: 4, left: 4, background: isLocked ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {isLocked
+                      ? <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></>
+                      : <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></>}
+                  </svg>
+                </button>
                 <button onClick={(e) => { e.stopPropagation(); setInfoColor(color) }}
                   title="Colour details"
                   style={{ position: 'absolute', top: 4, right: isExtra ? 26 : 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 11, fontWeight: 700, fontStyle: 'italic', fontFamily: 'Georgia,serif', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
@@ -1387,6 +1513,44 @@ ${stateVars}
             </div>
           ))}
         </div>
+
+        <h3 style={{ fontSize: 14, fontWeight: 700, marginTop: 24, marginBottom: 10 }}>Named Colour Libraries</h3>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {COLOR_LIBRARIES.map(lib => (
+            <button key={lib.id} className={`pl-chip${namedLibrary === lib.id ? ' active' : ''}`} onClick={() => { setNamedLibrary(lib.id); setNamedSearch('') }}>
+              {lib.name} <span style={{ fontSize: 9, opacity: .6 }}>({lib.colors.length})</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ position: 'relative', marginBottom: 12, maxWidth: 300 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t3)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" value={namedSearch} onChange={e => setNamedSearch(e.target.value)} placeholder="Search colours..." style={{ paddingLeft: 32, width: '100%', fontSize: 12 }} />
+        </div>
+        {(() => {
+          const lib = COLOR_LIBRARIES.find(l => l.id === namedLibrary)
+          if (!lib) return null
+          const q = namedSearch.trim().toLowerCase()
+          const filtered = q ? lib.colors.filter(c => c.name.toLowerCase().includes(q) || c.hex.toLowerCase().includes(q)) : lib.colors
+          const closest = activeColor ? findClosestNamedColor(activeColor, namedLibrary) : null
+          return <>
+            {closest && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-s)', background: 'var(--bg-1)', border: '1px solid var(--border)' }}>
+                <div style={{ width: 20, height: 20, borderRadius: 4, background: closest.hex, border: '1px solid var(--border)', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: 'var(--t1)' }}>Closest match: <strong>{closest.name}</strong> ({closest.hex})</span>
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
+              {filtered.slice(0, 80).map(c => (
+                <div key={c.name} onClick={() => addCustomColor(c.hex)} style={{ cursor: 'pointer', padding: 6, borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)', transition: 'border-color .15s' }} title={`Add ${c.name} (${c.hex}) to palette`}>
+                  <div style={{ height: 28, borderRadius: 4, background: c.hex, marginBottom: 4, border: '1px solid rgba(0,0,0,.06)' }} />
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--t0)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{c.hex}</div>
+                </div>
+              ))}
+            </div>
+            {filtered.length > 80 && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>Showing 80 of {filtered.length} — search to narrow results</div>}
+          </>
+        })()}
         </>}
       </section>
 
@@ -1590,6 +1754,188 @@ ${stateVars}
         </>}
       </section>
 
+
+      {/* ═══ SECTION 6: PALETTE VISUALIZER ═══ */}
+      <section id="visualizer" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+        <div className="cs-section-header" onClick={() => toggleCollapse('visualizer')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.visualizer ? 0 : 14 }}>
+          <svg className={`cs-chevron${collapsed.visualizer ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Palette Visualizer</h2>
+          <span style={{ fontSize: 10, color: 'var(--t2)', fontWeight: 500 }}>Preview your palette on real UI layouts</span>
+        </div>
+
+        {!collapsed.visualizer && (() => {
+          const pri = allColors[0] || '#3B82F6'
+          const sec = allColors[1] || '#6366F1'
+          const acc = allColors[2] || '#F59E0B'
+          const neu = allColors[3] || '#6B7280'
+          const surf = allColors[4] || '#F3F4F6'
+          const priText = textColorForBg(pri)
+          const secText = textColorForBg(sec)
+          const accText = textColorForBg(acc)
+          const surfText = textColorForBg(surf)
+          const priDark = mixHex(pri, '#000000', 0.3)
+          const priLight = mixHex(pri, '#FFFFFF', 0.85)
+          const secLight = mixHex(sec, '#FFFFFF', 0.85)
+
+          return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(380px,100%),1fr))', gap: 16 }}>
+            {/* ── Dashboard Mockup ── */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>Dashboard</div>
+              <div style={{ display: 'flex', height: 240 }}>
+                <div style={{ width: 52, background: pri, padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: priText === '#ffffff' ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.1)' }} />
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: priText === '#ffffff' ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.06)' }} />
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: priText === '#ffffff' ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.06)' }} />
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: acc, marginTop: 'auto' }} />
+                </div>
+                <div style={{ flex: 1, background: priLight, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ height: 8, width: 80, borderRadius: 4, background: pri, opacity: .7 }} />
+                    <div style={{ height: 22, width: 60, borderRadius: 4, background: acc, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, color: accText }}>ACTION</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                    {[pri, sec, acc].map((c, i) => (
+                      <div key={i} style={{ background: '#fff', borderRadius: 6, padding: 8, border: '1px solid ' + mixHex(c, '#FFFFFF', 0.7) }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: c }}>{['2.4k', '18%', '$12k'][i]}</div>
+                        <div style={{ fontSize: 7, color: neu, marginTop: 2 }}>{['Users', 'Growth', 'Revenue'][i]}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: '#fff', borderRadius: 6, padding: 8, border: '1px solid rgba(0,0,0,.06)', flex: 1 }}>
+                    <div style={{ fontSize: 7, fontWeight: 600, color: neu, marginBottom: 6 }}>Activity</div>
+                    <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 40 }}>
+                      {[40, 65, 50, 80, 70, 90, 55, 75, 85, 60, 95, 72].map((h, i) => (
+                        <div key={i} style={{ flex: 1, height: h + '%', borderRadius: 2, background: i === 10 ? acc : pri, opacity: i === 10 ? 1 : 0.25 + (h / 200) }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Landing Page Mockup ── */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>Landing Page</div>
+              <div style={{ height: 240, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: '#fff', padding: '6px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 14, height: 14, borderRadius: 3, background: pri }} />
+                    <div style={{ width: 40, height: 5, borderRadius: 2, background: '#222' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {[1,2,3].map(i => <div key={i} style={{ width: 20, height: 4, borderRadius: 2, background: '#ccc' }} />)}
+                    <div style={{ height: 16, width: 36, borderRadius: 3, background: pri, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 6, fontWeight: 700, color: priText }}>CTA</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ flex: 1, background: `linear-gradient(135deg, ${priDark} 0%, ${pri} 100%)`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 20, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', width: 120, height: 120, borderRadius: '50%', background: sec, opacity: .1, top: -20, right: -20 }} />
+                  <div style={{ width: 160, height: 8, borderRadius: 4, background: priText === '#ffffff' ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.8)', marginBottom: 6 }} />
+                  <div style={{ width: 120, height: 5, borderRadius: 3, background: priText === '#ffffff' ? 'rgba(255,255,255,.4)' : 'rgba(0,0,0,.3)', marginBottom: 12 }} />
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ height: 20, width: 52, borderRadius: 4, background: acc, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, color: accText }}>Get Started</span>
+                    </div>
+                    <div style={{ height: 20, width: 52, borderRadius: 4, background: 'transparent', border: `1px solid ${priText === '#ffffff' ? 'rgba(255,255,255,.4)' : 'rgba(0,0,0,.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 7, fontWeight: 600, color: priText === '#ffffff' ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.6)' }}>Learn More</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ background: '#fff', padding: 10, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  {[pri, sec, acc].map((c, i) => (
+                    <div key={i} style={{ textAlign: 'center' }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: mixHex(c, '#FFFFFF', 0.8), margin: '0 auto 4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
+                      </div>
+                      <div style={{ width: '80%', height: 4, borderRadius: 2, background: '#222', margin: '0 auto 2px' }} />
+                      <div style={{ width: '60%', height: 3, borderRadius: 2, background: '#ddd', margin: '0 auto' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Mobile App Mockup ── */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>Mobile App</div>
+              <div style={{ height: 240, display: 'flex', justifyContent: 'center', padding: 12, background: 'var(--bg-1)' }}>
+                <div style={{ width: 130, background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ background: pri, padding: '10px 10px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: 30, height: 5, borderRadius: 2, background: priText === '#ffffff' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.7)' }} />
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: priText === '#ffffff' ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.08)' }} />
+                  </div>
+                  <div style={{ padding: 8, flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ flex: 1, background: priLight, borderRadius: 6, padding: 6, textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: pri }}>24</div>
+                        <div style={{ fontSize: 5, color: neu }}>Tasks</div>
+                      </div>
+                      <div style={{ flex: 1, background: secLight, borderRadius: 6, padding: 6, textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: sec }}>8</div>
+                        <div style={{ fontSize: 5, color: neu }}>Done</div>
+                      </div>
+                    </div>
+                    {[1, 2, 3].map(i => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,.04)' }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 3, border: `1.5px solid ${i === 1 ? acc : 'rgba(0,0,0,.15)'}`, background: i === 1 ? acc : 'transparent', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ width: 60 + i * 5, height: 4, borderRadius: 2, background: i === 1 ? '#ccc' : '#222', textDecoration: i === 1 ? 'line-through' : 'none' }} />
+                          <div style={{ width: 30, height: 3, borderRadius: 2, background: '#eee', marginTop: 2 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ borderTop: '1px solid rgba(0,0,0,.06)', padding: '6px 0', display: 'flex', justifyContent: 'space-around' }}>
+                    {[pri, neu, sec].map((c, i) => (
+                      <div key={i} style={{ width: 18, height: 18, borderRadius: '50%', background: i === 0 ? mixHex(c, '#FFFFFF', 0.85) : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: c, opacity: i === 0 ? 1 : .3 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── E-commerce Mockup ── */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>E-Commerce</div>
+              <div style={{ height: 240, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                <div style={{ padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: 2, background: pri }} />
+                    <div style={{ width: 30, height: 4, borderRadius: 2, background: '#222' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <div style={{ width: 50, height: 14, borderRadius: 7, background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.08)', display: 'flex', alignItems: 'center', padding: '0 6px' }}>
+                      <span style={{ fontSize: 6, color: '#999' }}>Search...</span>
+                    </div>
+                    <div style={{ width: 12, height: 12, borderRadius: 2, background: neu, opacity: .3 }} />
+                  </div>
+                </div>
+                <div style={{ flex: 1, padding: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {[pri, sec, acc, neu].map((c, i) => (
+                    <div key={i} style={{ borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(0,0,0,.06)' }}>
+                      <div style={{ height: 50, background: `linear-gradient(135deg, ${mixHex(c, '#FFFFFF', 0.7)}, ${mixHex(c, '#FFFFFF', 0.9)})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 4, background: c, opacity: .5 }} />
+                      </div>
+                      <div style={{ padding: '5px 6px' }}>
+                        <div style={{ width: '70%', height: 4, borderRadius: 2, background: '#333', marginBottom: 3 }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: 8, fontWeight: 700, color: pri }}>${(19 + i * 10).toFixed(2)}</div>
+                          <div style={{ fontSize: 6, padding: '2px 5px', borderRadius: 3, background: i === 0 ? acc : 'transparent', color: i === 0 ? accText : 'transparent', fontWeight: 600 }}>{i === 0 ? 'SALE' : ''}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        })()}
+      </section>
 
       {/* ── Flow CTA: Next step → Typography ── */}
       <div className="cs-next-step">

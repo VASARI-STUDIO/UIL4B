@@ -80,9 +80,12 @@ export default function Sidebar({ isOpen, onClose }) {
   })()
 
   const [openCats, setOpenCats] = useState(() => {
+    const allOpen = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: true }), {})
     const stored = loadOpenState()
-    if (stored) return stored
-    return CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: true }), {})
+    // Merge stored prefs over the all-open default so categories added after a
+    // user's prefs were saved (e.g. AI Tools) start expanded instead of
+    // inheriting an undefined → collapsed state.
+    return stored ? { ...allOpen, ...stored } : allOpen
   })
 
   useEffect(() => {
