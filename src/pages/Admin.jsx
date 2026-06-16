@@ -88,7 +88,7 @@ function AreaChart({ data, height = 120 }) {
 
   return (
     <div className="adm-chart">
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      <svg role="img" aria-label="Values over time" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
         <defs>
           <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--accent)" stopOpacity=".25" />
@@ -146,7 +146,7 @@ function DonutChart({ segments, size = 120 }) {
 
   return (
     <div className="adm-donut-wrap">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <svg role="img" aria-label="Distribution breakdown" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {paths}
         <text x={cx} y={cy - 4} textAnchor="middle" fill="var(--t0)" fontSize="20" fontWeight="800">{total}</text>
         <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--t3)" fontSize="9">total</text>
@@ -168,7 +168,7 @@ function Sparkline({ data }) {
   if (!data.length) return null
   const max = Math.max(...data, 1)
   return (
-    <div className="adm-sparkline">
+    <div className="adm-sparkline" role="img" aria-label="Trend sparkline">
       {data.map((v, i) => (
         <div key={i} className="adm-sparkline-bar" style={{ height: `${Math.max(4, (v / max) * 100)}%` }} title={String(v)} />
       ))}
@@ -432,6 +432,7 @@ function ModuleBoard() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
+            aria-label="Search modules"
             placeholder="Search modules…"
             style={{ fontSize: 12, padding: '6px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', minWidth: 160 }}
           />

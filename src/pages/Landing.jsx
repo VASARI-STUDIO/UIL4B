@@ -8,8 +8,6 @@ import { CATEGORIES, TOOLS } from '../data/tools'
 
 const VISITED_KEY = 'vs-visited'
 
-const HERO_LOOP_SOURCES = []
-
 // Reveal-on-scroll helper — fades/slides sections in as they enter the viewport.
 function useReveal() {
   const ref = useRef(null)
@@ -759,11 +757,6 @@ export default function Landing() {
           onMouseLeave={onHeroLeave}
         >
           <div className="landing-hero-bg" aria-hidden="true">
-            {HERO_LOOP_SOURCES.length > 0 && (
-              <video className="landing-hero-media" autoPlay loop muted playsInline preload="auto">
-                {HERO_LOOP_SOURCES.map(s => <source key={s.src} src={s.src} type={s.type} />)}
-              </video>
-            )}
             <span className="landing-hero-grid" />
             <span className="landing-hero-orb landing-hero-orb-1" />
             <span className="landing-hero-orb landing-hero-orb-2" />

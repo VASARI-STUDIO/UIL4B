@@ -25,13 +25,24 @@ export default function Feedback({ toast }) {
 
     saveFeedback(payload)
 
+    let ok = false
     try {
-      await fetch('/api/support', {
+      const res = await fetch('/api/support', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-    } catch {}
+      ok = res.ok
+    } catch {
+      ok = false
+    }
+
+    // Never show success if the request didn't land — a silently-lost support
+    // request is the worst failure mode for a feedback channel.
+    if (!ok) {
+      toast(t('feedback.submitError') || 'Something went wrong sending that. Please check your connection and try again.')
+      return
+    }
 
     toast(t('feedback.thankYou'))
     setMessage('')

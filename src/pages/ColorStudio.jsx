@@ -9,7 +9,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
 import { extractColorsFromImage } from '../utils/extractColors'
-import { COLOR_LIBRARIES, findClosestNamedColor, searchNamedColors } from '../data/namedColors'
+import { COLOR_LIBRARIES, findClosestNamedColor } from '../data/namedColors'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic', 'custom']
 const HARM_LABELS = {
@@ -128,6 +128,8 @@ function StateShade({ shade, label, onCopy }) {
   const rgb = hover ? hexToRgb(shade) : null
   return (
     <div onClick={() => onCopy(shade)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      role="button" tabIndex={0} aria-label={`Copy ${shade.toUpperCase()}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCopy(shade) } }}
       style={{ flex: 1, padding: '16px 0 6px', textAlign: 'center', background: shade, cursor: 'pointer', minHeight: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', transition: 'filter .15s', filter: hover ? 'brightness(1.05)' : 'none' }}
     >
       <span style={{ fontSize: 9, fontFamily: 'var(--mono)', fontWeight: 700, color: fg, opacity: hover ? 1 : .6, transition: 'opacity .15s' }}>
@@ -148,6 +150,8 @@ function TintSwatch({ color, label, onCopy }) {
   const rgb = hover ? hexToRgb(color) : null
   return (
     <div onClick={() => onCopy(color)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      role="button" tabIndex={0} aria-label={`Copy ${color.toUpperCase()}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCopy(color) } }}
       style={{
         flex: 1, padding: '22px 0 10px', textAlign: 'center', background: color, cursor: 'pointer',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 2,
@@ -160,7 +164,7 @@ function TintSwatch({ color, label, onCopy }) {
         {label}
       </span>
       <span style={{ fontSize: 8, fontFamily: 'var(--mono)', fontWeight: 600, color: fg, opacity: hover ? .9 : .5 }}>
-        {hover ? color.toUpperCase().replace('#', '') : color.toUpperCase().replace('#', '')}
+        {color.toUpperCase().replace('#', '')}
       </span>
       {hover && rgb && (
         <span style={{ fontSize: 7, fontFamily: 'var(--mono)', color: fg, opacity: .5 }}>
@@ -168,21 +172,6 @@ function TintSwatch({ color, label, onCopy }) {
         </span>
       )}
     </div>
-  )
-}
-
-function ContrastBadge({ fg, bg }) {
-  const ratio = contrastRatio(fg, bg)
-  const pass = ratio >= 4.5
-  return (
-    <span style={{
-      fontSize: 9, fontFamily: 'var(--mono)', fontWeight: 700,
-      padding: '2px 6px', borderRadius: 4,
-      background: pass ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)',
-      color: pass ? '#16a34a' : '#dc2626',
-    }}>
-      {ratio.toFixed(1)}:1 {pass ? 'AA' : ''}
-    </span>
   )
 }
 
@@ -285,15 +274,16 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
           <span className="ci-hero-hex">{color.toUpperCase()}</span>
           <label className="ci-edit" style={{ color: fg, borderColor: fg }}>
             Edit
-            <input type="color" value={color} onChange={e => onChange(e.target.value)} />
+            <input type="color" value={color} onChange={e => onChange(e.target.value)} aria-label="Edit colour" />
           </label>
         </div>
-        <div className="ci-tabs">
+        <div className="ci-tabs" role="tablist">
           {TABS.map(t => (
-            <button key={t.id} className={`ci-tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+            <button key={t.id} className={`ci-tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}
+              role="tab" id={`ci-tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`ci-panel-${t.id}`}>{t.label}</button>
           ))}
         </div>
-        <div className="ci-body">
+        <div className="ci-body" role="tabpanel" id={`ci-panel-${tab}`} aria-labelledby={`ci-tab-${tab}`}>
           {tab === 'values' && (
             <>
               <div className="ci-values">
@@ -434,7 +424,7 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
   )
 }
 
-export default function ColorStudio({ onCopy }) {
+export default function ColorStudio({ onCopy, toast }) {
   const { t } = useI18n()
   const { theme } = useTheme()
   const { rounding } = useAppearance()
@@ -1002,7 +992,9 @@ ${stateVars}
         setActiveColorIdx(0)
         setLocked(new Set())
       }
-    } catch { /* ignore */ }
+    } catch {
+      toast('Could not read colours from that image — try a different file')
+    }
     setExtracting(false)
     setAddMenuOpen(false)
     if (extractFileRef.current) extractFileRef.current.value = ''
@@ -1159,6 +1151,7 @@ ${stateVars}
                     Pick Colour
                     <input ref={endAddSession} type="color" value={baseColor}
                       onChange={e => addCustomColor(e.target.value)}
+                      aria-label="Pick a custom colour to add"
                       style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', padding: 0 }}
                     />
                   </label>
@@ -1270,6 +1263,7 @@ ${stateVars}
                   onChange={e => editPaletteColor(i, e.target.value)}
                   style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
                   title="Edit colour"
+                  aria-label="Edit colour"
                 />
                 <button onClick={(e) => { e.stopPropagation(); toggleLock(i) }}
                   title={isLocked ? 'Unlock colour' : 'Lock colour'}
@@ -1309,6 +1303,7 @@ ${stateVars}
               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Add</span>
               <input ref={endAddSession} type="color" value={baseColor}
                 onChange={e => addCustomColor(e.target.value)}
+                aria-label="Add a custom colour"
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
               />
             </label>
@@ -1494,7 +1489,9 @@ ${stateVars}
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px,100%), 1fr))', gap: 10, marginBottom: 20 }}>
           {DESIGN_SYSTEMS.map(ds => (
-            <div key={ds.n} className="card-i" style={{ cursor: 'pointer', padding: 14 }} onClick={() => applyDesignSystem(ds)}>
+            <div key={ds.n} className="card-i" style={{ cursor: 'pointer', padding: 14 }} onClick={() => applyDesignSystem(ds)}
+              role="button" tabIndex={0} aria-label={`Load ${ds.n} palette`}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); applyDesignSystem(ds) } }}>
               <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
                 {ds.colors.map((c, ci) => (
                   <div key={ci} style={{ width: 20, height: 20, borderRadius: 4, background: c, border: '1px solid var(--border)' }} />
@@ -1508,7 +1505,9 @@ ${stateVars}
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Brand Palettes</h3>
         <div className="cs-brand-scroll">
           {BRANDS.map(brand => (
-            <div key={brand.n} className="card-i" style={{ cursor: 'pointer', padding: 10, minWidth: 140, flexShrink: 0 }} onClick={() => applyBrand(brand)}>
+            <div key={brand.n} className="card-i" style={{ cursor: 'pointer', padding: 10, minWidth: 140, flexShrink: 0 }} onClick={() => applyBrand(brand)}
+              role="button" tabIndex={0} aria-label={`Load ${brand.n} brand palette`}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); applyBrand(brand) } }}>
               <div style={{ display: 'flex', height: 28, borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
                 {brand.colors.map((c, ci) => <div key={ci} style={{ flex: 1, background: c }} />)}
               </div>
@@ -1544,13 +1543,17 @@ ${stateVars}
             )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
               {filtered.slice(0, 80).map(c => (
-                <div key={c.name} onClick={() => addCustomColor(c.hex)} style={{ cursor: 'pointer', padding: 6, borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)', transition: 'border-color .15s' }} title={`Add ${c.name} (${c.hex}) to palette`}>
+                <div key={c.name} onClick={() => addCustomColor(c.hex)}
+                  role="button" tabIndex={0} aria-label={`Add ${c.name} (${c.hex}) to palette`}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addCustomColor(c.hex) } }}
+                  style={{ cursor: 'pointer', padding: 6, borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)', transition: 'border-color .15s' }} title={`Add ${c.name} (${c.hex}) to palette`}>
                   <div style={{ height: 28, borderRadius: 4, background: c.hex, marginBottom: 4, border: '1px solid rgba(0,0,0,.06)' }} />
                   <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--t0)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
                   <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)' }}>{c.hex}</div>
                 </div>
               ))}
             </div>
+            {q && filtered.length === 0 && <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 8, padding: '12px 0', textAlign: 'center' }}>No colours found</div>}
             {filtered.length > 80 && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>Showing 80 of {filtered.length} — search to narrow results</div>}
           </>
         })()}
@@ -1611,6 +1614,7 @@ ${stateVars}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Custom</div>
                           <input type="color" value={resolved} onChange={e => { updateStop(si, { color: e.target.value }) }}
+                            aria-label="Pick a custom gradient stop colour"
                             style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', padding: 0 }}
                           />
                         </div>

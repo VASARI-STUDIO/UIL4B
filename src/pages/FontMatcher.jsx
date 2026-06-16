@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
@@ -72,6 +72,7 @@ export default function FontMatcher({ onCopy, toast }) {
   const [view, setView] = useState('discover')
   const [allFonts, setAllFonts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [sortBy, setSortBy] = useState('popularity')
@@ -94,9 +95,9 @@ export default function FontMatcher({ onCopy, toast }) {
   const [previewText, setPreviewText] = useState('')
   const sampleText = previewText || 'The quick brown fox jumps over the lazy dog'
 
-  const searchTimer = useRef(null)
-
-  useEffect(() => {
+  const loadFonts = useCallback(() => {
+    setLoading(true)
+    setError(false)
     fetchFonts().then(fonts => {
       setAllFonts(fonts)
       setLoading(false)
@@ -106,8 +107,15 @@ export default function FontMatcher({ onCopy, toast }) {
         setCompareB(fonts.find(f => f.category === 'serif') || fonts[1])
         setSpecimenFont(fonts[0])
       }
+    }).catch(() => {
+      setLoading(false)
+      setError(true)
     })
   }, [])
+
+  useEffect(() => {
+    loadFonts()
+  }, [loadFonts])
 
   const filtered = useMemo(() => {
     if (!allFonts.length) return []
@@ -225,6 +233,17 @@ export default function FontMatcher({ onCopy, toast }) {
       ))}
     </select>
   ), [allFonts])
+
+  if (error) {
+    return (
+      <div className="sec">
+        <div style={{ padding: 60, textAlign: 'center' }}>
+          <div style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 16 }}>Couldn&apos;t load fonts. Check your connection and try again.</div>
+          <button className="btn" onClick={loadFonts}>Retry</button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
