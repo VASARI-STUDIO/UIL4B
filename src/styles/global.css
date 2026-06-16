@@ -2436,13 +2436,6 @@ img,svg,video{max-width:100%;height:auto}
 }
 
 /* ─── Dashboard: Quick-start chips ─── */
-.bento-hero-quickstart{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
-.bento-qs-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:10px;font-weight:600;color:var(--t2);background:var(--accent-bg);text-decoration:none!important;transition:all var(--t);letter-spacing:.01em}
-.bento-qs-chip:hover{color:var(--t0);background:var(--accent-glow)}
-.bento-qs-chip svg{flex-shrink:0}
-.bento-hero-walkthrough{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);text-decoration:none!important;margin-top:8px;transition:color var(--t)}
-.bento-hero-walkthrough:hover{color:var(--brand);text-decoration:none!important}
-.bento-hero-walkthrough svg{color:var(--brand);flex-shrink:0}
 
 /* ─── Dashboard: Community section ─── */
 .bento-community{background:var(--card);padding:16px 20px!important}
