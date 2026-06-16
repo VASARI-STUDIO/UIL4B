@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 
@@ -25,6 +25,10 @@ export default function Login({ toast }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Return the user to the page that sent them here (RequireAuth / Checkout set
+  // location.state.from), falling back to home.
+  const from = location.state?.from || null
   const [searchParams] = useSearchParams()
   const isGate = searchParams.get('gate') === '1'
   const [gateSuccess, setGateSuccess] = useState(false)
@@ -46,7 +50,7 @@ export default function Login({ toast }) {
         await login(email, password)
         toast(t('auth.signedIn'))
         if (isGate) { setGateSuccess(true); setTimeout(() => window.close(), 1200); return }
-        navigate('/')
+        navigate(from || '/')
       }
     } catch (err) {
       const code = err.code
@@ -76,7 +80,7 @@ export default function Login({ toast }) {
       toast(t('auth.signedIn'))
       if (isGate) { setGateSuccess(true); setTimeout(() => window.close(), 1200); return }
       const onboarded = localStorage.getItem('vs-onboarded') === '1'
-      navigate(onboarded ? '/' : '/onboarding')
+      navigate(onboarded ? (from || '/') : '/onboarding')
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
         toast(err.code === 'auth/unauthorized-domain' ? t('auth.errors.googleUnavailable') : t('auth.errors.authFailed'))

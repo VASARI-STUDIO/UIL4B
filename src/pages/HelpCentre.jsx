@@ -132,7 +132,7 @@ function FAQTab() {
             No matching questions found. Try a different search term or <NavLink to="/help#contact" style={{ color: 'var(--brand)' }}>contact us</NavLink>.
           </div>
         )}
-        {filtered.map((faq, i) => {
+        {filtered.map((faq) => {
           const realIdx = faqs.indexOf(faq)
           const isOpen = openIndex === realIdx
           return (
@@ -166,23 +166,31 @@ function ContactTab() {
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [error, setError] = useState(false)
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
     if (!message.trim() || !type) return
     setSending(true)
+    setError(false)
+    const email = user?.email || ''
+    // saveFeedback takes a single entry object — the previous positional call
+    // wrote a corrupt localStorage record and dropped message/email/subject.
+    saveFeedback({ type, subject: subject || `[${type}]`, message: message.trim(), email, source: 'help-centre' })
+    let ok = false
     try {
-      const email = user?.email || ''
-      saveFeedback(type, message, email, subject)
-      await fetch('/api/support', {
+      const res = await fetch('/api/support', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, subject: subject || `[${type}]`, message, email, name: userProfile?.displayName || '' }),
-      }).catch(() => {})
-      setSent(true)
-    } finally {
-      setSending(false)
+      })
+      ok = res.ok
+    } catch {
+      ok = false
     }
+    setSending(false)
+    if (ok) setSent(true)
+    else setError(true)
   }, [type, subject, message, user, userProfile])
 
   const reset = () => {
@@ -190,6 +198,7 @@ function ContactTab() {
     setSubject('')
     setMessage('')
     setSent(false)
+    setError(false)
   }
 
   if (sent) {
@@ -277,6 +286,11 @@ function ContactTab() {
             {user && (
               <div style={{ fontSize: 11, color: 'var(--t3)' }}>
                 Sending as {user.email}
+              </div>
+            )}
+            {error && (
+              <div role="alert" style={{ fontSize: 12, color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--err) 30%, transparent)', borderRadius: 'var(--radius-s)', padding: '10px 12px' }}>
+                Something went wrong sending that. Please check your connection and try again.
               </div>
             )}
             <button type="submit" className="btn btn-accent" disabled={sending || !message.trim()} style={{ alignSelf: 'flex-start', padding: '10px 28px' }}>
