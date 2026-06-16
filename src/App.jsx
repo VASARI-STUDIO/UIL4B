@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { Component, useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
@@ -56,6 +56,33 @@ const UIBuilder = lazy(() => import('./pages/UIBuilder'))
 const AutoBuilder = lazy(() => import('./pages/AutoBuilder'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary caught:', error, info)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <div className="error-boundary-card">
+            <h2>Something went wrong</h2>
+            <p>This page ran into an unexpected error. Reloading usually fixes it.</p>
+            <button onClick={() => window.location.reload()}>Reload page</button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -183,6 +210,7 @@ export default function App() {
         <TopBar onMenuToggle={toggleMenu} onCommandPalette={openPalette} />
 
         <main className="main" key={location.pathname}>
+          <ErrorBoundary>
           <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
             <Routes location={location}>
               <Route path="/dashboard" element={<Dashboard />} />
@@ -240,6 +268,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
+          </ErrorBoundary>
           <AppFooter />
         </main>
       </div>

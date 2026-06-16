@@ -1659,6 +1659,14 @@ img,svg,video{max-width:100%;height:auto}
 /* Page-level loading fallback (Suspense) */
 .page-loading{display:flex;align-items:center;justify-content:center;min-height:60vh;width:100%;opacity:.6}
 
+/* Error Boundary */
+.error-boundary{display:flex;align-items:center;justify-content:center;min-height:60vh;width:100%;padding:24px}
+.error-boundary-card{text-align:center;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);padding:48px 40px;max-width:440px;width:100%}
+.error-boundary-card h2{font-family:var(--font);font-size:20px;font-weight:600;color:var(--t0);margin-bottom:8px}
+.error-boundary-card p{font-size:14px;color:var(--t1);line-height:1.6;margin-bottom:24px}
+.error-boundary-card button{display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;background:var(--brand);color:#fff;font-family:var(--font);font-size:14px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;transition:all var(--t)}
+.error-boundary-card button:hover{opacity:.85}
+
 /* Font Gallery responsive */
 @media(max-width:980px){
   .fg-featured-grid{grid-template-columns:repeat(4,1fr)}
