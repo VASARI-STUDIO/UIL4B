@@ -527,6 +527,34 @@ export default function ColorStudio({ onCopy }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gradStops, gradAngle, gradType])
 
+  const randomPalette = useCallback(() => {
+    const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
+    if (locked.size === 0) {
+      setBaseColor(hex)
+      setExtraColors([])
+      setOverrides({})
+      setActiveColorIdx(0)
+    } else {
+      if (!locked.has(0)) setBaseColor(hex)
+      setOverrides(prev => {
+        const next = { ...prev }
+        for (let i = 1; i < colors.length; i++) {
+          if (locked.has(i)) {
+            next[i] = allColors[i]
+          } else {
+            delete next[i]
+          }
+        }
+        return next
+      })
+      setExtraColors(prev => prev.map((c, i) => {
+        const globalIdx = colors.length + i
+        if (locked.has(globalIdx)) return c
+        return hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
+      }))
+    }
+  }, [locked, colors.length, allColors])
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.code !== 'Space') return
@@ -807,33 +835,6 @@ ${stateVars}
     })
   }, [])
 
-  const randomPalette = useCallback(() => {
-    const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
-    if (locked.size === 0) {
-      setBaseColor(hex)
-      setExtraColors([])
-      setOverrides({})
-      setActiveColorIdx(0)
-    } else {
-      if (!locked.has(0)) setBaseColor(hex)
-      setOverrides(prev => {
-        const next = { ...prev }
-        for (let i = 1; i < colors.length; i++) {
-          if (locked.has(i)) {
-            next[i] = allColors[i]
-          } else {
-            delete next[i]
-          }
-        }
-        return next
-      })
-      setExtraColors(prev => prev.map((c, i) => {
-        const globalIdx = colors.length + i
-        if (locked.has(globalIdx)) return c
-        return hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
-      }))
-    }
-  }, [locked, colors.length, allColors])
 
   const resetPalette = useCallback(() => {
     const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx }
