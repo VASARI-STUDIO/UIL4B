@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
@@ -13,46 +13,49 @@ import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytic
 import { useAuth } from './contexts/AuthContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 
+// Static imports — small or always-visited pages (instant load)
 import Dashboard from './pages/Dashboard'
-import ColorStudio from './pages/ColorStudio'
-import TypeScale from './pages/TypeScale'
-import FontMatcher from './pages/FontMatcher'
-import IconLibrary from './pages/IconLibrary'
-import ImageConverter from './pages/ImageConverter'
-import FileConverter from './pages/FileConverter'
-import PromptLibrary from './pages/PromptLibrary'
-import DocsDesign from './pages/DocsDesign'
-import DocsSocial from './pages/DocsSocial'
-import DocsThemes from './pages/DocsThemes'
-import DocsBrand from './pages/DocsBrand'
-import DocsSEO from './pages/DocsSEO'
-import DocsMarketing from './pages/DocsMarketing'
-import DocsAI from './pages/DocsAI'
-import ExternalResources from './pages/ExternalResources'
-import Login from './pages/Login'
-import Settings from './pages/Settings'
-import Community from './pages/Community'
-import Feedback from './pages/Feedback'
-import Privacy from './pages/Privacy'
-import Terms from './pages/Terms'
-import CategoryDashboard from './pages/CategoryDashboard'
-import VideoToFrames from './pages/VideoToFrames'
-import Admin from './pages/Admin'
-import Projects from './pages/Projects'
-import Checkout from './pages/Checkout'
-import CheckoutReturn from './pages/CheckoutReturn'
-import FontGallery from './pages/FontGallery'
-import AltTextGenerator from './pages/AltTextGenerator'
-import AiPromptGenerator from './pages/AiPromptGenerator'
-import LandingPromptGenerator from './pages/LandingPromptGenerator'
-import EmojiLibrary from './pages/EmojiLibrary'
-import BoxShadowGenerator from './pages/BoxShadowGenerator'
-import UIBuilder from './pages/UIBuilder'
-import AutoBuilder from './pages/AutoBuilder'
-import StyleGuide from './pages/StyleGuide'
-import HelpCentre from './pages/HelpCentre'
 import Landing from './pages/Landing'
+import Login from './pages/Login'
+import CategoryDashboard from './pages/CategoryDashboard'
 import Onboarding from './pages/Onboarding'
+
+// Lazy imports — heavy or rarely-visited pages (code-split)
+const ColorStudio = lazy(() => import('./pages/ColorStudio'))
+const TypeScale = lazy(() => import('./pages/TypeScale'))
+const FontMatcher = lazy(() => import('./pages/FontMatcher'))
+const IconLibrary = lazy(() => import('./pages/IconLibrary'))
+const ImageConverter = lazy(() => import('./pages/ImageConverter'))
+const FileConverter = lazy(() => import('./pages/FileConverter'))
+const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
+const DocsDesign = lazy(() => import('./pages/DocsDesign'))
+const DocsSocial = lazy(() => import('./pages/DocsSocial'))
+const DocsThemes = lazy(() => import('./pages/DocsThemes'))
+const DocsBrand = lazy(() => import('./pages/DocsBrand'))
+const DocsSEO = lazy(() => import('./pages/DocsSEO'))
+const DocsMarketing = lazy(() => import('./pages/DocsMarketing'))
+const DocsAI = lazy(() => import('./pages/DocsAI'))
+const ExternalResources = lazy(() => import('./pages/ExternalResources'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Community = lazy(() => import('./pages/Community'))
+const Feedback = lazy(() => import('./pages/Feedback'))
+const Privacy = lazy(() => import('./pages/Privacy'))
+const Terms = lazy(() => import('./pages/Terms'))
+const VideoToFrames = lazy(() => import('./pages/VideoToFrames'))
+const Admin = lazy(() => import('./pages/Admin'))
+const Projects = lazy(() => import('./pages/Projects'))
+const Checkout = lazy(() => import('./pages/Checkout'))
+const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
+const FontGallery = lazy(() => import('./pages/FontGallery'))
+const AltTextGenerator = lazy(() => import('./pages/AltTextGenerator'))
+const AiPromptGenerator = lazy(() => import('./pages/AiPromptGenerator'))
+const LandingPromptGenerator = lazy(() => import('./pages/LandingPromptGenerator'))
+const EmojiLibrary = lazy(() => import('./pages/EmojiLibrary'))
+const BoxShadowGenerator = lazy(() => import('./pages/BoxShadowGenerator'))
+const UIBuilder = lazy(() => import('./pages/UIBuilder'))
+const AutoBuilder = lazy(() => import('./pages/AutoBuilder'))
+const StyleGuide = lazy(() => import('./pages/StyleGuide'))
+const HelpCentre = lazy(() => import('./pages/HelpCentre'))
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -180,61 +183,63 @@ export default function App() {
         <TopBar onMenuToggle={toggleMenu} onCommandPalette={openPalette} />
 
         <main className="main" key={location.pathname}>
-          <Routes location={location}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
-            <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
-            <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
-            <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
-            <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
-            <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
-            <Route path="/color-studio" element={<Navigate to="/color" replace />} />
-            <Route path="/palette" element={<Navigate to="/color" replace />} />
-            <Route path="/tints" element={<Navigate to="/color" replace />} />
-            <Route path="/gradients" element={<Navigate to="/color" replace />} />
-            <Route path="/contrast" element={<Navigate to="/color" replace />} />
-            <Route path="/export" element={<Navigate to="/color" replace />} />
-            <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
-            <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
-            <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
-            <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
-            <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
-            <Route path="/file-converter" element={<FileConverter onCopy={copy} toast={toast} />} />
-            <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
-            <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
-            <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />
-            <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
-            <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
-            <Route path="/docs-design" element={<DocsDesign />} />
-            <Route path="/docs-social" element={<DocsSocial />} />
-            <Route path="/docs-themes" element={<DocsThemes />} />
-            <Route path="/docs-brand" element={<DocsBrand />} />
-            <Route path="/docs-seo" element={<DocsSEO />} />
-            <Route path="/docs-marketing" element={<DocsMarketing />} />
-            <Route path="/docs-ai" element={<DocsAI />} />
-            <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
-            <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
-            <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
-            <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />
-            <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
-            <Route path="/resources" element={<ExternalResources />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/login" element={<Login toast={toast} />} />
-            <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
-            <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
-            <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
-            <Route path="/settings" element={<Settings toast={toast} />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/feedback" element={<Feedback toast={toast} />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/help" element={<HelpCentre />} />
-            <Route path="/about" element={<Navigate to="/help#about" replace />} />
-            <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
-            <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
-            <Route path="/style-guide" element={<RequireAuth><StyleGuide toast={toast} /></RequireAuth>} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+            <Routes location={location}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
+              <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
+              <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
+              <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
+              <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
+              <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
+              <Route path="/color-studio" element={<Navigate to="/color" replace />} />
+              <Route path="/palette" element={<Navigate to="/color" replace />} />
+              <Route path="/tints" element={<Navigate to="/color" replace />} />
+              <Route path="/gradients" element={<Navigate to="/color" replace />} />
+              <Route path="/contrast" element={<Navigate to="/color" replace />} />
+              <Route path="/export" element={<Navigate to="/color" replace />} />
+              <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
+              <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
+              <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
+              <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
+              <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
+              <Route path="/file-converter" element={<FileConverter onCopy={copy} toast={toast} />} />
+              <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
+              <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
+              <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />
+              <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
+              <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
+              <Route path="/docs-design" element={<DocsDesign />} />
+              <Route path="/docs-social" element={<DocsSocial />} />
+              <Route path="/docs-themes" element={<DocsThemes />} />
+              <Route path="/docs-brand" element={<DocsBrand />} />
+              <Route path="/docs-seo" element={<DocsSEO />} />
+              <Route path="/docs-marketing" element={<DocsMarketing />} />
+              <Route path="/docs-ai" element={<DocsAI />} />
+              <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
+              <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
+              <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
+              <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />
+              <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
+              <Route path="/resources" element={<ExternalResources />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/login" element={<Login toast={toast} />} />
+              <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
+              <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+              <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
+              <Route path="/settings" element={<Settings toast={toast} />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/feedback" element={<Feedback toast={toast} />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/help" element={<HelpCentre />} />
+              <Route path="/about" element={<Navigate to="/help#about" replace />} />
+              <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
+              <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
+              <Route path="/style-guide" element={<RequireAuth><StyleGuide toast={toast} /></RequireAuth>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
           <AppFooter />
         </main>
       </div>

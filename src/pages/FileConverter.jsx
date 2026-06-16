@@ -46,15 +46,6 @@ function formatTime(s) {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
-function readAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(r.result)
-    r.onerror = () => reject(new Error('Could not read file'))
-    r.readAsDataURL(file)
-  })
-}
-
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -101,6 +92,8 @@ export default function FileConverter({ toast }) {
             key={m.id}
             className={`pt-t fc-tab${mode === m.id ? ' on' : ''}`}
             onClick={() => setMode(m.id)}
+            aria-pressed={mode === m.id}
+            aria-label={`${m.label}${m.id === '3d' ? ' (coming soon)' : ''} converter`}
           >
             {m.label}
             {m.id === '3d' && <span className="fc-soon">soon</span>}
@@ -123,7 +116,11 @@ function DropZone({ accept, multiple, onFiles, hint, sub }) {
   return (
     <div
       className={`img-drop-zone fc-drop${hover ? ' fc-drop-on' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label={hint}
       onClick={() => inputRef.current?.click()}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
       onDragOver={e => { e.preventDefault(); setHover(true) }}
       onDragLeave={() => setHover(false)}
       onDrop={e => {
@@ -219,11 +216,15 @@ function ImageConvert({ toast }) {
     return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w, h }
   }, [format, quality, maxDim])
 
+  const [convertProgress, setConvertProgress] = useState({ done: 0, total: 0 })
+
   const convertAll = useCallback(async () => {
     if (!items.length || busy) return
     setBusy(true)
+    setConvertProgress({ done: 0, total: items.length })
     let ok = 0
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
       try {
         if (item.out?.url) URL.revokeObjectURL(item.out.url)
         const out = await convertOne(item)
@@ -232,6 +233,7 @@ function ImageConvert({ toast }) {
       } catch (err) {
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, out: null, error: err.message } : it))
       }
+      setConvertProgress({ done: i + 1, total: items.length })
     }
     setBusy(false)
     toast(ok ? `Converted ${ok} image${ok > 1 ? 's' : ''}` : 'Conversion failed')
@@ -329,6 +331,11 @@ function ImageConvert({ toast }) {
             )}
             <button className="btn" onClick={clearAll} disabled={busy}>Clear</button>
           </div>
+          {busy && items.length > 1 && (
+            <div className="fc-progress" style={{ marginTop: 10 }}>
+              <div className="fc-progress-bar" style={{ width: `${Math.round((convertProgress.done / convertProgress.total) * 100)}%` }} />
+            </div>
+          )}
         </div>
       )}
 
@@ -337,7 +344,7 @@ function ImageConvert({ toast }) {
           <div className="img-grid">
             {items.map(it => (
               <div key={it.id} className="card fc-card">
-                <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" disabled={busy}>×</button>
+                <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>×</button>
                 <div className="fc-thumb">
                   <img src={it.out?.url || it.srcUrl} alt={it.name} />
                 </div>
@@ -484,7 +491,7 @@ function VideoToGif({ toast }) {
         ) : (
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <div style={{ flex: '1 1 min(360px,100%)', minWidth: 0 }}>
-              <video src={srcUrl} controls muted className="fc-video" />
+              <video src={srcUrl} controls muted className="fc-video" aria-label="Video preview" />
             </div>
             <div className="card" style={{ flex: '1 1 200px', minWidth: 0, padding: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--t0)' }}>Source</div>
@@ -532,7 +539,7 @@ function VideoToGif({ toast }) {
           </div>
 
           {progress && (
-            <div className="fc-status">{progress}</div>
+            <div className="fc-status"><span className="fc-spinner" aria-hidden="true" />{progress}</div>
           )}
           {engineState === 'error' && (
             <div className="fc-status fc-status-err">
@@ -548,13 +555,6 @@ function VideoToGif({ toast }) {
           <div className="card" style={{ padding: 16, marginTop: 10, maxWidth: 520 }}>
             <img src={result.url} alt="GIF result" style={{ maxWidth: '100%', borderRadius: 'var(--radius-s)', display: 'block', background: 'var(--bg-2)' }} />
             <div style={{ fontSize: 12, color: 'var(--t1)', margin: '10px 0' }}>GIF • {formatBytes(result.bytes)}</div>
-            <button className="btn btn-accent" onClick={() => triggerDownload(result.url.startsWith('blob:') ? fetchBlobThenDownload(result) : result.url, '')}>
-              {/* fallback handled below */}
-            </button>
-            <button className="btn btn-accent" onClick={() => {
-              const base = (file?.name || 'video').replace(/\.[^.]+$/, '')
-              triggerDownload(result.url, `${base}.gif`)
-            }} style={{ display: 'none' }} />
             <DownloadButton url={result.url} name={`${(file?.name || 'video').replace(/\.[^.]+$/, '')}.gif`} />
           </div>
         </div>
@@ -569,9 +569,6 @@ function DownloadButton({ url, name }) {
     <button className="btn btn-accent" onClick={() => triggerDownload(url, name)}>Download GIF</button>
   )
 }
-
-// Unused safety stub kept out of render path; never actually called.
-function fetchBlobThenDownload() { return '' }
 
 // ── Mode 3: Video → Frames (HTML5 video + canvas seek) ───────────────────────
 function VideoFrames({ toast }) {
@@ -703,7 +700,7 @@ function VideoFrames({ toast }) {
         ) : (
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <div style={{ flex: '1 1 min(360px,100%)', minWidth: 0 }}>
-              <video ref={videoRef} src={srcUrl} controls muted onLoadedMetadata={onLoadedMeta} className="fc-video" />
+              <video ref={videoRef} src={srcUrl} controls muted onLoadedMetadata={onLoadedMeta} className="fc-video" aria-label="Video preview" />
             </div>
             {meta && (
               <div className="card" style={{ flex: '1 1 200px', minWidth: 0, padding: 16 }}>
@@ -761,7 +758,7 @@ function VideoFrames({ toast }) {
           </div>
           <div className="img-grid">
             {frames.map(f => (
-              <div key={f.name} className="card fc-card" onClick={() => triggerDownload(f.blob, f.name)} style={{ cursor: 'pointer' }} title={`Download ${f.name}`}>
+              <div key={f.name} className="card fc-card" role="button" tabIndex={0} onClick={() => triggerDownload(f.blob, f.name)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerDownload(f.blob, f.name) } }} style={{ cursor: 'pointer' }} title={`Download ${f.name}`} aria-label={`Download ${f.name}`}>
                 <div className="fc-thumb"><img src={f.url} alt={f.name} /></div>
                 <div className="fc-name">{f.name}</div>
                 <div style={{ fontSize: 10, color: 'var(--t2)' }}>{formatBytes(f.size)} • {formatTime(f.time)}</div>

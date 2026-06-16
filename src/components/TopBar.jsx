@@ -576,6 +576,7 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
             onClick={() => togglePinned(currentTool.id)}
             aria-pressed={isPinned}
             title={isPinned ? 'Unpin from dashboard' : 'Pin this page to dashboard'}
+            aria-label={isPinned ? 'Unpin from dashboard' : 'Pin this page to dashboard'}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 17v5" /><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />

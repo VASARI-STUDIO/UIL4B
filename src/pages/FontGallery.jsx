@@ -125,7 +125,7 @@ function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
             <div className="fg-detail-label">Compare</div>
             <h2 className="fg-compare-title">{fonts.length} typefaces, side by side</h2>
           </div>
-          <button className="fg-detail-close fg-compare-close" onClick={onClose}>
+          <button className="fg-detail-close fg-compare-close" onClick={onClose} aria-label="Close comparison">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -159,7 +159,7 @@ function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
                   <button className="fg-compare-col-name" onClick={() => onSelect(font)} title="Open details">
                     {font.family}
                   </button>
-                  <button className="fg-compare-col-remove" onClick={() => onRemove(font)} title="Remove">
+                  <button className="fg-compare-col-remove" onClick={() => onRemove(font)} title="Remove" aria-label="Remove from comparison">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
@@ -222,7 +222,7 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
   return (
     <div className="fg-detail-overlay" onClick={onClose}>
       <div className="fg-detail" onClick={e => e.stopPropagation()}>
-        <button className="fg-detail-close" onClick={onClose}>
+        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
