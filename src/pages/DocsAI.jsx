@@ -1,4 +1,3 @@
-import { useI18n } from '../contexts/I18nContext'
 import DocsTOC from '../components/DocsTOC'
 
 const LAST_UPDATED = '2026-06-15'
@@ -60,7 +59,6 @@ function Article({ id, number, title, children }) {
 }
 
 export default function DocsAI() {
-  const { t } = useI18n()
   return (
     <div className="sec">
       <div className="sec-h">

@@ -322,7 +322,7 @@ export default function App() {
               <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
               <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
               <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
-              <Route path="/file-converter" element={<FileConverter onCopy={copy} toast={toast} />} />
+              <Route path="/file-converter" element={<FileConverter toast={toast} />} />
               <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
               <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
               <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />

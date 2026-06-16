@@ -68,7 +68,16 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
   return (
     <div className={`card proj-card${isCurrent ? ' proj-card-active' : ''}`} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: project.archived ? 0.55 : 1 }}>
       <div
+        role="button"
+        tabIndex={0}
+        aria-label={`Open project ${project.name}`}
         onClick={() => onOpenDetail?.(project)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === ' ') e.preventDefault()
+            onOpenDetail?.(project)
+          }
+        }}
         title="View project details"
         style={{ padding: '18px 16px 14px', background: `linear-gradient(135deg, ${pri} 0%, ${sec} 100%)`, position: 'relative', cursor: 'pointer', minHeight: 68 }}
       >
