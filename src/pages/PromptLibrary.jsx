@@ -333,6 +333,7 @@ export default function PromptLibrary({ onCopy, toast }) {
     if (!submitText.trim()) { toast('Enter a prompt to submit'); return }
     if (!user) { toast('Sign in to submit prompts'); return }
     setSubmitting(true)
+    let mediaDropped = false
     try {
       const doc = {
         title: submitTitle.trim() || submitText.trim().slice(0, 60),
@@ -347,10 +348,13 @@ export default function PromptLibrary({ onCopy, toast }) {
       }
       if (submitMediaPreview) {
         doc.mediaType = submitMediaPreview.type
-        doc.mediaUrl = submitMediaPreview.url.length < 900_000 ? submitMediaPreview.url : ''
+        const withinLimit = submitMediaPreview.url.length < 900_000
+        doc.mediaUrl = withinLimit ? submitMediaPreview.url : ''
+        mediaDropped = !withinLimit
       }
       await addDoc(collection(db, 'community-prompts'), doc)
       toast('Prompt submitted for review — you\'ll get +25 AI generations if approved!')
+      if (mediaDropped) toast('Your image was too large to attach (after compression) — the prompt was submitted without it')
       setSubmitTitle('')
       setSubmitText('')
       setSubmitTags('')

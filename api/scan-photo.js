@@ -1,4 +1,5 @@
-import { adminAuth } from './_lib/firebase-admin.js'
+import { adminAuth, adminDb, FieldValueIncrement } from './_lib/firebase-admin.js'
+import { planForSubscription, dailyLimitFor } from './_lib/plans.js'
 
 export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
@@ -26,6 +27,11 @@ q-4k, q-8k, q-detail, q-sharp, q-hdr, q-raytracing
 Analyze: camera settings (aperture, focal length, exposure), composition technique, lighting style, color grading, overall quality/mood.
 Return ONLY a valid JSON array. No markdown, no explanation, no code fences. Aim for 5-12 detected rules.`
 
+function todayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -39,10 +45,27 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Authentication required' })
   }
 
+  let uid
   try {
-    await adminAuth().verifyIdToken(authHeader.slice(7))
+    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
+    uid = decoded.uid
   } catch {
     return res.status(401).json({ error: 'Invalid token' })
+  }
+
+  // Per-user daily cap — mirrors generate-prompt.js / alt-text.js so this paid
+  // Gemini Vision call can't be abused by an authenticated user.
+  const fireDb = adminDb()
+  const userSnap = await fireDb.doc(`users/${uid}`).get()
+  const plan = planForSubscription(userSnap.data()?.subscription || null)
+  const toolId = 'scan-photo'
+  const limit = dailyLimitFor(plan, toolId)
+  const date = todayStr()
+  const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
+  const usageSnap = await usageRef.get()
+  const used = usageSnap.data()?.[toolId] || 0
+  if (used >= limit) {
+    return res.status(429).json({ error: 'Daily scan limit reached', usage: { used, limit, remaining: 0 }, plan: plan.id })
   }
 
   const { image, mimeType } = req.body || {}
@@ -99,6 +122,11 @@ export default async function handler(req, res) {
     } catch {
       return res.status(502).json({ error: 'Could not parse AI response', raw: raw.slice(0, 500) })
     }
+
+    try {
+      const inc = await FieldValueIncrement(1)
+      await usageRef.set({ [toolId]: inc }, { merge: true })
+    } catch { /* usage write best-effort */ }
 
     return res.status(200).json({ rules })
   } catch (err) {

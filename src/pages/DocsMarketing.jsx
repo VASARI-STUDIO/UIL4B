@@ -1,4 +1,3 @@
-import { useI18n } from '../contexts/I18nContext'
 import DocsTOC from '../components/DocsTOC'
 
 const LAST_UPDATED = '2026-06-15'
@@ -52,21 +51,21 @@ function Article({ id, number, title, children }) {
 }
 
 export default function DocsMarketing() {
-  const { t } = useI18n()
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 40, maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
-      <DocsTOC items={TOC_ITEMS} />
-      <div>
-        <header style={{ marginBottom: 48 }}>
-          <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, letterSpacing: '-.04em', lineHeight: 1.1, marginBottom: 12 }}>Marketing Fundamentals</h1>
-          <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--t1)', maxWidth: 600, marginBottom: 8 }}>Core marketing strategies for small businesses and freelancers — from positioning to paid ads to email nurture sequences.</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--t2)' }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Last updated: {LAST_UPDATED}
-          </div>
-        </header>
+    <div className="sec">
+      <div className="sec-h">
+        <div className="sec-h-eyebrow">Documentation</div>
+        <h1>Marketing Fundamentals</h1>
+        <p>Core marketing strategies for small businesses and freelancers — from positioning to paid ads to email nurture sequences.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--t2)' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Last updated: {LAST_UPDATED}
+        </div>
+      </div>
 
-        <Article id="art-mkt-01" number="01" title="Positioning & Messaging">
+      <DocsTOC items={TOC_ITEMS} />
+
+      <Article id="art-mkt-01" number="01" title="Positioning & Messaging">
           <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 16 }}>
             Your positioning statement is the foundation every other marketing decision builds on. If you can&apos;t explain what you do, who it&apos;s for, and why you&apos;re different in one sentence, your prospects won&apos;t figure it out either.
           </p>
@@ -362,7 +361,6 @@ export default function DocsMarketing() {
             Document your brand voice in a one-page guide with before/after examples for each channel (website, email, social). New team members and freelancers can match your voice in their first draft instead of requiring rounds of revision.
           </Callout>
         </Article>
-      </div>
     </div>
   )
 }

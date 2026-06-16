@@ -514,6 +514,17 @@ export default function FontGallery({ onCopy, toast }) {
     )
   }
 
+  if (!allFonts.length) {
+    return (
+      <div className="sec">
+        <div style={{ padding: 80, textAlign: 'center' }}>
+          <div style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 16 }}>No fonts to show — check your connection and refresh.</div>
+          <button className="btn" onClick={() => window.location.reload()}>Refresh</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="sec fg-page">
       {/* Hero */}
