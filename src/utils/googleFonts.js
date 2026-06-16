@@ -76,7 +76,7 @@ async function getRawFonts() {
     return cache
   }
 
-  console.warn('Google Fonts catalog unavailable — using bundled fallback list')
+  if (import.meta.env.DEV) console.warn('Google Fonts catalog unavailable — using bundled fallback list')
   // Don't poison the long-lived cache with the fallback: keep it for 5 minutes
   // so a transient network failure recovers quickly.
   cache = FALLBACK_FONTS

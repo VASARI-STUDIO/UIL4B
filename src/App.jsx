@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { Component, useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
@@ -13,46 +13,76 @@ import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytic
 import { useAuth } from './contexts/AuthContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 
+// Static imports — small or always-visited pages (instant load)
 import Dashboard from './pages/Dashboard'
-import ColorStudio from './pages/ColorStudio'
-import TypeScale from './pages/TypeScale'
-import FontMatcher from './pages/FontMatcher'
-import IconLibrary from './pages/IconLibrary'
-import ImageConverter from './pages/ImageConverter'
-import FileConverter from './pages/FileConverter'
-import PromptLibrary from './pages/PromptLibrary'
-import DocsDesign from './pages/DocsDesign'
-import DocsSocial from './pages/DocsSocial'
-import DocsThemes from './pages/DocsThemes'
-import DocsBrand from './pages/DocsBrand'
-import DocsSEO from './pages/DocsSEO'
-import DocsMarketing from './pages/DocsMarketing'
-import DocsAI from './pages/DocsAI'
-import ExternalResources from './pages/ExternalResources'
-import Login from './pages/Login'
-import Settings from './pages/Settings'
-import Community from './pages/Community'
-import Feedback from './pages/Feedback'
-import Privacy from './pages/Privacy'
-import Terms from './pages/Terms'
-import CategoryDashboard from './pages/CategoryDashboard'
-import VideoToFrames from './pages/VideoToFrames'
-import Admin from './pages/Admin'
-import Projects from './pages/Projects'
-import Checkout from './pages/Checkout'
-import CheckoutReturn from './pages/CheckoutReturn'
-import FontGallery from './pages/FontGallery'
-import AltTextGenerator from './pages/AltTextGenerator'
-import AiPromptGenerator from './pages/AiPromptGenerator'
-import LandingPromptGenerator from './pages/LandingPromptGenerator'
-import EmojiLibrary from './pages/EmojiLibrary'
-import BoxShadowGenerator from './pages/BoxShadowGenerator'
-import UIBuilder from './pages/UIBuilder'
-import AutoBuilder from './pages/AutoBuilder'
-import StyleGuide from './pages/StyleGuide'
-import HelpCentre from './pages/HelpCentre'
 import Landing from './pages/Landing'
+import Login from './pages/Login'
+import CategoryDashboard from './pages/CategoryDashboard'
 import Onboarding from './pages/Onboarding'
+
+// Lazy imports — heavy or rarely-visited pages (code-split)
+const ColorStudio = lazy(() => import('./pages/ColorStudio'))
+const TypeScale = lazy(() => import('./pages/TypeScale'))
+const FontMatcher = lazy(() => import('./pages/FontMatcher'))
+const IconLibrary = lazy(() => import('./pages/IconLibrary'))
+const ImageConverter = lazy(() => import('./pages/ImageConverter'))
+const FileConverter = lazy(() => import('./pages/FileConverter'))
+const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
+const DocsDesign = lazy(() => import('./pages/DocsDesign'))
+const DocsSocial = lazy(() => import('./pages/DocsSocial'))
+const DocsThemes = lazy(() => import('./pages/DocsThemes'))
+const DocsBrand = lazy(() => import('./pages/DocsBrand'))
+const DocsSEO = lazy(() => import('./pages/DocsSEO'))
+const DocsMarketing = lazy(() => import('./pages/DocsMarketing'))
+const DocsAI = lazy(() => import('./pages/DocsAI'))
+const ExternalResources = lazy(() => import('./pages/ExternalResources'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Community = lazy(() => import('./pages/Community'))
+const Feedback = lazy(() => import('./pages/Feedback'))
+const Privacy = lazy(() => import('./pages/Privacy'))
+const Terms = lazy(() => import('./pages/Terms'))
+const VideoToFrames = lazy(() => import('./pages/VideoToFrames'))
+const Admin = lazy(() => import('./pages/Admin'))
+const Projects = lazy(() => import('./pages/Projects'))
+const Checkout = lazy(() => import('./pages/Checkout'))
+const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
+const FontGallery = lazy(() => import('./pages/FontGallery'))
+const AltTextGenerator = lazy(() => import('./pages/AltTextGenerator'))
+const AiPromptGenerator = lazy(() => import('./pages/AiPromptGenerator'))
+const LandingPromptGenerator = lazy(() => import('./pages/LandingPromptGenerator'))
+const EmojiLibrary = lazy(() => import('./pages/EmojiLibrary'))
+const BoxShadowGenerator = lazy(() => import('./pages/BoxShadowGenerator'))
+const UIBuilder = lazy(() => import('./pages/UIBuilder'))
+const AutoBuilder = lazy(() => import('./pages/AutoBuilder'))
+const StyleGuide = lazy(() => import('./pages/StyleGuide'))
+const HelpCentre = lazy(() => import('./pages/HelpCentre'))
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary caught:', error, info)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <div className="error-boundary-card">
+            <h2>Something went wrong</h2>
+            <p>This page ran into an unexpected error. Reloading usually fixes it.</p>
+            <button onClick={() => window.location.reload()}>Reload page</button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -71,9 +101,49 @@ function RequireAuth({ children }) {
   return children
 }
 
+function KeyboardShortcutsOverlay({ open, onClose }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onDown)
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown) }
+  }, [open, onClose])
+  if (!open) return null
+  const shortcuts = [
+    { keys: ['?'], desc: 'Show keyboard shortcuts' },
+    { keys: ['Space'], desc: 'Random palette (Colour Studio)' },
+    { keys: ['Ctrl', 'K'], desc: 'Open command palette' },
+    { keys: ['Esc'], desc: 'Close modal / popup' },
+  ]
+  return (
+    <div className="kbd-overlay" onMouseDown={onClose}>
+      <div className="kbd-panel" ref={ref} onMouseDown={e => e.stopPropagation()}>
+        <div className="kbd-header">
+          <h3>Keyboard Shortcuts</h3>
+          <button className="kbd-close" onClick={onClose} aria-label="Close">&#x2715;</button>
+        </div>
+        <ul className="kbd-list">
+          {shortcuts.map((s, i) => (
+            <li key={i} className="kbd-row">
+              <span className="kbd-keys">{s.keys.map((k, j) => (
+                <span key={j}><kbd className="kbd-key">{k}</kbd>{j < s.keys.length - 1 && <span className="kbd-plus">+</span>}</span>
+              ))}</span>
+              <span className="kbd-desc">{s.desc}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [kbdOpen, setKbdOpen] = useState(false)
   const { user: authUser, loading: authLoading } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   const { message, visible, toast } = useToast()
@@ -132,7 +202,51 @@ export default function App() {
       '/auto-builder': 'UI L4B | UI Auto-Builder',
       '/file-converter': 'UI L4B | File Converter',
     }
+    const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion, video frames, and production-ready CSS exports.'
+    const PAGE_DESCRIPTIONS = {
+      '/': DEFAULT_DESCRIPTION,
+      '/welcome': DEFAULT_DESCRIPTION,
+      '/dashboard': 'Your UI L4B dashboard. Access all design tools, recent projects, and saved palettes in one place.',
+      '/color': 'Build professional colour systems with palette generation, tint scales, gradient builder, and named colour libraries. Export CSS, Tailwind, PNG and SVG.',
+      '/typography': 'Typography tools for designers and developers. Pair fonts, build type scales, and browse the Google Fonts catalogue.',
+      '/typescale': 'Create modular type scales for consistent typography. Preview sizes and export CSS custom properties.',
+      '/fontpairs': 'Discover harmonious font combinations for your designs. Preview heading and body pairs with live typography samples.',
+      '/fontgallery': 'Browse and preview 1,200+ Google Fonts. Filter by category, weight, and style. Compare fonts side by side.',
+      '/icons': 'Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
+      '/imgconvert': 'Convert images between formats — PNG, JPEG, WebP, AVIF, GIF. Client-side processing, nothing uploaded.',
+      '/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
+      '/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
+      '/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by DeepSeek and Gemini.',
+      '/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
+      '/prompts': 'Browse and submit community design prompts for AI image and web generators.',
+      '/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',
+      '/video-frames': 'Extract individual frames from video files in your browser. Select, preview, and download frames as PNG images.',
+      '/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',
+      '/ui-builder': 'Build complete UI design systems with guided steps. Pick colours, fonts, type scales, and export production-ready CSS.',
+      '/auto-builder': 'Automatically generate a full UI design system from a single colour or inspiration URL using AI.',
+      '/projects': 'Manage and organise your saved design projects. Access colour palettes, font selections, and exported assets.',
+      '/settings': 'Customise your UI L4B experience. Manage theme, appearance, subscription, and account preferences.',
+      '/login': 'Sign in to UI L4B to save projects, sync settings, and unlock AI-powered design tools.',
+      '/checkout': 'Upgrade to UI L4B Pro for 1,000 daily AI generations, higher-quality models, and synced projects.',
+      '/community': 'Join the UI L4B community. Share designs, discover inspiration, and connect with other designers and developers.',
+      '/feedback': 'Share your feedback, report bugs, or request features for UI L4B. We read every submission.',
+      '/help': 'Get help with UI L4B. Browse FAQs, learn about features, and find answers to common questions.',
+      '/privacy': 'UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.',
+      '/terms': 'UI L4B terms of service. Usage rules, intellectual property, and account policies.',
+      '/admin': DEFAULT_DESCRIPTION,
+      '/docs-themes': 'Learn about UI design themes — dark mode, light mode, and custom theme systems for modern web applications.',
+      '/docs-brand': 'A practical guide to choosing brand colours. Understand colour psychology, contrast, and accessibility basics.',
+      '/docs-seo': 'SEO fundamentals for small businesses. Learn keyword strategy, on-page optimisation, and technical SEO basics.',
+      '/docs-marketing': 'Marketing fundamentals for designers. Understand positioning, messaging, and visual communication strategies.',
+      '/docs-ai': 'A guide to AI coding assistants. Learn how to use AI tools effectively for web development and design.',
+      '/file-converter': 'Convert files between formats directly in your browser. Fast, private, client-side processing.',
+    }
+
     document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
+    const metaDesc = document.querySelector('meta[name="description"]')
+    if (metaDesc) {
+      metaDesc.setAttribute('content', PAGE_DESCRIPTIONS[location.pathname] || DEFAULT_DESCRIPTION)
+    }
   }, [location.pathname])
 
   useEffect(() => {
@@ -145,6 +259,13 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setPaletteOpen(prev => !prev)
+        return
+      }
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = e.target.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return
+        e.preventDefault()
+        setKbdOpen(prev => !prev)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -180,61 +301,65 @@ export default function App() {
         <TopBar onMenuToggle={toggleMenu} onCommandPalette={openPalette} />
 
         <main className="main" key={location.pathname}>
-          <Routes location={location}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
-            <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
-            <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
-            <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
-            <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
-            <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
-            <Route path="/color-studio" element={<Navigate to="/color" replace />} />
-            <Route path="/palette" element={<Navigate to="/color" replace />} />
-            <Route path="/tints" element={<Navigate to="/color" replace />} />
-            <Route path="/gradients" element={<Navigate to="/color" replace />} />
-            <Route path="/contrast" element={<Navigate to="/color" replace />} />
-            <Route path="/export" element={<Navigate to="/color" replace />} />
-            <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
-            <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
-            <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
-            <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
-            <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
-            <Route path="/file-converter" element={<FileConverter onCopy={copy} toast={toast} />} />
-            <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
-            <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
-            <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />
-            <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
-            <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
-            <Route path="/docs-design" element={<DocsDesign />} />
-            <Route path="/docs-social" element={<DocsSocial />} />
-            <Route path="/docs-themes" element={<DocsThemes />} />
-            <Route path="/docs-brand" element={<DocsBrand />} />
-            <Route path="/docs-seo" element={<DocsSEO />} />
-            <Route path="/docs-marketing" element={<DocsMarketing />} />
-            <Route path="/docs-ai" element={<DocsAI />} />
-            <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
-            <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
-            <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
-            <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />
-            <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
-            <Route path="/resources" element={<ExternalResources />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/login" element={<Login toast={toast} />} />
-            <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
-            <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
-            <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
-            <Route path="/settings" element={<Settings toast={toast} />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/feedback" element={<Feedback toast={toast} />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/help" element={<HelpCentre />} />
-            <Route path="/about" element={<Navigate to="/help#about" replace />} />
-            <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
-            <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
-            <Route path="/style-guide" element={<RequireAuth><StyleGuide toast={toast} /></RequireAuth>} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <ErrorBoundary>
+          <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+            <Routes location={location}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
+              <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
+              <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
+              <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
+              <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
+              <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
+              <Route path="/color-studio" element={<Navigate to="/color" replace />} />
+              <Route path="/palette" element={<Navigate to="/color" replace />} />
+              <Route path="/tints" element={<Navigate to="/color" replace />} />
+              <Route path="/gradients" element={<Navigate to="/color" replace />} />
+              <Route path="/contrast" element={<Navigate to="/color" replace />} />
+              <Route path="/export" element={<Navigate to="/color" replace />} />
+              <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
+              <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
+              <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
+              <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
+              <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
+              <Route path="/file-converter" element={<FileConverter onCopy={copy} toast={toast} />} />
+              <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
+              <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
+              <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />
+              <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
+              <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
+              <Route path="/docs-design" element={<DocsDesign />} />
+              <Route path="/docs-social" element={<DocsSocial />} />
+              <Route path="/docs-themes" element={<DocsThemes />} />
+              <Route path="/docs-brand" element={<DocsBrand />} />
+              <Route path="/docs-seo" element={<DocsSEO />} />
+              <Route path="/docs-marketing" element={<DocsMarketing />} />
+              <Route path="/docs-ai" element={<DocsAI />} />
+              <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
+              <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
+              <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
+              <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />
+              <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
+              <Route path="/resources" element={<ExternalResources />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/login" element={<Login toast={toast} />} />
+              <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
+              <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+              <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
+              <Route path="/settings" element={<Settings toast={toast} />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/feedback" element={<Feedback toast={toast} />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/help" element={<HelpCentre />} />
+              <Route path="/about" element={<Navigate to="/help#about" replace />} />
+              <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
+              <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
+              <Route path="/style-guide" element={<RequireAuth><StyleGuide toast={toast} /></RequireAuth>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+          </ErrorBoundary>
           <AppFooter />
         </main>
       </div>
@@ -242,6 +367,7 @@ export default function App() {
       <Toast message={message} visible={visible} />
       <FeedbackButton />
       <CommandPalette open={paletteOpen} onClose={closePalette} />
+      <KeyboardShortcutsOverlay open={kbdOpen} onClose={() => setKbdOpen(false)} />
       <GoogleOneTap />
     </div>
   )
