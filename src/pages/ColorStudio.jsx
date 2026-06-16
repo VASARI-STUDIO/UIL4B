@@ -982,6 +982,7 @@ ${stateVars}
     const file = e.target.files?.[0]
     if (!file) return
     setExtracting(true)
+    const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx, lk: new Set(locked) }
     try {
       const extracted = await extractColorsFromImage(file, 5)
       if (extracted.length) {
@@ -991,6 +992,14 @@ ${stateVars}
         setExtraColors(extracted.slice(1))
         setActiveColorIdx(0)
         setLocked(new Set())
+        showUndoToast('Palette extracted from image', () => {
+          setBaseColor(prev.base)
+          setHarmony(prev.harmony)
+          setExtraColors(prev.extras)
+          setOverrides(prev.ovr)
+          setActiveColorIdx(prev.idx)
+          setLocked(prev.lk)
+        })
       }
     } catch {
       toast('Could not read colours from that image — try a different file')
@@ -1015,22 +1024,43 @@ ${stateVars}
   }, [addMenuOpen])
 
   const removeExtra = (i) => {
+    const prev = { extras: [...extraColors], idx: activeColorIdx }
     setExtraColors(extraColors.filter((_, idx) => idx !== i))
     if (activeColorIdx >= colors.length + i) setActiveColorIdx(0)
+    showUndoToast('Swatch removed', () => {
+      setExtraColors(prev.extras)
+      setActiveColorIdx(prev.idx)
+    })
   }
 
   const applyBrand = (brand) => {
+    const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx }
     setBaseColor(brand.colors[0])
     setExtraColors(brand.colors.slice(5))
     setOverrides({})
     setActiveColorIdx(0)
+    showUndoToast(`Applied ${brand.n} palette`, () => {
+      setBaseColor(prev.base)
+      setHarmony(prev.harmony)
+      setExtraColors(prev.extras)
+      setOverrides(prev.ovr)
+      setActiveColorIdx(prev.idx)
+    })
   }
 
   const applyDesignSystem = (ds) => {
+    const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx }
     setBaseColor(ds.base)
     setExtraColors(ds.colors.slice(1))
     setOverrides({})
     setActiveColorIdx(0)
+    showUndoToast(`Applied ${ds.n} palette`, () => {
+      setBaseColor(prev.base)
+      setHarmony(prev.harmony)
+      setExtraColors(prev.extras)
+      setOverrides(prev.ovr)
+      setActiveColorIdx(prev.idx)
+    })
   }
 
   const stateCSS = Object.entries(stateColors).map(([state, presetIdx]) => {
