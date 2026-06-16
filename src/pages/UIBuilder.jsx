@@ -477,7 +477,6 @@ export default function UIBuilder({ onCopy, toast }) {
 
   const copyCSS = useCallback((sectionId) => {
     const css = generateCSS(sectionId)
-    navigator.clipboard.writeText(css)
     if (onCopy) onCopy(css)
     if (toast) toast('CSS copied')
   }, [generateCSS, onCopy, toast])
@@ -485,7 +484,6 @@ export default function UIBuilder({ onCopy, toast }) {
   const copyAllCSS = useCallback(() => {
     const css = COMPONENT_SECTIONS.map(s => generateCSS(s.id)).join('\n\n')
     const vars = `:root {\n  --primary: ${tokens.primary};\n  --surface: ${tokens.surface};\n  --text: ${tokens.text};\n  --text-sub: ${tokens.textSub};\n  --radius: ${tokens.radius}px;\n  --border-width: ${tokens.borderWidth}px;\n  --border-color: ${tokens.surfaceBorder};\n  --spacing: ${tokens.spacing}px;\n  --font-family: ${tokens.fontFamily};\n  --font-size: ${tokens.fontSize}px;\n  --shadow: ${shadow(tokens)};\n}\n\n`
-    navigator.clipboard.writeText(vars + css)
     if (onCopy) onCopy(vars + css)
     if (toast) toast('Full design system CSS copied')
   }, [generateCSS, tokens, onCopy, toast])
@@ -673,7 +671,7 @@ export default function UIBuilder({ onCopy, toast }) {
                     <div className="uib-code-tabs">
                       <button className={`uib-code-tab${codeMode === 'css' ? ' active' : ''}`} onClick={() => setCodeMode('css')}>CSS</button>
                       <button className={`uib-code-tab${codeMode === 'html' ? ' active' : ''}`} onClick={() => setCodeMode('html')}>HTML</button>
-                      <button className="btn-xs" style={{ marginLeft: 'auto' }} onClick={() => { const code = codeMode === 'css' ? generateCSS(section.id) : generateHTML(section.id); navigator.clipboard.writeText(code); if (toast) toast(`${codeMode.toUpperCase()} copied`) }} title="Copy" aria-label="Copy code">
+                      <button className="btn-xs" style={{ marginLeft: 'auto' }} onClick={async () => { const code = codeMode === 'css' ? generateCSS(section.id) : generateHTML(section.id); try { await navigator.clipboard.writeText(code); if (toast) toast(`${codeMode.toUpperCase()} copied`) } catch { if (toast) toast('Copy failed — your browser blocked clipboard access') } }} title="Copy" aria-label="Copy code">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
                       </button>
                     </div>
@@ -692,7 +690,6 @@ export default function UIBuilder({ onCopy, toast }) {
             </button>
             <button className="btn btn-s" onClick={() => {
               const html = COMPONENT_SECTIONS.map(s => `<!-- ${s.label} -->\n${generateHTML(s.id)}`).join('\n\n')
-              navigator.clipboard.writeText(html)
               if (onCopy) onCopy(html)
               if (toast) toast('Full HTML copied')
             }}>
