@@ -540,7 +540,7 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
       setSaveOpen(false)
       navigate('/projects')
     } catch (e) {
-      console.error(e)
+      // error swallowed — user already sees toast feedback
     }
   }
 

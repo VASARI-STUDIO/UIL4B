@@ -15,6 +15,7 @@ export const MODULE_BOARD = [
     health: 'good',
     summary: 'Flagship palette tool, shipped with full Coolors feature parity.',
     recentChanges: [
+      'Fixed production crash on Color Studio (TDZ violation in Rolldown bundle)',
       'Coolors parity: lock colors + spacebar regen + drag reorder (CS-15)',
       'Image color extraction via k-means from uploaded photos (CS-11)',
       'Palette visualizer on 4 UI mockups (CS-12)',
@@ -24,8 +25,6 @@ export const MODULE_BOARD = [
     ],
     nextSteps: [
       'Add ASE + PDF export to reach full export parity',
-      'Round UI styling pass (UI-01)',
-      'Lean harder on blue accent for export/preview buttons (UI-02)',
     ],
     updated: '2026-06-16',
   },
@@ -80,7 +79,6 @@ export const MODULE_BOARD = [
       'Alpha badge applied (NAV-04)',
     ],
     nextSteps: [
-      'Improve the AI tools dashboard; do not start menu collapsed (DASH-03)',
       'Gather usage data before exiting alpha',
     ],
     updated: '2026-06-16',
@@ -111,10 +109,10 @@ export const MODULE_BOARD = [
     recentChanges: [
       'Prompt-your-UI: business description → client-side colors/fonts/hero (ALPHA-01)',
       'Brand asset upload: logo color extraction + font input (ALPHA-02)',
+      'Distinct preview backdrop + brand-blue chips/sliders/progress + section accent bars (UIB-01)',
     ],
     nextSteps: [
       'AI mode deferred to stay under Vercel 12-function limit — revisit',
-      'Improve the UI builder dashboard UI (UIB-01)',
     ],
     updated: '2026-06-16',
   },
@@ -124,13 +122,14 @@ export const MODULE_BOARD = [
     area: 'Tools',
     status: 'in-progress',
     health: 'watch',
-    summary: 'New media converter (alpha) — images/video formats, planned build.',
+    summary: 'Media converter (alpha) — image formats + video->GIF + video->frames; old tools kept.',
     recentChanges: [
+      'Converter page shipped: image formats + video->GIF (ffmpeg.wasm) + video->frames + 3D coming-soon (CONV-01)',
       'Scoped against ezgif.com reference (webp<->gif, mp4->gif, resize/crop)',
     ],
     nextSteps: [
-      'Build converter page: webp/mp4->GIF, 3D->blend, video-to-frames (CONV-01)',
-      'Keep existing tools live until the converter is approved',
+      'Keep existing tools live until the converter is fully approved',
+      'Add 3D format conversion (currently coming-soon placeholder)',
     ],
     updated: '2026-06-16',
   },
@@ -172,17 +171,18 @@ export const MODULE_BOARD = [
     id: 'admin-dashboard',
     name: 'Admin Dashboard',
     area: 'Admin',
-    status: 'in-progress',
+    status: 'live',
     health: 'good',
-    summary: 'Industry-standard dashboard with SVG charts; board tab being added.',
+    summary: 'Industry-standard dashboard with SVG charts, filters, and Trello-style board tab.',
     recentChanges: [
+      'Trello-board module status page shipped (ADM-04)',
+      'Style Guide nested under Admin (NAV-07)',
       'Rebuilt to industry-standard dashboard: SVG charts + time filters (ADM-01)',
       'Filters: Today/7d/30d/All + type/status (ADM-02)',
       'Confirm dialogs on delete actions (GOV-02)',
     ],
     nextSteps: [
-      'Trello-board module status page — this board (ADM-04)',
-      'Nest Style Guide under Admin + add link (NAV-07)',
+      'Add export/print for board view',
     ],
     updated: '2026-06-16',
   },
