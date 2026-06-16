@@ -2748,3 +2748,24 @@ img,svg,video{max-width:100%;height:auto}
   .fc-soon-card h2{font-size:18px}
   .fc-drop{padding:28px 14px}
 }
+
+/* ── Keyboard Shortcuts Overlay ─────────────────────────────── */
+.kbd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;justify-content:center;align-items:center;animation:cp-fade .14s ease}
+.kbd-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);width:min(420px,calc(100vw - 32px));box-shadow:var(--warm-shadow-lg);overflow:hidden;animation:cp-rise .2s cubic-bezier(.2,0,0,1)}
+.kbd-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--border)}
+.kbd-header h3{margin:0;font-size:15px;font-weight:600;color:var(--t0)}
+.kbd-close{background:none;border:none;cursor:pointer;color:var(--t2);font-size:16px;padding:4px 6px;border-radius:var(--radius-s);line-height:1}
+.kbd-close:hover{background:var(--bg-2);color:var(--t0)}
+.kbd-list{list-style:none;margin:0;padding:10px 22px 18px}
+.kbd-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.kbd-row:last-child{border-bottom:none}
+.kbd-keys{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.kbd-key{font-family:var(--mono);font-size:11px;color:var(--t1);background:var(--bg-2);padding:3px 8px;border-radius:var(--radius-s);border:1px solid var(--border);white-space:nowrap}
+.kbd-plus{color:var(--t3);font-size:11px;margin:0 1px}
+.kbd-desc{color:var(--t1);font-size:13px;text-align:right}
+@media(max-width:480px){
+  .kbd-panel{width:calc(100vw - 24px)}
+  .kbd-header{padding:14px 16px 10px}
+  .kbd-list{padding:8px 16px 14px}
+  .kbd-desc{font-size:12px}
+}

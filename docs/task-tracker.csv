@@ -83,3 +83,13 @@ UI-02,Global,Theme,Use blue accent more (preview/export buttons + icons blue),M,
 UI-03,Global,Theme,Improve glow/dropshadow buttons (looks like AI slop),M,12k,DONE,Replaced neon glow + opacity-dim with crisp layered shadows + brand-soft hover
 CONV-01,File Converter,New Tool,New file converter page: images+video formats (webp/mp4->GIF, 3D->blend); merge video-to-frames,XL,45k,DONE,/file-converter: image formats + video->GIF (ffmpeg.wasm CDN) + video->frames + 3D coming-soon; old tools kept
 UIB-01,UI Builder,Layout,Improve UI builder dashboard UI,M,16k,DONE,Distinct preview backdrop + brand-blue chips/sliders/progress + section accent bars
+PERF-01,Infra,Performance,Code-split routes with React.lazy() — 34 routes lazy-loaded (1.7MB→423KB),L,20k,DONE,75% bundle size reduction; Firebase/ColorStudio/Admin split into separate chunks
+SEO-01,Infra,SEO,Add robots.txt and sitemap.xml with 23 public routes,S,4k,DONE,Disallow admin/settings/checkout; priorities by importance
+SEO-02,Infra,SEO,Add og:image + twitter:image + og:site_name meta tags,S,3k,DONE,Points to /previews/og-image.png (needs asset created)
+A11Y-01,Global,Accessibility,Add aria-labels to 18 icon-only buttons across 8 components,M,10k,DONE,ColorStudio/FontGallery/IconLibrary/BoxShadow/UIBuilder/TopBar/Sidebar/PromptLibrary
+A11Y-02,File Converter,Accessibility,Keyboard-accessible drop zone + mobile breakpoints + progress bars,M,12k,DONE,role=button/tabIndex/onKeyDown; 768px+480px breakpoints; batch progress + spinner
+RESIL-01,Global,Resilience,Add ErrorBoundary wrapping route Suspense — catches lazy-load crashes,M,8k,DONE,Shows reload button instead of blank page on component errors
+LAND-04,Landing,Semantics,Improve semantic HTML — article tags + nav landmarks + trust bar a11y,S,6k,DONE,Highlight/pricing cards → article; footer columns → nav; removed aria-hidden from stats
+INF-04,Infra,Code,Clean console statements for production,S,4k,DONE,DEV-only guards on console.warn/error; removed bare console.error in TopBar
+ADM-05,Admin,Board,Update module board statuses — promote completed modules to live,M,8k,DONE,dashboard/admin/global-theme → live; added TDZ fix to recent changes
+FIX-01,Color Studio,Bug,Fix production crash — TDZ violation in Rolldown bundle,S,6k,DONE,Moved randomPalette useCallback before dependent useEffect; PR #83 merged
