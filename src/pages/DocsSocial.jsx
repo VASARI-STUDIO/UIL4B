@@ -91,6 +91,10 @@ export default function DocsSocial() {
         <div className="sec-h-eyebrow">Marketing Playbook</div>
         <h1>{t('docsSocial.title')}</h1>
         <p>Data-driven social media strategies for design professionals. Algorithm insights, conversion psychology, and creative frameworks that actually move metrics.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+          <span style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600 }}>Last updated: 2026-06-15</span>
+        </div>
       </div>
 
       <DocsTOC items={TOC_ITEMS} />

@@ -528,7 +528,7 @@ export default function UIBuilder({ onCopy, toast }) {
                 onClick={() => setGuidedStep(i)}
                 style={{
                   flex: 1, height: 4, borderRadius: 2, cursor: 'pointer',
-                  background: i <= guidedStep ? 'var(--accent)' : 'var(--bg-3)',
+                  background: i <= guidedStep ? 'var(--brand)' : 'var(--bg-3)',
                   transition: 'background .2s',
                 }}
               />
@@ -536,7 +536,7 @@ export default function UIBuilder({ onCopy, toast }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--brand)', fontFamily: 'var(--mono)' }}>
                 Step {guidedStep + 1} of {COMPONENT_SECTIONS.length}
               </span>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)' }}>

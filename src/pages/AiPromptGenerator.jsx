@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useCallback } from 'react'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { auth as firebaseAuth } from '../utils/firebase'
@@ -42,6 +42,71 @@ export default function AiPromptGenerator({ toast }) {
   const [selectedRules, setSelectedRules] = useState([])
   const [activePreset, setActivePreset] = useState(null)
   const [collapsed, setCollapsed] = useState({})
+
+  // Photo scan state (AIP-05/06/07)
+  const [refImage, setRefImage] = useState(null)
+  const [refPreview, setRefPreview] = useState(null)
+  const [scanning, setScanning] = useState(false)
+  const [scannedRules, setScannedRules] = useState([])
+  const [scanChecked, setScanChecked] = useState(new Set())
+  const refInputRef = useRef(null)
+
+  const handleRefUpload = useCallback(async (file) => {
+    if (!file || !file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = () => setRefPreview(reader.result)
+    reader.readAsDataURL(file)
+    setRefImage(file)
+    setScannedRules([])
+    setScanChecked(new Set())
+  }, [])
+
+  const scanPhoto = useCallback(async () => {
+    if (!refImage) return
+    setScanning(true)
+    setScannedRules([])
+    try {
+      const token = await firebaseAuth.currentUser?.getIdToken()
+      if (!token) throw new Error('Sign in to scan photos')
+      const toBase64 = (f) => new Promise((resolve, reject) => {
+        const r = new FileReader()
+        r.onerror = () => reject(new Error('Read failed'))
+        r.onload = () => resolve(r.result.split(',')[1])
+        r.readAsDataURL(f)
+      })
+      const base64 = await toBase64(refImage)
+      const r = await fetch('/api/scan-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ image: base64, mimeType: refImage.type }),
+      })
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
+      const rules = data.rules || []
+      setScannedRules(rules)
+      const highMed = new Set(rules.filter(r => r.confidence !== 'low').map(r => r.id))
+      setScanChecked(highMed)
+    } catch (err) {
+      toast?.(err.message || 'Scan failed')
+    } finally {
+      setScanning(false)
+    }
+  }, [refImage, toast])
+
+  const applyScannedRules = useCallback(() => {
+    const allRuleIds = RULE_CATEGORIES.flatMap(c => c.rules.map(r => r.id))
+    const matching = [...scanChecked].filter(id => allRuleIds.includes(id))
+    setSelectedRules(prev => [...new Set([...prev, ...matching])])
+    setActivePreset(null)
+    toast?.(`Applied ${matching.length} rule${matching.length === 1 ? '' : 's'} from scan`)
+  }, [scanChecked, toast])
+
+  const clearRef = () => {
+    setRefImage(null)
+    setRefPreview(null)
+    setScannedRules([])
+    setScanChecked(new Set())
+  }
 
   const toggleRule = (id) => {
     setActivePreset(null)
@@ -150,6 +215,57 @@ export default function AiPromptGenerator({ toast }) {
           <div className="aipg-builder">
             <div className="aipg-builder-main">
               <div className="aipg-composer card">
+                {/* Reference image upload (AIP-05/06/07) */}
+                <div className="aipg-ref-section">
+                  <span className="aipg-option-label">Reference image (optional)</span>
+                  {!refPreview ? (
+                    <div
+                      className="aipg-ref-drop"
+                      onClick={() => refInputRef.current?.click()}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={e => { e.preventDefault(); handleRefUpload(e.dataTransfer.files?.[0]) }}
+                    >
+                      <input ref={refInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => { handleRefUpload(e.target.files?.[0]); e.target.value = '' }} />
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      <span style={{ fontSize: 12, color: 'var(--t2)' }}>Upload a photo to scan its visual rules</span>
+                    </div>
+                  ) : (
+                    <div className="aipg-ref-preview">
+                      <img src={refPreview} alt="Reference" style={{ maxHeight: 120, borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', objectFit: 'cover' }} />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-s btn-accent" onClick={scanPhoto} disabled={scanning} style={{ fontSize: 11 }}>
+                            {scanning ? 'Scanning...' : scannedRules.length > 0 ? 'Re-scan' : 'Scan rules'}
+                          </button>
+                          <button className="btn btn-s" onClick={clearRef} style={{ fontSize: 11, color: 'var(--t2)' }}>Remove</button>
+                        </div>
+                        {scanning && <span style={{ fontSize: 11, color: 'var(--t2)' }}>Analyzing composition, lighting, camera settings...</span>}
+                      </div>
+                    </div>
+                  )}
+                  {scannedRules.length > 0 && (
+                    <div className="aipg-scanned">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)' }}>Detected {scannedRules.length} rules</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-s" onClick={() => setScanChecked(new Set(scannedRules.map(r => r.id)))} style={{ fontSize: 10 }}>All</button>
+                          <button className="btn btn-s" onClick={() => setScanChecked(new Set())} style={{ fontSize: 10 }}>None</button>
+                          <button className="btn btn-s btn-accent" onClick={applyScannedRules} disabled={scanChecked.size === 0} style={{ fontSize: 10 }}>Apply selected</button>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {scannedRules.map(rule => (
+                          <label key={rule.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 'var(--radius-s)', background: scanChecked.has(rule.id) ? 'var(--accent-bg)' : 'var(--bg-1)', border: '1px solid ' + (scanChecked.has(rule.id) ? 'var(--accent)' : 'var(--border)'), cursor: 'pointer', transition: 'all .15s' }}>
+                            <input type="checkbox" checked={scanChecked.has(rule.id)} onChange={() => setScanChecked(prev => { const n = new Set(prev); n.has(rule.id) ? n.delete(rule.id) : n.add(rule.id); return n })} style={{ accentColor: 'var(--accent)' }} />
+                            <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: 'var(--t0)' }}>{rule.label}</span>
+                            <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: rule.confidence === 'high' ? 'rgba(16,185,129,.1)' : rule.confidence === 'medium' ? 'rgba(245,158,11,.1)' : 'rgba(156,163,175,.1)', color: rule.confidence === 'high' ? 'var(--ok)' : rule.confidence === 'medium' ? 'var(--warn)' : 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.04em' }}>{rule.confidence}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="aipg-field">
                   <label htmlFor="aipg-subject">Subject</label>
                   <input

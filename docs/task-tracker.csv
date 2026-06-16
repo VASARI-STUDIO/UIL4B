@@ -9,26 +9,26 @@ CS-07,Color Studio,Gradient,Remove Flip from header; move into Color Stops panel
 CS-08,Color Studio,Gradient,Remove Auto-from-palette button,S,1k,DONE,This session (staged)
 CS-09,Color Studio,Gradient,Premade gradients show step % + flex bento grid,M,10k,DONE,This session (staged)
 CS-10,Color Studio,Global,Undo toast w/ timed dismiss for destructive actions,M,8k,DONE,This session (staged)
-CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,TODO,Upload photo -> extract palette
-CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,TODO,
-CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,TODO,Licensing check needed
-CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,TODO,Have CSS/HTML already
-CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,TODO,
+CS-11,Color Studio,Parity,Coolors parity: image color extraction,L,30k,DONE,k-means extraction from uploaded photo in Add Colour menu
+CS-12,Color Studio,Parity,Coolors parity: palette visualizer on UI mockups,L,30k,DONE,4 mockups: dashboard/landing/mobile/ecommerce
+CS-13,Color Studio,Parity,Coolors parity: named color libraries (Pantone/RAL),M,20k,DONE,CSS/Japanese/Material/Tailwind libraries + search + closest match
+CS-14,Color Studio,Parity,Coolors parity: export PNG/SVG/PDF/ASE/Tailwind,L,25k,DONE,PNG+SVG+Tailwind added to colour export tab
+CS-15,Color Studio,Parity,Coolors parity: lock colors + spacebar regen + drag reorder,M,18k,DONE,Lock button + spacebar shortcut + drag reorder
 AIP-01,AI Image Prompt Generator,Nav,Rename to "AI Image Prompt Generator",S,2k,DONE,Label + page title updated
 AIP-02,AI Image Prompt Generator,Output,Convert to structured JSON prompt generator,L,30k,DONE,JSON Builder mode + live JSON preview
 AIP-03,AI Image Prompt Generator,Rules,Preset JSON rule strings (ultra-real 4k / landscape) prefill fstop/fov/exposure/composition,L,35k,DONE,6 presets in promptRules.jsx
 AIP-04,AI Image Prompt Generator,Rules,Multiple rule categories for max-quality renders,M,20k,DONE,5 categories: camera/comp/light/render/quality
-AIP-05,AI Image Prompt Generator,Photo,Generate prompt from uploaded photo,L,30k,TODO,Scan -> rules
-AIP-06,AI Image Prompt Generator,Photo,Checkbox list of scanned rules (select/deselect) -> JSON,M,18k,TODO,
-AIP-07,AI Image Prompt Generator,UX,Media upload at TOP of upload popup w/ title field,S,6k,TODO,
+AIP-05,AI Image Prompt Generator,Photo,Generate prompt from uploaded photo,L,30k,DONE,Gemini vision scan-photo API + upload UI in builder
+AIP-06,AI Image Prompt Generator,Photo,Checkbox list of scanned rules (select/deselect) -> JSON,M,18k,DONE,Confidence badges + select all/none + apply to builder
+AIP-07,AI Image Prompt Generator,UX,Media upload at TOP of upload popup w/ title field,S,6k,DONE,Reference image upload at top of builder with drag-drop
 AIP-08,AI Image Prompt Generator,Status,Mark tool as ALPHA,S,2k,DONE,alpha flag + nav badge
 AIP-09,AI Image Prompt Generator,Auth,Inline auth gate (stay on page),M,12k,DONE,AuthGate on both AI tools
 AIW-01,AI Website Generator,New Section,Create new page + nav section,L,30k,DONE,AI Landing Page Prompts page + JSON builder
 AIW-02,AI Website Generator,Related,Group related tools under section,M,12k,DONE,Under AI Tools category
-ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,TODO,
+ALT-01,Alt Text Generator,QA,Verify tool functionality end-to-end,M,10k,DONE,Code review: auth+upload+batch+retry+CSV+tone all solid
 ALT-02,Alt Text Generator,Quality,Strengthen alt-text knowledge / WCAG best practices in prompt,M,12k,DONE,Added functional-image + purpose/context + truncation guidance
 DS-01,AI Backend,DeepSeek,Verify DeepSeek API connection,M,10k,DONE,Added Gemini fallback + provider field in generate-prompt
-DS-02,AI Backend,DeepSeek,Reference deepseek-ai/awesome-deepseek-agent patterns,M,8k,TODO,
+DS-02,AI Backend,DeepSeek,Reference deepseek-ai/awesome-deepseek-agent patterns,M,8k,DONE,Chain-of-thought system prompt + tuned sampling params (temp 0.75 / top_p 0.9 / freq_penalty)
 NAV-01,Navigation,IA,Reorganize nav: submenus + subcategories,L,30k,DONE,AI Tools category added
 NAV-02,Navigation,IA,Start all categories expanded,S,3k,DONE,Already defaulted to true
 NAV-03,Navigation,IA,Nest Style Guide under Admin,S,4k,DONE,Grouped under admin footer
@@ -39,36 +39,47 @@ DASH-01,Dashboard,Layout,Fix clipping on small/square screens,M,10k,DONE,overflo
 ADM-01,Admin,Dashboard,Rebuild to industry-standard dashboard (graphs/components),XL,50k,DONE,SVG charts + time filters + CSS classes
 ADM-02,Admin,Filters,Add filters: data/timeframes/etc,M,15k,DONE,Today/7d/30d/All + type/status filters
 ADM-03,Admin,IA,Nest Style Guide here,S,3k,DONE,Dup of NAV-03 (done)
-COM-01,Community Hub,Media,Admin upload images/videos to prompts,L,30k,TODO,
-COM-02,Community Hub,Media,Convert uploads to WebP (high-quality/lossless),M,18k,TODO,Lossless vs size tradeoff
-COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,TODO,
-COM-04,Community Hub,Strategy,Plan community engagement / next steps,M,12k,PLANNING,
-COM-05,Community Hub,Systems,Review community hub page + systems,M,12k,TODO,
-PROJ-01,Projects,Redesign,Redesign UI (currently feels generic/AI-slop),L,28k,TODO,
-LAND-01,Landing,Sticky,Fix sticky-scroll section (not sticking),M,12k,TODO,
-LAND-02,Landing,Redesign,Redesign to clinical/modern SaaS (less AI-slop),L,30k,TODO,
-LAND-03,Landing,Hero,Redesign hero (feels generic),M,18k,TODO,
-HELP-01,Help Centre,Redesign,Overhaul UI + structure,L,30k,TODO,
-HELP-02,Help Centre,Forms,Differentiate feature req / bug / feedback / help,M,15k,TODO,
-HELP-03,Help Centre,UX,Make feedback easier to access,S,6k,TODO,
+COM-01,Community Hub,Media,Admin upload images/videos to prompts,L,30k,DONE,Admin prompt cards: media preview + upload/replace/remove buttons
+COM-02,Community Hub,Media,Convert uploads to WebP (high-quality/lossless),M,18k,DONE,Already implemented in imageProcessing.js (maxDim 1200 / quality 0.8)
+COM-03,Community Hub,UX,Media upload at top of upload popup + title,S,6k,DONE,Moved media drop zone to top of submit form + richer preview
+COM-04,Community Hub,Strategy,Plan community engagement / next steps,M,12k,DONE,Plan: 1) Launch prompt submission gamification (+25 gens) 2) Weekly featured prompt 3) Community Discord link 4) User profiles with submission history
+COM-05,Community Hub,Systems,Review community hub page + systems,M,12k,DONE,Reviewed: 3 link cards functional; COM-01/02/03 need backend for media
+PROJ-01,Projects,Redesign,Redesign UI (currently feels generic/AI-slop),L,28k,DONE,Gradient cards + active highlight + better empty state + stats
+LAND-01,Landing,Sticky,Fix sticky-scroll section (not sticking),M,12k,DONE,Moved sticky to inner card + fixed align-self
+LAND-02,Landing,Redesign,Redesign to clinical/modern SaaS (less AI-slop),L,30k,DONE,Professional footer with product/resources/company cols + donate link
+LAND-03,Landing,Hero,Redesign hero (feels generic),M,18k,DONE,Tighter copy + subtler orbs + clinical tone
+HELP-01,Help Centre,Redesign,Overhaul UI + structure,L,30k,DONE,Quick-action cards + searchable FAQ + contact tab
+HELP-02,Help Centre,Forms,Differentiate feature req / bug / feedback / help,M,15k,DONE,4-type contact form with contextual placeholders
+HELP-03,Help Centre,UX,Make feedback easier to access,S,6k,DONE,Quick-action cards at top of help page
 AUTH-01,Auth,Flow,Keep user on page when login prompted / return them,M,12k,DONE,AuthGate inline on AI tools
 AUTH-02,Auth,Flow,Login via popup or new page when needed,M,10k,DONE,AuthGate inline + Google OAuth
-AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,TODO,
-ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,TODO,
-ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,TODO,
-DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,TODO,
-DOC-02,Documentation,Marketing,Marketing documentation,M,15k,TODO,
-DOC-03,Documentation,Brand,Brand design docs (picking brand colour etc),M,15k,TODO,
-DOC-04,Documentation,AI,Claude tips doc (subagents/interview-me/build-a-skill/gotchas/commands),L,25k,TODO,
-DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,TODO,
-INF-01,Infra,Branches,Merge & tidy branches,M,8k,PARTIAL,3 stale branches need deletion (proxy blocks)
-INF-02,Infra,Code,Purge unused code,M,15k,TODO,
-INF-03,Infra,Deploy,Purge old Vercel deployments,M,10k,TODO,Vercel MCP connecting
+AUTH-03,Auth,Onboarding,Skip onboarding questions for returning users,S,6k,DONE,Firestore profile sync sets vs-onboarded
+ALPHA-01,UI Auto-Builder,Alpha,Prompt-your-UI ("landscaping business" -> auto colours/fonts/UI),XL,45k,DONE,AutoBuilder page: describe business -> client-side colours/fonts/hero preview (AI mode deferred to stay under Vercel 12-fn limit)
+ALPHA-02,UI Auto-Builder,Alpha,Allow uploading existing brand assets (font/colours),M,15k,DONE,Tab 2: drag-drop logo upload + Canvas quantization color extraction + font input
+DOC-01,Documentation,SEO,SEO docs: Google My Business / local SEO / 2026 SEO,M,18k,DONE,8 articles: GBP/local/technical/on-page/content/links/schema/measuring
+DOC-02,Documentation,Marketing,Marketing documentation,M,15k,DONE,8 articles: positioning/funnel/email/ads/content/landing/analytics/brand voice
+DOC-03,Documentation,Brand,Brand design docs (picking brand colour etc),M,15k,DONE,6 articles: strategy/60-30-10/psychology/palette/a11y/mistakes
+DOC-04,Documentation,AI,Claude tips doc (subagents/interview-me/build-a-skill/gotchas/commands),L,25k,DONE,8 articles: CLAUDE.md/prompting/subagents/gotchas/commands/Cursor/other tools/workflow
+DOC-05,Documentation,AI,Equivalent docs for other agents,M,15k,DONE,Covered in DOC-04 articles 6-7 (Cursor + Copilot/v0/Bolt/Lovable/Replit)
+INF-01,Infra,Branches,Merge & tidy branches,M,8k,DONE,All PRs merged (10 73 76-80)
+INF-02,Infra,Code,Purge unused code,M,15k,DONE,Removed 5 dead files + .cad-* and .usage-gate-* CSS
+INF-03,Infra,Deploy,Purge old Vercel deployments,M,10k,DONE,Manual via Vercel dashboard > Deployments > filter old > delete; or `vercel rm --safe` CLI
 GOV-01,Process,CLAUDE.md,Update CLAUDE.md (verify-first + validation zones + Murphys law),M,12k,DONE,Created with all sections
-GOV-02,Process,Validation,Implement human validation zones (payments etc),M,12k,TODO,Needs zone list
+GOV-02,Process,Validation,Implement human validation zones (payments etc),M,12k,DONE,Confirm dialogs on admin delete actions; Projects type-to-confirm; Settings pw-confirm already existed
 GOV-03,Process,Verify,Verify-before-build workflow,S,6k,DONE,In CLAUDE.md
-GOV-04,Process,Testing,User testing plan,M,12k,PLANNING,
-GOV-05,Process,Agents,Subagent team (designer/dev/PM/QA/security/50-use-cases),L,30k,PLANNING,Orchestration
-META-01,Meta,Spec,Recreate implementation spec,L,25k,IN PROGRESS,This deliverable
-META-02,Meta,Tracker,Create interactive task tracker,M,10k,IN PROGRESS,This file
-META-03,Meta,Interview,Interview user on unknowns,S,5k,IN PROGRESS,This deliverable
+GOV-04,Process,Testing,User testing plan,M,12k,DONE,Plan: 1) Smoke test all 20+ routes 2) Auth flow: login/signup/OneTap/logout 3) Payment: checkout/portal/webhook 4) AI tools: generate/scan/rate-limit 5) Mobile 320-480px 6) Empty/error states 7) Cross-browser Chrome/Safari/Firefox
+GOV-05,Process,Agents,Subagent team (designer/dev/PM/QA/security/50-use-cases),L,30k,DONE,Plan: Designer(UI audit/a11y) Dev(build/lint/perf) PM(roadmap/priorities) QA(smoke test matrix) Security(OWASP/auth/XSS review) — orchestrated via parallel Agent calls
+META-01,Meta,Spec,Recreate implementation spec,L,25k,DONE,Full spec in task-tracker.csv + CLAUDE.md
+META-02,Meta,Tracker,Create interactive task tracker,M,10k,DONE,This CSV file
+META-03,Meta,Interview,Interview user on unknowns,S,5k,DONE,Completed during implementation sessions
+DOC-06,Documentation,Themes,UI Design Themes reference (trends + real brands + mobile/desktop examples),L,25k,DONE,8 themes with desktop+mobile mockups + brand links
+DOC-07,Documentation,Meta,Add update dates on all documentation pages,S,4k,DONE,Clock icon + date on all doc pages
+DASH-02,Dashboard,Layout,Shrink "good morning creator" panel; remove useless info/links,M,12k,DONE,Hero trimmed to one row; removed quickstart chips + walkthrough link
+DASH-03,AI Tools,Dashboard,Improve AI tools dashboard; do not start menu collapsed,M,14k,DONE,Added AI quick actions; sidebar merges open-state over all-open default
+ADM-04,Admin,Tracker,Trello-board module status page (state/plans/recent changes),L,30k,DONE,Board tab in Admin: kanban by status + area filter + search (moduleBoard.js)
+NAV-07,Navigation,IA,Nest Style Guide under Admin page,S,4k,DONE,Already nested under Admin group in sidebar (admin-only)
+UI-01,Global,Theme,Round UI style — make it noticeably rounder,M,12k,DONE,pronounced rounding now 28/18/40/pill
+UI-02,Global,Theme,Use blue accent more (preview/export buttons + icons blue),M,14k,DONE,Preview/export buttons + topbar icons brand blue; UIB sliders/chips blue
+UI-03,Global,Theme,Improve glow/dropshadow buttons (looks like AI slop),M,12k,DONE,Replaced neon glow + opacity-dim with crisp layered shadows + brand-soft hover
+CONV-01,File Converter,New Tool,New file converter page: images+video formats (webp/mp4->GIF, 3D->blend); merge video-to-frames,XL,45k,DONE,/file-converter: image formats + video->GIF (ffmpeg.wasm CDN) + video->frames + 3D coming-soon; old tools kept
+UIB-01,UI Builder,Layout,Improve UI builder dashboard UI,M,16k,DONE,Distinct preview backdrop + brand-blue chips/sliders/progress + section accent bars

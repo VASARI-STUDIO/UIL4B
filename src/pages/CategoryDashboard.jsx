@@ -62,6 +62,12 @@ const QUICK_ACTIONS = {
     { label: 'Social post sizes', desc: 'Platform-specific specs', to: '/docs-social' },
     { label: 'External resources', desc: 'Curated tools and reads', to: '/resources' },
   ],
+  ai: [
+    { label: 'Structured image prompts', desc: 'JSON prompt builder with quality rules', to: '/ai-prompt' },
+    { label: 'Scan a reference photo', desc: 'Detect camera, lighting & composition', to: '/ai-prompt' },
+    { label: 'Landing page briefs', desc: 'Generate full website prompts', to: '/landing-prompts' },
+    { label: 'Auto-build a UI kit', desc: 'Describe a business → colours + fonts', to: '/auto-builder' },
+  ],
 }
 
 function TypographyDashboard({ cat, tools, quickActions, pinned, togglePinned, t }) {

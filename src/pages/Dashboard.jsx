@@ -464,8 +464,8 @@ export default function Dashboard() {
         onDragLeave={onZoneDragLeave}
         onDrop={onZoneDrop}
       >
-        {/* HERO — greeting + completion */}
-        <div className="bento-card bento-hero" style={{ gridColumn: 'span 4', gridRow: 'span 2' }}>
+        {/* HERO — greeting + quick resume */}
+        <div className="bento-card bento-hero" style={{ gridColumn: 'span 4' }}>
           <div className="bento-hero-top">
             <div>
               <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr}</div>
@@ -476,26 +476,6 @@ export default function Dashboard() {
               <ArrowIcon />
             </button>
           </div>
-          <div className="bento-hero-quickstart">
-            <NavLink to="/color" className="bento-qs-chip">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg>
-              Start with colour
-            </NavLink>
-            <NavLink to="/fontpairs" className="bento-qs-chip">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-              Pick fonts
-            </NavLink>
-            <NavLink to="/icons" className="bento-qs-chip">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              Browse icons
-            </NavLink>
-          </div>
-          <NavLink to="/color" className="bento-hero-walkthrough">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-            </svg>
-            New here? Follow the guided flow — colour → fonts → components → export
-          </NavLink>
           <div className="bento-hero-foot">
             {lastTool && (
               <NavLink to={lastTool.path} className="bento-hero-resume">

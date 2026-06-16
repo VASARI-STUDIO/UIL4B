@@ -9,11 +9,21 @@ const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || ''
 const GEMINI_KEY = process.env.GEMINI_API_KEY || ''
 const GEMINI_MODEL = 'gemini-2.0-flash'
 
-const SYSTEM_PROMPT = `You are an expert AI image prompt engineer. Generate a detailed, effective prompt for AI image generation. Include: subject description, art style, lighting, mood, composition, color palette, and technical quality tags. Format for the specified platform if given. Return ONLY the prompt text, no explanations.`
+const SYSTEM_PROMPT = `You are an expert AI image prompt engineer specialising in photorealistic, artistic, and commercial image generation.
 
-// Primary provider: DeepSeek. Returns the prompt text, or throws on failure so
-// the caller can fall back to Gemini.
-async function callDeepSeek(userMessage) {
+Think step-by-step:
+1. Parse the user's brief to identify subject, mood, and intent.
+2. Select an art style, lighting setup, and composition that serve the brief.
+3. Choose a colour palette and atmosphere that reinforce the mood.
+4. Add technical quality tags for the target platform.
+
+Output rules:
+- Return ONLY the finished prompt text — no reasoning, no headings, no markdown.
+- Start with the subject, then layer in style → lighting → mood → composition → colour → technical tags.
+- Use comma-separated descriptors. Keep it under 300 words.
+- If a target platform is specified, format for its syntax conventions.`
+
+async function callDeepSeek(userMessage, opts = {}) {
   const r = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}` },
@@ -23,8 +33,10 @@ async function callDeepSeek(userMessage) {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
-      temperature: 0.8,
-      max_tokens: 500,
+      temperature: opts.temperature ?? 0.75,
+      max_tokens: opts.maxTokens ?? 600,
+      top_p: 0.9,
+      frequency_penalty: 0.15,
     }),
   })
   if (!r.ok) {
@@ -42,14 +54,14 @@ async function callDeepSeek(userMessage) {
 
 // Fallback provider: Gemini. Used only when DeepSeek is unavailable so the tool
 // keeps working until DeepSeek is fully proven in production.
-async function callGemini(userMessage) {
+async function callGemini(userMessage, opts = {}) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: `${SYSTEM_PROMPT}\n\n${userMessage}` }] }],
-      generationConfig: { temperature: 0.8, maxOutputTokens: 500 },
+      generationConfig: { temperature: opts.temperature ?? 0.75, maxOutputTokens: opts.maxTokens ?? 600, topP: 0.9 },
     }),
   })
   if (!r.ok) {

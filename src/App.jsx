@@ -19,9 +19,15 @@ import TypeScale from './pages/TypeScale'
 import FontMatcher from './pages/FontMatcher'
 import IconLibrary from './pages/IconLibrary'
 import ImageConverter from './pages/ImageConverter'
+import FileConverter from './pages/FileConverter'
 import PromptLibrary from './pages/PromptLibrary'
 import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
+import DocsThemes from './pages/DocsThemes'
+import DocsBrand from './pages/DocsBrand'
+import DocsSEO from './pages/DocsSEO'
+import DocsMarketing from './pages/DocsMarketing'
+import DocsAI from './pages/DocsAI'
 import ExternalResources from './pages/ExternalResources'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
@@ -42,9 +48,8 @@ import LandingPromptGenerator from './pages/LandingPromptGenerator'
 import EmojiLibrary from './pages/EmojiLibrary'
 import BoxShadowGenerator from './pages/BoxShadowGenerator'
 import UIBuilder from './pages/UIBuilder'
+import AutoBuilder from './pages/AutoBuilder'
 import StyleGuide from './pages/StyleGuide'
-import About from './pages/About'
-import FAQ from './pages/FAQ'
 import HelpCentre from './pages/HelpCentre'
 import Landing from './pages/Landing'
 import Onboarding from './pages/Onboarding'
@@ -119,6 +124,13 @@ export default function App() {
       '/privacy': 'UI L4B | Privacy',
       '/terms': 'UI L4B | Terms',
       '/admin': 'UI L4B | Admin',
+      '/docs-themes': 'UI L4B | UI Design Themes',
+      '/docs-brand': 'UI L4B | Brand Colour Guide',
+      '/docs-seo': 'UI L4B | SEO for Small Business',
+      '/docs-marketing': 'UI L4B | Marketing Fundamentals',
+      '/docs-ai': 'UI L4B | AI Coding Assistants',
+      '/auto-builder': 'UI L4B | UI Auto-Builder',
+      '/file-converter': 'UI L4B | File Converter',
     }
     document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
   }, [location.pathname])
@@ -187,6 +199,7 @@ export default function App() {
             <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
+            <Route path="/file-converter" element={<FileConverter onCopy={copy} toast={toast} />} />
             <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
             <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
             <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />
@@ -194,9 +207,15 @@ export default function App() {
             <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
             <Route path="/docs-design" element={<DocsDesign />} />
             <Route path="/docs-social" element={<DocsSocial />} />
+            <Route path="/docs-themes" element={<DocsThemes />} />
+            <Route path="/docs-brand" element={<DocsBrand />} />
+            <Route path="/docs-seo" element={<DocsSEO />} />
+            <Route path="/docs-marketing" element={<DocsMarketing />} />
+            <Route path="/docs-ai" element={<DocsAI />} />
             <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
             <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
             <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
+            <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />
             <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
             <Route path="/resources" element={<ExternalResources />} />
             <Route path="/onboarding" element={<Onboarding />} />

@@ -773,39 +773,39 @@ export default function Landing() {
           <section className="landing-hero">
             <span className="landing-eyebrow landing-eyebrow-live">
               <span className="landing-live-dot" aria-hidden="true" />
-              40+ design tools · one workspace
+              Design toolkit for professionals
             </span>
             <h1 className="landing-title">
-              Every design tool you reach for,<br />
-              <em>together in one place.</em>
+              Colours, type, icons, exports.<br />
+              <em>One workspace.</em>
             </h1>
             <p className="landing-lede">
-              UIL4B brings colour systems, type pairing, icons, image tools and AI
-              into one fast, unified workspace — and exports a complete design system
-              without leaving the page.
+              Build production-ready colour systems, pair fonts, search 200K+ icons,
+              and export complete design tokens — all in one tool that runs entirely
+              in your browser.
             </p>
             <div className="landing-cta-row">
               <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-                {loggedIn ? 'Resume where you left off' : 'Open the toolkit — free'}
+                {loggedIn ? 'Open your workspace' : 'Start building — free'}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
               </button>
               <button type="button" className="btn landing-cta-secondary" onClick={signIn}>
-                {loggedIn ? 'Log in to another account' : 'Create free account'}
+                {loggedIn ? 'Switch account' : 'Sign in'}
               </button>
             </div>
             <span className="landing-cta-note">
               {loggedIn
-                ? `Signed in${firstName ? ` as ${firstName}` : ''}. Pick up right where you left off.`
-                : 'No signup required to explore · Free tier included · No credit card'}
+                ? `Signed in${firstName ? ` as ${firstName}` : ''}.`
+                : 'No account required · Free tier · No credit card'}
             </span>
             <div className="landing-trust" aria-hidden="true">
               <span className="landing-trust-item"><strong>200K+</strong> icons</span>
               <span className="landing-trust-dot" />
-              <span className="landing-trust-item"><strong>1,200+</strong> Google Fonts</span>
+              <span className="landing-trust-item"><strong>1,200+</strong> fonts</span>
+              <span className="landing-trust-dot" />
+              <span className="landing-trust-item"><strong>CSS/JSON/SVG</strong> export</span>
               <span className="landing-trust-dot" />
               <span className="landing-trust-item"><strong>100%</strong> client-side</span>
-              <span className="landing-trust-dot" />
-              <span className="landing-trust-item"><strong>Free</strong> forever</span>
             </div>
           </section>
 
@@ -966,14 +966,36 @@ export default function Landing() {
         <div className="landing-footer-inner">
           <div className="landing-footer-brand">
             <span className="landing-footer-mark">UIL4B</span>
-            <span className="landing-footer-tagline">Design toolkit for everyone.</span>
+            <span className="landing-footer-tagline">Design toolkit for professionals.</span>
           </div>
-          <div className="landing-footer-links">
-            <a href="#pricing">Pricing</a>
-            <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">About</a>
-            <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer">Donate</a>
+          <div className="landing-footer-cols">
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Product</span>
+              <a href="#pricing">Pricing</a>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/color')}>Colour Studio</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/fontpairs')}>Font Pair Finder</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/icons')}>Icon Library</button>
+            </div>
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Resources</span>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/docs-design')}>Design Principles</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/help')}>Help Centre</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/docs-themes')}>UI Design Themes</button>
+            </div>
+            <div className="landing-footer-col">
+              <span className="landing-footer-col-title">Company</span>
+              <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">About</a>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/privacy')}>Privacy</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/terms')}>Terms</button>
+            </div>
           </div>
-          <span className="landing-footer-copy">Built by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>
+          <div className="landing-footer-bottom">
+            <span className="landing-footer-copy">Built by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a></span>
+            <a href="https://buymeacoffee.com/dylan.coleman" target="_blank" rel="noopener noreferrer" className="landing-footer-donate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+              Support this project
+            </a>
+          </div>
         </div>
       </footer>
     </div>

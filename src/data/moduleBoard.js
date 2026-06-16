@@ -1,0 +1,371 @@
+// Module status board — living project dashboard data.
+// Surfaced in the Admin "Board" tab as a Trello/kanban view so the owner
+// can track each module's current state, recent changes, and next steps.
+//
+// status: 'live' | 'in-progress' | 'planned' | 'idea'
+// health: 'good' | 'watch' | 'blocked'
+// Derived from docs/task-tracker.csv.
+
+export const MODULE_BOARD = [
+  {
+    id: 'color-studio',
+    name: 'Color Studio',
+    area: 'Color',
+    status: 'live',
+    health: 'good',
+    summary: 'Flagship palette tool, shipped with full Coolors feature parity.',
+    recentChanges: [
+      'Coolors parity: lock colors + spacebar regen + drag reorder (CS-15)',
+      'Image color extraction via k-means from uploaded photos (CS-11)',
+      'Palette visualizer on 4 UI mockups (CS-12)',
+      'Named libraries: CSS/Japanese/Material/Tailwind + closest match (CS-13)',
+      'Export to PNG / SVG / Tailwind config (CS-14)',
+      'Reworked color info popup: tabbed UI + OKLCH + CVD sim (CS-05)',
+    ],
+    nextSteps: [
+      'Add ASE + PDF export to reach full export parity',
+      'Round UI styling pass (UI-01)',
+      'Lean harder on blue accent for export/preview buttons (UI-02)',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'typography',
+    name: 'Typography / Font Pair Finder',
+    area: 'Type',
+    status: 'live',
+    health: 'good',
+    summary: 'Font pairing tool with copy tracking feeding design analytics.',
+    recentChanges: [
+      'Font copy events wired into admin design analytics',
+      'Brand-blue accent applied to primary/accent buttons (NAV-06)',
+    ],
+    nextSteps: [
+      'Surface "most copied fonts" trends back into the picker UI',
+      'Add pairing presets sourced from real brand systems',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'ai-image-prompt',
+    name: 'AI Image Prompt Generator',
+    area: 'AI',
+    status: 'live',
+    health: 'watch',
+    summary: 'Alpha-flagged structured JSON prompt builder with photo scanning.',
+    recentChanges: [
+      'Converted to structured JSON prompt generator + live preview (AIP-02)',
+      '6 preset JSON rule strings (ultra-real 4k / landscape) (AIP-03)',
+      'Generate prompt from uploaded photo via Gemini vision (AIP-05)',
+      'Confidence-badged checkbox list of scanned rules (AIP-06)',
+      'Marked ALPHA with nav badge + inline auth gate (AIP-08/09)',
+    ],
+    nextSteps: [
+      'Graduate out of alpha once prompt quality is validated',
+      'Add user prompt history / saved presets',
+      'Monitor DeepSeek vs Gemini fallback reliability',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'ai-landing-prompts',
+    name: 'AI Landing Page Prompts',
+    area: 'AI',
+    status: 'live',
+    health: 'watch',
+    summary: 'New AI Tools page generating JSON landing-page prompts.',
+    recentChanges: [
+      'New page + nav section created (AIW-01)',
+      'Grouped with related tools under AI Tools category (AIW-02)',
+      'Alpha badge applied (NAV-04)',
+    ],
+    nextSteps: [
+      'Improve the AI tools dashboard; do not start menu collapsed (DASH-03)',
+      'Gather usage data before exiting alpha',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'alt-text-generator',
+    name: 'Alt Text Generator',
+    area: 'AI',
+    status: 'live',
+    health: 'good',
+    summary: 'Batch alt-text tool verified end-to-end with WCAG-tuned prompts.',
+    recentChanges: [
+      'End-to-end QA: auth + upload + batch + retry + CSV + tone (ALT-01)',
+      'Strengthened WCAG/alt-text guidance in prompt (ALT-02)',
+    ],
+    nextSteps: [
+      'Expose per-image tone controls in the batch view',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'ui-auto-builder',
+    name: 'UI Auto-Builder',
+    area: 'AI',
+    status: 'in-progress',
+    health: 'watch',
+    summary: 'Alpha "describe your business → UI" tool; full AI mode deferred.',
+    recentChanges: [
+      'Prompt-your-UI: business description → client-side colors/fonts/hero (ALPHA-01)',
+      'Brand asset upload: logo color extraction + font input (ALPHA-02)',
+    ],
+    nextSteps: [
+      'AI mode deferred to stay under Vercel 12-function limit — revisit',
+      'Improve the UI builder dashboard UI (UIB-01)',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'file-converter',
+    name: 'File Converter',
+    area: 'Tools',
+    status: 'in-progress',
+    health: 'watch',
+    summary: 'New media converter (alpha) — images/video formats, planned build.',
+    recentChanges: [
+      'Scoped against ezgif.com reference (webp<->gif, mp4->gif, resize/crop)',
+    ],
+    nextSteps: [
+      'Build converter page: webp/mp4->GIF, 3D->blend, video-to-frames (CONV-01)',
+      'Keep existing tools live until the converter is approved',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'community-hub',
+    name: 'Community Hub',
+    area: 'Community',
+    status: 'live',
+    health: 'watch',
+    summary: 'Prompt sharing hub; admin media upload needs backend hardening.',
+    recentChanges: [
+      'Admin prompt cards: media preview + upload/replace/remove (COM-01)',
+      'WebP conversion on upload via imageProcessing.js (COM-02)',
+      'Media drop zone moved to top of submit form (COM-03)',
+    ],
+    nextSteps: [
+      'COM-01/02/03 still need a proper backend for media at scale (COM-05)',
+      'Engagement plan: gamified submissions, weekly featured prompt, Discord, profiles (COM-04)',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'projects',
+    name: 'Projects',
+    area: 'Community',
+    status: 'live',
+    health: 'good',
+    summary: 'Saved-work hub, redesigned away from generic look.',
+    recentChanges: [
+      'Redesigned UI: gradient cards + active highlight + better empty state + stats (PROJ-01)',
+      'Type-to-confirm on destructive actions (GOV-02)',
+    ],
+    nextSteps: [
+      'Add project sharing / export',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'admin-dashboard',
+    name: 'Admin Dashboard',
+    area: 'Admin',
+    status: 'in-progress',
+    health: 'good',
+    summary: 'Industry-standard dashboard with SVG charts; board tab being added.',
+    recentChanges: [
+      'Rebuilt to industry-standard dashboard: SVG charts + time filters (ADM-01)',
+      'Filters: Today/7d/30d/All + type/status (ADM-02)',
+      'Confirm dialogs on delete actions (GOV-02)',
+    ],
+    nextSteps: [
+      'Trello-board module status page — this board (ADM-04)',
+      'Nest Style Guide under Admin + add link (NAV-07)',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'dashboard',
+    name: 'User Dashboard',
+    area: 'Core',
+    status: 'in-progress',
+    health: 'watch',
+    summary: 'Home dashboard; layout fixed but clutter pass still pending.',
+    recentChanges: [
+      'Fixed clipping on small/square screens (DASH-01)',
+    ],
+    nextSteps: [
+      'Shrink "good morning creator" panel; remove useless info/links (DASH-02)',
+      'Improve AI tools dashboard; do not start menu collapsed (DASH-03)',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'documentation',
+    name: 'Documentation',
+    area: 'Content',
+    status: 'live',
+    health: 'good',
+    summary: 'Large doc library across SEO, marketing, brand, AI, and UI themes.',
+    recentChanges: [
+      'SEO docs: 8 articles (GBP/local/technical/on-page/schema...) (DOC-01)',
+      'Marketing docs: 8 articles (DOC-02)',
+      'Brand design + Claude/AI agent tips docs (DOC-03/04/05)',
+      'UI Design Themes reference with desktop+mobile mockups (DOC-06)',
+      'Update dates added to all doc pages (DOC-07)',
+    ],
+    nextSteps: [
+      'Keep articles current as 2026 SEO/AI guidance shifts',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'navigation',
+    name: 'Navigation / IA',
+    area: 'Core',
+    status: 'live',
+    health: 'good',
+    summary: 'Reorganized nav with submenus, AI category, and alpha badges.',
+    recentChanges: [
+      'Submenus + subcategories; AI Tools category added (NAV-01/05)',
+      'All categories start expanded (NAV-02)',
+      'Alpha badges on AI generators (NAV-04)',
+      'Brand-blue accents site-wide (NAV-06)',
+    ],
+    nextSteps: [
+      'Re-verify Style Guide nesting under Admin (NAV-07)',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'landing',
+    name: 'Landing & Help',
+    area: 'Content',
+    status: 'live',
+    health: 'good',
+    summary: 'Landing redesigned to clinical SaaS; help centre overhauled.',
+    recentChanges: [
+      'Landing redesign: clinical SaaS tone + pro footer + hero (LAND-01/02/03)',
+      'Help centre: quick-action cards + searchable FAQ + 4-type contact form (HELP-01/02/03)',
+    ],
+    nextSteps: [
+      'A/B test hero copy once traffic grows',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'auth',
+    name: 'Auth / Login',
+    area: 'Infra',
+    status: 'live',
+    health: 'good',
+    summary: 'Firebase auth with inline gates, Google OAuth, smart onboarding skip.',
+    recentChanges: [
+      'Inline auth gate keeps user on page and returns them (AUTH-01)',
+      'Login via popup + Google OAuth (AUTH-02)',
+      'Skip onboarding for returning users via Firestore profile sync (AUTH-03)',
+    ],
+    nextSteps: [
+      'Validation zone — changes require explicit owner approval',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'payments',
+    name: 'Payments / Stripe',
+    area: 'Infra',
+    status: 'live',
+    health: 'good',
+    summary: 'Stripe subscriptions with embedded checkout and per-currency pricing.',
+    recentChanges: [
+      'Admin Stripe pricing panel: per-currency monthly/yearly editor',
+      'Validation zones documented in CLAUDE.md (GOV-01/02)',
+    ],
+    nextSteps: [
+      'Validation zone — never modify webhook/checkout without owner approval',
+      'Wire up email notifications (RESEND_API_KEY) for billing events',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'ai-backend',
+    name: 'AI Backend',
+    area: 'Infra',
+    status: 'live',
+    health: 'watch',
+    summary: 'DeepSeek primary with Gemini fallback and tuned sampling.',
+    recentChanges: [
+      'Verified DeepSeek connection + added Gemini fallback (DS-01)',
+      'Chain-of-thought prompt + tuned sampling (temp 0.75 / top_p 0.9) (DS-02)',
+    ],
+    nextSteps: [
+      'Watch the Vercel 12-function limit when adding AI routes',
+      'Add provider health/latency monitoring',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'infra-deploy',
+    name: 'Infra / Deploy',
+    area: 'Infra',
+    status: 'live',
+    health: 'good',
+    summary: 'Vercel deploy on a tidy branch/PR workflow; dead code purged.',
+    recentChanges: [
+      'Merged & tidied all branches (PRs 10/73/76-80) (INF-01)',
+      'Purged 5 dead files + unused CSS (INF-02)',
+      'Documented old-deployment cleanup process (INF-03)',
+    ],
+    nextSteps: [
+      'Automate stale Vercel deployment cleanup',
+      'Stay under the 12 serverless-function limit',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'global-theme',
+    name: 'Global Theme / UI Polish',
+    area: 'Core',
+    status: 'planned',
+    health: 'watch',
+    summary: 'Cross-cutting visual refresh to feel less generic / "AI-slop".',
+    recentChanges: [
+      'Brand-blue accent rolled out to primary/accent buttons (NAV-06)',
+    ],
+    nextSteps: [
+      'Round UI style — noticeably rounder (UI-01)',
+      'Use blue accent more on preview/export buttons + icons (UI-02)',
+      'Improve glow/dropshadow buttons — looks like AI slop (UI-03)',
+    ],
+    updated: '2026-06-16',
+  },
+  {
+    id: 'process-governance',
+    name: 'Process & Governance',
+    area: 'Process',
+    status: 'live',
+    health: 'good',
+    summary: 'Verify-first workflow, validation zones, and QA plans in place.',
+    recentChanges: [
+      'CLAUDE.md with verify-first + validation zones + Murphy’s Law (GOV-01)',
+      'Human validation zones implemented via confirm dialogs (GOV-02)',
+      'User testing + subagent-team plans documented (GOV-04/05)',
+    ],
+    nextSteps: [
+      'Run the full smoke-test matrix across all 20+ routes',
+      'Stand up the designer/dev/PM/QA/security subagent team',
+    ],
+    updated: '2026-06-16',
+  },
+]
+
+export const BOARD_STATUSES = [
+  { id: 'live', label: 'Live' },
+  { id: 'in-progress', label: 'In Progress' },
+  { id: 'planned', label: 'Planned' },
+  { id: 'idea', label: 'Idea' },
+]
+
+export const BOARD_AREAS = [...new Set(MODULE_BOARD.map(m => m.area))]
