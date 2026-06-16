@@ -106,7 +106,7 @@ export default function Onboarding() {
         {!onPricing ? (
           <div className="onb-step" key={step}>
             {step === 0 && (
-              <div className="onb-greeting">Welcome, <em>{firstName}</em> 👋</div>
+              <div className="onb-greeting">Welcome, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
             )}
             <h1 className="onb-q">{QUESTIONS[step].q}</h1>
             <p className="onb-sub">Quick question {step + 1} of {total} — this helps us improve UIL4B.</p>

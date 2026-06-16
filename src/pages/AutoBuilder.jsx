@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback } from 'react'
-import { useAuth } from '../contexts/AuthContext'
 import AuthGate from '../components/AuthGate'
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -245,8 +244,6 @@ function HeroPreview({ palette, fontPair, description }) {
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export default function AutoBuilder({ onCopy, toast }) {
-  const { user } = useAuth()
-
   // Tab state
   const [tab, setTab] = useState('generate')
 
@@ -322,34 +319,39 @@ export default function AutoBuilder({ onCopy, toast }) {
     if (!logoPreview) return
     setExtracting(true)
 
-    // Load image into an element for canvas extraction
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.src = logoPreview
+    try {
+      // Load image into an element for canvas extraction
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.src = logoPreview
 
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-    })
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+      })
 
-    const colors = extractColors(img, 5)
-    const roles = ['Primary', 'Secondary', 'Accent', 'Background', 'Text']
-    const palette = colors.map((hex, i) => ({ hex, role: roles[i] || `Color ${i + 1}` }))
+      const colors = extractColors(img, 5)
+      const roles = ['Primary', 'Secondary', 'Accent', 'Background', 'Text']
+      const palette = colors.map((hex, i) => ({ hex, role: roles[i] || `Color ${i + 1}` }))
 
-    // Use brand font or fallback
-    const fontPair = brandFont.trim()
-      ? { primary: brandFont.trim(), secondary: 'Inter', vibe: 'Custom brand font' }
-      : FONT_PAIRS[0]
+      // Use brand font or fallback
+      const fontPair = brandFont.trim()
+        ? { primary: brandFont.trim(), secondary: 'Inter', vibe: 'Custom brand font' }
+        : FONT_PAIRS[0]
 
-    setUploadResult({
-      palette,
-      fontPair,
-      rationale: 'Colors extracted from your uploaded logo using dominant-color quantization.',
-      description: logoFile?.name || 'Brand assets',
-      mood: 'custom',
-    })
-    setExtracting(false)
-  }, [logoPreview, brandFont, logoFile])
+      setUploadResult({
+        palette,
+        fontPair,
+        rationale: 'Colors extracted from your uploaded logo using dominant-color quantization.',
+        description: logoFile?.name || 'Brand assets',
+        mood: 'custom',
+      })
+    } catch {
+      toast?.('Could not read that image — try a PNG or JPG')
+    } finally {
+      setExtracting(false)
+    }
+  }, [logoPreview, brandFont, logoFile, toast])
 
   // ── Export handlers ─────────────────────────────────────────────────────────
 
