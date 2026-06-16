@@ -41,12 +41,12 @@ function readIconFile(file) {
   })
 }
 
-function ColorRow({ colors }) {
+function ColorRow({ colors, height = 24 }) {
   if (!colors?.length) return null
   return (
-    <div style={{ display: 'flex', height: 24, borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
+    <div style={{ display: 'flex', height, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
       {colors.slice(0, 6).map((c, i) => (
-        <div key={i} style={{ flex: 1, background: c }} title={c} />
+        <div key={i} style={{ flex: 1, background: c, transition: 'flex .2s' }} title={c} />
       ))}
     </div>
   )
@@ -60,20 +60,23 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
 
   const headingFamily = project.design?.fonts?.heading?.family || 'Inter'
   const bodyFamily = project.design?.fonts?.body?.family || 'Inter'
+  const colors = project.design?.palette?.colors || []
+  const pri = colors[0] || 'var(--bg-2)'
+  const sec = colors[1] || 'var(--bg-3)'
   const updated = new Date(project.updatedAt || project.createdAt)
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: project.archived ? 0.6 : 1 }}>
+    <div className={`card proj-card${isCurrent ? ' proj-card-active' : ''}`} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: project.archived ? 0.55 : 1 }}>
       <div
         onClick={() => onOpenDetail?.(project)}
         title="View project details"
-        style={{ padding: '20px 18px', background: project.design?.palette?.colors?.[0] || 'var(--bg-2)', position: 'relative', cursor: 'pointer' }}
+        style={{ padding: '18px 16px 14px', background: `linear-gradient(135deg, ${pri} 0%, ${sec} 100%)`, position: 'relative', cursor: 'pointer', minHeight: 68 }}
       >
         {icon && <img src={icon} alt="" className="proj-card-icon" />}
-        <div style={{ fontFamily: `'${headingFamily}', sans-serif`, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 8px rgba(0,0,0,.2)' }}>
-          {project.design?.palette?.colors?.[0]?.toUpperCase() || '#'}
+        <div style={{ fontFamily: `'${headingFamily}', sans-serif`, fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 6px rgba(0,0,0,.25)', lineHeight: 1.2 }}>
+          {project.name}
         </div>
-        <div style={{ fontFamily: `'${bodyFamily}', sans-serif`, fontSize: 11, color: 'rgba(255,255,255,.85)', marginTop: 2, textShadow: '0 1px 6px rgba(0,0,0,.2)' }}>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,.7)', marginTop: 4, fontWeight: 500, letterSpacing: '.02em' }}>
           {headingFamily} / {bodyFamily}
         </div>
         {project.archived && (
@@ -81,9 +84,14 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
             Archived
           </span>
         )}
+        {isCurrent && !project.archived && (
+          <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 8, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', background: 'rgba(255,255,255,.2)', backdropFilter: 'blur(8px)', color: '#fff', padding: '3px 8px', borderRadius: 4 }}>
+            Active
+          </span>
+        )}
       </div>
 
-      <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {editing ? (
           <div style={{ display: 'flex', gap: 6 }}>
             <input
@@ -96,26 +104,12 @@ function ProjectCard({ project, isCurrent, onLoad, onDelete, onRename, onOverwri
             <button className="btn btn-s" onClick={() => { setName(project.name); setEditing(false) }}>Cancel</button>
           </div>
         ) : (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <h3
-                onClick={() => onOpenDetail?.(project)}
-                title="View project details"
-                style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', flex: 1, cursor: 'pointer' }}
-              >{project.name}</h3>
-              {isCurrent && (
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '2px 6px', borderRadius: 4 }}>
-                  Loaded
-                </span>
-              )}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--t2)' }}>
-              Updated {updated.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>
+          <div style={{ fontSize: 11, color: 'var(--t2)' }}>
+            {updated.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
           </div>
         )}
 
-        <ColorRow colors={project.design?.palette?.colors} />
+        <ColorRow colors={colors} />
 
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 10, color: 'var(--t2)' }}>
           <span>{project.design?.palette?.colors?.length || 0} colours</span>
@@ -516,7 +510,7 @@ export default function Projects({ toast }) {
       <div className="sec">
         <div className="sec-h">
           <h1>Projects</h1>
-          <p>Sign in to save your designs and come back to them anytime.</p>
+          <p style={{ color: 'var(--t2)', fontSize: 13 }}>Sign in to save your designs and come back to them anytime.</p>
         </div>
         <div className="card" style={{ maxWidth: 480, padding: 32, textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
@@ -593,17 +587,29 @@ export default function Projects({ toast }) {
     if (loadedId === id) setLoadedId(null)
   }
 
+  const totalProjects = projects.length
+  const totalColours = projects.reduce((sum, p) => sum + (p.design?.palette?.colors?.length || 0), 0)
+
   return (
     <div className="sec">
       <div className="sec-h" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1>Projects</h1>
-          <p>Your saved design systems — palette, fonts, type scale, and tokens.</p>
+          <p style={{ color: 'var(--t2)', fontSize: 13 }}>Your saved design systems — palette, fonts, type scale, and tokens.</p>
+          {totalProjects > 0 && (
+            <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+              <span style={{ fontSize: 11, color: 'var(--t2)' }}><strong style={{ color: 'var(--t0)', fontWeight: 700 }}>{totalProjects}</strong> project{totalProjects === 1 ? '' : 's'}</span>
+              <span style={{ fontSize: 11, color: 'var(--t2)' }}><strong style={{ color: 'var(--t0)', fontWeight: 700 }}>{totalColours}</strong> colour{totalColours === 1 ? '' : 's'} saved</span>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {!showSaveForm && (
             <button className="btn btn-accent" onClick={() => setShowSaveForm(true)}>
-              Save Current Design
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+              </svg>
+              Save Current
             </button>
           )}
           <button className="btn" onClick={() => setShowNewModal(true)} title="Start a new project">
@@ -651,17 +657,21 @@ export default function Projects({ toast }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
             {COMMUNITY_PROJECTS.map(cp => (
               <div key={cp.id} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '20px 18px', background: cp.colors[0] }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 8px rgba(0,0,0,.2)' }}>
+                <div style={{ padding: '16px 16px 12px', background: `linear-gradient(135deg, ${cp.colors[0]}, ${cp.colors[1] || cp.colors[0]})`, position: 'relative' }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 6px rgba(0,0,0,.25)' }}>
                     {cp.name}
                   </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.85)', marginTop: 2, textShadow: '0 1px 6px rgba(0,0,0,.2)' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.7)', marginTop: 2, fontWeight: 500 }}>
                     by {cp.author}
                   </div>
                 </div>
-                <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <ColorRow colors={cp.colors} />
-                  <div style={{ fontSize: 10, color: 'var(--t2)' }}>{cp.colors.length} colours</div>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {cp.colors.map((c, i) => (
+                      <span key={i} style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)', background: 'var(--bg-1)', padding: '2px 6px', borderRadius: 4 }}>{c}</span>
+                    ))}
+                  </div>
                   <button className="btn btn-s btn-accent" onClick={() => handleUseCommunityPalette(cp)} style={{ fontSize: 11, marginTop: 'auto' }}>
                     Use this palette
                   </button>
@@ -709,11 +719,16 @@ export default function Projects({ toast }) {
 
       {projects.length === 0 ? (
         <div className="card" style={{ padding: 48, textAlign: 'center' }}>
-          <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }}>📁</div>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+            </svg>
+          </div>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No projects yet</h3>
-          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>
-            Build a palette in <NavLink to="/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/fontpairs">Font Pair Finder</NavLink>, then add your design to a project.
+          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16, maxWidth: 360, margin: '0 auto 16px' }}>
+            Build a palette in <NavLink to="/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/fontpairs">Font Pair Finder</NavLink>, then save your design as a project.
           </p>
+          <button className="btn btn-accent" onClick={() => setShowNewModal(true)}>Create your first project</button>
         </div>
       ) : activeProjects.length === 0 && archivedProjects.length === 0 ? (
         <div className="card" style={{ padding: 40, textAlign: 'center' }}>

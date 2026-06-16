@@ -507,44 +507,45 @@ export default function PromptLibrary({ onCopy, toast }) {
         <div className="pl-add-panel open">
           <div className="pl-add-inner">
             <div className="pl-add-fields">
+              <div
+                className={`pl-drop-zone${submitMedia ? ' has-file' : ''}`}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => { e.preventDefault(); handleSubmitMedia(e.dataTransfer?.files?.[0]) }}
+                onClick={() => submitFileRef.current?.click()}
+                style={{ marginBottom: 8 }}
+              >
+                {submitMediaPreview ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {submitMediaPreview.type === 'image' ? (
+                      <img src={submitMediaPreview.url} alt="Preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t0)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{submitMedia?.name}</div>
+                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>{submitMediaPreview.type === 'image' ? 'Image' : 'Video'} · {(submitMedia?.size / 1024).toFixed(0)} KB</div>
+                    </div>
+                    <button type="button" onClick={e => { e.stopPropagation(); setSubmitMedia(null); setSubmitMediaPreview(null) }}
+                      style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '2px 6px' }}
+                    >&times;</button>
+                  </div>
+                ) : (
+                  <>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span>Drop an image or video here (optional, max 10 MB)</span>
+                  </>
+                )}
+                <input ref={submitFileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }}
+                  onChange={e => handleSubmitMedia(e.target.files?.[0])} />
+              </div>
               <input type="text" value={submitTitle} onChange={e => setSubmitTitle(e.target.value)} placeholder="Prompt title" className="pl-input-title" />
               <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} placeholder="Your prompt..." className="pl-textarea" />
               <input type="text" value={submitTags} onChange={e => setSubmitTags(e.target.value)} placeholder="Tags (comma separated)" />
               <input type="url" value={submitProfile} onChange={e => setSubmitProfile(e.target.value)} placeholder="Your profile link (optional — portfolio, X, Dribbble)" />
-              <div className="pl-add-row">
-                <div
-                  className={`pl-drop-zone${submitMedia ? ' has-file' : ''}`}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={e => { e.preventDefault(); handleSubmitMedia(e.dataTransfer?.files?.[0]) }}
-                  onClick={() => submitFileRef.current?.click()}
-                  style={{ flex: 1 }}
-                >
-                  {submitMediaPreview ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {submitMediaPreview.type === 'image' ? (
-                        <img src={submitMediaPreview.url} alt="Preview" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} />
-                      ) : (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polygon points="5 3 19 12 5 21 5 3" />
-                        </svg>
-                      )}
-                      <span style={{ fontSize: 11, color: 'var(--t1)' }}>{submitMedia?.name}</span>
-                      <button type="button" onClick={e => { e.stopPropagation(); setSubmitMedia(null); setSubmitMediaPreview(null) }}
-                        style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '2px 4px' }}
-                      >&times;</button>
-                    </div>
-                  ) : (
-                    <>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
-                      <span>Upload demo image or video (optional, max 10 MB)</span>
-                    </>
-                  )}
-                  <input ref={submitFileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }}
-                    onChange={e => handleSubmitMedia(e.target.files?.[0])} />
-                </div>
-              </div>
             </div>
             <div className="pl-add-actions">
               <button className="btn" onClick={() => setSubmitOpen(false)}>Cancel</button>
