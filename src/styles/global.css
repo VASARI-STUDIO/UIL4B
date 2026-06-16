@@ -549,7 +549,7 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .uib-shadow-swatch{width:28px;height:20px;border-radius:4px;background:var(--card);border:1px solid var(--border);flex-shrink:0}
 .uib-shadow-chip-label{font-size:10px;font-weight:700;font-family:var(--mono);color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
 .uib-field{display:grid;grid-template-columns:64px 1fr 48px;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--t1)}
-.uib-field input[type="range"]{width:100%;accent-color:var(--accent)}
+.uib-field input[type="range"]{width:100%;accent-color:var(--brand)}
 .uib-num{width:48px;padding:3px 5px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--t0);font-size:11px;font-family:var(--mono);text-align:center}
 .uib-field-color{grid-template-columns:64px 28px 1fr;gap:6px}
 .uib-field-color input[type="color"]{width:28px;height:28px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;background:none}
@@ -557,13 +557,14 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .uib-components{display:flex;flex-direction:column;gap:24px}
 .uib-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden}
 .uib-section-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
-.uib-section-head h3{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.uib-section-head h3{font-size:14px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.uib-section-head h3::before{content:"";width:3px;height:15px;border-radius:2px;background:var(--brand);flex-shrink:0}
 .uib-section-actions{display:flex;gap:4px}
 .uib-variant-chips{display:flex;gap:4px;padding:10px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .uib-variant-chip{padding:5px 12px;border:1px solid var(--border);border-radius:999px;background:none;font-size:11px;font-weight:600;color:var(--t1);cursor:pointer;font-family:var(--font);transition:all .15s}
 .uib-variant-chip:hover{border-color:var(--bh);color:var(--t0)}
-.uib-variant-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
-.uib-preview-card{padding:24px 18px;min-height:60px}
+.uib-variant-chip.active{background:var(--brand-bg);border-color:var(--brand);color:var(--brand)}
+.uib-preview-card{padding:32px 24px;min-height:72px;background:var(--bg-2);display:flex;flex-direction:column;justify-content:center}
 .uib-preview-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .uib-code{margin:0;padding:14px 18px;background:var(--bg-1);border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--t1);overflow-x:auto;white-space:pre-wrap;word-break:break-all}
 .uib-export-bar{display:flex;gap:8px;justify-content:center;padding:12px 0}
