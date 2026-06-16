@@ -74,3 +74,12 @@ META-02,Meta,Tracker,Create interactive task tracker,M,10k,DONE,This CSV file
 META-03,Meta,Interview,Interview user on unknowns,S,5k,DONE,Completed during implementation sessions
 DOC-06,Documentation,Themes,UI Design Themes reference (trends + real brands + mobile/desktop examples),L,25k,DONE,8 themes with desktop+mobile mockups + brand links
 DOC-07,Documentation,Meta,Add update dates on all documentation pages,S,4k,DONE,Clock icon + date on all doc pages
+DASH-02,Dashboard,Layout,Shrink "good morning creator" panel; remove useless info/links,M,12k,TODO,Too big + clutter
+DASH-03,AI Tools,Dashboard,Improve AI tools dashboard; do not start menu collapsed,M,14k,TODO,
+ADM-04,Admin,Tracker,Trello-board module status page (state/plans/recent changes),L,30k,TODO,Replaces style-guide nesting target; live project board
+NAV-07,Navigation,IA,Nest Style Guide under Admin page,S,4k,TODO,Re-verify nesting + add link in admin
+UI-01,Global,Theme,Round UI style — make it noticeably rounder,M,12k,TODO,
+UI-02,Global,Theme,Use blue accent more (preview/export buttons + icons blue),M,14k,TODO,Blue underused
+UI-03,Global,Theme,Improve glow/dropshadow buttons (looks like AI slop),M,12k,TODO,
+CONV-01,File Converter,New Tool,New file converter page: images+video formats (webp/mp4->GIF, 3D->blend); merge video-to-frames,XL,45k,TODO,Ref: ezgif.com/webp-to-gif (webp<->gif, mp4->gif, resize/crop/optimize); keep old tools until approved
+UIB-01,UI Builder,Layout,Improve UI builder dashboard UI,M,16k,TODO,

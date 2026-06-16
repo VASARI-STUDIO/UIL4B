@@ -19,6 +19,7 @@ import TypeScale from './pages/TypeScale'
 import FontMatcher from './pages/FontMatcher'
 import IconLibrary from './pages/IconLibrary'
 import ImageConverter from './pages/ImageConverter'
+import FileConverter from './pages/FileConverter'
 import PromptLibrary from './pages/PromptLibrary'
 import DocsDesign from './pages/DocsDesign'
 import DocsSocial from './pages/DocsSocial'
@@ -129,6 +130,7 @@ export default function App() {
       '/docs-marketing': 'UI L4B | Marketing Fundamentals',
       '/docs-ai': 'UI L4B | AI Coding Assistants',
       '/auto-builder': 'UI L4B | UI Auto-Builder',
+      '/file-converter': 'UI L4B | File Converter',
     }
     document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
   }, [location.pathname])
@@ -197,6 +199,7 @@ export default function App() {
             <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
             <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
             <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
+            <Route path="/file-converter" element={<FileConverter onCopy={copy} toast={toast} />} />
             <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
             <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
             <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />

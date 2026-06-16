@@ -4,6 +4,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from '
 import { db } from '../utils/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
+import { MODULE_BOARD } from '../data/moduleBoard'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 const STATUSES = ['new', 'in-progress', 'done']
@@ -18,6 +19,7 @@ const WEEK = 7 * DAY
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'board', label: 'Board' },
   { id: 'design', label: 'Design' },
   { id: 'submissions', label: 'Submissions' },
   { id: 'prompts', label: 'Prompts' },
@@ -397,6 +399,101 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
             <button className="btn btn-s" onClick={() => setConfirmingDelete(true)} disabled={busy} style={{ fontSize: 10, color: 'var(--err)', marginLeft: 'auto' }}>Delete</button>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+const BOARD_COLUMNS = [
+  { id: 'live', label: 'Live', color: 'var(--ok)' },
+  { id: 'in-progress', label: 'In Progress', color: 'var(--brand)' },
+  { id: 'planned', label: 'Planned', color: 'var(--warn)' },
+  { id: 'idea', label: 'Ideas', color: 'var(--t3)' },
+]
+const HEALTH_COLOR = { good: 'var(--ok)', watch: 'var(--warn)', blocked: 'var(--err)' }
+
+function ModuleBoard() {
+  const [area, setArea] = useState('all')
+  const [search, setSearch] = useState('')
+
+  const areas = ['all', ...Array.from(new Set(MODULE_BOARD.map(m => m.area)))]
+  const q = search.trim().toLowerCase()
+  const filtered = MODULE_BOARD.filter(m => {
+    if (area !== 'all' && m.area !== area) return false
+    if (q && !(`${m.name} ${m.summary} ${m.area}`.toLowerCase().includes(q))) return false
+    return true
+  })
+
+  return (
+    <div className="adm-section">
+      <div className="adm-section-h">
+        <div className="adm-section-title"><span className="adm-section-bar" />Module Board ({filtered.length})</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search modules…"
+            style={{ fontSize: 12, padding: '6px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', minWidth: 160 }}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 14 }}>
+        {areas.map(a => (
+          <button
+            key={a}
+            className={`adm-time-btn${area === a ? ' active' : ''}`}
+            onClick={() => setArea(a)}
+            style={{ textTransform: a === 'all' ? 'uppercase' : 'none', letterSpacing: '.03em' }}
+          >
+            {a === 'all' ? 'All areas' : a}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 12, alignItems: 'flex-start' }}>
+        {BOARD_COLUMNS.map(col => {
+          const cards = filtered.filter(m => m.status === col.id)
+          return (
+            <div key={col.id} style={{ flex: '0 0 300px', minWidth: 300, background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.color }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t0)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{col.label}</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>{cards.length}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {cards.map(m => (
+                  <div key={m.id} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-s)', padding: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: HEALTH_COLOR[m.health] || 'var(--t3)', flexShrink: 0 }} title={m.health} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)' }}>{m.name}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--brand)', background: 'var(--brand-bg)', padding: '2px 7px', borderRadius: 999 }}>{m.area}</span>
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.5, margin: '0 0 8px' }}>{m.summary}</p>
+                    {m.recentChanges?.length > 0 && (
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ok)', marginBottom: 4 }}>Recent</div>
+                        <ul style={{ margin: 0, paddingLeft: 14, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {m.recentChanges.slice(0, 4).map((c, i) => <li key={i} style={{ fontSize: 11, color: 'var(--t2)', lineHeight: 1.45 }}>{c}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {m.nextSteps?.length > 0 && (
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--warn)', marginBottom: 4 }}>Next</div>
+                        <ul style={{ margin: 0, paddingLeft: 14, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {m.nextSteps.slice(0, 4).map((c, i) => <li key={i} style={{ fontSize: 11, color: 'var(--t2)', lineHeight: 1.45 }}>{c}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    <div style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>Updated {m.updated}</div>
+                  </div>
+                ))}
+                {cards.length === 0 && <div style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic', padding: '8px 4px' }}>Nothing here.</div>}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -1290,6 +1387,9 @@ export default function Admin({ toast }) {
           </div>
         </div>
       )}
+
+      {/* ═══════ BOARD TAB ═══════ */}
+      {tab === 'board' && <ModuleBoard />}
 
       {/* ═══════ PROMPTS TAB ═══════ */}
       {tab === 'prompts' && (
