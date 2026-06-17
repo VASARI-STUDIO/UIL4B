@@ -168,7 +168,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .nav-cat-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 .nav-cat.active>.nav-cat-header .nav-cat-toggle{color:var(--accent)}
 .nav-cat-body{max-height:0;overflow:hidden;transition:max-height .25s ease;display:flex;flex-direction:column;gap:1px;padding-left:24px}
-.nav-cat-body.open{max-height:400px;padding-top:2px;padding-bottom:6px}
+.nav-cat-body.open{max-height:800px;padding-top:2px;padding-bottom:6px}
 .nav-cat-body .nav-item{padding:6px 10px;font-size:12px;font-weight:450;border-left:2px solid var(--border);border-radius:0 var(--radius-s) var(--radius-s) 0;position:relative}
 .nav-cat-body .nav-item.active{border-left:2px solid var(--accent);background:var(--accent-bg);color:var(--accent)}
 [data-theme="light"] .nav-cat-body .nav-item.active{color:var(--accent);background:var(--accent-bg)}
