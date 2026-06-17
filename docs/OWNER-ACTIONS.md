@@ -5,37 +5,51 @@ work that's now in the codebase. Ordered by impact. Last updated 2026-06-17.
 
 ---
 
-## 🔴 1. Make the AI features work again (CRITICAL — they're dead in prod)
+## 🔴 1. Make the AI features work again (CRITICAL)
 
-**Why:** Alt Text Generator, AI Image Prompt Generator, and the photo-scan feature all fail because the **server-side env vars aren't set in Vercel**. Without the Firebase service-account key, every AI request fails auth; without the AI provider keys, generation can't run. The code is correct — it's purely missing config. (The endpoints now return a precise error telling you which one is missing.)
+**Status:** you've confirmed all the keys ARE set in Vercel — yet the AI tools still fail. With the keys present, the overwhelmingly likely cause is the **`FIREBASE_SERVICE_ACCOUNT_KEY` format**: pasting the service-account JSON into an env var commonly mangles the `private_key` newlines (`\n`), Firebase silently rejects the key, so every `verifyIdToken` fails and all AI tools die.
 
-Set these in **Vercel → your project → Settings → Environment Variables** (scope: **Production** + Preview), then **redeploy**:
+**What I changed (ships on next deploy):** the admin init now (a) **auto-repairs** mangled `\n` newlines in the private key — this alone may fix it outright — and (b) if the key is still rejected, returns a **precise on-screen error**. The three AI endpoints also now report Firestore-access errors explicitly instead of an opaque 500.
 
-| Variable | Where to get it | Notes |
-|---|---|---|
-| `FIREBASE_SERVICE_ACCOUNT_KEY` | Firebase Console → ⚙ Project Settings → **Service Accounts** → **Generate new private key** → download the `.json` | Paste the **entire JSON file contents** as the value (one line is fine). It must start with `{"type":"service_account",...}` — NOT the code snippet shown on that page. This is what verifies user logins on every AI call. |
-| `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Create API key | Powers Alt Text + photo-scan, and is the fallback for prompt generation. |
-| `DEEPSEEK_API_KEY` | [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) | Primary provider for the AI Prompt Generator (Gemini covers it if this is absent). |
+**Action:**
+1. **Redeploy** so tonight's fix ships.
+2. If it still fails, open the Alt Text Generator (signed in) — the on-screen error now names the exact cause:
+   - *"…private_key line breaks were mangled… re-generate and paste the raw .json"* → Firebase Console → ⚙ Project Settings → **Service Accounts** → **Generate new private key**, and paste the **raw .json contents unmodified** (one line is fine; starts with `{"type":"service_account",...}`).
+   - *"AI is not configured… GEMINI_API_KEY / DEEPSEEK_API_KEY missing"* → that key isn't reaching the function (check the name spelling and that its scope includes **Production**).
+   - *"Could not read your plan/usage from Firestore…"* → the service account lacks Firestore access, or the project/region is wrong.
 
-**Verify:** after redeploy, open the Alt Text Generator, sign in, upload an image. If it still fails, the on-screen error now names the exact missing key. (These are all server-only — never prefix them with `VITE_`.)
+Keys (all server-only, never `VITE_`): `FIREBASE_SERVICE_ACCOUNT_KEY` (verifies logins on every AI call), `GEMINI_API_KEY` (alt-text + photo-scan + fallback), `DEEPSEEK_API_KEY` (prompt generation).
 
 ---
 
-## 🟠 2. Stripe retention coupon (so "Cancel plan" offers a real discount)
+## 🟠 2. Stripe retention coupon — exact codes & amounts
 
-**Why:** the cancel flow now routes into Stripe's native cancellation flow; it just needs a coupon configured to actually offer one.
+**Recommended — one coupon, the cancel flow uses it:**
 
-1. **Create the coupon** — Stripe Dashboard → **Product catalogue → Coupons → + New**:
-   - Type: **Percentage discount**, **50% off**
-   - Duration: **Repeating**, **3 months**
-   - Name: `Retention 50% (3 months)` → Save. **Copy the Coupon ID** (looks like `aZ1bC2d3`).
-   *(Alternative offers if you prefer: a 100%-off "Duration: Once" coupon = one free billing cycle; or skip the discount and just allow cancellation.)*
-2. **Enable it in the portal** — Stripe Dashboard → **Settings → Billing → Customer portal**:
-   - Turn on **"Customers can cancel subscriptions."**
-   - Turn on **"Offer a coupon to retain customers"** → select the coupon above → Save.
-3. **(Optional)** add `STRIPE_RETENTION_COUPON=<coupon_id>` in Vercel — this embeds the offer directly via the API. Not required if you did step 2 (the portal config handles it); the code falls back gracefully either way.
+| Field | Value |
+|---|---|
+| Type | **Percentage discount** |
+| Percent off | **50%** |
+| Duration | **Repeating → 3 months** |
+| Coupon ID (code) | **`RETAIN50`** (set a custom ID, or let Stripe auto-generate and note it) |
+| Name | `Retention — 50% off 3 months` |
 
-**Also confirm these Stripe vars exist in Vercel** (needed for checkout at all — likely already set): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, and client `VITE_STRIPE_PUBLISHABLE_KEY`. If prices aren't set, run `STRIPE_SECRET_KEY=sk_... npm run setup:stripe` and paste the printed IDs.
+Why this: it's the standard win-back — meaningful but time-boxed (Pro is $4.99/mo → ~$2.50/mo for 3 months), recovers churn without permanently halving revenue, and is **safe for both monthly and yearly** subscribers.
+
+**Steps:**
+1. Stripe Dashboard → **Product catalogue → Coupons → + New** → enter the values above → Save. *(Customers never type the code — the portal applies it automatically; the ID is just for your reference / the optional env var.)*
+2. Stripe Dashboard → **Settings → Billing → Customer portal** → turn on **"Customers can cancel subscriptions"** AND **"Offer a coupon to retain customers"** → select `RETAIN50` → Save.
+3. *(Optional)* add `STRIPE_RETENTION_COUPON=<coupon_id>` in Vercel to also embed it via the API; not required if step 2 is done.
+
+**If you'd rather offer tiered options** (create these, pick what the portal shows — but Stripe's portal shows only ONE retention coupon, so `RETAIN50` is the safe single pick):
+
+| Scenario | Coupon | Note |
+|---|---|---|
+| "Too expensive" | **50% off · repeating · 3 months** → `RETAIN50` | the default |
+| "Not using it" | *(no coupon)* — enable **Pause subscription** in the portal | Stripe pauses billing, no coupon needed |
+| "One free month" | **100% off · Duration: Once** → `FREEMONTH` | ⚠ on a **yearly** plan, "once" = a free **year** — only show this to monthly subscribers |
+
+**Also confirm these Stripe vars exist in Vercel** (needed for checkout to work at all — likely already set): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `VITE_STRIPE_PUBLISHABLE_KEY`. If prices aren't set, run `STRIPE_SECRET_KEY=sk_... npm run setup:stripe`.
 
 ---
 

@@ -72,16 +72,19 @@ export default async function handler(req, res) {
   }
 
   const fireDb = adminDb()
-  const userSnap = await fireDb.doc(`users/${uid}`).get()
-  const subscription = userSnap.data()?.subscription || null
-  const plan = planForSubscription(subscription)
   const toolId = 'alt-text'
-  const limit = dailyLimitFor(plan, toolId)
-
   const date = todayStr()
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
-  const usageSnap = await usageRef.get()
-  const used = usageSnap.data()?.[toolId] || 0
+  let plan, limit, used
+  try {
+    const userSnap = await fireDb.doc(`users/${uid}`).get()
+    plan = planForSubscription(userSnap.data()?.subscription || null)
+    limit = dailyLimitFor(plan, toolId)
+    const usageSnap = await usageRef.get()
+    used = usageSnap.data()?.[toolId] || 0
+  } catch (e) {
+    return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
+  }
 
   if (used >= limit) {
     return res.status(429).json({

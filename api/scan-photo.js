@@ -58,14 +58,19 @@ export default async function handler(req, res) {
   // Per-user daily cap — mirrors generate-prompt.js / alt-text.js so this paid
   // Gemini Vision call can't be abused by an authenticated user.
   const fireDb = adminDb()
-  const userSnap = await fireDb.doc(`users/${uid}`).get()
-  const plan = planForSubscription(userSnap.data()?.subscription || null)
   const toolId = 'scan-photo'
-  const limit = dailyLimitFor(plan, toolId)
   const date = todayStr()
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
-  const usageSnap = await usageRef.get()
-  const used = usageSnap.data()?.[toolId] || 0
+  let plan, limit, used
+  try {
+    const userSnap = await fireDb.doc(`users/${uid}`).get()
+    plan = planForSubscription(userSnap.data()?.subscription || null)
+    limit = dailyLimitFor(plan, toolId)
+    const usageSnap = await usageRef.get()
+    used = usageSnap.data()?.[toolId] || 0
+  } catch (e) {
+    return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
+  }
   if (used >= limit) {
     return res.status(429).json({ error: 'Daily scan limit reached', usage: { used, limit, remaining: 0 }, plan: plan.id })
   }
