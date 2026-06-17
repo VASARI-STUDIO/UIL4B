@@ -93,3 +93,19 @@ LAND-04,Landing,Semantics,Improve semantic HTML — article tags + nav landmarks
 INF-04,Infra,Code,Clean console statements for production,S,4k,DONE,DEV-only guards on console.warn/error; removed bare console.error in TopBar
 ADM-05,Admin,Board,Update module board statuses — promote completed modules to live,M,8k,DONE,dashboard/admin/global-theme → live; added TDZ fix to recent changes
 FIX-01,Color Studio,Bug,Fix production crash — TDZ violation in Rolldown bundle,S,6k,DONE,Moved randomPalette useCallback before dependent useEffect; PR #83 merged
+AUDIT-01,Process,Audit,Full product audit of all 40 pages (inventories/completion scores/issue register/roadmap),XL,50k,DONE,docs/PRODUCT-AUDIT-2026-06-16.md; 6 parallel slice audits; build verified green; PR #85
+FIX-P0-1,Auth,Login,Return user to original page after sign-in (location.state.from),M,10k,DONE,Login.jsx reads location.state.from for email + Google; PR #85
+FIX-P0-2,Landing,Feedback,Feedback + Help Centre fail loudly instead of faking success,M,10k,DONE,Feedback.jsx + HelpCentre.jsx now check res.ok and show error; PR #85
+FIX-P0-3,Help Centre,Forms,Fix saveFeedback() signature (was writing corrupt record),S,5k,DONE,HelpCentre.jsx now passes single entry object (was 4 positional args); PR #85
+FIX-P0-4,AI Image Prompt Generator,Backend,Add per-user daily rate limit to scan-photo.js (was uncapped paid Gemini Vision),M,10k,DONE,Mirrors generate-prompt.js limit (toolId scan-photo); PR #85
+FIX-P1-1,Color Studio,Undo,Broaden undo to all palette-wiping actions,M,14k,DONE,Now covers Apply-Brand / Apply-Design-System / Image-Extract / swatch removal (was Reset only); PR #85
+FIX-P1-2,Color Studio,UI States,Surface image-extract error toast + named-colour empty state,M,10k,DONE,Toast on extract failure; No colours found empty state; PR #85
+FIX-P1-3,FontMatcher,UI States,Error + Retry state on fetchFonts failure (was stuck loading),M,10k,DONE,Added .catch + error state with Retry; PR #85
+FIX-P1-4,UI Auto-Builder,Resilience,Logo-extract try/catch/finally so corrupt image resets button,S,8k,DONE,AutoBuilder.jsx extract guard; surfaces error + resets state; PR #85
+FIX-P1-5,Global,UI States,Empty states for EmojiLibrary + FontGallery; PromptLibrary oversized-media warning,M,10k,DONE,Empty-search states + warn on dropped media >900KB; PR #85
+A11Y-03,Global,Accessibility,Accessibility pass: ColorStudio ARIA tablist + keyboard swatches; Projects/Onboarding/Docs/Admin,L,20k,DONE,Input aria-labels; keyboard-operable cells; chart role=img + module-search label; PR #85
+CLEANUP-01,Global,Code,Dead-code + orphaned CSS removal; fix DocsMarketing TOC layout,M,12k,DONE,Removed hero video + landing/bento CSS + ContrastBadge + unused imports/refs/props/i18n; DocsMarketing uses .sec/.sec-h; PR #85
+FIX-02,UI Builder,Resilience,Harden clipboard calls for insecure contexts,S,6k,DONE,navigator.clipboard wrapped / routed through safe onCopy; PR #86
+BACKEND-01,Payments / Stripe,Retention,Replace fake in-app cancel offers with Stripe native portal retention/cancellation,L,22k,BLOCKED,create-portal.js flow_data deep-link + optional STRIPE_RETENTION_COUPON; PR #87. OWNER: create coupon + enable cancellation/retention in Stripe Customer Portal config
+BACKEND-02,Projects,Sync,Cross-device project sync via Firestore users/{uid}/sync/projects,L,25k,DONE,Non-destructive merge + offline-safe; PR #87. v1 caveat: deletes do not propagate across devices
+BACKEND-03,Admin,Analytics,Server-side aggregate analytics (analytics-daily counters) + All users panel,L,25k,BLOCKED,Local charts relabelled This device; firestore.rules + Privacy.jsx updated; PR #87. OWNER: publish firestore.rules to populate aggregate panel
