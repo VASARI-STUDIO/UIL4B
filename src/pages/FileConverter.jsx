@@ -19,7 +19,13 @@ const OUTPUT_FORMATS = [
   { id: 'image/png', label: 'PNG', ext: 'png', lossy: false },
   { id: 'image/jpeg', label: 'JPEG', ext: 'jpg', lossy: true },
   { id: 'image/webp', label: 'WebP', ext: 'webp', lossy: true },
+  { id: 'image/avif', label: 'AVIF', ext: 'avif', lossy: true },
 ]
+
+// Formats supported by the canvas frame encoder (Video → Frames). AVIF is
+// excluded here because canvas.toBlob('image/avif') support is too inconsistent
+// to offer for batch frame extraction.
+const FRAME_FORMATS = OUTPUT_FORMATS.filter(f => f.id !== 'image/avif')
 
 const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif'
 const ACCEPT_VIDEO = 'video/*,.mp4,.webm,.mov,.avi,.gif,.webp'
@@ -210,8 +216,12 @@ function ImageConvert({ toast }) {
     if (format === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h) }
     ctx.drawImage(img, 0, 0, w, h)
     const q = format === 'image/png' ? undefined : quality / 100
+    // canvas.toBlob yields null when the browser can't encode the requested
+    // format (notably AVIF in some browsers). Guard it so the batch records a
+    // clear per-item error and keeps going instead of crashing.
+    const label = OUTPUT_FORMATS.find(f => f.id === format)?.label || format
     const blob = await new Promise((resolve, reject) => {
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Encoding failed (format may be unsupported)')), format, q)
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error(`${label} export not supported by this browser`)), format, q)
     })
     return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w, h }
   }, [format, quality, maxDim])
@@ -577,6 +587,8 @@ function VideoFrames({ toast }) {
   const [meta, setMeta] = useState(null)
   const [fps, setFps] = useState(2)
   const [scale, setScale] = useState(1)
+  const [format, setFormat] = useState('image/png')
+  const [quality, setQuality] = useState(90)
   const [extracting, setExtracting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [frames, setFrames] = useState([])
@@ -638,10 +650,14 @@ function VideoFrames({ toast }) {
     canvas.height = outH
     const ctx = canvas.getContext('2d')
 
+    const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
+    const q = fmt.lossy ? quality / 100 : undefined
+
     const step = 1 / Math.max(0.1, Math.min(30, fps))
     const total = Math.max(1, Math.floor(meta.duration / step))
     const out = []
     let t = 0, idx = 0
+    let unsupported = false
 
     try {
       while (t < meta.duration && idx < total + 1) {
@@ -650,29 +666,33 @@ function VideoFrames({ toast }) {
           const to = setTimeout(() => reject(new Error('Seek timed out')), 8000)
           video.onseeked = () => { clearTimeout(to); resolve() }
         })
-        ctx.clearRect(0, 0, outW, outH)
+        // JPEG has no alpha — fill white so transparent areas don't go black.
+        if (fmt.id === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, outW, outH) }
+        else ctx.clearRect(0, 0, outW, outH)
         ctx.drawImage(video, 0, 0, outW, outH)
-        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'))
-        if (blob) {
-          out.push({
-            blob, url: URL.createObjectURL(blob),
-            name: `frame-${String(idx + 1).padStart(4, '0')}.png`,
-            time: t, size: blob.size,
-          })
-        }
+        const blob = await new Promise(res => canvas.toBlob(res, fmt.id, q))
+        // null blob => this browser can't encode the chosen format. Bail out of
+        // the batch with a clear error rather than silently producing 0 frames.
+        if (!blob) { unsupported = true; throw new Error(`${fmt.label} export not supported by this browser`) }
+        out.push({
+          blob, url: URL.createObjectURL(blob),
+          name: `frame-${String(idx + 1).padStart(4, '0')}.${fmt.ext}`,
+          time: t, size: blob.size,
+        })
         idx++
         t += step
         setProgress(Math.round((idx / total) * 100))
       }
     } catch (err) {
-      toast(out.length ? `Extracted ${out.length} frames (stopped: ${err.message})` : `Extraction failed: ${err.message}`)
+      if (unsupported) toast(err.message)
+      else toast(out.length ? `Extracted ${out.length} frames (stopped: ${err.message})` : `Extraction failed: ${err.message}`)
     }
 
     setFrames(out)
     setExtracting(false)
     setProgress(100)
     if (out.length) toast(`Extracted ${out.length} frames`)
-  }, [srcUrl, meta, fps, scale, extracting, toast])
+  }, [srcUrl, meta, fps, scale, format, quality, extracting, toast])
 
   const downloadAll = useCallback(async () => {
     if (!frames.length) return
@@ -690,13 +710,14 @@ function VideoFrames({ toast }) {
   }, [frames, file, toast])
 
   const est = meta ? Math.max(1, Math.floor(meta.duration / (1 / Math.max(0.1, Math.min(30, fps))))) : 0
+  const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
 
   return (
     <>
       <div className="sub">
         {!srcUrl ? (
           <DropZone accept="video/*,.mp4,.webm,.mov,.avi" onFiles={onFiles}
-            hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI — output is a ZIP of PNGs" />
+            hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI — output is a ZIP of image frames" />
         ) : (
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <div style={{ flex: '1 1 min(360px,100%)', minWidth: 0 }}>
@@ -735,6 +756,24 @@ function VideoFrames({ toast }) {
                 <option value={0.5}>50%</option>
                 <option value={0.25}>25%</option>
               </select>
+            </div>
+            <div>
+              <div className="seg-label">Output Format</div>
+              <select value={format} onChange={e => setFormat(e.target.value)} disabled={extracting} style={{ maxWidth: 130 }}>
+                {FRAME_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div className="seg-label">Quality</div>
+              <div className="row">
+                <input
+                  type="range" min="1" max="100" value={quality} style={{ flex: 1 }}
+                  onChange={e => setQuality(+e.target.value)}
+                  disabled={extracting || !fmt.lossy}
+                />
+                <span style={{ fontSize: 12, color: 'var(--t1)', width: 38, textAlign: 'right' }}>{quality}%</span>
+              </div>
+              {!fmt.lossy && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>PNG is always lossless</div>}
             </div>
           </div>
           <div className="row" style={{ marginTop: 14, gap: 8 }}>

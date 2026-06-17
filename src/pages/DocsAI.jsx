@@ -1,6 +1,6 @@
 import DocsTOC from '../components/DocsTOC'
 
-const LAST_UPDATED = '2026-06-15'
+const LAST_UPDATED = '2026-06-17'
 
 const TOC_ITEMS = [
   { id: 'art-ai-01', number: '01', title: 'CLAUDE.md Setup' },
@@ -339,6 +339,11 @@ Always check that imports resolve to real files.`}</Code>
         <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>GitHub Copilot</h4>
         <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 12 }}>
           Inline code suggestions as you type. Best for boilerplate, test generation, and predictable patterns. Works in VS Code, JetBrains, and Neovim. Weakest at multi-file refactoring and architectural decisions.
+        </p>
+
+        <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Google Gemini</h4>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--t1)', marginBottom: 12 }}>
+          Google&apos;s coding offering comes in two flavours: Gemini CLI, an open-source terminal agent similar in spirit to Claude Code, and Gemini Code Assist, which plugs into VS Code and JetBrains for inline completions and chat. Its standout strength is a very large context window, so it can hold whole repositories or long specs in memory at once, plus tight integration with the Google ecosystem (Workspace, Google Cloud, and search-grounded answers). A generous free tier makes it easy to trial. Practical tip: use the wide context to paste an entire feature folder and ask Gemini to trace a data flow across files before you edit — it excels at whole-codebase reasoning where narrower tools lose the thread.
         </p>
 
         <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>v0.dev (Vercel)</h4>
