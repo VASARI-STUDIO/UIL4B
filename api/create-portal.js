@@ -26,7 +26,8 @@ export default async function handler(req, res) {
     const stripe = getStripeServer()
 
     const userDoc = await adminDb().collection('users').doc(uid).get()
-    const customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
+    const userData = userDoc.exists ? userDoc.data() : null
+    const customerId = userData?.stripeCustomerId || null
 
     if (!customerId) {
       return res.status(400).json({ error: 'No subscription found' })
@@ -36,10 +37,42 @@ export default async function handler(req, res) {
     const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
     const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
 
-    const session = await stripe.billingPortal.sessions.create({
+    const params = {
       customer: customerId,
       return_url: `${origin}/settings`,
-    })
+    }
+
+    // Deep-link into Stripe's native cancellation flow, where Stripe presents
+    // the configured retention coupon (real, server-side) before cancelling.
+    const { flow } = req.body || {}
+    const subId = userData?.subscription?.id
+    if (flow === 'cancel' && subId) {
+      const retentionCoupon = process.env.STRIPE_RETENTION_COUPON
+      params.flow_data = {
+        type: 'subscription_cancel',
+        subscription_cancel: {
+          subscription: subId,
+          ...(retentionCoupon
+            ? { retention: { type: 'coupon_offer', coupon_offer: { coupon: retentionCoupon } } }
+            : {}),
+        },
+      }
+    }
+
+    let session
+    try {
+      session = await stripe.billingPortal.sessions.create(params)
+    } catch (flowErr) {
+      // If the portal isn't configured for the cancel/retention flow yet, fall
+      // back to the default portal so the button still works.
+      if (params.flow_data) {
+        console.error('portal flow_data failed, falling back to default portal:', flowErr?.message)
+        delete params.flow_data
+        session = await stripe.billingPortal.sessions.create(params)
+      } else {
+        throw flowErr
+      }
+    }
 
     return res.status(200).json({ url: session.url })
   } catch (err) {
