@@ -587,7 +587,16 @@ export default function IconLibrary({ onCopy }) {
           <p style={{ fontSize: 12, color: 'var(--t2)', marginTop: 16, textAlign: 'center' }}>Loading icons…</p>
         )}
 
-        {!loading && (
+        {!loading && icons.length === 0 && (
+          <div className="pl-empty" style={{ padding: '48px 20px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <p>No icons match — try a different search, or refresh if the icon set didn&apos;t load.</p>
+          </div>
+        )}
+
+        {!loading && icons.length > 0 && (
           <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 12 }}>
             Showing {shown.length.toLocaleString()} of {icons.length.toLocaleString()} &middot; {mode}
           </p>
