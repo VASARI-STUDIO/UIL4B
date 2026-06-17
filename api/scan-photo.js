@@ -120,7 +120,7 @@ export default async function handler(req, res) {
       rules = JSON.parse(raw)
       if (!Array.isArray(rules)) throw new Error('Expected array')
     } catch {
-      return res.status(502).json({ error: 'Could not parse AI response', raw: raw.slice(0, 500) })
+      return res.status(502).json({ error: 'Could not parse AI response' })
     }
 
     try {
