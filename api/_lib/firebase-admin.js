@@ -11,7 +11,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
 
 let initialised = false
-let credentialStatus = 'missing' // 'ok' | 'invalid-json' | 'missing'
+let credentialStatus = 'missing' // 'ok' | 'init-failed' | 'invalid-json' | 'missing'
 
 function ensureApp() {
   if (initialised || getApps().length) {
@@ -26,6 +26,12 @@ function ensureApp() {
     try {
       serviceAccount = JSON.parse(raw)
       if (serviceAccount?.type === 'service_account' && serviceAccount?.private_key) {
+        // Env vars frequently mangle the PEM line breaks. Normalise escaped
+        // "\n" sequences back into real newlines so cert() can read the key —
+        // the single most common cause of verifyIdToken failing in production.
+        if (typeof serviceAccount.private_key === 'string') {
+          serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n')
+        }
         credentialStatus = 'ok'
       } else {
         credentialStatus = 'invalid-json'
@@ -42,7 +48,11 @@ function ensureApp() {
       initializeApp({ projectId })
     }
   } catch {
-    initializeApp({ projectId })
+    // cert() rejected the parsed key — almost always a mangled private_key.
+    // Record it so credentialProblem() can explain, then fall back so the app
+    // still boots.
+    if (serviceAccount) credentialStatus = 'init-failed'
+    try { initializeApp({ projectId }) } catch { /* already initialised */ }
   }
   initialised = true
 }
@@ -52,6 +62,9 @@ function ensureApp() {
 export function credentialProblem() {
   ensureApp()
   if (credentialStatus === 'ok') return null
+  if (credentialStatus === 'init-failed') {
+    return 'FIREBASE_SERVICE_ACCOUNT_KEY was parsed but Firebase rejected it — usually the private_key line breaks were mangled when pasting it into the environment variable. Re-generate the key (Firebase Console → Project Settings → Service Accounts → Generate new private key) and paste the raw .json contents exactly, unmodified.'
+  }
   if (credentialStatus === 'invalid-json') {
     return 'FIREBASE_SERVICE_ACCOUNT_KEY is set but is not the service account JSON. In Firebase Console → Project Settings → Service Accounts, click "Generate new private key" and paste the entire contents of the downloaded .json file (it starts with {"type":"service_account",...}) — not the code snippet shown on that page.'
   }

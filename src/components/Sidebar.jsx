@@ -1,9 +1,9 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useWorkspace, TOOL_DRAG_TYPE } from '../contexts/WorkspaceContext'
-import { CATEGORIES, toolsByCategory, localiseCategories, localiseTools } from '../data/tools'
+import { CATEGORIES, toolsByCategory, localiseCategories, localiseTools, groupBySubcategory } from '../data/tools'
 import { ADMIN_EMAILS } from '../utils/constants'
 
 const STORAGE_KEY = 'vs-nav-open'
@@ -256,6 +256,39 @@ export default function Sidebar({ isOpen, onClose }) {
             const isActive = activeCategoryId === cat.id
             const tools = allTools.filter(tl => tl.category === cat.id)
             const hasSubItems = tools.length > 1 || (tools.length === 1 && tools[0].path !== cat.path)
+            const subGroups = groupBySubcategory(tools)
+            // Number tools by their rendered order so the "n.m" labels read
+            // top-to-bottom — when grouped, that's the flattened group order;
+            // otherwise it's the plain tool order.
+            const orderedTools = subGroups.length > 0 ? subGroups.flatMap(g => g.tools) : tools
+            const toolIndex = new Map(orderedTools.map((tl, i) => [tl.id, i]))
+            const renderTool = (tool) => {
+              const ti = toolIndex.get(tool.id)
+              return (
+                <NavLink
+                  key={tool.id}
+                  to={tool.path}
+                  className={({ isActive: linkActive }) => `nav-item nav-item-sub${linkActive ? ' active' : ''}${pinned.includes(tool.id) ? ' is-pinned' : ''}`}
+                  onClick={onClose}
+                  onContextMenu={(e) => handleContextMenu(e, tool)}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'copy'
+                    e.dataTransfer.setData(TOOL_DRAG_TYPE, tool.id)
+                    e.dataTransfer.setData('text/plain', tool.label)
+                  }}
+                >
+                  <span className="nav-item-num">{idx + 1}.{ti + 1}</span>
+                  {tool.icon && (
+                    <svg className="nav-icon nav-icon-sub" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      {tool.icon}
+                    </svg>
+                  )}
+                  <span className="nav-item-label">{tool.label}</span>
+                  {tool.alpha && <span className="nav-alpha-badge">Alpha</span>}
+                </NavLink>
+              )
+            }
             return (
               <div key={cat.id} className={`nav-cat${isActive ? ' active' : ''}`}>
                 <div className="nav-cat-header">
@@ -288,30 +321,16 @@ export default function Sidebar({ isOpen, onClose }) {
                 </div>
                 {hasSubItems && (
                   <div className={`nav-cat-body${isOpen ? ' open' : ''}`}>
-                    {tools.map((tool, ti) => (
-                      <NavLink
-                        key={tool.id}
-                        to={tool.path}
-                        className={({ isActive: linkActive }) => `nav-item nav-item-sub${linkActive ? ' active' : ''}${pinned.includes(tool.id) ? ' is-pinned' : ''}`}
-                        onClick={onClose}
-                        onContextMenu={(e) => handleContextMenu(e, tool)}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.effectAllowed = 'copy'
-                          e.dataTransfer.setData(TOOL_DRAG_TYPE, tool.id)
-                          e.dataTransfer.setData('text/plain', tool.label)
-                        }}
-                      >
-                        <span className="nav-item-num">{idx + 1}.{ti + 1}</span>
-                        {tool.icon && (
-                          <svg className="nav-icon nav-icon-sub" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                            {tool.icon}
-                          </svg>
-                        )}
-                        <span className="nav-item-label">{tool.label}</span>
-                        {tool.alpha && <span className="nav-alpha-badge">Alpha</span>}
-                      </NavLink>
-                    ))}
+                    {subGroups.length > 0
+                      ? subGroups.map(group => (
+                          <Fragment key={group.subcategory || '_'}>
+                            {group.subcategory && (
+                              <div className="nav-pinned-label">{group.subcategory}</div>
+                            )}
+                            {group.tools.map(renderTool)}
+                          </Fragment>
+                        ))
+                      : tools.map(renderTool)}
                   </div>
                 )}
               </div>

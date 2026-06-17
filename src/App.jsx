@@ -1,4 +1,4 @@
-import { Component, useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { Component, useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
@@ -25,7 +25,6 @@ const ColorStudio = lazy(() => import('./pages/ColorStudio'))
 const TypeScale = lazy(() => import('./pages/TypeScale'))
 const FontMatcher = lazy(() => import('./pages/FontMatcher'))
 const IconLibrary = lazy(() => import('./pages/IconLibrary'))
-const ImageConverter = lazy(() => import('./pages/ImageConverter'))
 const FileConverter = lazy(() => import('./pages/FileConverter'))
 const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
 const DocsDesign = lazy(() => import('./pages/DocsDesign'))
@@ -41,7 +40,6 @@ const Community = lazy(() => import('./pages/Community'))
 const Feedback = lazy(() => import('./pages/Feedback'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
-const VideoToFrames = lazy(() => import('./pages/VideoToFrames'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Projects = lazy(() => import('./pages/Projects'))
 const Checkout = lazy(() => import('./pages/Checkout'))
@@ -174,14 +172,12 @@ export default function App() {
       '/fontpairs': 'UI L4B | Font Pairs',
       '/fontgallery': 'UI L4B | Font Gallery',
       '/icons': 'UI L4B | Icon Library',
-      '/imgconvert': 'UI L4B | Image Converter',
       '/alt-text': 'UI L4B | Alt Text Generator',
       '/ai-prompt': 'UI L4B | AI Image Prompt Generator',
       '/ai-tools': 'UI L4B | AI Tools',
       '/landing-prompts': 'UI L4B | AI Landing Page Prompts',
       '/prompts': 'UI L4B | Prompt Library',
       '/emoji': 'UI L4B | Emoji Library',
-      '/video-frames': 'UI L4B | Video to Frames',
       '/box-shadow': 'UI L4B | Box Shadow',
       '/ui-builder': 'UI L4B | UI Builder',
       '/projects': 'UI L4B | Projects',
@@ -213,14 +209,12 @@ export default function App() {
       '/fontpairs': 'Discover harmonious font combinations for your designs. Preview heading and body pairs with live typography samples.',
       '/fontgallery': 'Browse and preview 1,200+ Google Fonts. Filter by category, weight, and style. Compare fonts side by side.',
       '/icons': 'Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
-      '/imgconvert': 'Convert images between formats — PNG, JPEG, WebP, AVIF, GIF. Client-side processing, nothing uploaded.',
       '/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
       '/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
       '/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by DeepSeek and Gemini.',
       '/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
       '/prompts': 'Browse and submit community design prompts for AI image and web generators.',
       '/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',
-      '/video-frames': 'Extract individual frames from video files in your browser. Select, preview, and download frames as PNG images.',
       '/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',
       '/ui-builder': 'Build complete UI design systems with guided steps. Pick colours, fonts, type scales, and export production-ready CSS.',
       '/auto-builder': 'Automatically generate a full UI design system from a single colour or inspiration URL using AI.',
@@ -321,7 +315,7 @@ export default function App() {
               <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
               <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
               <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
-              <Route path="/imgconvert" element={<ImageConverter toast={toast} />} />
+              <Route path="/imgconvert" element={<Navigate to="/file-converter" replace />} />
               <Route path="/file-converter" element={<FileConverter toast={toast} />} />
               <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
               <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
@@ -335,7 +329,7 @@ export default function App() {
               <Route path="/docs-seo" element={<DocsSEO />} />
               <Route path="/docs-marketing" element={<DocsMarketing />} />
               <Route path="/docs-ai" element={<DocsAI />} />
-              <Route path="/video-frames" element={<VideoToFrames toast={toast} />} />
+              <Route path="/video-frames" element={<Navigate to="/file-converter" replace />} />
               <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
               <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
               <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />

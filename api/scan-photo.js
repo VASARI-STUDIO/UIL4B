@@ -1,4 +1,4 @@
-import { adminAuth, adminDb, FieldValueIncrement } from './_lib/firebase-admin.js'
+import { adminAuth, adminDb, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
 import { planForSubscription, dailyLimitFor } from './_lib/plans.js'
 
 export const config = {
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  if (!GEMINI_KEY) return res.status(500).json({ error: 'AI provider not configured' })
+  if (!GEMINI_KEY) return res.status(500).json({ error: 'AI is not configured on the server: GEMINI_API_KEY is missing.' })
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -50,20 +50,27 @@ export default async function handler(req, res) {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
   } catch {
-    return res.status(401).json({ error: 'Invalid token' })
+    const cp = credentialProblem()
+    if (cp) return res.status(500).json({ error: cp })
+    return res.status(401).json({ error: 'Invalid or expired session — sign out and back in.' })
   }
 
   // Per-user daily cap — mirrors generate-prompt.js / alt-text.js so this paid
   // Gemini Vision call can't be abused by an authenticated user.
   const fireDb = adminDb()
-  const userSnap = await fireDb.doc(`users/${uid}`).get()
-  const plan = planForSubscription(userSnap.data()?.subscription || null)
   const toolId = 'scan-photo'
-  const limit = dailyLimitFor(plan, toolId)
   const date = todayStr()
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
-  const usageSnap = await usageRef.get()
-  const used = usageSnap.data()?.[toolId] || 0
+  let plan, limit, used
+  try {
+    const userSnap = await fireDb.doc(`users/${uid}`).get()
+    plan = planForSubscription(userSnap.data()?.subscription || null)
+    limit = dailyLimitFor(plan, toolId)
+    const usageSnap = await usageRef.get()
+    used = usageSnap.data()?.[toolId] || 0
+  } catch (e) {
+    return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
+  }
   if (used >= limit) {
     return res.status(429).json({ error: 'Daily scan limit reached', usage: { used, limit, remaining: 0 }, plan: plan.id })
   }

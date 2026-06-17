@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { getCategory, localiseTools, localiseCategories } from '../data/tools'
+import { getCategory, localiseTools, localiseCategories, groupBySubcategory } from '../data/tools'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
@@ -50,10 +50,10 @@ const QUICK_ACTIONS = {
     { label: 'CSS export', desc: 'Drop-in custom properties', to: '/typescale' },
   ],
   imagery: [
-    { label: 'Compress for web', desc: 'Reduce JPG/PNG file size', to: '/imgconvert' },
-    { label: 'Convert to WebP', desc: 'Modern format, smaller files', to: '/imgconvert' },
+    { label: 'Compress for web', desc: 'Reduce JPG/PNG file size', to: '/file-converter' },
+    { label: 'Convert to WebP', desc: 'Modern format, smaller files', to: '/file-converter' },
     { label: 'Browse outline icons', desc: 'Iconify-powered search', to: '/icons' },
-    { label: 'Extract video frames', desc: 'Pull stills from MP4/MOV', to: '/video-frames' },
+    { label: 'Extract video frames', desc: 'Pull stills from MP4/MOV', to: '/file-converter' },
     { label: 'AI image prompts', desc: 'Generate prompts with DeepSeek', to: '/ai-prompt' },
   ],
   documentation: [
@@ -367,6 +367,32 @@ export default function CategoryDashboard({ categoryId }) {
 
   const [hero, ...rest] = tools
 
+  // Subcategory grouping for the flat (non-bento) grid — currently the
+  // Documentation hub. Empty for categories whose tools declare no subcategory,
+  // which keeps their grid flat and unchanged.
+  const subGroups = groupBySubcategory(tools)
+  const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 14 }
+  const renderToolCard = (tool) => {
+    const isPinned = pinned.includes(tool.id)
+    return (
+      <NavLink key={tool.id} to={tool.path} className="card-i" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', minHeight: 180, position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-s)', background: 'var(--accent-bg)', border: '1px solid rgba(167,139,250,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{cat.icon}</svg>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button type="button" className={`tool-mini-pin${isPinned ? ' pinned' : ''}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePinned(tool.id) }} aria-label={isPinned ? t('common.unpin', { name: tool.label }) : t('common.pin', { name: tool.label })} style={{ padding: 6 }}>
+              <PinIcon filled={isPinned} />
+            </button>
+          </div>
+        </div>
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, letterSpacing: '-.01em' }}>{tool.label}</h3>
+        <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.6, flex: 1 }}>{tool.description}</p>
+        <div style={{ marginTop: 16, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{t('common.openTool')} &rarr;</div>
+      </NavLink>
+    )
+  }
+
   return (
     <div className="sec">
       <div className="sec-h" style={{ marginBottom: 28 }}>
@@ -444,28 +470,22 @@ export default function CategoryDashboard({ categoryId }) {
             </div>
           )}
         </div>
+      ) : subGroups.length > 0 ? (
+        <div style={{ marginBottom: 40 }}>
+          {subGroups.map(group => (
+            <section key={group.subcategory || '_'} style={{ marginBottom: 28 }}>
+              {group.subcategory && (
+                <div className="sec-h-eyebrow" style={{ marginBottom: 14 }}>{group.subcategory}</div>
+              )}
+              <div style={gridStyle}>
+                {group.tools.map(renderToolCard)}
+              </div>
+            </section>
+          ))}
+        </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 14, marginBottom: 40 }}>
-          {tools.map(tool => {
-            const isPinned = pinned.includes(tool.id)
-            return (
-              <NavLink key={tool.id} to={tool.path} className="card-i" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', minHeight: 180, position: 'relative' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-s)', background: 'var(--accent-bg)', border: '1px solid rgba(167,139,250,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{cat.icon}</svg>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <button type="button" className={`tool-mini-pin${isPinned ? ' pinned' : ''}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePinned(tool.id) }} aria-label={isPinned ? t('common.unpin', { name: tool.label }) : t('common.pin', { name: tool.label })} style={{ padding: 6 }}>
-                      <PinIcon filled={isPinned} />
-                    </button>
-                  </div>
-                </div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, letterSpacing: '-.01em' }}>{tool.label}</h3>
-                <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.6, flex: 1 }}>{tool.description}</p>
-                <div style={{ marginTop: 16, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{t('common.openTool')} &rarr;</div>
-              </NavLink>
-            )
-          })}
+        <div style={{ ...gridStyle, marginBottom: 40 }}>
+          {tools.map(renderToolCard)}
         </div>
       )}
 

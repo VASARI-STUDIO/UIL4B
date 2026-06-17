@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// Firebase Storage security rules for UIL4B.
+//
+// community-media/{uid}/**  — media attached to community-prompt submissions.
+//   - Public read: approved prompts render these URLs in <img>/<video> tags,
+//     so anyone (including signed-out visitors) must be able to load them.
+//   - Write: only the authenticated owner may write under their own uid folder,
+//     and each object is capped at 25MB (client also compresses/limits uploads).
+//
+// Everything else is denied by default.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /community-media/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 25 * 1024 * 1024;
+    }
+  }
+}

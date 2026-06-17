@@ -4,5 +4,8 @@ Disallow: /admin
 Disallow: /settings
 Disallow: /checkout
 Disallow: /onboarding
+Disallow: /dashboard
+Disallow: /projects
+Disallow: /style-guide
 
 Sitemap: https://www.uil4b.com/sitemap.xml
