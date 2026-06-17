@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { useAuth } from './AuthContext'
+import { db } from '../utils/firebase'
 
 const ProjectContext = createContext()
 
@@ -67,12 +69,75 @@ function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 }
 
+// Cross-device sync constant: separate Firestore doc id from useFirestoreSync's 'data'.
+const SYNC_DOC = 'projects'
+const PUSH_DEBOUNCE_MS = 1500
+
+// Pure, NON-DESTRUCTIVE merge of two project lists.
+// - Union by `id`. When an id exists in both, keep the one with the newer
+//   `updatedAt` (Date.parse). If timestamps are equal/missing/unparseable,
+//   prefer the local copy.
+// - Never drops a project that exists in either list (deletes do not
+//   propagate in v1 — losing data is worse than a resurrected project).
+// - Always returns a new array.
+function mergeProjects(localList, remoteList) {
+  const local = Array.isArray(localList) ? localList : []
+  const remote = Array.isArray(remoteList) ? remoteList : []
+
+  const byId = new Map()
+  // Seed with local so local wins ties by default.
+  for (const p of local) {
+    if (p && p.id != null) byId.set(p.id, p)
+  }
+  for (const r of remote) {
+    if (!r || r.id == null) continue
+    const existing = byId.get(r.id)
+    if (!existing) {
+      byId.set(r.id, r)
+      continue
+    }
+    const localTime = Date.parse(existing.updatedAt)
+    const remoteTime = Date.parse(r.updatedAt)
+    // Take remote only when it is strictly newer and parseable.
+    if (!Number.isNaN(remoteTime) && (Number.isNaN(localTime) || remoteTime > localTime)) {
+      byId.set(r.id, r)
+    }
+    // else keep local (covers equal timestamps, missing/unparseable remote).
+  }
+
+  return Array.from(byId.values())
+}
+
+// Shallow structural compare keyed by id+updatedAt — enough to know whether a
+// merged list differs from the local list and therefore needs persisting.
+function projectListsEqual(a, b) {
+  if (a === b) return true
+  if (!Array.isArray(a) || !Array.isArray(b)) return false
+  if (a.length !== b.length) return false
+  const aById = new Map(a.map(p => [p && p.id, p]))
+  for (const p of b) {
+    const other = aById.get(p && p.id)
+    if (!other) return false
+    if ((other.updatedAt || '') !== (p.updatedAt || '')) return false
+  }
+  return true
+}
+
 export function ProjectProvider({ children }) {
   const { user } = useAuth()
   const userKey = user?.email?.toLowerCase() || null
 
+  const uid = user?.uid || null
+
   const [design, setDesign] = useState(loadCurrent)
   const [allProjects, setAllProjects] = useState(loadAllProjects)
+
+  // Cross-device sync plumbing (mirrors src/hooks/useFirestoreSync.js):
+  //  - suppressPushRef: set while/just after a pull so the resulting state
+  //    update does not bounce straight back as a redundant push.
+  //  - pushTimerRef: debounce handle for the push effect.
+  const suppressPushRef = useRef(false)
+  const pushTimerRef = useRef(null)
 
   // Auto-persist current design
   useEffect(() => {
@@ -224,6 +289,76 @@ export function ProjectProvider({ children }) {
       return next
     })
   }, [userKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Cross-device sync: PULL on login / uid change ───────────────────────────
+  // Non-destructive: merge remote projects into the local list. Wrapped in
+  // try/catch so an offline device or Firestore error never blocks the UI —
+  // localStorage stays the working source of truth.
+  useEffect(() => {
+    if (!uid || !userKey) return
+    let cancelled = false
+    // Suppress pushes while the pull is in flight and briefly after, so the
+    // merged state update doesn't immediately echo back to Firestore.
+    suppressPushRef.current = true
+    ;(async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid, 'sync', SYNC_DOC))
+        if (cancelled) return
+        if (snap.exists()) {
+          const remote = snap.data()
+          if (remote && Array.isArray(remote.list)) {
+            setAllProjects(prev => {
+              const localList = prev[userKey] || []
+              const merged = mergeProjects(localList, remote.list)
+              if (projectListsEqual(localList, merged)) return prev
+              const next = { ...prev, [userKey]: merged }
+              saveAllProjects(next)
+              return next
+            })
+          }
+        }
+      } catch {
+        // Offline / permission / transient — ignore, keep local data.
+      } finally {
+        if (!cancelled) {
+          // Release the suppression shortly after the merge settles so the next
+          // genuine local edit can push.
+          setTimeout(() => { suppressPushRef.current = false }, 1200)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+      suppressPushRef.current = false
+    }
+  }, [uid, userKey])
+
+  // ── Cross-device sync: PUSH (debounced) on local project changes ────────────
+  // Watches the current user's list and debounces a non-blocking setDoc. The
+  // suppress ref prevents the echo right after a pull. Any failure is ignored.
+  useEffect(() => {
+    if (!uid) return
+    if (suppressPushRef.current) return
+    if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
+    pushTimerRef.current = setTimeout(() => {
+      ;(async () => {
+        try {
+          await setDoc(
+            doc(db, 'users', uid, 'sync', SYNC_DOC),
+            // JSON round-trip strips undefined fields — Firestore rejects
+            // documents containing undefined, which would silently fail sync.
+            { list: JSON.parse(JSON.stringify(projects)), _updatedAt: Date.now() },
+            { merge: true }
+          )
+        } catch {
+          // Offline / transient — local data is unaffected.
+        }
+      })()
+    }, PUSH_DEBOUNCE_MS)
+    return () => {
+      if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
+    }
+  }, [uid, projects])
 
   const value = {
     design,

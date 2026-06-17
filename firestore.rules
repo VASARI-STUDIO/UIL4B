@@ -29,5 +29,16 @@ service cloud.firestore {
       allow update, delete: if request.auth != null
         && request.auth.token.admin == true;
     }
+
+    // Aggregate usage analytics — per-day counter docs ({YYYY-MM-DD}).
+    // Any signed-in user may create/update (increment) the counters so the
+    // admin dashboard can reflect ALL users' usage. Read is gated to the owner
+    // email (the Firebase `admin` custom claim is never set in this project).
+    // Note: this cannot fully prevent a signed-in user inflating counters —
+    // accepted limitation for an internal, non-billing dashboard.
+    match /analytics-daily/{day} {
+      allow read: if request.auth != null && request.auth.token.email == 'dylanjacob1100@gmail.com';
+      allow create, update: if request.auth != null;
+    }
   }
 }
