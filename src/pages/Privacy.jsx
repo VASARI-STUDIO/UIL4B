@@ -53,7 +53,7 @@ export default function Privacy() {
         {/* Storage disclosure table — full transparency */}
         <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 8 }}>What we store on your device</h3>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 16 }}>
-          UIL4B writes the following keys to your browser's localStorage. Nothing is sent to a server. You can inspect, export, or clear all of this from <a href="/settings">Settings → Your data</a>.
+          UIL4B writes the following keys to your browser's localStorage. With one narrow exception described below, this data stays on your device. You can inspect, export, or clear all of this from <a href="/settings">Settings → Your data</a>.
         </p>
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 24 }}>
           <table className="storage-table">
@@ -76,7 +76,12 @@ export default function Privacy() {
           </table>
         </div>
         <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 24, fontStyle: 'italic' }}>
-          <strong style={{ color: 'var(--t1)' }}>Note:</strong> "Account-bound" means the data is keyed to an account but never leaves your device. We have no servers and no copy of it.
+          <strong style={{ color: 'var(--t1)' }}>Note:</strong> "Account-bound" means the data is keyed to an account but never leaves your device. We keep no copy of it.
+        </p>
+
+        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 8 }}>Aggregate usage counts</h3>
+        <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 16 }}>
+          When you are <strong>signed in</strong>, UIL4B records anonymous, aggregate usage counts in our Firestore database (Sydney region) to understand which features are useful and where to invest. Specifically, we increment per-day tallies of which page paths are visited (for example <span className="storage-key">/color</span>) and how many times tools are used (for example a font copy or a colour pick). These are running totals shared across all users — they contain <strong>no message content, no prompt text, no colours or fonts you chose, and nothing that identifies you</strong>. We cannot tie a count back to an individual account. Signed-out visitors send nothing; their usage is tracked only in localStorage on their own device.
         </p>
 
         <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 12 }}>{t('privacy.s4Title')}</h3>
