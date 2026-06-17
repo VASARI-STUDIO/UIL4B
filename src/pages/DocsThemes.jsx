@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import DocsTOC from '../components/DocsTOC'
 
-const LAST_UPDATED = '2026-06-15'
+const LAST_UPDATED = '2026-06-17'
 
 const TOC_ITEMS = [
   { id: 'theme-01', number: '01', title: 'Neo-Brutalism' },
@@ -430,7 +430,7 @@ letter-spacing: -0.02em;`} />
         <div style={{ marginBottom: 16 }}>
           <BrandLink name="Amie" url="https://amie.so" />
           <BrandLink name="Craft" url="https://craft.do" />
-          <BrandLink name="Cron" url="https://cron.com" />
+          <BrandLink name="Notion Calendar" url="https://www.notion.so/product/calendar" />
         </div>
 
         <CSSSnippet code={`background: #E8D5FF;
