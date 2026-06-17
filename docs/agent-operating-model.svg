@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 1020" font-family="'Segoe UI',Roboto,system-ui,sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6b7a90"/>
+    </marker>
+    <marker id="arrB" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#3B82F6"/>
+    </marker>
+  </defs>
+
+  <rect width="1280" height="1020" fill="#0b0f17"/>
+
+  <!-- Title -->
+  <text x="40" y="46" fill="#3B82F6" font-size="26" font-weight="700">UIL4B — AI Agent Operating Model &amp; Work Flow</text>
+  <text x="40" y="72" fill="#93a1b5" font-size="14">How the Product Manager (main Claude thread) orchestrates specialist sub-agents · hub-and-spoke · parallel on disjoint scopes · gated</text>
+
+  <!-- ============ SECTION 1: ROLES ============ -->
+  <text x="40" y="118" fill="#e8edf5" font-size="16" font-weight="700">1 · ROLES  —  company structure mapped to how it is actually instantiated</text>
+
+  <!-- Founder -->
+  <rect x="540" y="135" width="200" height="42" rx="9" fill="#1a2233" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="640" y="161" fill="#e8edf5" font-size="15" font-weight="700" text-anchor="middle">FOUNDER  (you)</text>
+  <line x1="640" y1="177" x2="640" y2="198" stroke="#6b7a90" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- PM -->
+  <rect x="430" y="200" width="420" height="56" rx="10" fill="#13233f" stroke="#3B82F6" stroke-width="2"/>
+  <text x="640" y="223" fill="#cfe0ff" font-size="15" font-weight="700" text-anchor="middle">PRODUCT MANAGER / ORCHESTRATOR — main Claude thread</text>
+  <text x="640" y="243" fill="#93a1b5" font-size="12" text-anchor="middle">also performs CPO · Project Coordinator · QA gate · Design-review inline</text>
+  <line x1="640" y1="256" x2="640" y2="278" stroke="#6b7a90" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Role boxes row -->
+  <g font-size="12" text-anchor="middle">
+    <rect x="60"  y="280" width="170" height="46" rx="8" fill="#14211a" stroke="#34d399" stroke-width="1.3"/>
+    <text x="145" y="300" fill="#9ff0c8" font-weight="700">Research / Audit</text>
+    <text x="145" y="317" fill="#7e8aa0">spawned · read-only</text>
+
+    <rect x="245" y="280" width="170" height="46" rx="8" fill="#211a14" stroke="#f59e0b" stroke-width="1.3"/>
+    <text x="330" y="300" fill="#ffd79a" font-weight="700">Engineering</text>
+    <text x="330" y="317" fill="#7e8aa0">spawned · scoped writes</text>
+
+    <rect x="430" y="280" width="170" height="46" rx="8" fill="#1a1c2b" stroke="#8b8fd6" stroke-width="1.3"/>
+    <text x="515" y="300" fill="#c7c9f5" font-weight="700">Design / SEO</text>
+    <text x="515" y="317" fill="#7e8aa0">inline + spawned</text>
+
+    <rect x="615" y="280" width="170" height="46" rx="8" fill="#231a23" stroke="#f472b6" stroke-width="1.3"/>
+    <text x="700" y="300" fill="#ffc2e0" font-weight="700">QA / Verify</text>
+    <text x="700" y="317" fill="#7e8aa0">PM inline (build+lint)</text>
+
+    <rect x="800" y="280" width="170" height="46" rx="8" fill="#1a2230" stroke="#60a5fa" stroke-width="1.3"/>
+    <text x="885" y="300" fill="#bcd6ff" font-weight="700">Analytics</text>
+    <text x="885" y="317" fill="#7e8aa0">spawned · scoped</text>
+
+    <rect x="985" y="280" width="235" height="46" rx="8" fill="#1c1f27" stroke="#6b7a90" stroke-width="1.3"/>
+    <text x="1102" y="300" fill="#c8d2e0" font-weight="700">Coordinator / Plan</text>
+    <text x="1102" y="317" fill="#7e8aa0">PM inline · board + tracker + audit</text>
+  </g>
+
+  <!-- ============ SECTION 2: WORK FLOW ============ -->
+  <line x1="40" y1="356" x2="1240" y2="356" stroke="#1e2735" stroke-width="1"/>
+  <text x="40" y="384" fill="#e8edf5" font-size="16" font-weight="700">2 · WORK FLOW  —  the actual pipeline a request travels through</text>
+
+  <!-- spine helper coords: center x = 470 -->
+  <!-- Founder request -->
+  <rect x="330" y="402" width="280" height="40" rx="9" fill="#1a2233" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="470" y="427" fill="#e8edf5" font-size="14" font-weight="700" text-anchor="middle">Founder request</text>
+  <line x1="470" y1="442" x2="470" y2="462" stroke="#3B82F6" stroke-width="1.6" marker-end="url(#arrB)"/>
+
+  <!-- PM analyse -->
+  <rect x="290" y="464" width="360" height="44" rx="9" fill="#13233f" stroke="#3B82F6" stroke-width="1.6"/>
+  <text x="470" y="486" fill="#cfe0ff" font-size="13.5" font-weight="700" text-anchor="middle">PM · analyse → brief → tasks → plan</text>
+  <text x="470" y="502" fill="#93a1b5" font-size="11.5" text-anchor="middle">enforce gates before any work</text>
+  <line x1="470" y1="508" x2="470" y2="530" stroke="#3B82F6" stroke-width="1.6" marker-end="url(#arrB)"/>
+  <text x="660" y="524" fill="#f4a3c4" font-size="11.5" font-style="italic">RULE 1 · research before design/dev</text>
+
+  <!-- FAN-OUT 1: read-only -->
+  <rect x="150" y="532" width="640" height="84" rx="10" fill="#0f1a14" stroke="#34d399" stroke-width="1.4"/>
+  <text x="470" y="552" fill="#9ff0c8" font-size="13" font-weight="700" text-anchor="middle">▼ FAN-OUT · parallel READ-ONLY research / audit agents (one per disjoint slice)</text>
+  <g font-size="10.5" text-anchor="middle" fill="#cfe9da">
+    <rect x="168" y="562" width="92" height="40" rx="6" fill="#14271d" stroke="#2f7a5a"/><text x="214" y="586">Color Studio</text>
+    <rect x="270" y="562" width="92" height="40" rx="6" fill="#14271d" stroke="#2f7a5a"/><text x="316" y="586">AI tools</text>
+    <rect x="372" y="562" width="92" height="40" rx="6" fill="#14271d" stroke="#2f7a5a"/><text x="418" y="586">Nav/Admin</text>
+    <rect x="474" y="562" width="92" height="40" rx="6" fill="#14271d" stroke="#2f7a5a"/><text x="520" y="586">Pages/Auth</text>
+    <rect x="576" y="562" width="92" height="40" rx="6" fill="#14271d" stroke="#2f7a5a"/><text x="622" y="586">Converters</text>
+    <rect x="678" y="562" width="94" height="40" rx="6" fill="#14271d" stroke="#2f7a5a"/><text x="725" y="586">Docs/Infra</text>
+  </g>
+  <text x="470" y="612" fill="#7e8aa0" font-size="11" text-anchor="middle">return findings + file:line evidence · NO edits</text>
+  <line x1="470" y1="616" x2="470" y2="638" stroke="#3B82F6" stroke-width="1.6" marker-end="url(#arrB)"/>
+
+  <!-- PM synthesise -->
+  <rect x="290" y="640" width="360" height="44" rx="9" fill="#13233f" stroke="#3B82F6" stroke-width="1.6"/>
+  <text x="470" y="662" fill="#cfe0ff" font-size="13.5" font-weight="700" text-anchor="middle">PM · synthesise → Audit + Roadmap</text>
+  <text x="470" y="678" fill="#93a1b5" font-size="11.5" text-anchor="middle">verify claims · score pages · pick scope</text>
+  <line x1="470" y1="684" x2="470" y2="706" stroke="#3B82F6" stroke-width="1.6" marker-end="url(#arrB)"/>
+  <text x="660" y="700" fill="#f4a3c4" font-size="11.5" font-style="italic">check Human Validation Zones</text>
+
+  <!-- FAN-OUT 2: write -->
+  <rect x="150" y="708" width="640" height="84" rx="10" fill="#1c160d" stroke="#f59e0b" stroke-width="1.4"/>
+  <text x="470" y="728" fill="#ffd79a" font-size="13" font-weight="700" text-anchor="middle">▼ FAN-OUT · parallel WRITE agents on DISJOINT file sets (no build · no commit)</text>
+  <g font-size="10.5" text-anchor="middle" fill="#f3dcb4">
+    <rect x="168" y="738" width="92" height="40" rx="6" fill="#2a2010" stroke="#8a6a22"/><text x="214" y="762">P0 fixes</text>
+    <rect x="270" y="738" width="92" height="40" rx="6" fill="#2a2010" stroke="#8a6a22"/><text x="316" y="762">empty states</text>
+    <rect x="372" y="738" width="92" height="40" rx="6" fill="#2a2010" stroke="#8a6a22"/><text x="418" y="762">a11y</text>
+    <rect x="474" y="738" width="92" height="40" rx="6" fill="#2a2010" stroke="#8a6a22"/><text x="520" y="762">backend</text>
+    <rect x="576" y="738" width="92" height="40" rx="6" fill="#2a2010" stroke="#8a6a22"/><text x="622" y="762">File Conv</text>
+    <rect x="678" y="738" width="94" height="40" rx="6" fill="#2a2010" stroke="#8a6a22"/><text x="725" y="762">docs/plan</text>
+  </g>
+  <text x="470" y="788" fill="#7e8aa0" font-size="11" text-anchor="middle">return diffs + reports</text>
+  <line x1="470" y1="792" x2="470" y2="814" stroke="#3B82F6" stroke-width="1.6" marker-end="url(#arrB)"/>
+
+  <!-- PM verify -->
+  <rect x="270" y="816" width="400" height="44" rx="9" fill="#231a23" stroke="#f472b6" stroke-width="1.6"/>
+  <text x="470" y="838" fill="#ffc2e0" font-size="13.5" font-weight="700" text-anchor="middle">PM · review diffs → BUILD (npx vite build) + lint</text>
+  <text x="470" y="854" fill="#c98ba8" font-size="11.5" text-anchor="middle">VERIFY-FIRST GATE — must pass before commit</text>
+  <line x1="470" y1="860" x2="470" y2="882" stroke="#3B82F6" stroke-width="1.6" marker-end="url(#arrB)"/>
+
+  <!-- commit/merge -->
+  <rect x="300" y="884" width="340" height="40" rx="9" fill="#13233f" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="470" y="909" fill="#cfe0ff" font-size="13" font-weight="700" text-anchor="middle">commit → push → PR → squash-merge to main</text>
+  <line x1="470" y1="924" x2="470" y2="946" stroke="#3B82F6" stroke-width="1.6" marker-end="url(#arrB)"/>
+
+  <!-- report -->
+  <rect x="300" y="948" width="340" height="44" rx="9" fill="#1a2233" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="470" y="970" fill="#e8edf5" font-size="13" font-weight="700" text-anchor="middle">PM · report + decision list → Founder</text>
+  <text x="470" y="986" fill="#93a1b5" font-size="11" text-anchor="middle">loops back for the next request</text>
+
+  <!-- ===== Right-side principles panel ===== -->
+  <rect x="830" y="402" width="410" height="590" rx="12" fill="#0e141f" stroke="#1e2735" stroke-width="1.2"/>
+  <text x="852" y="432" fill="#3B82F6" font-size="15" font-weight="700">Operating principles</text>
+
+  <g font-size="12.5">
+    <text x="852" y="464" fill="#9ff0c8" font-weight="700">Hub-and-spoke</text>
+    <text x="852" y="483" fill="#b9c4d4">Sub-agents never talk to each other.</text>
+    <text x="852" y="501" fill="#b9c4d4">The PM is the only integrator — work</text>
+    <text x="852" y="519" fill="#b9c4d4">fans out, then fans back in for review.</text>
+
+    <text x="852" y="551" fill="#ffd79a" font-weight="700">Disjoint scopes</text>
+    <text x="852" y="570" fill="#b9c4d4">Parallel agents only touch separate</text>
+    <text x="852" y="588" fill="#b9c4d4">files → no merge conflicts. The PM</text>
+    <text x="852" y="606" fill="#b9c4d4">assigns non-overlapping file sets.</text>
+
+    <text x="852" y="638" fill="#ffc2e0" font-weight="700">Verify-first gate</text>
+    <text x="852" y="657" fill="#b9c4d4">Nothing is committed until the build</text>
+    <text x="852" y="675" fill="#b9c4d4">passes; agents never build/commit —</text>
+    <text x="852" y="693" fill="#b9c4d4">only the PM does, centrally.</text>
+
+    <text x="852" y="725" fill="#f4a3c4" font-weight="700">Human Validation Zones</text>
+    <text x="852" y="744" fill="#b9c4d4">Auth core + Stripe + firebase.js =</text>
+    <text x="852" y="762" fill="#b9c4d4">touch only with explicit approval;</text>
+    <text x="852" y="780" fill="#b9c4d4">changes kept additive + reversible.</text>
+
+    <text x="852" y="812" fill="#bcd6ff" font-weight="700">Scope discipline</text>
+    <text x="852" y="831" fill="#b9c4d4">Autonomous only within approved</text>
+    <text x="852" y="849" fill="#b9c4d4">scope; decision/billing items are</text>
+    <text x="852" y="867" fill="#b9c4d4">parked for the Founder, not guessed.</text>
+
+    <text x="852" y="899" fill="#9ff0c8" font-weight="700">Quality &gt; quantity</text>
+    <text x="852" y="918" fill="#b9c4d4">No micro-busywork; flag risk rather</text>
+    <text x="852" y="936" fill="#b9c4d4">than ship something half-verified.</text>
+
+    <text x="852" y="968" fill="#6b7a90" font-size="11" font-style="italic">This session: 6 audit agents → 5 PRs</text>
+    <text x="852" y="984" fill="#6b7a90" font-size="11" font-style="italic">merged + 3 backend features, all gated.</text>
+  </g>
+</svg>
