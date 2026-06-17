@@ -50,10 +50,10 @@ const QUICK_ACTIONS = {
     { label: 'CSS export', desc: 'Drop-in custom properties', to: '/typescale' },
   ],
   imagery: [
-    { label: 'Compress for web', desc: 'Reduce JPG/PNG file size', to: '/imgconvert' },
-    { label: 'Convert to WebP', desc: 'Modern format, smaller files', to: '/imgconvert' },
+    { label: 'Compress for web', desc: 'Reduce JPG/PNG file size', to: '/file-converter' },
+    { label: 'Convert to WebP', desc: 'Modern format, smaller files', to: '/file-converter' },
     { label: 'Browse outline icons', desc: 'Iconify-powered search', to: '/icons' },
-    { label: 'Extract video frames', desc: 'Pull stills from MP4/MOV', to: '/video-frames' },
+    { label: 'Extract video frames', desc: 'Pull stills from MP4/MOV', to: '/file-converter' },
     { label: 'AI image prompts', desc: 'Generate prompts with DeepSeek', to: '/ai-prompt' },
   ],
   documentation: [

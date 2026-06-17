@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
+import { takePendingImages } from '../utils/imageHandoff'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const ALPHA_BADGE_STYLE = {
@@ -74,6 +75,11 @@ function triggerDownload(blobOrUrl, filename) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function FileConverter({ toast }) {
+  // Pick up any files handed off from the dashboard's quick-upload tile. We grab
+  // them once here (takePendingImages clears the buffer) so we can both default
+  // the active tab to Image and seed the image converter with the files.
+  const [pendingImages] = useState(() => takePendingImages())
+  // Image is the default tab; pending hand-off images therefore land on it.
   const [mode, setMode] = useState('image')
 
   return (
@@ -107,7 +113,7 @@ export default function FileConverter({ toast }) {
         ))}
       </div>
 
-      {mode === 'image' && <ImageConvert toast={toast} />}
+      {mode === 'image' && <ImageConvert toast={toast} initialFiles={pendingImages} />}
       {mode === 'gif' && <VideoToGif toast={toast} />}
       {mode === 'frames' && <VideoFrames toast={toast} />}
       {mode === '3d' && <ThreeDComingSoon />}
@@ -150,7 +156,7 @@ function DropZone({ accept, multiple, onFiles, hint, sub }) {
 }
 
 // ── Mode 1: Image format conversion ──────────────────────────────────────────
-function ImageConvert({ toast }) {
+function ImageConvert({ toast, initialFiles }) {
   const [items, setItems] = useState([]) // { id, name, srcUrl, file, out:{blob,url,bytes,w,h} }
   const [format, setFormat] = useState('image/webp')
   const [quality, setQuality] = useState(90)
@@ -183,6 +189,12 @@ function ImageConvert({ toast }) {
     }))
     setItems(prev => [...prev, ...next])
   }, [toast])
+
+  // Seed from the dashboard quick-upload hand-off exactly once on mount.
+  useEffect(() => {
+    if (initialFiles?.length) addFiles(initialFiles)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const removeItem = useCallback((id) => {
     setItems(prev => prev.filter(it => {
