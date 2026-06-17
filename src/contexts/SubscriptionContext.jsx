@@ -95,13 +95,15 @@ export function SubscriptionProvider({ children }) {
     return data
   }, [])
 
-  const openPortal = useCallback(async () => {
+  // opts.flow === 'cancel' deep-links into Stripe's portal cancellation flow,
+  // where Stripe presents the configured retention coupon before cancelling.
+  const openPortal = useCallback(async (opts = {}) => {
     const token = await firebaseAuth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
     const res = await fetch('/api/create-portal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ flow: opts.flow || null }),
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.error || `Portal failed (server returned ${res.status})`)

@@ -1,3 +1,6 @@
+import { db, auth } from './firebase'
+import { doc, setDoc, collection, getDocs, query, orderBy, limit, increment } from 'firebase/firestore'
+
 const ANALYTICS_KEY = 'vs-analytics'
 const SESSIONS_KEY = 'vs-sessions'
 const FEEDBACK_KEY = 'vs-feedback'
@@ -8,6 +11,123 @@ function load(key, fallback = []) {
 
 function save(key, data) {
   try { localStorage.setItem(key, JSON.stringify(data)) } catch { /* quota */ }
+}
+
+// ── Server-side aggregate analytics (Firestore) ─────────────
+// ADDITIVE: clients increment per-day counters in `analytics-daily/{YYYY-MM-DD}`
+// so the admin dashboard can reflect ALL signed-in users' usage, not just the
+// admin's own browser. The localStorage tracking above remains the fallback and
+// is never removed. Writes are auth-only (Firestore rules require auth) and are
+// fully wrapped in try/catch so they never break the UI when offline or blocked.
+
+const AGGREGATE_COLLECTION = 'analytics-daily'
+
+// YYYY-MM-DD in the visitor's local time. Used as the per-day document id.
+function todayStr() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+// Turn an arbitrary path / id into a safe Firestore field-name fragment.
+// Firestore field paths can't contain '/', '.', '~', '*', '[', or ']', so we
+// collapse them to '_'. We also strip query strings / hashes (dynamic bits).
+function sanitizeKey(raw) {
+  if (!raw) return 'unknown'
+  let s = String(raw).split('?')[0].split('#')[0]
+  s = s.replace(/[/.~*[\]]+/g, '_') // illegal field-path chars → underscore
+  s = s.replace(/_{2,}/g, '_').replace(/^_+|_+$/g, '') // tidy duplicates/edges
+  return s || 'root'
+}
+
+// In-memory accumulator of pending increments, flushed on a debounce. Keyed by
+// Firestore field name → integer count. We coalesce many rapid events into one
+// write to stay well within Firestore's per-document write limits.
+let pendingIncrements = {}
+let flushTimer = null
+let unloadHookAttached = false
+
+function attachUnloadFlush() {
+  if (unloadHookAttached || typeof window === 'undefined') return
+  unloadHookAttached = true
+  // Best-effort final flush when the tab closes / navigates away.
+  window.addEventListener('beforeunload', () => { flushAggregate() })
+}
+
+function bumpAggregate(field, n = 1) {
+  try {
+    // Only attempt server writes for signed-in users — rules are auth-only.
+    if (!auth?.currentUser) return
+    const key = sanitizeKey(field)
+    pendingIncrements[key] = (pendingIncrements[key] || 0) + n
+    attachUnloadFlush()
+    if (flushTimer) return
+    flushTimer = setTimeout(() => { flushTimer = null; flushAggregate() }, 5000)
+  } catch { /* never let analytics break the app */ }
+}
+
+function flushAggregate() {
+  try {
+    if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
+    if (!auth?.currentUser) { pendingIncrements = {}; return }
+    const fields = pendingIncrements
+    pendingIncrements = {}
+    const keys = Object.keys(fields)
+    if (!keys.length) return
+    const day = todayStr()
+    const payload = { day }
+    for (const k of keys) payload[k] = increment(fields[k])
+    // merge:true so concurrent writers from different users all accumulate.
+    // Fire-and-forget; swallow rejection so an offline/denied write is silent.
+    setDoc(doc(db, AGGREGATE_COLLECTION, day), payload, { merge: true }).catch(() => {})
+  } catch { /* offline / rules / SDK error — fall back to localStorage only */ }
+}
+
+// Record a page view into the daily aggregate doc (total + per-path counter).
+function recordAggregateView(path) {
+  bumpAggregate('views', 1)
+  bumpAggregate(`view__${sanitizeKey(path)}`, 1)
+}
+
+// Record a tool action into the daily aggregate doc (per-tool counter).
+function recordAggregateTool(id) {
+  bumpAggregate(`tool__${sanitizeKey(id)}`, 1)
+}
+
+// Read the last `days` daily docs and sum them into a dashboard-friendly shape.
+// Returns a safe empty shape on any failure (offline, rules, no docs yet).
+export async function getAggregateAnalytics(days = 30) {
+  const empty = { totalViews: 0, byPath: [], byTool: [], days: [] }
+  try {
+    const q = query(collection(db, AGGREGATE_COLLECTION), orderBy('day', 'desc'), limit(days))
+    const snap = await getDocs(q)
+    let totalViews = 0
+    const pathCounts = {}
+    const toolCounts = {}
+    const dayViews = []
+    snap.docs.forEach(docSnap => {
+      const data = docSnap.data() || {}
+      const dayId = data.day || docSnap.id
+      let viewsForDay = 0
+      for (const [field, value] of Object.entries(data)) {
+        if (field === 'day') continue
+        const count = typeof value === 'number' ? value : 0
+        if (field === 'views') { totalViews += count; viewsForDay = count }
+        else if (field.startsWith('view__')) pathCounts[field.slice(6)] = (pathCounts[field.slice(6)] || 0) + count
+        else if (field.startsWith('tool__')) toolCounts[field.slice(6)] = (toolCounts[field.slice(6)] || 0) + count
+      }
+      dayViews.push({ day: dayId, views: viewsForDay })
+    })
+    const byPath = Object.entries(pathCounts).sort((a, b) => b[1] - a[1])
+    const byTool = Object.entries(toolCounts).sort((a, b) => b[1] - a[1])
+    // docs came back newest-first; present the timeline oldest→newest.
+    const daysAsc = dayViews.reverse()
+    return { totalViews, byPath, byTool, days: daysAsc }
+  } catch {
+    return empty
+  }
 }
 
 // Page view tracking
@@ -21,6 +141,8 @@ export function trackPageView(path) {
   // Keep last 2000 events to avoid quota issues
   if (views.length > 2000) views.splice(0, views.length - 2000)
   save(ANALYTICS_KEY, views)
+  // Additive: also feed the cross-user Firestore aggregate (auth-only, safe).
+  recordAggregateView(path)
 }
 
 // Session tracking (entry page, exit page, duration)
@@ -121,6 +243,8 @@ export function trackFontCopy(fontFamily) {
   const data = loadDesignAnalytics()
   data.fontCopies[fontFamily] = (data.fontCopies[fontFamily] || 0) + 1
   saveDesignAnalytics(data)
+  // Additive: also feed the cross-user Firestore aggregate as a tool action.
+  recordAggregateTool('font-copy')
 }
 
 export function trackColourPick(hex) {
@@ -130,6 +254,8 @@ export function trackColourPick(hex) {
   const data = loadDesignAnalytics()
   data.colourPicks[normalised] = (data.colourPicks[normalised] || 0) + 1
   saveDesignAnalytics(data)
+  // Additive: also feed the cross-user Firestore aggregate as a tool action.
+  recordAggregateTool('colour-pick')
 }
 
 export function trackToolAction(toolId) {
@@ -137,6 +263,8 @@ export function trackToolAction(toolId) {
   const data = loadDesignAnalytics()
   data.toolUsage[toolId] = (data.toolUsage[toolId] || 0) + 1
   saveDesignAnalytics(data)
+  // Additive: also feed the cross-user Firestore aggregate.
+  recordAggregateTool(toolId)
 }
 
 export function getDesignAnalytics() {

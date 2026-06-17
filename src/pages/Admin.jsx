@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics } from '../utils/analytics'
+import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics, getAggregateAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { useAuth } from '../contexts/AuthContext'
@@ -126,10 +126,12 @@ function DonutChart({ segments, size = 120 }) {
   const inner = r * 0.6
   const cx = r
   const cy = r
-  let cumAngle = -Math.PI / 2
+  const angles = segments.map(seg => (seg.value / total) * Math.PI * 2)
+  const startAngles = angles.map((_, i) => -Math.PI / 2 + angles.slice(0, i).reduce((s, a) => s + a, 0))
 
   const paths = segments.map((seg, i) => {
-    const angle = (seg.value / total) * Math.PI * 2
+    const angle = angles[i]
+    const cumAngle = startAngles[i]
     const x1 = cx + r * Math.cos(cumAngle)
     const y1 = cy + r * Math.sin(cumAngle)
     const x2 = cx + r * Math.cos(cumAngle + angle)
@@ -139,7 +141,6 @@ function DonutChart({ segments, size = 120 }) {
     const ix2 = cx + inner * Math.cos(cumAngle)
     const iy2 = cy + inner * Math.sin(cumAngle)
     const large = angle > Math.PI ? 1 : 0
-    cumAngle += angle
     const d = `M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix1},${iy1} A${inner},${inner} 0 ${large} 0 ${ix2},${iy2} Z`
     return <path key={i} d={d} fill={DONUT_COLORS[i % DONUT_COLORS.length]} opacity=".85"><title>{seg.label}: {seg.value}</title></path>
   })
@@ -689,12 +690,22 @@ export default function Admin({ toast }) {
   const [designData, setDesignData] = useState(null)
   const [rawViews, setRawViews] = useState([])
   const [rawSessions, setRawSessions] = useState([])
+  // Cross-user aggregate (server-read). null = loading, object = loaded.
+  const [aggregate, setAggregate] = useState(null)
+  const [aggregateLoaded, setAggregateLoaded] = useState(false)
 
   const refresh = useCallback(async () => {
     setData(getAnalyticsSummary())
     setDesignData(getDesignAnalytics())
     setRawViews(getPageViews())
     setRawSessions(getSessions())
+    // Cross-user aggregate from Firestore (safe-empty on failure). Non-blocking
+    // relative to the localStorage data above, which renders immediately.
+    setAggregateLoaded(false)
+    getAggregateAnalytics(30)
+      .then(agg => setAggregate(agg))
+      .catch(() => setAggregate({ totalViews: 0, byPath: [], byTool: [], days: [] }))
+      .finally(() => setAggregateLoaded(true))
     const localFeedback = getFeedback()
     let merged = [...localFeedback]
     try {
@@ -956,8 +967,12 @@ export default function Admin({ toast }) {
       {/* ═══════ OVERVIEW TAB ═══════ */}
       {tab === 'overview' && (
         <>
-          {/* Stat cards */}
+          {/* Stat cards — derived from THIS browser's localStorage only */}
           <div className="adm-section">
+            <div className="adm-section-h">
+              <div className="adm-section-title"><span className="adm-section-bar" />This device · local analytics</div>
+              <span style={{ fontSize: 11, color: 'var(--t3)' }}>Tracked in this browser&apos;s localStorage</span>
+            </div>
             <div className="adm-stats">
               <div className="adm-stat">
                 <div className="adm-stat-value">{fmtNum(filteredViews.length)}</div>
@@ -995,7 +1010,99 @@ export default function Admin({ toast }) {
             </div>
           </div>
 
-          {/* Charts row */}
+          {/* All users · aggregate — read from Firestore (cross-device) */}
+          <div className="adm-section">
+            <div className="adm-section-h">
+              <div className="adm-section-title"><span className="adm-section-bar" />All users · aggregate</div>
+              <span style={{ fontSize: 11, color: 'var(--t3)' }}>Server totals · last 30 days · all signed-in users</span>
+            </div>
+            {!aggregateLoaded ? (
+              <div className="adm-card"><div className="adm-empty">Loading aggregate analytics…</div></div>
+            ) : !aggregate || (aggregate.totalViews === 0 && aggregate.byPath.length === 0 && aggregate.byTool.length === 0) ? (
+              <div className="adm-card">
+                <div className="adm-card-body">
+                  <div className="adm-empty">No aggregate data yet.</div>
+                  <p style={{ fontSize: 11, color: 'var(--t3)', textAlign: 'center', margin: '6px 0 0' }}>
+                    Counts appear once signed-in users browse. If this stays empty, the <span className="mono">analytics-daily</span> Firestore rules may still need publishing.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="adm-stats" style={{ marginBottom: 24 }}>
+                  <div className="adm-stat">
+                    <div className="adm-stat-value">{fmtNum(aggregate.totalViews)}</div>
+                    <div className="adm-stat-label">Total Page Views</div>
+                    <div className="adm-stat-sub">All signed-in users</div>
+                  </div>
+                  <div className="adm-stat">
+                    <div className="adm-stat-value">{fmtNum(aggregate.byPath.length)}</div>
+                    <div className="adm-stat-label">Distinct Pages</div>
+                    <div className="adm-stat-sub">With recorded views</div>
+                  </div>
+                  <div className="adm-stat">
+                    <div className="adm-stat-value">{fmtNum(aggregate.byTool.reduce((s, t) => s + t[1], 0))}</div>
+                    <div className="adm-stat-label">Tool Actions</div>
+                    <div className="adm-stat-sub">{aggregate.byTool.length} tool types</div>
+                  </div>
+                  <div className="adm-stat">
+                    <div className="adm-stat-value">{fmtNum(aggregate.days.length)}</div>
+                    <div className="adm-stat-label">Active Days</div>
+                    <div className="adm-stat-sub">In last 30 days</div>
+                  </div>
+                </div>
+                <div className="adm-grid-2" style={{ marginBottom: 0 }}>
+                  <div className="adm-card">
+                    <div className="adm-card-header">
+                      <span className="adm-card-title">Top Pages (all users)</span>
+                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>{aggregate.byPath.length} pages</span>
+                    </div>
+                    <div className="adm-card-body">
+                      {aggregate.byPath.length > 0 ? (
+                        <div className="adm-bar">
+                          {(() => {
+                            const max = aggregate.byPath[0]?.[1] || 1
+                            return aggregate.byPath.slice(0, 8).map(([path, count]) => (
+                              <div key={path} className="adm-bar-row">
+                                <span className="adm-bar-label">{path === 'root' ? '/' : path.replace(/_/g, '/')}</span>
+                                <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                                <span className="adm-bar-value">{count}</span>
+                              </div>
+                            ))
+                          })()}
+                        </div>
+                      ) : <div className="adm-empty">No page data yet</div>}
+                    </div>
+                  </div>
+
+                  <div className="adm-card">
+                    <div className="adm-card-header">
+                      <span className="adm-card-title">Top Tools (all users)</span>
+                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>{aggregate.byTool.length} tools</span>
+                    </div>
+                    <div className="adm-card-body">
+                      {aggregate.byTool.length > 0 ? (
+                        <div className="adm-bar">
+                          {(() => {
+                            const max = aggregate.byTool[0]?.[1] || 1
+                            return aggregate.byTool.slice(0, 8).map(([tool, count]) => (
+                              <div key={tool} className="adm-bar-row">
+                                <span className="adm-bar-label">{tool}</span>
+                                <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                                <span className="adm-bar-value">{count}</span>
+                              </div>
+                            ))
+                          })()}
+                        </div>
+                      ) : <div className="adm-empty">No tool usage yet</div>}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Charts row — local (this device) */}
           <div className="adm-grid-2" style={{ marginBottom: 32 }}>
             <div className="adm-card">
               <div className="adm-card-header">
