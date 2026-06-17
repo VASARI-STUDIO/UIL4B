@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
-import { useAuth } from '../contexts/AuthContext'
-import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { isSvg } from '../utils/imageProcessing'
 
@@ -448,11 +446,9 @@ function NewProjectModal({ folders, onClose, onCreate }) {
 
 export default function Projects({ toast }) {
   const navigate = useNavigate()
-  const { user } = useAuth()
-  const { t } = useI18n()
   const { isPro } = useSubscription()
   const {
-    design, projects, canSaveProjects,
+    projects, canSaveProjects,
     saveProject, loadProject, deleteProject, renameProject, overwriteProject,
     archiveProject, resetDesign, setPalette,
   } = useProject()

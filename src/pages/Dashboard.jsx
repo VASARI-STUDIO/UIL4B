@@ -211,8 +211,6 @@ export default function Dashboard() {
   const bodyFont = design?.fonts?.body?.family || 'Inter'
   const headingWeight = design?.fonts?.heading?.weight || 700
   const bodyWeight = design?.fonts?.body?.weight || 400
-  const typeBase = design?.typeScale?.base || 16
-  const typeRatio = design?.typeScale?.ratio || 1.25
 
   const fallbackPalette = useMemo(() => {
     const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)

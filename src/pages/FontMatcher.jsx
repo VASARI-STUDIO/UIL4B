@@ -57,7 +57,7 @@ const PAGE_SIZE = 40
 
 export default function FontMatcher({ onCopy, toast }) {
   const { t } = useI18n()
-  const { design, setFonts } = useProject()
+  const { setFonts } = useProject()
 
   const applyPairing = useCallback((heading, body) => {
     const hWeight = heading.variants.includes(700) ? 700 : (heading.variants[heading.variants.length - 1] || 400)
@@ -218,21 +218,6 @@ export default function FontMatcher({ onCopy, toast }) {
     families.forEach(f => trackFontCopy(f.family))
     onCopy(url)
   }, [onCopy])
-
-  const fontSelect = useCallback((setter) => (
-    <select
-      onChange={e => {
-        const f = allFonts.find(x => x.family === e.target.value)
-        if (f) setter(f)
-      }}
-      style={{ minWidth: 200 }}
-    >
-      <option value="">Select a font...</option>
-      {allFonts.slice(0, 300).map(f => (
-        <option key={f.family} value={f.family}>{f.family}</option>
-      ))}
-    </select>
-  ), [allFonts])
 
   if (error) {
     return (

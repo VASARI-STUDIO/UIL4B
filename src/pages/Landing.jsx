@@ -25,6 +25,9 @@ function useReveal() {
   return [ref, shown]
 }
 
+// `Tag` is used as a JSX element below; without eslint-plugin-react's jsx-uses-vars,
+// no-unused-vars can't see JSX element usage, so the binding is suppressed here.
+// eslint-disable-next-line no-unused-vars
 function Reveal({ as: Tag = 'section', className = '', style, children, ...rest }) {
   const [ref, shown] = useReveal()
   return (

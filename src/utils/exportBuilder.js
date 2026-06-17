@@ -35,7 +35,7 @@ const ROUNDING_MAP = {
   pronounced: { radius: '20px', radiusS: '14px', radiusL: '28px', radiusXl: '40px' },
 }
 
-export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateShades, appearance }) {
+export function buildCSSVars({ palette, tints, fonts, typeScale, stateShades, appearance }) {
   const lines = [':root {']
 
   // Palette colours
@@ -93,8 +93,6 @@ export function buildCSSVars({ palette, tints, states, fonts, typeScale, stateSh
 // Style guide HTML — uses the user's actual palette + fonts as page styling.
 export function buildStyleGuideHTML({ design, stateShades, theme = 'light', projectName = 'Design System', appearance, watermark = false }) {
   const primary = design?.palette?.colors?.[0] || '#2563EB'
-  const secondary = design?.palette?.colors?.[1] || primary
-  const accent = design?.palette?.colors?.[2] || primary
   const headingFamily = design?.fonts?.heading?.family || 'Inter'
   const bodyFamily = design?.fonts?.body?.family || 'Inter'
   const headingWeight = design?.fonts?.heading?.weight || 700
