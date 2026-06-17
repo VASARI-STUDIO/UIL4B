@@ -110,11 +110,11 @@ export default function Dashboard() {
     navigate('/color')
   }
 
-  // Quick-upload from the Image Converter tile — stash the files and jump in.
+  // Quick-upload from the File Converter tile — stash the files and jump in.
   const quickUpload = (files) => {
     if (!files?.length) return
     setPendingImages(files)
-    navigate('/imgconvert')
+    navigate('/file-converter')
   }
 
   // Drag-and-drop: pin tools from the sidebar by dropping them here, and
@@ -211,8 +211,6 @@ export default function Dashboard() {
   const bodyFont = design?.fonts?.body?.family || 'Inter'
   const headingWeight = design?.fonts?.heading?.weight || 700
   const bodyWeight = design?.fonts?.body?.weight || 400
-  const typeBase = design?.typeScale?.base || 16
-  const typeRatio = design?.typeScale?.ratio || 1.25
 
   const fallbackPalette = useMemo(() => {
     const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
@@ -269,8 +267,8 @@ export default function Dashboard() {
   }, [pinned, lTools, lCats])
 
   const renderPreview = (tool) => {
-    // Image Converter gets a working quick-upload dropzone instead of a static graphic.
-    if (tool.id === 'imgconvert') {
+    // File Converter gets a working quick-upload dropzone instead of a static graphic.
+    if (tool.id === 'file-converter') {
       const stop = (e) => { e.preventDefault(); e.stopPropagation() }
       return (
         <>

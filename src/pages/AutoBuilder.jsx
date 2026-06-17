@@ -243,7 +243,7 @@ function HeroPreview({ palette, fontPair, description }) {
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
-export default function AutoBuilder({ onCopy, toast }) {
+export default function AutoBuilder({ toast }) {
   // Tab state
   const [tab, setTab] = useState('generate')
 

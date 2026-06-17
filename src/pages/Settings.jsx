@@ -245,7 +245,7 @@ export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { theme, setTheme } = useTheme()
   const { rounding, density, reducedMotion, setRounding, setDensity, setReducedMotion } = useAppearance()
-  const { isPro, subscription, plan, checkout, openPortal, loading: subLoading } = useSubscription()
+  const { isPro, subscription, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)

@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { useI18n } from '../contexts/I18nContext'
 
 const PAGE_SIZE = 200
 
@@ -34,7 +33,6 @@ function parseEmojis(str) {
 }
 
 export default function EmojiLibrary({ onCopy }) {
-  const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [activeCat, setActiveCat] = useState(null)
   const [copied, setCopied] = useState(null)
