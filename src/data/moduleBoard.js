@@ -15,6 +15,7 @@ export const MODULE_BOARD = [
     health: 'good',
     summary: 'Flagship palette tool, shipped with full Coolors feature parity.',
     recentChanges: [
+      'Undo now covers all palette-wiping actions; surfaced image-extract errors; ARIA tablist + keyboard-operable swatches; dead code removed',
       'Fixed production crash on Color Studio (TDZ violation in Rolldown bundle)',
       'Coolors parity: lock colors + spacebar regen + drag reorder (CS-15)',
       'Image color extraction via k-means from uploaded photos (CS-11)',
@@ -26,7 +27,7 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Add ASE + PDF export to reach full export parity',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
   {
     id: 'typography',
@@ -53,6 +54,7 @@ export const MODULE_BOARD = [
     health: 'watch',
     summary: 'Alpha-flagged structured JSON prompt builder with photo scanning.',
     recentChanges: [
+      'scan-photo endpoint now per-user rate-limited (was the only uncapped paid AI call)',
       'Converted to structured JSON prompt generator + live preview (AIP-02)',
       '6 preset JSON rule strings (ultra-real 4k / landscape) (AIP-03)',
       'Generate prompt from uploaded photo via Gemini vision (AIP-05)',
@@ -64,7 +66,7 @@ export const MODULE_BOARD = [
       'Add user prompt history / saved presets',
       'Monitor DeepSeek vs Gemini fallback reliability',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
   {
     id: 'ai-landing-prompts',
@@ -159,22 +161,25 @@ export const MODULE_BOARD = [
     health: 'good',
     summary: 'Saved-work hub, redesigned away from generic look.',
     recentChanges: [
+      'Cross-device sync via Firestore (non-destructive merge, offline-safe)',
       'Redesigned UI: gradient cards + active highlight + better empty state + stats (PROJ-01)',
       'Type-to-confirm on destructive actions (GOV-02)',
     ],
     nextSteps: [
+      'Propagate deletes across devices (v1 doesn\'t)',
       'Add project sharing / export',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
   {
     id: 'admin-dashboard',
     name: 'Admin Dashboard',
     area: 'Admin',
     status: 'live',
-    health: 'good',
+    health: 'watch',
     summary: 'Industry-standard dashboard with SVG charts, filters, and Trello-style board tab.',
     recentChanges: [
+      'Server-side aggregate analytics panel (analytics-daily counters); local charts relabelled \'This device\'',
       'Trello-board module status page shipped (ADM-04)',
       'Style Guide nested under Admin (NAV-07)',
       'Rebuilt to industry-standard dashboard: SVG charts + time filters (ADM-01)',
@@ -182,9 +187,10 @@ export const MODULE_BOARD = [
       'Confirm dialogs on delete actions (GOV-02)',
     ],
     nextSteps: [
+      'Owner: publish firestore.rules to populate the aggregate panel',
       'Add export/print for board view',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
   {
     id: 'dashboard',
@@ -211,6 +217,7 @@ export const MODULE_BOARD = [
     health: 'good',
     summary: 'Large doc library across SEO, marketing, brand, AI, and UI themes.',
     recentChanges: [
+      'Fixed DocsMarketing layout so the shared TOC aligns; removed unused i18n imports',
       'SEO docs: 8 articles (GBP/local/technical/on-page/schema...) (DOC-01)',
       'Marketing docs: 8 articles (DOC-02)',
       'Brand design + Claude/AI agent tips docs (DOC-03/04/05)',
@@ -220,7 +227,7 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Keep articles current as 2026 SEO/AI guidance shifts',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
   {
     id: 'navigation',
@@ -248,13 +255,14 @@ export const MODULE_BOARD = [
     health: 'good',
     summary: 'Landing redesigned to clinical SaaS; help centre overhauled.',
     recentChanges: [
+      'Feedback/Help forms fail loudly instead of faking success; fixed corrupt saveFeedback; removed dead hero video/CSS',
       'Landing redesign: clinical SaaS tone + pro footer + hero (LAND-01/02/03)',
       'Help centre: quick-action cards + searchable FAQ + 4-type contact form (HELP-01/02/03)',
     ],
     nextSteps: [
       'A/B test hero copy once traffic grows',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
   {
     id: 'auth',
@@ -264,6 +272,7 @@ export const MODULE_BOARD = [
     health: 'good',
     summary: 'Firebase auth with inline gates, Google OAuth, smart onboarding skip.',
     recentChanges: [
+      'Login returns users to their original page after sign-in (location.state.from)',
       'Inline auth gate keeps user on page and returns them (AUTH-01)',
       'Login via popup + Google OAuth (AUTH-02)',
       'Skip onboarding for returning users via Firestore profile sync (AUTH-03)',
@@ -271,24 +280,26 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Validation zone — changes require explicit owner approval',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
   {
     id: 'payments',
     name: 'Payments / Stripe',
     area: 'Infra',
     status: 'live',
-    health: 'good',
+    health: 'watch',
     summary: 'Stripe subscriptions with embedded checkout and per-currency pricing.',
     recentChanges: [
+      'Replaced deceptive in-app cancel offers with Stripe\'s native portal retention/cancellation flow (real coupons)',
       'Admin Stripe pricing panel: per-currency monthly/yearly editor',
       'Validation zones documented in CLAUDE.md (GOV-01/02)',
     ],
     nextSteps: [
+      'Owner: create retention coupon + enable cancellation in Stripe Customer Portal config',
       'Validation zone — never modify webhook/checkout without owner approval',
       'Wire up email notifications (RESEND_API_KEY) for billing events',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
   {
     id: 'ai-backend',
@@ -351,6 +362,7 @@ export const MODULE_BOARD = [
     health: 'good',
     summary: 'Verify-first workflow, validation zones, and QA plans in place.',
     recentChanges: [
+      'Full product audit of all 40 pages + execution roadmap + resolution log; P0/P1 QC remediation wave + accessibility pass',
       'CLAUDE.md with verify-first + validation zones + Murphy’s Law (GOV-01)',
       'Human validation zones implemented via confirm dialogs (GOV-02)',
       'User testing + subagent-team plans documented (GOV-04/05)',
@@ -359,7 +371,7 @@ export const MODULE_BOARD = [
       'Run the full smoke-test matrix across all 20+ routes',
       'Stand up the designer/dev/PM/QA/security subagent team',
     ],
-    updated: '2026-06-16',
+    updated: '2026-06-17',
   },
 ]
 

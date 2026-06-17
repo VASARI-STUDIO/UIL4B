@@ -270,9 +270,9 @@ Unused: `ContrastBadge` + `searchNamedColors` import + no-op ternary (`ColorStud
 
 ---
 
-## 9. Session Resolution Log (2026-06-16)
+## 9. Session Resolution Log (updated 2026-06-17)
 
-Fixes shipped in the same session as this audit. All verified with `npx vite build` (green) and merged to `main` via PR #85 (plus follow-up commits on `claude/kind-wozniak-nrpkpn`).
+Fixes shipped in the same session as this audit. All verified with `npx vite build` (green) and **merged to `main` via PRs #85, #86, and #87**. PR #85 carried the P0/P1 correctness + accessibility + cleanup wave; #86 hardened the UI Builder clipboard calls; #87 landed the backend work (Stripe native retention, cross-device project sync, server-side aggregate analytics).
 
 ### ✅ Fixed
 | Issue | Resolution |
@@ -292,9 +292,16 @@ Fixes shipped in the same session as this audit. All verified with `npx vite bui
 | P2 Accessibility | ColorStudio (input labels, keyboard-operable cells, ARIA tablist), Projects card, Onboarding emoji, DocsThemes focus, Admin chart/search labels |
 | P3 Dead code | Removed `ContrastBadge`, unused imports/refs/props, no-op ternary, dead hero `<video>`, orphaned CSS, unused doc `t` |
 | P4 DocsMarketing layout | Now uses standard `.sec`/`.sec-h` so the shared TOC aligns |
+| P0-5 Settings retention offers (PR #87) | Replaced the deceptive in-app "Apply 50% discount / Pause / Free month" buttons with Stripe's **native** Customer Portal cancellation/retention flow — `create-portal.js` deep-links via `flow_data` and applies an optional `STRIPE_RETENTION_COUPON`. **Owner action pending:** create the coupon + enable cancellation/retention in the Stripe Customer Portal config (no real offer surfaces until then). |
+| P0-6 Admin analytics — aggregate store (PR #87) | Added server-side `analytics-daily` Firestore counters and an "All users · aggregate" Admin panel; existing `localStorage` charts relabelled "This device". `firestore.rules` + `Privacy.jsx` updated. **Owner action pending:** publish `firestore.rules` so the aggregate panel can read/write counters. |
+| P1-5 Project sync / quota (PR #87) | Cross-device project sync via Firestore `users/{uid}/sync/projects` — non-destructive merge, offline-safe. This also gives projects a server-side home instead of being purely local. **v1 caveat:** deletes don't propagate across devices yet. |
 
 ### ⏳ Deliberately deferred — need a founder decision or carry refactor risk
-- **P0-5 Settings retention offers** — "Apply 50% discount / Pause / Free month" still claim success but do nothing. Honest fix depends on whether real Stripe coupons exist (billing decision). **Left untouched.**
-- **P0-6 Admin analytics** — still per-browser `localStorage`. Needs a server-side aggregate store (Firestore collection or analytics provider). **Architectural.**
-- **P1-5 ProjectContext quota failure** — surfacing it reliably requires restructuring the save-state flow (persistence runs inside the React state updater); too risky to do blind for a rare edge case. **Flagged.**
-- **og-image.png**, File-Converter alpha→GA gaps, blue-accent theme pass, pain-led homepage merge, DocsAI Gemini coverage — unchanged; see §8.
+- **og-image.png** — still referenced (`index.html:14,19`) but absent from `public/previews/`; needs an asset generated.
+- **File Converter alpha → GA gaps** — AVIF, live savings, frame quality/format, dashboard hand-off still missing before `/imgconvert` + `/video-frames` can retire.
+- **Blue-accent theme pass** — the global `--accent`→blue swap is still deferred by request; some legacy purple remains.
+- **Pain-led homepage redesign** — the redesign branch is still un-merged; current landing is feature-led, not pain-led. Decision pending.
+- **Community media backend** — `/community` media at scale (COM-05) still needs a proper backend; current path downscales to WebP client-side only.
+- *(DocsAI Gemini coverage also remains thin; minor.)*
+
+> **Owner action items carried forward from §9 fixes:** (1) create the Stripe retention coupon + enable cancellation/retention in the Stripe Customer Portal config (P0-5); (2) publish `firestore.rules` so the Admin aggregate analytics panel populates (P0-6). The code for both shipped in PR #87 but stays inert until these are done.
