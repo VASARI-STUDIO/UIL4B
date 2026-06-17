@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics, getAggregateAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
+import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import { MODULE_BOARD } from '../data/moduleBoard'
@@ -53,6 +54,16 @@ function fmtDateTime(iso) {
 function fmtNum(n) {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
+}
+
+// Read a File into a base64 data URL (used for the legacy base64 media fallback).
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target.result)
+    reader.onerror = () => reject(new Error('Could not read file'))
+    reader.readAsDataURL(file)
+  })
 }
 
 function timeFilter(timestamp, range) {
@@ -273,24 +284,40 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
     if (file.size > 10 * 1024 * 1024) { toast('File must be under 10 MB'); return }
     setBusy(true)
     try {
+      const mediaType = isImage ? 'image' : 'video'
+      // Compute the legacy base64 data URL first (images are compressed to WebP).
+      let dataUrl
       if (isImage) {
         const { processImageForUpload } = await import('../utils/imageProcessing')
-        const { dataUrl } = await processImageForUpload(file, { maxDimension: 1200, quality: 0.8 })
-        if (dataUrl.length < 900_000) {
-          await updatePrompt({ mediaType: 'image', mediaUrl: dataUrl })
-        } else {
-          toast('Image too large after compression')
-        }
+        dataUrl = (await processImageForUpload(file, { maxDimension: 1200, quality: 0.8 })).dataUrl
       } else {
-        const reader = new FileReader()
-        reader.onload = async (e) => {
-          if (e.target.result.length < 900_000) {
-            await updatePrompt({ mediaType: 'video', mediaUrl: e.target.result })
-          } else {
-            toast('Video too large for storage')
-          }
+        dataUrl = await readFileAsDataUrl(file)
+      }
+
+      // Preferred path: upload to Firebase Storage and store a plain URL (no
+      // size cap). For images upload the compressed WebP blob; for videos
+      // upload the original File. If Storage is disabled the upload throws and
+      // we fall back to the legacy base64 path below.
+      let uploaded = false
+      try {
+        const blob = isImage ? dataUrlToBlob(dataUrl) : file
+        const ext = isImage ? extFromDataUrl(dataUrl, 'webp') : extFromDataUrl(dataUrl, 'mp4')
+        if (blob) {
+          const url = await uploadCommunityMedia(blob, undefined, ext)
+          await updatePrompt({ mediaType, mediaUrl: url })
+          uploaded = true
         }
-        reader.readAsDataURL(file)
+      } catch {
+        // fall through to base64 fallback
+      }
+
+      if (!uploaded) {
+        // Legacy fallback: inline base64, keeping the existing 900KB guard.
+        if (dataUrl.length < 900_000) {
+          await updatePrompt({ mediaType, mediaUrl: dataUrl })
+        } else {
+          toast(isImage ? 'Image too large after compression' : 'Video too large for storage')
+        }
       }
     } catch { toast('Failed to process media') }
     setBusy(false)

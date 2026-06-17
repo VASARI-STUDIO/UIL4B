@@ -1,26 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.uil4b.com/</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://www.uil4b.com/color</loc><priority>0.9</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://www.uil4b.com/fonts</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/fontpairs</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/typescale</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/icons</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/ui-builder</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://www.uil4b.com/box-shadow</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/imgconvert</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/video-frames</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/file-converter</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://www.uil4b.com/ai-prompt</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://www.uil4b.com/landing-prompts</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://www.uil4b.com/alt-text</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/prompts</loc><priority>0.6</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://www.uil4b.com/projects</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/docs-seo</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/docs-marketing</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/docs-brand</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/docs-themes</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/docs-ai</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/docs-social</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.uil4b.com/help</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
+  <!-- Home -->
+  <url><loc>https://www.uil4b.com/</loc><priority>1.0</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+
+  <!-- Tools -->
+  <url><loc>https://www.uil4b.com/color</loc><priority>0.9</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/fontpairs</loc><priority>0.9</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/fontgallery</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/typescale</loc><priority>0.8</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/icons</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/box-shadow</loc><priority>0.8</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/file-converter</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/emoji</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/ui-builder</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/auto-builder</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/ai-prompt</loc><priority>0.7</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/landing-prompts</loc><priority>0.7</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/alt-text</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+
+  <!-- Category hubs -->
+  <url><loc>https://www.uil4b.com/typography</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/imagery</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/ai-tools</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/docs</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+
+  <!-- Community & content -->
+  <url><loc>https://www.uil4b.com/prompts</loc><priority>0.6</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/resources</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/community</loc><priority>0.5</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+
+  <!-- Documentation -->
+  <url><loc>https://www.uil4b.com/docs-seo</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/docs-marketing</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/docs-brand</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/docs-themes</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/docs-ai</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/docs-social</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/docs-design</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+
+  <!-- Support & legal -->
+  <url><loc>https://www.uil4b.com/help</loc><priority>0.5</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/feedback</loc><priority>0.4</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/privacy</loc><priority>0.3</priority><changefreq>yearly</changefreq><lastmod>2026-06-17</lastmod></url>
+  <url><loc>https://www.uil4b.com/terms</loc><priority>0.3</priority><changefreq>yearly</changefreq><lastmod>2026-06-17</lastmod></url>
 </urlset>

@@ -539,7 +539,7 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
       saveProject(name)
       setSaveOpen(false)
       navigate('/projects')
-    } catch (e) {
+    } catch {
       // error swallowed — user already sees toast feedback
     }
   }

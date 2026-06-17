@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 // Firebase config — these are client-side keys, NOT secrets. The Firebase web
 // API key is a public project identifier that ships in every Firebase web app's
@@ -32,4 +33,8 @@ export const GOOGLE_CLIENT_ID =
 export const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({ prompt: 'select_account' })
 export const db = getFirestore(app)
+// Firebase Storage — used for community-prompt media so uploads aren't capped
+// by Firestore's ~1MB document limit. storageBucket is set in firebaseConfig.
+// Callers must degrade gracefully if Storage isn't enabled yet (see mediaUpload.js).
+export const storage = getStorage(app)
 export default app

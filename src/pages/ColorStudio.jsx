@@ -1086,10 +1086,6 @@ ${stateVars}
   const updateStop = (idx, updates) => setGradStops(gradStops.map((s, i) => i === idx ? { ...s, ...updates } : s))
   const applyPreset = (preset) => { setGradStops(preset.stops.map(s => ({ color: s.color, position: s.pos }))); setGradAngle(preset.angle); setGradType(preset.type); setStopPickerIdx(null) }
 
-  const primary = allColors[0]
-  const secondary = allColors[1] || allColors[0]
-  const accent = allColors[2] || allColors[0]
-
   return (
     <div className="sec">
       <div className="sec-h">
@@ -1807,11 +1803,8 @@ ${stateVars}
           const sec = allColors[1] || '#6366F1'
           const acc = allColors[2] || '#F59E0B'
           const neu = allColors[3] || '#6B7280'
-          const surf = allColors[4] || '#F3F4F6'
           const priText = textColorForBg(pri)
-          const secText = textColorForBg(sec)
           const accText = textColorForBg(acc)
-          const surfText = textColorForBg(surf)
           const priDark = mixHex(pri, '#000000', 0.3)
           const priLight = mixHex(pri, '#FFFFFF', 0.85)
           const secLight = mixHex(sec, '#FFFFFF', 0.85)

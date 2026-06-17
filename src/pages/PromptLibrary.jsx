@@ -7,6 +7,7 @@ import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { processImageForUpload } from '../utils/imageProcessing'
+import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 
 function getPrompts() {
   try { return JSON.parse(localStorage.getItem('vs-prompts') || '[]') }
@@ -348,9 +349,35 @@ export default function PromptLibrary({ onCopy, toast }) {
       }
       if (submitMediaPreview) {
         doc.mediaType = submitMediaPreview.type
-        const withinLimit = submitMediaPreview.url.length < 900_000
-        doc.mediaUrl = withinLimit ? submitMediaPreview.url : ''
-        mediaDropped = !withinLimit
+        // Preferred path: upload the processed media to Firebase Storage and
+        // store a plain URL (no size cap). If Storage isn't enabled yet the
+        // upload throws and we fall back to the legacy base64-in-Firestore
+        // path below, so nothing regresses.
+        let uploaded = false
+        try {
+          // Re-encoded images live in submitMediaPreview.url (WebP/SVG); videos
+          // keep their original File. Upload a Blob either way.
+          const blob =
+            submitMediaPreview.type === 'image'
+              ? dataUrlToBlob(submitMediaPreview.url)
+              : (submitMedia || dataUrlToBlob(submitMediaPreview.url))
+          if (blob) {
+            const ext =
+              submitMediaPreview.type === 'image'
+                ? extFromDataUrl(submitMediaPreview.url, 'webp')
+                : extFromDataUrl(submitMediaPreview.url, 'mp4')
+            doc.mediaUrl = await uploadCommunityMedia(blob, user.uid, ext)
+            uploaded = true
+          }
+        } catch {
+          // fall through to base64 fallback
+        }
+        if (!uploaded) {
+          // Legacy fallback: inline base64, keeping the existing 900KB guard.
+          const withinLimit = submitMediaPreview.url.length < 900_000
+          doc.mediaUrl = withinLimit ? submitMediaPreview.url : ''
+          mediaDropped = !withinLimit
+        }
       }
       await addDoc(collection(db, 'community-prompts'), doc)
       toast('Prompt submitted for review — you\'ll get +25 AI generations if approved!')
@@ -367,7 +394,7 @@ export default function PromptLibrary({ onCopy, toast }) {
       toast('Failed to submit — try again')
     }
     setSubmitting(false)
-  }, [submitTitle, submitText, submitTags, submitProfile, submitMediaPreview, user, userProfile, toast])
+  }, [submitTitle, submitText, submitTags, submitProfile, submitMedia, submitMediaPreview, user, userProfile, toast])
 
   return (
     <div className="sec">
