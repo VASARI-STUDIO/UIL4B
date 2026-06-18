@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -243,8 +242,7 @@ function NavIcon({ id }) {
 
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
-  const { theme, setTheme } = useTheme()
-  const { rounding, density, reducedMotion, setRounding, setDensity, setReducedMotion } = useAppearance()
+  const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, subscription, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
@@ -476,66 +474,16 @@ export default function Settings({ toast }) {
           <section id="set-appearance" className="settings-section">
             <div className="settings-section-h">
               <h2>Appearance</h2>
-              <p>Customise the look and feel of the interface.</p>
+              <p>UIL4B uses a single, carefully tuned dark interface. Accessibility preferences live here.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">Theme</div>
-                    <div className="settings-row-meta">Currently using {theme}</div>
-                  </div>
-                  <div className="theme-pill">
-                    <button className={`theme-pill-opt${theme === 'light' ? ' active' : ''}`} onClick={() => setTheme && setTheme('light')}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-                      Light
-                    </button>
-                    <button className={`theme-pill-opt${theme === 'dark' ? ' active' : ''}`} onClick={() => setTheme && setTheme('dark')}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                      Dark
-                    </button>
-                  </div>
-                </div>
-
-                <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
-                  <div>
-                    <div className="settings-row-label">Rounding</div>
-                    <div className="settings-row-meta">Control the border-radius across the UI</div>
-                  </div>
-                  <div className="rounding-options">
-                    {[
-                      { id: 'none', label: 'Square' },
-                      { id: 'subtle', label: 'Subtle' },
-                      { id: 'default', label: 'Medium' },
-                      { id: 'pronounced', label: 'Round' },
-                    ].map(opt => (
-                      <button
-                        key={opt.id}
-                        className={`rounding-opt${rounding === opt.id ? ' active' : ''}`}
-                        data-r={opt.id}
-                        onClick={() => setRounding(opt.id)}
-                      >
-                        <div className="rounding-preview" />
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="toggle-row">
-                  <div className="toggle-row-info">
-                    <div className="toggle-row-label">Compact mode</div>
-                    <div className="toggle-row-meta">Reduce spacing for denser layouts</div>
-                  </div>
-                  <button className={`toggle-switch${density === 'compact' ? ' on' : ''}`} onClick={() => setDensity(density === 'compact' ? 'cozy' : 'compact')} />
-                </div>
-
                 <div className="toggle-row">
                   <div className="toggle-row-info">
                     <div className="toggle-row-label">Reduced motion</div>
                     <div className="toggle-row-meta">Minimise animations and transitions</div>
                   </div>
-                  <button className={`toggle-switch${reducedMotion ? ' on' : ''}`} onClick={() => setReducedMotion(!reducedMotion)} />
+                  <button className={`toggle-switch${reducedMotion ? ' on' : ''}`} onClick={() => setReducedMotion(!reducedMotion)} aria-label="Toggle reduced motion" aria-pressed={reducedMotion} />
                 </div>
               </div>
             </div>
