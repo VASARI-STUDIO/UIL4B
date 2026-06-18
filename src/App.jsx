@@ -12,6 +12,7 @@ import { useClipboard } from './hooks/useClipboard'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { useAuth } from './contexts/AuthContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
+import { ADMIN_EMAILS } from './utils/constants'
 
 // Static imports — small or always-visited pages (instant load)
 import Dashboard from './pages/Dashboard'
@@ -97,6 +98,23 @@ function RequireAuth({ children }) {
     )
   }
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
+  return children
+}
+
+// Gates alpha / not-yet-public tools so they can't be reached by direct URL.
+// Only admins (ADMIN_EMAILS) may open them; everyone else is bounced to the
+// dashboard. Keeps route access aligned with the hidden nav/dashboard entries.
+function RequireAdmin({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+        <div className="fg-loader" />
+      </div>
+    )
+  }
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  if (!isAdmin) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -319,10 +337,10 @@ export default function App() {
               <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
               <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
               <Route path="/imgconvert" element={<Navigate to="/file-converter" replace />} />
-              <Route path="/file-converter" element={<FileConverter toast={toast} />} />
-              <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
-              <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
-              <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />
+              <Route path="/file-converter" element={<RequireAdmin><FileConverter toast={toast} /></RequireAdmin>} />
+              <Route path="/alt-text" element={<RequireAdmin><AltTextGenerator toast={toast} /></RequireAdmin>} />
+              <Route path="/ai-prompt" element={<RequireAdmin><AiPromptGenerator toast={toast} /></RequireAdmin>} />
+              <Route path="/landing-prompts" element={<RequireAdmin><LandingPromptGenerator toast={toast} /></RequireAdmin>} />
               <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
               <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
               <Route path="/ratio" element={<RatioCalculator onCopy={copy} />} />
@@ -336,7 +354,7 @@ export default function App() {
               <Route path="/video-frames" element={<Navigate to="/file-converter" replace />} />
               <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
               <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
-              <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />
+              <Route path="/auto-builder" element={<RequireAdmin><AutoBuilder onCopy={copy} toast={toast} /></RequireAdmin>} />
               <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
               <Route path="/resources" element={<ExternalResources />} />
               <Route path="/onboarding" element={<Onboarding />} />

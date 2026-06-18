@@ -712,7 +712,8 @@ export default function Landing() {
             {toolsOpen && (
               <div className="landing-tools-panel" role="menu">
                 {CATEGORIES.map(cat => {
-                  const catTools = TOOLS.filter(tl => tl.category === cat.id)
+                  // Public marketing menu never advertises alpha / not-yet-public tools.
+                  const catTools = TOOLS.filter(tl => tl.category === cat.id && !tl.alpha)
                   if (!catTools.length) return null
                   return (
                     <div key={cat.id} className="landing-tools-col">

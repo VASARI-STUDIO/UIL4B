@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { localiseTools, localiseCategories } from '../data/tools'
 import { useWorkspace, TOOL_DRAG_TYPE } from '../contexts/WorkspaceContext'
 import { useAuth } from '../contexts/AuthContext'
+import { ADMIN_EMAILS } from '../utils/constants'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -239,7 +240,10 @@ export default function Dashboard() {
     return () => clearInterval(id)
   }, [])
 
-  const lTools = localiseTools(t)
+  // Hide alpha / not-yet-public tools from the dashboard (pins, recents, count)
+  // for everyone but admins — keeps it consistent with the nav and route gates.
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  const lTools = localiseTools(t).filter(tl => isAdmin || !tl.alpha)
   const lCats = localiseCategories(t)
 
   const greeting = (() => {
