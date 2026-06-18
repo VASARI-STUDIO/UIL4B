@@ -76,12 +76,14 @@ secret-scanner, qa, release-captain, analytics). See `docs/PRODUCT-AUDIT-2026-06
 
 ---
 
-## OPEN QUESTIONS (interview)
-- **Q-SEQ** — Is the phase order above right, or re-prioritise?
-- **Q-THEME** — "Remove UI customisation": keep the dark/light toggle, or lock to ONE fixed theme (dark)?
-- **Q-ALT** — Alt Text Generator's home: the **Imagery** tab or the new **SEO Specialist** section? (You named both.)
-- **Q-SEO** — SEO Specialist comparison data ("improve SEO X% vs others"): **real measurement** (needs infra + honest data) or **illustrative** marketing numbers? And spider scope (client fetch vs serverless crawler)?
-- **Q-HOME** — Homepage: build the `design` agent's "Living Specimen + gallery wall" brief, or a different direction?
-- **Q-SEC** — "Prevent access to sensitive code/workarounds": is the concern (a) hiding alpha from users, (b) stopping non-admins reaching admin features, or (c) something else? (Client JS is always inspectable — real security must be server-side.)
-- **Q-PLAN** — "the plan tab is empty": which tab/screen? (The Admin "Board" tab? a roadmap page?) so I update the right thing.
-- **Q-FP** — "Future Plans" admin-only section: confirm it's purely a staging area for not-yet-ready tools (no user routes at all).
+## DECISIONS (locked 2026-06-18)
+- **Q-THEME → Dark only.** Remove the light theme AND all appearance customisation; one fixed dark brand theme, medium rounding default, full rounding on buttons/CTAs.
+- **Q-ALT → SEO Specialist.** Alt Text Generator anchors the new SEO Specialist section. Imagery = File Converter + AI Image Prompt Generator.
+- **Q-SEO → Illustrative now, real later.** Ship the SEO tools with clearly-framed illustrative improvement examples (no invented hard stats); build a real before/after scoring engine for the vs-competitors data as a follow-on.
+- **Q-HOME → Design agent's brief.** Build the pain-led "Living Specimen" hero + gallery-wall homepage; then rename `/welcome` → `/home` and roll the new style across the app.
+
+## STILL OPEN (need answers before/while executing)
+- **Q-SEQ** — confirm the 10-phase order, or re-prioritise.
+- **Q-SEC** — what exactly is the "sensitive code / workaround" concern: hide alpha, block non-admins from admin features, or something specific?
+- **Q-PLAN** — which screen is the empty "plan tab" (Admin **Board** tab? a roadmap page?).
+- **Q-FP** — confirm "Future Plans" is admin-only staging with no public routes.
