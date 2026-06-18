@@ -54,6 +54,7 @@ const UIBuilder = lazy(() => import('./pages/UIBuilder'))
 const AutoBuilder = lazy(() => import('./pages/AutoBuilder'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
+const RatioCalculator = lazy(() => import('./pages/RatioCalculator'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -178,6 +179,7 @@ export default function App() {
       '/landing-prompts': 'UI L4B | AI Landing Page Prompts',
       '/prompts': 'UI L4B | Prompt Library',
       '/emoji': 'UI L4B | Emoji Library',
+      '/ratio': 'UI L4B | Aspect Ratio Calculator',
       '/box-shadow': 'UI L4B | Box Shadow',
       '/ui-builder': 'UI L4B | UI Builder',
       '/projects': 'UI L4B | Projects',
@@ -215,6 +217,7 @@ export default function App() {
       '/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
       '/prompts': 'Browse and submit community design prompts for AI image and web generators.',
       '/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',
+      '/ratio': 'Free aspect ratio calculator. Lock a ratio, enter one dimension, get the matching size with a live shape preview.',
       '/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',
       '/ui-builder': 'Build complete UI design systems with guided steps. Pick colours, fonts, type scales, and export production-ready CSS.',
       '/auto-builder': 'Automatically generate a full UI design system from a single colour or inspiration URL using AI.',
@@ -322,6 +325,7 @@ export default function App() {
               <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />
               <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
               <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
+              <Route path="/ratio" element={<RatioCalculator onCopy={copy} />} />
               <Route path="/docs-design" element={<DocsDesign />} />
               <Route path="/docs-social" element={<DocsSocial />} />
               <Route path="/docs-themes" element={<DocsThemes />} />
