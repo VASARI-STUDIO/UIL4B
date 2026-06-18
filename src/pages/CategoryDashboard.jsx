@@ -4,6 +4,8 @@ import { getCategory, localiseTools, localiseCategories, groupBySubcategory } fr
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
+import { useAuth } from '../contexts/AuthContext'
+import { ADMIN_EMAILS } from '../utils/constants'
 import { TRENDING_FONTS, TRENDING_PAIRS, FONT_OF_THE_MONTH, COMMUNITY_STATS } from '../data/communityFonts'
 import { loadFont, getFontCSSRule } from '../utils/googleFonts'
 
@@ -331,6 +333,8 @@ export default function CategoryDashboard({ categoryId }) {
   const rawCat = getCategory(categoryId)
   const { pinned, togglePinned } = useWorkspace()
   const { t } = useI18n()
+  const { user } = useAuth()
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
 
   if (!rawCat) {
     return <div className="sec"><h1>Unknown category</h1></div>
@@ -338,8 +342,11 @@ export default function CategoryDashboard({ categoryId }) {
 
   const cats = localiseCategories(t)
   const cat = cats.find(c => c.id === categoryId) || rawCat
-  const tools = localiseTools(t).filter(tl => tl.category === categoryId)
-  const quickActions = QUICK_ACTIONS[categoryId] || []
+  const localised = localiseTools(t)
+  // Alpha tools are admin-only — hide them (and quick actions that link to them).
+  const tools = localised.filter(tl => tl.category === categoryId && (isAdmin || !tl.alpha))
+  const alphaPaths = new Set(localised.filter(tl => tl.alpha).map(tl => tl.path))
+  const quickActions = (QUICK_ACTIONS[categoryId] || []).filter(qa => isAdmin || !alphaPaths.has(qa.to))
   const useBento = tools.length <= 5
 
   if (categoryId === 'typography') {

@@ -171,8 +171,8 @@ export default function Sidebar({ isOpen, onClose }) {
     <>
       <div className={`sidebar-overlay${isOpen ? ' visible' : ''}`} onClick={onClose} />
       <nav className={`sidebar${isOpen ? ' open' : ''}`} id="sidebar">
-        {/* Brand — returns to the public sales / home page */}
-        <NavLink to="/welcome" className="sidebar-brand" onClick={onClose}>
+        {/* Brand — the logo is the in-app home link (to the dashboard) */}
+        <NavLink to="/dashboard" className="sidebar-brand" onClick={onClose}>
           <div className="sidebar-brand-text">
             <span className="sidebar-brand-name">{t('brand.name')}</span>
             <span className="sidebar-brand-sub">{t('brand.tagline')}</span>
@@ -181,17 +181,6 @@ export default function Sidebar({ isOpen, onClose }) {
 
         {/* Primary Navigation */}
         <div className="sidebar-nav">
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) => `nav-item${isActive || location.pathname === '/' ? ' active' : ''}`}
-            onClick={onClose}
-          >
-            <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-            <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>{t('nav.dashboard')}</span>
-          </NavLink>
-
           {user && (
             <NavLink
               to="/projects"
@@ -254,7 +243,11 @@ export default function Sidebar({ isOpen, onClose }) {
           {cats.map((cat, idx) => {
             const isOpen = !!openCats[cat.id]
             const isActive = activeCategoryId === cat.id
-            const tools = allTools.filter(tl => tl.category === cat.id)
+            // Alpha tools are admin-only — non-admins never see them in the nav.
+            const tools = allTools.filter(tl => tl.category === cat.id && (isAdmin || !tl.alpha))
+            // If a category has no visible tools for this user (e.g. an all-alpha
+            // category for a non-admin), drop it from the nav entirely.
+            if (!tools.length) return null
             const hasSubItems = tools.length > 1 || (tools.length === 1 && tools[0].path !== cat.path)
             const subGroups = groupBySubcategory(tools)
             // Number tools by their rendered order so the "n.m" labels read
