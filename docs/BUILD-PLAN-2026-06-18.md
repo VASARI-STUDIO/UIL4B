@@ -77,13 +77,20 @@ secret-scanner, qa, release-captain, analytics). See `docs/PRODUCT-AUDIT-2026-06
 ---
 
 ## DECISIONS (locked 2026-06-18)
-- **Q-THEME → Dark only.** Remove the light theme AND all appearance customisation; one fixed dark brand theme, medium rounding default, full rounding on buttons/CTAs.
-- **Q-ALT → SEO Specialist.** Alt Text Generator anchors the new SEO Specialist section. Imagery = File Converter + AI Image Prompt Generator.
-- **Q-SEO → Illustrative now, real later.** Ship the SEO tools with clearly-framed illustrative improvement examples (no invented hard stats); build a real before/after scoring engine for the vs-competitors data as a follow-on.
-- **Q-HOME → Design agent's brief.** Build the pain-led "Living Specimen" hero + gallery-wall homepage; then rename `/welcome` → `/home` and roll the new style across the app.
+- **Q-THEME → Dark only.** Remove the light theme AND all appearance customisation; one fixed dark brand theme, medium rounding default, full rounding on buttons/CTAs; asymmetric button padding allowed.
+- **Q-ALT → SEO Specialist.** Alt Text anchors the new (admin-only/alpha) SEO Specialist section. Imagery = File Converter + AI Image Prompt Generator.
+- **Q-SEO → Illustrative now, real later.** Ship SEO tools with clearly-framed illustrative examples; build a real before/after scoring engine later.
+- **Q-HOME → Design brief, anchored on LINEAR.** Founder loves Linear (linear.app) — its product UI AND sales page — as the primary reference for both the homepage and the app-wide style. Build the Living-Specimen/gallery homepage in that register; then rename `/welcome` → `/home` and roll the style across the app.
+- **Community Hub → real prompt/design sharing**, reusing the Prompt Library submit/moderate/upvote pipeline + an intro popup.
+- **SEO Spider → admin-only Future-Plan placeholder now** (empty/coming-soon); founder builds the crawler later. (Alt Text in the SEO Specialist section is functional now.)
+- **Category dashboards → functional mini-tools where they shine**, falling back to rich interactive preview cards when a mini-tool isn't sensible/clean.
+- **Doc interactive tools → reuse the File Converter engine** (platform-dimensions resize/crop via the existing client-side image pipeline).
 
-## STILL OPEN (need answers before/while executing)
-- **Q-SEQ** — confirm the 10-phase order, or re-prioritise.
-- **Q-SEC** — what exactly is the "sensitive code / workaround" concern: hide alpha, block non-admins from admin features, or something specific?
-- **Q-PLAN** — which screen is the empty "plan tab" (Admin **Board** tab? a roadmap page?).
-- **Q-FP** — confirm "Future Plans" is admin-only staging with no public routes.
+## DEFAULTS (not specified — using these; flag to change)
+- **Q-SEQ** — use the 10-phase order above.
+- **Q-SEC** — full security pass: confirm admin features are SERVER-gated (not just UI-hidden), no secrets in the client bundle, alpha-hiding understood as UI-only; harden real gaps.
+- **Q-PLAN** — interpret "plan tab" as the Admin **Board** (`moduleBoard.js`); populate its Planned/Idea columns from this backlog.
+- **Q-FP** — "Future Plans" = admin-only staging, no public routes.
+- **Projects** — nest under the profile/avatar menu (top-right).
+- **Intro popups** — one reusable component; apply to Information Centre + Community Hub first, easy to add to any tool later.
+- **Doc screen-stats** — well-known, clearly-cited industry figures.
