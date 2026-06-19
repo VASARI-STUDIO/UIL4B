@@ -552,7 +552,7 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
           </svg>
         </button>
 
-        <Link to="/welcome" className="topbar-brand" title={t('brand.full')}>
+        <Link to="/home" className="topbar-brand" title={t('brand.full')}>
           <span className="topbar-title">{t('brand.full')}</span>
         </Link>
 
