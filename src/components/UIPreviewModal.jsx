@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { generateHarmony, textColorForBg } from '../utils/colors'
@@ -126,6 +127,15 @@ export default function UIPreviewModal({ open, onClose }) {
     return () => { document.body.style.overflow = ''; document.removeEventListener('keydown', onKey) }
   }, [open, onClose])
 
+  // Close the preview when the user navigates to a different page (e.g. clicks a
+  // nav item) — the preview should never linger over a page it doesn't belong to.
+  const location = useLocation()
+  const pathRef = useRef(location.pathname)
+  useEffect(() => {
+    if (open && location.pathname !== pathRef.current) onClose()
+    pathRef.current = location.pathname
+  }, [location.pathname, open, onClose])
+
   if (!open) return null
 
   // Pull the palette from the live design; fall back to regenerating from the
@@ -159,7 +169,7 @@ export default function UIPreviewModal({ open, onClose }) {
               {ROUNDING_OPTIONS.map(opt => (
                 <button key={opt.id} onClick={() => setPreviewRounding(opt.id)}
                   className={`uip-rounding-btn${previewRounding === opt.id ? ' is-active' : ''}`}
-                  style={{ borderRadius: (PREVIEW_RADIUS[opt.id] || PREVIEW_RADIUS.default).l }}
+                  style={{ borderRadius: (PREVIEW_RADIUS[opt.id] || PREVIEW_RADIUS.default).m }}
                 >{opt.label}</button>
               ))}
             </div>
