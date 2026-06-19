@@ -60,6 +60,14 @@ const ROUNDING_OPTIONS = [
   { id: 'pronounced', label: 'Round' },
 ]
 
+// Responsive preview — constrain the showcase to a device width so the grids
+// reflow exactly as they would on a real screen. `width: null` means full-width.
+const DEVICE_OPTIONS = [
+  { id: 'full', label: 'Desktop', width: null, icon: (<><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></>) },
+  { id: 'tablet', label: 'Tablet', width: 768, icon: (<><rect x="4" y="2" width="16" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></>) },
+  { id: 'mobile', label: 'Mobile', width: 390, icon: (<><rect x="6" y="2" width="12" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></>) },
+]
+
 function themeTokens(isDark) {
   if (isDark) return { bg: '#1e1c18', surface: '#161412', surfaceAlt: '#28251f', border: '#353028', borderStrong: '#423c32', text: '#f3efe8', textMuted: '#a8a29e', textFaint: '#706b64', textGhost: '#4a453e', card: '#1e1c18', inputBg: '#28251f' }
   return { bg: '#ffffff', surface: '#f9f6f1', surfaceAlt: '#eee9e0', border: '#eee9e0', borderStrong: '#e2dcd2', text: '#1a1814', textMuted: '#5c5650', textFaint: '#8a847e', textGhost: '#b8b2aa', card: '#ffffff', inputBg: '#ffffff' }
@@ -107,6 +115,9 @@ export default function UIPreviewModal({ open, onClose }) {
   const [previewRounding, setPreviewRounding] = useState(() => {
     try { return localStorage.getItem('vs-preview-rounding') || 'default' } catch { return 'default' }
   })
+  const [previewDevice, setPreviewDevice] = useState(() => {
+    try { return localStorage.getItem('vs-preview-device') || 'full' } catch { return 'full' }
+  })
   const [previewTab, setPreviewTab] = useState('Dashboard')
   const [previewEmail, setPreviewEmail] = useState('')
   const [previewEmailFocused, setPreviewEmailFocused] = useState(false)
@@ -117,6 +128,10 @@ export default function UIPreviewModal({ open, onClose }) {
   useEffect(() => {
     try { localStorage.setItem('vs-preview-rounding', previewRounding) } catch { /* quota */ }
   }, [previewRounding])
+
+  useEffect(() => {
+    try { localStorage.setItem('vs-preview-device', previewDevice) } catch { /* quota */ }
+  }, [previewDevice])
 
   // Lock background scroll and wire Escape-to-close while open.
   useEffect(() => {
@@ -155,6 +170,7 @@ export default function UIPreviewModal({ open, onClose }) {
   const sidebarTk = themeTokens(!isDark)
   const okShade = STATE_PRESETS.success[stateColors.success].shades
   const rd = PREVIEW_RADIUS[previewRounding] || PREVIEW_RADIUS.default
+  const deviceWidth = (DEVICE_OPTIONS.find(d => d.id === previewDevice) || DEVICE_OPTIONS[0]).width
 
   return (
     <div className="uip-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="UI preview">
@@ -165,6 +181,16 @@ export default function UIPreviewModal({ open, onClose }) {
             <h2 className="uip-modal-title">Your colour system on real UI</h2>
           </div>
           <div className="uip-modal-head-actions">
+            <div className="uip-device" role="group" aria-label="Preview width">
+              {DEVICE_OPTIONS.map(opt => (
+                <button key={opt.id} onClick={() => setPreviewDevice(opt.id)}
+                  className={`uip-device-btn${previewDevice === opt.id ? ' is-active' : ''}`}
+                  title={opt.label} aria-label={opt.label} aria-pressed={previewDevice === opt.id}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{opt.icon}</svg>
+                </button>
+              ))}
+            </div>
             <div className="uip-rounding">
               {ROUNDING_OPTIONS.map(opt => (
                 <button key={opt.id} onClick={() => setPreviewRounding(opt.id)}
@@ -183,9 +209,10 @@ export default function UIPreviewModal({ open, onClose }) {
 
         <div className="uip-modal-body">
           <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20, lineHeight: 1.6 }}>
-            Preview your palette and state colours on real components. Switch your theme (top bar) to see both modes.
+            Preview your palette and state colours on real components. Use the device controls (top right) to see how the layout reflows on tablet and mobile.
           </p>
 
+          <div className="uip-canvas" style={{ maxWidth: deviceWidth || '100%', margin: deviceWidth ? '0 auto' : undefined, transition: 'max-width .3s cubic-bezier(.2,0,0,1)' }}>
           {/* ── App Layout ── */}
           <div style={{ borderRadius: rd.l, overflow: 'hidden', border: `1px solid ${tk.border}`, marginBottom: 24 }}>
             <div className="uip-layout">
@@ -500,6 +527,7 @@ export default function UIPreviewModal({ open, onClose }) {
                 </div>
               )}
             </div>
+          </div>
           </div>
         </div>
       </div>
