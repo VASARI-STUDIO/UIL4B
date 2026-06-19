@@ -12,6 +12,7 @@ import { useClipboard } from './hooks/useClipboard'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { useAuth } from './contexts/AuthContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
+import { ADMIN_EMAILS } from './utils/constants'
 
 // Static imports — small or always-visited pages (instant load)
 import Dashboard from './pages/Dashboard'
@@ -55,6 +56,7 @@ const AutoBuilder = lazy(() => import('./pages/AutoBuilder'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
 const RatioCalculator = lazy(() => import('./pages/RatioCalculator'))
+const FuturePlans = lazy(() => import('./pages/FuturePlans'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -97,6 +99,23 @@ function RequireAuth({ children }) {
     )
   }
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
+  return children
+}
+
+// Gates alpha / not-yet-public tools so they can't be reached by direct URL.
+// Only admins (ADMIN_EMAILS) may open them; everyone else is bounced to the
+// dashboard. Keeps route access aligned with the hidden nav/dashboard entries.
+function RequireAdmin({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+        <div className="fg-loader" />
+      </div>
+    )
+  }
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  if (!isAdmin) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -173,6 +192,9 @@ export default function App() {
       '/fontpairs': 'UI L4B | Font Pairs',
       '/fontgallery': 'UI L4B | Font Gallery',
       '/icons': 'UI L4B | Icon Library',
+      '/imagery': 'UI L4B | Imagery',
+      '/icons-emoji': 'UI L4B | Icons & Emoji',
+      '/resources': 'UI L4B | Resources',
       '/alt-text': 'UI L4B | Alt Text Generator',
       '/ai-prompt': 'UI L4B | AI Image Prompt Generator',
       '/ai-tools': 'UI L4B | AI Tools',
@@ -192,6 +214,7 @@ export default function App() {
       '/privacy': 'UI L4B | Privacy',
       '/terms': 'UI L4B | Terms',
       '/admin': 'UI L4B | Admin',
+      '/future-plans': 'UI L4B | Future Plans',
       '/docs-themes': 'UI L4B | UI Design Themes',
       '/docs-brand': 'UI L4B | Brand Colour Guide',
       '/docs-seo': 'UI L4B | SEO for Small Business',
@@ -211,6 +234,9 @@ export default function App() {
       '/fontpairs': 'Discover harmonious font combinations for your designs. Preview heading and body pairs with live typography samples.',
       '/fontgallery': 'Browse and preview 1,200+ Google Fonts. Filter by category, weight, and style. Compare fonts side by side.',
       '/icons': 'Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
+      '/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
+      '/icons-emoji': 'Search 200,000+ icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
+      '/resources': 'A curated directory of the best external design resources — fonts, colour tools, AI generators, and inspiration galleries.',
       '/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
       '/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
       '/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by DeepSeek and Gemini.',
@@ -231,6 +257,7 @@ export default function App() {
       '/privacy': 'UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.',
       '/terms': 'UI L4B terms of service. Usage rules, intellectual property, and account policies.',
       '/admin': DEFAULT_DESCRIPTION,
+      '/future-plans': DEFAULT_DESCRIPTION,
       '/docs-themes': 'Learn about UI design themes — dark mode, light mode, and custom theme systems for modern web applications.',
       '/docs-brand': 'A practical guide to choosing brand colours. Understand colour psychology, contrast, and accessibility basics.',
       '/docs-seo': 'SEO fundamentals for small businesses. Learn keyword strategy, on-page optimisation, and technical SEO basics.',
@@ -305,6 +332,7 @@ export default function App() {
               <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
               <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
               <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
+              <Route path="/icons-emoji" element={<CategoryDashboard categoryId="icons-emoji" />} />
               <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
               <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
               <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
@@ -319,10 +347,10 @@ export default function App() {
               <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
               <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
               <Route path="/imgconvert" element={<Navigate to="/file-converter" replace />} />
-              <Route path="/file-converter" element={<FileConverter toast={toast} />} />
-              <Route path="/alt-text" element={<AltTextGenerator toast={toast} />} />
-              <Route path="/ai-prompt" element={<AiPromptGenerator toast={toast} />} />
-              <Route path="/landing-prompts" element={<LandingPromptGenerator toast={toast} />} />
+              <Route path="/file-converter" element={<RequireAdmin><FileConverter toast={toast} /></RequireAdmin>} />
+              <Route path="/alt-text" element={<RequireAdmin><AltTextGenerator toast={toast} /></RequireAdmin>} />
+              <Route path="/ai-prompt" element={<RequireAdmin><AiPromptGenerator toast={toast} /></RequireAdmin>} />
+              <Route path="/landing-prompts" element={<RequireAdmin><LandingPromptGenerator toast={toast} /></RequireAdmin>} />
               <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
               <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
               <Route path="/ratio" element={<RatioCalculator onCopy={copy} />} />
@@ -336,7 +364,7 @@ export default function App() {
               <Route path="/video-frames" element={<Navigate to="/file-converter" replace />} />
               <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
               <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
-              <Route path="/auto-builder" element={<AutoBuilder onCopy={copy} toast={toast} />} />
+              <Route path="/auto-builder" element={<RequireAdmin><AutoBuilder onCopy={copy} toast={toast} /></RequireAdmin>} />
               <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
               <Route path="/resources" element={<ExternalResources />} />
               <Route path="/onboarding" element={<Onboarding />} />
@@ -354,6 +382,7 @@ export default function App() {
               <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
               <Route path="/style-guide" element={<RequireAuth><StyleGuide toast={toast} /></RequireAuth>} />
+              <Route path="/future-plans" element={<RequireAdmin><FuturePlans /></RequireAdmin>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
