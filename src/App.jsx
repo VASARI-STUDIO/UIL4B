@@ -214,7 +214,7 @@ export default function App() {
       '/feedback': 'UI L4B | Feedback',
       '/help': 'UI L4B | Help Centre',
       '/info': 'UI L4B | Information Centre',
-      '/seo': 'UI L4B | SEO Inspector',
+      '/seo': 'UI L4B | SEO Specialist',
       '/privacy': 'UI L4B | Privacy',
       '/terms': 'UI L4B | Terms',
       '/admin': 'UI L4B | Admin',
