@@ -42,11 +42,18 @@ function ContextMenu({ x, y, tool, isPinned, onPin, onClose }) {
     }
   }, [onClose])
 
+  // Clamp to the viewport so a right-click near the right/bottom edge doesn't
+  // push the menu off-screen (≈200×120 footprint, 8px breathing room).
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 9999
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 9999
+  const left = Math.max(8, Math.min(x, vw - 208))
+  const top = Math.max(8, Math.min(y, vh - 128))
+
   return (
     <div
       ref={ref}
       className="nav-ctx-menu"
-      style={{ position: 'fixed', left: x, top: y, zIndex: 9999 }}
+      style={{ position: 'fixed', left, top, zIndex: 9999 }}
     >
       <button type="button" onClick={() => { onPin(tool.id); onClose() }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -353,6 +360,12 @@ export default function Sidebar({ isOpen, onClose }) {
               <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
             <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Help Centre</span>
+          </NavLink>
+          <NavLink to="/info" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
+            <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>Info Centre</span>
           </NavLink>
 
           {user ? (
