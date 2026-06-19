@@ -191,6 +191,9 @@ export default function App() {
       '/fontpairs': 'UI L4B | Font Pairs',
       '/fontgallery': 'UI L4B | Font Gallery',
       '/icons': 'UI L4B | Icon Library',
+      '/imagery': 'UI L4B | Imagery',
+      '/icons-emoji': 'UI L4B | Icons & Emoji',
+      '/resources': 'UI L4B | Resources',
       '/alt-text': 'UI L4B | Alt Text Generator',
       '/ai-prompt': 'UI L4B | AI Image Prompt Generator',
       '/ai-tools': 'UI L4B | AI Tools',
@@ -229,6 +232,9 @@ export default function App() {
       '/fontpairs': 'Discover harmonious font combinations for your designs. Preview heading and body pairs with live typography samples.',
       '/fontgallery': 'Browse and preview 1,200+ Google Fonts. Filter by category, weight, and style. Compare fonts side by side.',
       '/icons': 'Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
+      '/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
+      '/icons-emoji': 'Search 200,000+ icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
+      '/resources': 'A curated directory of the best external design resources — fonts, colour tools, AI generators, and inspiration galleries.',
       '/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
       '/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
       '/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by DeepSeek and Gemini.',
@@ -323,6 +329,7 @@ export default function App() {
               <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
               <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
               <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
+              <Route path="/icons-emoji" element={<CategoryDashboard categoryId="icons-emoji" />} />
               <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
               <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
               <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />

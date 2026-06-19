@@ -179,21 +179,8 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
         </NavLink>
 
-        {/* Primary Navigation */}
+        {/* Primary Navigation — Projects now lives in the profile menu (top-right). */}
         <div className="sidebar-nav">
-          {user && (
-            <NavLink
-              to="/projects"
-              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-              onClick={onClose}
-            >
-              <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-              </svg>
-              <span className="nav-item-label" style={{ textTransform: 'uppercase', letterSpacing: '.06em', fontSize: 11, fontWeight: 600 }}>{t('nav.projects') || 'Projects'}</span>
-            </NavLink>
-          )}
-
           {user && (
             <div
               className={`nav-pinned${pinDropActive ? ' drop-active' : ''}`}

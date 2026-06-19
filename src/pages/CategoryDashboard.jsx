@@ -54,9 +54,12 @@ const QUICK_ACTIONS = {
   imagery: [
     { label: 'Compress for web', desc: 'Reduce JPG/PNG file size', to: '/file-converter' },
     { label: 'Convert to WebP', desc: 'Modern format, smaller files', to: '/file-converter' },
-    { label: 'Browse outline icons', desc: 'Iconify-powered search', to: '/icons' },
     { label: 'Extract video frames', desc: 'Pull stills from MP4/MOV', to: '/file-converter' },
-    { label: 'AI image prompts', desc: 'Generate prompts with DeepSeek', to: '/ai-prompt' },
+    { label: 'Aspect ratio calculator', desc: 'Solve dimensions for any ratio', to: '/ratio' },
+  ],
+  'icons-emoji': [
+    { label: 'Search outline icons', desc: 'Iconify-powered, copy as SVG', to: '/icons' },
+    { label: 'Browse emoji', desc: 'Organised by category, click to copy', to: '/emoji' },
   ],
   documentation: [
     { label: 'Visual hierarchy', desc: 'Layout fundamentals', to: '/docs-design' },

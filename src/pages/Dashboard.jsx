@@ -399,6 +399,7 @@ export default function Dashboard() {
           </>
         )
       case 'imagery':
+      case 'icons-emoji':
         return (
           <>
             <div className="bento-img-preview">
