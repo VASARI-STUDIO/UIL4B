@@ -58,6 +58,7 @@ const HelpCentre = lazy(() => import('./pages/HelpCentre'))
 const RatioCalculator = lazy(() => import('./pages/RatioCalculator'))
 const FuturePlans = lazy(() => import('./pages/FuturePlans'))
 const InfoCentre = lazy(() => import('./pages/InfoCentre'))
+const SeoInspector = lazy(() => import('./pages/SeoInspector'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -213,6 +214,7 @@ export default function App() {
       '/feedback': 'UI L4B | Feedback',
       '/help': 'UI L4B | Help Centre',
       '/info': 'UI L4B | Information Centre',
+      '/seo': 'UI L4B | SEO Inspector',
       '/privacy': 'UI L4B | Privacy',
       '/terms': 'UI L4B | Terms',
       '/admin': 'UI L4B | Admin',
@@ -257,6 +259,7 @@ export default function App() {
       '/feedback': 'Share your feedback, report bugs, or request features for UI L4B. We read every submission.',
       '/help': 'Get help with UI L4B. Browse FAQs, learn about features, and find answers to common questions.',
       '/info': 'The UI L4B Information Centre — a single, searchable guide to every tool, keyboard shortcuts, privacy, and a live screen-size inspector.',
+      '/seo': 'Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.',
       '/privacy': 'UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.',
       '/terms': 'UI L4B terms of service. Usage rules, intellectual property, and account policies.',
       '/admin': DEFAULT_DESCRIPTION,
@@ -386,6 +389,7 @@ export default function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/help" element={<HelpCentre />} />
               <Route path="/info" element={<InfoCentre />} />
+              <Route path="/seo" element={<SeoInspector />} />
               <Route path="/about" element={<Navigate to="/help#about" replace />} />
               <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
