@@ -2963,6 +2963,15 @@ img,svg,video{max-width:100%;height:auto}
 .seo-check-icon{flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1.5px solid;display:flex;align-items:center;justify-content:center;margin-top:1px}
 .seo-check-label{font-size:13px;font-weight:600;color:var(--t0);margin-bottom:2px}
 .seo-check-detail{font-size:12.5px;color:var(--t2);line-height:1.5}
+.seo-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.seo-tab{padding:9px 16px;border:none;background:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s ease,border-color .15s ease}
+.seo-tab:hover{color:var(--t0)}
+.seo-tab.is-active{color:var(--accent);border-bottom-color:var(--accent)}
+.seo-faqs{display:flex;flex-direction:column;gap:14px}
+.seo-faq{display:flex;flex-direction:column;gap:7px}
+.seo-faq-head{display:flex;align-items:center;justify-content:space-between}
+.seo-faq-del{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px;border-radius:var(--radius-s);display:flex;transition:color .15s ease}
+.seo-faq-del:hover{color:var(--err)}
 .seo-tags{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow);padding:20px;margin-top:16px}
 .seo-tags-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .seo-tags-note{font-size:12.5px;color:var(--t2);line-height:1.5;margin:8px 0 12px}
