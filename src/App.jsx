@@ -56,6 +56,7 @@ const AutoBuilder = lazy(() => import('./pages/AutoBuilder'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
 const RatioCalculator = lazy(() => import('./pages/RatioCalculator'))
+const FuturePlans = lazy(() => import('./pages/FuturePlans'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -213,6 +214,7 @@ export default function App() {
       '/privacy': 'UI L4B | Privacy',
       '/terms': 'UI L4B | Terms',
       '/admin': 'UI L4B | Admin',
+      '/future-plans': 'UI L4B | Future Plans',
       '/docs-themes': 'UI L4B | UI Design Themes',
       '/docs-brand': 'UI L4B | Brand Colour Guide',
       '/docs-seo': 'UI L4B | SEO for Small Business',
@@ -255,6 +257,7 @@ export default function App() {
       '/privacy': 'UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.',
       '/terms': 'UI L4B terms of service. Usage rules, intellectual property, and account policies.',
       '/admin': DEFAULT_DESCRIPTION,
+      '/future-plans': DEFAULT_DESCRIPTION,
       '/docs-themes': 'Learn about UI design themes — dark mode, light mode, and custom theme systems for modern web applications.',
       '/docs-brand': 'A practical guide to choosing brand colours. Understand colour psychology, contrast, and accessibility basics.',
       '/docs-seo': 'SEO fundamentals for small businesses. Learn keyword strategy, on-page optimisation, and technical SEO basics.',
@@ -379,6 +382,7 @@ export default function App() {
               <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
               <Route path="/style-guide" element={<RequireAuth><StyleGuide toast={toast} /></RequireAuth>} />
+              <Route path="/future-plans" element={<RequireAdmin><FuturePlans /></RequireAdmin>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
