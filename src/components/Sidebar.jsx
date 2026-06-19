@@ -42,11 +42,18 @@ function ContextMenu({ x, y, tool, isPinned, onPin, onClose }) {
     }
   }, [onClose])
 
+  // Clamp to the viewport so a right-click near the right/bottom edge doesn't
+  // push the menu off-screen (≈200×120 footprint, 8px breathing room).
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 9999
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 9999
+  const left = Math.max(8, Math.min(x, vw - 208))
+  const top = Math.max(8, Math.min(y, vh - 128))
+
   return (
     <div
       ref={ref}
       className="nav-ctx-menu"
-      style={{ position: 'fixed', left: x, top: y, zIndex: 9999 }}
+      style={{ position: 'fixed', left, top, zIndex: 9999 }}
     >
       <button type="button" onClick={() => { onPin(tool.id); onClose() }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
