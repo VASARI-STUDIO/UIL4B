@@ -377,7 +377,7 @@ export default function App() {
               <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
               <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
               <Route path="/settings" element={<Settings toast={toast} />} />
-              <Route path="/community" element={<Community />} />
+              <Route path="/community" element={<Community toast={toast} />} />
               <Route path="/feedback" element={<Feedback toast={toast} />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
