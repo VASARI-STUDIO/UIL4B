@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { TOOLS, CATEGORIES, getCategory, localiseTools, localiseCategories } from '../data/tools'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useAuth } from '../contexts/AuthContext'
+import { ADMIN_EMAILS } from '../utils/constants'
 
 export default function CommandPalette({ open, onClose }) {
   const [query, setQuery] = useState('')
@@ -11,9 +13,12 @@ export default function CommandPalette({ open, onClose }) {
   const inputRef = useRef(null)
   const listRef = useRef(null)
   const { recent } = useWorkspace()
+  const { user } = useAuth()
   const { t } = useI18n()
 
-  const lTools = useMemo(() => localiseTools(t), [t])
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  // Hide alpha / not-yet-public tools from search for everyone but admins.
+  const lTools = useMemo(() => localiseTools(t).filter(tl => isAdmin || !tl.alpha), [t, isAdmin])
   const lCats = useMemo(() => localiseCategories(t), [t])
 
   const quickActions = useMemo(() => [

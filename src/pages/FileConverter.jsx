@@ -46,6 +46,16 @@ function formatBytes(b) {
   return (b / 1048576).toFixed(1) + ' MB'
 }
 
+// Describes the size change between the original and converted file.
+// dir: 'down' (smaller, good), 'up' (larger), 'same'.
+function sizeDelta(orig, out) {
+  if (!orig || out == null) return null
+  const pct = Math.round((1 - out / orig) * 100)
+  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller`, color: 'var(--ok)' }
+  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger`, color: 'var(--err)' }
+  return { pct: 0, dir: 'same', label: 'same size', color: 'var(--t2)' }
+}
+
 function formatTime(s) {
   if (!isFinite(s)) return '0:00'
   const m = Math.floor(s / 60)
@@ -295,6 +305,10 @@ function ImageConvert({ toast, initialFiles }) {
   }, [items, fmt, downloadOne, toast])
 
   const readyCount = items.filter(it => it.out).length
+  const converted = items.filter(it => it.out)
+  const totalOrig = converted.reduce((s, it) => s + it.file.size, 0)
+  const totalOut = converted.reduce((s, it) => s + it.out.bytes, 0)
+  const batchDelta = readyCount > 1 ? sizeDelta(totalOrig, totalOut) : null
 
   return (
     <>
@@ -358,6 +372,12 @@ function ImageConvert({ toast, initialFiles }) {
               <div className="fc-progress-bar" style={{ width: `${Math.round((convertProgress.done / convertProgress.total) * 100)}%` }} />
             </div>
           )}
+          {batchDelta && (
+            <div style={{ fontSize: 12, color: 'var(--t1)', marginTop: 10 }}>
+              {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
+              <span style={{ color: batchDelta.color, fontWeight: 600 }}> • {batchDelta.label}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -376,7 +396,14 @@ function ImageConvert({ toast, initialFiles }) {
                 ) : it.out ? (
                   <>
                     <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {it.out.w}×{it.out.h} • {formatBytes(it.out.bytes)}
+                      {it.out.w}×{it.out.h}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                      {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
+                      {(() => {
+                        const d = sizeDelta(it.file.size, it.out.bytes)
+                        return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
+                      })()}
                     </div>
                     <button className="btn btn-accent fc-dl" onClick={() => downloadOne(it)}>
                       Download {fmt.label}
@@ -576,7 +603,13 @@ function VideoToGif({ toast }) {
           <div className="sl">Result</div>
           <div className="card" style={{ padding: 16, marginTop: 10, maxWidth: 520 }}>
             <img src={result.url} alt="GIF result" style={{ maxWidth: '100%', borderRadius: 'var(--radius-s)', display: 'block', background: 'var(--bg-2)' }} />
-            <div style={{ fontSize: 12, color: 'var(--t1)', margin: '10px 0' }}>GIF • {formatBytes(result.bytes)}</div>
+            <div style={{ fontSize: 12, color: 'var(--t1)', margin: '10px 0' }}>
+              GIF • {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
+              {(() => {
+                const d = file?.size ? sizeDelta(file.size, result.bytes) : null
+                return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
+              })()}
+            </div>
             <DownloadButton url={result.url} name={`${(file?.name || 'video').replace(/\.[^.]+$/, '')}.gif`} />
           </div>
         </div>

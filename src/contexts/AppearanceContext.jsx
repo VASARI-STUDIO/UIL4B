@@ -2,29 +2,22 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const AppearanceContext = createContext()
 const STORAGE_KEY = 'vs-appearance'
-// Bump when we want to force a new appearance default onto everyone (including
-// returning users who already have a saved preference).
-const VERSION_KEY = 'vs-appearance-v'
-const APPEARANCE_VERSION = '2'
 
+// Rounding and density are LOCKED product-wide (medium / cozy) — the surface is
+// curated, not user-customised. Only reduced-motion remains adjustable because
+// it is an accessibility preference, not a cosmetic one.
 const DEFAULTS = {
-  rounding: 'default', // "Medium" rounding — the friendly default for everyone
-  density: 'cozy',
+  rounding: 'default', // "Medium" rounding — locked for everyone
+  density: 'cozy',     // single comfortable density — locked for everyone
   reducedMotion: false,
 }
 
 function load() {
   try {
-    // One-time migration: snap everyone to the new medium-rounding default.
-    if (localStorage.getItem(VERSION_KEY) !== APPEARANCE_VERSION) {
-      localStorage.setItem(VERSION_KEY, APPEARANCE_VERSION)
-      const raw = localStorage.getItem(STORAGE_KEY)
-      const prev = raw ? JSON.parse(raw) : {}
-      return { ...DEFAULTS, ...prev, rounding: DEFAULTS.rounding }
-    }
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULTS
-    return { ...DEFAULTS, ...JSON.parse(raw) }
+    const prev = raw ? JSON.parse(raw) : {}
+    // Ignore any stored rounding/density; only honour the a11y motion choice.
+    return { ...DEFAULTS, reducedMotion: !!prev.reducedMotion }
   } catch { return DEFAULTS }
 }
 
