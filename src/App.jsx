@@ -389,7 +389,7 @@ export default function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/help" element={<HelpCentre />} />
               <Route path="/info" element={<InfoCentre />} />
-              <Route path="/seo" element={<SeoInspector />} />
+              <Route path="/seo" element={<SeoInspector onCopy={copy} toast={toast} />} />
               <Route path="/about" element={<Navigate to="/help#about" replace />} />
               <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
