@@ -15,6 +15,38 @@ function truncate(str, n) {
   return str.length > n ? str.slice(0, n - 1).trimEnd() + '…' : str
 }
 
+// Escape a string for safe use inside an HTML attribute value.
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+// Build the copy-ready <head> meta tags from the current inputs.
+function buildTags({ title, description, url }) {
+  const t = title.trim()
+  const d = description.trim()
+  const u = url.trim()
+  const lines = []
+  if (t) lines.push(`<title>${escapeAttr(t)}</title>`)
+  if (d) lines.push(`<meta name="description" content="${escapeAttr(d)}">`)
+  if (u) lines.push(`<link rel="canonical" href="${escapeAttr(u)}">`)
+  lines.push('')
+  lines.push('<!-- Open Graph -->')
+  if (t) lines.push(`<meta property="og:title" content="${escapeAttr(t)}">`)
+  if (d) lines.push(`<meta property="og:description" content="${escapeAttr(d)}">`)
+  if (u) lines.push(`<meta property="og:url" content="${escapeAttr(u)}">`)
+  lines.push('<meta property="og:type" content="website">')
+  lines.push('')
+  lines.push('<!-- Twitter -->')
+  lines.push('<meta name="twitter:card" content="summary_large_image">')
+  if (t) lines.push(`<meta name="twitter:title" content="${escapeAttr(t)}">`)
+  if (d) lines.push(`<meta name="twitter:description" content="${escapeAttr(d)}">`)
+  return lines.join('\n')
+}
+
 function parseUrl(raw) {
   const fallback = { domain: 'example.com', crumbs: [] }
   if (!raw) return fallback
@@ -100,7 +132,7 @@ const STATUS_META = {
   fail: { color: 'var(--err)', score: 0, icon: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></> },
 }
 
-export default function SeoInspector() {
+export default function SeoInspector({ onCopy, toast }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [url, setUrl] = useState('')
@@ -108,6 +140,12 @@ export default function SeoInspector() {
   const [device, setDevice] = useState('desktop')
 
   const checks = useMemo(() => runChecks({ title, description, url, keyword }), [title, description, url, keyword])
+  const tags = useMemo(() => buildTags({ title, description, url }), [title, description, url])
+
+  const copyTags = () => {
+    if (onCopy) onCopy(tags)
+    else if (navigator.clipboard) navigator.clipboard.writeText(tags).then(() => toast?.('Meta tags copied'))
+  }
 
   const score = useMemo(() => {
     if (!checks.length) return 0
@@ -217,6 +255,21 @@ export default function SeoInspector() {
             </div>
           )
         })}
+      </div>
+
+      {/* Copy-ready meta tags */}
+      <div className="seo-tags">
+        <div className="seo-tags-head">
+          <h2 className="seo-checklist-h" style={{ margin: 0 }}>Meta tags</h2>
+          <button className="btn btn-s btn-accent" onClick={copyTags}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+            Copy tags
+          </button>
+        </div>
+        <p className="seo-tags-note">Paste these into your page&rsquo;s <code>&lt;head&gt;</code>. They update live as you type above.</p>
+        <pre className="seo-tags-code">{tags}</pre>
       </div>
     </div>
   )
