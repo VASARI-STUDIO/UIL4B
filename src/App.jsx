@@ -184,7 +184,7 @@ export default function App() {
     setMenuOpen(false)
     const PAGE_TITLES = {
       '/': 'UI L4B | Design Toolkit',
-      '/welcome': 'UI L4B | Design Toolkit',
+      '/home': 'UI L4B | Design Toolkit',
       '/dashboard': 'UI L4B | Dashboard',
       '/color': 'UI L4B | Colour Studio',
       '/typography': 'UI L4B | Typography',
@@ -226,7 +226,7 @@ export default function App() {
     const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion, video frames, and production-ready CSS exports.'
     const PAGE_DESCRIPTIONS = {
       '/': DEFAULT_DESCRIPTION,
-      '/welcome': DEFAULT_DESCRIPTION,
+      '/home': DEFAULT_DESCRIPTION,
       '/dashboard': 'Your UI L4B dashboard. Access all design tools, recent projects, and saved palettes in one place.',
       '/color': 'Build professional colour systems with palette generation, tint scales, gradient builder, and named colour libraries. Export CSS, Tailwind, PNG and SVG.',
       '/typography': 'Typography tools for designers and developers. Pair fonts, build type scales, and browse the Google Fonts catalogue.',
@@ -299,8 +299,12 @@ export default function App() {
   // The sales / landing page is the public homepage. It renders full-screen,
   // outside the app chrome. The root URL (/) serves it to logged-out visitors so
   // it is the first page that loads and is indexable; logged-in users are sent
-  // straight to their dashboard but can still reach it via /welcome.
+  // straight to their dashboard but can still reach it via /home.
+  // /welcome is the legacy path — redirect it to /home so old links keep working.
   if (location.pathname === '/welcome') {
+    return <Navigate to="/home" replace />
+  }
+  if (location.pathname === '/home') {
     return <><Landing /><GoogleOneTap /></>
   }
   if (location.pathname === '/onboarding') {
