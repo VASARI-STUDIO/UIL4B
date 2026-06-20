@@ -754,14 +754,11 @@ export default function Landing() {
           <div className="landing-hero-bg" aria-hidden="true">
             <span className="landing-hero-grid" />
             <span className="landing-hero-orb landing-hero-orb-1" />
-            <span className="landing-hero-orb landing-hero-orb-2" />
-            <span className="landing-hero-orb landing-hero-orb-3" />
             <span className="landing-hero-glow" />
           </div>
           <section className="landing-hero">
             <span className="landing-eyebrow landing-eyebrow-live">
-              <span className="landing-live-dot" aria-hidden="true" />
-              Design toolkit for professionals
+              The design toolkit
             </span>
             <h1 className="landing-title">
               Colours, type, icons, exports.<br />
