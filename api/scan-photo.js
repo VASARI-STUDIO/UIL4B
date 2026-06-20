@@ -1,15 +1,17 @@
 import { adminAuth, adminDb, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
 import { planForSubscription, dailyLimitFor } from './_lib/plans.js'
+import { cleanKey } from './_lib/env.js'
 
 export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 }
 
-const GEMINI_KEY =
+const GEMINI_KEY = cleanKey(
   process.env.GEMINI_API_KEY ||
   process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
   process.env.GOOGLE_API_KEY ||
   ''
+)
 
 const SYSTEM_PROMPT = `You are a photography and visual analysis expert. Analyze the uploaded image and identify the photographic and visual rules/settings used. Return a JSON array of detected rules, where each rule is an object with:
 - "id": a short kebab-case identifier matching one of the known rule IDs listed below, or a new one if none match
