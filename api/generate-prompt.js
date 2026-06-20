@@ -1,12 +1,13 @@
 import { adminDb, adminAuth, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
 import { planForSubscription, dailyLimitFor } from './_lib/plans.js'
+import { cleanKey } from './_lib/env.js'
 
 export const config = {
   api: { bodyParser: { sizeLimit: '2mb' } },
 }
 
-const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || ''
-const GEMINI_KEY = process.env.GEMINI_API_KEY || ''
+const DEEPSEEK_KEY = cleanKey(process.env.DEEPSEEK_API_KEY)
+const GEMINI_KEY = cleanKey(process.env.GEMINI_API_KEY)
 const GEMINI_MODEL = 'gemini-2.0-flash'
 
 const SYSTEM_PROMPT = `You are an expert AI image prompt engineer specialising in photorealistic, artistic, and commercial image generation.
@@ -83,6 +84,24 @@ function todayStr() {
 }
 
 export default async function handler(req, res) {
+  // Config health check (admin-code gated). GET /api/generate-prompt?diag=<code>
+  // reports whether the AI keys and Firebase credential are present/valid —
+  // lengths only, never the values — so misconfiguration is diagnosable fast.
+  if (req.method === 'GET') {
+    if ((req.query?.diag || '') !== 'uil4b-dev-2026') {
+      res.setHeader('Allow', 'POST')
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    let cred
+    try { cred = credentialProblem() || 'ok' } catch (e) { cred = 'error: ' + String(e?.message || e).slice(0, 120) }
+    return res.status(200).json({
+      deepseekKey: DEEPSEEK_KEY ? `set (${DEEPSEEK_KEY.length} chars)` : 'MISSING',
+      geminiKey: GEMINI_KEY ? `set (${GEMINI_KEY.length} chars)` : 'MISSING',
+      firebaseCredential: cred,
+      node: process.version,
+    })
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
@@ -167,7 +186,12 @@ export default async function handler(req, res) {
     if (lastErr?.status === 429) {
       return res.status(429).json({ error: 'Rate limited by provider. Try again shortly.', retryAfter: 10 })
     }
-    return res.status(502).json({ error: 'AI providers unavailable', detail: String(lastErr?.message || '').slice(0, 200) })
+    // 401/403 from a provider means the key was rejected — surface that plainly
+    // so a misconfigured key is obvious rather than a vague "unavailable".
+    if (lastErr?.status === 401 || lastErr?.status === 403) {
+      return res.status(502).json({ error: `AI provider rejected the API key (${lastErr.status}). Check DEEPSEEK_API_KEY / GEMINI_API_KEY in the deployment environment — re-paste with no quotes or trailing spaces, then redeploy.`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
+    }
+    return res.status(502).json({ error: `AI providers unavailable (${lastErr?.message || 'unknown error'}).`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
   }
 
   try {
