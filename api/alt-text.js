@@ -1,17 +1,20 @@
 import { adminDb, adminAuth, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
 import { planForSubscription, dailyLimitFor, modelFor } from './_lib/plans.js'
+import { cleanKey } from './_lib/env.js'
 
 export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 }
 
 // Gemini API key — accept the common env var names so it works regardless of
-// what it was named in Vercel. Server-side only (never exposed to the client).
-const GEMINI_KEY =
+// what it was named in Vercel. Sanitised (quotes/whitespace stripped) and
+// server-side only (never exposed to the client).
+const GEMINI_KEY = cleanKey(
   process.env.GEMINI_API_KEY ||
   process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
   process.env.GOOGLE_API_KEY ||
   ''
+)
 
 const BASE_PROMPT = `You are an accessibility expert writing WCAG 2.2-compliant alt text for a website image.
 - Do not start with "Image of", "Picture of", or "A photo of", and do not end with the word "image".
