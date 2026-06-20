@@ -208,16 +208,19 @@ export default function InfoCentre() {
       <div className="ic-sections">
         {SECTIONS.map(s => (
           <section key={s.id} id={s.id} className="ic-acc">
-            <button
-              className={`ic-acc-head${open[s.id] ? ' is-open' : ''}`}
-              onClick={() => toggle(s.id)}
-              aria-expanded={!!open[s.id]}
-            >
-              <span className="ic-acc-emoji" aria-hidden="true">{s.emoji}</span>
-              <h2 className="ic-acc-title">{s.title}</h2>
-              <svg className="ic-acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-            </button>
-            <div className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`}>
+            <h2 className="ic-acc-h">
+              <button
+                className={`ic-acc-head${open[s.id] ? ' is-open' : ''}`}
+                onClick={() => toggle(s.id)}
+                aria-expanded={!!open[s.id]}
+                aria-controls={`ic-body-${s.id}`}
+              >
+                <span className="ic-acc-emoji" aria-hidden="true">{s.emoji}</span>
+                <span className="ic-acc-title">{s.title}</span>
+                <svg className="ic-acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+              </button>
+            </h2>
+            <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-body-${s.id}`}>
               <div className="ic-acc-body-inner">{s.body}</div>
             </div>
           </section>
