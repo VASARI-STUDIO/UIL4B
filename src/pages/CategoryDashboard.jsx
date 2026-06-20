@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import { TRENDING_FONTS, TRENDING_PAIRS, FONT_OF_THE_MONTH, COMMUNITY_STATS } from '../data/communityFonts'
 import { loadFont, getFontCSSRule } from '../utils/googleFonts'
+import CategoryMiniTool from '../components/CategoryMiniTool'
 
 function PinIcon({ filled }) {
   return (
@@ -332,7 +333,7 @@ function TypographyDashboard({ cat, tools, quickActions, pinned, togglePinned, t
   )
 }
 
-export default function CategoryDashboard({ categoryId }) {
+export default function CategoryDashboard({ categoryId, onCopy, toast }) {
   const rawCat = getCategory(categoryId)
   const { pinned, togglePinned } = useWorkspace()
   const { t } = useI18n()
@@ -410,6 +411,8 @@ export default function CategoryDashboard({ categoryId }) {
         <h1>{cat.label}</h1>
         <p className="sec-h-sub">{cat.description}</p>
       </div>
+
+      <CategoryMiniTool categoryId={categoryId} onCopy={onCopy} toast={toast} />
 
       {useBento ? (
         <div className="cat-bento">

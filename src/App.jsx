@@ -341,10 +341,10 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
               <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
-              <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" />} />
-              <Route path="/icons-emoji" element={<CategoryDashboard categoryId="icons-emoji" />} />
+              <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" onCopy={copy} toast={toast} />} />
+              <Route path="/icons-emoji" element={<CategoryDashboard categoryId="icons-emoji" onCopy={copy} toast={toast} />} />
               <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
-              <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" />} />
+              <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" onCopy={copy} toast={toast} />} />
               <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
               <Route path="/color-studio" element={<Navigate to="/color" replace />} />
               <Route path="/palette" element={<Navigate to="/color" replace />} />
