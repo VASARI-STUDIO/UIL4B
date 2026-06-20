@@ -2862,7 +2862,7 @@ img,svg,video{max-width:100%;height:auto}
 .ch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
 .ch-card{position:relative;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);transition:border-color .2s,transform .2s}
 .ch-card:hover{border-color:var(--bh);transform:translateY(-3px)}
-.ch-thumb{display:flex;align-items:center;justify-content:center;height:150px;text-decoration:none!important;position:relative}
+.ch-thumb{display:flex;align-items:center;justify-content:center;height:150px;text-decoration:none!important;position:relative;background:linear-gradient(135deg,var(--c1,var(--accent)),var(--c2,var(--accent-strong)))}
 .ch-thumb-mono{font-family:var(--mono);font-size:30px;font-weight:700;color:rgba(255,255,255,.92);letter-spacing:.04em;text-shadow:0 1px 8px rgba(0,0,0,.25)}
 .ch-heart{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-pill);border:none;cursor:pointer;background:rgba(0,0,0,.5);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;opacity:0;transform:translateY(-2px);transition:opacity .18s,transform .18s,background .15s;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .ch-card:hover .ch-heart,.ch-heart:focus-visible{opacity:1;transform:translateY(0)}
@@ -2903,6 +2903,7 @@ img,svg,video{max-width:100%;height:auto}
 .ic-toc-link:hover{border-color:var(--accent);color:var(--accent)}
 .ic-sections{display:flex;flex-direction:column;gap:10px}
 .ic-acc{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);scroll-margin-top:72px}
+.ic-acc-h{margin:0;font-size:inherit;font-weight:inherit;line-height:inherit}
 .ic-acc-head{display:flex;align-items:center;gap:12px;width:100%;padding:16px 18px;background:none;border:none;cursor:pointer;font-family:var(--font);text-align:left;transition:background var(--t)}
 .ic-acc-head:hover{background:var(--hvr)}
 .ic-acc-emoji{font-size:19px;line-height:1;flex-shrink:0}

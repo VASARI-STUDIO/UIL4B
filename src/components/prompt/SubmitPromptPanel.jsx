@@ -100,8 +100,9 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
       onClose()
     } catch {
       toast('Failed to submit — try again')
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }, [submitTitle, submitText, submitTags, submitProfile, submitMedia, submitMediaPreview, user, userProfile, toast, onClose])
 
   return (

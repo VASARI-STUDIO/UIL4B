@@ -118,7 +118,7 @@ export default function FuturePlans() {
             </div>
             <div className="fp-grid">
               {items.map(plan => (
-                <article key={plan.title} className="fp-card">
+                <article key={`${plan.tag}-${plan.title}`} className="fp-card">
                   <div className="fp-card-head">
                     <h3 className="fp-card-title">{plan.title}</h3>
                     <span className="fp-card-tag">{plan.tag}</span>

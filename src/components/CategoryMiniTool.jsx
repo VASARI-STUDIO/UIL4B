@@ -51,7 +51,7 @@ function IconEmojiMini({ onCopy, toast }) {
 
   const copy = (em) => {
     if (onCopy) onCopy(em)
-    else if (navigator.clipboard) navigator.clipboard.writeText(em).then(() => toast?.('Copied'))
+    else if (navigator.clipboard) navigator.clipboard.writeText(em).then(() => toast?.('Copied')).catch(() => toast?.('Copy failed'))
     setCopied(em)
     setTimeout(() => setCopied(c => (c === em ? null : c)), 900)
   }
@@ -84,7 +84,7 @@ function ShadowMini({ onCopy, toast }) {
 
   const copy = () => {
     if (onCopy) onCopy(css)
-    else if (navigator.clipboard) navigator.clipboard.writeText(css).then(() => toast?.('Copied CSS'))
+    else if (navigator.clipboard) navigator.clipboard.writeText(css).then(() => toast?.('Copied CSS')).catch(() => toast?.('Copy failed'))
   }
 
   const sliders = [

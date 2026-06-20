@@ -167,8 +167,10 @@ export default async function handler(req, res) {
       .replace(/^\d+\.\s+/gm, '')        // numbered list markers
       .trim()
 
-    const inc = await FieldValueIncrement(1)
-    await usageRef.set({ [toolId]: inc }, { merge: true })
+    try {
+      const inc = await FieldValueIncrement(1)
+      await usageRef.set({ [toolId]: inc }, { merge: true })
+    } catch { /* usage write best-effort — never fail a successful generation */ }
 
     return res.status(200).json({
       altText,
