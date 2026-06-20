@@ -32,19 +32,25 @@ export default function AddPromptPanel({ open, onClose, onAdd, toast, t }) {
     }
 
     const picked = fileInput?.files?.[0]
+    // Guard localStorage: a large file becomes a ~33%-bigger base64 string.
+    if (picked && picked.size > 4 * 1024 * 1024) {
+      toast('That file is too large to attach — saving the prompt text only.')
+      return finish(prompt)
+    }
+    // If a FileReader can't read the file, still save the text rather than hang.
+    const readFallback = (file) => {
+      const reader = new FileReader()
+      reader.onload = (e) => { prompt.img = e.target.result; finish(prompt) }
+      reader.onerror = () => { toast('Could not read the file — saving the prompt text only.'); finish(prompt) }
+      reader.readAsDataURL(file)
+    }
     if (picked && picked.type.startsWith('image/')) {
       // Compress images to WebP before persisting locally (SVGs pass through).
       processImageForUpload(picked, { maxDimension: 1200, quality: 0.8 })
         .then(({ dataUrl }) => { prompt.img = dataUrl; finish(prompt) })
-        .catch(() => {
-          const reader = new FileReader()
-          reader.onload = (e) => { prompt.img = e.target.result; finish(prompt) }
-          reader.readAsDataURL(picked)
-        })
+        .catch(() => readFallback(picked))
     } else if (picked) {
-      const reader = new FileReader()
-      reader.onload = (e) => { prompt.img = e.target.result; finish(prompt) }
-      reader.readAsDataURL(picked)
+      readFallback(picked)
     } else {
       finish(prompt)
     }

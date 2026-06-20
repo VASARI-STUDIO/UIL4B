@@ -67,13 +67,15 @@ function analyze(text, keyword) {
   let keywordStat = null
   const kw = keyword.trim().toLowerCase()
   if (kw) {
-    const hay = ` ${norm.join(' ')} `
-    const phrase = kw.replace(/[^a-z0-9\s]/g, '').trim()
+    // Count against the RAW lowercased text (so stopword keywords aren't filtered
+    // out), with Unicode-safe word boundaries so "café"/CJK keywords still match.
+    const raw = trimmed.toLowerCase()
+    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     let count = 0
-    if (phrase.includes(' ')) {
-      count = (` ${trimmed.toLowerCase()} `.match(new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length
-    } else {
-      count = (hay.match(new RegExp(`\\s${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s`, 'g')) || []).length
+    try {
+      count = (raw.match(new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'gu')) || []).length
+    } catch {
+      count = (raw.match(new RegExp(escaped, 'g')) || []).length
     }
     const density = (count / Math.max(1, wordCount)) * 100
     let verdict

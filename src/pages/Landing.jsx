@@ -413,12 +413,11 @@ function LandingBento({ onOpen }) {
         <h2>Every tool you reach for, together.</h2>
       </div>
       <div className="landing-bento">
-        {BENTO.map((t, i) => (
+        {BENTO.map((t) => (
           <button
             key={t.id}
             type="button"
             className={`landing-bento-tile landing-bento-c${t.span}`}
-            style={{ '--i': i }}
             onClick={() => onOpen(t.to)}
           >
             <span className="landing-bento-icon">

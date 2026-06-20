@@ -46,7 +46,7 @@ function DesignCard({ item, saved, count, onToggle }) {
   return (
     <article className="ch-card">
       <a className="ch-thumb" href={item.url} target="_blank" rel="noopener noreferrer"
-        style={{ background: `linear-gradient(135deg, ${item.c1}, ${item.c2})` }} aria-label={`${item.name} — open in new tab`}>
+        style={{ '--c1': item.c1, '--c2': item.c2 }} aria-label={`${item.name} — open in new tab`}>
         <span className="ch-thumb-mono">{item.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
       </a>
       <button
@@ -98,8 +98,8 @@ function SubmitModal({ onClose, onSubmit }) {
   }
 
   return (
-    <div className="ch-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Submit a design">
-      <div className="ch-modal" onClick={e => e.stopPropagation()}>
+    <div className="ch-modal-overlay" onClick={onClose} role="presentation">
+      <div className="ch-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design">
         <div className="ch-modal-head">
           <h2>Submit a design</h2>
           <button className="ch-modal-close" onClick={onClose} aria-label="Close">

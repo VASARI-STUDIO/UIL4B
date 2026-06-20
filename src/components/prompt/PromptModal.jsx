@@ -12,8 +12,8 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
   }, [onClose])
 
   return (
-    <div className="pl-modal-backdrop" onClick={onClose}>
-      <div className="pl-modal" onClick={e => e.stopPropagation()}>
+    <div className="pl-modal-backdrop" onClick={onClose} role="presentation">
+      <div className="pl-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="pl-modal-title">
         <button className="pl-modal-close" onClick={onClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -21,7 +21,7 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
         </button>
 
         <div className="pl-modal-header">
-          <h2>{prompt.title || prompt.text.slice(0, 60)}</h2>
+          <h2 id="pl-modal-title">{prompt.title || prompt.text.slice(0, 60)}</h2>
           {pTags.length > 0 && (
             <div className="pl-card-tags" style={{ marginTop: 8 }}>
               {pTags.map(tag => <span key={tag} className="pl-tag">{tag}</span>)}

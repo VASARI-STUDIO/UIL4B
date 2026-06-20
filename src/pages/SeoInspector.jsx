@@ -22,20 +22,25 @@ export default function SeoInspector({ onCopy, toast }) {
         <p>{active.desc}</p>
       </div>
 
-      <div className="seo-tabs">
+      <div className="seo-tabs" role="tablist" aria-label="SEO tools">
         {TABS.map(tp => (
           <button
             key={tp.id}
+            id={`seo-tab-${tp.id}`}
+            role="tab"
+            aria-selected={tab === tp.id}
+            aria-controls={`seo-panel-${tp.id}`}
             className={`seo-tab${tab === tp.id ? ' is-active' : ''}`}
             onClick={() => setTab(tp.id)}
-            aria-pressed={tab === tp.id}
           >{tp.label}</button>
         ))}
       </div>
 
-      {tab === 'meta' && <MetaInspector onCopy={onCopy} toast={toast} />}
-      {tab === 'schema' && <SchemaGenerator onCopy={onCopy} toast={toast} />}
-      {tab === 'content' && <ContentAnalyzer />}
+      <div role="tabpanel" id={`seo-panel-${tab}`} aria-labelledby={`seo-tab-${tab}`}>
+        {tab === 'meta' && <MetaInspector onCopy={onCopy} toast={toast} />}
+        {tab === 'schema' && <SchemaGenerator onCopy={onCopy} toast={toast} />}
+        {tab === 'content' && <ContentAnalyzer />}
+      </div>
     </div>
   )
 }
