@@ -20,11 +20,14 @@ function ensureApp() {
   }
   const projectId =
     process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'uil4b-357c5'
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()
   let serviceAccount = null
   if (raw) {
     try {
       serviceAccount = JSON.parse(raw)
+      // Handle a double-encoded value (the whole JSON pasted as a quoted
+      // string), which JSON.parse returns as a string rather than an object.
+      if (typeof serviceAccount === 'string') serviceAccount = JSON.parse(serviceAccount)
       if (serviceAccount?.type === 'service_account' && serviceAccount?.private_key) {
         // Env vars frequently mangle the PEM line breaks. Normalise escaped
         // "\n" sequences back into real newlines so cert() can read the key —
