@@ -324,7 +324,7 @@ function TypographyDashboard({ cat, tools, quickActions, pinned, togglePinned, t
       </section>
 
       <div className="typo-cta-footer">
-        <p>Typography set? Customise UI chrome &mdash; rounding, density, and motion.</p>
+        <p>Typography set? Fine-tune your accessibility and motion preferences.</p>
         <NavLink to="/settings" state={{ section: 'appearance' }} className="typo-cta-link">
           Appearance settings <ArrowIcon />
         </NavLink>
