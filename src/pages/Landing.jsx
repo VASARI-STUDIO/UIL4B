@@ -78,7 +78,7 @@ const FREE_FEATURES = [
   'Unlimited palettes, type scales & CSS exports',
   '40 AI generations per day',
   'Work saved locally in your browser',
-  'Light & dark themes, multiple languages',
+  'A polished dark interface, multiple languages',
 ]
 
 const PRO_FEATURES = [
