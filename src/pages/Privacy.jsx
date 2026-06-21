@@ -2,14 +2,14 @@ import { useI18n } from '../contexts/I18nContext'
 
 const STORAGE_DISCLOSURE = [
   { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
-  { key: 'vs-t', purpose: 'Theme preference (light/dark)', pii: 'no' },
-  { key: 'vs-t-v', purpose: 'Theme schema version', pii: 'no' },
   { key: 'vs-nav-open', purpose: 'Sidebar category expand/collapse state', pii: 'no' },
   { key: 'vs-pinned-tools', purpose: 'Tools you pinned for quick access', pii: 'no' },
   { key: 'vs-recent-tools', purpose: 'Recently used tools list', pii: 'no' },
   { key: 'vs-current-design', purpose: 'Active palette, fonts, type scale, gradient', pii: 'no' },
   { key: 'vs-projects', purpose: 'Saved design projects (per account)', pii: 'local' },
   { key: 'vs-prompts', purpose: 'Your AI prompt library', pii: 'local' },
+  { key: 'vs-community-saves', purpose: 'Designs you saved in the Community Hub', pii: 'no' },
+  { key: 'vs-community-submissions', purpose: 'Designs you submitted to the Community Hub', pii: 'local' },
   { key: 'vs-state-shades', purpose: 'Cached state colour shades', pii: 'no' },
   { key: 'vs-users', purpose: 'Account credentials (email + hashed password) for local accounts', pii: 'yes' },
   { key: 'vs-session', purpose: 'Active session info (no password)', pii: 'yes' },
