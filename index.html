@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-AU" data-theme="dark">
+<html lang="en-AU" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -46,13 +46,14 @@ html[data-theme="light"]{background:#fff;color:#171717;color-scheme:light}
 body{background:inherit;color:inherit}
 svg{color:inherit}
 </style>
+<script>
+// Apply the saved or device-preferred theme synchronously, before first paint,
+// so there is no light/dark flash (FOUC). vs-t holds an explicit choice; absent
+// that we follow the OS via prefers-color-scheme.
+(function(){try{var r=document.documentElement;var t=localStorage.getItem('vs-t');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a=JSON.parse(localStorage.getItem('vs-appearance')||'{}');r.setAttribute('data-reduced-motion',String(!!a.reducedMotion))}catch(e){}})();
+</script>
 </head>
 <body>
-<script>
-// UIL4B is a dark-only product. Lock the dark theme and the medium/cozy
-// appearance defaults synchronously before first paint (no FOUC, no light flash).
-(function(){try{var r=document.documentElement;r.setAttribute('data-theme','dark');r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a=JSON.parse(localStorage.getItem('vs-appearance')||'{}');r.setAttribute('data-reduced-motion',String(!!a.reducedMotion))}catch(e){document.documentElement.setAttribute('data-theme','dark')}})();
-</script>
 <div id="root"></div>
 <noscript>
 <div style="max-width:720px;margin:0 auto;padding:48px 24px;font-family:system-ui,sans-serif;line-height:1.6">
