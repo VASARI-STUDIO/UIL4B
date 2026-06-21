@@ -1,25 +1,58 @@
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 
 const ThemeContext = createContext()
 
-// UIL4B is a dark-only product. The theme is fixed to dark; `toggleTheme` and
-// `setTheme` are retained as no-ops so existing consumers keep working without
-// changes while the appearance can never drift away from the brand surface.
+// Default to the visitor's OS/browser preference; a deliberate choice (toggle or
+// Settings picker) is remembered and then takes precedence over the OS.
+function getSystemTheme() {
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
 export function ThemeProvider({ children }) {
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'dark')
-    // Clear any legacy stored preference so the app can't be coaxed back to light.
+  const [theme, setThemeState] = useState(() => {
     try {
-      localStorage.removeItem('vs-t')
-      localStorage.removeItem('vs-t-v')
-      localStorage.removeItem('vs-t-explicit')
-    } catch { /* storage unavailable */ }
+      const stored = localStorage.getItem('vs-t')
+      return stored === 'dark' || stored === 'light' ? stored : getSystemTheme()
+    } catch {
+      return getSystemTheme()
+    }
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    try { localStorage.setItem('vs-t', theme) } catch { /* storage unavailable */ }
+  }, [theme])
+
+  // Follow live OS theme changes until the visitor makes an explicit choice
+  // (tracked via vs-t-explicit, set on toggle / Settings selection).
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    let explicit = false
+    try { explicit = localStorage.getItem('vs-t-explicit') === '1' } catch { /* ignore */ }
+    if (explicit) return
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = (e) => {
+      try { if (localStorage.getItem('vs-t-explicit') === '1') return } catch { /* ignore */ }
+      setThemeState(e.matches ? 'dark' : 'light')
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  const noop = () => {}
+  const setTheme = (next) => {
+    if (next !== 'dark' && next !== 'light') return
+    try { localStorage.setItem('vs-t-explicit', '1') } catch { /* ignore */ }
+    setThemeState(next)
+  }
+
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark')
 
   return (
-    <ThemeContext.Provider value={{ theme: 'dark', toggleTheme: noop, setTheme: noop }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   )
