@@ -7,8 +7,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 
 const STORAGE_DISCLOSURE = [
   { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
-  { key: 'vs-t', purpose: 'Theme preference (light/dark)', pii: 'no' },
-  { key: 'vs-appearance', purpose: 'Appearance settings (rounding, density, motion)', pii: 'no' },
+  { key: 'vs-appearance', purpose: 'Reduced-motion preference', pii: 'no' },
   { key: 'vs-nav-open', purpose: 'Sidebar category state', pii: 'no' },
   { key: 'vs-pinned-tools', purpose: 'Tools you pinned for quick access', pii: 'no' },
   { key: 'vs-recent-tools', purpose: 'Recently used tools list', pii: 'no' },
