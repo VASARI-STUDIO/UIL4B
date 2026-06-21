@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -241,6 +242,7 @@ function NavIcon({ id }) {
 
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
+  const { theme, setTheme } = useTheme()
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, subscription, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
@@ -473,10 +475,27 @@ export default function Settings({ toast }) {
           <section id="set-appearance" className="settings-section">
             <div className="settings-section-h">
               <h2>Appearance</h2>
-              <p>UIL4B uses a single, carefully tuned dark interface. Accessibility preferences live here.</p>
+              <p>Choose your theme. UIL4B follows your device by default — pick one to lock it.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
+                <div className="settings-row">
+                  <div>
+                    <div className="settings-row-label">Theme</div>
+                    <div className="settings-row-meta">Currently using {theme} mode</div>
+                  </div>
+                  <div className="theme-pill" role="group" aria-label="Theme">
+                    <button className={`theme-pill-opt${theme === 'light' ? ' active' : ''}`} onClick={() => setTheme('light')} aria-pressed={theme === 'light'}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                      Light
+                    </button>
+                    <button className={`theme-pill-opt${theme === 'dark' ? ' active' : ''}`} onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                      Dark
+                    </button>
+                  </div>
+                </div>
+
                 <div className="toggle-row">
                   <div className="toggle-row-info">
                     <div className="toggle-row-label">Reduced motion</div>
