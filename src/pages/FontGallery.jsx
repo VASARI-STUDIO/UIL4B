@@ -402,7 +402,11 @@ export default function FontGallery({ onCopy, toast }) {
   const [allFonts, setAllFonts] = useState([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('all')
-  const [query, setQuery] = useState('')
+  // Preselect a font when arrived via /fontgallery?font=Family (e.g. the
+  // dashboard's Font of the Day) by seeding the search with that family.
+  const [query, setQuery] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('font') || '' } catch { return '' }
+  })
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
