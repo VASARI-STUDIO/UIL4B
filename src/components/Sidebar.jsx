@@ -341,12 +341,6 @@ export default function Sidebar({ isOpen, onClose }) {
                 </svg>
                 <span className="nav-item-label">Style Guide</span>
               </NavLink>
-              <NavLink to="/future-plans" className={({ isActive }) => `nav-item nav-item-footer nav-item-sub${isActive ? ' active' : ''}`} onClick={onClose}>
-                <svg className="nav-icon nav-icon-sub" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" />
-                </svg>
-                <span className="nav-item-label">Future Plans</span>
-              </NavLink>
             </div>
           )}
           <NavLink to="/settings" className={({ isActive }) => `nav-item nav-item-footer${isActive ? ' active' : ''}`} onClick={onClose}>
