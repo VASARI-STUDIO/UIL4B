@@ -373,7 +373,7 @@ export default function App() {
               <Route path="/docs-ai" element={<DocsAI />} />
               <Route path="/video-frames" element={<Navigate to="/file-converter" replace />} />
               <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
-              <Route path="/ui-builder" element={<UIBuilder onCopy={copy} toast={toast} />} />
+              <Route path="/ui-builder" element={<RequireAdmin><UIBuilder onCopy={copy} toast={toast} /></RequireAdmin>} />
               <Route path="/auto-builder" element={<RequireAdmin><AutoBuilder onCopy={copy} toast={toast} /></RequireAdmin>} />
               <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
               <Route path="/resources" element={<ExternalResources />} />
