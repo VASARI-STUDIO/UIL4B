@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics, getAggregateAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
@@ -963,6 +964,7 @@ export default function Admin({ toast }) {
               <button key={t.id} className={`adm-time-btn${timeRange === t.id ? ' active' : ''}`} onClick={() => setTimeRange(t.id)}>{t.label}</button>
             ))}
           </div>
+          <Link to="/style-guide" className="btn btn-s">Style Guide</Link>
           <button className="btn btn-s" onClick={refresh}>Refresh</button>
           <button className="btn btn-s" onClick={exportCSV}>Export CSV</button>
           {!isAdminUser && <button className="btn btn-s" onClick={() => { setUnlocked(false); toast('Admin access revoked') }} style={{ color: 'var(--err)' }}>Lock</button>}
