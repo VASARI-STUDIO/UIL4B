@@ -514,10 +514,13 @@ export default function Dashboard() {
           const gridStyle = getGridStyle(tool)
           const catClass = CATEGORY_CLASS[tool.category] || 'bento-cat'
           const dndClass = `${dragIdx === i ? ' dragging' : ''}${dragOverIdx === i ? ' drag-over' : ''}`
+          // The Font Gallery tile shows the Font of the Day — open the gallery
+          // preselected to that exact font.
+          const dest = tool.id === 'fontgallery' ? `/fontgallery?font=${encodeURIComponent(fontOfDay.family)}` : tool.path
           return (
             <NavLink
               key={tool.id}
-              to={tool.path}
+              to={dest}
               className={`bento-card ${catClass} bento-pin-cell${dndClass}`}
               style={gridStyle}
               draggable
