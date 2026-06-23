@@ -104,7 +104,9 @@ export default function EmojiLibrary({ onCopy }) {
     setTimeout(() => setCopied(null), 1200)
   }, [onCopy, skinTone])
 
-  const totalCount = EMOJI_DATA.reduce((sum, g) => sum + parseEmojis(g.emojis).length, 0)
+  // EMOJI_DATA is static — parse the full set once, not on every render
+  // (this ran on every scroll/keystroke and was the source of the scroll lag).
+  const totalCount = useMemo(() => EMOJI_DATA.reduce((sum, g) => sum + parseEmojis(g.emojis).length, 0), [])
 
   return (
     <div className="sec">
