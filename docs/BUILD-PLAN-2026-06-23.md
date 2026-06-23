@@ -87,7 +87,7 @@ headed as superseded). Work runs **page-by-page, feature-by-feature**.
 - **[#4]** Default everyone to dark, light opt-in, no OS-follow; toggle + persistence
   kept. Light-theme token coverage in `global.css` audited complete.
 
-### Phase 0.5 — Theme DIRECTION spec  ·  design  ·  ✅ SPEC DONE → engineer pass next
+### Phase 0.5 — Theme DIRECTION spec  ·  design  ·  ✅ DONE (token pass committed `c30f0c2`)
 - App-wide Linear × Coolors visual language as a written spec (no homepage rebuild):
   confirm/refine dark + light token palettes against live `global.css`; type scale;
   spacing rhythm; radii; elevation/surface + glass-morphism rules; motion principles;
@@ -110,8 +110,9 @@ headed as superseded). Work runs **page-by-page, feature-by-feature**.
 ### Phase 1 — Colour Studio (FIRST real page)  ·  research → design → engineer → security + qa
 Ground-up rebuild. **Slice 1 design spec ✅ done → [`docs/specs/colour-studio.md`](specs/colour-studio.md)**
 (page nav + Palette Builder core: HCT/Material-3 tonal "Auto", sliding-pill nav, gap-insert ×1–3,
-built-in tonal tints, Pro-gates as real non-DOM gates). Engineer builds Slice 1 after the
-theme-direction spec lands. Full sub-sequence:
+built-in tonal tints, Pro-gates as real non-DOM gates). **◐ Slice 1 BUILD IN PROGRESS** (engineer
+`ac04fd18…`, against the now-committed Phase 0.5 tokens; gate = code-review + security-review
+[mandatory CS#3.2 anti-tamper] + secret-scan + qa, then one PR). Full sub-sequence:
 - **Page nav** — pill style + sliding/snapping inner pill (any label width), glass panel,
   pinned-to-top on load, **tints section removed** (folds into palette). (CS#1, 2, 2.1)
 - **Palette Builder (Coolors-grade rebuild)** —
