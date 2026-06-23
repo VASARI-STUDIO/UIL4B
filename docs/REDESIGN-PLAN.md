@@ -1,5 +1,8 @@
 # UIL4B — Redesign Plan (Phase: "Linear/Coolors rebuild")
 
+> ⚠️ **SUPERSEDED (2026-06-23) by [`docs/BUILD-PLAN-2026-06-23.md`](BUILD-PLAN-2026-06-23.md).**
+> That file is the single source of truth. This doc is kept for history only.
+
 _Created 2026-06-20. **Amended 2026-06-23** after a fresh founder interview + a status
 reconciliation against `main`. The authoritative tracking doc for the big redesign
 list. Work runs **page-by-page, feature-by-feature**; **Colour Studio first**._
