@@ -93,6 +93,52 @@ const SECTIONS = [
     ),
   },
   {
+    id: 'accounts',
+    emoji: '👤',
+    title: 'Accounts & sign-in',
+    body: (
+      <>
+        <p>You can use every core tool without an account. Signing in (Google or email) is optional — it saves your projects and syncs your preferences across devices.</p>
+        <p>Sign in from the top-right, or wherever you see a prompt. Manage your profile, email and password in <Link to="/settings">Settings → Account</Link>.</p>
+      </>
+    ),
+  },
+  {
+    id: 'saving',
+    emoji: '💾',
+    title: 'Saving & syncing your work',
+    body: (
+      <>
+        <p>Your active palette, fonts and type scale are kept in your browser automatically — close the tab and they&rsquo;ll be waiting. Sign in to save named projects and have them follow you to any device.</p>
+        <p>Find everything you&rsquo;ve saved under <Link to="/projects">Projects</Link> (also in the profile menu).</p>
+      </>
+    ),
+  },
+  {
+    id: 'pro',
+    emoji: '✨',
+    title: 'Free vs Pro',
+    body: (
+      <>
+        <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits, premium exports, and advanced previews.</p>
+        <p>Compare the plans and upgrade whenever you&rsquo;re ready from <Link to="/settings">Settings → Support</Link>; manage or cancel from the same place.</p>
+      </>
+    ),
+  },
+  {
+    id: 'troubleshooting',
+    emoji: '🛟',
+    title: 'Troubleshooting',
+    body: (
+      <ul>
+        <li><strong>An AI tool isn&rsquo;t responding?</strong> AI features need you to be signed in. If it keeps failing, the service may be briefly busy — give it a moment and try again.</li>
+        <li><strong>Something looks off?</strong> A hard refresh (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>) clears most glitches.</li>
+        <li><strong>Working offline?</strong> Core tools run entirely in your browser and keep going; sign-in, sync and AI need a connection.</li>
+        <li><strong>Lost something?</strong> Saved projects live in <Link to="/projects">Projects</Link>, and you can export a full backup any time from <Link to="/settings">Settings → Your data</Link>.</li>
+      </ul>
+    ),
+  },
+  {
     id: 'shortcuts',
     emoji: '⌨️',
     title: 'Keyboard shortcuts',
