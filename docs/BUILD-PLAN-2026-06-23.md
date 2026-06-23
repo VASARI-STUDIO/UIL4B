@@ -87,13 +87,25 @@ headed as superseded). Work runs **page-by-page, feature-by-feature**.
 - **[#4]** Default everyone to dark, light opt-in, no OS-follow; toggle + persistence
   kept. Light-theme token coverage in `global.css` audited complete.
 
-### Phase 0.5 — Theme DIRECTION spec  ·  design  ·  ◐ IN PROGRESS
+### Phase 0.5 — Theme DIRECTION spec  ·  design  ·  ✅ SPEC DONE → engineer pass next
 - App-wide Linear × Coolors visual language as a written spec (no homepage rebuild):
   confirm/refine dark + light token palettes against live `global.css`; type scale;
   spacing rhythm; radii; elevation/surface + glass-morphism rules; motion principles;
   component primitives (buttons/pills/cards/popups); brand-colour application.
-  Output → `docs/specs/theme-direction.md`; hand to engineer for a small
-  tokens/primitives pass only. **Everything downstream references this.**
+  **Spec ✅ persisted → [`docs/specs/theme-direction.md`](specs/theme-direction.md).**
+  **Everything downstream references this.** Engineer's token/primitive pass (next):
+  - **Dark palette: keep as-is.** **Light: 4 lifts** — `--bg-1:#FCFCFD`,
+    `--border:rgba(0,0,0,.08)`, ADD light `--ring:inset 0 1px 0 rgba(255,255,255,.7)`,
+    ADD `--scrim` (dark `rgba(8,9,11,.62)` / light `rgba(23,23,23,.32)`).
+  - **ADD tokens:** `--info`/`--info-bg` (alias of brand), glass recipe
+    (`--glass-bg`/`--glass-border`/`--glass-shadow`), `--t-fast:.12s cubic-bezier(.2,0,0,1)`.
+  - **ADD primitives:** `.btn-ghost`, `.btn-l`, `.is-loading` spinner; `.glass` recipe;
+    sliding-pill `.cs-seg`/`.cs-seg-btn`/`.cs-seg-thumb`; Pro-lock shell
+    `.pro-lock`/`.pro-lock-veil`/`.pro-lock-cta`/`.pro-lock-badge`/`-title`/`-sub`;
+    cards add `box-shadow:var(--shadow-s),var(--ring)`; H1 `line-height:1.15`.
+  - **#13** — neutralise `.nav-pinned.drop-active` (no brand): `background:var(--hvr)`,
+    `box-shadow:inset 0 0 0 1.5px var(--bh)`; empty-state border `--border`/`--bh`, label `--t3`.
+  - Small, token-only — no component rebuilds. Verify-gate, commit.
 
 ### Phase 1 — Colour Studio (FIRST real page)  ·  research → design → engineer → security + qa
 Ground-up rebuild. **Slice 1 design spec ✅ done → [`docs/specs/colour-studio.md`](specs/colour-studio.md)**
