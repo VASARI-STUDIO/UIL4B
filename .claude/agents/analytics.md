@@ -37,8 +37,8 @@ prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
 - **Stack reality:** React 19 + Vite SPA on Vercel; Firebase Auth + Firestore (australia-southeast1, 12-function limit); Stripe; DeepSeek/Gemini AI. Analytics today are **client-side localStorage** (`vs-analytics`, `vs-sessions`, `vs-design-analytics`) **plus** an additive **Firestore `analytics-daily`** aggregate; the **Admin** page (`/admin`) renders both.
 - **Validation zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, all Stripe files) are off-limits to edit. Signup events live near auth and upgrade events near Stripe — so when you recommend instrumenting them, route the work through `engineer` **as approval-gated**, and prefer hooks that don't modify the zone files themselves (e.g. observing auth/subscription context state, not editing the contexts' core logic).
 
-At the **start of every task**, `Read` `CLAUDE.md` (analytics keys, constants,
-validation zones) and `docs/PRODUCT-AUDIT-2026-06-16.md` — especially **P0-6**
+At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
+(analytics keys, constants, validation zones) and `docs/PRODUCT-AUDIT-2026-06-16.md` — especially **P0-6**
 ("Admin analytics were per-browser localStorage, not aggregate") and §9, which
 records the `analytics-daily` Firestore aggregate that was added and the **owner
 action still pending: publish `firestore.rules` so the aggregate panel populates.**
