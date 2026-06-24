@@ -218,13 +218,109 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .sub{margin-bottom:48px}
 
 /* ─── Color Studio Nav & Sections ─── */
-.cs-sticky-nav{position:sticky;top:12px;z-index:40;display:flex;gap:2px;margin:0 auto 24px;padding:10px 18px;background:color-mix(in srgb,var(--card) 88%,transparent);border:1px solid var(--border);border-radius:var(--radius-l);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 2px 12px rgba(0,0,0,.06);max-width:fit-content}
-.cs-nav-item{padding:9px 14px;border-radius:var(--radius-s);font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;min-height:36px}
-.cs-nav-item:hover{color:var(--t0);background:var(--hvr)}
-.cs-nav-item.active{color:var(--accent-fg);font-weight:700;background:var(--brand)}
+/* Pill-nav (CS#1/2/2.1): glass panel + absolutely-positioned sliding thumb whose
+   x/width are JS-measured from the active button (--cs-thumb-x/--cs-thumb-w set
+   imperatively on the thumb ref — never a JSX inline-style attribute). */
+.cs-pillnav{position:sticky;top:var(--s-3);z-index:40;display:inline-flex;align-items:center;gap:2px;margin:0 auto var(--s-5);padding:5px;max-width:fit-content;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-1) 72%,transparent);border:1px solid var(--border);box-shadow:var(--shadow-m),var(--ring);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);isolation:isolate}
+.cs-pillnav-item{position:relative;z-index:1;padding:8px 16px;min-height:36px;border:none;background:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;color:var(--t2);transition:color .2s ease}
+.cs-pillnav-item:hover{color:var(--t0)}
+.cs-pillnav-item:active{transform:translateY(.5px)}
+.cs-pillnav-item.active{color:var(--accent-fg);font-weight:700}
+.cs-pillnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-pill)}
+.cs-pillnav-thumb{position:absolute;top:5px;left:0;z-index:0;height:calc(100% - 10px);border-radius:var(--radius-pill);background:var(--brand);box-shadow:0 2px 8px -2px var(--brand-glow);transform:translateX(var(--cs-thumb-x,0));width:var(--cs-thumb-w,0);transition:transform .42s cubic-bezier(.34,1.56,.64,1),width .42s cubic-bezier(.34,1.56,.64,1)}
+[data-theme="light"] .cs-pillnav{box-shadow:var(--shadow-m)}
 .cs-section-header{user-select:none;position:relative;z-index:10}
 .cs-section-header>h2{transition:color .15s}
 .cs-section-header:hover>h2{color:var(--t1)}
+
+/* ─── Palette Builder core (CS#3.1/3.3–3.6/3.8/3.10/3.15/3.16) ─── */
+.cs-pb-section{margin-bottom:48px;scroll-margin-top:100px}
+/* Header */
+.cs-pb-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer}
+.cs-pb-title{margin:0;flex-shrink:0}
+.cs-pb-randomize{display:inline-flex;align-items:center;gap:8px}
+.cs-pb-kbd{font-family:var(--mono);font-size:10px;font-weight:700;line-height:1;padding:3px 6px;border-radius:var(--radius-xs);background:color-mix(in srgb,#000 18%,transparent);color:var(--accent-fg)}
+.cs-pb-reset{display:inline-flex;align-items:center;gap:8px}
+.cs-pb-add-trigger{display:inline-flex;align-items:center;gap:5px}
+.cs-pb-live{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+
+/* Base colour + harmony quick-switch */
+.cs-pb-base{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--s-3)}
+.cs-pb-base-swatch{position:relative;width:40px;height:40px;flex-shrink:0;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border)}
+.cs-pb-base-chip{position:absolute;inset:0}
+.cs-pb-base-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
+.cs-pb-base-hex{width:104px;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;padding:9px 12px;min-height:40px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);color:var(--t0)}
+.cs-pb-base-div{width:1px;height:24px;background:var(--border);flex-shrink:0}
+.cs-pb-harms{display:flex;gap:4px;flex-wrap:wrap}
+
+/* Swatch rail (CS#3.1/3.3) */
+.cs-pb-rail{display:flex;gap:var(--s-2);margin-bottom:var(--s-3);flex-wrap:wrap}
+/* Re-deal stagger (CS#3.10) — remount-replayed via key change; per-index delay.
+   Fill mode is `backwards` (not `both`) so the 100% transform:none doesn't win
+   the cascade after the animation ends and clobber :hover translateY. */
+.cs-pb-swatch{position:relative;flex:1 1 0;min-width:84px;min-height:160px;border-radius:var(--radius-l);overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column;justify-content:flex-end;cursor:grab;transition:transform .18s cubic-bezier(.16,1,.3,1),box-shadow .18s ease,flex-basis .3s cubic-bezier(.16,1,.3,1);animation:cs-deal .32s cubic-bezier(.16,1,.3,1) backwards}
+.cs-pb-swatch.cs-d0{animation-delay:0ms}
+.cs-pb-swatch.cs-d1{animation-delay:48ms}
+.cs-pb-swatch.cs-d2{animation-delay:96ms}
+.cs-pb-swatch.cs-d3{animation-delay:144ms}
+.cs-pb-swatch.cs-d4{animation-delay:192ms}
+.cs-pb-swatch.cs-d5{animation-delay:240ms}
+@keyframes cs-deal{0%{transform:translateY(6px) scale(.98);opacity:.4}60%{opacity:1}100%{transform:none;opacity:1}}
+.cs-pb-swatch:active{cursor:grabbing}
+.cs-pb-swatch:hover{transform:translateY(-3px);box-shadow:var(--shadow-m)}
+.cs-pb-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cs-pb-swatch.active{outline:2px solid var(--accent);outline-offset:2px}
+.cs-pb-swatch.locked{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 60%,transparent)}
+.cs-pb-swatch.drag-ghost{opacity:.4}
+.cs-pb-swatch.drag-over{box-shadow:inset 0 0 0 2px var(--brand);transform:scale(1.03)}
+.cs-pb-swatch.skeleton{background:linear-gradient(100deg,var(--bg-1) 30%,var(--bg-2) 50%,var(--bg-1) 70%);background-size:200% 100%;animation:cs-shimmer 1.2s ease-in-out infinite;border-color:var(--border)}
+.cs-pb-swatch-meta{padding:var(--s-3) var(--s-3) var(--s-2)}
+.cs-pb-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.65}
+.cs-pb-hex{position:relative;display:inline-block;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;cursor:pointer}
+.cs-pb-edit{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
+.cs-pb-tints{display:flex;height:36px;flex-shrink:0}
+.cs-pb-tint{flex:1;border:none;padding:0;cursor:pointer;transition:filter .15s}
+.cs-pb-tint:hover{filter:brightness(1.06)}
+
+/* Hover/focus toolbar */
+.cs-pb-tools{position:absolute;top:6px;left:6px;right:6px;display:flex;align-items:center;gap:4px;opacity:0;transform:translateY(-4px);transition:opacity .15s ease,transform .15s ease}
+.cs-pb-swatch:hover .cs-pb-tools,
+.cs-pb-swatch:focus-within .cs-pb-tools{opacity:1;transform:none}
+.cs-pb-tool{width:24px;height:24px;display:grid;place-items:center;border:none;border-radius:50%;cursor:pointer;color:#fff;background:color-mix(in srgb,#000 42%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:background .15s,transform .1s}
+.cs-pb-tool:hover{background:color-mix(in srgb,#000 58%,transparent)}
+.cs-pb-tool:active{transform:scale(.92)}
+.cs-pb-tool:focus-visible{outline:2px solid var(--accent-fg);outline-offset:1px}
+.cs-pb-tool.locked{background:color-mix(in srgb,#fff 28%,transparent)}
+.cs-pb-tool--drag{cursor:grab}
+
+/* Gap-insert ×1–3 (CS#3.5) */
+.cs-pb-gap{position:relative;flex:0 0 var(--s-2);align-self:stretch;display:grid;place-items:center;cursor:pointer}
+.cs-pb-gap-btn{width:26px;height:26px;border-radius:50%;background:var(--brand);color:var(--accent-fg);border:2px solid var(--bg-0);display:grid;place-items:center;opacity:0;transform:scale(.6);transition:opacity .15s ease,transform .2s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--shadow-s)}
+.cs-pb-gap:hover .cs-pb-gap-btn,
+.cs-pb-gap:focus-within .cs-pb-gap-btn{opacity:1;transform:scale(1)}
+.cs-pb-gap:focus-visible{outline:none}
+.cs-pb-gap:focus-visible .cs-pb-gap-btn{opacity:1;transform:scale(1);outline:2px solid var(--accent);outline-offset:2px}
+.cs-pb-gap-count{font-family:var(--mono);font-size:12px;font-weight:700;line-height:1}
+
+/* Trailing "+ Add" card */
+.cs-pb-add{position:relative;flex:1 1 0;min-width:84px;min-height:160px;border-radius:var(--radius-l);border:1px dashed var(--border);background:var(--bg-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--t2);cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+.cs-pb-add:hover{color:var(--t0);border-color:var(--accent);background:var(--hvr)}
+.cs-pb-add-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.cs-pb-add-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
+
+/* Global adjust strip (CS#3.15) */
+.cs-pb-adjust{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-4);padding:var(--s-4) var(--s-5);background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow);margin-bottom:var(--s-3)}
+.cs-pb-adjust-field{display:flex;flex-direction:column;gap:6px}
+.cs-pb-adjust-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.cs-pb-adjust-val{color:var(--t1)}
+.cs-pb-adjust-reset{grid-column:1/-1;justify-self:start;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--brand);padding:4px 0;min-height:32px;transition:opacity .15s}
+.cs-pb-adjust-reset:disabled{color:var(--t3);cursor:default;opacity:.6}
+
+/* Pro-lock affordance (real gate — glyph is the conversion driver) */
+.cs-pro-lock{position:relative}
+.cs-pro-lock-glyph{margin-left:6px;color:var(--accent);flex-shrink:0;vertical-align:-1px}
+
+@keyframes cs-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* State preset label: full name on desktop, abbreviation on mobile */
 .state-preset-short{display:none}
@@ -242,6 +338,15 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .cs-add-menu-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:6px 12px 4px}
 .cs-add-menu-dots{display:flex;gap:3px}
 .cs-add-menu-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* Pick-colour + Extract rows: shared menu-row styling (same metrics as the
+   menu buttons). The pick control uses the page's hidden-overlay pattern
+   (CS-5): an opacity:0 native input sits over a styled chip, because a visible
+   <input type="color"> is restyled inconsistently by Firefox/Safari/mobile. */
+.cs-add-pick{padding:2px 0}
+.cs-add-pick-label,.cs-add-extract-label{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:13px;font-weight:500;color:var(--brand)}
+.cs-add-pick-label{position:relative;justify-content:space-between}
+.cs-add-pick-chip{width:24px;height:24px;flex-shrink:0;border-radius:var(--radius-xs);border:1px solid var(--border)}
+.cs-add-pick-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
 /* Popup edge-safety: on phones the 240px Add-Colour menu can overrun the right
    viewport edge (its trigger sits at the end of the section header). Right-align
    it and cap its width so it always stays on screen. */
@@ -1231,7 +1336,6 @@ img,svg,video{max-width:100%;height:auto}
   .btn-s{padding:7px 12px;font-size:11px;min-height:38px}
 
   /* Touch targets — minimum 44px on mobile */
-  .cs-nav-item{min-height:44px;padding:10px 14px}
   .pt-t{min-height:44px;padding:10px 14px}
   .tool-mini-pin{min-width:44px;min-height:44px;padding:10px}
   .sidebar-user-action{min-width:44px;min-height:44px}
@@ -1262,9 +1366,12 @@ img,svg,video{max-width:100%;height:auto}
   /* Color Studio */
   .tint-grid-responsive{grid-template-columns:repeat(auto-fill,minmax(min(56px,calc((100% - 32px)/4)),1fr))!important}
   .tint-controls-grid{grid-template-columns:1fr!important;gap:12px!important}
-  .cs-sticky-nav{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
-  .cs-sticky-nav::-webkit-scrollbar{display:none}
-  .cs-nav-item{flex-shrink:0}
+  /* Pill-nav → horizontal scroll-snap rail on tablet/phone (keeps glass + thumb). */
+  .cs-pillnav{display:flex;max-width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity}
+  .cs-pillnav::-webkit-scrollbar{display:none}
+  .cs-pillnav-item{flex-shrink:0;min-height:44px;scroll-snap-align:center}
+  /* Global-adjust strip → 2 columns. */
+  .cs-pb-adjust{grid-template-columns:repeat(2,1fr)}
 
   /* Font matcher cards */
   .fp{min-width:0!important;flex:1 1 100%!important}
@@ -1346,6 +1453,12 @@ img,svg,video{max-width:100%;height:auto}
   .nav-cat-toggle{width:28px;height:36px}
   .nav-item{padding:11px 12px;min-height:42px}
   .nav-cat-link{padding:11px 10px;min-height:40px}
+  /* Pill-nav: tighter type/padding, pin closer to top. */
+  .cs-pillnav{top:var(--s-2)}
+  .cs-pillnav-item{font-size:12.5px;padding:7px 13px}
+  /* Palette builder: 2 cards per row, shorter; adjust → single column. */
+  .cs-pb-swatch,.cs-pb-add{flex:1 1 calc(50% - var(--s-2));min-height:128px}
+  .cs-pb-adjust{grid-template-columns:1fr}
 }
 
 /* Tiny screens (≤380px) — last-resort tightening */
@@ -1360,6 +1473,14 @@ img,svg,video{max-width:100%;height:auto}
   .sec-h h1{font-size:24px}
   .pal-grid{grid-template-columns:repeat(2,1fr)!important}
   .ig{grid-template-columns:repeat(3,1fr)}
+  .cs-pillnav{gap:0}
+  .cs-pillnav-item{padding:6px 11px}
+}
+
+/* Touch / no-hover devices — surface the per-swatch toolbar at rest (CS responsive). */
+@media(hover:none){
+  .cs-pb-tools{opacity:.85;transform:none}
+  .cs-pb-gap-btn{opacity:.7;transform:scale(1)}
 }
 
 /* ─── Scrollbar ─── */

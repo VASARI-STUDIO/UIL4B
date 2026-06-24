@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo, Fragment } from 'react'
 import { NavLink } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, hexToHsv, hexToOklch, mixHex, describeColor, T_LABELS } from '../utils/colors'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, hexToHsv, hexToOklch, mixHex, describeColor, T_LABELS, autoTonalPalette, tonalRamp, applyAdjust } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { useI18n } from '../contexts/I18nContext'
 import { trackColourPick } from '../utils/analytics'
 import { useExport } from '../contexts/ExportContext'
@@ -17,6 +18,17 @@ const HARM_LABELS = {
   split: 'Split Comp.', tetradic: 'Tetradic', monochromatic: 'Mono', custom: 'Custom',
 }
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
+
+// Global-adjust sliders (CS#3.15). Each drives one field of globalAdjust; the
+// whole palette is recomputed non-destructively via applyAdjust.
+const ADJUST_FIELDS = [
+  { key: 'h', label: 'Hue', min: -180, max: 180, unit: '°' },
+  { key: 's', label: 'Saturation', min: -100, max: 100, unit: '%' },
+  // "Tone" not "Brightness": this shifts HCT *tone*, not luminance — honest naming
+  // for a HCT-native tool. The ±100 range maps to ±50 tone steps (see applyAdjust).
+  { key: 'b', label: 'Tone', min: -100, max: 100, unit: '' },
+  { key: 'temp', label: 'Temperature', min: -100, max: 100, unit: '' },
+]
 
 const BRANDS = [
   { n: 'Google', colors: ['#4285F4', '#DB4437', '#F4B400', '#0F9D58', '#1A1A1A'] },
@@ -118,6 +130,15 @@ function CopyIcon({ size = 12 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  )
+}
+
+// Small padlock used as the Pro affordance on gated controls.
+function LockGlyph({ size = 11 }) {
+  return (
+    <svg className="cs-pro-lock-glyph" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
     </svg>
   )
 }
@@ -429,6 +450,24 @@ export default function ColorStudio({ onCopy, toast }) {
   const { theme } = useTheme()
   const { rounding } = useAppearance()
   const { design, setPalette, setStates, setTints, setGradient, saveProject, projects, loadProject, overwriteProject, canSaveProjects } = useProject()
+  // `isPro` drives every Pro gate. The later upgrade-popup slice will also pull
+  // `checkout` from here to wire real billing; Slice 1 doesn't (see onProGate).
+  const { isPro } = useSubscription()
+
+  // Real Pro gate (function prop): non-Pro users hit this instead of getting the
+  // gated capability computed/rendered. Slice-1 stub — the toast IS the gate.
+  // We deliberately do NOT call checkout() here: that hard-navigates
+  // (window.location.href) and destroys the user's unsaved palette. The in-page
+  // upgrade popup that wires the real checkout is an explicitly-later slice; this
+  // stub only surfaces the lock. Wires the prop without touching billing files.
+  // (`checkout` stays imported for that later slice / other callers.)
+  const onProGate = useCallback((feature) => {
+    const labels = {
+      harmonies: 'Harmony systems are a Pro feature — upgrade to unlock',
+      'extra-colours': 'Palettes beyond 6 colours are a Pro feature — upgrade to unlock',
+    }
+    toast?.(labels[feature] || 'This is a Pro feature')
+  }, [toast])
 
   const [undoToast, setUndoToast] = useState(null)
   const undoTimerRef = useRef(null)
@@ -444,6 +483,12 @@ export default function ColorStudio({ onCopy, toast }) {
 
   const [baseColor, setBaseColor] = useState(() => design?.palette?.base || '#2563EB')
   const [harmony, setHarmony] = useState(() => design?.palette?.harmony || 'analogous')
+  // Engine selector — 'auto' (HCT/Material-3 tonal) is the Slice-1 default and the
+  // only mode wired so far. The Auto/HSL toggle UI is a later slice; we read+persist
+  // `mode` now (so the value round-trips through ProjectContext) but don't expose a
+  // setter until that toggle exists. Add `setMode` back when the toggle lands.
+  const [mode] = useState(() => design?.palette?.mode || 'auto')
+  const [globalAdjust, setGlobalAdjust] = useState(() => design?.palette?.globalAdjust || { h: 0, s: 0, b: 0, temp: 0 })
   const [extraColors, setExtraColors] = useState(() => design?.palette?.extraColors || [])
   const [overrides, setOverrides] = useState(() => design?.palette?.overrides || {})
   const [stateColors, setStateColors] = useState(() => design?.states || { success: 1, warning: 0, error: 0, info: 0 })
@@ -451,13 +496,20 @@ export default function ColorStudio({ onCopy, toast }) {
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
+  // a11y live region for randomise / insert / lock announcements.
+  const [liveMsg, setLiveMsg] = useState('')
   const [cssExpanded, setCssExpanded] = useState(false)
   const [infoColor, setInfoColor] = useState(null)
   const colorRef = useRef(null)
 
-  const [lumBias, setLumBias] = useState(() => design?.tints?.lumBias ?? 82)
-  const [satDecay, setSatDecay] = useState(() => design?.tints?.satDecay ?? 12)
-  const [oled, setOled] = useState(() => design?.tints?.oled ?? true)
+  // Tint-ramp tuning. The standalone Tints section (with its sliders) folded
+  // into the palette builder's per-card tonal undersides in Slice 1; these
+  // values still drive tintScale/allTintScales (used by Systems + exports), so
+  // they persist at their saved/default settings until a later slice re-exposes
+  // controls for them.
+  const lumBias = design?.tints?.lumBias ?? 82
+  const satDecay = design?.tints?.satDecay ?? 12
+  const oled = design?.tints?.oled ?? true
 
   const [gradStops, setGradStops] = useState(() => design?.gradient?.stops || [{ color: null, position: 0 }, { color: null, position: 100 }])
   const [gradAngle, setGradAngle] = useState(() => design?.gradient?.angle ?? 135)
@@ -466,7 +518,6 @@ export default function ColorStudio({ onCopy, toast }) {
 
   const SECTIONS = useMemo(() => [
     { id: 'palette', label: 'Palette' },
-    { id: 'tints', label: 'Tints' },
     { id: 'states', label: 'States' },
     { id: 'systems', label: 'Systems' },
     { id: 'gradients', label: 'Gradients' },
@@ -488,16 +539,77 @@ export default function ColorStudio({ onCopy, toast }) {
     return () => observer.disconnect()
   }, [SECTIONS])
 
+  // ── Pill-nav sliding thumb (CS#2/2.1) ──
+  // The thumb is positioned/sized from a live measure of the active button
+  // (offsetLeft/offsetWidth) so it fits any label width at any zoom/font state.
+  // We set CSS custom props imperatively on the thumb ref (NOT a JSX inline
+  // style attribute) to satisfy the no-inline-styles rule.
+  const navRef = useRef(null)
+  const thumbRef = useRef(null)
+  const itemRefs = useRef({})
+  const measureThumb = useCallback(() => {
+    const el = itemRefs.current[activeSection]
+    const thumb = thumbRef.current
+    if (!el || !thumb) return
+    thumb.style.setProperty('--cs-thumb-x', el.offsetLeft + 'px')
+    thumb.style.setProperty('--cs-thumb-w', el.offsetWidth + 'px')
+  }, [activeSection])
+  useEffect(() => {
+    measureThumb()
+    // On ≤768 the rail scrolls; centre the active item then re-measure once it settles.
+    const el = itemRefs.current[activeSection]
+    if (el && navRef.current && navRef.current.scrollWidth > navRef.current.clientWidth) {
+      el.scrollIntoView({ inline: 'center', block: 'nearest' })
+      requestAnimationFrame(() => requestAnimationFrame(measureThumb))
+    }
+  }, [activeSection, measureThumb])
+  useEffect(() => {
+    measureThumb()
+    // Outfit loads after first paint and shifts label widths — re-measure then.
+    document.fonts?.ready.then(measureThumb).catch(() => {})
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measureThumb) : null
+    if (ro && navRef.current) ro.observe(navRef.current)
+    window.addEventListener('resize', measureThumb)
+    return () => {
+      if (ro) ro.disconnect()
+      window.removeEventListener('resize', measureThumb)
+    }
+  }, [measureThumb])
+
   const colors = generateHarmony(baseColor, harmony)
   // Per-index manual overrides applied on top of the harmony-generated colours.
   const resolvedColors = colors.map((c, i) => overrides[i] || c)
-  const allColors = [...resolvedColors, ...extraColors]
+  // baseColors = the RAW palette (generator + overrides + extras). All write-back
+  // handlers (drag/edit/remove/randomise) operate on THIS — the global adjust is a
+  // non-destructive lens layered on top for display/export only.
+  const baseColors = useMemo(() => [...resolvedColors, ...extraColors], [resolvedColors, extraColors])
+  // allColors = baseColors through the global-adjust lens. applyAdjust returns the
+  // same array reference when the adjust is zeroed (identity), so every downstream
+  // consumer/export is untouched until a slider moves.
+  const allColors = useMemo(() => applyAdjust(baseColors, globalAdjust), [baseColors, globalAdjust])
+
+  // ── Free-tier 6-colour cap (CS#3.17) — single state-level chokepoint ──
+  // Every palette-growth path (insert-between, manual hue-offset, custom pick,
+  // brand-palette merge) funnels through these two helpers so the cap is enforced
+  // in the reducer logic, not just the UI — it holds against a console caller, not
+  // only a button click. PRO_MAX is the free ceiling on TOTAL swatches.
+  const PRO_MAX = 6
+  // Returns true if `n` swatches can be added now. When a non-Pro user would
+  // exceed the cap, fires the Pro gate and returns false (caller adds nothing).
+  const checkCanAdd = useCallback((n = 1) => {
+    if (isPro) return true
+    if (baseColors.length + n > PRO_MAX) { onProGate('extra-colours'); return false }
+    return true
+  }, [isPro, baseColors.length, onProGate])
+  // Remaining free slots before the cap (Infinity for Pro). Used to clamp a
+  // multi-colour merge (brand palettes) to what will fit.
+  const freeSlotsLeft = useCallback(() => (isPro ? Infinity : Math.max(0, PRO_MAX - baseColors.length)), [isPro, baseColors.length])
 
   // Sync palette state to ProjectContext (full design persistence)
   useEffect(() => {
-    setPalette({ base: baseColor, harmony, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors, locked: [...locked] })
+    setPalette({ base: baseColor, harmony, mode, globalAdjust, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors, locked: [...locked] })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseColor, harmony, extraColors, JSON.stringify(overrides), activeColorIdx, allColors.join(',')])
+  }, [baseColor, harmony, mode, JSON.stringify(globalAdjust), extraColors, JSON.stringify(overrides), activeColorIdx, allColors.join(',')])
 
   useEffect(() => {
     setStates(stateColors)
@@ -517,33 +629,53 @@ export default function ColorStudio({ onCopy, toast }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gradStops, gradAngle, gradType])
 
-  const randomPalette = useCallback(() => {
-    const hex = hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
-    if (locked.size === 0) {
-      setBaseColor(hex)
-      setExtraColors([])
-      setOverrides({})
-      setActiveColorIdx(0)
-    } else {
-      if (!locked.has(0)) setBaseColor(hex)
-      setOverrides(prev => {
-        const next = { ...prev }
-        for (let i = 1; i < colors.length; i++) {
-          if (locked.has(i)) {
-            next[i] = allColors[i]
-          } else {
-            delete next[i]
-          }
-        }
-        return next
-      })
-      setExtraColors(prev => prev.map((c, i) => {
-        const globalIdx = colors.length + i
-        if (locked.has(globalIdx)) return c
-        return hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
-      }))
+  // Re-deal animation token: bump on randomise so unlocked cards replay cs-deal.
+  const [dealToken, setDealToken] = useState(0)
+
+  // Tonal randomise (CS#3.10). Default mode='auto' deals an HCT/Material-3 tonal
+  // palette mapped to the 5 ROLES — accessible-by-construction. Locked swatches
+  // survive. Murphy's-law: if the HCT solver throws, fall back to HSL random +
+  // a non-blocking toast; never white-screen.
+  const randomize = useCallback(() => {
+    let fresh
+    try {
+      fresh = autoTonalPalette()
+      if (!Array.isArray(fresh) || fresh.length < colors.length || fresh.some(c => !/^#[0-9a-f]{6}$/i.test(c))) {
+        throw new Error('tonal palette invalid')
+      }
+    } catch {
+      fresh = colors.map(() => hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30)))
+      toast?.('Colour engine fell back to a simple random palette')
     }
-  }, [locked, colors.length, allColors])
+
+    if (!locked.has(0)) setBaseColor(fresh[0])
+    setOverrides(prev => {
+      const next = { ...prev }
+      for (let i = 1; i < colors.length; i++) {
+        if (locked.has(i)) next[i] = baseColors[i]       // keep the locked colour
+        else next[i] = fresh[i] || hslToHex(Math.floor(Math.random() * 360), 60, 55)
+      }
+      return next
+    })
+    setExtraColors(prev => prev.map((c, i) => {
+      const globalIdx = colors.length + i
+      if (locked.has(globalIdx)) return c
+      return hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
+    }))
+    setDealToken(t => t + 1)
+    setLiveMsg('Palette randomised')
+  }, [locked, colors, baseColors, toast])
+
+  // Deal a fresh Auto tonal palette once on mount (CS#3.8) — only if the user
+  // hasn't carried in a saved/customised palette.
+  const didInitRandomRef = useRef(false)
+  useEffect(() => {
+    if (didInitRandomRef.current) return
+    didInitRandomRef.current = true
+    const pristine = harmony === 'analogous' && extraColors.length === 0 && Object.keys(overrides).length === 0 && (baseColor === '#2563EB' || baseColor === '#0051FF')
+    if (pristine) randomize()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -551,11 +683,11 @@ export default function ColorStudio({ onCopy, toast }) {
       const tag = e.target.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return
       e.preventDefault()
-      randomPalette()
+      randomize()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [randomPalette])
+  }, [randomize])
 
   const activeColor = allColors[activeColorIdx] || allColors[0]
 
@@ -820,7 +952,8 @@ ${stateVars}
   const toggleLock = useCallback((idx) => {
     setLocked(prev => {
       const next = new Set(prev)
-      if (next.has(idx)) next.delete(idx); else next.add(idx)
+      if (next.has(idx)) { next.delete(idx); setLiveMsg('Colour unlocked') }
+      else { next.add(idx); setLiveMsg('Colour locked') }
       return next
     })
   }, [])
@@ -843,7 +976,6 @@ ${stateVars}
   }, [baseColor, harmony, extraColors, overrides, activeColorIdx, showUndoToast])
 
   const [addMenuOpen, setAddMenuOpen] = useState(false)
-  const [tintDropdownOpen, setTintDropdownOpen] = useState(false)
   const [gradPresetsExpanded, setGradPresetsExpanded] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
@@ -879,7 +1011,12 @@ ${stateVars}
     return results.slice(0, 10)
   }, [allColors, tintScale])
 
+  // "Custom (Hue Offset)" is a FREE manual path by design — it's a single
+  // hue-rotated colour, the sibling of per-swatch manual editing. Only harmony
+  // *systems* (analogous/complement/triadic/split-comp) are Pro. It still passes
+  // through the shared 6-colour cap via checkCanAdd.
   const addColor = () => {
+    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
     const [h] = hexToHsl(baseColor)
     const offset = (extraColors.length + 1) * 47
     setExtraColors([...extraColors, hslToHex((h + offset) % 360, 55, 55)])
@@ -894,6 +1031,9 @@ ${stateVars}
   const addSessionRef = useRef(null)
   const addCustomColor = (hex) => {
     if (addSessionRef.current == null) {
+      // First onChange of a session = a real add → consume a slot / check the cap.
+      // Subsequent drags update the same swatch in place (no new slot, no check).
+      if (!checkCanAdd(1)) return
       addSessionRef.current = extraColors.length
       setExtraColors([...extraColors, hex])
     } else {
@@ -910,7 +1050,9 @@ ${stateVars}
   const handleDragOver = (e, idx) => { e.preventDefault(); setDragOverIdx(idx) }
   const handleDragEnd = () => {
     if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
-      const reordered = [...allColors]
+      // Reorder the RAW base palette (write-backs operate on baseColors, not the
+      // adjusted view) so the global-adjust lens stays consistent after a move.
+      const reordered = [...baseColors]
       const [moved] = reordered.splice(dragIdx, 1)
       reordered.splice(dragOverIdx, 0, moved)
       const newLocked = new Set()
@@ -945,13 +1087,110 @@ ${stateVars}
     }
   }
 
+  // Write a whole RAW palette array back into base/overrides/extras. The first
+  // `colors.length` slots map to base(0)+overrides(1..), the rest become extras.
+  // Used by gap-insert and keyboard reorder so they stay in the non-destructive
+  // base layer (the adjust lens recomputes the displayed colours).
+  const writeRawPalette = useCallback((next) => {
+    if (!next.length) return
+    setBaseColor(next[0])
+    setOverrides(Object.fromEntries(next.slice(1, colors.length).map((c, i) => [i + 1, c])))
+    setExtraColors(next.slice(colors.length))
+  }, [colors.length])
+
+  // Insert N evenly-spaced colours at the Lab/tonal midpoints between two
+  // neighbours (CS#3.5). N=1 → t=.5. Routes through the shared checkCanAdd cap
+  // chokepoint (anti-tamper): a non-Pro insert that would exceed 6 fires the Pro
+  // gate and inserts nothing.
+  const insertBetween = useCallback((leftIdx, count) => {
+    const n = Math.max(1, Math.min(3, count))
+    const a = baseColors[leftIdx]
+    const b = baseColors[leftIdx + 1]
+    if (!a || !b) return
+    if (!checkCanAdd(n)) return
+    const mids = []
+    for (let k = 1; k <= n; k++) mids.push(mixHex(a, b, k / (n + 1)))
+    const next = [...baseColors.slice(0, leftIdx + 1), ...mids, ...baseColors.slice(leftIdx + 1)]
+    // Shift locks past the insertion point.
+    setLocked(prev => {
+      const out = new Set()
+      prev.forEach(li => out.add(li > leftIdx ? li + n : li))
+      return out
+    })
+    writeRawPalette(next)
+    setDealToken(t => t + 1)
+    setLiveMsg(`Inserted ${n} colour${n > 1 ? 's' : ''}`)
+  }, [baseColors, checkCanAdd, writeRawPalette])
+
+  // Keyboard reorder (a11y): ArrowLeft/Right on a focused card moves it.
+  const moveCard = useCallback((idx, dir) => {
+    const target = idx + dir
+    if (target < 0 || target >= baseColors.length) return
+    const next = [...baseColors]
+    const [moved] = next.splice(idx, 1)
+    next.splice(target, 0, moved)
+    setLocked(prev => {
+      const out = new Set()
+      prev.forEach(li => {
+        if (li === idx) out.add(target)
+        else if (dir > 0 && li === target) out.add(idx)
+        else if (dir < 0 && li === target) out.add(idx)
+        else out.add(li)
+      })
+      return out
+    })
+    writeRawPalette(next)
+    if (activeColorIdx === idx) setActiveColorIdx(target)
+    setLiveMsg(`Moved colour to position ${target + 1}`)
+  }, [baseColors, activeColorIdx, writeRawPalette])
+
+  // Gap-insert count cycling: click +1; click again within 600ms cycles 1→2→3;
+  // commit on timeout. State: { idx, count } for the active gap.
+  const [gapState, setGapState] = useState(null)
+  const gapTimerRef = useRef(null)
+  const handleGapClick = useCallback((leftIdx) => {
+    if (gapTimerRef.current) clearTimeout(gapTimerRef.current)
+    setGapState(prev => {
+      const count = prev && prev.idx === leftIdx ? (prev.count % 3) + 1 : 1
+      gapTimerRef.current = setTimeout(() => {
+        insertBetween(leftIdx, count)
+        setGapState(null)
+      }, 600)
+      return { idx: leftIdx, count }
+    })
+  }, [insertBetween])
+  useEffect(() => () => { if (gapTimerRef.current) clearTimeout(gapTimerRef.current) }, [])
+
+  // Global-adjust slider write — rAF-throttled so a fast drag coalesces to one
+  // state update per frame (<16ms), avoiding re-render thrash on the rail.
+  const adjustRafRef = useRef(null)
+  const adjustPendingRef = useRef(null)
+  const updateAdjust = useCallback((key, value) => {
+    // Merge into the pending slot (don't overwrite) so two sliders moved within the
+    // same frame both land — otherwise the second clobbers the first.
+    adjustPendingRef.current = { ...(adjustPendingRef.current || {}), [key]: value }
+    if (adjustRafRef.current) return
+    adjustRafRef.current = requestAnimationFrame(() => {
+      adjustRafRef.current = null
+      const p = adjustPendingRef.current
+      adjustPendingRef.current = null
+      if (p) setGlobalAdjust(prev => ({ ...prev, ...p }))
+    })
+  }, [])
+  useEffect(() => () => { if (adjustRafRef.current) cancelAnimationFrame(adjustRafRef.current) }, [])
+
+  // Harmony-system adds are Pro AND capped. The Pro check happens at the call site
+  // (button routes non-Pro clicks to onProGate without computing); checkCanAdd here
+  // is the second chokepoint so the cap holds even for a Pro user / console caller.
   const addComplement = () => {
+    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
     const [h, s, l] = hexToHsl(baseColor)
     setExtraColors([...extraColors, hslToHex((h + 180) % 360, s, l)])
     setAddMenuOpen(false)
   }
 
   const addAnalogous = () => {
+    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
     const [h, s, l] = hexToHsl(baseColor)
     const offset = 30 + Math.floor(Math.random() * 15)
     setExtraColors([...extraColors, hslToHex((h + offset) % 360, s, l)])
@@ -959,20 +1198,28 @@ ${stateVars}
   }
 
   const addTriadic = () => {
+    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
     const [h, s, l] = hexToHsl(baseColor)
     setExtraColors([...extraColors, hslToHex((h + 120) % 360, s, l)])
     setAddMenuOpen(false)
   }
 
   const addSplitComp = () => {
+    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
     const [h, s, l] = hexToHsl(baseColor)
     setExtraColors([...extraColors, hslToHex((h + 150) % 360, s, l)])
     setAddMenuOpen(false)
   }
 
+  // Brand-palette merge can add several swatches: for a non-Pro user clamp the
+  // appended slice to the remaining free slots, and fire the Pro gate if the merge
+  // would have overflowed the cap (so the lock is surfaced, not silently swallowed).
   const addBrandColors = (brand) => {
-    const newColors = brand.colors.filter(c => !allColors.map(x => x.toUpperCase()).includes(c.toUpperCase()))
-    setExtraColors([...extraColors, ...newColors.slice(0, 3)])
+    const newColors = brand.colors.filter(c => !allColors.map(x => x.toUpperCase()).includes(c.toUpperCase())).slice(0, 3)
+    const slots = freeSlotsLeft()
+    const toAdd = newColors.slice(0, slots)
+    if (newColors.length > toAdd.length) onProGate('extra-colours')
+    if (toAdd.length) setExtraColors([...extraColors, ...toAdd])
     setAddMenuOpen(false)
   }
 
@@ -1137,59 +1384,84 @@ ${stateVars}
         )}
       </div>
 
-      <nav className="cs-sticky-nav">
+      <nav className="cs-pillnav" aria-label="Colour Studio sections" ref={navRef}>
+        <span className="cs-pillnav-thumb" aria-hidden="true" ref={thumbRef} />
         {SECTIONS.map(s => (
           <button
             key={s.id}
-            className={`cs-nav-item${activeSection === s.id ? ' active' : ''}`}
+            ref={el => { itemRefs.current[s.id] = el }}
+            className={`cs-pillnav-item${activeSection === s.id ? ' active' : ''}`}
+            aria-current={activeSection === s.id ? 'true' : undefined}
             onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
           >{s.label}</button>
         ))}
       </nav>
 
       {/* ═══ SECTION 1: PALETTE BUILDER ═══ */}
-      <section id="palette" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className="cs-section-header" onClick={() => toggleCollapse('palette')} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.palette ? 0 : 20, cursor: 'pointer' }}>
+      <section id="palette" className="cs-pb-section">
+        <div className="cs-section-header cs-pb-header" onClick={() => toggleCollapse('palette')}>
           <svg className={`cs-chevron${collapsed.palette ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Palette Builder</h2>
-          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); randomPalette() }} title="Random palette (or press Spacebar)" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <h2 className="cs-pb-title">Palette Builder</h2>
+          <button className="btn btn-accent btn-s cs-pb-randomize" onClick={(e) => { e.stopPropagation(); randomize() }} title="Random palette (or press Spacebar)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10" /><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14" />
             </svg>
-            Random
-            <kbd style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--t2)', fontFamily: 'var(--mono)', marginLeft: 2 }}>Space</kbd>
+            Randomise
+            <kbd className="cs-pb-kbd">Space</kbd>
           </button>
-          <button className="btn btn-s" onClick={(e) => { e.stopPropagation(); resetPalette() }} title="Reset palette to default" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button className="btn btn-s cs-pb-reset" onClick={(e) => { e.stopPropagation(); resetPalette() }} title="Reset palette to default">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" />
             </svg>
             Reset
           </button>
+          {/* Colour System hook (CS#3.14, later slice): this dropdown becomes the popup. */}
           <div className="cs-add-wrap" ref={addMenuRef} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-            <button className="btn btn-s" onClick={() => setAddMenuOpen(!addMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <button className="btn btn-s cs-pb-add-trigger" onClick={() => setAddMenuOpen(!addMenuOpen)}>
               + Add Colour
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             {addMenuOpen && (
               <div className="cs-add-menu">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="cs-add-pick">
+                  {/* Hidden-overlay picker (CS-5): a native <input type="color">
+                      renders inconsistently across browsers, so we hide it
+                      (opacity:0, absolute) over a styled chip — same pattern as
+                      cs-pb-base-input/cs-pb-edit/cs-pb-add-input. The chip shows
+                      the current base colour (= the input's value); dynamic
+                      background is the permitted runtime inline-style exception. */}
+                  <label className="cs-add-pick-label">
                     Pick Colour
+                    <span className="cs-add-pick-chip" style={{ background: baseColor }} aria-hidden="true" />
                     <input ref={endAddSession} type="color" value={baseColor}
                       onChange={e => addCustomColor(e.target.value)}
                       aria-label="Pick a custom colour to add"
-                      style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', padding: 0 }}
+                      className="cs-add-pick-input"
                     />
                   </label>
                 </div>
                 <div className="cs-add-menu-sep" />
+                {/* FREE by design: a single hue-rotated colour is a manual path
+                    (sibling of per-swatch editing), NOT a Pro harmony system. */}
                 <button onClick={addColor}>Custom (Hue Offset)</button>
-                <button onClick={addComplement}>Complementary</button>
-                <button onClick={addAnalogous}>Analogous</button>
-                <button onClick={addTriadic}>Triadic</button>
-                <button onClick={addSplitComp}>Split Complement</button>
+                {/* Harmony systems are Pro (CS#3.7). For non-Pro users we DON'T
+                    compute the harmony client-side — the handler routes straight
+                    to the upgrade gate (anti-tamper); the lock glyph is the
+                    conversion driver. */}
+                <button className="cs-pro-lock" onClick={() => isPro ? addComplement() : onProGate('harmonies')}>
+                  Complementary{!isPro && <LockGlyph />}
+                </button>
+                <button className="cs-pro-lock" onClick={() => isPro ? addAnalogous() : onProGate('harmonies')}>
+                  Analogous{!isPro && <LockGlyph />}
+                </button>
+                <button className="cs-pro-lock" onClick={() => isPro ? addTriadic() : onProGate('harmonies')}>
+                  Triadic{!isPro && <LockGlyph />}
+                </button>
+                <button className="cs-pro-lock" onClick={() => isPro ? addSplitComp() : onProGate('harmonies')}>
+                  Split Complement{!isPro && <LockGlyph />}
+                </button>
                 <div className="cs-add-menu-sep" />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: 'var(--brand)' }}>
+                <label className="cs-add-extract-label">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                   {extracting ? 'Extracting…' : 'Extract from Image'}
                   <input ref={extractFileRef} type="file" accept="image/*" onChange={handleImageExtract} style={{ display: 'none' }} />
@@ -1212,128 +1484,187 @@ ${stateVars}
         </div>
 
         {!collapsed.palette && <>
-        {/* Base color + harmony row */}
-        <div className="card" style={{ padding: '12px 16px 16px', marginBottom: 12 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 10 }}>Base colour & Harmony</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ position: 'relative', width: 42, height: 42, flexShrink: 0 }}>
-                <div
-                  style={{ width: 42, height: 42, borderRadius: 'var(--radius-s)', background: baseColor, border: '1px solid var(--border)', pointerEvents: 'none' }}
-                />
-                <input
-                  ref={colorRef}
-                  type="color"
-                  value={baseColor}
-                  onChange={e => { setBaseColor(e.target.value); setOverrides({}); trackColourPick(e.target.value) }}
-                  aria-label="Pick base colour"
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0, background: 'none', appearance: 'none', WebkitAppearance: 'none' }}
-                />
-              </div>
-              <input
-                type="text" value={baseColor.toUpperCase()}
-                style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, width: 90 }}
-                onChange={e => { let v = e.target.value; if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-f]{6}$/i.test(v)) { setBaseColor(v); setOverrides({}) } }}
-              />
-            </div>
-            <div style={{ height: 28, width: 1, background: 'var(--border)' }} />
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {HARMS.map(h => (
-                <button key={h} className={`pt-t${harmony === h ? ' on' : ''}`} onClick={() => { setHarmony(h); setOverrides({}) }}
-                  style={{ padding: '5px 12px', fontSize: 11 }}
-                >{HARM_LABELS[h]}</button>
-              ))}
-            </div>
+        {/* a11y: announce randomise / insert / lock / move to screen readers. */}
+        <p className="cs-pb-live" aria-live="polite" role="status">{liveMsg}</p>
+
+        {/* Base colour + harmony quick-switch. The base picker is free; the
+            harmony *systems* are Pro (CS#3.7) — a non-Pro click routes to the
+            gate and does NOT recompute the harmony (anti-tamper). */}
+        <div className="cs-pb-base">
+          <div className="cs-pb-base-swatch">
+            <span className="cs-pb-base-chip" style={{ background: baseColor }} aria-hidden="true" />
+            <input
+              ref={colorRef}
+              type="color"
+              value={baseColor}
+              onChange={e => { setBaseColor(e.target.value); setOverrides({}); trackColourPick(e.target.value) }}
+              aria-label="Pick base colour"
+              className="cs-pb-base-input"
+            />
+          </div>
+          <input
+            type="text" value={baseColor.toUpperCase()} className="cs-pb-base-hex"
+            aria-label="Base colour hex"
+            onChange={e => { let v = e.target.value; if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-f]{6}$/i.test(v)) { setBaseColor(v); setOverrides({}) } }}
+          />
+          <span className="cs-pb-base-div" aria-hidden="true" />
+          <div className="cs-pb-harms">
+            {HARMS.map(h => {
+              const free = h === 'analogous' || h === 'custom' || h === 'monochromatic'
+              return (
+                <button key={h}
+                  className={`pt-t${harmony === h ? ' on' : ''}${!free && !isPro ? ' cs-pro-lock' : ''}`}
+                  onClick={() => {
+                    if (!free && !isPro) { onProGate('harmonies'); return }
+                    setHarmony(h); setOverrides({})
+                  }}
+                >{HARM_LABELS[h]}{!free && !isPro && <LockGlyph size={10} />}</button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Palette swatches */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+        {/* Palette rail — tonal-glass cards (CS#3.1/3.3/3.4/3.5/3.10/3.16). */}
+        <div className="cs-pb-rail">
           {allColors.map((color, i) => {
             const isActive = i === activeColorIdx
             const isExtra = i >= colors.length
             const isLocked = locked.has(i)
+            const isDragGhost = dragIdx === i
             const isDragOver = dragOverIdx === i && dragIdx !== i
+            const role = ROLES[i] || `CUSTOM ${i - colors.length + 1}`
+            const tints = tonalRamp(color, [30, 45, 60, 75, 90])
+            const fg = textColorForBg(color)
             return (
-              <div key={i}
-                draggable
-                onDragStart={() => handleDragStart(i)}
-                onDragOver={(e) => handleDragOver(e, i)}
-                onDragEnd={handleDragEnd}
-                style={{ position: 'relative', flex: '1 1 0', minWidth: 80, opacity: dragIdx === i ? .5 : 1, transition: 'opacity .15s, transform .15s', transform: isDragOver ? 'scale(1.04)' : 'none' }}
-              >
+              // Re-deal animation replays by remounting on dealToken change; the
+              // token must key the OUTERMOST node (the Fragment) so the swatch
+              // div is actually torn down and re-created (CS-1).
+              <Fragment key={`${i}-${dealToken}`}>
+                {/* Gap-insert zone before every card except the first (CS#3.5). */}
+                {i > 0 && (() => {
+                  // The gap cycles 1→2→3 inserts on repeat activation; the label
+                  // reflects the count that the NEXT activation will insert so SR
+                  // users hear what they're about to do (code-review #10).
+                  const gapCount = gapState && gapState.idx === i - 1 ? gapState.count : 1
+                  const between = `between ${ROLES[i - 1] || 'colour ' + i} and ${role}`
+                  return (
+                    <div className="cs-pb-gap"
+                      onClick={() => handleGapClick(i - 1)}
+                      role="button" tabIndex={0}
+                      aria-label={`Insert ${gapCount} colour${gapCount > 1 ? 's' : ''} ${between}`}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleGapClick(i - 1) } }}
+                    >
+                      <span className="cs-pb-gap-btn" aria-hidden="true">
+                        {gapState && gapState.idx === i - 1
+                          ? <span className="cs-pb-gap-count">{gapState.count}</span>
+                          : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>}
+                      </span>
+                    </div>
+                  )
+                })()}
                 <div
+                  className={`cs-pb-swatch${isActive ? ' active' : ''}${isLocked ? ' locked' : ''}${isDragGhost ? ' drag-ghost' : ''}${isDragOver ? ' drag-over' : ''} cs-d${Math.min(i, 5)}`}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={(e) => handleDragOver(e, i)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => { setActiveColorIdx(i); onCopy(color) }}
-                  style={{
-                    background: color, borderRadius: 'var(--radius-s)', padding: '16px 12px',
-                    minHeight: 110, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-                    cursor: 'grab', transition: 'transform .12s', color: textColorForBg(color),
-                    border: isActive ? '2px solid var(--accent)' : isDragOver ? '2px dashed var(--brand)' : '1px solid var(--border)',
-                    outline: isActive ? '2px solid var(--accent-soft)' : 'none',
-                    outlineOffset: 1,
+                  onContextMenu={(e) => { e.preventDefault(); setInfoColor(color) }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowLeft') { e.preventDefault(); moveCard(i, -1) }
+                    else if (e.key === 'ArrowRight') { e.preventDefault(); moveCard(i, 1) }
+                    else if (e.key === 'Enter') { setActiveColorIdx(i); onCopy(color) }
                   }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${role} ${color.toUpperCase()}${isLocked ? ', locked' : ''}. Arrow keys reorder, Enter copies.`}
+                  style={{ background: color, color: fg }}
                 >
-                  {isLocked && (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', top: 6, left: 6, opacity: .7 }}>
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
-                    </svg>
-                  )}
-                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', opacity: .6, marginBottom: 2 }}>
-                    {ROLES[i] || `CUSTOM ${i - colors.length + 1}`}
+                  {/* Hover/focus toolbar: drag · lock · copy · (i) · remove. */}
+                  <div className="cs-pb-tools">
+                    <span className="cs-pb-tool cs-pb-tool--drag" aria-hidden="true" title="Drag to reorder">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+                    </span>
+                    <button className={`cs-pb-tool${isLocked ? ' locked' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLock(i) }}
+                      title={isLocked ? 'Unlock colour' : 'Lock colour'} aria-label={isLocked ? 'Unlock colour' : 'Lock colour'} aria-pressed={isLocked}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        {isLocked
+                          ? <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></>
+                          : <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></>}
+                      </svg>
+                    </button>
+                    <button className="cs-pb-tool" onClick={(e) => { e.stopPropagation(); onCopy(color) }} title="Copy hex" aria-label="Copy hex">
+                      <CopyIcon size={12} />
+                    </button>
+                    <button className="cs-pb-tool" onClick={(e) => { e.stopPropagation(); setInfoColor(color) }} title="Colour details" aria-label="Colour details">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    </button>
+                    {isExtra && (
+                      <button className="cs-pb-tool" onClick={(e) => { e.stopPropagation(); removeExtra(i - colors.length) }} title="Remove colour" aria-label="Remove colour">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    )}
                   </div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700 }}>
-                    {color.toUpperCase()}
+
+                  <div className="cs-pb-swatch-meta">
+                    <div className="cs-pb-role">{role}</div>
+                    {/* Manual per-swatch set (CS#3.16): clicking the hex opens the
+                        native picker overlaid on it; writes to overrides[i]. */}
+                    <label className="cs-pb-hex" onClick={(e) => e.stopPropagation()}>
+                      {color.toUpperCase()}
+                      <input type="color" value={color} className="cs-pb-edit"
+                        onChange={e => editPaletteColor(i, e.target.value)}
+                        title="Set this colour" aria-label={`Set ${role} colour`} />
+                    </label>
+                  </div>
+
+                  {/* Built-in tonal tints (CS#3.3) — the tonal ramp of this card. */}
+                  <div className="cs-pb-tints" aria-hidden="true">
+                    {tints.map((t, ti) => (
+                      // tabIndex -1: the tints row is aria-hidden, so it must also
+                      // be removed from the Tab order (CS-2) — copying the tint
+                      // stays available via right-click info / the parent swatch.
+                      <button key={ti} className="cs-pb-tint" style={{ background: t }}
+                        title={t.toUpperCase()} tabIndex={-1}
+                        onClick={(e) => { e.stopPropagation(); onCopy(t) }} />
+                    ))}
                   </div>
                 </div>
-                <input type="color" value={color}
-                  onChange={e => editPaletteColor(i, e.target.value)}
-                  style={{ position: 'absolute', bottom: 4, left: 4, width: 22, height: 22, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4, opacity: .7 }}
-                  title="Edit colour"
-                  aria-label="Edit colour"
-                />
-                <button onClick={(e) => { e.stopPropagation(); toggleLock(i) }}
-                  title={isLocked ? 'Unlock colour' : 'Lock colour'}
-                  aria-label={isLocked ? 'Unlock colour' : 'Lock colour'}
-                  style={{ position: 'absolute', top: 4, left: 4, background: isLocked ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    {isLocked
-                      ? <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></>
-                      : <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></>}
-                  </svg>
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); setInfoColor(color) }}
-                  title="Colour details"
-                  aria-label="Colour details"
-                  style={{ position: 'absolute', top: 4, right: isExtra ? 26 : 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 11, fontWeight: 700, fontStyle: 'italic', fontFamily: 'Georgia,serif', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                >i</button>
-                {isExtra && (
-                  <button onClick={() => removeExtra(i - colors.length)}
-                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                  >&times;</button>
-                )}
-              </div>
+              </Fragment>
             )
           })}
-          {/* Quick-add colour swatch */}
-          <div style={{ position: 'relative', flex: '0 0 80px', minWidth: 80 }}>
-            <label
-              style={{
-                borderRadius: 'var(--radius-s)', padding: '16px 12px',
-                minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                cursor: 'pointer', transition: 'background .15s, border-color .15s',
-                border: '2px dashed var(--border)', background: 'var(--hvr)',
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
-              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)' }}>Add</span>
-              <input ref={endAddSession} type="color" value={baseColor}
-                onChange={e => addCustomColor(e.target.value)}
-                aria-label="Add a custom colour"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
-              />
-            </label>
-          </div>
+
+          {/* Trailing "+ Add" card (CS#3.14) — the free single-colour add path
+              and the entry point that becomes the Colour System popup later. */}
+          <label className="cs-pb-add">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+            <span className="cs-pb-add-label">Add</span>
+            <input ref={endAddSession} type="color" value={baseColor}
+              onChange={e => addCustomColor(e.target.value)}
+              aria-label="Add a custom colour"
+              className="cs-pb-add-input" />
+          </label>
+        </div>
+
+        {/* Global adjust strip (CS#3.15) — non-destructive H/S/B/Temp lens over
+            the whole palette. Writes globalAdjust; applyAdjust recomputes
+            allColors live. rAF-throttled via the slider's native input event. */}
+        <div className="cs-pb-adjust">
+          {ADJUST_FIELDS.map(f => (
+            <div className="cs-pb-adjust-field" key={f.key}>
+              <span className="cs-pb-adjust-label">
+                <span>{f.label}</span>
+                <span className="cs-pb-adjust-val">{globalAdjust[f.key] > 0 ? '+' : ''}{globalAdjust[f.key]}{f.unit}</span>
+              </span>
+              <input type="range" min={f.min} max={f.max} value={globalAdjust[f.key]}
+                aria-label={f.label}
+                aria-valuetext={`${f.label} ${globalAdjust[f.key] > 0 ? '+' : ''}${globalAdjust[f.key]}${f.unit}`}
+                onChange={e => updateAdjust(f.key, +e.target.value)} />
+            </div>
+          ))}
+          <button className="cs-pb-adjust-reset"
+            disabled={globalAdjust.h === 0 && globalAdjust.s === 0 && globalAdjust.b === 0 && globalAdjust.temp === 0}
+            onClick={() => setGlobalAdjust({ h: 0, s: 0, b: 0, temp: 0 })}>Reset adjust</button>
         </div>
 
         {/* Compact CSS output */}
@@ -1360,104 +1691,7 @@ ${stateVars}
         </>}
       </section>
 
-      {/* ═══ SECTION 2: TINT SCALES ═══ */}
-      <section id="tints" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className="cs-section-header" onClick={() => toggleCollapse('tints')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.tints ? 0 : 14 }}>
-          <svg className={`cs-chevron${collapsed.tints ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Tint Scale</h2>
-        </div>
-
-        {!collapsed.tints && <>
-        {/* Quick switch + controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {allColors.map((c, i) => (
-              <button key={i} onClick={() => setActiveColorIdx(i)} title={c}
-                aria-label={`Switch to ${c}`}
-                style={{
-                  width: 36, height: 36, borderRadius: 8, background: c, border: i === activeColorIdx ? '2px solid var(--accent)' : '1px solid var(--border)',
-                  cursor: 'pointer', transition: 'transform .1s', padding: 0,
-                }}
-              />
-            ))}
-          </div>
-          <div style={{ height: 20, width: 1, background: 'var(--border)' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: 'var(--t2)' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', fontSize: 9 }}>Lum</span>
-              <input type="range" min="50" max="100" value={lumBias} onChange={e => setLumBias(snap(+e.target.value, 82))} style={{ width: 80 }} />
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{lumBias}</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', fontSize: 9 }}>Sat</span>
-              <input type="range" min="0" max="50" value={satDecay} onChange={e => setSatDecay(snap(+e.target.value, 12))} style={{ width: 80 }} />
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{satDecay}</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-              <span style={{ fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', fontSize: 9 }}>OLED</span>
-              <button className={`toggle-switch${oled ? ' on' : ''}`} onClick={() => setOled(!oled)} style={{ transform: 'scale(.8)' }} />
-            </label>
-          </div>
-          <button className="btn btn-s" onClick={() => {
-            const css = ':root {\n' + tintScale.map((c, i) => `  --tint-${T_LABELS[i]}: ${c};`).join('\n') + '\n}'
-            onCopy(css)
-          }} style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 10 }}>
-            <CopyIcon /> Copy Tints
-          </button>
-        </div>
-
-        {/* Tint strip */}
-        <div className="cs-tint-strip" style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-          {tintScale.map((c, i) => (
-            <TintSwatch key={i} color={c} label={T_LABELS[i]} onCopy={onCopy} />
-          ))}
-        </div>
-
-        {/* Tint dropdown: all palette colours */}
-        <div style={{ marginTop: 14 }}>
-          <button onClick={() => setTintDropdownOpen(!tintDropdownOpen)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font)', fontSize: 12, fontWeight: 600, color: 'var(--t1)', padding: '8px 0' }}
-          >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transition: 'transform .2s', transform: tintDropdownOpen ? 'rotate(90deg)' : 'none' }}>
-              <polyline points="9 6 15 12 9 18" />
-            </svg>
-            All Palette Tints
-            <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 400 }}>{allColors.length} colours</span>
-          </button>
-          {tintDropdownOpen && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
-              {allColors.map((c, ci) => {
-                const scale = allTintScales[ci]
-                if (!scale) return null
-                return (
-                  <div key={ci}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <div style={{ width: 14, height: 14, borderRadius: 3, background: c, border: '1px solid var(--border)' }} />
-                      <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t2)' }}>
-                        {ROLES[ci] || `Custom ${ci - colors.length + 1}`}
-                      </span>
-                      <button className="btn btn-s" onClick={() => {
-                        const css = ':root {\n' + scale.map((t, ti) => `  --${(ROLES[ci] || 'custom-' + (ci - colors.length + 1)).toLowerCase()}-${T_LABELS[ti]}: ${t};`).join('\n') + '\n}'
-                        onCopy(css)
-                      }} style={{ marginLeft: 'auto', padding: '2px 8px', fontSize: 9 }}>
-                        <CopyIcon size={9} /> Copy
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', borderRadius: 'var(--radius-s)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                      {scale.map((t, ti) => (
-                        <TintSwatch key={ti} color={t} label={T_LABELS[ti]} onCopy={onCopy} />
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-        </>}
-      </section>
-
-      {/* ═══ SECTION 3: UI STATE COLORS ═══ */}
+      {/* ═══ SECTION 2: UI STATE COLORS ═══ */}
       <section id="states" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
         <div className="cs-section-header" onClick={() => toggleCollapse('states')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: collapsed.states ? 0 : 14, flexWrap: 'wrap', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1503,7 +1737,7 @@ ${stateVars}
         </>}
       </section>
 
-      {/* ═══ SECTION 4: DESIGN SYSTEMS ═══ */}
+      {/* ═══ SECTION 3: DESIGN SYSTEMS ═══ */}
       <section id="systems" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
         <div className="cs-section-header" onClick={() => toggleCollapse('systems')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.systems ? 0 : 14 }}>
           <svg className={`cs-chevron${collapsed.systems ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1586,7 +1820,7 @@ ${stateVars}
         </>}
       </section>
 
-      {/* ═══ SECTION 5: GRADIENT TOOL ═══ */}
+      {/* ═══ SECTION 4: GRADIENT TOOL ═══ */}
       <section id="gradients" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
         <div className="cs-section-header" onClick={() => toggleCollapse('gradients')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.gradients ? 0 : 14 }}>
           <svg className={`cs-chevron${collapsed.gradients ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1790,7 +2024,7 @@ ${stateVars}
       </section>
 
 
-      {/* ═══ SECTION 6: PALETTE VISUALIZER ═══ */}
+      {/* ═══ SECTION 5: PALETTE VISUALIZER ═══ */}
       <section id="visualizer" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
         <div className="cs-section-header" onClick={() => toggleCollapse('visualizer')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.visualizer ? 0 : 14 }}>
           <svg className={`cs-chevron${collapsed.visualizer ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
