@@ -44,6 +44,13 @@ headed as superseded). Work runs **page-by-page, feature-by-feature**.
 - **Anti-tamper (security)** — Pro overlays / paywalled content (CS#3.2, #24) must
   **not** ship to the client merely hidden. Gate **server-side** or **don't render**
   the locked artifact, so inspect-element can't bypass. `security-reviewer` signs off.
+  - **Client `isPro` is a conversion/UX driver only, NEVER the sole guard once output
+    gains server-honoured value.** Security review (Slice 1, L-2) confirmed: in the
+    palette builder a flipped client `isPro` only reveals locally-computed colours (no
+    real exposure). But the **export/save slice (#23/#24, CS#3.11) MUST re-verify
+    entitlement server-side** — `verifyIdToken`-protected `/api` route reading the
+    authoritative Firestore `users/{uid}` plan (Stripe-webhook-synced via
+    `api/_lib/firebase-admin.js`), not a client-sent flag. **That slice is founder-gated.**
 - **Human-Validation-Zones** — Payments (#20/21/23/24) + Auth (#30/31) are
   founder-gated: flag blast radius, never silently edit
   (`docs/reference/human-validation-zones.md`).
