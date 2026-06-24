@@ -117,18 +117,24 @@ headed as superseded). Work runs **page-by-page, feature-by-feature**.
 ### Phase 1 — Colour Studio (FIRST real page)  ·  research → design → engineer → security + qa
 Ground-up rebuild. **Slice 1 design spec ✅ done → [`docs/specs/colour-studio.md`](specs/colour-studio.md)**
 (page nav + Palette Builder core: HCT/Material-3 tonal "Auto", sliding-pill nav, gap-insert ×1–3,
-built-in tonal tints, Pro-gates as real non-DOM gates). **◐ Slice 1 BUILD IN PROGRESS** (engineer
-`ac04fd18…`, against the now-committed Phase 0.5 tokens; gate = code-review + security-review
-[mandatory CS#3.2 anti-tamper] + secret-scan + qa, then one PR). Full sub-sequence:
-- **Page nav** — pill style + sliding/snapping inner pill (any label width), glass panel,
-  pinned-to-top on load, **tints section removed** (folds into palette). (CS#1, 2, 2.1)
+built-in tonal tints, Pro-gates as real non-DOM gates). **✅ Slice 1 SHIPPED** — committed `1a81d74`
++ pushed to `claude/youthful-ride-dbre15` (NOT yet PR'd). Gate cleared: code-review + security-review
+(CS#3.2 anti-tamper) + secret-scan + qa PASS, build green, lint at baseline (0 errors). Then
+**browser-verified** in Chromium (Playwright smoke-test): no JS errors; pill-nav thumb measured
+(84px desktop / 72px mobile); 5 tonal swatches with `cs-deal` replay on Randomise (CS-1 fix) +
+`backwards` fill-mode (no flash); hidden-overlay `<input type=color>` picker (CS-5); non-Pro harmony
+lock glyphs present (anti-tamper); `data-reduced-motion` suppresses `cs-deal` (0.32s→0.01ms). Full
+sub-sequence (Slice 1 items marked ✅; the rest = later slices):
+- **Page nav** ✅ (Slice 1) — pill style + sliding/snapping inner pill (any label width), glass
+  panel, pinned-to-top on load, **tints section removed** (folds into palette). (CS#1, 2, 2.1)
 - **Palette Builder (Coolors-grade rebuild)** —
-  - **"Auto" default = HCT / Material-3 tonal, 5 colours, randomised on open** (CS#3.6, 3.8);
-    maths harmonies remain but **Pro-locked** (CS#3.7); **>6-colour randomize → Pro** (CS#3.17).
-  - **Space / button to randomize**, **lock + drag-reorder** swatches (CS#3.10), **smooth
-    add-colour transition** (CS#3.4), **insert exact midpoint between two swatches ×1–3** (CS#3.5).
-  - **Tints in the generator** (CS#3.3); **colour-blindness variants view** (CS#3.9); global
-    **hue/sat/bright/temperature** adjust (CS#3.15); **manual per-swatch set** (CS#3.16).
+  - ✅ (Slice 1) **"Auto" default = HCT / Material-3 tonal, 5 colours, randomised on open** (CS#3.6,
+    3.8); maths harmonies remain but **Pro-locked** (CS#3.7); **>6-colour randomize → Pro** (CS#3.17).
+  - ✅ (Slice 1) **Space / button to randomize**, **insert exact midpoint between two swatches ×1–3**
+    (CS#3.5). ◐ **lock + drag-reorder** swatches (CS#3.10 — toolbar markup in place, full DnD = next
+    slice), **smooth add-colour transition** (CS#3.4).
+  - ✅ (Slice 1) **Tints in the generator** (CS#3.3); global **hue/sat/tone/temperature** adjust
+    (CS#3.15). ☐ **colour-blindness variants view** (CS#3.9); **manual per-swatch set** (CS#3.16).
   - **Swatch popup redesign** + **right-click/hover menu**: contrast check, view shades
     (click → swatch becomes it), info popup. (CS#3.12)
   - **"Colour System" popup** (renamed from "add colour") — keep From-brand-palette; house
