@@ -162,6 +162,12 @@ pattern, browser reclaims on nav); L4 — `addSystemRamp` gives no toast when a 
 duplicates (ColorStudio.jsx ~L2018) while `addSampledColors` does — minor UX inconsistency; M3 —
 the Slice-2 swatch popup `onDown` (ColorStudio.jsx ~L468) shares the same double-fire potential the
 Slice-3 trigger just fixed; harmless today but worth the same guard when that file is next touched.
+**Deferred spec-feature gaps (from the 3-subagent review, → a later Colour-Studio slice, NOT
+blocking this merge):** (1) **Image zoom 2× pan** — the 2× control renders but there is no pan-offset
+state / drag-to-pan, so at 2× the image is centre-cropped and the edges are unreachable (spec §5.4.5
+shipped as a stub); (2) **touch long-press disambiguation** — `onPointerDown` on the stage adds a
+point on first `pointerdown` with no hold timer, so on mobile a user trying to drag an existing point
+can inadvertently add one (spec §5.7 calls for a ~250 ms hold before a drag starts).
 
 Full sub-sequence (Slice 1, 2 & 3 items marked ✅; the rest = later slices):
 - **Page nav** ✅ (Slice 1) — pill style + sliding/snapping inner pill (any label width), glass
