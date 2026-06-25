@@ -140,7 +140,30 @@ zero JS errors. **Deferred tech-debt (logged, non-blocking):** M2 — extract a 
 logic); L1 — `#000` literal in `.cs-pb-kbd` should use a design token; L2 — make the popup's
 `matchMedia` breakpoint check reactive (re-evaluate on resize, not just on mount).
 
-Full sub-sequence (Slice 1 & 2 items marked ✅; the rest = later slices):
+**✅ Slice 3 SHIPPED** — committed `9754595` + pushed to `claude/youthful-ride-dbre15`.
+The **"Colour System" popup** (CS#3.14): replaces the `+ Add Colour` dropdown and the
+standalone "Pick Colour" overlay with one popup, three tabs — **Generate** (instant free HCT
+`tonalRamp` Auto + harmony radiogroup; free: Auto/Custom/Monochromatic, Pro-locked: Complementary/
+Analogous/Triadic/Split/Tetradic), **Image** (free signature: canvas stage that keeps the image on
+screen, 5 auto-seeded draggable eyedropper points via kMeans→nearest-pixel, magnifier loupe, live
+contrast badge, zoom 1×/2×, full keyboard parity), **Brands** (2-col grid from `BRANDS`). Gate
+cleared (PM-run review/QA — subagents were session-limited): **anti-tamper PASS** (Pro harmony
+maths only under `isPro`; `sel` can never hold a Pro id for a non-Pro user; `ramp` memo double-
+guards `&& isPro`; locked chips show a static `HarmonyDiagram` + lock glyph, never a hex);
+**image surface bounded** (MIME check, 12 MB reject, 1600px decode cap, guarded `getImageData`/
+`drawImage`, object-URL revoke, all four phases); a11y strong (dialog/tablist/tabpanel/radiogroup/
+slider/application roles, focus-trap, roving tabindex). All add paths route through the shared
+6-colour free cap (`checkCanAdd`/`freeSlotsLeft`→`onProGate`) with case-insensitive dedupe + undo.
+Double-fire reopen fixed (outside-click handler early-returns on the trigger). Build green, lint at
+baseline (0 errors / 31 warnings); ColorStudio.jsx contributes 0/0. No HVZ (auth/Stripe) files
+touched. **Deferred tech-debt (logged, non-blocking):** L3 — object-URL not revoked on the image
+error/`catch` paths in `extractColorPointsFromImage` + `CsysImage.seedFromFile` (pre-existing
+pattern, browser reclaims on nav); L4 — `addSystemRamp` gives no toast when a ramp is entirely
+duplicates (ColorStudio.jsx ~L2018) while `addSampledColors` does — minor UX inconsistency; M3 —
+the Slice-2 swatch popup `onDown` (ColorStudio.jsx ~L468) shares the same double-fire potential the
+Slice-3 trigger just fixed; harmless today but worth the same guard when that file is next touched.
+
+Full sub-sequence (Slice 1, 2 & 3 items marked ✅; the rest = later slices):
 - **Page nav** ✅ (Slice 1) — pill style + sliding/snapping inner pill (any label width), glass
   panel, pinned-to-top on load, **tints section removed** (folds into palette). (CS#1, 2, 2.1)
 - **Palette Builder (Coolors-grade rebuild)** —
@@ -153,7 +176,7 @@ Full sub-sequence (Slice 1 & 2 items marked ✅; the rest = later slices):
     (CS#3.15). ✅ (Slice 2) **colour-blindness variants view** (CS#3.9); **manual per-swatch set** (CS#3.16).
   - ✅ (Slice 2) **Swatch popup redesign** + **right-click/long-press menu**: contrast check,
     view shades (click → swatch becomes it), info popup, in-place Edit tab. (CS#3.12)
-  - **"Colour System" popup** (renamed from "add colour") — keep From-brand-palette; house
+  - ✅ (Slice 3) **"Colour System" popup** (renamed from "add colour") — keep From-brand-palette; house
     harmony picker + Auto default; **image extract keeps image on screen with movable
     eyedropper points**; **remove plain "pick colour" tab.** (CS#3.14)
   - **High-quality UI previews** (real UI, not tiny mockups); **1–3 blurred Pro previews with
