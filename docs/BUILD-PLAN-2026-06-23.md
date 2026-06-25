@@ -123,8 +123,24 @@ built-in tonal tints, Pro-gates as real non-DOM gates). **✅ Slice 1 SHIPPED** 
 **browser-verified** in Chromium (Playwright smoke-test): no JS errors; pill-nav thumb measured
 (84px desktop / 72px mobile); 5 tonal swatches with `cs-deal` replay on Randomise (CS-1 fix) +
 `backwards` fill-mode (no flash); hidden-overlay `<input type=color>` picker (CS-5); non-Pro harmony
-lock glyphs present (anti-tamper); `data-reduced-motion` suppresses `cs-deal` (0.32s→0.01ms). Full
-sub-sequence (Slice 1 items marked ✅; the rest = later slices):
+lock glyphs present (anti-tamper); `data-reduced-motion` suppresses `cs-deal` (0.32s→0.01ms).
+
+**✅ Slice 2 SHIPPED** — committed `c379c99` + pushed to `claude/youthful-ride-dbre15` (NOT
+yet PR'd). Per-swatch interaction layer (all three features **free**): swatch popup redesign +
+context menu (CS#3.12), palette-wide colour-blindness variants (CS#3.9), manual per-swatch hex
+(CS#3.16). Gate cleared: code-review (1 CRITICAL + 3 HIGH + folded MED/LOW fixed by engineer) +
+security-review + secret-scan PASS, build green, lint at baseline (0 errors / 31 warnings).
+Machado-2009 matrices numerically re-verified (canonical severity-1.0, physically-correct
+linear-RGB pipeline). Then **browser-verified** in Chromium (Playwright): context menu portals
+to `<body>` (escapes the rail's stacking/overflow); 4-tab popup (Values·Contrast·Shades·Edit);
+shade-click replaces the swatch in place; invalid hex rejected with no mutation; CB overlay
+recolours swatches while retaining the TRUE hex label; mobile bottom-sheet renders anchored;
+zero JS errors. **Deferred tech-debt (logged, non-blocking):** M2 — extract a shared
+`useSlidingThumb` hook (page-nav thumb + popup tab underline duplicate the measure/ResizeObserver
+logic); L1 — `#000` literal in `.cs-pb-kbd` should use a design token; L2 — make the popup's
+`matchMedia` breakpoint check reactive (re-evaluate on resize, not just on mount).
+
+Full sub-sequence (Slice 1 & 2 items marked ✅; the rest = later slices):
 - **Page nav** ✅ (Slice 1) — pill style + sliding/snapping inner pill (any label width), glass
   panel, pinned-to-top on load, **tints section removed** (folds into palette). (CS#1, 2, 2.1)
 - **Palette Builder (Coolors-grade rebuild)** —
@@ -134,9 +150,9 @@ sub-sequence (Slice 1 items marked ✅; the rest = later slices):
     (CS#3.5). ◐ **lock + drag-reorder** swatches (CS#3.10 — toolbar markup in place, full DnD = next
     slice), **smooth add-colour transition** (CS#3.4).
   - ✅ (Slice 1) **Tints in the generator** (CS#3.3); global **hue/sat/tone/temperature** adjust
-    (CS#3.15). ☐ **colour-blindness variants view** (CS#3.9); **manual per-swatch set** (CS#3.16).
-  - **Swatch popup redesign** + **right-click/hover menu**: contrast check, view shades
-    (click → swatch becomes it), info popup. (CS#3.12)
+    (CS#3.15). ✅ (Slice 2) **colour-blindness variants view** (CS#3.9); **manual per-swatch set** (CS#3.16).
+  - ✅ (Slice 2) **Swatch popup redesign** + **right-click/long-press menu**: contrast check,
+    view shades (click → swatch becomes it), info popup, in-place Edit tab. (CS#3.12)
   - **"Colour System" popup** (renamed from "add colour") — keep From-brand-palette; house
     harmony picker + Auto default; **image extract keeps image on screen with movable
     eyedropper points**; **remove plain "pick colour" tab.** (CS#3.14)
