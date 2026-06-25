@@ -145,10 +145,11 @@ export function extractColorPointsFromImage(file, count = 5) {
         resolve(unique)
         URL.revokeObjectURL(img.src)
       } catch (err) {
+        try { URL.revokeObjectURL(img.src) } catch { /* ignore */ }
         reject(err instanceof Error ? err : new Error('Failed to process image'))
       }
     }
-    img.onerror = () => reject(new Error('Failed to load image'))
+    img.onerror = () => { URL.revokeObjectURL(img.src); reject(new Error('Failed to load image')) }
     img.src = URL.createObjectURL(file)
   })
 }
