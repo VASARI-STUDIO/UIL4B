@@ -68,7 +68,7 @@ A comprehensive design toolkit built with React and Vite. Create colour palettes
 api/                  Vercel serverless functions (Stripe, support, admin verification)
 src/
 ├── components/       Sidebar, TopBar, Toast, CommandPalette, GoogleOneTap
-├── contexts/         Auth, Theme, I18n, Project, Workspace, Subscription
+├── contexts/         Auth, Theme, Appearance, I18n, Project, Workspace, Subscription, Export
 ├── data/             Tool and category definitions, community prompts
 ├── hooks/            useToast, useClipboard, useFirestoreSync
 ├── locales/          10 JSON locale files (en, en-US, de, es, fr, it, ja, ko, pt, zh)
@@ -107,7 +107,8 @@ Server-side (Vercel, no prefix):
 | `STRIPE_SECRET_KEY` | Stripe secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` | Stripe price IDs |
-| `GEMINI_API_KEY` | AI generation (alt text, etc.) |
+| `DEEPSEEK_API_KEY` | AI generation — primary backend (prompts, alt text, scan, etc.) |
+| `GEMINI_API_KEY` | AI generation — fallback backend |
 | `RESEND_API_KEY` / `SUPPORT_NOTIFY_EMAIL` | Feedback email notifications (optional) |
 | `GOOGLE_SHEETS_WEBHOOK_URL` | Feedback → Google Sheets sync (optional, see `docs/google-sheets-setup.md`) |
 

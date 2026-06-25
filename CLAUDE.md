@@ -1,92 +1,109 @@
 # UIL4B — Web Design Toolkit
 
-## Project Overview
+UIL4B is a SaaS platform providing high-quality UI tools and generators.
+React 19 SPA (Vite + Vercel): Color Studio, Font Pair Finder, AI generators, and
+a community hub. Firebase Auth + Firestore, Stripe subscriptions, DeepSeek/Gemini
+AI backends.
 
-React 19 SPA (Vite + Vercel) providing design tools: Color Studio, Font Pair Finder, AI generators, and community hub. Firebase Auth + Firestore, Stripe subscriptions, DeepSeek/Gemini AI backends.
+> This file is a lean index. Detailed technical reference lives in
+> [`docs/reference/`](docs/reference/) — see **Reference Docs** at the bottom.
 
-## Tech Stack
+---
 
-- **Frontend**: React 19, Vite, BrowserRouter
-- **Styling**: CSS custom properties (dark/light theme), no CSS-in-JS
-- **Auth**: Firebase Auth (Google One Tap + email/password)
-- **Database**: Firestore (region: australia-southeast1)
-- **AI**: DeepSeek API (primary), Gemini API (fallback)
-- **Payments**: Stripe (embedded checkout, customer portal)
-- **Deploy**: Vercel (serverless functions in `/api`)
+## Working With Me
 
-## Key Architecture
+Dylan is a Website Designer turned vibe-code developer, and an entrepreneur. I
+like to work autonomously — I like to provide tasks, or have tasks provided to
+me, and be left to work alone.
 
-- **Pages**: `src/pages/` — each route is a standalone component
-- **Contexts**: AuthContext, SubscriptionContext, ProjectContext, WorkspaceContext
-- **API routes**: `/api/*.js` — Vercel serverless functions (no VITE_ prefix for secrets)
-- **Styles**: Single `src/styles/global.css` — all CSS in one file, class-based
-- **Analytics**: Client-side localStorage (`vs-analytics`, `vs-sessions`, `vs-design-analytics`)
+When I'm giving instructions they will often not be structured very well, or in
+a good / correct order, as I have some ADHD tendencies. So many times my
+instructions will need to be carefully pulled apart and pieced back together
+into a good list, in the right order. (E.g. I might give three instructions
+about Section A, then one about Section B, then jump back to Section A again —
+regroup and re-sequence before acting.)
 
-## Build & Verify
+## Decision Rules
 
-```bash
-npx vite build          # Must pass before any commit
-npx vite --port 5173    # Dev server
-```
+- Action over asking.
+- Concise over verbose.
+- Automation over manual.
+- Execute first, refine later.
 
-## Verify-First Workflow
+## Priorities
 
-Before starting any implementation:
-1. **State how you will verify** the change works (build, visual check, specific test)
-2. **After finishing**, run that verification and report results
-3. **Never claim success** without evidence — build pass + visual confirmation minimum
+1. User experience
+2. Reliability
+3. Speed
+4. Visual quality
 
-## Human Validation Zones
+## When Multiple Solutions Exist
 
-These areas require explicit user approval before ANY code changes. Explain the blast radius (what could break, who is affected, is it reversible) before proceeding:
+1. Choose maintainability over cleverness.
+2. Choose reusable components over duplication.
+3. Choose production-ready implementations.
+4. Choose scalable architecture.
+5. Choose user value over engineering perfection.
 
-### Payments / Stripe
-- `api/stripe-webhook.js` — processes subscription events, touches billing state
-- `api/setup-stripe.js` — creates/modifies Stripe prices
-- `api/create-checkout.js` — initiates payment sessions
-- `api/create-portal.js` — customer billing portal
-- `src/contexts/SubscriptionContext.jsx` — plan resolution, checkout flow
-- `api/_lib/stripe.js`, `api/_lib/pricing.js`, `api/_lib/plans.js`
+## Core Behaviors
 
-### Auth / Login
-- `src/contexts/AuthContext.jsx` — login/signup/profile, session management
-- `src/components/AuthGate.jsx` — inline auth gates on AI tools
-- `src/components/GoogleOneTap.jsx` — automatic sign-in
-- `api/verify-admin.js` — admin privilege verification
-- `src/utils/firebase.js` — Firebase config and auth instance
+- Exhaust all options before asking.
+- Give real opinions, not pros/cons lists.
+- Confirm before irreversible external actions.
+- Never mark work complete without running it.
 
-**Rule**: Never modify these files without asking first. A bug here locks users out or breaks billing.
+## Self-Extension (Automatic Skill Creation)
 
-## Murphy's Law Checklist
+I extend my own capabilities by creating new skills. This is core to evolution.
 
-Before shipping any feature, consider:
-- What happens if the network is offline?
-- What happens on a 320px screen? On a 4K screen?
-- What happens if the user double-clicks?
-- What happens if the data is empty? If it has 1000+ items?
-- What happens if localStorage is full or disabled?
-- What happens if the user navigates away mid-action?
-- What happens if Firebase/Stripe/AI API is down?
+### When to Create a Skill AUTOMATICALLY
 
-## Constants & Config
+Create a new skill when ALL of these are true:
 
-- **Admin emails**: `src/utils/constants.js` — `ADMIN_EMAILS = ['dylanjacob1100@gmail.com']`
-- **Admin code**: `'uil4b-dev-2026'` (session-only unlock)
-- **Firebase project**: `uil4b-357c5`
-- **Brand color**: `--brand: #3B82F6` (dark) / `#2563EB` (light)
-- **Dark contrast tokens**: `--t1:#b0b0b0`, `--t2:#909090`, `--t3:#757575`
-- **Onboarding skip**: `localStorage 'vs-onboarded'` — set to `'1'` after first login
+1. **Capability gap** — User requests something no existing skill covers.
+2. **Reusable** — Pattern will likely be useful again (not one-off).
+3. **Structured** — Involves a clear process, API, or tool usage.
+4. **User benefit** — Saves time on future similar requests.
 
-## CSS Conventions
+### How to Create a Skill
 
-- Use existing CSS custom properties (`--accent`, `--t0`–`--t3`, `--bg-0`–`--bg-4`, `--border`, `--radius-*`)
-- Class naming: kebab-case with component prefix (`cs-` Color Studio, `adm-` Admin, `aipg-` AI Prompt)
-- No inline styles in new code — add classes to global.css
-- Mobile breakpoints: 768px (tablet), 480px (phone), 380px (tiny)
+1. **Recognize the gap** — "No skill exists for this, and it's reusable."
+2. **Create the skill file** immediately: `~/.claude/skills/[skill-name]/SKILL.md`
+3. **Use minimal YAML frontmatter**:
+   ```yaml
+   ---
+   name: skill-name
+   description: Clear description of when to use this skill
+   allowed-tools: Tool1, Tool2
+   ---
+   ```
+4. **Use it immediately** for the current task.
+5. **Inform user**: "Created new skill: [name] — [what it does]."
 
-## Git Workflow
+---
 
-- **Branch**: Always work on the designated feature branch
-- **Merge to main**: Via PR only (direct push returns 503)
-- **Commit style**: Descriptive, component-prefixed messages
-- **Never force-push** without explicit permission
+## Reference Docs
+
+Detailed, task-ready reference for agents. Read the relevant one before working
+in that area.
+
+- **[Project Manager](docs/reference/project-manager.md)** — how the PM (main
+  thread) parses instructions and routes work. **The PM never writes code.**
+- **[Tech Stack](docs/reference/tech-stack.md)** — frameworks, dependencies,
+  AI backends, client/server boundary.
+- **[Architecture](docs/reference/architecture.md)** — pages, contexts,
+  components, `/api` routes (12-function limit), analytics layer.
+- **[Build & Verify](docs/reference/build-and-verify.md)** — the verify-first
+  build gate. Nothing ships without it.
+- **⚠️ [Human Validation Zones](docs/reference/human-validation-zones.md)** —
+  founder-gated auth/Stripe files. **Read before touching auth or payments.**
+- **[Murphy's Law Checklist](docs/reference/murphys-law.md)** — required
+  loading/empty/error/offline states; resilience.
+- **[Constants & Config](docs/reference/constants-and-config.md)** — admin
+  emails/code, Firebase IDs, brand colour, tokens, env vars.
+- **[CSS Conventions](docs/reference/css-conventions.md)** — single
+  `global.css`, design tokens, class prefixes, breakpoints.
+- **[Git Workflow](docs/reference/git-workflow.md)** — branch, commit, push,
+  PR-only merge to `main`.
+
+Subagent roster + routing principles: [`.claude/agents/README.md`](.claude/agents/README.md).

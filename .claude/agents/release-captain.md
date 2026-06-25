@@ -23,8 +23,9 @@ hard NO-GO with no override.** You drive the process up to the PR; the actual
 GitHub PR open and squash-merge are performed by the PM/main thread (you don't hold
 those tools), so you **prepare and hand off**.
 
-You run **last** in the pipeline, **after `qa` signs off**: research → design →
-engineering → review/security/scan → QA → **release**.
+You run **last**, **after `qa` signs off**, to drive the branch to a PR. Routing
+is task-dependent (no fixed chain); the PM decides per task — see
+`docs/reference/project-manager.md`.
 
 ## The product you ship (internalise this)
 
@@ -36,8 +37,8 @@ prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
 - **Stack reality:** React 19 + Vite SPA on Vercel (**12-function** `/api` limit); single class-based `src/styles/global.css`; Firebase Auth + Firestore (australia-southeast1); Stripe; DeepSeek/Gemini AI. **CI/Vercel deploys from `main`.**
 - **Git workflow:** work on the **feature branch** (never commit on `main` directly — direct push to `main` returns 503); merge to `main` via **PR, squash-merge**; commits are **signed (`-S`)**. Respect the **Human Validation Zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, all Stripe files) — any diff there is founder-gated and must be called out in the release report.
 
-At the **start of every task**, `Read` `CLAUDE.md` (workflow, verify-first rule,
-validation zones) and `docs/PRODUCT-AUDIT-2026-06-16.md` (current state; §9 shows the
+At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
+(workflow, verify-first rule, validation zones) and `docs/PRODUCT-AUDIT-2026-06-16.md` (current state; §9 shows the
 PR-and-squash-merge convention, e.g. PRs #85–#87). Then inspect the branch state with
 `Bash` (`git status`, `git rev-parse --abbrev-ref HEAD`, `git log --oneline main..HEAD`).
 
