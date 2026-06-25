@@ -140,7 +140,40 @@ zero JS errors. **Deferred tech-debt (logged, non-blocking):** M2 — extract a 
 logic); L1 — `#000` literal in `.cs-pb-kbd` should use a design token; L2 — make the popup's
 `matchMedia` breakpoint check reactive (re-evaluate on resize, not just on mount).
 
-Full sub-sequence (Slice 1 & 2 items marked ✅; the rest = later slices):
+**✅ Slice 3 SHIPPED** — feature `9754595` + review-fix batch `524ccdb`, pushed to
+`claude/youthful-ride-dbre15`.
+The **"Colour System" popup** (CS#3.14): replaces the `+ Add Colour` dropdown and the
+standalone "Pick Colour" overlay with one popup, three tabs — **Generate** (instant free HCT
+`tonalRamp` Auto + harmony radiogroup; free: Auto/Custom/Monochromatic, Pro-locked: Complementary/
+Analogous/Triadic/Split/Tetradic), **Image** (free signature: canvas stage that keeps the image on
+screen, 5 auto-seeded draggable eyedropper points via kMeans→nearest-pixel, magnifier loupe, live
+contrast badge, zoom 1×/2×, full keyboard parity), **Brands** (2-col grid from `BRANDS`). Gate
+cleared by the full 3-subagent review (code-reviewer + security-reviewer + qa); every finding
+fixed in `524ccdb` (PM verified the gate + read the diff, no HVZ files touched): **anti-tamper
+PASS** (Pro harmony
+maths only under `isPro`; `sel` can never hold a Pro id for a non-Pro user; `ramp` memo double-
+guards `&& isPro`; locked chips show a static `HarmonyDiagram` + lock glyph, never a hex);
+**image surface bounded** (MIME check, 12 MB reject, 1600px decode cap, guarded `getImageData`/
+`drawImage`, object-URL revoke, all four phases); a11y strong (dialog/tablist/tabpanel/radiogroup/
+slider/application roles, focus-trap, roving tabindex). All add paths route through the shared
+6-colour free cap (`checkCanAdd`/`freeSlotsLeft`→`onProGate`) with case-insensitive dedupe + undo.
+Double-fire reopen fixed (outside-click handler early-returns on the trigger). Build green, lint at
+baseline (0 errors / 31 warnings); ColorStudio.jsx contributes 0/0. No HVZ (auth/Stripe) files
+touched. **Review fixes applied in `524ccdb`:** L3 (object-URL revoke on the image error/`catch`
+paths) ✅ **resolved**; L4 (`addSystemRamp` now toasts on an all-duplicate ramp, matching
+`addSampledColors`) ✅ **resolved**; plus Home/End tab keys (WCAG APG), loupe single-source sizing,
+live readout-tracking during drag, pointer-capture guard, stale-anchor rect captured at click-time,
+and `addBrandColors` cap-gate + undo toast. **Deferred tech-debt (logged, non-blocking):** M3 —
+the Slice-2 swatch popup `onDown` (ColorStudio.jsx ~L468) shares the same double-fire potential the
+Slice-3 trigger just fixed; harmless today but worth the same guard when that file is next touched.
+**Deferred spec-feature gaps (from the 3-subagent review, → a later Colour-Studio slice, NOT
+blocking this merge):** (1) **Image zoom 2× pan** — the 2× control renders but there is no pan-offset
+state / drag-to-pan, so at 2× the image is centre-cropped and the edges are unreachable (spec §5.4.5
+shipped as a stub); (2) **touch long-press disambiguation** — `onPointerDown` on the stage adds a
+point on first `pointerdown` with no hold timer, so on mobile a user trying to drag an existing point
+can inadvertently add one (spec §5.7 calls for a ~250 ms hold before a drag starts).
+
+Full sub-sequence (Slice 1, 2 & 3 items marked ✅; the rest = later slices):
 - **Page nav** ✅ (Slice 1) — pill style + sliding/snapping inner pill (any label width), glass
   panel, pinned-to-top on load, **tints section removed** (folds into palette). (CS#1, 2, 2.1)
 - **Palette Builder (Coolors-grade rebuild)** —
@@ -153,7 +186,7 @@ Full sub-sequence (Slice 1 & 2 items marked ✅; the rest = later slices):
     (CS#3.15). ✅ (Slice 2) **colour-blindness variants view** (CS#3.9); **manual per-swatch set** (CS#3.16).
   - ✅ (Slice 2) **Swatch popup redesign** + **right-click/long-press menu**: contrast check,
     view shades (click → swatch becomes it), info popup, in-place Edit tab. (CS#3.12)
-  - **"Colour System" popup** (renamed from "add colour") — keep From-brand-palette; house
+  - ✅ (Slice 3) **"Colour System" popup** (renamed from "add colour") — keep From-brand-palette; house
     harmony picker + Auto default; **image extract keeps image on screen with movable
     eyedropper points**; **remove plain "pick colour" tab.** (CS#3.14)
   - **High-quality UI previews** (real UI, not tiny mockups); **1–3 blurred Pro previews with

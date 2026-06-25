@@ -82,3 +82,74 @@ export function extractColorsFromImage(file, count = 5) {
     img.src = URL.createObjectURL(file)
   })
 }
+
+// Slice 3 (Colour System popup, Image tab): the eyedropper instrument needs the
+// extracted colours AND where they live on the image, so auto-seeded points land
+// on real pixels (back-map cluster → representative pixel). Returns both the hexes
+// and normalised 0–1 coordinates (origin top-left) of the closest source pixel to
+// each kMeans centroid, so points survive zoom/resize/letterbox.
+// Mirrors extractColorsFromImage's downscale/skip rules so the centroids match.
+export function extractColorPointsFromImage(file, count = 5) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const maxDim = 150
+        const scale = Math.min(maxDim / img.width, maxDim / img.height, 1)
+        const w = Math.max(1, Math.round(img.width * scale))
+        const h = Math.max(1, Math.round(img.height * scale))
+
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })
+        ctx.drawImage(img, 0, 0, w, h)
+
+        const data = ctx.getImageData(0, 0, w, h).data
+        // Keep the source pixel's coordinate alongside its colour so we can map a
+        // centroid back to a real location. Sample every 4th pixel (stride 16 bytes).
+        const pixels = []
+        const coords = []
+        for (let i = 0; i < data.length; i += 16) {
+          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3]
+          if (a < 128) continue
+          if (r > 245 && g > 245 && b > 245) continue
+          if (r < 10 && g < 10 && b < 10) continue
+          const px = (i >> 2) % w
+          const py = Math.floor((i >> 2) / w)
+          pixels.push([r, g, b])
+          coords.push([px / w, py / h])
+        }
+
+        if (!pixels.length) { resolve([]); URL.revokeObjectURL(img.src); return }
+
+        const k = Math.min(count, pixels.length)
+        const centroids = kMeans(pixels, k)
+        const points = centroids.map(c => {
+          // Nearest source pixel to this centroid = its on-image representative.
+          let minD = Infinity, best = 0
+          for (let p = 0; p < pixels.length; p++) {
+            const d = colorDistance(pixels[p], c)
+            if (d < minD) { minD = d; best = p }
+          }
+          return { hex: rgbToHex(...pixels[best]), x: coords[best][0], y: coords[best][1] }
+        })
+        // De-dupe points that collapsed onto the same pixel (tiny/flat images).
+        const seen = new Set()
+        const unique = points.filter(p => {
+          const key = `${Math.round(p.x * 1000)}:${Math.round(p.y * 1000)}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        resolve(unique)
+        URL.revokeObjectURL(img.src)
+      } catch (err) {
+        try { URL.revokeObjectURL(img.src) } catch { /* ignore */ }
+        reject(err instanceof Error ? err : new Error('Failed to process image'))
+      }
+    }
+    img.onerror = () => { URL.revokeObjectURL(img.src); reject(new Error('Failed to load image')) }
+    img.src = URL.createObjectURL(file)
+  })
+}
