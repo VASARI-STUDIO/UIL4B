@@ -475,7 +475,7 @@ export default function Settings({ toast }) {
           <section id="set-appearance" className="settings-section">
             <div className="settings-section-h">
               <h2>Appearance</h2>
-              <p>Choose your theme. UIL4B follows your device by default — pick one to lock it.</p>
+              <p>Choose your theme. UIL4B is dark by default — switch to light any time.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">

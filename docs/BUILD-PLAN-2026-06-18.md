@@ -1,5 +1,9 @@
 # UIL4B — Build Plan & Backlog (2026-06-18)
 
+> ⚠️ **SUPERSEDED (2026-06-23) by [`docs/BUILD-PLAN-2026-06-23.md`](BUILD-PLAN-2026-06-23.md).**
+> Kept for history. Note the **Q-THEME "Dark only"** decision below was *reversed* on
+> 2026-06-23 (light/dark restored, dark default + opt-in). See the new plan.
+
 Captured from the founder's task brief. This is the **planning artifact** — nothing in
 "Phase 1+" is built yet; execution starts after the open questions (§OPEN) are answered.
 Sequencing follows the founder's rule: **fix/polish existing modules before new alpha tools.**

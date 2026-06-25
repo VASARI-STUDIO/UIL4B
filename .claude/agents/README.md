@@ -7,8 +7,9 @@ Claude thread**: it reads the request, routes work to the right agent(s) via the
 Agent tool, relays their findings, and performs the actions subagents can't (opening
 and squash-merging PRs via the GitHub MCP tools).
 
-Every agent `Read`s `CLAUDE.md` and `docs/PRODUCT-AUDIT-2026-06-16.md` at the start
-of a task for current conventions, validation zones, and the live state of the app.
+Every agent `Read`s `CLAUDE.md` at the start of a task, plus the relevant
+`docs/reference/*.md` for its area (conventions, validation zones, constants),
+and `docs/PRODUCT-AUDIT-2026-06-16.md` for the live state of the app.
 
 ## The 10 agents
 
@@ -25,20 +26,25 @@ of a task for current conventions, validation zones, and the live state of the a
 | **release-captain** | sonnet | Drives the branch through the gates; GO/NO-GO report + prepared PR title/body; hands the merge to the PM. |
 | **analytics** | sonnet | Instrumentation specialist — audits the localStorage + `analytics-daily` layer and designs goal-aligned events/funnels. |
 
-## The composition chain
+## Routing (task-dependent — no fixed chain)
 
-```
-research ──► design / seo ──► engineer ──► ┌ code-reviewer ┐
-   │            │                          │ security-reviewer ├──► qa ──► release-captain ──► [PM merges]
- (strategy)  (specs)        (build)        └ secret-scanner ┘     (gate)    (GO/NO-GO + PR)     via GitHub MCP
-```
+There is **no fixed composition chain**. Every task varies in which agent(s)
+handle it, and the goal is to use the **fewest agents that do the job well** —
+each unnecessary agent burns context. The **PM (main thread) routes per task**;
+the routing rules live in
+[`docs/reference/project-manager.md`](../../docs/reference/project-manager.md).
 
-- **research** runs first and feeds **design** and **seo**.
-- **design / seo** produce the specs **engineer** implements.
-- After engineering, the three pre-ship checks run together: **code-reviewer** (quality), **security-reviewer** (OWASP), **secret-scanner** (leaks).
-- **qa** is the final functional gate before release.
-- **release-captain** runs the gates, writes the GO/NO-GO + PR, and **hands off to the PM** (the main thread) to open and **squash-merge** via the GitHub MCP tools.
-- **analytics** is advisory and runs whenever instrumentation needs auditing or designing (typically informing research/engineer).
+Quick orientation (defaults, not a mandated sequence):
+
+- **Advisory/strategy** tasks (research, seo, analytics, design reviews) usually
+  need **one** agent — don't add gates that have nothing to gate.
+- **Code changes** are implemented by **engineer** and always end at a green
+  build; before a PR they pass **secret-scanner** + **code-reviewer**
+  (+ **security-reviewer** for `/api`/auth/UGC/uploads) + **qa**.
+- **release-captain** prepares the GO/NO-GO + PR and **hands off to the PM**,
+  who opens and **squash-merges** via the GitHub MCP tools (only when asked).
+- **Human Validation Zones** (auth, Stripe) are flagged to the founder for
+  approval **before** any implementation.
 
 ## Enforcement principles
 

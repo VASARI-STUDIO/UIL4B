@@ -9,7 +9,8 @@ _Last updated: 2026-06-20. Single source of truth for what's shipped, what needs
 ## ✅ Shipped & live on `main` — ready for your feedback
 
 ### Design system
-- Dark-only theme lock + FOUC fix (#92)
+- ~~Dark-only theme lock~~ → **reversed 2026-06-23**: full light/dark restored, **dark is
+  the default**, light is opt-in (no OS auto-follow). FOUC fix retained. (#92, then #4)
 - Full-round pill buttons / CTAs (#92)
 - **Homepage Linear redesign** — pass 1 hero/pricing/serif (#103) + bento showcase pass 2 (#107)
 - Dead-CSS cleanup (#95) · stale-copy fixes for removed features (#109)
