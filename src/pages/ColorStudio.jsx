@@ -10,7 +10,7 @@ import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
-import { extractColorsFromImage } from '../utils/extractColors'
+import { extractColorPointsFromImage } from '../utils/extractColors'
 import { COLOR_LIBRARIES, findClosestNamedColor } from '../data/namedColors'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic', 'custom']
@@ -722,6 +722,686 @@ function SwatchPopup({ idx, color, role, anchorRect, isSheet, siblings, isLocked
   )
 }
 
+// ── Colour System popup (CS#3.14, Slice 3) ──
+// Three tabs (Generate / Image / Brands) sharing Slice 2's popup chrome,
+// positioner, dismissal, focus-trap and ≤480 bottom-sheet. Replaces the old
+// cs-add-menu dropdown + standalone Pick-Colour overlay.
+
+const CSYS_TABS = [
+  { id: 'gen', label: 'Generate' },
+  { id: 'img', label: 'Image' },
+  { id: 'brand', label: 'Brands' },
+]
+
+// Harmony chips, in display order. `free` mirrors the cs-pb-harms split exactly.
+const CSYS_HARMS = [
+  { id: 'auto', label: 'Auto', free: true },
+  { id: 'custom', label: 'Custom', free: true },
+  { id: 'monochromatic', label: 'Monochromatic', free: true },
+  { id: 'complement', label: 'Complementary', free: false },
+  { id: 'analogous', label: 'Analogous', free: false },
+  { id: 'triadic', label: 'Triadic', free: false },
+  { id: 'split', label: 'Split', free: false },
+  { id: 'tetradic', label: 'Tetradic', free: false },
+]
+
+// Tiny mono 2–3 dot relationship diagram per harmony (Gestalt: read the
+// *relationship* pre-consciously). Dots on a 24×24 circle; no colour reveal.
+function HarmonyDiagram({ id }) {
+  // angles (deg, 12-o'clock = -90) of the related hues around the wheel.
+  const sets = {
+    auto: [0],
+    custom: [0, 47],
+    monochromatic: [0],
+    complement: [0, 180],
+    analogous: [-30, 0, 30],
+    triadic: [0, 120, 240],
+    split: [0, 150, 210],
+    tetradic: [0, 90, 180, 270],
+  }
+  const angles = sets[id] || [0]
+  const cx = 12, cy = 12, r = 7
+  return (
+    <svg className="cs-csys-harm-diagram" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx={cx} cy={cy} r={r + 2.5} stroke="currentColor" strokeWidth="1" opacity="0.35" />
+      {id === 'monochromatic'
+        ? [4, 7, 10].map((rr, i) => <circle key={i} cx={cx} cy={cy - rr + 5} r="1.7" fill="currentColor" />)
+        : angles.map((a, i) => {
+            const rad = ((a - 90) * Math.PI) / 180
+            return <circle key={i} cx={cx + r * Math.cos(rad)} cy={cy + r * Math.sin(rad)} r="2" fill="currentColor" />
+          })}
+    </svg>
+  )
+}
+
+function ColourSystemPopup({
+  anchorRect, isSheet, baseColor, harmony, isPro, freeSlotsLeft, checkCanAdd,
+  onProGate, onClose, restoreRef, onAddRamp, onAddCustomHue, onAddSampled, onAddBrand, onAddBrandSwatch,
+}) {
+  const popRef = useRef(null)
+  const tabsRef = useRef(null)
+  const tabRefs = useRef({})
+  const underlineRef = useRef(null)
+  const [tab, setTab] = useState('gen')
+
+  // Anchored positioning (desktop) — reuse Slice 2's exact algorithm.
+  useLayoutEffect(() => {
+    const el = popRef.current
+    if (!el || isSheet || !anchorRect) return
+    const w = el.offsetWidth, h = el.offsetHeight
+    let x = anchorRect.left
+    let y = anchorRect.bottom + 8
+    if (y + h > window.innerHeight - 12) {
+      const above = anchorRect.top - h - 8
+      y = above >= 12 ? above : Math.max(12, (window.innerHeight - h) / 2)
+    }
+    x = Math.min(x, window.innerWidth - w - 12)
+    x = Math.max(12, x)
+    el.style.setProperty('--cs-csys-x', x + 'px')
+    el.style.setProperty('--cs-csys-y', y + 'px')
+  }, [anchorRect, isSheet, tab])
+
+  // Tab underline measurement (sliding-pill, echoes Slice 2).
+  const measureUnderline = useCallback(() => {
+    const el = tabRefs.current[tab]
+    const u = underlineRef.current
+    if (!el || !u) return
+    u.style.setProperty('--cs-csys-tab-x', el.offsetLeft + 'px')
+    u.style.setProperty('--cs-csys-tab-w', el.offsetWidth + 'px')
+  }, [tab])
+  useLayoutEffect(() => { measureUnderline() }, [measureUnderline])
+  useEffect(() => {
+    document.fonts?.ready.then(measureUnderline).catch(() => {})
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measureUnderline) : null
+    if (ro && tabsRef.current) ro.observe(tabsRef.current)
+    window.addEventListener('resize', measureUnderline)
+    return () => {
+      if (ro) ro.disconnect()
+      window.removeEventListener('resize', measureUnderline)
+    }
+  }, [measureUnderline])
+
+  // Focus the active tab on open.
+  useEffect(() => {
+    tabRefs.current.gen?.focus()
+  }, [])
+
+  // Dismissal: Esc, outside-click, scroll/resize → close + restore focus to trigger.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
+      if (e.key !== 'Tab') return
+      const focusables = popRef.current?.querySelectorAll('button, [href], input, select, canvas, [tabindex]:not([tabindex="-1"])')
+      if (!focusables || !focusables.length) return
+      const list = Array.from(focusables).filter(n => !n.disabled && n.offsetParent !== null)
+      if (!list.length) return
+      const first = list[0], last = list[list.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+    const onDown = (e) => {
+      // Ignore clicks on the trigger itself — its own onClick toggles the popup.
+      // Without this guard the mousedown→onClose() then click→toggle race reopens it.
+      if (restoreRef?.current?.contains(e.target)) return
+      if (popRef.current && !popRef.current.contains(e.target)) onClose()
+    }
+    const onScroll = () => { if (!isSheet) onClose() }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onDown)
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      restoreRef?.current?.focus?.()
+    }
+  }, [onClose, isSheet, restoreRef])
+
+  // Roving tabindex / arrow-key tab switching.
+  const onTabKey = (e) => {
+    const order = CSYS_TABS.map(t => t.id)
+    const i = order.indexOf(tab)
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      const next = e.key === 'ArrowRight' ? (i + 1) % order.length : (i - 1 + order.length) % order.length
+      setTab(order[next])
+      requestAnimationFrame(() => tabRefs.current[order[next]]?.focus())
+    }
+  }
+
+  return (
+    <div className={`cs-sw-overlay${isSheet ? ' cs-csys-sheet-overlay' : ''}`}>
+      <div ref={popRef} className="cs-csys-popup" role="dialog" aria-modal="true" aria-labelledby="cs-csys-title">
+        {isSheet && <div className="cs-csys-grabber" aria-hidden="true" />}
+        <div className="cs-csys-head">
+          <h2 className="cs-csys-title" id="cs-csys-title">Colour System</h2>
+          <button className="cs-csys-close" onClick={onClose} aria-label="Close">&times;</button>
+        </div>
+        <div ref={tabsRef} className="cs-csys-tabs" role="tablist" aria-label="Colour System" onKeyDown={onTabKey}>
+          {CSYS_TABS.map(t => (
+            <button key={t.id} ref={el => (tabRefs.current[t.id] = el)}
+              className={`cs-csys-tab${tab === t.id ? ' active' : ''}`}
+              role="tab" id={`cs-csys-tab-${t.id}`} aria-selected={tab === t.id}
+              aria-controls={`cs-csys-panel-${t.id}`} tabIndex={tab === t.id ? 0 : -1}
+              onClick={() => setTab(t.id)}>{t.label}</button>
+          ))}
+          <span ref={underlineRef} className="cs-csys-tab-underline" aria-hidden="true" />
+        </div>
+        <div className="cs-csys-body">
+          {tab === 'gen' && (
+            <CsysGenerate baseColor={baseColor} harmony={harmony} isPro={isPro} checkCanAdd={checkCanAdd}
+              onProGate={onProGate} onAddRamp={onAddRamp} onAddCustomHue={onAddCustomHue} />
+          )}
+          {tab === 'img' && (
+            <CsysImage isPro={isPro} freeSlotsLeft={freeSlotsLeft} checkCanAdd={checkCanAdd}
+              onAddSampled={onAddSampled} />
+          )}
+          {tab === 'brand' && (
+            <CsysBrands freeSlotsLeft={freeSlotsLeft} onAddBrand={onAddBrand} onAddBrandSwatch={onAddBrandSwatch} />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Generate tab ──
+function CsysGenerate({ baseColor, harmony, isPro, checkCanAdd, onProGate, onAddRamp, onAddCustomHue }) {
+  // Selected harmony — only free ids are ever held in state (anti-tamper: a Pro
+  // chip click NEVER changes selection or computes a ramp for a non-Pro user).
+  const [sel, setSel] = useState(() => {
+    const free = CSYS_HARMS.find(h => h.id === harmony && h.free)
+    return free ? free.id : 'auto'
+  })
+  const tileRef = useRef([])
+
+  // The previewed ramp.
+  // ANTI-TAMPER (Slice 1 contract): a Pro harmony is ONLY computed when isPro is
+  // true. `sel` can never hold a Pro id for a non-Pro user (onChip gates it), so
+  // the locked branch is never reached client-side — no harmony hex is placed in
+  // state/DOM/preview for a non-entitled user. The strip only shows free output.
+  const ramp = useMemo(() => {
+    if (sel === 'custom') {
+      const [h] = hexToHsl(baseColor)
+      const one = hslToHex((h + 47) % 360, 55, 55)
+      return [one, one, one, one, one]
+    }
+    const proHarm = CSYS_HARMS.find(h => h.id === sel && !h.free)
+    if (proHarm && isPro) {
+      const out = generateHarmony(baseColor, sel)
+      // Pad/trim to a 5-tile strip without inventing colours (repeat last).
+      const five = out.slice(0, 5)
+      while (five.length < 5) five.push(out[out.length - 1])
+      return five
+    }
+    return tonalRamp(baseColor, [30, 45, 60, 75, 90])
+  }, [sel, baseColor, isPro])
+
+  useLayoutEffect(() => {
+    ramp.forEach((hex, i) => tileRef.current[i]?.style.setProperty('--cs-csys-tile', hex))
+  }, [ramp])
+
+  const onChip = (h) => {
+    if (!h.free) { if (!isPro) { onProGate('harmonies'); return } }
+    setSel(h.id)
+  }
+
+  const commit = () => {
+    if (!checkCanAdd(1)) return
+    if (sel === 'custom') { onAddCustomHue(); return }
+    onAddRamp(ramp)
+  }
+
+  return (
+    <div className="cs-csys-panel" role="tabpanel" id="cs-csys-panel-gen" aria-labelledby="cs-csys-tab-gen">
+      <div className="cs-csys-eyebrow">Auto<span className="cs-csys-free-badge">Free</span></div>
+      <div className="cs-csys-auto">
+        {ramp.map((hex, i) => (
+          <span key={i} ref={el => (tileRef.current[i] = el)} className="cs-csys-auto-tile" title={hex} />
+        ))}
+      </div>
+      <div className="cs-csys-eyebrow">Harmony</div>
+      <div className="cs-csys-harm" role="radiogroup" aria-label="Harmony">
+        {CSYS_HARMS.map(h => {
+          const locked = !h.free && !isPro
+          const selected = sel === h.id
+          return (
+            <button key={h.id} type="button"
+              className={`cs-csys-harm-chip${selected ? ' is-selected' : ''}${locked ? ' is-locked' : ''}`}
+              role="radio" aria-checked={selected}
+              aria-disabled={locked || undefined}
+              aria-label={locked ? `${h.label} — Pro` : h.label}
+              onClick={() => onChip(h)}>
+              <HarmonyDiagram id={h.id} />
+              <span className="cs-csys-harm-label">{h.label}</span>
+              {locked && <span className="cs-csys-lock"><LockGlyph size={10} /></span>}
+            </button>
+          )
+        })}
+      </div>
+      <div className="cs-csys-foot">
+        <button className="cs-csys-add" onClick={commit}>Add to palette</button>
+        <button className="cs-csys-ghost" onClick={onAddCustomHue}>Custom hue</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Image tab (the signature instrument) ──
+const CSYS_MAX_BYTES = 12 * 1024 * 1024
+function CsysImage({ isPro, freeSlotsLeft, checkCanAdd, onAddSampled }) {
+  const stageRef = useRef(null)
+  const canvasRef = useRef(null)       // visible, drawn letterboxed
+  const srcRef = useRef(null)          // offscreen, natural-res, sampled
+  const loupeRef = useRef(null)
+  const loupeCanvasRef = useRef(null)
+  const fileRef = useRef(null)
+  const ptRefs = useRef({})
+  const rafRef = useRef(null)
+  const liveTimerRef = useRef(null)
+  const draggingRef = useRef(null)
+
+  const [phase, setPhase] = useState('empty')   // empty | loading | ready | error
+  const [errMsg, setErrMsg] = useState('')
+  const [dragover, setDragover] = useState(false)
+  const [points, setPoints] = useState([])      // [{ id, x, y, hex }] x/y normalised 0–1
+  const [active, setActive] = useState(null)     // active point id
+  const [zoom, setZoom] = useState(1)
+  const [live, setLive] = useState('')
+  const idRef = useRef(0)
+
+  // Letterbox geometry of the source image inside the canvas (px, CSS units).
+  const boxRef = useRef({ ox: 0, oy: 0, dw: 0, dh: 0, cw: 0, ch: 0 })
+
+  const sampleAt = useCallback((nx, ny) => {
+    const src = srcRef.current
+    if (!src) return '#000000'
+    const sx = Math.max(0, Math.min(src.width - 1, Math.round(nx * src.width)))
+    const sy = Math.max(0, Math.min(src.height - 1, Math.round(ny * src.height)))
+    try {
+      const d = src.getContext('2d', { willReadFrequently: true }).getImageData(sx, sy, 1, 1).data
+      return '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+    } catch { return '#000000' }
+  }, [])
+
+  // Draw the image letterboxed into the visible canvas at the current zoom.
+  const drawCanvas = useCallback(() => {
+    const cv = canvasRef.current, src = srcRef.current, stage = stageRef.current
+    if (!cv || !src || !stage) return
+    const cw = stage.clientWidth
+    const maxH = parseInt(getComputedStyle(stage).getPropertyValue('--cs-csys-stage-h') || '300', 10) || 300
+    const ar = src.width / src.height
+    let dw = cw, dh = cw / ar
+    if (dh > maxH) { dh = maxH; dw = maxH * ar }
+    cv.width = Math.round(cw)
+    cv.height = Math.round(maxH)
+    const ctx = cv.getContext('2d')
+    ctx.imageSmoothingEnabled = true
+    ctx.clearRect(0, 0, cv.width, cv.height)
+    const sw = dw * zoom, sh = dh * zoom
+    const ox = (cw - sw) / 2, oy = (maxH - sh) / 2
+    ctx.drawImage(src, ox, oy, sw, sh)
+    boxRef.current = { ox, oy, dw: sw, dh: sh, cw, ch: maxH }
+  }, [zoom])
+
+  // Project a normalised point to CSS px within the stage, and apply via custom props.
+  const positionPoints = useCallback(() => {
+    const { ox, oy, dw, dh } = boxRef.current
+    points.forEach(p => {
+      const el = ptRefs.current[p.id]
+      if (!el) return
+      el.style.setProperty('--cs-x', (ox + p.x * dw) + 'px')
+      el.style.setProperty('--cs-y', (oy + p.y * dh) + 'px')
+      el.style.setProperty('--cs-c', p.hex)
+    })
+  }, [points])
+
+  useLayoutEffect(() => { if (phase === 'ready') { drawCanvas(); positionPoints() } }, [phase, zoom, drawCanvas, positionPoints])
+  useEffect(() => {
+    if (phase !== 'ready') return
+    const onResize = () => { drawCanvas(); positionPoints() }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [phase, drawCanvas, positionPoints])
+
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); clearTimeout(liveTimerRef.current) }, [])
+
+  const announce = useCallback((hex) => {
+    clearTimeout(liveTimerRef.current)
+    liveTimerRef.current = setTimeout(() => setLive(`Sampled ${hex}`), 300)
+  }, [])
+
+  // Draw the magnifier loupe around a normalised point and position it near the handle.
+  const drawLoupe = useCallback((p) => {
+    const lc = loupeCanvasRef.current, src = srcRef.current, loupe = loupeRef.current
+    if (!lc || !src || !loupe) return
+    const N = 11, scale = 8
+    lc.width = N; lc.height = N
+    const sx = Math.round(p.x * src.width) - (N >> 1)
+    const sy = Math.round(p.y * src.height) - (N >> 1)
+    const ctx = lc.getContext('2d')
+    ctx.imageSmoothingEnabled = false
+    ctx.clearRect(0, 0, N, N)
+    try { ctx.drawImage(src, sx, sy, N, N, 0, 0, N, N) } catch { /* edge */ }
+    // Position the loupe near the handle (above-left), clamped to the stage.
+    const { ox, oy, dw, dh } = boxRef.current
+    const hx = ox + p.x * dw, hy = oy + p.y * dh
+    const size = N * scale
+    let lx = hx + 18, ly = hy - size - 18
+    if (ly < 0) ly = hy + 18
+    if (lx + size > boxRef.current.cw) lx = hx - size - 18
+    if (lx < 0) lx = 4
+    loupe.style.setProperty('--cs-loupe-x', lx + 'px')
+    loupe.style.setProperty('--cs-loupe-y', ly + 'px')
+    loupe.style.setProperty('--cs-loupe-size', size + 'px')
+  }, [])
+
+  const updatePoint = useCallback((id, nx, ny, { announceHex = false } = {}) => {
+    const cx = Math.max(0, Math.min(1, nx)), cy = Math.max(0, Math.min(1, ny))
+    const hex = sampleAt(cx, cy)
+    setPoints(ps => ps.map(p => (p.id === id ? { ...p, x: cx, y: cy, hex } : p)))
+    const el = ptRefs.current[id]
+    if (el) {
+      const { ox, oy, dw, dh } = boxRef.current
+      el.style.setProperty('--cs-x', (ox + cx * dw) + 'px')
+      el.style.setProperty('--cs-y', (oy + cy * dh) + 'px')
+      el.style.setProperty('--cs-c', hex)
+    }
+    drawLoupe({ x: cx, y: cy })
+    if (announceHex) announce(hex)
+    return hex
+  }, [sampleAt, drawLoupe, announce])
+
+  const seedFromFile = useCallback(async (file) => {
+    setPhase('loading'); setErrMsg('')
+    if (!file.type.startsWith('image/')) {
+      setPhase('error'); setErrMsg("That's not an image. Try PNG, JPG, or WEBP."); return
+    }
+    if (file.size > CSYS_MAX_BYTES) {
+      setPhase('error'); setErrMsg('Image is over 12 MB. Try a smaller one.'); return
+    }
+    // Decode at natural resolution into the offscreen sampling canvas.
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = async () => {
+      try {
+        // Cap the sampling buffer so a 8000px upload doesn't blow memory; sampling
+        // stays per-pixel accurate at this resolution for eyedropper purposes.
+        const cap = 1600
+        const s = Math.min(cap / img.width, cap / img.height, 1)
+        const sw = Math.max(1, Math.round(img.width * s))
+        const sh = Math.max(1, Math.round(img.height * s))
+        const off = document.createElement('canvas')
+        off.width = sw; off.height = sh
+        off.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, sw, sh)
+        srcRef.current = off
+        URL.revokeObjectURL(url)
+        let seeds = []
+        try { seeds = await extractColorPointsFromImage(file, 5) } catch { seeds = [] }
+        setPhase('ready')
+        if (seeds.length) {
+          setPoints(seeds.map(s2 => ({ id: ++idRef.current, x: s2.x, y: s2.y, hex: s2.hex })))
+          setActive(null)
+        } else {
+          setPoints([])
+          setLive('We couldn’t find distinct colours in that image — tap to place a point.')
+        }
+      } catch {
+        setPhase('error'); setErrMsg('Couldn’t read that image. Try another file.')
+      }
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); setPhase('error'); setErrMsg('Couldn’t read that image. Try another file.') }
+    img.src = url
+  }, [])
+
+  const onFile = (e) => { const f = e.target.files?.[0]; if (f) seedFromFile(f); if (fileRef.current) fileRef.current.value = '' }
+  const onDrop = (e) => {
+    e.preventDefault(); setDragover(false)
+    const f = e.dataTransfer.files?.[0]; if (f) seedFromFile(f)
+  }
+
+  // Add a point at a normalised location (click/tap or keyboard P).
+  const addPoint = useCallback((nx, ny) => {
+    if (!checkCanAdd(1)) return null   // fires onProGate('extra-colours') internally when capped
+    const id = ++idRef.current
+    const hex = sampleAt(nx, ny)
+    setPoints(ps => [...ps, { id, x: nx, y: ny, hex }])
+    setActive(id)
+    requestAnimationFrame(() => { ptRefs.current[id]?.focus(); drawLoupe({ x: nx, y: ny }) })
+    announce(hex)
+    return id
+  }, [checkCanAdd, sampleAt, drawLoupe, announce])
+
+  const removePoint = useCallback((id) => {
+    setPoints(ps => {
+      if (ps.length <= 1) { setLive('Keep at least one sample point.'); return ps }
+      const next = ps.filter(p => p.id !== id)
+      setActive(a => (a === id ? (next[0]?.id ?? null) : a))
+      return next
+    })
+  }, [])
+
+  // Pointer drag of a handle.
+  const onPointerDown = (e, id) => {
+    e.preventDefault(); e.stopPropagation()
+    setActive(id)
+    ptRefs.current[id]?.focus()
+    draggingRef.current = id
+    ptRefs.current[id]?.classList.add('is-dragging')
+    const move = (ev) => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => {
+        const stage = stageRef.current; if (!stage) return
+        const r = stage.getBoundingClientRect()
+        const { ox, oy, dw, dh } = boxRef.current
+        const nx = (ev.clientX - r.left - ox) / dw
+        const ny = (ev.clientY - r.top - oy) / dh
+        updatePoint(id, nx, ny)
+      })
+    }
+    const up = () => {
+      draggingRef.current = null
+      ptRefs.current[id]?.classList.remove('is-dragging')
+      const p = pointsRef.current.find(pp => pp.id === id)
+      if (p) announce(p.hex)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  // Keep a ref of points for the pointerup closure (avoids stale read).
+  const pointsRef = useRef(points)
+  useEffect(() => { pointsRef.current = points }, [points])
+
+  // Click empty canvas → add a point there.
+  const onStagePointerDown = (e) => {
+    if (phase !== 'ready') return
+    if (e.target.closest('.cs-csys-pt')) return
+    const stage = stageRef.current; if (!stage) return
+    const r = stage.getBoundingClientRect()
+    const { ox, oy, dw, dh } = boxRef.current
+    const nx = (e.clientX - r.left - ox) / dw
+    const ny = (e.clientY - r.top - oy) / dh
+    if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return
+    addPoint(nx, ny)
+  }
+
+  // Keyboard contract on the canvas application region.
+  const onStageKey = (e) => {
+    if (phase !== 'ready') return
+    if (e.key === 'p' || e.key === 'P' || (e.key === 'Enter' && e.target === stageRef.current)) {
+      e.preventDefault(); addPoint(0.5, 0.5)
+    }
+  }
+
+  // Per-point keyboard: arrows nudge, Delete/Backspace remove.
+  const onPointKey = (e, id) => {
+    const p = pointsRef.current.find(pp => pp.id === id); if (!p) return
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removePoint(id); return }
+    const step = e.shiftKey ? 10 : 1
+    const { dw, dh } = boxRef.current
+    let dx = 0, dy = 0
+    if (e.key === 'ArrowLeft') dx = -step
+    else if (e.key === 'ArrowRight') dx = step
+    else if (e.key === 'ArrowUp') dy = -step
+    else if (e.key === 'ArrowDown') dy = step
+    else return
+    e.preventDefault()
+    const nx = p.x + (dw ? dx / dw : 0)
+    const ny = p.y + (dh ? dy / dh : 0)
+    setActive(id)
+    updatePoint(id, nx, ny, { announceHex: true })
+  }
+
+  const replaceImage = () => { setPhase('empty'); setPoints([]); setActive(null); setZoom(1); srcRef.current = null }
+
+  const canAdd = points.length > 0 && (isPro || freeSlotsLeft() > 0)
+  const commit = () => { if (points.length) onAddSampled(points.map(p => p.hex)) }
+
+  // ── render ──
+  if (phase === 'empty' || phase === 'error') {
+    return (
+      <div className="cs-csys-panel" role="tabpanel" id="cs-csys-panel-img" aria-labelledby="cs-csys-tab-img">
+        <button type="button"
+          className={`cs-csys-drop${dragover ? ' is-dragover' : ''}${phase === 'error' ? ' is-error' : ''}`}
+          onClick={() => fileRef.current?.click()}
+          onDragOver={e => { e.preventDefault(); setDragover(true) }}
+          onDragLeave={() => setDragover(false)}
+          onDrop={onDrop}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span className="cs-csys-drop-title">Drop an image, or browse</span>
+          <span className="cs-csys-drop-sub">PNG, JPG, WEBP · up to 12 MB</span>
+          {phase === 'error' && <span className="cs-csys-drop-err" role="alert">{errMsg}</span>}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" className="cs-csys-file" onChange={onFile} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="cs-csys-panel" role="tabpanel" id="cs-csys-panel-img" aria-labelledby="cs-csys-tab-img">
+      <div className="cs-csys-zoom" role="group" aria-label="Zoom">
+        {[1, 2].map(z => (
+          <button key={z} type="button" className={`cs-csys-zoom-seg${zoom === z ? ' active' : ''}`}
+            aria-pressed={zoom === z} onClick={() => setZoom(z)}>{z}×</button>
+        ))}
+      </div>
+      <div ref={stageRef}
+        className={`cs-csys-stage${phase === 'loading' ? ' is-loading' : ''}`}
+        role="application"
+        aria-label="Image colour sampler. Use arrow keys to move the selected point; press P to place a new point; Delete to remove."
+        aria-describedby="cs-csys-instr"
+        tabIndex={0}
+        onPointerDown={onStagePointerDown}
+        onKeyDown={onStageKey}>
+        <canvas ref={canvasRef} className="cs-csys-canvas" aria-hidden="true" />
+        {points.map((p, i) => (
+          <span key={p.id} ref={el => (ptRefs.current[p.id] = el)}
+            className={`cs-csys-pt${active === p.id ? ' is-active' : ''}`}
+            role="slider" aria-label={`Sample point ${i + 1}, ${p.hex}`}
+            aria-valuetext={`${p.hex}, contrast ${contrastRatio(p.hex, '#FFFFFF').toFixed(1)} to 1 on white`}
+            aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(p.x * 100)}
+            tabIndex={active == null ? (i === 0 ? 0 : -1) : (active === p.id ? 0 : -1)}
+            onFocus={() => { setActive(p.id); drawLoupe(p) }}
+            onPointerDown={e => onPointerDown(e, p.id)}
+            onKeyDown={e => onPointKey(e, p.id)}>
+            <span className="cs-csys-pt-ring" />
+            <button type="button" className="cs-csys-pt-del" aria-label={`Remove sample point ${i + 1}`}
+              tabIndex={-1} onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); removePoint(p.id) }}>&times;</button>
+          </span>
+        ))}
+        <div ref={loupeRef} className="cs-csys-loupe" aria-hidden="true">
+          <canvas ref={loupeCanvasRef} className="cs-csys-loupe-canvas" />
+          <span className="cs-csys-loupe-cross" />
+        </div>
+        {phase === 'loading' && <div className="cs-csys-state is-loading"><span className="cs-csys-spinner" />Reading image…</div>}
+        {phase === 'ready' && points.length > 0 && active && (() => {
+          const p = points.find(pp => pp.id === active); if (!p) return null
+          const cr = contrastRatio(p.hex, '#FFFFFF')
+          const tier = cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : cr >= 3 ? 'AA Lg' : 'Fail'
+          const cls = cr >= 4.5 ? 'pass' : cr >= 3 ? 'warn' : 'fail'
+          return (
+            <div className="cs-csys-readout" ref={el => { if (el) { const { ox, oy, dw, dh } = boxRef.current; el.style.setProperty('--cs-x', (ox + p.x * dw) + 'px'); el.style.setProperty('--cs-y', (oy + p.y * dh) + 'px'); el.style.setProperty('--cs-c', p.hex) } }}>
+              <span className="cs-csys-readout-sw" />
+              <span className="cs-csys-readout-hex">{p.hex}</span>
+              <span className={`cs-csys-readout-badge ${cls}`}>{tier}</span>
+            </div>
+          )
+        })()}
+      </div>
+      <p id="cs-csys-instr" className="cs-csys-hint">{points.length ? 'Tap the image to add a point · drag or use arrow keys to refine' : 'Tap the image to place a sample point'}</p>
+      <div className="cs-csys-tray" role="list" aria-label="Sampled colours">
+        {points.map((p, i) => (
+          <button key={p.id} type="button" role="listitem"
+            ref={el => { if (el) el.style.setProperty('--cs-c', p.hex) }}
+            className={`cs-csys-tray-tile${active === p.id ? ' is-active' : ''}`}
+            title={p.hex} aria-label={`Sample ${i + 1} ${p.hex}, remove`}
+            onClick={() => removePoint(p.id)}>
+            <span className="cs-csys-tray-x" aria-hidden="true">&times;</span>
+          </button>
+        ))}
+      </div>
+      <p className="cs-csys-live" aria-live="polite" role="status">{live}</p>
+      <div className="cs-csys-foot">
+        <button className="cs-csys-add" onClick={commit} disabled={!canAdd}>
+          {points.length ? `Add ${points.length} colour${points.length === 1 ? '' : 's'}` : 'Add colours'}
+        </button>
+        <button className="cs-csys-ghost" onClick={replaceImage}>Replace image</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Brands tab ──
+function CsysBrands({ freeSlotsLeft, onAddBrand, onAddBrandSwatch }) {
+  const [sel, setSel] = useState(null)
+  const barRefs = useRef({})
+  useLayoutEffect(() => {
+    BRANDS.forEach(b => {
+      const refs = barRefs.current[b.n] || []
+      b.colors.forEach((c, i) => refs[i]?.style.setProperty('--cs-c', c))
+    })
+  })
+  const selBrand = BRANDS.find(b => b.n === sel)
+  return (
+    <div className="cs-csys-panel" role="tabpanel" id="cs-csys-panel-brand" aria-labelledby="cs-csys-tab-brand">
+      <div className="cs-csys-brand-grid">
+        {BRANDS.map(b => (
+          <div key={b.n}
+            className={`cs-csys-brand${sel === b.n ? ' is-selected' : ''}`}
+            role="button" tabIndex={0} aria-pressed={sel === b.n}
+            onClick={() => setSel(b.n)}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSel(b.n) } }}>
+            <span className="cs-csys-brand-name">{b.n}</span>
+            <div className="cs-csys-brand-bar">
+              {b.colors.map((c, i) => (
+                <button key={i} type="button" className="cs-csys-brand-sw"
+                  ref={el => { (barRefs.current[b.n] = barRefs.current[b.n] || [])[i] = el }}
+                  aria-label={`Add ${b.n} ${c}`} title={c}
+                  onClick={e => { e.stopPropagation(); onAddBrandSwatch(c) }} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="cs-csys-foot">
+        <button className="cs-csys-add" disabled={!selBrand} onClick={() => selBrand && onAddBrand(selBrand)}>
+          {selBrand ? `Add ${selBrand.n} palette` : 'Select a brand'}
+        </button>
+        {!freeSlotsLeft() && <span className="cs-csys-foot-note">Free palettes hold up to 6 colours</span>}
+      </div>
+    </div>
+  )
+}
+
 export default function ColorStudio({ onCopy, toast }) {
   const { t } = useI18n()
   const { theme } = useTheme()
@@ -1318,7 +1998,55 @@ ${stateVars}
     })
   }, [baseColor, harmony, extraColors, overrides, activeColorIdx, showUndoToast])
 
-  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  // Colour System popup (CS#3.14, Slice 3) — replaced the old cs-add-menu dropdown.
+  const [csysOpen, setCsysOpen] = useState(false)
+  const csysAnchorRef = useRef(null)
+  const closeCsys = useCallback(() => setCsysOpen(false), [])
+  // Close on route change (the popup is anchored to a page-local trigger).
+  useEffect(() => {
+    if (!csysOpen) return
+    const onPop = () => setCsysOpen(false)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [csysOpen])
+
+  // Commit a previewed free-tier ramp (Generate tab) — clamps to the cap.
+  const addSystemRamp = useCallback((ramp) => {
+    const slots = freeSlotsLeft()
+    const toAdd = ramp.filter(c => !allColors.map(x => x.toUpperCase()).includes(c.toUpperCase())).slice(0, slots === Infinity ? ramp.length : slots)
+    if (!isPro && ramp.length > toAdd.length && freeSlotsLeft() < ramp.length) onProGate('extra-colours')
+    if (!toAdd.length) { if (!checkCanAdd(1)) return; return }
+    const prev = [...extraColors]
+    setExtraColors([...extraColors, ...toAdd])
+    showUndoToast(`Added ${toAdd.length} colour${toAdd.length === 1 ? '' : 's'}`, () => setExtraColors(prev))
+    setCsysOpen(false)
+  }, [allColors, extraColors, freeSlotsLeft, isPro, onProGate, checkCanAdd, showUndoToast])
+
+  // Commit sampled image colours (Image tab) — same clamp + undo path as brands.
+  const addSampledColors = useCallback((hexes) => {
+    const slots = freeSlotsLeft()
+    const fresh = hexes.filter(c => !allColors.map(x => x.toUpperCase()).includes(c.toUpperCase()))
+    const toAdd = slots === Infinity ? fresh : fresh.slice(0, slots)
+    if (fresh.length > toAdd.length) onProGate('extra-colours')
+    if (toAdd.length) {
+      const prev = [...extraColors]
+      setExtraColors([...extraColors, ...toAdd])
+      showUndoToast(`Added ${toAdd.length} colour${toAdd.length === 1 ? '' : 's'} from image`, () => setExtraColors(prev))
+    } else if (!fresh.length) {
+      toast?.('Those colours are already in your palette')
+    }
+    setCsysOpen(false)
+  }, [allColors, extraColors, freeSlotsLeft, onProGate, showUndoToast, toast])
+
+  // Add a single colour (per-swatch brand affordance) via the cap chokepoint.
+  const addSingleColor = useCallback((hex) => {
+    if (allColors.map(x => x.toUpperCase()).includes(hex.toUpperCase())) { toast?.('That colour is already in your palette'); return }
+    if (!checkCanAdd(1)) return
+    const prev = [...extraColors]
+    setExtraColors([...extraColors, hex])
+    showUndoToast('Colour added', () => setExtraColors(prev))
+  }, [allColors, extraColors, checkCanAdd, showUndoToast, toast])
+
   const [gradPresetsExpanded, setGradPresetsExpanded] = useState(false)
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
@@ -1359,11 +2087,11 @@ ${stateVars}
   // *systems* (analogous/complement/triadic/split-comp) are Pro. It still passes
   // through the shared 6-colour cap via checkCanAdd.
   const addColor = () => {
-    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
+    if (!checkCanAdd(1)) { setCsysOpen(false); return }
     const [h] = hexToHsl(baseColor)
     const offset = (extraColors.length + 1) * 47
     setExtraColors([...extraColors, hslToHex((h + offset) % 360, 55, 55)])
-    setAddMenuOpen(false)
+    setCsysOpen(false)
   }
 
   // The native <input type="color"> fires onChange continuously while the user
@@ -1599,96 +2327,18 @@ ${stateVars}
   }, [])
   useEffect(() => () => { if (adjustRafRef.current) cancelAnimationFrame(adjustRafRef.current) }, [])
 
-  // Harmony-system adds are Pro AND capped. The Pro check happens at the call site
-  // (button routes non-Pro clicks to onProGate without computing); checkCanAdd here
-  // is the second chokepoint so the cap holds even for a Pro user / console caller.
-  const addComplement = () => {
-    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
-    const [h, s, l] = hexToHsl(baseColor)
-    setExtraColors([...extraColors, hslToHex((h + 180) % 360, s, l)])
-    setAddMenuOpen(false)
-  }
-
-  const addAnalogous = () => {
-    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
-    const [h, s, l] = hexToHsl(baseColor)
-    const offset = 30 + Math.floor(Math.random() * 15)
-    setExtraColors([...extraColors, hslToHex((h + offset) % 360, s, l)])
-    setAddMenuOpen(false)
-  }
-
-  const addTriadic = () => {
-    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
-    const [h, s, l] = hexToHsl(baseColor)
-    setExtraColors([...extraColors, hslToHex((h + 120) % 360, s, l)])
-    setAddMenuOpen(false)
-  }
-
-  const addSplitComp = () => {
-    if (!checkCanAdd(1)) { setAddMenuOpen(false); return }
-    const [h, s, l] = hexToHsl(baseColor)
-    setExtraColors([...extraColors, hslToHex((h + 150) % 360, s, l)])
-    setAddMenuOpen(false)
-  }
-
   // Brand-palette merge can add several swatches: for a non-Pro user clamp the
   // appended slice to the remaining free slots, and fire the Pro gate if the merge
   // would have overflowed the cap (so the lock is surfaced, not silently swallowed).
-  const addBrandColors = (brand) => {
+  // Wired to the Colour System popup's Brands tab (onAddBrand).
+  const addBrandColors = useCallback((brand) => {
     const newColors = brand.colors.filter(c => !allColors.map(x => x.toUpperCase()).includes(c.toUpperCase())).slice(0, 3)
     const slots = freeSlotsLeft()
     const toAdd = newColors.slice(0, slots)
     if (newColors.length > toAdd.length) onProGate('extra-colours')
-    if (toAdd.length) setExtraColors([...extraColors, ...toAdd])
-    setAddMenuOpen(false)
-  }
-
-  const [extracting, setExtracting] = useState(false)
-  const extractFileRef = useRef(null)
-  const handleImageExtract = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setExtracting(true)
-    const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx, lk: new Set(locked) }
-    try {
-      const extracted = await extractColorsFromImage(file, 5)
-      if (extracted.length) {
-        setBaseColor(extracted[0])
-        setHarmony('custom')
-        setOverrides({})
-        setExtraColors(extracted.slice(1))
-        setActiveColorIdx(0)
-        setLocked(new Set())
-        showUndoToast('Palette extracted from image', () => {
-          setBaseColor(prev.base)
-          setHarmony(prev.harmony)
-          setExtraColors(prev.extras)
-          setOverrides(prev.ovr)
-          setActiveColorIdx(prev.idx)
-          setLocked(prev.lk)
-        })
-      }
-    } catch {
-      toast('Could not read colours from that image — try a different file')
-    }
-    setExtracting(false)
-    setAddMenuOpen(false)
-    if (extractFileRef.current) extractFileRef.current.value = ''
-  }
-
-  const addMenuRef = useRef(null)
-  useEffect(() => {
-    if (!addMenuOpen) return
-    const close = (e) => {
-      // Don't close if the click is inside the add-menu (e.g. the native color picker)
-      if (addMenuRef.current && addMenuRef.current.contains(e.target)) return
-      setAddMenuOpen(false)
-    }
-    // Use mousedown instead of click so the native browser colour-picker
-    // popover (which doesn't dispatch mousedown on the document) stays open.
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [addMenuOpen])
+    if (toAdd.length) setExtraColors(prev => [...prev, ...toAdd])
+    setCsysOpen(false)
+  }, [allColors, freeSlotsLeft, onProGate])
 
   const removeExtra = (i) => {
     const prev = { extras: [...extraColors], idx: activeColorIdx }
@@ -1837,72 +2487,18 @@ ${stateVars}
             </svg>
             Reset
           </button>
-          {/* Colour System hook (CS#3.14, later slice): this dropdown becomes the popup. */}
-          <div className="cs-add-wrap" ref={addMenuRef} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-            <button className="btn btn-s cs-pb-add-trigger" onClick={() => setAddMenuOpen(!addMenuOpen)}>
-              + Add Colour
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            {addMenuOpen && (
-              <div className="cs-add-menu">
-                <div className="cs-add-pick">
-                  {/* Hidden-overlay picker (CS-5): a native <input type="color">
-                      renders inconsistently across browsers, so we hide it
-                      (opacity:0, absolute) over a styled chip — same pattern as
-                      cs-pb-base-input/cs-pb-edit/cs-pb-add-input. The chip shows
-                      the current base colour (= the input's value); dynamic
-                      background is the permitted runtime inline-style exception. */}
-                  <label className="cs-add-pick-label">
-                    Pick Colour
-                    <span className="cs-add-pick-chip" style={{ background: baseColor }} aria-hidden="true" />
-                    <input ref={endAddSession} type="color" value={baseColor}
-                      onChange={e => addCustomColor(e.target.value)}
-                      aria-label="Pick a custom colour to add"
-                      className="cs-add-pick-input"
-                    />
-                  </label>
-                </div>
-                <div className="cs-add-menu-sep" />
-                {/* FREE by design: a single hue-rotated colour is a manual path
-                    (sibling of per-swatch editing), NOT a Pro harmony system. */}
-                <button onClick={addColor}>Custom (Hue Offset)</button>
-                {/* Harmony systems are Pro (CS#3.7). For non-Pro users we DON'T
-                    compute the harmony client-side — the handler routes straight
-                    to the upgrade gate (anti-tamper); the lock glyph is the
-                    conversion driver. */}
-                <button className="cs-pro-lock" onClick={() => isPro ? addComplement() : onProGate('harmonies')}>
-                  Complementary{!isPro && <LockGlyph />}
-                </button>
-                <button className="cs-pro-lock" onClick={() => isPro ? addAnalogous() : onProGate('harmonies')}>
-                  Analogous{!isPro && <LockGlyph />}
-                </button>
-                <button className="cs-pro-lock" onClick={() => isPro ? addTriadic() : onProGate('harmonies')}>
-                  Triadic{!isPro && <LockGlyph />}
-                </button>
-                <button className="cs-pro-lock" onClick={() => isPro ? addSplitComp() : onProGate('harmonies')}>
-                  Split Complement{!isPro && <LockGlyph />}
-                </button>
-                <div className="cs-add-menu-sep" />
-                <label className="cs-add-extract-label">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                  {extracting ? 'Extracting…' : 'Extract from Image'}
-                  <input ref={extractFileRef} type="file" accept="image/*" onChange={handleImageExtract} style={{ display: 'none' }} />
-                </label>
-                <div className="cs-add-menu-sep" />
-                <div className="cs-add-menu-label">From Brand Palette</div>
-                {BRANDS.slice(0, 6).map(b => (
-                  <button key={b.n} onClick={() => addBrandColors(b)}>
-                    <span>{b.n}</span>
-                    <span className="cs-add-menu-dots">
-                      {b.colors.slice(0, 4).map((c, ci) => (
-                        <span key={ci} className="cs-add-menu-dot" style={{ background: c }} />
-                      ))}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Colour System popup trigger (CS#3.14, Slice 3). Opens cs-csys-popup —
+              the Generate / Image / Brands surface that replaced the old dropdown. */}
+          <button ref={csysAnchorRef} type="button"
+            className="btn btn-s cs-pb-add-trigger cs-csys-trigger"
+            aria-label="Open Colour System" aria-haspopup="dialog" aria-expanded={csysOpen}
+            onClick={(e) => { e.stopPropagation(); setCsysOpen(o => !o) }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <rect x="3" y="3" width="8" height="8" rx="1.5" /><rect x="13" y="3" width="8" height="8" rx="1.5" />
+              <rect x="3" y="13" width="8" height="8" rx="1.5" /><rect x="13" y="13" width="8" height="8" rx="1.5" />
+            </svg>
+            Colour System
+          </button>
         </div>
 
         {!collapsed.palette && <>
@@ -2749,6 +3345,26 @@ ${stateVars}
           onTab={(tab) => setSwPopup(p => (p ? { ...p, tab } : p))}
           onReplace={(hex, source) => replaceSwatch(swPopup.idx, hex, source)}
           onResetAdjust={resetGlobalAdjust}
+        />
+      )}
+
+      {csysOpen && (
+        <ColourSystemPopup
+          anchorRect={csysAnchorRef.current?.getBoundingClientRect()}
+          isSheet={typeof window !== 'undefined' && window.matchMedia('(max-width: 480px)').matches}
+          baseColor={baseColor}
+          harmony={harmony}
+          isPro={isPro}
+          freeSlotsLeft={freeSlotsLeft}
+          checkCanAdd={checkCanAdd}
+          onProGate={onProGate}
+          onClose={closeCsys}
+          restoreRef={csysAnchorRef}
+          onAddRamp={addSystemRamp}
+          onAddCustomHue={addColor}
+          onAddSampled={addSampledColors}
+          onAddBrand={addBrandColors}
+          onAddBrandSwatch={addSingleColor}
         />
       )}
 
