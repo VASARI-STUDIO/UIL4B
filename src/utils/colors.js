@@ -269,11 +269,11 @@ function clampInt(min, max, v) { return v < min ? min : v > max ? max : v }
 function clampDouble(min, max, v) { return v < min ? min : v > max ? max : v }
 function signum(n) { return n < 0 ? -1 : n === 0 ? 0 : 1 }
 
-function linearized(rgbComponent) {
+export function linearized(rgbComponent) {
   const n = rgbComponent / 255
   return (n <= 0.040449936 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4)) * 100
 }
-function delinearized(rgbComponent) {
+export function delinearized(rgbComponent) {
   const n = rgbComponent / 100
   const v = n <= 0.0031308 ? n * 12.92 : 1.055 * Math.pow(n, 1 / 2.4) - 0.055
   return clampInt(0, 255, Math.round(v * 255))
@@ -542,4 +542,53 @@ export function fixBackground(fg, bg, targetRatio) {
     else { if (isFgLight) hi = mid; else lo = mid }
   }
   return best
+}
+
+// Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices,
+// applied in linear sRGB. Source: the canonical published severity table
+// (DaltonLens / colorspace R `simulate_cvd`). Achromatopsia is handled
+// separately via Rec.709 luma. Rows are row-major [r;g;b].
+const MACHADO_2009 = {
+  protanopia: [
+    0.152286, 1.052583, -0.204868,
+    0.114503, 0.786281, 0.099216,
+    -0.003882, -0.048116, 1.051998,
+  ],
+  deuteranopia: [
+    0.367322, 0.860646, -0.227968,
+    0.280085, 0.672501, 0.047413,
+    -0.011820, 0.042940, 0.968881,
+  ],
+  tritanopia: [
+    1.255528, -0.076749, -0.178779,
+    -0.078411, 0.930809, 0.147602,
+    0.004733, 0.691367, 0.303900,
+  ],
+}
+
+// simCvd(hex, type) — simulate colour-vision deficiency in linear sRGB.
+// type: 'normal' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia'.
+// Never throws; returns the input hex unchanged on bad/unknown input.
+export function simCvd(hex, type) {
+  try {
+    if (!type || type === 'normal') return hex
+    const [r, g, b] = hexToRgb(hex)
+    // hexToRgb yields NaN (not a throw) on malformed input, so the try/catch won't
+    // fire — guard explicitly to honour the "returns input hex unchanged" contract.
+    if (![r, g, b].every(Number.isFinite)) return hex
+    const lr = linearized(r) / 100, lg = linearized(g) / 100, lb = linearized(b) / 100
+    let nr, ng, nb
+    if (type === 'achromatopsia') {
+      const y = 0.2126 * lr + 0.7152 * lg + 0.0722 * lb
+      nr = ng = nb = y
+    } else {
+      const m = MACHADO_2009[type]
+      if (!m) return hex
+      nr = m[0] * lr + m[1] * lg + m[2] * lb
+      ng = m[3] * lr + m[4] * lg + m[5] * lb
+      nb = m[6] * lr + m[7] * lg + m[8] * lb
+    }
+    const enc = (v) => delinearized(Math.max(0, Math.min(1, v)) * 100).toString(16).padStart(2, '0')
+    return '#' + enc(nr) + enc(ng) + enc(nb)
+  } catch { return hex }
 }

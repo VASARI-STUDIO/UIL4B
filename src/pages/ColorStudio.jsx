@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef, useEffect, useMemo, Fragment } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect, Fragment } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, hexToCmyk, hexToHsv, hexToOklch, mixHex, describeColor, T_LABELS, autoTonalPalette, tonalRamp, applyAdjust } from '../utils/colors'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, mixHex, describeColor, T_LABELS, autoTonalPalette, tonalRamp, applyAdjust, hexToHct, simCvd, fixForeground } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useI18n } from '../contexts/I18nContext'
@@ -200,198 +201,464 @@ function snap(value, target, threshold = 3) {
   return Math.abs(value - target) <= threshold ? target : value
 }
 
-function colorPsychology(h, s, l) {
-  if (s < 10) {
-    if (l > 85) return { mood: 'Clean, minimal', audience: 'Luxury, tech, healthcare', pros: ['Clean and modern', 'Universal appeal', 'Great for backgrounds'], cons: ['Can feel sterile', 'Low visual impact alone'] }
-    if (l < 20) return { mood: 'Authoritative, bold', audience: 'Premium, editorial, fashion', pros: ['Conveys sophistication', 'High contrast pairing', 'Timeless feel'], cons: ['Can feel heavy', 'Needs lighter accents'] }
-    return { mood: 'Balanced, neutral', audience: 'Corporate, professional', pros: ['Versatile and safe', 'Easy to pair', 'Professional feel'], cons: ['Non-distinctive', 'Needs accent colours'] }
-  }
-  if (h < 30) return { mood: 'Energetic, urgent', audience: 'Food, retail, entertainment', pros: ['Grabs attention fast', 'Creates urgency', 'Evokes passion'], cons: ['Can feel aggressive', 'Overuse causes fatigue'] }
-  if (h < 60) return { mood: 'Warm, optimistic', audience: 'Creative, youth, wellness', pros: ['Friendly and inviting', 'Conveys warmth', 'High visibility'], cons: ['Hard to read as text', 'Can feel childish if overused'] }
-  if (h < 90) return { mood: 'Fresh, natural', audience: 'Eco, organic, outdoor', pros: ['Calming and fresh', 'Signals growth', 'Natural associations'], cons: ['Common — needs distinction', 'Cool tones may clash'] }
-  if (h < 150) return { mood: 'Trustworthy, calm', audience: 'Health, fintech, sustainability', pros: ['Balanced energy', 'Associated with health', 'Works light and dark'], cons: ['Less common in branding', 'Can feel clinical'] }
-  if (h < 210) return { mood: 'Reliable, professional', audience: 'Tech, finance, corporate', pros: ['Builds trust instantly', 'Universal appeal', 'Pairs with most palettes'], cons: ['Overused in tech', 'Can feel cold'] }
-  if (h < 270) return { mood: 'Creative, luxurious', audience: 'Beauty, gaming, premium', pros: ['Evokes creativity', 'Feels premium', 'Distinctive and memorable'], cons: ['Can feel mystical', 'Hard to match casually'] }
-  if (h < 330) return { mood: 'Playful, bold', audience: 'Fashion, beauty, social media', pros: ['Eye-catching and fun', 'Modern and energetic', 'Appeals to younger demos'], cons: ['Can feel unserious', 'Gender associations'] }
-  return { mood: 'Energetic, urgent', audience: 'Food, retail, entertainment', pros: ['Grabs attention fast', 'Creates urgency', 'Evokes passion'], cons: ['Can feel aggressive', 'Overuse causes fatigue'] }
+// ── Slice 2 surfaces ──────────────────────────────────────────────────────
+// The Slice-1 ColorInfoPopup (centered modal, ci-* classes, gamma-space CVD,
+// colorPsychology) is REPLACED by CtxMenu + SwatchPopup below. The old per-swatch
+// Vision tab is superseded by the palette-wide CB overlay (§4.C); Usage/psychology
+// is deferred to CS#5. CVD now runs on the linear-RGB Machado-2009 simCvd in
+// colors.js — the old gamma-space matrices are gone.
+
+// CVD modes for the palette-wide colour-vision lens (§4.C). value = simCvd() key.
+const CB_MODES = [
+  { value: 'normal', label: 'Normal', short: 'Normal', desc: 'True colour' },
+  { value: 'protanopia', label: 'Protan', short: 'Prot', desc: 'Red-blind (protanopia)' },
+  { value: 'deuteranopia', label: 'Deutan', short: 'Deut', desc: 'Green-blind (deuteranopia)' },
+  { value: 'tritanopia', label: 'Tritan', short: 'Trit', desc: 'Blue-blind (tritanopia)' },
+  { value: 'achromatopsia', label: 'Achroma', short: 'Achr', desc: 'Total colour-blindness (achromatopsia)' },
+]
+const CB_LABELS = Object.fromEntries(CB_MODES.map(m => [m.value, m.desc]))
+
+// Small inline icons used by the context menu / popup, kept local (the rail's
+// CopyIcon is reused where a copy glyph is needed).
+function ChevronRight({ size = 14 }) {
+  return <svg className="cs-ctx-arrow" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
 }
 
-const CVD_MATRICES = {
-  protanopia:   [0.567,0.433,0, 0.558,0.442,0, 0,0.242,0.758],
-  deuteranopia: [0.625,0.375,0, 0.7,0.3,0, 0,0.3,0.7],
-  tritanopia:   [0.95,0.05,0, 0,0.433,0.567, 0,0.475,0.525],
-}
-function simCVD(hex, matrix) {
-  const [r, g, b] = hexToRgb(hex)
-  const nr = Math.round(matrix[0]*r + matrix[1]*g + matrix[2]*b)
-  const ng = Math.round(matrix[3]*r + matrix[4]*g + matrix[5]*b)
-  const nb = Math.round(matrix[6]*r + matrix[7]*g + matrix[8]*b)
-  return '#' + [nr,ng,nb].map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('')
-}
+// ─── CONTEXT MENU (cs-ctx, §4.A) ───────────────────────────────────────────
+// Right-click / long-press fast path. Portals to <body> (must escape the
+// swatch's overflow:hidden). Desktop = floating at cursor with flip+clamp;
+// ≤480px = bottom sheet (positioning handled in CSS via the media query).
+function CtxMenu({ color, role, isExtra, isLocked, sheet, x, y, onCopy, onShades, onContrast, onEdit, onToggleLock, onRemove, onClose, restoreRef }) {
+  const menuRef = useRef(null)
+  const itemRefs = useRef([])
+  const [active, setActive] = useState(0)
 
-function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
-  const ref = useRef(null)
-  const [tab, setTab] = useState('values')
+  // Build the item list (Remove only for extras). Each carries its handler and
+  // whether it closes the menu on activation.
+  const items = useMemo(() => {
+    const list = [
+      { key: 'copy', label: 'Copy', kbd: '⌘C', icon: <CopyIcon size={14} />, run: onCopy, closes: true },
+      { key: 'shades', label: 'View shades', arrow: true, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M3 15h18" /></svg>, run: onShades, closes: true },
+      { key: 'contrast', label: 'Check contrast', arrow: true, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 3v18" fill="currentColor" /></svg>, run: onContrast, closes: true },
+      { key: 'edit', label: 'Edit colour…', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>, run: onEdit, closes: true },
+      { key: 'lock', label: isLocked ? 'Unlock' : 'Lock', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" />{isLocked ? <path d="M7 11V7a5 5 0 0 1 10 0v4" /> : <path d="M7 11V7a5 5 0 0 1 9.9-1" />}</svg>, run: onToggleLock, closes: false },
+    ]
+    if (isExtra) list.push({ key: 'remove', label: 'Remove', danger: true, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>, run: onRemove, closes: true })
+    return list
+  }, [isExtra, isLocked, onCopy, onShades, onContrast, onEdit, onToggleLock, onRemove])
+
+  const activate = useCallback((i) => {
+    const it = items[i]
+    if (!it) return
+    it.run()
+    if (it.closes) onClose()
+  }, [items, onClose])
+
+  // Flip + clamp at the cursor (desktop only; the sheet is positioned by CSS).
+  useLayoutEffect(() => {
+    const el = menuRef.current
+    if (!el || sheet) return
+    el.style.setProperty('--cs-ctx-chip', color)
+    const w = el.offsetWidth, h = el.offsetHeight
+    let nx = x, ny = y, origin = 'top left'
+    if (x + w > window.innerWidth - 8) { nx = x - w; origin = 'top right' }
+    if (y + h > window.innerHeight - 8) { ny = y - h; origin = origin === 'top right' ? 'bottom right' : 'bottom left' }
+    nx = Math.max(8, Math.min(nx, window.innerWidth - w - 8))
+    ny = Math.max(8, Math.min(ny, window.innerHeight - h - 8))
+    el.style.setProperty('--cs-ctx-x', nx + 'px')
+    el.style.setProperty('--cs-ctx-y', ny + 'px')
+    el.style.setProperty('--cs-ctx-origin', origin)
+  }, [x, y, sheet, color])
+
+  // Set the live chip colour for the sheet variant (no flip maths there).
+  useLayoutEffect(() => {
+    if (sheet && menuRef.current) menuRef.current.style.setProperty('--cs-ctx-chip', color)
+  }, [sheet, color])
+
+  // Auto-focus the first item on open.
+  useEffect(() => { itemRefs.current[0]?.focus() }, [])
+
+  // Dismissal: outside-click, Esc, scroll, resize. Restore focus on unmount.
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('keydown', onKey)
+    const onDown = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) onClose() }
+    const onScroll = () => onClose()
     document.addEventListener('mousedown', onDown)
-    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown) }
-  }, [onClose])
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+      // Restore focus to the live anchor (owned by the parent, stable for the
+      // menu's lifetime). Reading .current at cleanup is intentional.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      restoreRef?.current?.focus?.()
+    }
+  }, [onClose, restoreRef])
 
-  const [h, s, l] = hexToHsl(color)
-  const [r, g, b] = hexToRgb(color)
-  const [c, m, y, k] = hexToCmyk(color)
-  const [hv, sv, bv] = hexToHsv(color)
-  const [oL, oC, oH] = hexToOklch(color)
+  const onKeyDown = (e) => {
+    const n = items.length
+    if (e.key === 'ArrowDown') { e.preventDefault(); const i = (active + 1) % n; setActive(i); itemRefs.current[i]?.focus() }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); const i = (active - 1 + n) % n; setActive(i); itemRefs.current[i]?.focus() }
+    else if (e.key === 'Home') { e.preventDefault(); setActive(0); itemRefs.current[0]?.focus() }
+    else if (e.key === 'End') { e.preventDefault(); setActive(n - 1); itemRefs.current[n - 1]?.focus() }
+    else if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    else if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') {
+      if (e.key === ' ' || e.key === 'Enter' || (e.key === 'ArrowRight' && items[active].arrow)) { e.preventDefault(); activate(active) }
+    }
+  }
+
+  return createPortal(
+    <div ref={menuRef} className={`cs-ctx${sheet ? ' cs-ctx-sheet' : ''}`} role="menu"
+      aria-label={`${role} colour actions`} onKeyDown={onKeyDown}>
+      <div className="cs-ctx-head" aria-hidden="true">
+        <span className="cs-ctx-chip" />
+        <span className="cs-ctx-role">{role}</span>
+        <span className="cs-ctx-hex">{color.toUpperCase()}</span>
+      </div>
+      {items.map((it, i) => (
+        <Fragment key={it.key}>
+          {it.danger && <div className="cs-ctx-sep" role="separator" />}
+          <button
+            ref={el => (itemRefs.current[i] = el)}
+            className={`cs-ctx-item${it.danger ? ' cs-ctx-danger' : ''}${active === i ? ' cs-ctx-active' : ''}`}
+            role="menuitem" tabIndex={active === i ? 0 : -1}
+            aria-label={it.label}
+            onMouseEnter={() => setActive(i)}
+            onClick={() => activate(i)}
+          >
+            {it.icon}
+            <span>{it.label}</span>
+            {it.kbd && <span className="cs-ctx-kbd">{it.kbd}</span>}
+            {it.arrow && <ChevronRight />}
+          </button>
+        </Fragment>
+      ))}
+    </div>,
+    document.body
+  )
+}
+
+// ─── SWATCH POPUP (cs-sw, §4.B) ────────────────────────────────────────────
+// Deep path. 4 tabs: Values · Contrast · Shades · Edit. Desktop = anchored
+// popover (no scrim, aria-modal=false). ≤480px = bottom sheet (scrim, modal).
+// Tracks the swatch by INDEX; live colour derived from props each render.
+const SW_TABS = [
+  { id: 'values', label: 'Values' },
+  { id: 'contrast', label: 'Contrast' },
+  { id: 'shades', label: 'Shades' },
+  { id: 'edit', label: 'Edit' },
+]
+
+function gradeBadges(ratio) {
+  // Returns the two-tier badge set (Normal text + Large text) for a contrast ratio.
+  return [
+    { label: 'Normal', cls: ratio >= 4.5 ? 'pass' : 'fail', tier: ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : 'Fail' },
+    { label: 'Large', cls: ratio >= 3 ? 'pass' : 'fail', tier: ratio >= 4.5 ? 'AAA' : ratio >= 3 ? 'AA' : 'Fail' },
+  ]
+}
+
+function SwatchPopup({ idx, color, role, anchorRect, isSheet, siblings, isLocked, adjustActive, baseValue, onClose, onCopy, onTab, initialTab, onReplace, onResetAdjust, recentEdits, restoreRef }) {
+  const popRef = useRef(null)
+  const bodyRef = useRef(null)
+  const tabsRef = useRef(null)
+  const tabRefs = useRef({})
+  const underlineRef = useRef(null)
+  const heroRef = useRef(null)
+  const hexInputRef = useRef(null)
+  const colorInputRef = useRef(null)
+  const [tab, setTab] = useState(initialTab || 'values')
+  const [copied, setCopied] = useState(null)
+  const [hexDraft, setHexDraft] = useState(color.toUpperCase())
+  const [hexErr, setHexErr] = useState(false)
+  const commitTimer = useRef(null)
+  const copyTimerRef = useRef(null)
+
   const fg = textColorForBg(color)
+  const [r, g, b] = hexToRgb(color)
+  const [hh, ss, ll] = hexToHsl(color)
+  const [hctH, hctC, hctT] = hexToHct(color)
   const onWhite = contrastRatio(color, '#FFFFFF')
   const onBlack = contrastRatio(color, '#000000')
-  const grade = (ratio) => ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA Large' : 'Fail'
-  const gradeBadge = (ratio) => {
-    const pass = ratio >= 4.5
-    const large = ratio >= 3
-    return { text: pass ? 'AA' : large ? 'AA Lg' : 'Fail', ok: pass || large, strong: pass }
-  }
-
   const whiteText = contrastRatio('#FFFFFF', color)
   const blackText = contrastRatio('#000000', color)
 
-  const tints = [0.85, 0.65, 0.45, 0.25].map(t => mixHex(color, '#FFFFFF', t)).reverse()
-  const darks = [0.15, 0.3, 0.45, 0.6, 0.75].map(t => mixHex(color, '#000000', t))
-  const tintShade = [...tints, color, ...darks]
-
-  const rows = [
+  const valueRows = [
     ['HEX', color.toUpperCase()],
-    ['RGB', `rgb(${r}, ${g}, ${b})`],
-    ['HSL', `hsl(${h}, ${s}%, ${l}%)`],
-    ['HSB', `hsb(${hv}, ${sv}%, ${bv}%)`],
-    ['CMYK', `cmyk(${c}%, ${m}%, ${y}%, ${k}%)`],
-    ['OKLCH', `oklch(${oL}% ${oC} ${oH})`],
+    ['RGB', `${r}, ${g}, ${b}`],
+    ['HSL', `${hh}°, ${ss}%, ${ll}%`],
+    ['HCT', `${Math.round(hctH)}°, ${Math.round(hctC)}, ${Math.round(hctT)}`],
   ]
 
-  const cvdTypes = [
-    { key: 'protanopia', label: 'Protanopia', desc: 'Red-blind' },
-    { key: 'deuteranopia', label: 'Deuteranopia', desc: 'Green-blind' },
-    { key: 'tritanopia', label: 'Tritanopia', desc: 'Blue-blind' },
-  ]
+  // Set dynamic colours via custom props on refs (no inline styles).
+  useLayoutEffect(() => {
+    heroRef.current?.style.setProperty('--cs-sw-bg', color)
+    heroRef.current?.style.setProperty('--cs-sw-fg', fg)
+  }, [color, fg])
 
-  const psych = colorPsychology(h, s, l)
-  const TABS = [
-    { id: 'values', label: 'Values' },
-    { id: 'contrast', label: 'Contrast' },
-    { id: 'shades', label: 'Shades' },
-    { id: 'vision', label: 'Vision' },
-    { id: 'usage', label: 'Usage' },
-  ]
+  // Keep the hex draft in sync when the swatch colour changes from outside (e.g.
+  // a shade-replace or Fix), unless the user is mid-edit in this field.
+  useEffect(() => {
+    if (document.activeElement !== hexInputRef.current) {
+      setHexDraft(color.toUpperCase())
+      setHexErr(false)
+    }
+  }, [color])
+
+  // Tab underline measurement (sliding-pill, echoes the page nav).
+  const measureUnderline = useCallback(() => {
+    const el = tabRefs.current[tab]
+    const u = underlineRef.current
+    if (!el || !u) return
+    u.style.setProperty('--cs-sw-tab-x', el.offsetLeft + 'px')
+    u.style.setProperty('--cs-sw-tab-w', el.offsetWidth + 'px')
+  }, [tab])
+  useLayoutEffect(() => { measureUnderline() }, [measureUnderline])
+  // Re-measure on viewport/tab-bar resize and late font load — the popup can stay
+  // open across a resize, and the underline would otherwise misalign (mirrors the
+  // page-nav thumb). useLayoutEffect for the initial sync; effect for the observer.
+  useEffect(() => {
+    document.fonts?.ready.then(measureUnderline).catch(() => {})
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measureUnderline) : null
+    if (ro && tabsRef.current) ro.observe(tabsRef.current)
+    window.addEventListener('resize', measureUnderline)
+    return () => {
+      if (ro) ro.disconnect()
+      window.removeEventListener('resize', measureUnderline)
+    }
+  }, [measureUnderline])
+
+  // Anchored positioning (desktop). Sheet positioning is CSS-only.
+  useLayoutEffect(() => {
+    const el = popRef.current
+    if (!el || isSheet || !anchorRect) return
+    const w = el.offsetWidth, h = el.offsetHeight
+    let x = anchorRect.left
+    let y = anchorRect.bottom + 8
+    if (y + h > window.innerHeight - 12) {
+      const above = anchorRect.top - h - 8
+      y = above >= 12 ? above : Math.max(12, (window.innerHeight - h) / 2)
+    }
+    x = Math.min(x, window.innerWidth - w - 12)
+    x = Math.max(12, x)
+    el.style.setProperty('--cs-sw-x', x + 'px')
+    el.style.setProperty('--cs-sw-y', y + 'px')
+  }, [anchorRect, isSheet, tab])
+
+  // Focus management: focus the requested tab's first control / the hex input on
+  // open. Focus trap while open. Restore focus to the swatch on close.
+  useEffect(() => {
+    if ((initialTab || tab) === 'edit') hexInputRef.current?.focus()
+    else tabRefs.current[initialTab || 'values']?.focus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
+      if (e.key !== 'Tab') return
+      const focusables = popRef.current?.querySelectorAll('button, [href], input, select, [tabindex]:not([tabindex="-1"])')
+      if (!focusables || !focusables.length) return
+      const list = Array.from(focusables).filter(n => !n.disabled && n.offsetParent !== null)
+      if (!list.length) return
+      const first = list[0], last = list[list.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+    const onDown = (e) => { if (popRef.current && !popRef.current.contains(e.target)) onClose() }
+    const onScroll = () => { if (!isSheet) onClose() }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onDown)
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+      // Restore focus to the live anchor (parent-owned, stable for the popup's
+      // lifetime). Reading .current at cleanup is intentional.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      restoreRef?.current?.focus?.()
+    }
+  }, [onClose, isSheet, restoreRef])
+
+  const selectTab = (id) => { setTab(id); onTab?.(id) }
+
+  const copyValue = (key, value) => {
+    onCopy(value)
+    setCopied(key)
+    // Store the handle so a rapid re-copy doesn't race two timers (mirrors commitTimer).
+    clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => setCopied(c => (c === key ? null : c)), 1100)
+  }
+
+  // Hex / rgb() validation + debounced commit (§4.D).
+  const HEX_RE = /^#?[0-9a-fA-F]{6}$/
+  const RGB_RE = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i
+  const tryParse = (raw) => {
+    const s = raw.trim()
+    if (HEX_RE.test(s)) return '#' + s.replace('#', '').toUpperCase()
+    const m = s.match(RGB_RE)
+    if (m) {
+      const ch = [m[1], m[2], m[3]].map(v => Math.max(0, Math.min(255, parseInt(v, 10))))
+      if (ch.some(v => v > 255)) return null
+      return '#' + ch.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+    }
+    return null
+  }
+  const onHexChange = (raw) => {
+    setHexDraft(raw)
+    clearTimeout(commitTimer.current)
+    const parsed = tryParse(raw)
+    if (!parsed) { setHexErr(raw.trim().length > 0); return }
+    setHexErr(false)
+    commitTimer.current = setTimeout(() => onReplace(parsed, 'edit'), 120)
+  }
+  useEffect(() => () => { clearTimeout(commitTimer.current); clearTimeout(copyTimerRef.current) }, [])
+
+  const badge = (cls, tier) => <span className={`cs-sw-badge ${cls}`}>{tier}</span>
+
+  // Mini contrast cell colours via custom props on a ref callback.
+  const qcRef = (ground, sample) => (el) => {
+    if (!el) return
+    el.style.setProperty('--cs-qc-bg', ground)
+    el.style.setProperty('--cs-qc-fg', sample)
+    el.style.setProperty('--cs-qc-tx', textColorForBg(ground))
+  }
+
+  const shades = useMemo(() => tonalRamp(color, [10, 20, 30, 40, 50, 60, 70, 80, 90, 95]), [color])
+  const TONES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 95]
 
   return (
-    <div className="ci-overlay">
-      <div className="ci-popup" ref={ref}>
-        <button className="ci-close" onClick={onClose} aria-label="Close">&times;</button>
-        <div className="ci-hero" style={{ background: color, color: fg }}>
-          <span className="ci-name">{describeColor(color)}</span>
-          <span className="ci-hero-hex">{color.toUpperCase()}</span>
-          <label className="ci-edit" style={{ color: fg, borderColor: fg }}>
+    <div className={`cs-sw-overlay${isSheet ? ' cs-sw-sheet-overlay' : ''}`}>
+      <div ref={popRef} className="cs-sw" role="dialog" aria-modal={isSheet ? 'true' : 'false'}
+        aria-labelledby={`cs-sw-hex-${idx}`}>
+        <button className="cs-sw-close" onClick={onClose} aria-label="Close">&times;</button>
+        <div ref={heroRef} className="cs-sw-hero">
+          <span className="cs-sw-role">{role}</span>
+          <span className="cs-sw-name">{describeColor(color)}</span>
+          <span className="cs-sw-hex" id={`cs-sw-hex-${idx}`}>{color.toUpperCase()}</span>
+          <button className="cs-sw-edit-pill" onClick={() => selectTab('edit')}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
             Edit
-            <input type="color" value={color} onChange={e => onChange(e.target.value)} aria-label="Edit colour" />
-          </label>
+          </button>
         </div>
-        <div className="ci-tabs" role="tablist">
-          {TABS.map(t => (
-            <button key={t.id} className={`ci-tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}
-              role="tab" id={`ci-tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`ci-panel-${t.id}`}>{t.label}</button>
+        <div ref={tabsRef} className="cs-sw-tabs" role="tablist" aria-label="Colour details">
+          {SW_TABS.map(t => (
+            <button key={t.id} ref={el => (tabRefs.current[t.id] = el)}
+              className={`cs-sw-tab${tab === t.id ? ' active' : ''}`}
+              role="tab" id={`cs-sw-tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`cs-sw-panel-${t.id}`}
+              onClick={() => selectTab(t.id)}>{t.label}</button>
           ))}
+          <span ref={underlineRef} className="cs-sw-tab-underline" aria-hidden="true" />
         </div>
-        <div className="ci-body" role="tabpanel" id={`ci-panel-${tab}`} aria-labelledby={`ci-tab-${tab}`}>
+        <div ref={bodyRef} className="cs-sw-body" role="tabpanel" id={`cs-sw-panel-${tab}`} aria-labelledby={`cs-sw-tab-${tab}`}>
           {tab === 'values' && (
             <>
-              <div className="ci-values">
-                {rows.map(([label, val]) => (
-                  <button key={label} className="ci-value-row" onClick={() => onCopy(val)} title="Copy">
-                    <span className="ci-value-label">{label}</span>
-                    <span className="ci-value-val">{val}</span>
-                    <CopyIcon size={11} />
+              <div className="cs-sw-values">
+                {valueRows.map(([label, val]) => (
+                  <button key={label} className="cs-sw-val-row" onClick={() => copyValue(label, val)}>
+                    <span className="cs-sw-val-label">{label}</span>
+                    <span className="cs-sw-val-text">{val}</span>
+                    {copied === label ? <span className="cs-sw-val-copied">Copied</span> : <CopyIcon size={12} />}
                   </button>
                 ))}
               </div>
-              <div className="ci-quick-contrast">
-                <div className="ci-qc-cell" style={{ background: '#fff' }}>
-                  <span className="ci-qc-sample" style={{ color }}>Aa</span>
-                  <span className="ci-qc-ratio">{onWhite.toFixed(1)}:1</span>
-                  <span className={`ci-qc-badge ${onWhite >= 4.5 ? 'pass' : onWhite >= 3 ? 'warn' : 'fail'}`}>{grade(onWhite)}</span>
-                </div>
-                <div className="ci-qc-cell" style={{ background: '#000' }}>
-                  <span className="ci-qc-sample" style={{ color }}>Aa</span>
-                  <span className="ci-qc-ratio" style={{ color: '#fff' }}>{onBlack.toFixed(1)}:1</span>
-                  <span className={`ci-qc-badge ${onBlack >= 4.5 ? 'pass' : onBlack >= 3 ? 'warn' : 'fail'}`}>{grade(onBlack)}</span>
-                </div>
+              <div className="cs-sw-quick">
+                {[['#FFFFFF', onWhite], ['#000000', onBlack]].map(([ground, ratio]) => (
+                  <div key={ground} className="cs-sw-qc" ref={qcRef(ground, color)}>
+                    <span className="cs-sw-qc-aa">Aa</span>
+                    <span className="cs-sw-qc-ratio">{ratio.toFixed(1)}:1</span>
+                    {badge(ratio >= 4.5 ? 'pass' : ratio >= 3 ? 'warn' : 'fail', ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA Lg' : 'Fail')}
+                  </div>
+                ))}
               </div>
             </>
           )}
 
           {tab === 'contrast' && (
-            <>
-              <div className="ci-shades-label">Colour on backgrounds</div>
-              <div className="ci-contrast">
-                <div className="ci-contrast-cell" style={{ background: '#fff', color }}>
-                  <span className="ci-cc-label">On white</span>
-                  <span className="ci-cc-sample" style={{ color }}>Sample text Aa</span>
-                  <strong>{onWhite.toFixed(2)}</strong>
-                  <em className={onWhite >= 4.5 ? 'pass' : 'fail'}>{grade(onWhite)}</em>
-                </div>
-                <div className="ci-contrast-cell" style={{ background: '#000', color }}>
-                  <span className="ci-cc-label" style={{ color: '#fff' }}>On black</span>
-                  <span className="ci-cc-sample" style={{ color }}>Sample text Aa</span>
-                  <strong style={{ color: '#fff' }}>{onBlack.toFixed(2)}</strong>
-                  <em className={onBlack >= 4.5 ? 'pass' : 'fail'} style={{ color: '#fff' }}>{grade(onBlack)}</em>
-                </div>
-              </div>
-              <div className="ci-shades-label" style={{ marginTop: 16 }}>Text on this colour</div>
-              <div className="ci-text-contrast">
-                {[['#FFFFFF', 'White text', whiteText], ['#000000', 'Black text', blackText]].map(([tc, label, ratio]) => {
-                  const bg = gradeBadge(ratio)
-                  return (
-                    <div key={tc} className="ci-text-row" style={{ background: color }}>
-                      <span style={{ color: tc, fontSize: 14, fontWeight: 700 }}>Aa</span>
-                      <span style={{ color: tc }}>{label}</span>
-                      <span className="ci-text-ratio" style={{ color: tc }}>
-                        {ratio.toFixed(1)}:1
-                      </span>
-                      <span className={`ci-qc-badge ${bg.strong ? 'pass' : bg.ok ? 'warn' : 'fail'}`}>{bg.text}</span>
+            <div className="cs-sw-contrast">
+              <div className="cs-sw-group-label">vs white &amp; black</div>
+              <div className="cs-sw-cc-pair">
+                {[['#FFFFFF', onWhite], ['#000000', onBlack]].map(([ground, ratio]) => (
+                  <div key={ground} className="cs-sw-cc" ref={qcRef(ground, color)}>
+                    <span className="cs-sw-cc-aa">Aa</span>
+                    <span className="cs-sw-cc-ratio">{ratio.toFixed(2)}:1</span>
+                    <div className="cs-sw-badges">
+                      {gradeBadges(ratio).map(bd => <span key={bd.label} className={`cs-sw-badge ${bd.cls}`} title={`${bd.label} text`}>{bd.label[0]}: {bd.tier}</span>)}
                     </div>
-                  )
-                })}
+                    {ratio < 4.5 && (() => {
+                      // Compute once — fixForeground is an iterative HCT binary search;
+                      // reuse the result for both the click handler and the label.
+                      const fixed = fixForeground(color, ground, 4.5)
+                      return (
+                        <button className="cs-sw-fix" onClick={() => onReplace(fixed, 'fix')}>
+                          Nudge to AA → {fixed.toUpperCase()}
+                        </button>
+                      )
+                    })()}
+                  </div>
+                ))}
               </div>
-            </>
+
+              {siblings.length > 0 && (
+                <>
+                  <div className="cs-sw-group-label">vs palette siblings (UI ≥3:1)</div>
+                  <div className="cs-sw-siblings">
+                    {siblings.map(s => {
+                      const ratio = contrastRatio(color, s.color)
+                      return (
+                        <div key={s.idx} className="cs-sw-sib-row">
+                          <span className="cs-sw-sib-chip" ref={el => el && el.style.setProperty('--cs-sib', s.color)} />
+                          <span className="cs-sw-sib-role">{s.role}</span>
+                          <span className="cs-sw-sib-ratio">{ratio.toFixed(2)}:1</span>
+                          {badge(ratio >= 3 ? 'pass' : 'fail', ratio >= 3 ? 'OK' : 'Low')}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+
+              <div className="cs-sw-group-label">text on this colour</div>
+              <div className="cs-sw-siblings">
+                {[['#FFFFFF', 'White text', whiteText], ['#000000', 'Black text', blackText]].map(([tc, label, ratio]) => (
+                  <div key={tc} className="cs-sw-sib-row">
+                    <span className="cs-sw-sib-chip" ref={el => el && el.style.setProperty('--cs-sib', tc)} />
+                    <span className="cs-sw-sib-role">{label}</span>
+                    <span className="cs-sw-sib-ratio">{ratio.toFixed(2)}:1</span>
+                    {badge(ratio >= 4.5 ? 'pass' : ratio >= 3 ? 'warn' : 'fail', ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA Lg' : 'Fail')}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {tab === 'shades' && (
             <>
-              <div className="ci-shades-label">Tints &amp; Shades</div>
-              <div className="ci-tintshade">
-                {tintShade.map((sh, i) => {
-                  const isBase = sh.toLowerCase() === color.toLowerCase()
-                  return (
-                    <button key={i} className={'ci-ts-cell' + (isBase ? ' ci-ts-base' : '')}
-                      style={{ background: sh, color: textColorForBg(sh) }}
-                      onClick={() => onCopy(sh.toUpperCase())}
-                      title={'Copy ' + sh.toUpperCase()}>
-                      <span className="ci-ts-hex">{sh.toUpperCase().replace('#', '')}</span>
-                    </button>
-                  )
-                })}
+              <p className="cs-sw-helper">Click a shade to replace this swatch · ⧉ to copy.</p>
+              <div className="cs-sw-shade-strip">
+                {shades.map((sh, i) => (
+                  <button key={i} className="cs-sw-shade-seg" ref={el => el && el.style.setProperty('--cs-seg', sh)}
+                    title={sh.toUpperCase()} aria-label={`Tone ${TONES[i]} ${sh.toUpperCase()}`}
+                    onClick={() => onReplace(sh, 'shade')} />
+                ))}
               </div>
-              <div className="ci-shade-list">
-                {tintShade.map((sh, i) => {
-                  const isBase = sh.toLowerCase() === color.toLowerCase()
+              <div className="cs-sw-siblings">
+                {shades.map((sh, i) => {
+                  const current = sh.toLowerCase() === color.toLowerCase()
                   return (
-                    <button key={i} className={`ci-shade-row${isBase ? ' ci-shade-base' : ''}`} onClick={() => onCopy(sh.toUpperCase())}>
-                      <div className="ci-shade-dot" style={{ background: sh }} />
-                      <span className="ci-shade-hex">{sh.toUpperCase()}</span>
-                      <span className="ci-shade-ratio">{contrastRatio(sh, '#FFFFFF').toFixed(1)}:1</span>
-                      <CopyIcon size={9} />
+                    <button key={i} className="cs-sw-shade-row" aria-current={current ? 'true' : undefined}
+                      onClick={() => onReplace(sh, 'shade')}>
+                      <span className="cs-sw-shade-dot" ref={el => el && el.style.setProperty('--cs-dot', sh)} />
+                      <span className="cs-sw-shade-tone">{TONES[i]}</span>
+                      <span className="cs-sw-shade-hex">{sh.toUpperCase()}</span>
+                      <span className="cs-sw-shade-ratio">{contrastRatio(sh, '#FFFFFF').toFixed(1)}:1</span>
+                      <span className="cs-sw-shade-copy" role="button" tabIndex={-1} aria-label={`Copy ${sh.toUpperCase()}`}
+                        onClick={(e) => { e.stopPropagation(); onCopy(sh.toUpperCase()) }}>
+                        <CopyIcon size={11} />
+                      </span>
                     </button>
                   )
                 })}
@@ -399,45 +666,55 @@ function ColorInfoPopup({ color, onClose, onCopy, onChange }) {
             </>
           )}
 
-          {tab === 'vision' && (
+          {tab === 'edit' && (
             <>
-              <div className="ci-shades-label">Colour blindness simulation</div>
-              <div className="ci-cvd-grid">
-                <div className="ci-cvd-card">
-                  <div className="ci-cvd-swatch" style={{ background: color }} />
-                  <span className="ci-cvd-name">Normal</span>
-                  <span className="ci-cvd-hex">{color.toUpperCase()}</span>
-                </div>
-                {cvdTypes.map(cvd => {
-                  const sim = simCVD(color, CVD_MATRICES[cvd.key])
-                  return (
-                    <div key={cvd.key} className="ci-cvd-card" onClick={() => onCopy(sim)}>
-                      <div className="ci-cvd-swatch" style={{ background: sim }} />
-                      <span className="ci-cvd-name">{cvd.label}</span>
-                      <span className="ci-cvd-desc">{cvd.desc}</span>
-                      <span className="ci-cvd-hex">{sim.toUpperCase()}</span>
-                    </div>
-                  )
-                })}
+              <div className="cs-sw-edit-label">Exact colour</div>
+              <div className="cs-sw-edit-field">
+                <label className="cs-sw-edit-chip" ref={el => el && el.style.setProperty('--cs-edit-chip', color)}>
+                  <input ref={colorInputRef} type="color" value={color}
+                    onChange={e => onReplace(e.target.value, 'edit')} aria-label="Pick colour" />
+                </label>
+                <input ref={hexInputRef} type="text" inputMode="text"
+                  className={`cs-sw-edit-hex${hexErr ? ' invalid' : ''}`}
+                  value={hexDraft} onChange={e => onHexChange(e.target.value)}
+                  aria-label="Hex value" aria-invalid={hexErr}
+                  aria-describedby={hexErr ? `cs-sw-edit-err-${idx}` : undefined}
+                  spellCheck={false} autoComplete="off" />
+                <button className="cs-sw-edit-pick" onClick={() => colorInputRef.current?.click()}>Pick</button>
               </div>
+              {hexErr && (
+                <div className="cs-sw-edit-err" id={`cs-sw-edit-err-${idx}`}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                  Enter a valid 6-digit hex (or rgb()).
+                </div>
+              )}
+              {recentEdits.length > 0 && (
+                <>
+                  <div className="cs-sw-edit-label">Recent</div>
+                  <div className="cs-sw-recent">
+                    {recentEdits.map((hex, i) => (
+                      <button key={i} className="cs-sw-recent-chip" ref={el => el && el.style.setProperty('--cs-recent', hex)}
+                        title={hex.toUpperCase()} aria-label={`Set ${hex.toUpperCase()}`}
+                        onClick={() => onReplace(hex, 'edit')} />
+                    ))}
+                  </div>
+                </>
+              )}
+              <div className="cs-sw-edit-sep" />
+              {adjustActive ? (
+                <>
+                  <div className="cs-sw-edit-note">
+                    A global adjust is active — this swatch is set exactly, then the adjust lens is applied on top (shown in the rail). <button onClick={onResetAdjust}>Reset adjust</button> for a 1:1 match.
+                  </div>
+                  <div className="cs-sw-edit-sub">Set: {baseValue.toUpperCase()} · as shown in rail: {color.toUpperCase()}</div>
+                </>
+              ) : (
+                <div className="cs-sw-edit-note">This sets the swatch exactly. Click a value to copy it from any tab.</div>
+              )}
+              {isLocked && (
+                <div className="cs-sw-edit-note">This swatch is locked; it won&apos;t change on Randomise.</div>
+              )}
             </>
-          )}
-
-          {tab === 'usage' && (
-            <div className="ci-psychology">
-              <div className="ci-psych-header">
-                <div className="ci-psych-row"><span className="ci-psych-label">Mood</span><span>{psych.mood}</span></div>
-                <div className="ci-psych-row"><span className="ci-psych-label">Best for</span><span>{psych.audience}</span></div>
-              </div>
-              <div className="ci-psych-lists">
-                <div className="ci-psych-list">
-                  {psych.pros.map((p, i) => <div key={i} className="ci-psych-item ci-psych-pro"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>{p}</div>)}
-                </div>
-                <div className="ci-psych-list">
-                  {psych.cons.map((c, i) => <div key={i} className="ci-psych-item ci-psych-con"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{c}</div>)}
-                </div>
-              </div>
-            </div>
           )}
         </div>
       </div>
@@ -499,8 +776,20 @@ export default function ColorStudio({ onCopy, toast }) {
   // a11y live region for randomise / insert / lock announcements.
   const [liveMsg, setLiveMsg] = useState('')
   const [cssExpanded, setCssExpanded] = useState(false)
-  const [infoColor, setInfoColor] = useState(null)
   const colorRef = useRef(null)
+  // ── Slice 2 surfaces (§5.2) ──
+  // Both menu+popup are tracked by INDEX (not colour value) so they follow live
+  // edits (shade-replace/fix/edit) and survive duplicate colours. Opening one
+  // closes the other. cbMode + recentEdits are EPHEMERAL (never persisted).
+  const [ctxMenu, setCtxMenu] = useState(null)   // { idx, x, y, mode:'menu'|'sheet' } | null
+  const [swPopup, setSwPopup] = useState(null)    // { idx, tab } | null
+  const [cbMode, setCbMode] = useState('normal')  // 'normal' | one of CB_MODES
+  const [recentEdits, setRecentEdits] = useState([])
+  // The right-clicked / long-pressed swatch node — focus is restored here when a
+  // surface closes (a11y). Set imperatively in the rail render.
+  const ctxAnchorRef = useRef(null)
+  const swAnchorRef = useRef(null)
+  const [swAnchorRect, setSwAnchorRect] = useState(null)
 
   // Tint-ramp tuning. The standalone Tints section (with its sliders) folded
   // into the palette builder's per-card tonal undersides in Slice 1; these
@@ -576,9 +865,13 @@ export default function ColorStudio({ onCopy, toast }) {
     }
   }, [measureThumb])
 
-  const colors = generateHarmony(baseColor, harmony)
+  // Memoised on its scalar inputs so the array identity is stable across unrelated
+  // renders — otherwise the whole downstream pipeline (baseColors→allColors→cbColors
+  // →cbClash, incl. applyAdjust/simCvd per swatch) would recompute on every state
+  // change (menus, toasts). generateHarmony is pure for a given (base, harmony).
+  const colors = useMemo(() => generateHarmony(baseColor, harmony), [baseColor, harmony])
   // Per-index manual overrides applied on top of the harmony-generated colours.
-  const resolvedColors = colors.map((c, i) => overrides[i] || c)
+  const resolvedColors = useMemo(() => colors.map((c, i) => overrides[i] || c), [colors, overrides])
   // baseColors = the RAW palette (generator + overrides + extras). All write-back
   // handlers (drag/edit/remove/randomise) operate on THIS — the global adjust is a
   // non-destructive lens layered on top for display/export only.
@@ -587,6 +880,56 @@ export default function ColorStudio({ onCopy, toast }) {
   // same array reference when the adjust is zeroed (identity), so every downstream
   // consumer/export is untouched until a slider moves.
   const allColors = useMemo(() => applyAdjust(baseColors, globalAdjust), [baseColors, globalAdjust])
+
+  // ── Colour-vision lens (CS#3.9, §4.C) ──
+  // A pure presentation lens over allColors — NEVER mutates the source. When a
+  // CVD mode is active the rail backgrounds render cbColors[i]; the hex LABELS
+  // always render the true allColors[i]. simCvd never throws (returns input hex
+  // on bad data), so a swatch can never go blank.
+  const cbColors = useMemo(
+    () => (cbMode === 'normal' ? allColors : allColors.map(c => simCvd(c, cbMode))),
+    [allColors, cbMode]
+  )
+  // Confusion-pair heuristic (FREE premium touch): any two simulated swatches
+  // within ≈28/255 Euclidean RGB distance are flagged as hard to tell apart for
+  // this vision type. Returns a Set of swatch indices in any clashing pair.
+  const cbClash = useMemo(() => {
+    const out = new Set()
+    if (cbMode === 'normal') return out
+    const rgbs = cbColors.map(hexToRgb)
+    for (let i = 0; i < rgbs.length; i++) {
+      for (let j = i + 1; j < rgbs.length; j++) {
+        const dr = rgbs[i][0] - rgbs[j][0], dg = rgbs[i][1] - rgbs[j][1], db = rgbs[i][2] - rgbs[j][2]
+        if (Math.sqrt(dr * dr + dg * dg + db * db) <= 28) { out.add(i); out.add(j) }
+      }
+    }
+    return out
+  }, [cbColors, cbMode])
+  // a11y note for the clash heuristic — read out, not just ringed (§5.6).
+  const cbClashMsg = cbClash.size > 0
+    ? `${cbClash.size} colours may be hard to tell apart in ${CB_LABELS[cbMode] || cbMode}.`
+    : ''
+
+  // CB segmented-toggle sliding thumb — same measure technique as the page nav
+  // (DRY: third use of the pattern). Sets --cs-cb-x / --cs-cb-w on the thumb ref.
+  const cbBarRef = useRef(null)
+  const cbThumbRef = useRef(null)
+  const cbSegRefs = useRef({})
+  const measureCbThumb = useCallback(() => {
+    const el = cbSegRefs.current[cbMode]
+    const thumb = cbThumbRef.current
+    if (!el || !thumb) return
+    thumb.style.setProperty('--cs-cb-x', el.offsetLeft + 'px')
+    thumb.style.setProperty('--cs-cb-w', el.offsetWidth + 'px')
+  }, [cbMode])
+  useLayoutEffect(() => { measureCbThumb() }, [measureCbThumb])
+  useEffect(() => {
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measureCbThumb) : null
+    if (ro && cbBarRef.current) ro.observe(cbBarRef.current)
+    window.addEventListener('resize', measureCbThumb)
+    document.fonts?.ready.then(measureCbThumb).catch(() => {})
+    return () => { if (ro) ro.disconnect(); window.removeEventListener('resize', measureCbThumb) }
+  }, [measureCbThumb])
 
   // ── Free-tier 6-colour cap (CS#3.17) — single state-level chokepoint ──
   // Every palette-growth path (insert-between, manual hue-offset, custom pick,
@@ -1069,6 +1412,9 @@ ${stateVars}
       if (activeColorIdx === dragIdx) setActiveColorIdx(dragOverIdx)
       else if (dragIdx < dragOverIdx && activeColorIdx > dragIdx && activeColorIdx <= dragOverIdx) setActiveColorIdx(activeColorIdx - 1)
       else if (dragIdx > dragOverIdx && activeColorIdx >= dragOverIdx && activeColorIdx < dragIdx) setActiveColorIdx(activeColorIdx + 1)
+      // Reorder remaps indices; any open surface tracks by index, so its idx is now
+      // stale (would render a DIFFERENT swatch's data). Close rather than remap.
+      setSwPopup(null); setSwAnchorRect(null); setCtxMenu(null)
     }
     setDragIdx(null)
     setDragOverIdx(null)
@@ -1086,6 +1432,77 @@ ${stateVars}
       setExtraColors(extraColors.map((c, i) => i === eIdx ? hex : c))
     }
   }
+
+  // ── Slice 2 surface handlers (§5.1/§5.2) ──
+  // Opening either surface closes the other (one job per screen). The context
+  // menu is the fast path (right-click / long-press); the popup is the deep path.
+  // CB mode disables both — you judge a simulation, you don't edit through it.
+  const cbActive = cbMode !== 'normal'
+  const closeCtxMenu = useCallback(() => setCtxMenu(null), [])
+  const closeSwPopup = useCallback(() => { setSwPopup(null); setSwAnchorRect(null) }, [])
+  const openCtxMenu = useCallback((idx, x, y, mode = 'menu') => {
+    if (cbActive) { setLiveMsg('Exit colour-vision mode to edit.'); if (toast) toast('Exit colour-vision mode to edit.'); return }
+    setSwPopup(null); setSwAnchorRect(null)
+    setCtxMenu({ idx, x, y, mode })
+  }, [cbActive, toast])
+  const openSwatchPopup = useCallback((idx, tab = 'values', rect = null) => {
+    if (cbActive) { setLiveMsg('Exit colour-vision mode to edit.'); if (toast) toast('Exit colour-vision mode to edit.'); return }
+    setCtxMenu(null)
+    setSwAnchorRect(rect)
+    setSwPopup({ idx, tab })
+  }, [cbActive, toast])
+
+  // Replace a swatch's colour from a popup action (edit / shade / fix). Writes
+  // through editPaletteColor (raw base layer), pushes the value into the session
+  // recent-edits history, and offers a one-tap undo. `source` is advisory only.
+  const replaceSwatch = useCallback((idx, hex) => {
+    const next = (hex || '').toUpperCase()
+    if (!/^#[0-9A-F]{6}$/.test(next)) return
+    const prev = { base: baseColor, ovr: { ...overrides }, extras: [...extraColors] }
+    editPaletteColor(idx, next)
+    setRecentEdits(list => [next, ...list.filter(h => h.toUpperCase() !== next)].slice(0, 8))
+    showUndoToast('Colour updated', () => {
+      setBaseColor(prev.base)
+      setOverrides(prev.ovr)
+      setExtraColors(prev.extras)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseColor, overrides, extraColors, colors.length, showUndoToast])
+
+  const resetGlobalAdjust = useCallback(() => setGlobalAdjust({ h: 0, s: 0, b: 0, temp: 0 }), [])
+
+  // ── Long-press → bottom-sheet context menu (≤480, §4.A) ──
+  // 450ms hold with a >10px move / scroll cancel. Touch only; right-click is the
+  // desktop path. Refs (not state) so the timer never triggers a render mid-press.
+  const lpTimer = useRef(null)
+  const lpStart = useRef(null)
+  const lpFired = useRef(false)
+  // Unmount cleanup: a pending long-press would otherwise fire setCtxMenu on an
+  // unmounted component (mirrors gapTimerRef/adjustRafRef cleanups).
+  useEffect(() => () => clearTimeout(lpTimer.current), [])
+  const cancelLongPress = useCallback(() => {
+    clearTimeout(lpTimer.current)
+    lpTimer.current = null
+    lpStart.current = null
+  }, [])
+  const onSwatchTouchStart = useCallback((idx, node) => (e) => {
+    if (cbActive || e.touches.length !== 1) return
+    const t = e.touches[0]
+    lpStart.current = { x: t.clientX, y: t.clientY }
+    lpFired.current = false
+    clearTimeout(lpTimer.current)
+    lpTimer.current = setTimeout(() => {
+      lpFired.current = true
+      ctxAnchorRef.current = node
+      openCtxMenu(idx, t.clientX, t.clientY, 'sheet')
+    }, 450)
+  }, [cbActive, openCtxMenu])
+  const onSwatchTouchMove = useCallback((e) => {
+    if (!lpStart.current || !e.touches.length) return
+    const t = e.touches[0]
+    if (Math.abs(t.clientX - lpStart.current.x) > 10 || Math.abs(t.clientY - lpStart.current.y) > 10) cancelLongPress()
+  }, [cancelLongPress])
+  const onSwatchTouchEnd = useCallback(() => cancelLongPress(), [cancelLongPress])
 
   // Write a whole RAW palette array back into base/overrides/extras. The first
   // `colors.length` slots map to base(0)+overrides(1..), the rest become extras.
@@ -1141,6 +1558,9 @@ ${stateVars}
     })
     writeRawPalette(next)
     if (activeColorIdx === idx) setActiveColorIdx(target)
+    // Reorder remaps indices; close any index-tracked surface so it can't show the
+    // wrong swatch's data (mirrors handleDragEnd).
+    setSwPopup(null); setSwAnchorRect(null); setCtxMenu(null)
     setLiveMsg(`Moved colour to position ${target + 1}`)
   }, [baseColors, activeColorIdx, writeRawPalette])
 
@@ -1272,7 +1692,9 @@ ${stateVars}
 
   const removeExtra = (i) => {
     const prev = { extras: [...extraColors], idx: activeColorIdx }
-    setExtraColors(extraColors.filter((_, idx) => idx !== i))
+    // Functional form: a double-tap remove must filter the latest list, not the one
+    // closed over at render (which would resurrect the first-removed swatch).
+    setExtraColors(prevExtras => prevExtras.filter((_, idx) => idx !== i))
     if (activeColorIdx >= colors.length + i) setActiveColorIdx(0)
     showUndoToast('Swatch removed', () => {
       setExtraColors(prev.extras)
@@ -1487,6 +1909,46 @@ ${stateVars}
         {/* a11y: announce randomise / insert / lock / move to screen readers. */}
         <p className="cs-pb-live" aria-live="polite" role="status">{liveMsg}</p>
 
+        {/* Colour-vision lens toggle (CS#3.9, §4.C). Palette-level control grouped
+            above the rail (common region). Sliding-pill on >380; a labelled
+            <select> on ≤380 (Hick — a select is fine for 5 exclusive options on a
+            tiny screen). cbMode is EPHEMERAL — never persisted. */}
+        <div className="cs-cb-wrap">
+          <span className="cs-cb-title" id="cs-cb-label">Colour vision</span>
+          <div ref={cbBarRef} className="cs-cb-toggle" role="radiogroup" aria-labelledby="cs-cb-label">
+            {CB_MODES.map(m => (
+              <button key={m.value} ref={el => (cbSegRefs.current[m.value] = el)}
+                className={`cs-cb-seg${cbMode === m.value ? ' active' : ''}`}
+                role="radio" aria-checked={cbMode === m.value} aria-label={m.desc}
+                onClick={() => setCbMode(m.value)}>
+                <span className="cs-cb-seg-full">{m.label}</span>
+                <span className="cs-cb-seg-abbr" aria-hidden="true">{m.short}</span>
+              </button>
+            ))}
+            <span ref={cbThumbRef} className="cs-cb-thumb" aria-hidden="true" />
+          </div>
+          {/* ≤380 fallback — same state, different control (CSS hides one or the other). */}
+          <label className="cs-cb-select-wrap">
+            <span className="cs-cb-select-label">Colour vision</span>
+            <select className="cs-cb-select" value={cbMode} onChange={e => setCbMode(e.target.value)}
+              aria-label="Colour vision simulation">
+              {CB_MODES.map(m => <option key={m.value} value={m.value}>{m.desc}</option>)}
+            </select>
+          </label>
+        </div>
+
+        {/* Active-lens banner — the visible text that names what's simulated, so the
+            mode is never ambiguous (and SR users hear it). Hex values unchanged. */}
+        {cbActive && (
+          <div className="cs-cb-banner" role="status">
+            <svg className="cs-cb-banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /></svg>
+            <span>Simulating {CB_LABELS[cbMode]} — colours shown are how your palette appears; hex values are unchanged.</span>
+            <button className="cs-cb-banner-exit" onClick={() => setCbMode('normal')}>Back to normal</button>
+          </div>
+        )}
+        {/* Clash heuristic note — read out, not just a ring on the swatch. */}
+        <p className="cs-pb-live" aria-live="polite" role="status">{cbClashMsg}</p>
+
         {/* Base colour + harmony quick-switch. The base picker is free; the
             harmony *systems* are Pro (CS#3.7) — a non-Pro click routes to the
             gate and does NOT recompute the harmony (anti-tamper). */}
@@ -1525,7 +1987,7 @@ ${stateVars}
         </div>
 
         {/* Palette rail — tonal-glass cards (CS#3.1/3.3/3.4/3.5/3.10/3.16). */}
-        <div className="cs-pb-rail">
+        <div className={`cs-pb-rail${cbActive ? ' cb-on' : ''}`}>
           {allColors.map((color, i) => {
             const isActive = i === activeColorIdx
             const isExtra = i >= colors.length
@@ -1534,7 +1996,11 @@ ${stateVars}
             const isDragOver = dragOverIdx === i && dragIdx !== i
             const role = ROLES[i] || `CUSTOM ${i - colors.length + 1}`
             const tints = tonalRamp(color, [30, 45, 60, 75, 90])
-            const fg = textColorForBg(color)
+            // Displayed background = simulated under the CB lens; the hex label and
+            // every action still use `color` (the true value). Never mutate source.
+            const shownColor = cbActive ? cbColors[i] : color
+            const fg = textColorForBg(shownColor)
+            const isClash = cbActive && cbClash.has(i)
             return (
               // Re-deal animation replays by remounting on dealToken change; the
               // token must key the OUTERMOST node (the Fragment) so the swatch
@@ -1563,23 +2029,47 @@ ${stateVars}
                   )
                 })()}
                 <div
-                  className={`cs-pb-swatch${isActive ? ' active' : ''}${isLocked ? ' locked' : ''}${isDragGhost ? ' drag-ghost' : ''}${isDragOver ? ' drag-over' : ''} cs-d${Math.min(i, 5)}`}
-                  draggable
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={(e) => handleDragOver(e, i)}
+                  className={`cs-pb-swatch${isActive ? ' active' : ''}${isLocked ? ' locked' : ''}${isDragGhost ? ' drag-ghost' : ''}${isDragOver ? ' drag-over' : ''}${isClash ? ' cs-cb-clash' : ''} cs-d${Math.min(i, 5)}`}
+                  ref={el => { if (el && ctxMenu?.idx === i) ctxAnchorRef.current = el; if (el && swPopup?.idx === i) swAnchorRef.current = el }}
+                  draggable={!cbActive}
+                  onDragStart={() => { if (!cbActive) handleDragStart(i) }}
+                  onDragOver={(e) => { if (!cbActive) handleDragOver(e, i) }}
                   onDragEnd={handleDragEnd}
-                  onClick={() => { setActiveColorIdx(i); onCopy(color) }}
-                  onContextMenu={(e) => { e.preventDefault(); setInfoColor(color) }}
+                  onClick={() => { if (cbActive) return; setActiveColorIdx(i); onCopy(color) }}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    if (cbActive) { setLiveMsg('Exit colour-vision mode to edit.'); if (toast) toast('Exit colour-vision mode to edit.'); return }
+                    ctxAnchorRef.current = e.currentTarget
+                    openCtxMenu(i, e.clientX, e.clientY, window.matchMedia('(max-width: 480px)').matches ? 'sheet' : 'menu')
+                  }}
+                  onTouchStart={(e) => onSwatchTouchStart(i, e.currentTarget)(e)}
+                  onTouchMove={onSwatchTouchMove}
+                  onTouchEnd={onSwatchTouchEnd}
+                  onTouchCancel={onSwatchTouchEnd}
                   onKeyDown={(e) => {
+                    if (cbActive) return
                     if (e.key === 'ArrowLeft') { e.preventDefault(); moveCard(i, -1) }
                     else if (e.key === 'ArrowRight') { e.preventDefault(); moveCard(i, 1) }
                     else if (e.key === 'Enter') { setActiveColorIdx(i); onCopy(color) }
+                    else if (e.shiftKey && e.key === 'F10') {
+                      e.preventDefault()
+                      const r = e.currentTarget.getBoundingClientRect()
+                      ctxAnchorRef.current = e.currentTarget
+                      openCtxMenu(i, r.left + r.width / 2, r.top + 40, window.matchMedia('(max-width: 480px)').matches ? 'sheet' : 'menu')
+                    } else if (e.key === 'ContextMenu') {
+                      e.preventDefault()
+                      const r = e.currentTarget.getBoundingClientRect()
+                      ctxAnchorRef.current = e.currentTarget
+                      openCtxMenu(i, r.left + r.width / 2, r.top + 40, window.matchMedia('(max-width: 480px)').matches ? 'sheet' : 'menu')
+                    }
                   }}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${role} ${color.toUpperCase()}${isLocked ? ', locked' : ''}. Arrow keys reorder, Enter copies.`}
-                  style={{ background: color, color: fg }}
+                  aria-label={`${role} ${color.toUpperCase()}${isLocked ? ', locked' : ''}${cbActive ? ', simulated colour' : ''}${isClash ? ', hard to distinguish from another swatch' : ''}. Arrow keys reorder, Enter copies.`}
+                  style={{ background: shownColor, color: fg }}
                 >
+                  {/* CB simulated micro-tag (§4.C) — names the swatch as a simulation. */}
+                  {cbActive && <span className="cs-cb-tag" aria-hidden="true">simulated</span>}
                   {/* Hover/focus toolbar: drag · lock · copy · (i) · remove. */}
                   <div className="cs-pb-tools">
                     <span className="cs-pb-tool cs-pb-tool--drag" aria-hidden="true" title="Drag to reorder">
@@ -1596,7 +2086,7 @@ ${stateVars}
                     <button className="cs-pb-tool" onClick={(e) => { e.stopPropagation(); onCopy(color) }} title="Copy hex" aria-label="Copy hex">
                       <CopyIcon size={12} />
                     </button>
-                    <button className="cs-pb-tool" onClick={(e) => { e.stopPropagation(); setInfoColor(color) }} title="Colour details" aria-label="Colour details">
+                    <button className="cs-pb-tool" onClick={(e) => { e.stopPropagation(); ctxAnchorRef.current = e.currentTarget.closest('.cs-pb-swatch'); openSwatchPopup(i, 'values', e.currentTarget.closest('.cs-pb-swatch')?.getBoundingClientRect()) }} title="Colour details" aria-label="Colour details">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                     </button>
                     {isExtra && (
@@ -1608,14 +2098,14 @@ ${stateVars}
 
                   <div className="cs-pb-swatch-meta">
                     <div className="cs-pb-role">{role}</div>
-                    {/* Manual per-swatch set (CS#3.16): clicking the hex opens the
-                        native picker overlaid on it; writes to overrides[i]. */}
-                    <label className="cs-pb-hex" onClick={(e) => e.stopPropagation()}>
+                    {/* Manual per-swatch set (CS#3.16): the hex label opens the popup's
+                        Edit tab (the proper home for exact entry — picker + validated
+                        hex field). Label always shows the TRUE colour, even under the
+                        CB lens. */}
+                    <button className="cs-pb-hex" onClick={(e) => { e.stopPropagation(); ctxAnchorRef.current = e.currentTarget.closest('.cs-pb-swatch'); openSwatchPopup(i, 'edit', e.currentTarget.closest('.cs-pb-swatch')?.getBoundingClientRect()) }}
+                      title="Edit this colour" aria-label={`Edit ${role} colour, currently ${color.toUpperCase()}`}>
                       {color.toUpperCase()}
-                      <input type="color" value={color} className="cs-pb-edit"
-                        onChange={e => editPaletteColor(i, e.target.value)}
-                        title="Set this colour" aria-label={`Set ${role} colour`} />
-                    </label>
+                    </button>
                   </div>
 
                   {/* Built-in tonal tints (CS#3.3) — the tonal ramp of this card. */}
@@ -2215,16 +2705,50 @@ ${stateVars}
       </div>
       <UIKitGuide step="color" />
 
-      {infoColor && (
-        <ColorInfoPopup
-          color={infoColor}
-          onClose={() => setInfoColor(null)}
+      {/* Context menu (cs-ctx, §4.A) — fast path. idx-tracked; live colour derived
+          each render. Skips render if the index fell out of range (e.g. a remove). */}
+      {ctxMenu && allColors[ctxMenu.idx] != null && (
+        <CtxMenu
+          color={allColors[ctxMenu.idx]}
+          role={ROLES[ctxMenu.idx] || `CUSTOM ${ctxMenu.idx - colors.length + 1}`}
+          isExtra={ctxMenu.idx >= colors.length}
+          isLocked={locked.has(ctxMenu.idx)}
+          sheet={ctxMenu.mode === 'sheet'}
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          restoreRef={ctxAnchorRef}
+          onCopy={() => onCopy(allColors[ctxMenu.idx])}
+          onShades={() => openSwatchPopup(ctxMenu.idx, 'shades', ctxAnchorRef.current?.getBoundingClientRect())}
+          onContrast={() => openSwatchPopup(ctxMenu.idx, 'contrast', ctxAnchorRef.current?.getBoundingClientRect())}
+          onEdit={() => openSwatchPopup(ctxMenu.idx, 'edit', ctxAnchorRef.current?.getBoundingClientRect())}
+          onToggleLock={() => toggleLock(ctxMenu.idx)}
+          onRemove={() => { if (ctxMenu.idx >= colors.length) removeExtra(ctxMenu.idx - colors.length) }}
+          onClose={closeCtxMenu}
+        />
+      )}
+
+      {/* Swatch popup (cs-sw, §4.B) — deep path. idx-tracked. siblings = the other
+          swatches (for the contrast tab). baseValue = the RAW set value (pre-adjust
+          lens); colour = the displayed value. */}
+      {swPopup && allColors[swPopup.idx] != null && (
+        <SwatchPopup
+          idx={swPopup.idx}
+          color={allColors[swPopup.idx]}
+          baseValue={baseColors[swPopup.idx] || allColors[swPopup.idx]}
+          role={ROLES[swPopup.idx] || `CUSTOM ${swPopup.idx - colors.length + 1}`}
+          isSheet={typeof window !== 'undefined' && window.matchMedia('(max-width: 480px)').matches}
+          anchorRect={swAnchorRect}
+          siblings={allColors.map((c, i) => ({ idx: i, color: c, role: ROLES[i] || `CUSTOM ${i - colors.length + 1}` })).filter(s => s.idx !== swPopup.idx)}
+          isLocked={locked.has(swPopup.idx)}
+          adjustActive={globalAdjust.h !== 0 || globalAdjust.s !== 0 || globalAdjust.b !== 0 || globalAdjust.temp !== 0}
+          initialTab={swPopup.tab}
+          recentEdits={recentEdits}
+          restoreRef={swAnchorRef}
+          onClose={closeSwPopup}
           onCopy={onCopy}
-          onChange={(hex) => {
-            const idx = allColors.indexOf(infoColor)
-            if (idx >= 0) editPaletteColor(idx, hex)
-            setInfoColor(hex)
-          }}
+          onTab={(tab) => setSwPopup(p => (p ? { ...p, tab } : p))}
+          onReplace={(hex, source) => replaceSwatch(swPopup.idx, hex, source)}
+          onResetAdjust={resetGlobalAdjust}
         />
       )}
 
