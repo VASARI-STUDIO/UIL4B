@@ -239,6 +239,273 @@ export function generateTintScale(cfg) {
   })
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// HCT (Hue · Chroma · Tone) — minimal self-contained Material-3 port.
+// Ported from material-color-utilities (Apache-2.0) down to the CAM16 + HCT
+// solver we actually use, to avoid pulling the full package (bundle weight).
+// hctToHex(hue 0-360, chroma 0+, tone 0-100) -> '#rrggbb'.
+// ─────────────────────────────────────────────────────────────────────────
+
+// Linearised-sRGB → CIE XYZ matrix (D65 white point). Multiply a [R,G,B] of
+// `linearized()` components (0–100) by this to get [X,Y,Z]. Row 1 is the standard
+// Rec.709 luminance weights, so `row · SRGB_TO_XYZ[1]` gives Y directly.
+// NOTE: the CAM16 chromatic-adaptation step in hexToHct() does NOT use this matrix
+// for its cone response — it applies the separate hardcoded CAT16/M16 (Bradford-
+// family) coefficients inline (0.401288 / 0.650173 / -0.051461 …). The two are
+// distinct; this matrix is sRGB→XYZ only.
+const SRGB_TO_XYZ = [
+  [0.41233895, 0.35762064, 0.18051042],
+  [0.2126, 0.7152, 0.0722],
+  [0.01932141, 0.11916382, 0.95034478],
+]
+const Y_FROM_LINRGB = [0.2126, 0.7152, 0.0722]
+const LINRGB_FROM_SCALED_DISCOUNT = [
+  [1373.2198709594231, -1100.4251190754821, -7.278681089101213],
+  [-271.815969077903, 559.6580465940733, -32.46047482791194],
+  [1.9622899599665666, -57.173814538844006, 308.7233197812385],
+]
+
+function clampInt(min, max, v) { return v < min ? min : v > max ? max : v }
+function clampDouble(min, max, v) { return v < min ? min : v > max ? max : v }
+function signum(n) { return n < 0 ? -1 : n === 0 ? 0 : 1 }
+
+export function linearized(rgbComponent) {
+  const n = rgbComponent / 255
+  return (n <= 0.040449936 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4)) * 100
+}
+export function delinearized(rgbComponent) {
+  const n = rgbComponent / 100
+  const v = n <= 0.0031308 ? n * 12.92 : 1.055 * Math.pow(n, 1 / 2.4) - 0.055
+  return clampInt(0, 255, Math.round(v * 255))
+}
+function hexFromRgb(r, g, b) {
+  const h = (v) => clampInt(0, 255, v).toString(16).padStart(2, '0')
+  return '#' + h(r) + h(g) + h(b)
+}
+function yFromLstar(lstar) {
+  const fy = (lstar + 16) / 116
+  const fy3 = fy * fy * fy
+  return (fy3 > 216 / 24389 ? fy3 : (116 * fy - 16) / (24389 / 27)) * 100
+}
+// module-private: inverse of yFromLstar (CIE Y → L*), used by hexToHct for tone.
+function lstarFromY(y) {
+  const yNorm = y / 100
+  const yi = yNorm > 216 / 24389 ? Math.cbrt(yNorm) : ((24389 / 27) * yNorm + 16) / 116
+  return 116 * yi - 16
+}
+function matrixMultiply(row, matrix) {
+  return [
+    row[0] * matrix[0][0] + row[1] * matrix[0][1] + row[2] * matrix[0][2],
+    row[0] * matrix[1][0] + row[1] * matrix[1][1] + row[2] * matrix[1][2],
+    row[0] * matrix[2][0] + row[1] * matrix[2][1] + row[2] * matrix[2][2],
+  ]
+}
+function inverseChromaticAdaptation(adapted) {
+  const abs = Math.abs(adapted)
+  const base = Math.max(0, (27.13 * abs) / (400 - abs))
+  return signum(adapted) * Math.pow(base, 1 / 0.42)
+}
+
+// CAM16 viewing conditions (default sRGB / D65 / mid-grey background).
+const VC = (() => {
+  const wp = [95.047, 100, 108.883]
+  const rW = wp[0] * 0.401288 + wp[1] * 0.650173 + wp[2] * -0.051461
+  const gW = wp[0] * -0.250268 + wp[1] * 1.204414 + wp[2] * 0.045854
+  const bW = wp[0] * -0.002079 + wp[1] * 0.048952 + wp[2] * 0.953127
+  const f = 1, c = 0.69, nc = 1
+  const yb = yFromLstar(50), yw = 100
+  const adaptingLuminance = ((200 / Math.PI) * yFromLstar(50)) / 100
+  const n = yb / yw
+  const z = 1.48 + Math.sqrt(n)
+  const nbb = 0.725 / Math.pow(n, 0.2)
+  const ncb = nbb
+  const d = clampDouble(0, 1, f * (1 - (1 / 3.6) * Math.exp((-adaptingLuminance - 42) / 92)))
+  const rgbD = [d * (100 / rW) + 1 - d, d * (100 / gW) + 1 - d, d * (100 / bW) + 1 - d]
+  const k = 1 / (5 * adaptingLuminance + 1)
+  const k4 = k * k * k * k
+  const k4F = 1 - k4
+  const fl = k4 * adaptingLuminance + 0.1 * k4F * k4F * Math.cbrt(5 * adaptingLuminance)
+  const rAF = Math.pow((fl * rgbD[0] * rW) / 100, 0.42)
+  const gAF = Math.pow((fl * rgbD[1] * gW) / 100, 0.42)
+  const bAF = Math.pow((fl * rgbD[2] * bW) / 100, 0.42)
+  const rA = (400 * rAF) / (rAF + 27.13)
+  const gA = (400 * gAF) / (gAF + 27.13)
+  const bA = (400 * bAF) / (bAF + 27.13)
+  const aw = (2 * rA + gA + 0.05 * bA) * nbb
+  return { n, aw, nbb, ncb, c, nc, rgbD, fl, z }
+})()
+
+function sanitizeRadians(angle) { return (angle + Math.PI * 8) % (Math.PI * 2) }
+function trueDelinearized(c) {
+  const n = c / 100
+  const v = n <= 0.0031308 ? n * 12.92 : 1.055 * Math.pow(n, 1 / 2.4) - 0.055
+  return v * 255
+}
+
+// Newton solver: sRGB colour at (hue rad, chroma, tone-as-Y), or 0 if not found.
+function findResultByJ(hueRadians, chroma, y) {
+  let j = Math.sqrt(y) * 11
+  const tInnerCoeff = 1 / Math.pow(1.64 - Math.pow(0.29, VC.n), 0.73)
+  const eHue = 0.25 * (Math.cos(hueRadians + 2) + 3.8)
+  const p1 = eHue * (50000 / 13) * VC.nc * VC.ncb
+  const hSin = Math.sin(hueRadians)
+  const hCos = Math.cos(hueRadians)
+  for (let round = 0; round < 5; round++) {
+    const jNorm = j / 100
+    const alpha = chroma === 0 || j === 0 ? 0 : chroma / Math.sqrt(jNorm)
+    const t = Math.pow(alpha * tInnerCoeff, 1 / 0.9)
+    const ac = VC.aw * Math.pow(jNorm, 1 / VC.c / VC.z)
+    const p2 = ac / VC.nbb
+    const gamma = (23 * (p2 + 0.305) * t) / (23 * p1 + 11 * t * hCos + 108 * t * hSin)
+    const a = gamma * hCos
+    const b = gamma * hSin
+    const rA = (460 * p2 + 451 * a + 288 * b) / 1403
+    const gA = (460 * p2 - 891 * a - 261 * b) / 1403
+    const bA = (460 * p2 - 220 * a - 6300 * b) / 1403
+    const linrgb = matrixMultiply(
+      [inverseChromaticAdaptation(rA), inverseChromaticAdaptation(gA), inverseChromaticAdaptation(bA)],
+      LINRGB_FROM_SCALED_DISCOUNT,
+    )
+    if (linrgb[0] < 0 || linrgb[1] < 0 || linrgb[2] < 0) return 0
+    const fnj = Y_FROM_LINRGB[0] * linrgb[0] + Y_FROM_LINRGB[1] * linrgb[1] + Y_FROM_LINRGB[2] * linrgb[2]
+    if (fnj <= 0) return 0
+    if (round === 4 || Math.abs(fnj - y) < 0.002) {
+      if (linrgb[0] > 100.01 || linrgb[1] > 100.01 || linrgb[2] > 100.01) return 0
+      return hexFromRgb(
+        Math.round(trueDelinearized(linrgb[0])),
+        Math.round(trueDelinearized(linrgb[1])),
+        Math.round(trueDelinearized(linrgb[2])),
+      )
+    }
+    j = j - ((fnj - y) * j) / (2 * fnj)
+  }
+  return 0
+}
+function grayHex(tone) {
+  const c = delinearized(yFromLstar(clampDouble(0, 100, tone)))
+  return hexFromRgb(c, c, c)
+}
+
+// Solve for the sRGB colour at (hue°, chroma, tone); reduce chroma until the
+// colour is in-gamut, guaranteeing a valid hex (M3 behaviour).
+function solveToHex(hueDegrees, chroma, tone) {
+  if (chroma < 0.0001 || tone < 0.0001 || tone > 99.9999) return grayHex(tone)
+  const hueRad = sanitizeRadians((hueDegrees % 360) * (Math.PI / 180))
+  const y = yFromLstar(tone)
+  let answer = findResultByJ(hueRad, chroma, y)
+  if (answer) return answer
+  let low = 0, high = chroma
+  for (let i = 0; i < 8 && high - low > 0.4; i++) {
+    const mid = (low + high) / 2
+    const candidate = findResultByJ(hueRad, mid, y)
+    if (candidate) { answer = candidate; low = mid } else { high = mid }
+  }
+  return answer || grayHex(tone)
+}
+
+// Public: hue 0-360, chroma 0+, tone 0-100 -> '#rrggbb'. Throws on non-finite
+// input; callers wrap in try/catch per Murphy's-law (HSL fallback).
+export function hctToHex(hue, chroma, tone) {
+  if (![hue, chroma, tone].every(Number.isFinite)) throw new Error('hctToHex: non-finite input')
+  return solveToHex(hue, Math.max(0, chroma), clampDouble(0, 100, tone))
+}
+
+// HCT of a hex: tone from L*, hue + chroma from CAM16. Used by tonalRamp so the
+// ramp tracks the swatch's own hue/chroma.
+export function hexToHct(hex) {
+  const [r, g, b] = hexToRgb(hex)
+  const lr = linearized(r), lg = linearized(g), lb = linearized(b)
+  const yy = SRGB_TO_XYZ[1][0] * lr + SRGB_TO_XYZ[1][1] * lg + SRGB_TO_XYZ[1][2] * lb
+  // Cone responses (rC/gC/bC) via the CAT16/M16 chromatic-adaptation transform —
+  // these literal coefficients are the separate Bradford-family matrix, NOT
+  // SRGB_TO_XYZ; they map XYZ → the CAM16 RGB cone space.
+  const rC = 0.401288 * (SRGB_TO_XYZ[0][0] * lr + SRGB_TO_XYZ[0][1] * lg + SRGB_TO_XYZ[0][2] * lb)
+    + 0.650173 * yy
+    - 0.051461 * (SRGB_TO_XYZ[2][0] * lr + SRGB_TO_XYZ[2][1] * lg + SRGB_TO_XYZ[2][2] * lb)
+  const x = SRGB_TO_XYZ[0][0] * lr + SRGB_TO_XYZ[0][1] * lg + SRGB_TO_XYZ[0][2] * lb
+  const z = SRGB_TO_XYZ[2][0] * lr + SRGB_TO_XYZ[2][1] * lg + SRGB_TO_XYZ[2][2] * lb
+  const gC = -0.250268 * x + 1.204414 * yy + 0.045854 * z
+  const bC = -0.002079 * x + 0.048952 * yy + 0.953127 * z
+  const rD = VC.rgbD[0] * rC, gD = VC.rgbD[1] * gC, bD = VC.rgbD[2] * bC
+  const rAF = Math.pow((VC.fl * Math.abs(rD)) / 100, 0.42)
+  const gAF = Math.pow((VC.fl * Math.abs(gD)) / 100, 0.42)
+  const bAF = Math.pow((VC.fl * Math.abs(bD)) / 100, 0.42)
+  const rA = (signum(rD) * 400 * rAF) / (rAF + 27.13)
+  const gA = (signum(gD) * 400 * gAF) / (gAF + 27.13)
+  const bA = (signum(bD) * 400 * bAF) / (bAF + 27.13)
+  const a = (11 * rA - 12 * gA + bA) / 11
+  const bb = (rA + gA - 2 * bA) / 9
+  const u = (20 * rA + 20 * gA + 21 * bA) / 20
+  const p2 = (40 * rA + 20 * gA + bA) / 20
+  let hue = (Math.atan2(bb, a) * 180) / Math.PI
+  if (hue < 0) hue += 360; else if (hue >= 360) hue -= 360
+  const ac = p2 * VC.nbb
+  const jScale = 100 * Math.pow(ac / VC.aw, VC.c * VC.z)
+  const huePrime = hue < 20.14 ? hue + 360 : hue
+  const eHue = 0.25 * (Math.cos((huePrime * Math.PI) / 180 + 2) + 3.8)
+  const p1 = (50000 / 13) * eHue * VC.nc * VC.ncb
+  const t = (p1 * Math.sqrt(a * a + bb * bb)) / (u + 0.305)
+  const alpha = Math.pow(t, 0.9) * Math.pow(1.64 - Math.pow(0.29, VC.n), 0.73)
+  const chroma = alpha * Math.sqrt(jScale / 100)
+  return [hue, chroma, lstarFromY(yy)]
+}
+
+// 5-step tonal ramp of a hex at the given tones, preserving its hue/chroma.
+export function tonalRamp(hex, tones = [30, 45, 60, 75, 90]) {
+  let h, c
+  try { const hct = hexToHct(hex); h = hct[0]; c = hct[1] }
+  catch { const [hh, ss] = hexToHsl(hex); h = hh; c = ss * 0.6 }
+  return tones.map(t => {
+    try { return hctToHex(h, c, t) }
+    catch { return hslToHex(h, Math.min(100, c), t) }
+  })
+}
+
+// Default "Auto" tonal palette: 5 swatches mapped to the five ROLES off a
+// seeded hue, using M3 tone roles. Accessible-by-construction (large tone
+// distances). Returns 5 hexes [PRIMARY, SECONDARY, ACCENT, SUBTLE, DEEP].
+export function autoTonalPalette(seedHue = Math.random() * 360) {
+  const hue = ((seedHue % 360) + 360) % 360
+  const sibling = (hue + (20 + Math.random() * 25)) % 360
+  const baseChroma = 36 + Math.random() * 24
+  return [
+    hctToHex(hue, baseChroma, 40),               // PRIMARY  -> tone 40
+    hctToHex(sibling, baseChroma * 0.92, 60),    // SECONDARY-> tone 60 (sibling hue)
+    hctToHex(hue, baseChroma + 14, 70),          // ACCENT   -> tone 70, higher chroma
+    hctToHex(hue, 8, 90),                        // SUBTLE   -> tone 90, low chroma
+    hctToHex(hue, baseChroma * 0.7, 20),         // DEEP     -> tone 20
+  ]
+}
+
+// Non-destructive global adjust lens. Hue rotate / chroma scale / tone shift /
+// temperature bias over a base palette -> new array. Identity (returns input)
+// when every field is 0, so exports stay untouched until a slider moves.
+export function applyAdjust(baseColors, adj) {
+  if (!adj || (adj.h === 0 && adj.s === 0 && adj.b === 0 && adj.temp === 0)) return baseColors
+  return baseColors.map(hex => {
+    try {
+      let [h, c, t] = hexToHct(hex)
+      h = (((h + adj.h) % 360) + 360) % 360
+      if (adj.temp !== 0) {
+        const target = adj.temp > 0 ? 30 : 210
+        const diff = ((target - h + 540) % 360) - 180
+        h = (((h + diff * (Math.abs(adj.temp) / 100) * 0.5) % 360) + 360) % 360
+      }
+      c = Math.max(0, c * (1 + adj.s / 100))
+      // adj.b is the "Tone" slider (±100). Halved → ±50 tone steps so full travel
+      // shifts half the 0–100 tone range, not the whole thing (prevents total
+      // black/white washes at the extremes).
+      t = Math.max(0, Math.min(100, t + adj.b / 2))
+      return hctToHex(h, c, t)
+    } catch {
+      let [h, s, l] = hexToHsl(hex)
+      h = (((h + adj.h) % 360) + 360) % 360
+      s = Math.max(0, Math.min(100, s * (1 + adj.s / 100)))
+      l = Math.max(0, Math.min(100, l + adj.b / 2))
+      return hslToHex(h, s, l)
+    }
+  })
+}
 export function fixForeground(fg, bg, targetRatio) {
   const fgHsl = hexToHsl(fg)
   const [h, s] = fgHsl
@@ -275,4 +542,53 @@ export function fixBackground(fg, bg, targetRatio) {
     else { if (isFgLight) hi = mid; else lo = mid }
   }
   return best
+}
+
+// Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices,
+// applied in linear sRGB. Source: the canonical published severity table
+// (DaltonLens / colorspace R `simulate_cvd`). Achromatopsia is handled
+// separately via Rec.709 luma. Rows are row-major [r;g;b].
+const MACHADO_2009 = {
+  protanopia: [
+    0.152286, 1.052583, -0.204868,
+    0.114503, 0.786281, 0.099216,
+    -0.003882, -0.048116, 1.051998,
+  ],
+  deuteranopia: [
+    0.367322, 0.860646, -0.227968,
+    0.280085, 0.672501, 0.047413,
+    -0.011820, 0.042940, 0.968881,
+  ],
+  tritanopia: [
+    1.255528, -0.076749, -0.178779,
+    -0.078411, 0.930809, 0.147602,
+    0.004733, 0.691367, 0.303900,
+  ],
+}
+
+// simCvd(hex, type) — simulate colour-vision deficiency in linear sRGB.
+// type: 'normal' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia'.
+// Never throws; returns the input hex unchanged on bad/unknown input.
+export function simCvd(hex, type) {
+  try {
+    if (!type || type === 'normal') return hex
+    const [r, g, b] = hexToRgb(hex)
+    // hexToRgb yields NaN (not a throw) on malformed input, so the try/catch won't
+    // fire — guard explicitly to honour the "returns input hex unchanged" contract.
+    if (![r, g, b].every(Number.isFinite)) return hex
+    const lr = linearized(r) / 100, lg = linearized(g) / 100, lb = linearized(b) / 100
+    let nr, ng, nb
+    if (type === 'achromatopsia') {
+      const y = 0.2126 * lr + 0.7152 * lg + 0.0722 * lb
+      nr = ng = nb = y
+    } else {
+      const m = MACHADO_2009[type]
+      if (!m) return hex
+      nr = m[0] * lr + m[1] * lg + m[2] * lb
+      ng = m[3] * lr + m[4] * lg + m[5] * lb
+      nb = m[6] * lr + m[7] * lg + m[8] * lb
+    }
+    const enc = (v) => delinearized(Math.max(0, Math.min(1, v)) * 100).toString(16).padStart(2, '0')
+    return '#' + enc(nr) + enc(ng) + enc(nb)
+  } catch { return hex }
 }
