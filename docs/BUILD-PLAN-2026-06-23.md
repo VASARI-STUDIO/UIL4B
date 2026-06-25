@@ -140,14 +140,17 @@ zero JS errors. **Deferred tech-debt (logged, non-blocking):** M2 — extract a 
 logic); L1 — `#000` literal in `.cs-pb-kbd` should use a design token; L2 — make the popup's
 `matchMedia` breakpoint check reactive (re-evaluate on resize, not just on mount).
 
-**✅ Slice 3 SHIPPED** — committed `9754595` + pushed to `claude/youthful-ride-dbre15`.
+**✅ Slice 3 SHIPPED** — feature `9754595` + review-fix batch `524ccdb`, pushed to
+`claude/youthful-ride-dbre15`.
 The **"Colour System" popup** (CS#3.14): replaces the `+ Add Colour` dropdown and the
 standalone "Pick Colour" overlay with one popup, three tabs — **Generate** (instant free HCT
 `tonalRamp` Auto + harmony radiogroup; free: Auto/Custom/Monochromatic, Pro-locked: Complementary/
 Analogous/Triadic/Split/Tetradic), **Image** (free signature: canvas stage that keeps the image on
 screen, 5 auto-seeded draggable eyedropper points via kMeans→nearest-pixel, magnifier loupe, live
 contrast badge, zoom 1×/2×, full keyboard parity), **Brands** (2-col grid from `BRANDS`). Gate
-cleared (PM-run review/QA — subagents were session-limited): **anti-tamper PASS** (Pro harmony
+cleared by the full 3-subagent review (code-reviewer + security-reviewer + qa); every finding
+fixed in `524ccdb` (PM verified the gate + read the diff, no HVZ files touched): **anti-tamper
+PASS** (Pro harmony
 maths only under `isPro`; `sel` can never hold a Pro id for a non-Pro user; `ramp` memo double-
 guards `&& isPro`; locked chips show a static `HarmonyDiagram` + lock glyph, never a hex);
 **image surface bounded** (MIME check, 12 MB reject, 1600px decode cap, guarded `getImageData`/
@@ -156,10 +159,11 @@ slider/application roles, focus-trap, roving tabindex). All add paths route thro
 6-colour free cap (`checkCanAdd`/`freeSlotsLeft`→`onProGate`) with case-insensitive dedupe + undo.
 Double-fire reopen fixed (outside-click handler early-returns on the trigger). Build green, lint at
 baseline (0 errors / 31 warnings); ColorStudio.jsx contributes 0/0. No HVZ (auth/Stripe) files
-touched. **Deferred tech-debt (logged, non-blocking):** L3 — object-URL not revoked on the image
-error/`catch` paths in `extractColorPointsFromImage` + `CsysImage.seedFromFile` (pre-existing
-pattern, browser reclaims on nav); L4 — `addSystemRamp` gives no toast when a ramp is entirely
-duplicates (ColorStudio.jsx ~L2018) while `addSampledColors` does — minor UX inconsistency; M3 —
+touched. **Review fixes applied in `524ccdb`:** L3 (object-URL revoke on the image error/`catch`
+paths) ✅ **resolved**; L4 (`addSystemRamp` now toasts on an all-duplicate ramp, matching
+`addSampledColors`) ✅ **resolved**; plus Home/End tab keys (WCAG APG), loupe single-source sizing,
+live readout-tracking during drag, pointer-capture guard, stale-anchor rect captured at click-time,
+and `addBrandColors` cap-gate + undo toast. **Deferred tech-debt (logged, non-blocking):** M3 —
 the Slice-2 swatch popup `onDown` (ColorStudio.jsx ~L468) shares the same double-fire potential the
 Slice-3 trigger just fixed; harmless today but worth the same guard when that file is next touched.
 **Deferred spec-feature gaps (from the 3-subagent review, → a later Colour-Studio slice, NOT
