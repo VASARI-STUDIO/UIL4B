@@ -180,8 +180,11 @@ Full sub-sequence (Slice 1, 2 & 3 items marked ✅; the rest = later slices):
   - ✅ (Slice 1) **"Auto" default = HCT / Material-3 tonal, 5 colours, randomised on open** (CS#3.6,
     3.8); maths harmonies remain but **Pro-locked** (CS#3.7); **>6-colour randomize → Pro** (CS#3.17).
   - ✅ (Slice 1) **Space / button to randomize**, **insert exact midpoint between two swatches ×1–3**
-    (CS#3.5). ◐ **lock + drag-reorder** swatches (CS#3.10 — toolbar markup in place, full DnD = next
-    slice), **smooth add-colour transition** (CS#3.4).
+    (CS#3.5). ✅ (Slices 1–2) **lock + drag-reorder** swatches (CS#3.10 — `toggleLock`/`aria-pressed`,
+    native-DnD mouse + touch handlers + keyboard ArrowL/R `moveCard`, locked-index remap on move),
+    **smooth add-colour transition** (CS#3.4 — staggered `cs-deal` deal-in + `flex-basis`/transform
+    transitions). _Confirmed shipped via the Slice 4 kickoff audit; the earlier "full DnD = next slice"
+    note was stale._
   - ✅ (Slice 1) **Tints in the generator** (CS#3.3); global **hue/sat/tone/temperature** adjust
     (CS#3.15). ✅ (Slice 2) **colour-blindness variants view** (CS#3.9); **manual per-swatch set** (CS#3.16).
   - ✅ (Slice 2) **Swatch popup redesign** + **right-click/long-press menu**: contrast check,
@@ -189,9 +192,11 @@ Full sub-sequence (Slice 1, 2 & 3 items marked ✅; the rest = later slices):
   - ✅ (Slice 3) **"Colour System" popup** (renamed from "add colour") — keep From-brand-palette; house
     harmony picker + Auto default; **image extract keeps image on screen with movable
     eyedropper points**; **remove plain "pick colour" tab.** (CS#3.14)
-  - **High-quality UI previews** (real UI, not tiny mockups); **1–3 blurred Pro previews with
-    upgrade overlay + final upgrade CTA**; ⚠ **server-gated / not-rendered** so inspect-element
-    can't unlock (CS#3.2).
+  - ◐ **(→ Slice 4, in progress)** **High-quality UI previews** (real UI, not tiny mockups); **1–3
+    blurred Pro previews with upgrade overlay + final upgrade CTA**; ⚠ **server-gated / not-rendered**
+    so inspect-element can't unlock (CS#3.2). _Slice 4 ships the preview component + client-side
+    anti-tamper gate (Pro preview content never rendered for non-Pro, mirroring the Slice 3 harmony
+    pattern); the full server-rendered entitlement gate folds into the Phase 3 export/paywall slice._
   - **Quick-export** (reusable across tools). ⚠ Per decision #3, **export is Pro-only** — no
     free watermarked export (CS#3.11 reconciled).
 - **Colour data** — names indexed from coolors.co/colors + color-hex.com (CS#4); pros/cons
