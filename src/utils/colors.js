@@ -592,3 +592,147 @@ export function simCvd(hex, type) {
     return '#' + enc(nr) + enc(ng) + enc(nb)
   } catch { return hex }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// derivePreviewRoles — the Colour Studio "See it shipped" Previews engine.
+// (Slice 4 §5.) Maps the live palette to ONE deterministic, total semantic-role
+// object via luminance-sort + chroma-rank, with a WCAG-AA safety net so every
+// scene stays legible for ANY palette (length 0/1/many, all-light/dark/grey).
+// Pure: uses only existing exports above (luminance, contrastRatio, mixHex,
+// textColorForBg, fixForeground, hexToHsl, hexToHct). Never throws.
+//
+// Returns the eight roles for the scene's declared mode:
+//   { bg, surface, primary, onPrimary, accent, text, muted, border, lowChroma }
+// `mode`: 'dark' (hero) | 'light' (app/mobile/article).
+// `lowChroma` flags the all-grey fallback so the legend can hint the user.
+// ─────────────────────────────────────────────────────────────────────────
+
+const PV_BRAND = '#3B82F6'        // --brand fallback focal colour (empty/all-grey)
+const PV_BRAND_SOFT = '#60A5FA'   // accent fallback partner
+const PV_NEAR_BLACK = '#0A0B0D'
+const PV_NEAR_WHITE = '#F2F3F5'
+const PV_CHROMA_MIN = 8           // HCT chroma below this reads as "grey"
+
+function pvLum(hex) {
+  const [r, g, b] = hexToRgb(hex)
+  return luminance(r, g, b)
+}
+
+// Perceptual chroma rank — HCT chroma when available, HSL saturation as a
+// resilient fallback. Higher = more vivid. Never throws.
+function pvChroma(hex) {
+  try {
+    const c = hexToHct(hex)[1]
+    if (Number.isFinite(c)) return c
+  } catch { /* fall through to HSL */ }
+  const [, s] = hexToHsl(hex)
+  return Number.isFinite(s) ? s * 0.6 : 0   // ~scale HSL sat into HCT-ish range
+}
+
+export function derivePreviewRoles(allColors, opts = {}) {
+  const mode = opts.mode === 'dark' ? 'dark' : 'light'
+  // Sanitise input: keep only well-formed #rrggbb strings (Murphy: ignore junk).
+  const palette = (Array.isArray(allColors) ? allColors : [])
+    .filter(c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c))
+
+  // ── Empty palette → brand fallback set on app-neutral material (§10). ──
+  if (palette.length === 0) {
+    const bg = mode === 'dark' ? PV_NEAR_BLACK : PV_NEAR_WHITE
+    const surface = mixHex(bg, mode === 'dark' ? '#FFFFFF' : '#000000', 0.06)
+    const text = mode === 'dark' ? PV_NEAR_WHITE : PV_NEAR_BLACK
+    // Brand blue on the light surface is CR 2.89 (<3:1), so the CTA/KPI numbers
+    // need the same border safety net the full path uses (§5.2) — else the
+    // large-text floor silently fails on the empty-palette light scenes.
+    const primaryLowOnSurface = contrastRatio(PV_BRAND, surface) < 3
+    const primaryBorder = primaryLowOnSurface ? mixHex(PV_BRAND, text, 0.35) : 'transparent'
+    return {
+      bg,
+      surface,
+      primary: PV_BRAND,
+      onPrimary: textColorOnSolid(PV_BRAND),
+      accent: PV_BRAND_SOFT,
+      text,
+      muted: mixHex(text, bg, 0.42),
+      border: mixHex(text, bg, 0.86),
+      primaryBorder,
+      lowChroma: true,
+    }
+  }
+
+  // ── 1. Luminance sort (ascending: darkest → lightest). ──
+  const byLum = [...palette].sort((a, b) => pvLum(a) - pvLum(b))
+
+  // ── 2. bg: darkest for dark mode, lightest for light mode. ──
+  const bg = mode === 'dark' ? byLum[0] : byLum[byLum.length - 1]
+  const opposite = mode === 'dark' ? '#FFFFFF' : '#000000'
+
+  // ── 3. surface: one tonal step off bg toward the opposite end (Material:
+  // surfaces are tonal, never a random palette colour). Dark mode lifts toward
+  // white; light mode dips a hair toward black so the panel reads as *raised*. ──
+  const surface = mixHex(bg, opposite, mode === 'dark' ? 0.10 : 0.05)
+
+  // ── 4. primary: highest chroma that clears ≥3:1 on surface (visible CTA). ──
+  const byChroma = [...palette].sort((a, b) => pvChroma(b) - pvChroma(a))
+  const maxChroma = byChroma.length ? pvChroma(byChroma[0]) : 0
+  const lowChroma = maxChroma < PV_CHROMA_MIN
+
+  let primary = null
+  if (!lowChroma) {
+    primary = byChroma.find(c => contrastRatio(c, surface) >= 3) || byChroma[0]
+  }
+  // bg-clash guard: a single same-hue chromatic colour can make primary === bg
+  // (e.g. ['#00FF41'] → button fill == canvas, invisible even with a border).
+  // Reject it so the brand-blue fallback below gives a visible focal colour.
+  if (primary && contrastRatio(primary, bg) < 1.5) primary = null
+  if (!primary) primary = PV_BRAND   // all-grey / clash / no usable chroma → brand focal
+
+  // ── 5. accent: next-highest chroma, hue-distinct from primary. ──
+  let accent = null
+  if (!lowChroma) {
+    const pHue = safeHue(primary)
+    accent = byChroma.find(c => c !== primary && hueDist(safeHue(c), pHue) > 12 && pvChroma(c) >= PV_CHROMA_MIN)
+      || byChroma.find(c => c !== primary && pvChroma(c) >= PV_CHROMA_MIN)
+  }
+  if (!accent) accent = lowChroma ? PV_BRAND_SOFT : mixHex(primary, PV_BRAND_SOFT, 0.5)
+
+  // ── 6. text: contrast-derived (NEVER a swatch), gently warmed toward primary. ──
+  let text = textColorOnSolid(bg)
+  const warmed = mixHex(text, primary, 0.08)
+  if (contrastRatio(warmed, bg) >= 7) text = warmed
+
+  // ── 7. onPrimary: legible label on the CTA. ──
+  let onPrimary = textColorOnSolid(primary)
+
+  // ── 8. muted + border: derived from text↔bg, contrast-clamped. ──
+  let muted = mixHex(text, bg, 0.45)
+  const border = mixHex(text, bg, 0.86)
+
+  // ── §5.2 AA safety net — validate + self-heal before any scene renders. ──
+  if (contrastRatio(text, bg) < 7) {
+    // body copy must clear AA-large; pick the winning pole.
+    text = contrastRatio(PV_NEAR_WHITE, bg) >= contrastRatio(PV_NEAR_BLACK, bg) ? PV_NEAR_WHITE : PV_NEAR_BLACK
+    muted = mixHex(text, bg, 0.45)
+  }
+  if (contrastRatio(muted, bg) < 4.5) muted = fixForeground(muted, bg, 4.5)
+  if (contrastRatio(onPrimary, primary) < 4.5) onPrimary = fixForeground(onPrimary, primary, 4.5)
+  // CTA invisible on its card → caller draws a 1px border; we expose primaryBorder.
+  const primaryLowOnSurface = contrastRatio(primary, surface) < 3
+  const primaryBorder = primaryLowOnSurface ? mixHex(primary, text, 0.35) : 'transparent'
+
+  return { bg, surface, primary, onPrimary, accent, text, muted, border, primaryBorder, lowChroma }
+}
+
+// textColorForBg returns rgba() strings; for solid hex roles we want a hex pole
+// so downstream mixHex/contrast maths stay in hex space. Pure, never throws.
+function textColorOnSolid(hex) {
+  let lum = 0
+  try { lum = pvLum(hex) } catch { lum = 0 }
+  return lum > 0.179 ? PV_NEAR_BLACK : PV_NEAR_WHITE
+}
+function safeHue(hex) {
+  try { const h = hexToHsl(hex)[0]; return Number.isFinite(h) ? h : 0 } catch { return 0 }
+}
+function hueDist(a, b) {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
+}
