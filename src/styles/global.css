@@ -3467,6 +3467,209 @@ img,svg,video{max-width:100%;height:auto}
 [data-reduced-motion] .cs-csys-loupe{transition:none}
 [data-reduced-motion] .cs-csys-drop.is-error{animation:none}
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   COLOUR STUDIO — "SEE IT SHIPPED" PREVIEWS (cs-pv-, Slice 4)
+   Four full vector UI scenes that recolour from the live palette via per-scene
+   --pv-* custom properties (set imperatively on .cs-pv-canvas; never inline).
+   Two free (hero/app) + two Pro-locked (mobile/article). The locked scenes show
+   ONLY a palette-free wireframe — no --pv-* var is ever set on them (§9).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cs-pv{margin-bottom:var(--s-7);scroll-margin-top:100px}
+.cs-pv-header{cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.cs-pv-header.is-collapsed{margin-bottom:0}
+.cs-pv-header h2{font-size:18px;font-weight:700}
+.cs-pv-sublabel{font-size:10px;line-height:1.4;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--t2)}
+.cs-pv-body{max-width:1280px;margin-inline:auto}
+
+/* ── Role legend (teaches the palette→role mapping) ── */
+.cs-pv-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-bottom:var(--s-5);
+  padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1)}
+.cs-pv-legend-item{display:inline-flex;align-items:center;gap:7px}
+.cs-pv-legend-dot{width:14px;height:14px;border-radius:var(--radius-pill);border:1px solid var(--bh);flex-shrink:0;
+  transition:transform var(--t-fast)}
+.cs-pv-legend-item:hover .cs-pv-legend-dot{transform:scale(1.15)}
+.cs-pv-legend-dot[data-role="bg"]{background:var(--pv-bg)}
+.cs-pv-legend-dot[data-role="surface"]{background:var(--pv-surface)}
+.cs-pv-legend-dot[data-role="primary"]{background:var(--pv-primary)}
+.cs-pv-legend-dot[data-role="accent"]{background:var(--pv-accent)}
+.cs-pv-legend-dot[data-role="text"]{background:var(--pv-text)}
+.cs-pv-legend-name{font-size:10px;line-height:1;letter-spacing:.04em;text-transform:uppercase;font-weight:700;color:var(--t1)}
+.cs-pv-legend-hex{font-family:var(--mono);font-size:10px;line-height:1;font-weight:500;color:var(--t2)}
+.cs-pv-legend-hint{font-size:10px;color:var(--t2);font-style:italic;margin-left:auto}
+
+/* ── Grid + scene chrome ── */
+.cs-pv-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s-4)}
+.cs-pv-scene{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l);
+  overflow:hidden;box-shadow:var(--warm-shadow),var(--ring);
+  animation:cs-deal .32s cubic-bezier(.16,1,.3,1) backwards;
+  transition:transform var(--t),box-shadow var(--t)}
+.cs-pv-scene:nth-child(2){animation-delay:.05s}
+.cs-pv-scene:nth-child(3){animation-delay:.1s}
+.cs-pv-scene:nth-child(4){animation-delay:.15s}
+.cs-pv-scene:hover{transform:translateY(-2px);box-shadow:var(--warm-shadow-lg),var(--ring)}
+.cs-pv-scene-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:9px 14px;border-bottom:1px solid var(--border)}
+.cs-pv-scene-tag{font-size:10px;line-height:1;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--t2)}
+.cs-pv-scene-mode{font-size:9px;line-height:1;letter-spacing:.06em;text-transform:uppercase;font-weight:600;
+  color:var(--t3);padding:3px 7px;border:1px solid var(--border);border-radius:var(--radius-pill)}
+.cs-pv-canvas{aspect-ratio:16/10;background:var(--pv-bg);color:var(--pv-text);
+  padding:var(--s-4);position:relative;overflow:hidden;container-type:inline-size;
+  container-name:pv-canvas;font-family:var(--font)}
+
+/* ── Recoloured atoms — read ONLY from --pv-* (no inline style) ── */
+.cs-pv-btn{display:inline-flex;align-items:center;justify-content:center;
+  background:var(--pv-primary);color:var(--pv-on-primary);border:1px solid var(--pv-primary-border, transparent);
+  border-radius:var(--radius-pill);font-size:11px;line-height:1;font-weight:650;padding:7px 13px;white-space:nowrap}
+.cs-pv-btn.is-ghost{background:transparent;color:var(--pv-text);border:1px solid var(--pv-border)}
+.cs-pv-tag{display:inline-flex;align-items:center;font-size:10px;line-height:1;font-weight:600;padding:4px 10px;
+  border-radius:var(--radius-pill);color:var(--pv-accent);background:color-mix(in srgb,var(--pv-accent) 12%,transparent)}
+.cs-pv-headline{color:var(--pv-text);font-weight:800;letter-spacing:-.02em;font-size:clamp(22px,4cqi,30px);line-height:1.1;margin:0}
+.cs-pv-sub{color:var(--pv-muted);max-width:60ch;font-size:12px;line-height:1.55;font-weight:450;margin:0}
+.cs-pv-glow{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(60% 50% at 50% 28%,color-mix(in srgb,var(--pv-primary) 18%,transparent),transparent 70%)}
+
+/* Scene A — Marketing Hero (dark) */
+.cs-pv-nav{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:var(--s-5)}
+.cs-pv-wordmark{display:inline-flex;align-items:center;gap:7px;color:var(--pv-text);font-weight:700;font-size:13px}
+.cs-pv-dot{width:14px;height:14px;border-radius:var(--radius-s);background:var(--pv-primary);display:inline-block}
+.cs-pv-nav-links{display:inline-flex;align-items:center;gap:14px}
+.cs-pv-link{color:var(--pv-muted);font-size:11px;font-weight:500}
+.cs-pv-hero{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
+.cs-pv-cta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.cs-pv-logos{display:flex;gap:16px;margin-top:var(--s-3);opacity:.5}
+.cs-pv-logos span{width:48px;height:9px;border-radius:var(--radius-pill);background:var(--pv-muted)}
+
+/* Scene B — App Dashboard (light) */
+.cs-pv-app{display:flex;gap:0;margin:calc(var(--s-4) * -1);height:calc(100% + var(--s-4) * 2)}
+.cs-pv-side{flex-shrink:0;width:54px;background:var(--pv-surface);border-right:1px solid var(--pv-border);
+  display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0}
+.cs-pv-side-mark{width:22px;height:22px;border-radius:var(--radius-s);background:var(--pv-primary)}
+.cs-pv-side-item{width:30px;height:30px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
+.cs-pv-side-item i{width:15px;height:15px;border-radius:5px;background:var(--pv-muted);opacity:.55}
+.cs-pv-side-item.is-active{background:color-mix(in srgb,var(--pv-primary) 14%,transparent)}
+.cs-pv-side-item.is-active i{background:var(--pv-primary);opacity:1}
+.cs-pv-app-main{flex:1;min-width:0;padding:14px;display:flex;flex-direction:column;gap:12px}
+.cs-pv-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cs-pv-topbar-title{color:var(--pv-text);font-weight:700;font-size:15px}
+.cs-pv-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cs-pv-kpi{background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:var(--radius-s);
+  padding:10px;display:flex;flex-direction:column;gap:3px}
+.cs-pv-kpi-label{color:var(--pv-muted);font-size:9px;line-height:1.3;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.cs-pv-kpi-num{color:var(--pv-primary);font-size:22px;line-height:1;font-weight:800}
+.cs-pv-kpi-chip{align-self:flex-start;color:var(--pv-accent);font-size:9px;font-weight:700;
+  padding:2px 6px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--pv-accent) 14%,transparent)}
+.cs-pv-chart{flex:1;min-height:0;display:flex;align-items:flex-end;gap:6px;
+  background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:var(--radius-s);padding:12px}
+.cs-pv-bar{flex:1;border-radius:3px 3px 0 0;background:var(--pv-primary);opacity:.45}
+.cs-pv-bar:nth-child(1){height:42%}.cs-pv-bar:nth-child(2){height:68%}.cs-pv-bar:nth-child(3){height:55%}
+.cs-pv-bar:nth-child(4){height:80%}.cs-pv-bar:nth-child(5){height:62%}.cs-pv-bar:nth-child(6){height:95%}
+.cs-pv-bar:nth-child(7){height:58%}.cs-pv-bar:nth-child(8){height:74%}
+.cs-pv-bar.is-peak{background:var(--pv-accent);opacity:1}
+
+/* Scene C — Mobile Feed (light) */
+.cs-pv-mobile{display:flex;align-items:center;justify-content:center;height:100%}
+.cs-pv-phone{width:46cqi;max-width:170px;aspect-ratio:9/16;background:var(--pv-bg);border:3px solid var(--pv-border);
+  border-radius:22px;box-shadow:0 8px 24px rgba(0,0,0,.18);overflow:hidden}
+.cs-pv-screen{position:relative;height:100%;background:var(--pv-surface);padding:10px;display:flex;flex-direction:column;gap:8px}
+.cs-pv-status{display:flex;align-items:center;justify-content:space-between}
+.cs-pv-status>span:first-child{width:26px;height:5px;border-radius:var(--radius-pill);background:var(--pv-muted);opacity:.5}
+.cs-pv-status-dots{display:inline-flex;gap:3px}
+.cs-pv-status-dots i{width:4px;height:4px;border-radius:50%;background:var(--pv-muted);opacity:.5}
+.cs-pv-feed-head{display:flex;align-items:center;gap:8px}
+.cs-pv-avatar{width:26px;height:26px;border-radius:50%;background:var(--pv-accent)}
+.cs-pv-feed-title{color:var(--pv-text);font-weight:700;font-size:13px}
+.cs-pv-feed-card{background:var(--pv-bg);border:1px solid var(--pv-border);border-radius:var(--radius-s);
+  padding:8px;display:flex;flex-direction:column;gap:5px}
+.cs-pv-feed-img{height:34px;border-radius:5px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--pv-primary) 55%,transparent),color-mix(in srgb,var(--pv-accent) 45%,transparent))}
+.cs-pv-feed-line{height:5px;border-radius:var(--radius-pill);background:var(--pv-text);opacity:.78}
+.cs-pv-feed-line.is-short{width:55%;background:var(--pv-muted);opacity:.6}
+.cs-pv-feed-actions{display:inline-flex;gap:8px;margin-top:1px}
+.cs-pv-feed-actions i{width:11px;height:11px;border-radius:3px;background:var(--pv-muted);opacity:.5}
+.cs-pv-feed-actions i.is-active{background:var(--pv-primary);opacity:1}
+.cs-pv-fab{position:absolute;right:12px;bottom:42px;width:30px;height:30px;border-radius:50%;
+  background:var(--pv-primary);color:var(--pv-on-primary);display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:600;line-height:1;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.cs-pv-tabbar{margin-top:auto;display:flex;align-items:center;justify-content:space-around;
+  padding:8px 0 2px;border-top:1px solid var(--pv-border)}
+.cs-pv-tabbar i{width:14px;height:14px;border-radius:4px;background:var(--pv-muted);opacity:.5}
+.cs-pv-tabbar i.is-active{background:var(--pv-primary);opacity:1}
+
+/* Scene D — Editorial Article (light) */
+.cs-pv-article{display:flex;flex-direction:column;gap:var(--s-2);max-width:66ch;margin-inline:auto;height:100%;overflow:hidden}
+.cs-pv-kicker{color:var(--pv-accent);font-size:10px;line-height:1;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.cs-pv-art-headline{color:var(--pv-text);font-weight:750;letter-spacing:-.015em;font-size:clamp(18px,5cqi,24px);line-height:1.15;margin:0}
+.cs-pv-byline{color:var(--pv-muted);font-size:11px;font-weight:500}
+.cs-pv-rule{height:2px;border-radius:var(--radius-pill);background:var(--pv-primary);width:42px}
+.cs-pv-cols{columns:2;column-gap:var(--s-4);color:var(--pv-text);font-size:11.5px;line-height:1.7;font-weight:450}
+.cs-pv-cols p{margin:0 0 8px}
+.cs-pv-a{color:var(--pv-accent);text-decoration:underline;text-underline-offset:2px}
+.cs-pv-quote{margin:0;padding:8px 12px;background:var(--pv-surface);border-left:3px solid var(--pv-primary);
+  border-radius:0 var(--radius-s) var(--radius-s) 0;color:var(--pv-text);font-size:14px;line-height:1.4;font-weight:600}
+
+/* ── Locked scene — the ONLY thing rendered for non-Pro. Palette-free. ── */
+.cs-pv-scene.is-locked .cs-pv-canvas{background:var(--bg-2);color:var(--t3)}
+.cs-pv-lock-art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:var(--s-5);
+  filter:grayscale(1);opacity:.5}
+.cs-pv-lock-phone{width:90px;display:flex;flex-direction:column;gap:7px;padding:12px;
+  border:2px solid var(--t3);border-radius:14px}
+.cs-pv-lock-phone .cs-pv-lock-bar{height:18px;border-radius:5px;background:var(--border)}
+.cs-pv-lock-phone .cs-pv-lock-block{height:24px;border-radius:5px;background:var(--border)}
+.cs-pv-lock-doc{width:60%;max-width:220px;display:flex;flex-direction:column;gap:8px}
+.cs-pv-lock-line{height:7px;border-radius:var(--radius-pill);background:var(--border)}
+.cs-pv-lock-line.is-short{width:60%}
+.cs-pv-lock-line.is-kicker{width:35%;background:var(--t3)}
+.cs-pv-lock-head{height:14px;border-radius:5px;background:var(--t3)}
+.cs-pv-lock-rule{height:2px;width:30px;border-radius:var(--radius-pill);background:var(--t3);margin:2px 0}
+.cs-pv-lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--s-3);text-align:center;padding:var(--s-5);
+  background:color-mix(in srgb,var(--bg-2) 72%,transparent)}
+.cs-pv-lock-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--radius-pill);
+  background:var(--brand-bg);color:var(--brand);font-size:11px;font-weight:700}
+.cs-pv-lock-label{color:var(--t1);font-size:13px;font-weight:700}
+.cs-pv-lock-cta{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;
+  border-radius:var(--radius-pill);border:1px solid var(--brand);background:transparent;color:var(--brand);
+  font-family:var(--font);font-size:12px;font-weight:650;cursor:pointer;transition:background var(--t),color var(--t)}
+.cs-pv-lock-cta:hover{background:var(--brand);color:#fff}
+
+/* ── Closing upsell ── */
+.cs-pv-upsell{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);
+  margin-top:var(--s-5);padding:var(--s-5);border-radius:var(--radius-l);
+  border:1px solid var(--brand);background:var(--brand-bg)}
+.cs-pv-upsell-copy{display:flex;flex-direction:column;gap:3px}
+.cs-pv-upsell-copy strong{color:var(--t0);font-size:15px;font-weight:700}
+.cs-pv-upsell-copy span{color:var(--t2);font-size:12px}
+.cs-pv-upsell-cta{flex-shrink:0;min-height:44px}
+
+/* ── Responsive (320 → 4K) — scenes reflow by their own width via @container ── */
+@container pv-canvas (max-width:340px){
+  .cs-pv-app .cs-pv-side{display:none}
+  .cs-pv-kpis{grid-template-columns:repeat(2,1fr)}
+  .cs-pv-cols{columns:1}
+}
+@media (max-width:768px){
+  .cs-pv-grid{grid-template-columns:1fr}
+  .cs-pv-canvas{aspect-ratio:16/9}
+}
+@media (max-width:480px){
+  .cs-pv-canvas{aspect-ratio:4/3}
+  .cs-pv-upsell{flex-direction:column;align-items:stretch;text-align:center}
+  .cs-pv-upsell-cta{width:100%}
+}
+@media (max-width:380px){
+  .cs-pv-legend{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .cs-pv-legend-item{flex-shrink:0}
+  .cs-pv-legend-hex{display:none}
+}
+@media (max-width:320px){
+  .cs-pv-canvas{aspect-ratio:1/1}
+  .cs-pv-lock{flex-wrap:wrap}
+}
+
+/* ── Reduced motion (belt-and-braces; the global gate handles transitions) ── */
+[data-reduced-motion] .cs-pv-scene{animation:none;transition:none}
+[data-reduced-motion] .cs-pv-scene:hover{transform:none}
+
 /* CB toggle responsive: wraps below the randomise row on tablet/phone */
 @media (max-width:768px){
   .cs-cb-wrap{flex:1 1 100%;order:10;margin-top:4px}
