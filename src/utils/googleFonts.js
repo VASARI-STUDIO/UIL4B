@@ -160,13 +160,42 @@ export function unloadFont(family) {
   loadedFonts.delete(family)
 }
 
+// Canvas text-width comparison — the authoritative FOUT/font-load detection
+// technique. Renders a probe string at the same size in (a) the target family
+// over each generic baseline and (b) the generic baseline alone. If the target
+// width differs from the baseline, the web font is genuinely rendering. If it
+// matches across ALL three generic baselines, the face never loaded. This is
+// reliable regardless of weight-descriptor quirks that make document.fonts.load
+// resolve empty even when the face is fine.
+const FONT_PROBE = 'mmmmmwwwwwlli0O'
+const GENERIC_BASELINES = ['monospace', 'serif', 'sans-serif']
+
+function canvasFontRendered(family, weight) {
+  if (typeof document === 'undefined' || !document.createElement) return null
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext && canvas.getContext('2d')
+  if (!ctx) return null // No 2D context — can't measure; let caller decide.
+  const size = '72px'
+  for (const generic of GENERIC_BASELINES) {
+    ctx.font = `${weight} ${size} ${generic}`
+    const baselineWidth = ctx.measureText(FONT_PROBE).width
+    ctx.font = `${weight} ${size} "${family}", ${generic}`
+    const familyWidth = ctx.measureText(FONT_PROBE).width
+    // A meaningful difference (>0.5px guards sub-pixel rounding) against ANY
+    // baseline means the target family is the one being painted.
+    if (Math.abs(familyWidth - baselineWidth) > 0.5) return true
+  }
+  // Identical to every generic baseline → the web font did not load.
+  return false
+}
+
 // Verify a font actually rendered rather than silently falling back to a system
-// face. Uses the CSS Font Loading API: document.fonts.load() resolves with the
-// matching FontFace objects once the file is fetched and parsed. A network
-// failure or a content blocker that intercepts fonts.googleapis.com leaves the
-// set empty, which is how we detect "this font could not load".
+// face. Strongly biased toward NOT reporting "blocked": a positive from the CSS
+// Font Loading API is trusted outright; only a confident canvas-measured
+// negative returns false. This avoids false "ad-blocker" banners caused by
+// document.fonts.load() resolving empty at a specific weight descriptor.
 //
-// Returns a Promise<boolean>: true if at least one face for the family loaded.
+// Returns a Promise<boolean>: true if the family is rendering (or unknowable).
 export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } = {}) {
   if (typeof document === 'undefined' || !document.fonts || !document.fonts.load) {
     // No Font Loading API — assume success and let the browser fall back.
@@ -174,16 +203,32 @@ export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } 
   }
   const spec = `${weight} 16px "${family}"`
   try {
-    const loadPromise = document.fonts.load(spec)
-    const timed = new Promise(resolve => setTimeout(() => resolve(null), timeout))
-    const faces = await Promise.race([loadPromise, timed])
-    if (faces === null) {
-      // Timed out — fall back to a synchronous check.
-      return document.fonts.check(spec)
+    // Fast-path positive: kick off the load, then wait for the font set to
+    // settle so a freshly-fetched face is measurable on the canvas.
+    const loadPromise = document.fonts.load(spec).catch(() => null)
+    const timed = new Promise(resolve => setTimeout(() => resolve('timeout'), timeout))
+    const result = await Promise.race([loadPromise, timed])
+
+    // Positive signals are trusted immediately — don't fall through to negate.
+    if (Array.isArray(result) && result.length > 0) return true
+    if (document.fonts.check(spec)) return true
+
+    // Ensure pending faces have settled before the authoritative measurement.
+    if (document.fonts.ready) {
+      await Promise.race([
+        document.fonts.ready.catch(() => {}),
+        new Promise(resolve => setTimeout(resolve, 500)),
+      ])
+      if (document.fonts.check(spec)) return true
     }
-    return Array.isArray(faces) ? faces.length > 0 : document.fonts.check(spec)
+
+    // Only now decide a NEGATIVE, and only on a confident canvas result.
+    // null (no canvas/context) is treated as "unknowable" → don't show banner.
+    const rendered = canvasFontRendered(family, weight)
+    return rendered !== false
   } catch {
-    return false
+    // On any unexpected error, bias toward not showing the banner.
+    return document.fonts.check(spec)
   }
 }
 
