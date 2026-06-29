@@ -147,71 +147,36 @@ function PaletteDemo() {
           Shuffle
         </button>
       </div>
-      <div style={{ display: 'flex', borderRadius: 'var(--radius)', overflow: 'hidden', height: 120 }}>
+      <div className="landing-demo-pal-row">
         {palette.colors.map((c, i) => (
           <div
             key={i}
+            className="landing-demo-pal-swatch"
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
             onClick={() => copy(c, i)}
-            style={{
-              flex: hovered === i ? 2.5 : 1,
-              background: c,
-              display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'center',
-              paddingBottom: 10,
-              transition: 'flex .35s cubic-bezier(.16,1,.3,1)',
-              cursor: 'pointer',
-            }}
+            style={{ flex: hovered === i ? 2.5 : 1, background: c }}
           >
-            <span style={{
-              fontFamily: 'var(--mono)',
-              fontSize: 9,
-              fontWeight: 700,
-              color: 'rgba(255,255,255,.92)',
-              opacity: hovered === i ? 1 : 0,
-              transition: 'opacity .2s',
-              background: 'rgba(0,0,0,.36)',
-              padding: '3px 7px',
-              borderRadius: 4,
-              backdropFilter: 'blur(8px)',
-              whiteSpace: 'nowrap',
-            }}>
+            <span className="landing-demo-pal-hex" style={{ opacity: hovered === i ? 1 : 0 }}>
               {copied === i ? 'Copied!' : c}
             </span>
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div className="landing-demo-pal-labels">
         {DEMO_LABELS.map((label, i) => (
-          <span key={i} style={{
-            flex: 1,
-            textAlign: 'center',
-            fontSize: 9,
-            fontFamily: 'var(--mono)',
-            fontWeight: 600,
-            letterSpacing: '.04em',
-            textTransform: 'uppercase',
-            color: 'var(--t3)',
-          }}>{label}</span>
+          <span key={i} className="landing-demo-pal-label">{label}</span>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+      <div className="landing-demo-pal-tints">
         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => {
           const l = 95 - i * 9
           return (
-            <div key={i} style={{
-              flex: 1,
-              height: 24,
-              borderRadius: 3,
-              background: `hsl(${palette.hue}, 70%, ${l}%)`,
-              transition: 'background .4s ease',
-            }} />
+            <div key={i} className="landing-demo-pal-tint" style={{ background: `hsl(${palette.hue}, 70%, ${l}%)` }} />
           )
         })}
       </div>
-      <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', textAlign: 'center' }}>
+      <div className="landing-demo-pal-caption">
         Tint Scale · 50–900 · click a swatch to copy
       </div>
     </div>
@@ -318,38 +283,27 @@ function TokenDemo() {
   const [hovered, setHovered] = useState(null)
   return (
     <div className="landing-demo-tokens">
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>Spacing Scale</div>
+      <div className="landing-demo-tok-head">Spacing Scale</div>
       {DEMO_TOKENS.map((tk, i) => (
         <div key={i}
+          className="landing-demo-tok-row"
           onMouseEnter={() => setHovered(i)}
           onMouseLeave={() => setHovered(null)}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'default' }}
         >
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, color: hovered === i ? 'var(--accent)' : 'var(--t2)', minWidth: 28, transition: 'color .2s' }}>{tk.label}</span>
-          <div style={{
-            height: 6,
-            borderRadius: 3,
+          <span className="landing-demo-tok-label" style={{ color: hovered === i ? 'var(--accent)' : 'var(--t2)' }}>{tk.label}</span>
+          <div className="landing-demo-tok-bar" style={{
             background: hovered === i ? 'var(--accent)' : 'var(--bg-3)',
             width: `${(tk.value / 48) * 100}%`,
-            minWidth: 8,
-            transition: 'all .3s cubic-bezier(.16,1,.3,1)',
           }} />
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)', fontWeight: 600 }}>{tk.value}px</span>
+          <span className="landing-demo-tok-px">{tk.value}px</span>
         </div>
       ))}
-      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+      <div className="landing-demo-tok-radius">
         {[0, 2, 6, 12, 20, 999].map((r, i) => (
-          <div key={i} style={{
-            width: 28,
-            height: 28,
-            borderRadius: r,
-            background: 'var(--bg-2)',
-            border: '1px solid var(--border)',
-            transition: 'all .2s',
-          }} />
+          <div key={i} className="landing-demo-tok-chip" style={{ borderRadius: r }} />
         ))}
       </div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)', fontWeight: 600, letterSpacing: '.04em' }}>Border Radius</div>
+      <div className="landing-demo-tok-caption">Border Radius</div>
     </div>
   )
 }
@@ -449,7 +403,7 @@ function StickyFeatures() {
       if (!el) return
       const obs = new IntersectionObserver(
         ([e]) => { if (e.isIntersecting) setActive(i) },
-        { rootMargin: '-35% 0px -35% 0px' }
+        { rootMargin: '-45% 0px -45% 0px' }
       )
       obs.observe(el)
       observers.push(obs)

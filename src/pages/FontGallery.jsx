@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { fetchFonts, loadFont, getFontCSSRule, generatePairings, verifyFontLoaded } from '../utils/googleFonts'
+import { fetchFonts, loadFont, reloadFont, getFontCSSRule, generatePairings, verifyFontLoaded } from '../utils/googleFonts'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
 
@@ -60,8 +60,10 @@ function GalleryCard({ font, onSelect, index, inCompare, onToggleCompare }) {
         // Only swap the card to the real typeface once the file has actually
         // arrived — otherwise a blocked/slow font would render a misleading
         // fallback. If it never loads, the card keeps the neutral system face.
-        verifyFontLoaded(font.family, hw(font)).then(ok => {
-          if (!cancelled && ok) setLoaded(true)
+        // Verify at the regular weight we requested, not the heading weight, so
+        // a synthesised bold can't read as "not loaded".
+        verifyFontLoaded(font.family, reg).then(status => {
+          if (!cancelled && status === 'ok') setLoaded(true)
         })
       }
     }, { rootMargin: '200px' })
@@ -200,8 +202,12 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
     loadFont(font.family, font.variants)
     let cancelled = false
     setLoadState('checking')
-    verifyFontLoaded(font.family, hw(font)).then(ok => {
-      if (!cancelled) setLoadState(ok ? 'ok' : 'blocked')
+    // Verify at the regular base weight (not the heading weight) and carry the
+    // status union straight through: 'ok' | 'unknown' (still loading) | 'failed'
+    // (the stylesheet genuinely errored — only then do we mention a blocker).
+    const reg = font.variants.includes(400) ? 400 : font.variants[0]
+    verifyFontLoaded(font.family, reg).then(status => {
+      if (!cancelled) setLoadState(status)
     })
     return () => { cancelled = true }
   }, [font])
@@ -228,7 +234,14 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
           </svg>
         </button>
 
-        {loadState === 'blocked' && (
+        {loadState === 'unknown' && (
+          <div className="fg-loading-note" role="status">
+            <span className="fg-loading-note-spinner" aria-hidden="true" />
+            <span>Still loading this preview&hellip; showing a fallback until {font.family} arrives.</span>
+          </div>
+        )}
+
+        {loadState === 'failed' && (
           <div className="fg-blocked-banner" role="alert">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
@@ -236,17 +249,22 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
             <div>
               <strong>This font couldn&rsquo;t load, so a fallback is shown.</strong>
               <span>
-                A privacy or ad-blocking extension may be blocking <code>fonts.googleapis.com</code>.
-                Allow Google Fonts for this site (or pause the extension) to preview {font.family} accurately —
-                copied exports are unaffected.
+                The request to <code>fonts.googleapis.com</code> was blocked — usually a privacy or
+                ad-blocking extension, or an offline connection. Allow Google Fonts for this site (or
+                reconnect) to preview {font.family} accurately. This is preview-only; copied imports and
+                exports are unaffected.
               </span>
               <button
                 type="button"
                 className="fg-blocked-retry"
                 onClick={() => {
                   setLoadState('checking')
-                  loadFont(font.family, font.variants)
-                  verifyFontLoaded(font.family, hw(font)).then(ok => setLoadState(ok ? 'ok' : 'blocked'))
+                  const reg = font.variants.includes(400) ? 400 : font.variants[0]
+                  // Cache-bust so a genuinely re-attempted fetch isn't served the
+                  // failed response from cache, then re-verify.
+                  reloadFont(font.family).then(() =>
+                    verifyFontLoaded(font.family, reg).then(status => setLoadState(status))
+                  )
                 }}
               >Retry</button>
             </div>
