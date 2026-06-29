@@ -8,7 +8,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { setPendingImages } from '../utils/imageHandoff'
-import { loadFont } from '../utils/googleFonts'
+import { loadFont, verifyFontLoaded } from '../utils/googleFonts'
 import { getRecentIcons, iconToSvg } from '../utils/recentIcons'
 import { UIKIT_GUIDE_KEY } from '../components/UIKitGuide'
 
@@ -95,15 +95,52 @@ const CATEGORY_CLASS = {
   documentation: 'bento-cat',
 }
 
+// Last-known user identity persisted under a NON-uid key. Seeding name/photo
+// from this on first paint means the hero/avatar usually paint the REAL value on
+// frame 1 (the uid-keyed profile cache can't help — uid isn't known until auth
+// resolves). Reading auth state + writing localStorage here is fine; we do NOT
+// touch AuthContext itself.
+const LAST_USER_KEY = 'vs-last-user'
+
+function readLastUser() {
+  try {
+    const raw = localStorage.getItem(LAST_USER_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function writeLastUser(next) {
+  try { localStorage.setItem(LAST_USER_KEY, JSON.stringify(next)) } catch { /* storage full/disabled */ }
+}
+
+// Once-per-session entrance flag. Lives in sessionStorage so it survives the
+// <main key={location.pathname}> remount (App.jsx) — that remount is what made
+// the entrance replay on every /dashboard return (P3). Read on mount so a
+// returning dashboard starts already-entered (no re-pop); set after the first
+// reveal completes.
+const DASH_ENTERED_KEY = 'vs-dash-entered'
+
+function hasAlreadyEntered() {
+  try { return sessionStorage.getItem(DASH_ENTERED_KEY) === '1' } catch { return false }
+}
+
+function markEntered() {
+  try { sessionStorage.setItem(DASH_ENTERED_KEY, '1') } catch { /* ignore */ }
+}
+
 export default function Dashboard() {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, loading: authLoading } = useAuth()
   const { pinned, recent, addPinned, reorderPinned } = useWorkspace()
   const { t } = useI18n()
   const { design } = useProject()
-  const { plan, isPro } = useSubscription()
+  const { plan, isPro, loading: subLoading } = useSubscription()
   const navigate = useNavigate()
   const [now, setNow] = useState(() => new Date())
   const freePerDay = plan?.limits?.['ai-default'] ?? 40
+
+  // Last-known identity, seeded synchronously so the hero name + avatar usually
+  // paint real on frame 1 instead of flashing a placeholder (P2).
+  const [lastUser] = useState(readLastUser)
 
   // Launch the guided UI-kit builder starting at the colour palette.
   const buildUIKit = () => {
@@ -130,6 +167,31 @@ export default function Dashboard() {
   // on mount (re-read on every dashboard visit since the route remounts).
   const [recentIcons] = useState(getRecentIcons)
   const [copiedIcon, setCopiedIcon] = useState(null)
+
+  // ─── First-load choreography ───
+  // Once-per-session entrance: if we've already revealed this session, start
+  // already-entered so the bento is simply present (no re-pop on /dashboard
+  // return — P3). The flag lives in sessionStorage, OUTSIDE this remounting
+  // component, so it survives the route remount.
+  const [hasEntered, setHasEntered] = useState(hasAlreadyEntered)
+  // The Font-of-the-Day type is held behind a reserved skeleton box until the
+  // real face is confirmed, so the user never sees the fallback face reflow into
+  // the real one (P6).
+  const [fotdFontLoading, setFotdFontLoading] = useState(true)
+
+  // Readiness gate. i18n is statically seeded (P1) so the shell is real on
+  // frame 1; auth + subscription resolve after first paint. dataReady flips the
+  // bento from is-loading (skeletons) to is-ready (real content + one-time
+  // entrance). With the persisted seed above, the skeleton window is usually a
+  // single frame.
+  // /dashboard is a public (non-auth) area — it is not gated, so a visitor can
+  // land here signed out. The first-load treatment is self-sufficient: the
+  // persisted last-user seed + skeletons carry the dashboard while auth and
+  // subscription resolve on their own. A signed-out visitor simply sees the
+  // neutral greeting (no name) with free-tier defaults.
+  const authReady = !authLoading
+  const subReady = !subLoading
+  const dataReady = authReady && subReady
 
   // Re-copy a quick-access icon without leaving the dashboard. CDN icons are
   // fetched on demand; embedded icons are rebuilt locally.
@@ -232,13 +294,43 @@ export default function Dashboard() {
   const fontOfDay = useMemo(() => FONTS_OF_DAY[dayNumber % FONTS_OF_DAY.length], [dayNumber])
 
   useEffect(() => {
+    let cancelled = false
     loadFont(fontOfDay.family, [400, fontOfDay.weight])
+    // Reveal the FOTD type only once the real face is confirmed (or we can't
+    // tell — 'unknown'/'failed' both mean "stop hiding it" so the user is never
+    // left staring at an empty box; the reserved geometry already prevents CLS).
+    // Initial state is already loading (useState(true)); on the rare mid-session
+    // day rollover the previous real glyphs stay visible while the next face
+    // confirms — no flash back to skeleton, no CLS — so we don't re-gate here.
+    verifyFontLoaded(fontOfDay.family, fontOfDay.weight)
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setFotdFontLoading(false) })
+    return () => { cancelled = true }
   }, [fontOfDay])
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(id)
   }, [])
+
+  // Persist last-known identity (non-uid key) so the next cold load seeds the
+  // hero name + avatar real on frame 1 (P2). Only writes once a real signed-in
+  // identity is resolved; never persists a placeholder.
+  useEffect(() => {
+    if (!user) return
+    const name = userProfile?.displayName || ''
+    const photoURL = userProfile?.photoURL || ''
+    if (name || photoURL) writeLastUser({ name, photoURL })
+  }, [user, userProfile?.displayName, userProfile?.photoURL])
+
+  // Once data is ready, the entrance plays exactly once; flag the session so a
+  // later /dashboard return is simply present (no re-pop — P3). Wait one reveal
+  // window before marking, so the animation isn't cut short on this first run.
+  useEffect(() => {
+    if (!dataReady || hasEntered) return
+    const id = setTimeout(() => { markEntered(); setHasEntered(true) }, 700)
+    return () => clearTimeout(id)
+  }, [dataReady, hasEntered])
 
   // Hide alpha / not-yet-public tools from the dashboard (pins, recents, count)
   // for everyone but admins — keeps it consistent with the nav and route gates.
@@ -254,7 +346,17 @@ export default function Dashboard() {
     return t('dash.greeting.evening')
   })()
 
-  const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'Creator'
+  // Resolve a real first name from auth, falling back to the persisted last-user
+  // seed. NO personal placeholder ('Creator' is gone — P2): when no real name is
+  // known we render the greeting ALONE, then blur the name in once it lands, so
+  // the hero never shows a fake name. resolvedName is empty until a name exists.
+  const liveName = userProfile?.displayName || user?.email?.split('@')[0] || ''
+  const resolvedName = liveName || (authLoading ? (lastUser?.name || '') : '')
+  const firstName = resolvedName ? resolvedName.split(' ')[0] : ''
+  // Animate the name in only when it appears after a skeleton frame — i.e. the
+  // name wasn't seeded on frame 1 but is now known. (If the seed painted it
+  // immediately, it's just there, no animation.)
+  const animateName = !!firstName && authLoading === false && !lastUser?.name
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
   const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 
@@ -346,7 +448,7 @@ export default function Dashboard() {
       const fontStack = `'${fontOfDay.family}', ${fontOfDay.fallback}`
       return (
         <>
-          <div className="bento-fotd">
+          <div className={`bento-fotd${fotdFontLoading ? ' is-font-loading' : ''}`}>
             <span className="bento-fotd-tag">Font of the day</span>
             <span className="bento-fotd-sample" style={{ fontFamily: fontStack, fontWeight: fontOfDay.weight }}>Ag</span>
             <span className="bento-fotd-name" style={{ fontFamily: fontStack, fontWeight: fontOfDay.weight }}>{fontOfDay.family}</span>
@@ -461,7 +563,8 @@ export default function Dashboard() {
   return (
     <div className="dash">
       <div
-        className={`bento${dropActive ? ' bento-drop-active' : ''}`}
+        className={`bento ${dataReady ? 'is-ready' : 'is-loading'}${hasEntered ? ' has-entered' : ''}${dropActive ? ' bento-drop-active' : ''}`}
+        aria-busy={dataReady ? undefined : 'true'}
         onDragEnter={onZoneDragEnter}
         onDragOver={onZoneDragOver}
         onDragLeave={onZoneDragLeave}
@@ -472,7 +575,10 @@ export default function Dashboard() {
           <div className="bento-hero-top">
             <div>
               <div className="bento-hero-meta"><span className="bento-pulse" />{dateStr}</div>
-              <h1 className="bento-hero-title">{greeting}, <em>{firstName}</em></h1>
+              <h1 className="bento-hero-title">
+                {greeting}
+                {firstName && <>, <em className={animateName ? 'bento-hero-name-in' : undefined}>{firstName}</em></>}
+              </h1>
             </div>
             <button type="button" className="bento-hero-cta" onClick={buildUIKit}>
               <span>Build a UI Kit</span>
@@ -487,13 +593,19 @@ export default function Dashboard() {
                 <ArrowIcon />
               </NavLink>
             )}
-            <span className="bento-hero-tokens">
-              {isPro ? (
-                <>Unlimited AI · Pro plan</>
-              ) : (
-                <><strong>{freePerDay}</strong> AI generations today</>
-              )}
-            </span>
+            {subLoading ? (
+              // Neutral skeleton until the plan is known — never guess Pro vs
+              // Free (briefly showing the wrong tier is a trust break — P4).
+              <span className="sk sk-chip" aria-hidden="true" />
+            ) : (
+              <span className="bento-hero-tokens">
+                {isPro ? (
+                  <>Unlimited AI · Pro plan</>
+                ) : (
+                  <><strong>{freePerDay}</strong> AI generations today</>
+                )}
+              </span>
+            )}
           </div>
         </div>
 
