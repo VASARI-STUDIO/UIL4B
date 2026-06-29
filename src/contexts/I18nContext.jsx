@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import en from '../locales/en.json'
 
 const I18nContext = createContext()
 const STORAGE_KEY = 'vs-lang'
@@ -27,7 +28,10 @@ function detectBrowserLang() {
   return 'en'
 }
 
-let localeCache = {}
+// Seed the default (en) locale into the cache so first paint is synchronous —
+// t() never returns a raw translation key on the first frame. Other locales
+// (en-US, es, …) still load async and swap in via the effect below.
+let localeCache = { en }
 
 function resolve(obj, path) {
   return path.split('.').reduce((o, k) => o?.[k], obj)
@@ -37,7 +41,10 @@ export function I18nProvider({ children }) {
   const [lang, setLangState] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) || detectBrowserLang() } catch { return 'en' }
   })
-  const [messages, setMessages] = useState(null)
+  // Seed with the statically-imported default locale so the very first paint
+  // renders real copy, not raw keys (P1). If the active language is en, this is
+  // already correct; any other language overwrites it async in the effect below.
+  const [messages, setMessages] = useState(en)
 
   useEffect(() => {
     let cancelled = false
