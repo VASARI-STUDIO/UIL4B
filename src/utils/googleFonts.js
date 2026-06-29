@@ -122,7 +122,49 @@ export async function getFontCategories() {
   return [...new Set(fonts.map(f => f.category))]
 }
 
-const loadedFonts = new Map() // family -> { link, weights:Set<number> }
+// family -> { link, weights:Set<number>, status:'pending'|'loaded'|'error', ready:Promise<void> }
+// `status`/`ready` make detection event-driven: verifyFontLoaded can wait for the
+// actual stylesheet request to settle and, crucially, tell a genuine
+// network/extension block (the <link> firing `error`) apart from "the face just
+// hasn't arrived yet". A real `error` is the ONLY reliable "actually failed" signal.
+const loadedFonts = new Map()
+
+// Build and inject the css2 <link> for a family at the given weights, wiring its
+// load/error events into a per-family status. `nonce` busts the HTTP cache on a
+// manual retry so a transiently-failed request is genuinely re-attempted rather
+// than served from cache.
+function injectFontLink(family, weights, nonce) {
+  // CSS2 API wants the axis tag ONCE: family=Name:wght@400;700 — NOT
+  // wght@400;wght@700 (which Google rejects, leaving the font unloaded).
+  const weightStr = `wght@${weights.join(';')}`
+  let url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:${weightStr}&display=swap`
+  if (nonce) url += `&_r=${nonce}`
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = url
+  link.dataset.fontFamily = family
+
+  const entry = { link, weights: new Set(weights), status: 'pending', ready: null }
+  entry.ready = new Promise(resolve => {
+    link.onload = () => {
+      // Only the latest link for this family owns the status — a superseded
+      // link (weight upgrade / retry) resolving late must not clobber it.
+      if (loadedFonts.get(family)?.link === link) entry.status = 'loaded'
+      resolve()
+    }
+    link.onerror = () => {
+      // A real network failure or a content/privacy blocker intercepting
+      // fonts.googleapis.com fires `error`. This is the only signal we trust
+      // enough to tell the user a font was actually blocked.
+      if (loadedFonts.get(family)?.link === link) entry.status = 'error'
+      resolve()
+    }
+  })
+
+  document.head.appendChild(link)
+  loadedFonts.set(family, entry)
+  return entry
+}
 
 export function loadFont(family, weights = [400]) {
   const requested = [...new Set(weights)]
@@ -137,20 +179,24 @@ export function loadFont(family, weights = [400]) {
     // Otherwise upgrade the link to the union of weights so previews aren't
     // forced to synthesise (faux-bold) a weight that was never downloaded.
     requested.forEach(w => existing.weights.add(w))
+    const all = [...existing.weights].sort((a, b) => a - b)
     existing.link.remove()
+    injectFontLink(family, all, null)
+    return
   }
 
-  const all = existing ? [...existing.weights].sort((a, b) => a - b) : requested
-  // CSS2 API wants the axis tag ONCE: family=Name:wght@400;700 — NOT
-  // wght@400;wght@700 (which Google rejects, leaving the font unloaded).
-  const weightStr = `wght@${all.join(';')}`
-  const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:${weightStr}&display=swap`
-  const link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = url
-  link.dataset.fontFamily = family
-  document.head.appendChild(link)
-  loadedFonts.set(family, { link, weights: new Set(all) })
+  injectFontLink(family, requested, null)
+}
+
+// Force a fresh fetch of a family's stylesheet, bypassing the HTTP cache, and
+// resolve once it settles. Backs the detail-modal Retry so a font that failed
+// transiently — or after the user pauses a blocker — actually re-downloads.
+export async function reloadFont(family) {
+  const existing = loadedFonts.get(family)
+  const weights = existing ? [...existing.weights].sort((a, b) => a - b) : [400]
+  if (existing) existing.link.remove()
+  const entry = injectFontLink(family, weights, Date.now())
+  await entry.ready
 }
 
 export function unloadFont(family) {
@@ -160,13 +206,21 @@ export function unloadFont(family) {
   loadedFonts.delete(family)
 }
 
+// Has the css2 <link> for this family fired a genuine `error` (network failure
+// or a content/privacy blocker intercepting fonts.googleapis.com)? Returns true
+// ONLY on that real signal — never on "not arrived yet".
+function linkErrored(family) {
+  return loadedFonts.get(family)?.status === 'error'
+}
+
 // Canvas text-width comparison — the authoritative FOUT/font-load detection
-// technique. Renders a probe string at the same size in (a) the target family
-// over each generic baseline and (b) the generic baseline alone. If the target
-// width differs from the baseline, the web font is genuinely rendering. If it
-// matches across ALL three generic baselines, the face never loaded. This is
-// reliable regardless of weight-descriptor quirks that make document.fonts.load
-// resolve empty even when the face is fine.
+// technique. Measures a probe string in the TARGET family ALONE against each
+// generic baseline measured separately. If the target's width differs from a
+// baseline, the web font is genuinely rendering; if it matches every generic
+// baseline, the face never loaded. Measuring the family alone (not a
+// "family, generic" list) matters: Canvas `ctx.font` is the CSS `font`
+// shorthand, which rejects a multi-family value outright — so a list value
+// silently keeps the previous font and makes the measurement meaningless.
 const FONT_PROBE = 'mmmmmwwwwwlli0O'
 const GENERIC_BASELINES = ['monospace', 'serif', 'sans-serif']
 
@@ -176,11 +230,17 @@ function canvasFontRendered(family, weight) {
   const ctx = canvas.getContext && canvas.getContext('2d')
   if (!ctx) return null // No 2D context — can't measure; let caller decide.
   const size = '72px'
+
+  // Width of the target family rendered on its own. If the assignment is
+  // rejected (e.g. an exotic family name), ctx.font won't reflect it; the
+  // baseline comparison below still holds because a non-applied family falls
+  // back to whatever ctx.font was, which won't match all three generics.
+  ctx.font = `${weight} ${size} "${family}"`
+  const familyWidth = ctx.measureText(FONT_PROBE).width
+
   for (const generic of GENERIC_BASELINES) {
     ctx.font = `${weight} ${size} ${generic}`
     const baselineWidth = ctx.measureText(FONT_PROBE).width
-    ctx.font = `${weight} ${size} "${family}", ${generic}`
-    const familyWidth = ctx.measureText(FONT_PROBE).width
     // A meaningful difference (>0.5px guards sub-pixel rounding) against ANY
     // baseline means the target family is the one being painted.
     if (Math.abs(familyWidth - baselineWidth) > 0.5) return true
@@ -190,45 +250,60 @@ function canvasFontRendered(family, weight) {
 }
 
 // Verify a font actually rendered rather than silently falling back to a system
-// face. Strongly biased toward NOT reporting "blocked": a positive from the CSS
-// Font Loading API is trusted outright; only a confident canvas-measured
-// negative returns false. This avoids false "ad-blocker" banners caused by
-// document.fonts.load() resolving empty at a specific weight descriptor.
+// face. Returns a Promise resolving to one of:
+//   'ok'      — the family is rendering (or the environment can't tell us
+//               otherwise: no Font Loading API, no canvas, an unexpected error).
+//   'failed'  — the css2 <link> fired a genuine `error` (network failure or a
+//               content/privacy blocker intercepting fonts.googleapis.com). The
+//               ONLY status that should ever surface a "blocked" message.
+//   'unknown' — the face isn't measurable yet but nothing actually errored
+//               (slow network / first paint). Caller should show a neutral
+//               "still loading" state, NEVER accuse a blocker.
 //
-// Returns a Promise<boolean>: true if the family is rendering (or unknowable).
+// Detection is event-driven (it leans on the <link>'s load/error events via
+// loadedFonts) and ALWAYS awaits document.fonts.ready before any negative
+// verdict — including the timeout branch — so a slow-but-successful load is
+// never mistaken for a failure. Verify at the REQUESTED base weight (default
+// 400), not a heading weight: document.fonts.check('700 …') is false for a
+// synthesised bold even when the regular face loaded fine.
 export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } = {}) {
   if (typeof document === 'undefined' || !document.fonts || !document.fonts.load) {
     // No Font Loading API — assume success and let the browser fall back.
-    return true
+    return 'ok'
   }
   const spec = `${weight} 16px "${family}"`
   try {
-    // Fast-path positive: kick off the load, then wait for the font set to
-    // settle so a freshly-fetched face is measurable on the canvas.
+    // Kick off the load, then race it against a timeout so we never hang.
     const loadPromise = document.fonts.load(spec).catch(() => null)
     const timed = new Promise(resolve => setTimeout(() => resolve('timeout'), timeout))
     const result = await Promise.race([loadPromise, timed])
 
     // Positive signals are trusted immediately — don't fall through to negate.
-    if (Array.isArray(result) && result.length > 0) return true
-    if (document.fonts.check(spec)) return true
+    if (Array.isArray(result) && result.length > 0) return 'ok'
+    if (document.fonts.check(spec)) return 'ok'
 
-    // Ensure pending faces have settled before the authoritative measurement.
+    // Always let pending faces settle before any negative verdict — this is the
+    // core race fix and runs for BOTH the resolved-empty and 'timeout' branches.
     if (document.fonts.ready) {
       await Promise.race([
         document.fonts.ready.catch(() => {}),
         new Promise(resolve => setTimeout(resolve, 500)),
       ])
-      if (document.fonts.check(spec)) return true
+      if (document.fonts.check(spec)) return 'ok'
     }
 
-    // Only now decide a NEGATIVE, and only on a confident canvas result.
-    // null (no canvas/context) is treated as "unknowable" → don't show banner.
+    // Confident positive from canvas → rendering.
     const rendered = canvasFontRendered(family, weight)
-    return rendered !== false
+    if (rendered === true) return 'ok'
+
+    // Negative or unknowable. Only call it a failure if the <link> ACTUALLY
+    // errored (a real block); otherwise it's just not here yet → 'unknown'.
+    if (linkErrored(family)) return 'failed'
+    return rendered === false ? 'unknown' : 'ok'
   } catch {
-    // On any unexpected error, bias toward not showing the banner.
-    return document.fonts.check(spec)
+    // On any unexpected error, bias away from accusing a blocker.
+    if (document.fonts.check(spec)) return 'ok'
+    return linkErrored(family) ? 'failed' : 'ok'
   }
 }
 
