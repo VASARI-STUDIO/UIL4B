@@ -1,6 +1,6 @@
 /* UIL4B v10 — Editorial, Premium, Refined */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--font:'Outfit',system-ui,-apple-system,sans-serif;--serif:'Outfit',system-ui,-apple-system,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;--t:.2s cubic-bezier(.16,1,.3,1);--sw:248px;--top-h:56px;--radius-xs:6px;--radius-s:8px;--radius:10px;--radius-l:14px;--radius-xl:20px;--radius-2xl:28px;--radius-pill:999px;--accent-fg:#ffffff;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;--s-9:96px;--s-10:128px;--t-fast:.12s cubic-bezier(.2,0,0,1)}
+:root{--font:'Outfit',system-ui,-apple-system,sans-serif;--serif:'Outfit',system-ui,-apple-system,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;--t:.2s cubic-bezier(.16,1,.3,1);--sw:248px;--top-h:56px;--radius-xs:6px;--radius-s:8px;--radius:10px;--radius-l:14px;--radius-xl:20px;--radius-2xl:28px;--radius-pill:999px;--accent-fg:#ffffff;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;--s-9:96px;--s-10:128px;--t-fast:.12s cubic-bezier(.2,0,0,1);--fl-reveal:.42s cubic-bezier(.16,1,.3,1);--fl-stagger:55ms;--fl-shimmer-dur:1.4s}
 [data-theme="dark"]{--bg-0:#0A0B0D;--bg-1:#0F1012;--bg-2:#16181C;--bg-3:#1E2126;--bg-4:#272B31;--border:rgba(255,255,255,.07);--bh:rgba(255,255,255,.13);--t0:#F2F3F5;--t1:#B6BAC2;--t2:#888D97;--t3:#5C616B;--cbg:#0F1012;--hvr:rgba(255,255,255,.04);--card:#16181C;--card-grad:#16181C;--inp:#16181C;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--accent:#3B82F6;--accent-strong:#2563EB;--accent-soft:#60A5FA;--accent-bg:rgba(59,130,246,.12);--accent-glow:rgba(59,130,246,.20);--icon-inv:invert(1);--brand:#3B82F6;--brand-soft:#60A5FA;--brand-bg:rgba(59,130,246,.12);--brand-glow:rgba(59,130,246,.18);--info:#3B82F6;--info-bg:rgba(59,130,246,.12);--scrim:rgba(8,9,11,.62);--glass-bg:color-mix(in srgb,var(--bg-1) 72%,transparent);--glass-border:var(--bh);--glass-shadow:0 8px 32px -12px rgba(0,0,0,.6)}
 [data-theme="light"]{--bg-0:#fff;--bg-1:#FCFCFD;--bg-2:#f7f7f7;--bg-3:#ebebeb;--bg-4:#d4d4d4;--border:rgba(0,0,0,.08);--bh:rgba(0,0,0,.12);--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#171717;--t1:#525252;--t2:#737373;--t3:#a3a3a3;--cbg:#f5f5f5;--hvr:rgba(0,0,0,.03);--card:#fff;--card-grad:#fff;--inp:#fff;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#2563EB;--accent-strong:#1D4ED8;--accent-soft:#3B82F6;--accent-bg:rgba(37,99,235,.08);--accent-glow:rgba(37,99,235,.14);--icon-inv:none;--brand:#2563EB;--brand-soft:#3B82F6;--brand-bg:rgba(37,99,235,.08);--brand-glow:rgba(37,99,235,.12);--info:#2563EB;--info-bg:rgba(37,99,235,.08);--scrim:rgba(23,23,23,.32);--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
 html{scroll-behavior:smooth}
@@ -916,20 +916,95 @@ a.bento-card:hover::before{opacity:1}
   .bento-hero-cta{align-self:flex-start}
 }
 
-/* Dashboard entrance animation */
+/* Dashboard entrance animation — runs ONCE over real content.
+   The keyframe is unchanged; only WHEN it fires is gated. The entrance plays
+   only on the first data-ready reveal (.is-ready:not(.has-entered)); skeletons
+   never animate-in (they shimmer in place under .is-loading), and a returning
+   /dashboard (.has-entered, seeded from sessionStorage) is simply present so it
+   never re-pops. See Dashboard.jsx for the gate wiring. */
 @keyframes bentoIn{from{opacity:0;transform:translateY(14px) scale(.98)}}
-.bento>.bento-card{animation:bentoIn .55s cubic-bezier(.16,1,.3,1) backwards}
-.bento>.bento-card:nth-child(1){animation-delay:0ms}
-.bento>.bento-card:nth-child(2){animation-delay:60ms}
-.bento>.bento-card:nth-child(3){animation-delay:120ms}
-.bento>.bento-card:nth-child(4){animation-delay:180ms}
-.bento>.bento-card:nth-child(5){animation-delay:240ms}
-.bento>.bento-card:nth-child(6){animation-delay:300ms}
-.bento>.bento-card:nth-child(7){animation-delay:360ms}
-.bento>.bento-card:nth-child(8){animation-delay:420ms}
-.bento>.bento-card:nth-child(9){animation-delay:480ms}
-.bento>.bento-card:nth-child(10){animation-delay:540ms}
+.bento.is-loading>.bento-card{animation:none}
+.bento.has-entered>.bento-card{animation:none}
+.bento.is-ready:not(.has-entered)>.bento-card{animation:bentoIn var(--fl-reveal) cubic-bezier(.16,1,.3,1) backwards}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(1){animation-delay:0ms}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(2){animation-delay:calc(var(--fl-stagger)*1)}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(3){animation-delay:calc(var(--fl-stagger)*2)}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(4){animation-delay:calc(var(--fl-stagger)*3)}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(5){animation-delay:calc(var(--fl-stagger)*4)}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(6){animation-delay:calc(var(--fl-stagger)*5)}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(7){animation-delay:calc(var(--fl-stagger)*6)}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(8){animation-delay:calc(var(--fl-stagger)*7)}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(9){animation-delay:calc(var(--fl-stagger)*8)}
+.bento.is-ready:not(.has-entered)>.bento-card:nth-child(10){animation-delay:calc(var(--fl-stagger)*9)}
 .bento-drop-hint{animation:none}
+
+/* ─── First-load skeleton system (sk-) + first-load motion (fl-) ─── */
+/* Base skeleton primitive: a flat surface tone (--bg-2) with one slow, quiet
+   left-to-right sheen swept from the faintest text token. Every region composes
+   this. The sheen lives on ::after so the base stays a real, theme-tracking
+   surface colour (no neon). Cadence matches pro-lock-skeleton (1.4s). */
+.sk{position:relative;overflow:hidden;background:var(--bg-2);border-radius:var(--radius-s)}
+.sk::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,color-mix(in srgb,var(--t3) 9%,transparent) 50%,transparent 70%);background-size:200% 100%;animation:sk-shimmer var(--fl-shimmer-dur) ease-in-out infinite}
+@keyframes sk-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Generic ghost rows reused inside card skeletons */
+.sk-line{display:block;height:10px;border-radius:var(--radius-xs)}
+.sk-line.w-40{width:40%}
+.sk-line.w-60{width:60%}
+.sk-line.w-80{width:80%}
+.sk-block{flex:1;min-height:56px;border-radius:var(--radius)}
+
+/* Hero greeting line — matches .bento-hero-title line box so no reflow */
+.sk-hero-line{height:1.2em;width:min(62%,340px);border-radius:var(--radius-s);margin:0}
+
+/* Bento card ghost — IS a .bento-card so it inherits border/radius/shadow/grid */
+.bento-card.sk-card{pointer-events:none}
+
+/* Top-bar / sidebar-footer avatar ghost — circle, never a guest icon */
+.sk-avatar{width:32px;height:32px;border-radius:var(--radius-pill);flex-shrink:0}
+.sk-avatar-name{height:12px;width:84px;border-radius:var(--radius-xs)}
+
+/* Sidebar pinned-nav reserve + row ghosts — hold vertical space so no reflow */
+.sk-nav-reserve{min-height:var(--sk-nav-h,0px)}
+.sk-navrow{height:34px;border-radius:var(--radius-s);margin:2px 0}
+
+/* Plan chip ghost — neutral until subscription.loading is false (never guesses) */
+.sk-chip{display:inline-block;height:14px;width:128px;border-radius:var(--radius-xs);vertical-align:middle}
+
+/* Font-of-the-Day ghost — identical box to .bento-fotd so type fades in with no
+   metric shift once verifyFontLoaded() confirms the real face */
+.sk-fotd{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px 16px 16px;min-height:150px}
+.sk-fotd-sample{height:clamp(52px,6vw,76px);width:1.4em;border-radius:var(--radius-s)}
+.sk-fotd-name{height:18px;width:120px;border-radius:var(--radius-xs)}
+.sk-fotd-meta{height:9px;width:64px;border-radius:var(--radius-xs)}
+
+/* Skeleton→content crossfade layer: skeleton fades out as content fades in over
+   the same window, so there is no gap and no jump (boxes are size-matched) */
+.bento .sk-layer{transition:opacity var(--fl-reveal) ease}
+.bento.is-ready .sk-layer{opacity:0;pointer-events:none}
+
+/* Name blur-in: the flagship name focuses into place when it's known */
+@keyframes fl-name-in{from{opacity:0;filter:blur(6px);transform:translateY(2px)}to{opacity:1;filter:blur(0);transform:none}}
+.bento-hero-name-in{animation:fl-name-in var(--fl-reveal) cubic-bezier(.16,1,.3,1) both}
+
+/* FOTD type held behind the reserved box until the real face is confirmed */
+.bento-fotd-sample,.bento-fotd-name{transition:opacity var(--fl-reveal) ease}
+.bento-fotd.is-font-loading .bento-fotd-sample,
+.bento-fotd.is-font-loading .bento-fotd-name{opacity:0}
+
+/* Reduced motion: skeletons become STATIC space-reservers (no sheen sweep) and
+   content is simply present — no transforms, no blur. Preserve the information
+   (layout) while dropping the decoration (motion). The global reduced-motion
+   rule already zeroes durations; these make the static-ghost intent explicit and
+   avoid a 0.01ms shimmer/blur flicker. */
+html[data-reduced-motion="true"] .sk::after{animation:none;background:none}
+html[data-reduced-motion="true"] .bento.is-ready:not(.has-entered)>.bento-card,
+html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .sk::after{animation:none;background:none}
+  html:not([data-reduced-motion="false"]) .bento.is-ready:not(.has-entered)>.bento-card,
+  html:not([data-reduced-motion="false"]) .bento-hero-name-in{animation:none}
+}
 
 /* Short viewport — trim general page chrome */
 @media(min-width:981px) and (max-height:900px){
@@ -941,7 +1016,7 @@ a.bento-card:hover::before{opacity:1}
   .bento-card{padding:16px}
   .bento-hero-title{font-size:clamp(20px,2.4vw,26px)}
   .bento-color-strip{min-height:96px}
-  .bento-typo-preview,.bento-img-preview,.bento-fotd{min-height:78px}
+  .bento-typo-preview,.bento-img-preview,.bento-fotd,.sk-fotd{min-height:78px}
 
   /* General page sections */
   .sec-h{margin-bottom:20px}
