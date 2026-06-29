@@ -466,7 +466,15 @@ function SwatchPopup({ idx, color, role, anchorRect, isSheet, siblings, isLocked
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
     }
     const onDown = (e) => { if (popRef.current && !popRef.current.contains(e.target)) onClose() }
-    const onScroll = () => { if (!isSheet) onClose() }
+    const onScroll = (e) => {
+      if (isSheet) return
+      // Ignore scrolls originating inside the popup's own scrollable content
+      // (the .cs-sw-body tab panel). A capture-phase window listener still
+      // receives these with e.target set to the inner scroll node. A page
+      // scroll has e.target === document (not contained → still closes).
+      if (popRef.current && e?.target?.nodeType && popRef.current.contains(e.target)) return
+      onClose()
+    }
     document.addEventListener('keydown', onKey)
     document.addEventListener('mousedown', onDown)
     window.addEventListener('scroll', onScroll, true)
@@ -845,7 +853,15 @@ function ColourSystemPopup({
       if (restoreRef?.current?.contains(e.target)) return
       if (popRef.current && !popRef.current.contains(e.target)) onClose()
     }
-    const onScroll = () => { if (!isSheet) onClose() }
+    const onScroll = (e) => {
+      if (isSheet) return
+      // Ignore scrolls originating inside the popup's own scrollable content
+      // (the .cs-csys-body / Tints tab list). A capture-phase window listener
+      // still receives these with e.target set to the inner scroll node. A page
+      // scroll has e.target === document (not contained → still closes).
+      if (popRef.current && e?.target?.nodeType && popRef.current.contains(e.target)) return
+      onClose()
+    }
     document.addEventListener('keydown', onKey)
     document.addEventListener('mousedown', onDown)
     window.addEventListener('scroll', onScroll, true)
