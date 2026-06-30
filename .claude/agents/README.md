@@ -9,22 +9,29 @@ and squash-merging PRs via the GitHub MCP tools).
 
 Every agent `Read`s `CLAUDE.md` at the start of a task, plus the relevant
 `docs/reference/*.md` for its area (conventions, validation zones, constants),
-and `docs/PRODUCT-AUDIT-2026-06-16.md` for the live state of the app.
+and `docs/BACKLOG-STATUS.md` for the live state of the app (what's shipped,
+what's in flight, what's blocked on the owner).
 
 ## The 10 agents
 
 | Agent | Model | Purpose (one line) |
 |---|---|---|
-| **research** | opus | First phase — market & competitor intelligence; cited, decision-ready strategy reports. |
+| **research** | sonnet | First phase — market & competitor intelligence; cited, decision-ready strategy reports. |
 | **design** | opus | AAA, agency-grade UI/UX specs and design reviews, grounded in references + behavioural science. |
-| **seo** | opus | Technical + content + AI-search SEO; prioritised, data-backed organic-growth specs. |
+| **seo** | sonnet | Technical + content + AI-search SEO; prioritised, data-backed organic-growth specs. |
 | **engineer** | opus | The executor — turns approved specs into clean, convention-true React/CSS/`/api` code; verifies with a green build. |
 | **code-reviewer** | sonnet | Severity-ranked code-QUALITY review of a diff (naming, complexity, errors, DRY, UX-state gaps) with `file:line` fixes. |
 | **security-reviewer** | opus | OWASP-style security review of `/api`, authz, UGC, uploads, and fetches; concrete exploit + remediation per finding. |
-| **secret-scanner** | haiku | Pre-commit hardcoded-secret detector; redacts matches, BLOCK/PASS verdict, knows the public-by-design values. |
+| **secret-scanner** | sonnet | Pre-commit hardcoded-secret detector; redacts matches, BLOCK/PASS verdict, knows the public-by-design values. |
 | **qa** | sonnet | Final functional gate — PASS/FAIL on functionality, responsive, a11y, performance, UX states, honesty, SEO/meta. |
 | **release-captain** | sonnet | Drives the branch through the gates; GO/NO-GO report + prepared PR title/body; hands the merge to the PM. |
 | **analytics** | sonnet | Instrumentation specialist — audits the localStorage + `analytics-daily` layer and designs goal-aligned events/funnels. |
+
+**Model policy (founder rule, 2026-06-30).** Opus is reserved for the work where
+reasoning depth pays for itself: **design, engineer, security-reviewer, and the
+PM (main thread)**. Everything else runs on **sonnet** (research, seo,
+code-reviewer, secret-scanner, qa, release-captain, analytics). Keep this table
+and the `model:` field in each agent file in sync; if you change one, change both.
 
 ## Routing (task-dependent — no fixed chain)
 
@@ -45,6 +52,24 @@ Quick orientation (defaults, not a mandated sequence):
   who opens and **squash-merges** via the GitHub MCP tools (only when asked).
 - **Human Validation Zones** (auth, Stripe) are flagged to the founder for
   approval **before** any implementation.
+
+## Batched gate (founder rule, 2026-06-30 — lighten the process)
+
+To cut token spend, **don't drag every small change through the full agent
+chain.** The cadence:
+
+- **Per change:** the engineer runs the **simple local check** — `npx vite build`
+  + `npx eslint .` (zero model/API cost). That's the bar to keep moving.
+- **Per cluster:** once a group of related changes has landed, run **one combined
+  code-review + qa pass** over the whole cluster before merging it — not a
+  separate review per micro-edit.
+- **Always, no exception:** any change touching **`/api`, auth, Stripe, or
+  user-generated content** still gets **secret-scanner + security-reviewer**
+  before merge. Security-sensitive code is never batched away.
+
+This is the "build everything, then scan/test the batch" model the founder asked
+for. See `docs/reference/build-and-verify.md` and
+`docs/reference/project-manager.md` for the full policy.
 
 ## Enforcement principles
 
