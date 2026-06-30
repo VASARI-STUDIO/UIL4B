@@ -175,6 +175,7 @@ export default function App() {
   const location = useLocation()
 
   const toggleMenu = () => setMenuOpen(prev => !prev)
+  const openMenu = () => setMenuOpen(true)
   const closeMenu = () => setMenuOpen(false)
   const openPalette = () => setPaletteOpen(true)
   const closePalette = () => setPaletteOpen(false)
@@ -338,7 +339,7 @@ export default function App() {
       <Sidebar isOpen={menuOpen} onClose={closeMenu} />
 
       <div className="app-main">
-        <TopBar onMenuToggle={toggleMenu} onCommandPalette={openPalette} />
+        <TopBar onMenuToggle={toggleMenu} onOpenMenu={openMenu} onCommandPalette={openPalette} />
 
         <main className="main" key={location.pathname}>
           <ErrorBoundary>
