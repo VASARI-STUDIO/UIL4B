@@ -1307,6 +1307,29 @@ html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
 .cmdk-hint-keys{display:inline-flex;gap:3px;flex-shrink:0}
 .cmdk-hint-keys kbd{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:2px 6px;line-height:1}
 
+/* ─── Section switcher (top bar) ─── */
+.nav-switch{position:relative;flex-shrink:0}
+.nav-switch-trigger{display:inline-flex;align-items:center;gap:var(--s-2);background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-pill);padding:6px 10px 6px 12px;color:var(--t0);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
+.nav-switch-trigger:hover{border-color:var(--bh);background:var(--bg-2)}
+.nav-switch-icon{width:16px;height:16px;flex-shrink:0;color:var(--brand)}
+.nav-switch-trigger-label{white-space:nowrap}
+.nav-switch-chev{width:13px;height:13px;flex-shrink:0;color:var(--t2);transition:transform var(--t)}
+.nav-switch-chev.open{transform:rotate(180deg)}
+.nav-switch-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:288px;max-width:calc(100vw - 16px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:200;padding:6px;animation:cp-rise .15s cubic-bezier(.2,0,0,1)}
+.nav-switch-item{display:flex;align-items:center;gap:var(--s-3);width:100%;padding:9px 10px;background:none;border:none;cursor:pointer;font-family:var(--font);border-radius:var(--radius-s);transition:background var(--t);text-align:left;color:var(--t0)}
+.nav-switch-item:hover{background:var(--hvr)}
+.nav-switch-item.is-current{background:var(--accent-bg)}
+.nav-switch-item.is-current:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.nav-switch-item-icon{width:18px;height:18px;flex-shrink:0;color:var(--brand);margin-top:1px;align-self:flex-start}
+.nav-switch-item-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.nav-switch-item-label{font-size:13px;font-weight:600;color:var(--t0);line-height:1.2}
+.nav-switch-desc{font-size:11px;font-weight:400;color:var(--t1);line-height:1.35}
+.nav-switch-check{width:16px;height:16px;flex-shrink:0;color:var(--accent);align-self:center}
+.nav-switch-divider{height:1px;background:var(--border);margin:6px 4px}
+.nav-switch-link{display:flex;align-items:center;gap:var(--s-3);width:100%;padding:9px 10px;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;color:var(--t0);border-radius:var(--radius-s);transition:background var(--t);text-align:left}
+.nav-switch-link:hover{background:var(--hvr)}
+.nav-switch-link-icon{width:16px;height:16px;flex-shrink:0;color:var(--t2)}
+
 /* ═══════════════════════════════════════
    RESPONSIVE — clean cascade, mobile parity
    Breakpoints: 1024 / 860 / 640 / 480 / 380
@@ -1355,6 +1378,13 @@ img,svg,video{max-width:100%;height:auto}
   .export-dropdown{position:fixed!important;top:auto!important;bottom:0!important;left:0!important;right:0!important;border-radius:var(--radius-l) var(--radius-l) 0 0!important;min-width:0!important;max-width:none!important;width:100%!important;padding:14px 12px 28px!important;box-shadow:0 -8px 32px rgba(0,0,0,.35)!important;animation:slideUp .25s cubic-bezier(.16,1,.3,1)!important}
   .export-dropdown::before{content:'';display:block;width:36px;height:4px;background:var(--bg-4);border-radius:2px;margin:0 auto 12px}
   .export-dropdown-item{padding:14px 16px!important;font-size:13px!important;min-height:44px}
+  /* Section switcher — icon-only pill; the label folds into the bottom sheet */
+  .nav-switch-trigger{padding:0;width:44px;height:44px;justify-content:center;gap:0}
+  .nav-switch-trigger-label,.nav-switch-chev{display:none}
+  .nav-switch-icon{width:18px;height:18px}
+  .nav-switch-menu{position:fixed;top:auto;bottom:0;left:0;right:0;border-radius:var(--radius-l) var(--radius-l) 0 0;min-width:0;max-width:none;width:100%;padding:14px 12px 28px;box-shadow:0 -8px 32px rgba(0,0,0,.35);animation:slideUp .25s cubic-bezier(.16,1,.3,1)}
+  .nav-switch-menu::before{content:'';display:block;width:36px;height:4px;background:var(--bg-4);border-radius:2px;margin:0 auto 12px}
+  .nav-switch-item,.nav-switch-link{min-height:44px}
 }
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 
