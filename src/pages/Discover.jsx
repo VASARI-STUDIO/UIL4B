@@ -188,6 +188,10 @@ export default function Discover({ toast, forcedType = null }) {
   const openCollection = useCallback((coll) => {
     setModal({ kind: 'collection', item: { ...coll, _members: resolveCollection(coll) } })
   }, [])
+  // Stable close handler — a fresh closure each render would tear down + re-run
+  // the modal's focus effect (deps on onClose) on ANY parent re-render and yank
+  // focus back to the first element. useCallback keeps the identity stable.
+  const closeModal = useCallback(() => setModal(null), [])
 
   // ─── Empty-state variant resolution (never a dead end) ────────────────────
   const emptyVariant = useMemo(() => {
@@ -323,6 +327,8 @@ export default function Discover({ toast, forcedType = null }) {
               <DiscoverEmpty
                 variant={emptyVariant}
                 categoryLabel={categoryLabel(filter)}
+                focused={focused}
+                hasQuery={!!query}
                 onClear={clearFilters}
                 onBrowseAll={() => { setSort('trending'); setFilter(forcedType || 'all') }}
                 onPickCategory={pickCategory}
@@ -356,7 +362,7 @@ export default function Discover({ toast, forcedType = null }) {
           item={modal.item}
           kind={modal.kind}
           offline={offline}
-          onClose={() => setModal(null)}
+          onClose={closeModal}
           onOpenResource={openResource}
         />
       )}
