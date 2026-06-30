@@ -26,6 +26,20 @@ api/
 └── _lib/              # shared server helpers (env, firebase-admin, stripe, pricing, plans)
 ```
 
+## Product surfaces (Workspace / Discover / Learn)
+
+The code is still organised route-per-page, but the **product story** groups
+every page under one of three surfaces (see `positioning.md`):
+
+- **Workspace** — create: build/validate/export UI foundations (the Tools).
+- **Discover** — browse: community + curated external resources (replaces the
+  old "Library" framing — see `discover.md`).
+- **Learn** — understand: docs, principles, guides.
+
+This is a *naming and IA* lens, not a folder move — pages stay in `src/pages/`.
+The in-app navigation reorg to make these surfaces real is a separate
+multi-slice effort (the "north star" in `positioning.md`), not done yet.
+
 ## Contexts (`src/contexts/`)
 
 All 8 providers — wrap order matters, check `App.jsx` before reordering:
@@ -51,7 +65,8 @@ Route-per-page. Current set (groups, not exhaustive of behaviour):
   UIBuilder, AutoBuilder, StyleGuide.
 - **Hub / nav**: Landing, Dashboard, CategoryDashboard, Community,
   ExternalResources, InfoCentre, HelpCentre, Feedback, Settings, Projects,
-  Onboarding, ComingSoon.
+  Onboarding, ComingSoon. *(Community + ExternalResources are the seed of the
+  **Discover** surface — see `discover.md`; Projects stays Workspace-private.)*
 - **Docs**: DocsAI, DocsBrand, DocsDesign, DocsMarketing, DocsSEO, DocsSocial,
   DocsThemes.
 - **Auth / billing**: Login, Checkout, CheckoutReturn.
