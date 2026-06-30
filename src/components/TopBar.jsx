@@ -7,11 +7,16 @@ import { useProject } from '../contexts/ProjectContext'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { TOOLS } from '../data/tools'
+import { SECTIONS, resolveSection } from '../data/sections'
 import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { ADMIN_EMAILS } from '../utils/constants'
 import UIPreviewModal from './UIPreviewModal'
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+// The drawer sidebar appears at ≤860px (see global.css responsive cascade);
+// match that so a section-select opens the drawer exactly when it exists.
+const MOBILE_QUERY = '(max-width: 860px)'
 
 const STATE_PRESETS_KEY = 'vs-state-shades'
 const PREVIEW_ROUNDING_KEY = 'vs-preview-rounding'
@@ -519,7 +524,169 @@ function ProfileMenu() {
   )
 }
 
-export default function TopBar({ onMenuToggle, onCommandPalette }) {
+// Section switcher — sits in the top bar between the brand and the command
+// palette. Built as a sibling of ExportDropdown / ProfileMenu: same open/close
+// useState, the same mousedown click-outside listener, ESC to close, and the
+// same aria-haspopup / aria-expanded / aria-controls wiring. Adds full roving
+// keyboard focus (↑/↓, Home/End, Enter/Space, Esc restores focus to the trigger)
+// because this menu is a primary navigation control.
+function NavSectionSwitcher({ onNavigateMobile }) {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const triggerRef = useRef(null)
+  const menuRef = useRef(null)
+
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  const currentSection = resolveSection(location.pathname)
+  const current = SECTIONS.find(s => s.id === currentSection) || SECTIONS[0]
+
+  useEffect(() => {
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  // Move focus into the menu when it opens so keyboard users land on the first
+  // item; ESC closes and restores focus to the trigger.
+  useEffect(() => {
+    if (!open) return
+    const items = menuRef.current?.querySelectorAll('[role="menuitem"]')
+    items?.[0]?.focus()
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); triggerRef.current?.focus() } }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
+
+  const isMobile = () =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function' &&
+    window.matchMedia(MOBILE_QUERY).matches
+
+  const go = (to) => {
+    setOpen(false)
+    navigate(to)
+    // On mobile the drawer sidebar is hidden by default; opening it drops the
+    // user straight into the destination section's navigation.
+    if (isMobile()) onNavigateMobile?.()
+  }
+
+  // Roving focus across the menu items (Zone A + Zone B).
+  const onMenuKeyDown = (e) => {
+    const items = Array.from(menuRef.current?.querySelectorAll('[role="menuitem"]') || [])
+    if (!items.length) return
+    const idx = items.indexOf(document.activeElement)
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      items[(idx + 1) % items.length]?.focus()
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      items[(idx - 1 + items.length) % items.length]?.focus()
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      items[0]?.focus()
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      items[items.length - 1]?.focus()
+    }
+  }
+
+  return (
+    <div ref={ref} className="nav-switch">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="nav-switch-trigger"
+        onClick={() => setOpen(v => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls="nav-switch-menu"
+        aria-label={`Section: ${current.label}. Switch section`}
+      >
+        <svg className="nav-switch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {current.icon}
+        </svg>
+        <span className="nav-switch-trigger-label">{current.label}</span>
+        <svg className={`nav-switch-chev${open ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          id="nav-switch-menu"
+          ref={menuRef}
+          className="nav-switch-menu"
+          role="menu"
+          aria-label="Switch section"
+          onKeyDown={onMenuKeyDown}
+        >
+          {/* Zone A — the three product surfaces */}
+          {SECTIONS.map((s) => {
+            const isCurrent = s.id === currentSection
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="menuitem"
+                className={`nav-switch-item${isCurrent ? ' is-current' : ''}`}
+                aria-current={isCurrent ? 'true' : undefined}
+                onClick={() => go(s.home)}
+              >
+                <svg className="nav-switch-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  {s.icon}
+                </svg>
+                <span className="nav-switch-item-text">
+                  <span className="nav-switch-item-label">{s.label}</span>
+                  <span className="nav-switch-desc">{s.description}</span>
+                </span>
+                {isCurrent && (
+                  <svg className="nav-switch-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+
+          {/* Zone B — cross-cutting destinations */}
+          <div className="nav-switch-divider" role="separator" />
+          <button type="button" role="menuitem" className="nav-switch-link" onClick={() => go('/dashboard')}>
+            <svg className="nav-switch-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" />
+            </svg>
+            Dashboard
+          </button>
+          {user && (
+            <button type="button" role="menuitem" className="nav-switch-link" onClick={() => go('/projects')}>
+              <svg className="nav-switch-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+              </svg>
+              My Projects
+            </button>
+          )}
+          <button type="button" role="menuitem" className="nav-switch-link" onClick={() => go('/settings')}>
+            <svg className="nav-switch-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
+            Settings
+          </button>
+          {isAdmin && (
+            <button type="button" role="menuitem" className="nav-switch-link" onClick={() => go('/admin')}>
+              <svg className="nav-switch-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              Admin
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function TopBar({ onMenuToggle, onOpenMenu, onCommandPalette }) {
   const { t } = useI18n()
   const { theme, toggleTheme } = useTheme()
   const { saveProject } = useProject()
@@ -556,6 +723,8 @@ export default function TopBar({ onMenuToggle, onCommandPalette }) {
         <Link to="/home" className="topbar-brand" title={t('brand.full')}>
           <span className="topbar-title">{t('brand.full')}</span>
         </Link>
+
+        <NavSectionSwitcher onNavigateMobile={onOpenMenu} />
 
         <button type="button" className="cmdk-hint" onClick={onCommandPalette} aria-label={t('cmd.placeholder')}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
