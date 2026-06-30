@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CATEGORY_MAP, categoryLabel } from '../../data/discoverCategories'
+import { monogram, buildToolHandoffUrl, primaryAvailableTool } from './discoverUtils'
 import CategoryGlyph from './CategoryGlyph'
 
 // External-resource Discover card (the only variant in Slice 2a). Two-zone:
@@ -12,14 +13,7 @@ import CategoryGlyph from './CategoryGlyph'
 // nofollow"> with a visible ↗. "Use in tool" is a real navigation. Save is a
 // <button aria-pressed>. The card body (not the buttons) opens a detail modal.
 
-// Deterministic monogram from the title (max 2 chars).
-function monogram(title) {
-  const words = title.replace(/[^a-zA-Z0-9 ]/g, ' ').trim().split(/\s+/)
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
-  return title.slice(0, 2).toUpperCase()
-}
-
-function ExternalGlyph({ size = 12 }) {
+function ExternalGlyph({ size = 13 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="dsc-ext-glyph">
@@ -44,7 +38,10 @@ export default function DiscoverCard({ resource, saved, broken, offline, onToggl
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const cat = CATEGORY_MAP[resource.category]
-  const primaryTool = resource.relatedTools?.[0]
+  // Only offer a "Use in tool" CTA for a PUBLIC tool; admin-gated routes
+  // (/ui-builder, /file-converter) would dead-end on <ComingSoon/> for normal
+  // users, so we fall back to the no-tool "Visit site" path instead.
+  const primaryTool = primaryAvailableTool(resource)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -55,16 +52,10 @@ export default function DiscoverCard({ resource, saved, broken, offline, onToggl
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [menuOpen])
 
-  // Hand-off: navigate to the related tool. Only ColorStudio reads ?preset; for
-  // every other tool we still navigate (never a dead end) and toast on arrival
-  // via the destination — here we just route with the param so the link is honest.
+  // Hand-off: navigate to the related tool. Only ColorStudio reads ?preset; every
+  // other public tool just routes (gated tools never reach here — see primaryTool).
   const goToTool = (tool) => {
-    const params = new URLSearchParams()
-    if (tool.preset) params.set('preset', tool.preset)
-    if (tool.tab) params.set('tab', tool.tab)
-    if (!tool.preset) params.set('from', 'discover')
-    const qs = params.toString()
-    navigate(qs ? `${tool.route}?${qs}` : tool.route)
+    navigate(buildToolHandoffUrl(tool))
   }
 
   const openModal = (e) => {
@@ -73,14 +64,14 @@ export default function DiscoverCard({ resource, saved, broken, offline, onToggl
     onOpen(resource)
   }
   const onBodyKey = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); onOpen(resource) }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(resource) }
   }
 
   return (
     <article className="dsc-card" data-cat={resource.category}>
       {/* Generated face — local, never fetched */}
       <div className="dsc-face" data-cat={resource.category}>
-        <span className="dsc-face-mono">{monogram(resource.title)}</span>
+        <span className="dsc-face-mono">{monogram(resource.title, resource.category)}</span>
         <span className="dsc-face-glyph"><CategoryGlyph category={resource.category} size={20} /></span>
       </div>
 

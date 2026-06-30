@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { categoryLabel } from '../../data/discoverCategories'
+import { monogram, buildToolHandoffUrl, isToolAvailable } from './discoverUtils'
 import CategoryGlyph from './CategoryGlyph'
 
 // Detail view for a single resource OR a collection. Reuses the shared
@@ -13,12 +14,6 @@ import CategoryGlyph from './CategoryGlyph'
 //
 // All external links are real nofollow new-tab <a>; the hand-off is a real
 // navigation. We never fetch the external URL — faces are local monograms.
-
-function monogram(title) {
-  const words = title.replace(/[^a-zA-Z0-9 ]/g, ' ').trim().split(/\s+/)
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
-  return title.slice(0, 2).toUpperCase()
-}
 
 function ExternalGlyph({ size = 13 }) {
   return (
@@ -57,14 +52,17 @@ export default function DiscoverModal({ item, kind, offline, onClose, onOpenReso
     return () => { document.removeEventListener('keydown', onKey); cancelAnimationFrame(t) }
   }, [onClose])
 
+  // Lock background scroll while the modal is open; restore the prior value on
+  // close (mirrors CommandPalette / FeedbackModal).
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
   const handoff = (tool) => {
-    const params = new URLSearchParams()
-    if (tool.preset) params.set('preset', tool.preset)
-    if (tool.tab) params.set('tab', tool.tab)
-    if (!tool.preset) params.set('from', 'discover')
-    const qs = params.toString()
     onClose()
-    navigate(qs ? `${tool.route}?${qs}` : tool.route)
+    navigate(buildToolHandoffUrl(tool))
   }
 
   // ─── Collection view ──────────────────────────────────────────────────────
@@ -89,7 +87,7 @@ export default function DiscoverModal({ item, kind, offline, onClose, onOpenReso
                     onClick={() => onOpenResource(r)}
                     aria-label={`View details for ${r.title}`}
                   >
-                    <span className="dsc-modal-member-face" data-cat={r.category} aria-hidden="true">{monogram(r.title)}</span>
+                    <span className="dsc-modal-member-face" data-cat={r.category} aria-hidden="true">{monogram(r.title, r.category)}</span>
                     <span className="dsc-modal-member-meta">
                       <span className="dsc-modal-member-title">{r.title}</span>
                       <span className="dsc-modal-member-host">{categoryLabel(r.category)} · {r.host}</span>
@@ -109,7 +107,10 @@ export default function DiscoverModal({ item, kind, offline, onClose, onOpenReso
 
   // ─── Resource view ────────────────────────────────────────────────────────
   const r = item
-  const tools = r.relatedTools || []
+  // Hide admin-gated tools — their routes render <ComingSoon/> for normal users,
+  // so listing them here would be a dishonest dead end. The section hides if none
+  // remain (see `tools.length > 0` below).
+  const tools = (r.relatedTools || []).filter(isToolAvailable)
   return (
     <div className="ch-modal-overlay" onClick={onClose} role="presentation">
       <div className="ch-modal dsc-modal" ref={dialogRef} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${r.title} details`}>
@@ -122,7 +123,7 @@ export default function DiscoverModal({ item, kind, offline, onClose, onOpenReso
         <div className="ch-modal-body">
           <div className="dsc-modal-top">
             <span className="dsc-modal-face" data-cat={r.category} aria-hidden="true">
-              <span className="dsc-face-mono">{monogram(r.title)}</span>
+              <span className="dsc-face-mono">{monogram(r.title, r.category)}</span>
             </span>
             <div className="dsc-modal-id">
               <span className="dsc-modal-host">{r.host}</span>
