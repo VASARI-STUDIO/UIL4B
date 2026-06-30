@@ -1,9 +1,12 @@
-# UIL4B — Web Design Toolkit
+# UIL4B — The UI System Workspace
 
-UIL4B is a SaaS platform providing high-quality UI tools and generators.
-React 19 SPA (Vite + Vercel): Color Studio, Font Pair Finder, AI generators, and
-a community hub. Firebase Auth + Firestore, Stripe subscriptions, DeepSeek/Gemini
-AI backends.
+UIL4B is the **operating workspace for UI system creation** — build, organize,
+validate, and export interface foundations without tab-hopping. One product, one
+account, one Stripe subscription, organised as three surfaces: **Workspace**
+(create), **Discover** (browse community + curated external resources), and
+**Learn** (understand). React 19 SPA (Vite + Vercel); Firebase Auth + Firestore;
+Stripe subscriptions; DeepSeek/Gemini AI backends. See
+[`positioning.md`](docs/reference/positioning.md) for the canonical story.
 
 > This file is a lean index. Detailed technical reference lives in
 > [`docs/reference/`](docs/reference/) — see **Reference Docs** at the bottom.
@@ -87,12 +90,21 @@ Create a new skill when ALL of these are true:
 Detailed, task-ready reference for agents. Read the relevant one before working
 in that area.
 
+- **[Positioning & Surfaces](docs/reference/positioning.md)** — **source of
+  truth** for what UIL4B is and the three surfaces (Workspace / Discover /
+  Learn). Read before marketing copy, naming a tool, or placing a feature.
+- **[Discover](docs/reference/discover.md)** — the community + curated
+  external-resource hub (**replaces the old "Library"**); structure, categories,
+  engagement, external-resource rules, MVP scope.
 - **[Project Manager](docs/reference/project-manager.md)** — how the PM (main
   thread) parses instructions and routes work. **The PM never writes code.**
 - **[Tech Stack](docs/reference/tech-stack.md)** — frameworks, dependencies,
   AI backends, client/server boundary.
 - **[Architecture](docs/reference/architecture.md)** — pages, contexts,
   components, `/api` routes (12-function limit), analytics layer.
+- **[Colour System Method](docs/reference/color-system-m3.md)** — our Material
+  3-based colour method (seed → tonal palettes → roles → light/dark); the
+  foundation for the UI System Builder & Brand System Builder.
 - **[Build & Verify](docs/reference/build-and-verify.md)** — the verify-first
   build gate. Nothing ships without it.
 - **⚠️ [Human Validation Zones](docs/reference/human-validation-zones.md)** —

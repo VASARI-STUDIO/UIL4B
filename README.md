@@ -1,6 +1,8 @@
-# UIL4B — Design Toolkit
+# UIL4B — The UI System Workspace
 
-A comprehensive design toolkit built with React and Vite. Create colour palettes, generate tint scales, check contrast, build gradients, pair fonts, design UI components, convert images, extract video frames, and export production-ready CSS — all in the browser.
+The operating workspace for UI system creation — build, organize, validate, and export interface foundations without tab-hopping. Create colour palettes, generate tint scales, check contrast, build gradients, pair fonts, design UI components, convert images, extract video frames, and export production-ready CSS, all in the browser.
+
+The product is organised around three surfaces: **Workspace** (create), **Discover** (browse community + curated external resources), and **Learn** (understand). See [`docs/reference/positioning.md`](docs/reference/positioning.md) for the canonical story.
 
 **Live:** [uil4b.com](https://www.uil4b.com)
 
@@ -34,7 +36,7 @@ A comprehensive design toolkit built with React and Vite. Create colour palettes
 - **Prompt Library** — Personal + community AI prompt library with Pro-gated community prompts, popular/new sorting, and contributor submissions (+25 AI generations for approved prompts)
 - **Design Principles** — Visual hierarchy, cognitive load, micro interactions, and brand psychology
 - **Social & Marketing** — Content pillars, posting cadence, caption templates, growth tactics
-- **External Resources** — Curated links plus user-added custom resources with colour-coded cards
+- **Discover** (External Resources + Community) — the emerging community & external-resource hub: curated external tools and inspiration sites alongside community-shared systems, each linking back to the relevant UIL4B tool. Replaces the old "Library" framing — see [`docs/reference/discover.md`](docs/reference/discover.md)
 
 ## Features
 
