@@ -1,13 +1,9 @@
 import { DISCOVER_COLLECTIONS, resolveCollection } from '../../data/discoverResources'
+import { monogram } from './discoverUtils'
 
 // 3 static editorial collections. Each is a 2×2 mini-preview (the first four
 // member faces) + title + count. Clicking opens the collection in the detail
 // modal so the user can scan its members without leaving the page.
-function monogram(title) {
-  const words = title.replace(/[^a-zA-Z0-9 ]/g, ' ').trim().split(/\s+/)
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
-  return title.slice(0, 2).toUpperCase()
-}
 
 export default function CollectionsBand({ onOpen }) {
   return (
@@ -30,7 +26,7 @@ export default function CollectionsBand({ onOpen }) {
               <div className="dsc-coll-preview" aria-hidden="true">
                 {preview.map(r => (
                   <span key={r.id} className="dsc-coll-tile" data-cat={r.category}>
-                    {monogram(r.title)}
+                    {monogram(r.title, r.category)}
                   </span>
                 ))}
               </div>
