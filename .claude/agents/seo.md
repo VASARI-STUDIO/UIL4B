@@ -9,7 +9,7 @@ description: >-
   2026 search reality; returns prioritised, data-backed SEO specs. Advisory —
   runs in the research phase, before engineering implements.
 tools: WebSearch, WebFetch, Read, Grep, Glob, Bash
-model: opus
+model: sonnet
 ---
 
 # Senior SEO Strategist (Technical · Content · AI-Search) — UIL4B
