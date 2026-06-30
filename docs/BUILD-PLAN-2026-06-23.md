@@ -173,7 +173,17 @@ shipped as a stub); (2) **touch long-press disambiguation** — `onPointerDown` 
 point on first `pointerdown` with no hold timer, so on mobile a user trying to drag an existing point
 can inadvertently add one (spec §5.7 calls for a ~250 ms hold before a drag starts).
 
-Full sub-sequence (Slice 1, 2 & 3 items marked ✅; the rest = later slices):
+**✅ Slice 4 SHIPPED** — high-quality UI previews (CS#3.2): real, full-fidelity UI mockups
+rendered from the live palette + **1–3 Pro-gated blurred previews** with an upgrade overlay and a
+final upgrade CTA. **Client-side anti-tamper holds the line** — the Pro preview content is **never
+computed, placed in state, or rendered into the DOM for a non-Pro user** (mirrors the Slice 3 harmony
+pattern), so inspect-element cannot unlock it; only the blurred shell + CTA exist client-side. Gate
+cleared: code-review + **security-review (anti-tamper PASS)** + secret-scan + qa, build green, lint at
+baseline (0 errors / 31 warnings). **The full server-rendered entitlement gate (verify-`idToken` `/api`
+route reading the authoritative Firestore `users/{uid}` plan) folds into the Phase 3 export/paywall
+slice (#23/#24, CS#3.11) — that slice is founder-gated.**
+
+Full sub-sequence (Slice 1, 2, 3 & 4 items marked ✅; the rest = later slices):
 - **Page nav** ✅ (Slice 1) — pill style + sliding/snapping inner pill (any label width), glass
   panel, pinned-to-top on load, **tints section removed** (folds into palette). (CS#1, 2, 2.1)
 - **Palette Builder (Coolors-grade rebuild)** —
@@ -192,9 +202,9 @@ Full sub-sequence (Slice 1, 2 & 3 items marked ✅; the rest = later slices):
   - ✅ (Slice 3) **"Colour System" popup** (renamed from "add colour") — keep From-brand-palette; house
     harmony picker + Auto default; **image extract keeps image on screen with movable
     eyedropper points**; **remove plain "pick colour" tab.** (CS#3.14)
-  - ◐ **(→ Slice 4, in progress)** **High-quality UI previews** (real UI, not tiny mockups); **1–3
+  - ✅ **(Slice 4 SHIPPED)** **High-quality UI previews** (real UI, not tiny mockups); **1–3
     blurred Pro previews with upgrade overlay + final upgrade CTA**; ⚠ **server-gated / not-rendered**
-    so inspect-element can't unlock (CS#3.2). _Slice 4 ships the preview component + client-side
+    so inspect-element can't unlock (CS#3.2). _Slice 4 shipped the preview component + client-side
     anti-tamper gate (Pro preview content never rendered for non-Pro, mirroring the Slice 3 harmony
     pattern); the full server-rendered entitlement gate folds into the Phase 3 export/paywall slice._
   - **Quick-export** (reusable across tools). ⚠ Per decision #3, **export is Pro-only** — no
@@ -210,15 +220,35 @@ Full sub-sequence (Slice 1, 2 & 3 items marked ✅; the rest = later slices):
 - **Re-theme** the whole page to the theme-direction spec (CS#12).
 
 ### Phase 2 — Homepage finalize + app shell + global nav & search  ·  design → engineer → review
+
+> 🟢 **ACTIVE WORKSTREAM — the Global Nav Redesign is the live realisation of this phase.**
+> Founder brief: *"redo the nav — a button at the top with a dropdown (like coolors.co), the
+> left sidebar specific to each section, make Discover supersede Resources."* This is the in-app
+> embodiment of the **three surfaces** (`positioning.md`) and subsumes the nav items below
+> (**#1/#1.1 search**, **#2/#3 nav-parity + mega-menu**, **#13/#14 pinned-nav fixes**). Design
+> spec is **done**. Founder decisions locked: **fold Resources cards into Discover immediately**
+> (no interim redirect) and **absorb `/community` into the Discover page** (no standalone).
+> Live slice status is mirrored in `docs/BACKLOG-STATUS.md` §2.
+
+| Slice | What | Subsumes | Status |
+|---|---|---|---|
+| **1** | Section model (`src/data/sections.jsx`) + top-bar **section switcher** (Workspace/Discover/Learn dropdown) | #2 nav parity (single shared switcher) | ✅ **shipped — PR #127** |
+| **2** | **Discover supersedes Resources** — fold ExternalResources cards into Discover, absorb `/community`, update switcher/links | — | ☐ next |
+| **3** | Section-aware **Workspace** left sidebar | #13/#14 (pinned-nav highlight + pin icon) | ☐ |
+| **4** | **Discover** left sidebar | — | ☐ |
+| **5** | **Learn** left sidebar | — | ☐ |
+| **6** | Edge cases + polish (`/checkout` = no sidebar — HVZ-adjacent, founder-review) + **mega-menu / global search** wiring | #1/#1.1 search, #3 mega-menu | ☐ |
+
+Original phase-2 line items (now folded into the slices above; kept for traceability):
 - **[#5]** ✅ — finalize: confirm with founder, align to final tokens, add **[#37]**
   placeholder hero (right of text), swap **[#36]** 3D hero later; **[#5.5]** smooth scroll.
 - **[#6]** app shell re-themed (sweep for drift).
 - **[#1]** global search → **links to the in-page section** of a tool; **[#1.1]** help/docs
-  searchable with a **distinct visual treatment** for tools vs help vs docs.
+  searchable with a **distinct visual treatment** for tools vs help vs docs. _(→ nav Slice 6.)_
 - **[#2]** nav parity — dashboard nav == `/home` nav; **[#3]** extra-tools button →
-  **full-width Coolors-style mega-menu** _(needs screenshot)_.
+  **full-width Coolors-style mega-menu** _(needs screenshot)_. _(#2 → Slice 1 ✅; #3 → Slice 6.)_
 - **[#13]** kill the **blue highlight** on pinned nav sections; **[#14]** move the **pin icon
-  onto the page**, not the nav.
+  onto the page**, not the nav. _(→ nav Slice 3.)_
 
 ### Phase 3 — Monetisation & auth  ·  design → engineer (HVZ-gated) → security + qa
 - **[#22]** remove **Buy-Me-A-Coffee** link (`src/pages/Landing.jsx`) — quick.

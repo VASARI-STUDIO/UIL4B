@@ -74,6 +74,35 @@ fixed composition chain**; routing is per-task. Defaults:
 - When in doubt about scope, prefer the **leaner** route and escalate if the
   agent reports it's bigger than thought.
 
+## Batched gate — lighten the process (founder rule, 2026-06-30)
+
+Dylan flagged that we burn tokens by over-routing — pushing every small change
+through the full chain. The cadence is now:
+
+- **Per change** — the engineer runs the **simple local check** (`npx vite build`
+  + `npx eslint .`). That's enough to keep moving; the PM does **not** spin up a
+  review subagent for every micro-edit.
+- **Per cluster** — once a group of related changes has landed, the PM routes
+  **one combined `code-reviewer` + `qa` pass** over the whole batch before
+  merging. Build everything, then scan the batch.
+- **Non-negotiable** — any change touching **`/api`, auth, Stripe, or
+  user-generated content** still gets **`secret-scanner` + `security-reviewer`
+  before merge**, every time. Security is never batched away.
+- For a tiny, pure-UI diff the PM may do the **inline secret-review itself**
+  (reading the diff) rather than launching `secret-scanner` — reserve the
+  subagent for security-sensitive surfaces. (Reading code/diffs is PM scope;
+  editing them is not.)
+
+See `build-and-verify.md` for the same policy from the build side.
+
+## Models — who runs on what (founder rule, 2026-06-30)
+
+Opus is reserved for **design, engineer, security-reviewer, and the PM (main
+thread)**. Every other agent runs on **sonnet** (research, seo, code-reviewer,
+secret-scanner, qa, release-captain, analytics). The roster table in
+`.claude/agents/README.md` and the `model:` field in each agent file are the
+source of truth — keep them in sync.
+
 ## PM-only responsibilities (subagents can't do these)
 
 - **Open / update / squash-merge PRs** via the GitHub MCP tools (only when

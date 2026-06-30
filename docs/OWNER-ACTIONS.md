@@ -1,28 +1,41 @@
 # UIL4B — Owner Action List
 
 Things only **you** can do (credentials, dashboards, infra) to fully activate the
-work that's now in the codebase. Ordered by impact. Last updated 2026-06-20.
+work that's now in the codebase. Ordered by impact. Last reviewed 2026-06-30.
+
+> **⚠ Status is uncertain — verify before you fix.** As of 2026-06-30 you weren't
+> sure which of these you'd already done, and the agent environment **cannot reach
+> `uil4b.com` to check for you** (outbound to the production domain is blocked by
+> the sandbox network policy — a `403 CONNECT` on every request). So each item
+> below now leads with a **self-check you can run in ~30 seconds**. Run the check
+> first; only do the fix if the check fails. Nothing here is destructive — re-doing
+> an already-done step is harmless.
 
 ---
 
 ## 🔴 1. Make the AI features work again (CRITICAL)
 
-**CONFIRMED via live production diagnostic (2026-06-20).** I added a config health check and
-ran it against production: `GET https://uil4b.com/api/generate-prompt?diag=uil4b-dev-2026`.
-It returned:
+**▶ Check first (30 sec):** open
+`https://uil4b.com/api/generate-prompt?diag=uil4b-dev-2026` in your browser (or
+`curl` it). You want to see `firebaseCredential: "ok"` and both `GEMINI_API_KEY`
+and `DEEPSEEK_API_KEY` reported as `set (… chars)`. If all three are healthy,
+**this item is done — skip the fix.** (Even quicker: sign in and open the Alt Text
+Generator; if it works, AI is alive.)
 
-| Env var | Live status | Verdict |
+**Last known state (2026-06-20 diagnostic — may be stale if you've since fixed it):**
+
+| Env var | Status then | Verdict |
 |---|---|---|
 | `GEMINI_API_KEY` | **set (39 chars)** | ✅ present, correct length |
 | `DEEPSEEK_API_KEY` | **MISSING** | ❌ not set in Production |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | **set, but not valid service-account JSON** | ❌ malformed |
 
-So the keys are **not** all correct in production — two are wrong, and the Firebase one is the
-real blocker. Every AI tool verifies your login (`verifyIdToken`) *before* calling the AI model,
-and that needs a valid service-account credential. The value currently in
-`FIREBASE_SERVICE_ACCOUNT_KEY` isn't the service-account JSON (it's likely the code snippet shown
-on that page, the web-app `firebaseConfig`, or a partial paste), so auth fails and **every** AI
-tool dies — no matter how correct the AI keys are.
+If the check above still shows those failures: every AI tool verifies your login
+(`verifyIdToken`) *before* calling the AI model, and that needs a valid
+service-account credential. A malformed `FIREBASE_SERVICE_ACCOUNT_KEY` (the code
+snippet from that page, the web-app `firebaseConfig`, or a partial paste — instead
+of the real service-account JSON) makes auth fail, so **every** AI tool dies no
+matter how correct the AI keys are.
 
 **Fix (≈5 min):**
 
