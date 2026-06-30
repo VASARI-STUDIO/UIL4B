@@ -37,6 +37,8 @@ const DocsSEO = lazy(() => import('./pages/DocsSEO'))
 const DocsMarketing = lazy(() => import('./pages/DocsMarketing'))
 const DocsAI = lazy(() => import('./pages/DocsAI'))
 const ExternalResources = lazy(() => import('./pages/ExternalResources'))
+const Discover = lazy(() => import('./pages/Discover'))
+const DiscoverGradients = lazy(() => import('./pages/DiscoverGradients'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Community = lazy(() => import('./pages/Community'))
 const Feedback = lazy(() => import('./pages/Feedback'))
@@ -199,6 +201,8 @@ export default function App() {
       '/imagery': 'UI L4B | Imagery',
       '/icons-emoji': 'UI L4B | Icons & Emoji',
       '/resources': 'UI L4B | Resources',
+      '/discover': 'UI L4B | Discover',
+      '/discover/gradients': 'UI L4B | Gradient Library',
       '/alt-text': 'UI L4B | Alt Text Generator',
       '/ai-prompt': 'UI L4B | AI Image Prompt Generator',
       '/ai-tools': 'UI L4B | AI Tools',
@@ -242,6 +246,8 @@ export default function App() {
       '/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
       '/icons-emoji': 'Search 200,000+ icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
       '/resources': 'A curated directory of the best external design resources — fonts, colour tools, AI generators, and inspiration galleries.',
+      '/discover': 'Discover the best external design resources — gradients, palettes, fonts, components and inspiration — with a one-tap hand-off into the UI L4B tools that use them.',
+      '/discover/gradients': 'A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.',
       '/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
       '/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
       '/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by DeepSeek and Gemini.',
@@ -377,6 +383,8 @@ export default function App() {
               <Route path="/auto-builder" element={<RequireAdmin><AutoBuilder onCopy={copy} toast={toast} /></RequireAdmin>} />
               <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
               <Route path="/resources" element={<ExternalResources />} />
+              <Route path="/discover" element={<Discover toast={toast} />} />
+              <Route path="/discover/gradients" element={<DiscoverGradients toast={toast} />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/login" element={<Login toast={toast} />} />
               <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
