@@ -10,7 +10,7 @@ description: >-
   Advisory and read-only — this is the FIRST phase in the company workflow,
   before design and engineering.
 tools: WebSearch, WebFetch, Read, Grep, Glob
-model: opus
+model: sonnet
 ---
 
 # Market & Competitor Intelligence Analyst — UIL4B

@@ -33,6 +33,23 @@ Before starting any implementation:
 - **Run it before marking complete.** See Core Behaviors in `CLAUDE.md`:
   "Never mark work complete without running it."
 
+## Batched gate — simple per change, full per cluster
+
+Founder rule (2026-06-30): **don't over-route.** The build/lint gate is cheap
+(local, zero model cost); the multi-agent review gate is not. So:
+
+- **After each change** → run the **simple check**: `npx vite build` +
+  `npx eslint .`. Baseline today is **0 errors / 31 warnings** — match it; don't
+  add new warnings and don't "fix" the pre-existing 31.
+- **After a cluster of related changes** → run **one combined code-review + qa**
+  over the whole batch, then merge. Not a fresh review per micro-edit.
+- **Security-sensitive code is never batched away.** Anything touching `/api`,
+  auth, Stripe, or user-generated content gets **secret-scanner +
+  security-reviewer before merge**, every time — no matter how small.
+
+Rule of thumb: *simple check after completing a new thing; a bigger scan/test
+after several changes have landed.*
+
 ## What "verified" looks like by task type
 
 | Task | Minimum verification |

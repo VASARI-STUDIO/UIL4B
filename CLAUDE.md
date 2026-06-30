@@ -2,120 +2,77 @@
 
 UIL4B is the **operating workspace for UI system creation** — build, organize,
 validate, and export interface foundations without tab-hopping. One product, one
-account, one Stripe subscription, organised as three surfaces: **Workspace**
-(create), **Discover** (browse community + curated external resources), and
-**Learn** (understand). React 19 SPA (Vite + Vercel); Firebase Auth + Firestore;
-Stripe subscriptions; DeepSeek/Gemini AI backends. See
-[`positioning.md`](docs/reference/positioning.md) for the canonical story.
+account, one Stripe subscription, three surfaces: **Workspace** (create),
+**Discover** (browse), **Learn** (understand). React 19 SPA (Vite + Vercel);
+Firebase Auth + Firestore; Stripe subscriptions; DeepSeek/Gemini AI.
 
-> This file is a lean index. Detailed technical reference lives in
-> [`docs/reference/`](docs/reference/) — see **Reference Docs** at the bottom.
+> Lean index. Canonical story → [`positioning.md`](docs/reference/positioning.md).
+> **Taking over / new to the project?** Read
+> [`BACKLOG-STATUS.md`](docs/BACKLOG-STATUS.md) first — current direction, active
+> work, backlog, and owner actions in one place.
 
 ---
 
-## Working With Me
+## Working with me (Dylan)
 
-Dylan is a Website Designer turned vibe-code developer, and an entrepreneur. I
-like to work autonomously — I like to provide tasks, or have tasks provided to
-me, and be left to work alone.
+Designer-turned-vibe-coder and entrepreneur; I work autonomously — hand me a task
+and let me run. My instructions are often unstructured / out of order (ADHD
+tendencies) — **pull them apart, regroup, and re-sequence before acting.** Full
+PM operating model: [`project-manager.md`](docs/reference/project-manager.md).
 
-When I'm giving instructions they will often not be structured very well, or in
-a good / correct order, as I have some ADHD tendencies. So many times my
-instructions will need to be carefully pulled apart and pieced back together
-into a good list, in the right order. (E.g. I might give three instructions
-about Section A, then one about Section B, then jump back to Section A again —
-regroup and re-sequence before acting.)
+## Decision rules
 
-## Decision Rules
+- Action over asking · Concise over verbose · Automation over manual · Execute
+  first, refine later.
+- **Priorities:** 1) User experience 2) Reliability 3) Speed 4) Visual quality.
+- **When solutions compete:** maintainability > cleverness · reuse > duplication
+  · production-ready > clever · scalable > quick · user value > perfection.
 
-- Action over asking.
-- Concise over verbose.
-- Automation over manual.
-- Execute first, refine later.
+## Core behaviors
 
-## Priorities
-
-1. User experience
-2. Reliability
-3. Speed
-4. Visual quality
-
-## When Multiple Solutions Exist
-
-1. Choose maintainability over cleverness.
-2. Choose reusable components over duplication.
-3. Choose production-ready implementations.
-4. Choose scalable architecture.
-5. Choose user value over engineering perfection.
-
-## Core Behaviors
-
-- Exhaust all options before asking.
-- Give real opinions, not pros/cons lists.
+- Exhaust options before asking. Give real opinions, not pros/cons lists.
 - Confirm before irreversible external actions.
-- Never mark work complete without running it.
+- Never mark work complete without running it
+  ([`build-and-verify.md`](docs/reference/build-and-verify.md)).
 
-## Self-Extension (Automatic Skill Creation)
+## Self-extension (auto skill creation)
 
-I extend my own capabilities by creating new skills. This is core to evolution.
-
-### When to Create a Skill AUTOMATICALLY
-
-Create a new skill when ALL of these are true:
-
-1. **Capability gap** — User requests something no existing skill covers.
-2. **Reusable** — Pattern will likely be useful again (not one-off).
-3. **Structured** — Involves a clear process, API, or tool usage.
-4. **User benefit** — Saves time on future similar requests.
-
-### How to Create a Skill
-
-1. **Recognize the gap** — "No skill exists for this, and it's reusable."
-2. **Create the skill file** immediately: `~/.claude/skills/[skill-name]/SKILL.md`
-3. **Use minimal YAML frontmatter**:
-   ```yaml
-   ---
-   name: skill-name
-   description: Clear description of when to use this skill
-   allowed-tools: Tool1, Tool2
-   ---
-   ```
-4. **Use it immediately** for the current task.
-5. **Inform user**: "Created new skill: [name] — [what it does]."
+When a request reveals a **reusable, structured** capability gap no skill covers,
+create one at `~/.claude/skills/[name]/SKILL.md` (minimal YAML frontmatter:
+`name`, `description`, `allowed-tools`), use it immediately, and tell me:
+"Created new skill: [name] — [what it does]."
 
 ---
 
-## Reference Docs
+## Reference docs
 
-Detailed, task-ready reference for agents. Read the relevant one before working
-in that area.
+Read the relevant one before working in that area.
 
-- **[Positioning & Surfaces](docs/reference/positioning.md)** — **source of
-  truth** for what UIL4B is and the three surfaces (Workspace / Discover /
-  Learn). Read before marketing copy, naming a tool, or placing a feature.
-- **[Discover](docs/reference/discover.md)** — the community + curated
-  external-resource hub (**replaces the old "Library"**); structure, categories,
-  engagement, external-resource rules, MVP scope.
-- **[Project Manager](docs/reference/project-manager.md)** — how the PM (main
-  thread) parses instructions and routes work. **The PM never writes code.**
-- **[Tech Stack](docs/reference/tech-stack.md)** — frameworks, dependencies,
-  AI backends, client/server boundary.
+- **[Positioning & Surfaces](docs/reference/positioning.md)** — source of truth:
+  what UIL4B is + the three surfaces.
+- **[Discover](docs/reference/discover.md)** — community + curated-resource hub
+  (replaces "Library").
+- **[Project Manager](docs/reference/project-manager.md)** — how the PM parses +
+  routes work. **The PM never writes code.**
+- **[Tech Stack](docs/reference/tech-stack.md)** — frameworks, AI backends,
+  client/server boundary.
 - **[Architecture](docs/reference/architecture.md)** — pages, contexts,
-  components, `/api` routes (12-function limit), analytics layer.
-- **[Colour System Method](docs/reference/color-system-m3.md)** — our Material
-  3-based colour method (seed → tonal palettes → roles → light/dark); the
-  foundation for the UI System Builder & Brand System Builder.
-- **[Build & Verify](docs/reference/build-and-verify.md)** — the verify-first
-  build gate. Nothing ships without it.
+  components, `/api` (12-function limit), analytics.
+- **[Colour System Method](docs/reference/color-system-m3.md)** — M3-based colour
+  method (seed → tonal palettes → roles → light/dark).
+- **[Build & Verify](docs/reference/build-and-verify.md)** — the verify gate +
+  when to run simple vs. batched checks.
 - **⚠️ [Human Validation Zones](docs/reference/human-validation-zones.md)** —
-  founder-gated auth/Stripe files. **Read before touching auth or payments.**
-- **[Murphy's Law Checklist](docs/reference/murphys-law.md)** — required
-  loading/empty/error/offline states; resilience.
+  founder-gated auth/Stripe files. Read before touching auth or payments.
+- **[Murphy's Law](docs/reference/murphys-law.md)** — required
+  loading/empty/error/offline states.
 - **[Constants & Config](docs/reference/constants-and-config.md)** — admin
   emails/code, Firebase IDs, brand colour, tokens, env vars.
-- **[CSS Conventions](docs/reference/css-conventions.md)** — single
-  `global.css`, design tokens, class prefixes, breakpoints.
+- **[CSS Conventions](docs/reference/css-conventions.md)** — single `global.css`,
+  design tokens, class prefixes, breakpoints.
 - **[Git Workflow](docs/reference/git-workflow.md)** — branch, commit, push,
   PR-only merge to `main`.
 
-Subagent roster + routing principles: [`.claude/agents/README.md`](.claude/agents/README.md).
+**State & planning:** [`BACKLOG-STATUS.md`](docs/BACKLOG-STATUS.md) (live state +
+backlog) · [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) (founder-only tasks) ·
+subagent roster [`.claude/agents/README.md`](.claude/agents/README.md).
