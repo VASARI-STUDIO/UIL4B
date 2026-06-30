@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useSearchParams } from 'react-router-dom'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, mixHex, describeColor, T_LABELS, autoTonalPalette, tonalRamp, applyAdjust, hexToHct, simCvd, fixForeground, derivePreviewRoles } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -1823,6 +1823,36 @@ export default function ColorStudio({ onCopy, toast }) {
   const [collapsed, setCollapsed] = useState({})
   const [activeSection, setActiveSection] = useState('palette')
   const toggleCollapse = useCallback((id) => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })), [])
+
+  // ── Discover hand-off: ?preset=<slug>&tab=gradient ──
+  // When the user picks "Use in Gradient Generator" from Discover, we arrive
+  // with a preset slug. Match it against GRAD_PRESETS by slugified name, apply
+  // it, expand + scroll to the gradients section, toast, then strip the params
+  // (replace) so a refresh/back doesn't silently re-apply it. One-shot.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const presetAppliedRef = useRef(false)
+  useEffect(() => {
+    if (presetAppliedRef.current) return
+    const presetSlug = searchParams.get('preset')
+    if (!presetSlug && searchParams.get('tab') !== 'gradient') return
+    presetAppliedRef.current = true
+    const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const preset = presetSlug ? GRAD_PRESETS.find(p => slugify(p.n) === presetSlug) : null
+    if (preset) {
+      setGradStops(preset.stops.map(s => ({ color: s.color, position: s.pos })))
+      setGradAngle(preset.angle)
+      setGradType(preset.type)
+    }
+    setCollapsed(prev => ({ ...prev, gradients: false }))
+    requestAnimationFrame(() => {
+      document.getElementById('gradients')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    if (toast) toast(preset ? 'Loaded from Discover' : 'Opened in Gradient Generator')
+    // Strip the hand-off params without adding a history entry.
+    const next = new URLSearchParams(searchParams)
+    next.delete('preset'); next.delete('tab'); next.delete('from')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams, toast])
 
   useEffect(() => {
     const els = SECTIONS.map(s => document.getElementById(s.id)).filter(Boolean)
