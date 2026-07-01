@@ -1,9 +1,10 @@
-import { FILTER_CATEGORIES } from '../../data/discoverCategories'
+import { VISIBLE_CATEGORIES } from '../../data/discoverCategories'
 import CategoryGlyph from './CategoryGlyph'
 
 // "Browse by type" — colour-coded tiles with live counts. Clicking a tile is a
 // FILTER shortcut (not a route): it sets the grid filter and scrolls to the
-// grid. Counts come from the parent so they reflect the real seed.
+// grid. Counts come from the parent so they reflect the real seed. Community is
+// included here (VISIBLE_CATEGORIES) so it's browsable from the full surface.
 export default function BrowseTiles({ counts, activeFilter, onPick }) {
   return (
     <section className="dsc-browse" aria-label="Browse by type">
@@ -11,7 +12,7 @@ export default function BrowseTiles({ counts, activeFilter, onPick }) {
         <h2>Browse by type</h2>
       </div>
       <div className="dsc-tiles">
-        {FILTER_CATEGORIES.map(cat => {
+        {VISIBLE_CATEGORIES.map(cat => {
           const count = counts[cat.key] || 0
           const active = activeFilter === cat.key
           return (

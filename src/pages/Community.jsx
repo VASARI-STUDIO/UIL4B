@@ -1,73 +1,25 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { COMMUNITY_DESIGNS, COMMUNITY_CATEGORIES } from '../data/communityDesigns'
+import CommunityCard from '../components/discover/CommunityCard'
 
 // Community Hub — browse, save, and submit design inspiration. Saves drive the
 // ranking. Baseline save counts are illustrative for now; the heart toggle and
 // each user's own saves persist locally and layer on top, so the UX is real and
 // upgrades cleanly to shared Firestore counts later.
+//
+// The seed data (COMMUNITY_DESIGNS), the category list (COMMUNITY_CATEGORIES) and
+// the card (CommunityCard) now live in shared modules so the Discover surface can
+// render the same designs without importing this page. Submission stays a
+// local-only placeholder here (no shared publishing pipeline yet).
 
 const SAVES_KEY = 'vs-community-saves'
 const SUBMISSIONS_KEY = 'vs-community-submissions'
-
-const CATEGORIES = ['All', 'Landing', 'Dashboard', 'Portfolio', 'E-commerce', 'Mobile', 'Branding']
-
-// Curated seed. Thumbnails are generated gradients (no external assets / Storage
-// dependency) so the gallery renders instantly and offline.
-const SEED = [
-  { id: 's1', name: 'Aurora Analytics', author: 'Maya R.', category: 'Dashboard', c1: '#3B82F6', c2: '#8B5CF6', saves: 342, url: 'https://dribbble.com' },
-  { id: 's2', name: 'Lumen Studio', author: 'Devon K.', category: 'Landing', c1: '#0EA5E9', c2: '#22D3EE', saves: 318, url: 'https://awwwards.com' },
-  { id: 's3', name: 'Folio Noir', author: 'Inès B.', category: 'Portfolio', c1: '#111827', c2: '#374151', saves: 287, url: 'https://behance.net' },
-  { id: 's4', name: 'Marketplace Mint', author: 'Theo L.', category: 'E-commerce', c1: '#10B981', c2: '#34D399', saves: 264, url: 'https://dribbble.com' },
-  { id: 's5', name: 'Pulse Mobile', author: 'Sara W.', category: 'Mobile', c1: '#F43F5E', c2: '#FB7185', saves: 251, url: 'https://mobbin.com' },
-  { id: 's6', name: 'Cobalt Brand Kit', author: 'Nikolai V.', category: 'Branding', c1: '#2563EB', c2: '#60A5FA', saves: 233, url: 'https://behance.net' },
-  { id: 's7', name: 'Solaris Landing', author: 'Priya N.', category: 'Landing', c1: '#F59E0B', c2: '#FBBF24', saves: 219, url: 'https://awwwards.com' },
-  { id: 's8', name: 'Grid Atlas', author: 'Marco D.', category: 'Dashboard', c1: '#6366F1', c2: '#A5B4FC', saves: 198, url: 'https://dribbble.com' },
-  { id: 's9', name: 'Verdant Store', author: 'Lena H.', category: 'E-commerce', c1: '#059669', c2: '#6EE7B7', saves: 176, url: 'https://dribbble.com' },
-  { id: 's10', name: 'Monochrome Folio', author: 'Otis P.', category: 'Portfolio', c1: '#27272A', c2: '#52525B', saves: 154, url: 'https://behance.net' },
-  { id: 's11', name: 'Glass Wallet', author: 'Amara F.', category: 'Mobile', c1: '#7C3AED', c2: '#C4B5FD', saves: 142, url: 'https://mobbin.com' },
-  { id: 's12', name: 'Coral Identity', author: 'Hugo S.', category: 'Branding', c1: '#EC4899', c2: '#F9A8D4', saves: 121, url: 'https://behance.net' },
-]
 
 function loadSaves() {
   try { return new Set(JSON.parse(localStorage.getItem(SAVES_KEY) || '[]')) } catch { return new Set() }
 }
 function loadSubmissions() {
   try { return JSON.parse(localStorage.getItem(SUBMISSIONS_KEY) || '[]') } catch { return [] }
-}
-
-function HeartIcon({ filled }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  )
-}
-
-function DesignCard({ item, saved, count, onToggle }) {
-  return (
-    <article className="ch-card">
-      <a className="ch-thumb" href={item.url} target="_blank" rel="noopener noreferrer"
-        style={{ '--c1': item.c1, '--c2': item.c2 }} aria-label={`${item.name} — open in new tab`}>
-        <span className="ch-thumb-mono">{item.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
-      </a>
-      <button
-        className={`ch-heart${saved ? ' is-saved' : ''}`}
-        onClick={() => onToggle(item.id)}
-        aria-pressed={saved}
-        aria-label={saved ? `Unsave ${item.name}` : `Save ${item.name}`}
-        title={saved ? 'Saved' : 'Save'}
-      >
-        <HeartIcon filled={saved} />
-        <span className="ch-heart-count">{count}</span>
-      </button>
-      <div className="ch-card-body">
-        <div className="ch-card-name">{item.name}</div>
-        <div className="ch-card-meta">
-          <span>{item.author}</span>
-          <span className="ch-card-tag">{item.category}</span>
-        </div>
-      </div>
-    </article>
-  )
 }
 
 function SubmitModal({ onClose, onSubmit }) {
@@ -122,7 +74,7 @@ function SubmitModal({ onClose, onSubmit }) {
           <label className="ch-field">
             <span>Category</span>
             <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-              {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+              {COMMUNITY_CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </label>
           {error && <div className="ch-error">{error}</div>}
@@ -164,7 +116,7 @@ export default function Community({ toast }) {
   // user's own save — exactly the "ranking by saves" behaviour, illustratively.
   const effectiveCount = useCallback((item) => item.saves + (saves.has(item.id) ? 1 : 0), [saves])
 
-  const all = useMemo(() => [...submissions, ...SEED], [submissions])
+  const all = useMemo(() => [...submissions, ...COMMUNITY_DESIGNS], [submissions])
 
   const visible = useMemo(() => {
     let list = filter === 'All' ? all : all.filter(i => i.category === filter)
@@ -195,7 +147,7 @@ export default function Community({ toast }) {
 
       <div className="ch-toolbar">
         <div className="ch-filters">
-          {CATEGORIES.map(c => (
+          {COMMUNITY_CATEGORIES.map(c => (
             <button key={c} className={`ch-filter${filter === c ? ' is-active' : ''}`} onClick={() => setFilter(c)}>{c}</button>
           ))}
         </div>
@@ -208,7 +160,7 @@ export default function Community({ toast }) {
       {visible.length > 0 ? (
         <div className="ch-grid">
           {visible.map(item => (
-            <DesignCard key={item.id} item={item} saved={saves.has(item.id)} count={effectiveCount(item)} onToggle={toggleSave} />
+            <CommunityCard key={item.id} item={item} saved={saves.has(item.id)} count={effectiveCount(item)} onToggle={toggleSave} />
           ))}
         </div>
       ) : (
