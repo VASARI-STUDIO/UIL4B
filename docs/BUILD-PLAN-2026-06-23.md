@@ -65,8 +65,9 @@ headed as superseded). Work runs **page-by-page, feature-by-feature**.
   and the **quick-export** image (CS#3.11). Building to the live Coolors URLs; flag
   for a look.
 - **#24 second URL export type** — sentence incomplete in the brief.
-- **#5 homepage** — already shipped (Linear pass 1+2); confirm iterate-further vs
-  accept-as-base (Phase 2).
+- **#5 homepage** — ✅ **resolved 2026-07-01:** rebuild from the **Mobbin homepage**
+  as the new starting point (supersedes the shipped Linear homepage + the shelved
+  "questly" spec). See Phase 2 [#5].
 - **"More lists per section as we go."**
 
 ---
@@ -222,26 +223,35 @@ Full sub-sequence (Slice 1, 2, 3 & 4 items marked ✅; the rest = later slices):
 ### Phase 2 — Homepage finalize + app shell + global nav & search  ·  design → engineer → review
 
 > 🟢 **ACTIVE WORKSTREAM — the Global Nav Redesign is the live realisation of this phase.**
-> Founder brief: *"redo the nav — a button at the top with a dropdown (like coolors.co), the
-> left sidebar specific to each section, make Discover supersede Resources."* This is the in-app
-> embodiment of the **three surfaces** (`positioning.md`) and subsumes the nav items below
-> (**#1/#1.1 search**, **#2/#3 nav-parity + mega-menu**, **#13/#14 pinned-nav fixes**). Design
-> spec is **done**. Founder decisions locked: **fold Resources cards into Discover immediately**
-> (no interim redirect) and **absorb `/community` into the Discover page** (no standalone).
-> Live slice status is mirrored in `docs/BACKLOG-STATUS.md` §2.
+> ⚠️ **DIRECTION CHANGE 2026-07-01 (founder):** the original *single section switcher* shipped as
+> Slice 1 (PR #127), but Dylan pivoted to a **normal horizontal nav bar with three top-level items
+> (Workspace · Discover · Learn), each opening its own mega-menu dropdown** styled like the Jasper +
+> incident.io reference images (described in `docs/BACKLOG-STATUS.md` §2). The Slice-1 section **data
+> model (`src/data/sections.jsx`) is kept and reused**; only the *switcher UI* is superseded. This is
+> the in-app embodiment of the **three surfaces** (`positioning.md`) and subsumes the nav items below
+> (**#1/#1.1 search**, **#2/#3 nav-parity + mega-menu**, **#13/#14 pinned-nav fixes**). Founder
+> decisions still locked: **fold Resources cards into Discover immediately** (no interim redirect) and
+> **absorb `/community` into the Discover page** (no standalone). Live slice status + the reference-image
+> specs are in `docs/BACKLOG-STATUS.md` §2.
 
 | Slice | What | Subsumes | Status |
 |---|---|---|---|
-| **1** | Section model (`src/data/sections.jsx`) + top-bar **section switcher** (Workspace/Discover/Learn dropdown) | #2 nav parity (single shared switcher) | ✅ **shipped — PR #127** |
-| **2** | **Discover supersedes Resources** — fold ExternalResources cards into Discover, absorb `/community`, update switcher/links | — | ☐ next |
-| **3** | Section-aware **Workspace** left sidebar | #13/#14 (pinned-nav highlight + pin icon) | ☐ |
-| **4** | **Discover** left sidebar | — | ☐ |
-| **5** | **Learn** left sidebar | — | ☐ |
-| **6** | Edge cases + polish (`/checkout` = no sidebar — HVZ-adjacent, founder-review) + **mega-menu / global search** wiring | #1/#1.1 search, #3 mega-menu | ☐ |
+| **1** | Section model (`src/data/sections.jsx`) + top-bar section switcher | #2 nav parity | ✅ **shipped — PR #127** (switcher UI superseded by Slice 3; data model kept) |
+| **2** | **Discover supersedes Resources** — fold ExternalResources cards into Discover, absorb `/community`, update links | — | ☐ next |
+| **3** | **Mega-menu nav bar** — replace switcher with a 3-label horizontal nav; each label opens its own mega-menu dropdown (Jasper/incident.io style) | #3 mega-menu | ☐ **NEW — design spec first** |
+| **4** | **Workspace** mega-menu panel + section-aware left sidebar | #13/#14 (pinned-nav highlight + pin icon) | ☐ |
+| **5** | **Discover** mega-menu panel + left sidebar | — | ☐ |
+| **6** | **Learn** mega-menu panel + left sidebar | — | ☐ |
+| **7** | Edge cases + polish (`/checkout` = no sidebar — HVZ-adjacent, founder-review) + wire **global search** into the mega-menus | #1/#1.1 search | ☐ |
 
 Original phase-2 line items (now folded into the slices above; kept for traceability):
-- **[#5]** ✅ — finalize: confirm with founder, align to final tokens, add **[#37]**
-  placeholder hero (right of text), swap **[#36]** 3D hero later; **[#5.5]** smooth scroll.
+- **[#5]** ⚠ **REDIRECTED 2026-07-01 — rebuild from the Mobbin homepage.** Founder:
+  *"use the homepage from the mobbin app as new basic starting design point... i like
+  this homepage design as a starting point."* Supersedes the shipped Linear homepage
+  **and** the shelved "questly" spec (#30/#31 — do not build). Route: research →
+  `design` teardown of mobbin.com → engineer (#32) → review/QA → ship (#33). Keep
+  UIL4B positioning copy + theme-direction tokens; carry forward **[#37]** placeholder
+  hero, swap **[#36]** 3D hero later, **[#5.5]** smooth scroll.
 - **[#6]** app shell re-themed (sweep for drift).
 - **[#1]** global search → **links to the in-page section** of a tool; **[#1.1]** help/docs
   searchable with a **distinct visual treatment** for tools vs help vs docs. _(→ nav Slice 6.)_
@@ -283,18 +293,38 @@ Original phase-2 line items (now folded into the slices above; kept for traceabi
   **size per tool**, minimal breakpoints.
 - **[#16]** make the site **safely scrapable by AI/SEO crawlers** (prerender/meta) **without**
   exposing anything that lets users steal data — `seo` specs, `security-reviewer` gates.
+- **[#16.1] SEO reverse-engineering (founder 2026-07-01).** *"reverse engineer SEO, via using
+  common search terms for similar tools... currently if i search 'UI colour palette generator' i
+  am not even in the first 5 pages... check this for many search queries."* → the `seo` agent
+  mines competitor high-intent queries, audits our **real** rank across many queries, and seeds to
+  climb (per-tool landing pages, "[competitor] alternative" pages, metadata/H1, AI-citable content)
+  covering **both** "color" (US) and "colour" (UK/AU). Standing directive lives in
+  `.claude/agents/seo.md`; pairs with owner-action #5 (prerender decision).
 - **MISC [#1]** tidy the file system; **[#2]** READMEs current; **[#3]** full UX-quality pass
   every page.
+
+### 🐞 Known bugs (logged 2026-07-01 — route a fix; detail in `BACKLOG-STATUS.md` §5)
+- **Colour/Color label flash on refresh** — two locale files disagree
+  (`src/locales/en.json` British "Colour Studio" ~L94/112/177 vs `src/locales/en-US.json`
+  American "Color Studio"); British paints first, US re-renders. Fix: resolve locale
+  **synchronously before first paint** (or align default). Client i18n only — no HVZ/`/api`.
+- **Font-gallery FOUT on scroll** — `src/pages/FontGallery.jsx` lazy-loads each font via
+  `IntersectionObserver` (~L53–60, L511; `loadFont`/`reloadFont`/`verifyFontLoaded` from
+  `../utils/googleFonts`), swapping each card placeholder→real font after verify — janky/unreliable
+  per-card reflow. Fix: preload/`font-display` the visible set, reserve card metrics, reliable
+  load path (retry/fallback).
 
 ---
 
 ## Agent routing (`docs/reference/project-manager.md`)
 - **research** — Colour Studio + homepage teardowns (Coolors, Linear, Material-3).
-- **design** — theme direction, Colour Studio, homepage finalize, pricing, walkthrough,
-  export/paywall UX, mega-menu, community hub. **AAA specs before engineering.**
+- **design** — theme direction, Colour Studio, **Mobbin homepage teardown/rebuild**,
+  **mega-menu nav bar** (Jasper/incident.io style), pricing, walkthrough, export/paywall UX,
+  community hub. **AAA specs before engineering.**
 - **engineer** — all implementation; runs the build gate.
 - **analytics** — Phase 5 instrumentation design.
-- **seo** — #16 scrapability/indexability.
+- **seo** — #16 scrapability/indexability + **#16.1 reverse-engineer competitor keywords +
+  audit real rank** (2026-07-01).
 - **code-reviewer + security-reviewer + secret-scanner** — pre-ship gate every phase;
   security **mandatory** on paywall/anti-tamper (#24, CS#3.2) and auth (#30/31).
 - **qa** — PASS/FAIL sign-off before merge.

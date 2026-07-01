@@ -1,8 +1,12 @@
 # UIL4B — Backlog & Handoff Status
 
-_Last updated: 2026-06-30. **This is the doc a fresh PM reads first** to take over
+_Last updated: 2026-07-01. **This is the doc a fresh PM reads first** to take over
 and hit the ground running: what we're building, how we work, what's shipped,
 what's in flight, what's blocked on the owner, and what's queued._
+
+> **Taking over from scratch?** The paste-ready spin-up prompt for a brand-new PM
+> chat lives in [`docs/PM-HANDOFF-PROMPT.md`](PM-HANDOFF-PROMPT.md). Read this doc
+> first, then that.
 
 ---
 
@@ -17,10 +21,23 @@ what's in flight, what's blocked on the owner, and what's queued._
 5. **`.claude/agents/README.md`** — the 10-agent roster + which model each runs on.
 6. **`docs/OWNER-ACTIONS.md`** — the things only Dylan can do (infra/keys).
 
-Health check (2026-06-30): **build green**, ESLint **0 errors / 31 warnings**
+Health check (2026-07-01): **build green**, ESLint **0 errors / 31 warnings**
 (the 31 are pre-existing advisory `set-state-in-effect` hints — match this
 baseline; don't add new warnings, don't "fix" the 31). `main` is current through
-**PR #127**.
+**PR #128** (the previous PM-handoff overhaul).
+
+**What landed 2026-07-01 (this doc pass — direction changes a fresh PM must know):**
+1. **Nav pivoted** from a single section *switcher* to a **normal 3-item nav bar
+   with per-item mega-menu dropdowns** (Workspace · Discover · Learn) — see §2.
+2. **Homepage direction decided:** rebuild from the **Mobbin homepage** as the new
+   starting point (supersedes the shipped Linear homepage and the shelved "questly"
+   spec) — see §5.
+3. **Mobbin** added to the "make-irrelevant" competitor set + queued as a Discover
+   inspiration card — see §5.
+4. **SEO reverse-engineering** directive added (mine competitor search terms, audit
+   our real rank, seed to climb) — see §5 + `.claude/agents/seo.md`.
+5. **Two UX bugs logged** (Colour/Color label flash on refresh; font-gallery FOUT on
+   scroll) — see §5 "🐞 Known bugs."
 
 ---
 
@@ -50,23 +67,56 @@ baseline; don't add new warnings, don't "fix" the 31). `main` is current through
 
 ---
 
-## 2. 🟢 Active workstream — Global Nav Redesign
+## 2. 🟢 Active workstream — Global Nav Redesign (mega-menu direction)
 
-Dylan's brief: *"redo the nav — a button at the top with a dropdown (like
-coolors.co), the left sidebar specific to each section, and make Discover
-supersede Resources."* Decoded into a 6-slice plan; design spec is **done**
-(task #52). Founder decisions locked: **fold Resources cards into Discover
-immediately** (no interim redirect) and **absorb `/community` into the Discover
-page** (no standalone).
+⚠️ **DIRECTION CHANGE — 2026-07-01 (founder, supersedes the earlier switcher
+plan).** Original brief was a single coolors-style **section switcher** (one
+button that swaps between Workspace/Discover/Learn) — that shipped as Slice 1
+(PR #127). Dylan has since pivoted:
+
+> *"for the navigation instead of having 3 sections, Learn, Workspace and
+> discover, the navigation should be a normal navigation menu with these labels,
+> and their own drop downs; these dropdowns will look similar to the attached
+> reference images."*
+
+So the top bar becomes a **normal horizontal nav** with **three top-level items —
+Workspace · Discover · Learn — each opening its own mega-menu dropdown**, styled
+like the two reference images below. The Slice 1 **section *data model*
+(`src/data/sections.jsx`) is kept and reused**; only the *switcher UI* is
+superseded by the mega-menu nav. The two locked founder decisions still stand:
+**fold Resources cards into Discover immediately** (no interim redirect) and
+**absorb `/community` into the Discover page** (no standalone).
+
+**Revised slice plan:**
 
 | Slice | What | Status |
 |---|---|---|
-| **1** | Section model (`src/data/sections.jsx`) + top-bar **section switcher** (Workspace/Discover/Learn dropdown) | ✅ **shipped — PR #127** |
-| **2** | **Discover supersedes Resources** — fold ExternalResources cards into Discover, absorb `/community`, update the switcher/links | ☐ next |
-| **3** | Section-aware **Workspace** left sidebar | ☐ |
-| **4** | **Discover** left sidebar | ☐ |
-| **5** | **Learn** left sidebar | ☐ |
-| **6** | Edge cases + polish (e.g. `/checkout` = no sidebar — HVZ-adjacent, founder-review) | ☐ |
+| **1** | Section model (`src/data/sections.jsx`) + top-bar section switcher | ✅ **shipped — PR #127** — ⚠ switcher UI now **superseded by Slice 3**; the `sections.jsx` data model is retained |
+| **2** | **Discover supersedes Resources** — fold ExternalResources cards into Discover, absorb `/community`, update links | ☐ **next** (unaffected by the pivot) |
+| **3** | **Mega-menu nav bar** — replace the switcher with a horizontal 3-label nav (Workspace · Discover · Learn); each label opens its own mega-menu dropdown (see reference styling below) | ☐ **NEW — needs a design spec first** |
+| **4** | **Workspace** mega-menu panel content + section-aware left sidebar | ☐ |
+| **5** | **Discover** mega-menu panel content + left sidebar | ☐ |
+| **6** | **Learn** mega-menu panel content + left sidebar | ☐ |
+| **7** | Edge cases + polish (`/checkout` = no sidebar — HVZ-adjacent, founder-review) + wire **global search** into the mega-menus | ☐ |
+
+**Reference-image styling for the mega-menus** (a fresh PM/design agent won't have
+the screenshots — build to these written specs, then route a `design` teardown):
+
+- **Jasper mega-menu (light theme).** A wide **3-column** panel. Each column has a
+  small uppercase section header (e.g. *"Popular tools & topics"* / *"Learn Jasper"*
+  / *"Get support"*) above a list of **link rows**, each row = **icon + bold title +
+  one-line description**. A **bottom promo band** of 2–3 cards (Blog / Customer
+  Stories / Reviews). Generous padding, soft shadows, rounded corners.
+- **incident.io mega-menu (dark theme).** A **3-column split** labelled
+  *PRODUCTS / PLATFORM / FEATURED*. **Left column** = rounded **icon tile + title +
+  sub-label** (with inline product chips, e.g. Slack/Teams). **Middle column** =
+  a **title + description** list. **Right column** = a single **featured promo card**
+  (image + CTA). A **thin footer row** with secondary links plus a primary CTA
+  (*"Start a free trial"*).
+
+Net: our three panels should borrow Jasper's icon+title+description link rows and
+incident.io's featured-card + footer-CTA structure, re-skinned to the UIL4B
+theme-direction tokens (dark default / light opt-in).
 
 This is the in-app realisation of the **three surfaces** (`positioning.md`) and
 overlaps Build-Plan **Phase 2** items #1/#2/#3/#13/#14.
@@ -94,7 +144,9 @@ overlaps Build-Plan **Phase 2** items #1/#2/#3/#13/#14.
   and **security-gated** — task #49._
 
 ### Navigation
-- **Nav Slice 1** — global section switcher in the top bar (PR #127, above).
+- **Nav Slice 1** — global section switcher in the top bar (PR #127). ⚠ The
+  switcher **UI is being superseded** by the mega-menu nav (§2, Slice 3); its
+  `src/data/sections.jsx` **data model is kept and reused**.
 
 ### Homepage / first-load / platform
 - Homepage Linear redesign (pass 1 + 2); first-load FOUC polish; `/dashboard`
@@ -134,15 +186,62 @@ Roughly in priority order. Detail + item numbers live in `BUILD-PLAN-2026-06-23.
   engineer feasibility #28 done) — estimated shrink + re-convert, max-dimensions
   redesign, more file types, video→gif → full video converter, video↔frames both
   directions.
-- **Homepage redesign** (tasks #32/#33; "questly" spec #30/#31 done) — ⚠ decision
-  pending: this is a *second* redesign on top of the shipped Linear homepage;
-  confirm with Dylan whether to build the questly direction or iterate the Linear
-  one before routing the engineer.
+- **Homepage redesign — ✅ DECIDED 2026-07-01 (founder):** rebuild from the
+  **Mobbin homepage (mobbin.com) as the new starting design point.** Dylan:
+  *"use the homepage from the mobbin app as new basic starting design point for
+  the app. i like this homepage design as a starting point."* This **supersedes**
+  both the shipped Linear homepage **and** the shelved "questly" spec (#30/#31 —
+  now history, do not build). Route: **research → `design` teardown of
+  mobbin.com's homepage → engineer (#32) → review/QA → ship (#33)**. Keep the
+  UIL4B positioning copy (`positioning.md`) and theme-direction tokens; borrow
+  Mobbin's *layout/structure*, not its brand.
+- **Mobbin → "make-irrelevant" set + Discover card (2026-07-01).** Dylan:
+  *"another app to add to the list of Apps to make irrelivant https://mobbin.com/
+  a inspiration app."* Mobbin is already in the `seo`/`research` agent competitor
+  lists; the new work is to add **mobbin.com as a curated Discover `inspiration`
+  card** (title/description/category/tags/use-case/free-paid label, links back to
+  our tools per `discover.md`) — fold into the Discover Slice 2 work.
+- **SEO reverse-engineering (2026-07-01) — see `.claude/agents/seo.md`.** Dylan:
+  *"reverse engineer SEO, via using common search terms for similar tools to help
+  us seed better on the search results; currently if i search 'UI colour palette
+  generator' i am not even in the first 5 pages; we need to check this for many
+  search queries."* → mine competitor high-intent queries, audit our **real** rank
+  across many queries, seed to climb (per-tool landing pages, "[competitor]
+  alternative" pages, metadata/H1, AI-citable content), covering **both** "color"
+  (US) and "colour" (UK/AU) spellings. Pairs with owner-action #5 (prerender
+  decision).
 - **Admin dashboard restyle** + move Style Guide into Admin (Style Guide move
   already done; restyle outstanding).
 - **Security hardening pass** (rules reviewed OK; tighten remaining surfaces —
   Dylan: *"be careful with public-facing code so we can't get hacked and have
   users steal data."*).
+
+---
+
+### 🐞 Known bugs (logged 2026-07-01 — route a fix)
+
+Both reported by Dylan; root-caused via read-only recon so the engineer can go
+straight to the fix.
+
+1. **Colour/Color label flash on refresh.** *"if i refresh the page the colour
+   studio label says Colour then corrects to color."* **Root cause:** two locale
+   files — `src/locales/en.json` (British *"Colour Studio"*, ~L94/112/177) and
+   `src/locales/en-US.json` (American *"Color Studio"*). British paints first, the
+   US locale resolves and re-renders → a visible flash. **Fix direction:** resolve
+   the active locale **synchronously before first paint** (or align the default so
+   the first paint already matches), so no swap is visible. Pure client i18n — no
+   HVZ, no `/api`.
+2. **Font-gallery FOUT on scroll.** *"a rendering issue on the font pages causes me
+   to be able to see fonts loading as i scroll, they switch family from the
+   placeholder to the actual font; it often doesnt work and it often renders them
+   as you load the page so its not a very clean UX system."* **Root cause:**
+   `src/pages/FontGallery.jsx` lazy-loads each font via an `IntersectionObserver`
+   (~L53–60, L511) using `loadFont`/`reloadFont`/`verifyFontLoaded` from
+   `../utils/googleFonts`, swapping each card placeholder→real typeface only after
+   verify — an unreliable, janky per-card reflow on scroll. **Fix direction:**
+   preload/`font-display` the visible set and reserve card metrics so the swap
+   isn't visible (avoid per-card observer thrash); make the load path reliable
+   (retry/fallback) so cards don't get stuck on the placeholder.
 
 ---
 
