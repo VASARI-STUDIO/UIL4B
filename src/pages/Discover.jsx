@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { DISCOVER_RESOURCES, resolveCollection } from '../data/discoverResources'
 import { VISIBLE_CATEGORIES, categoryLabel } from '../data/discoverCategories'
 import { COMMUNITY_DESIGNS } from '../data/communityDesigns'
@@ -158,6 +159,10 @@ export default function Discover({ toast, forcedType = null }) {
 
   // ─── The visible grid list ────────────────────────────────────────────────
   const visible = useMemo(() => {
+    // Community is its own band (rendered separately) and is NOT a
+    // DISCOVER_RESOURCES category, so scoping the external grid to it would only
+    // ever compute an empty list behind a hidden section. Short-circuit instead.
+    if (filter === 'community') return []
     let list = DISCOVER_RESOURCES
     if (forcedType) list = list.filter(r => r.category === forcedType)
     else if (filter !== 'all') list = list.filter(r => r.category === filter)
@@ -259,6 +264,11 @@ export default function Discover({ toast, forcedType = null }) {
   // When the Community chip is the active filter on the full surface, community
   // is the focus: the external grid is hidden and the community band stands alone.
   const communityActive = !focused && filter === 'community'
+  // The community band is a browse strip, not searchable in this MVP, so it must
+  // not appear to ignore the user's scoping: show it on the default "all" view and
+  // when the Community chip is selected (its sole content), but hide it once the
+  // user drills into a specific EXTERNAL category or runs a search it can't join.
+  const showCommunityBand = !focused && !query && (filter === 'all' || filter === 'community')
 
   // ─── Sub-renders ──────────────────────────────────────────────────────────
   const Toolbar = (
@@ -367,16 +377,17 @@ export default function Discover({ toast, forcedType = null }) {
           {/* Browse by type (full surface only) */}
           {!focused && <BrowseTiles counts={counts} activeFilter={filter} onPick={pickCategory} />}
 
-          {/* From the community — an always-visible band on the full surface. When
-              the Community chip is active it's the sole grid (the external grid
-              below is hidden); otherwise it sits alongside the external resources.
-              Community designs are NOT external resources, so they render the
-              CommunityCard on its own ch-* markup. */}
-          {!focused && (
+          {/* From the community — a browse band on the full surface. Shown on the
+              default "all" view and when the Community chip is active (where it's
+              the sole grid, the external grid below being hidden); hidden once the
+              user drills into a specific external category or runs a search it
+              can't participate in. Community designs are NOT external resources, so
+              they render the CommunityCard on its own ch-* markup. */}
+          {showCommunityBand && (
             <section className="dsc-grid-band" ref={communityRef} aria-labelledby={communityHeadingId}>
               <div className="section-h">
                 <h2 id={communityHeadingId}>From the community</h2>
-                <span className="meta">
+                <span className="meta" aria-live="polite">
                   {communityDesigns.length} {communityDesigns.length === 1 ? 'design' : 'designs'}
                 </span>
               </div>
@@ -389,11 +400,14 @@ export default function Discover({ toast, forcedType = null }) {
                       saved={communitySaves.has(item.id)}
                       count={communityCount(item)}
                       onToggle={toggleCommunitySave}
+                      offline={offline}
                     />
                   ))}
                 </div>
               ) : (
-                <div className="ch-empty">No community designs yet — be the first to submit one.</div>
+                <div className="ch-empty">
+                  No community designs yet — <Link to="/community">submit one on the Community Hub</Link>.
+                </div>
               )}
             </section>
           )}

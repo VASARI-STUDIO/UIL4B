@@ -12,16 +12,19 @@ function HeartIcon({ filled }) {
   )
 }
 
-export default function CommunityCard({ item, saved, count, onToggle }) {
+export default function CommunityCard({ item, saved, count, onToggle, offline = false }) {
   return (
     <article className="ch-card">
       <a
         className="ch-thumb"
-        href={item.url}
+        href={offline ? undefined : item.url}
         target="_blank"
         rel="noopener noreferrer nofollow"
         style={{ '--c1': item.c1, '--c2': item.c2 }}
         aria-label={`${item.name} — open in new tab`}
+        aria-disabled={offline || undefined}
+        tabIndex={offline ? -1 : undefined}
+        onClick={(e) => { if (offline) e.preventDefault() }}
       >
         <span className="ch-thumb-mono">{item.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
       </a>

@@ -24,7 +24,8 @@ what's in flight, what's blocked on the owner, and what's queued._
 Health check (2026-07-01): **build green**, ESLint **0 errors / 31 warnings**
 (the 31 are pre-existing advisory `set-state-in-effect` hints — match this
 baseline; don't add new warnings, don't "fix" the 31). `main` is current through
-**PR #128** (the previous PM-handoff overhaul).
+**PR #129** (the mega-menu nav-pivot + Mobbin/SEO doc pass; #128 was the prior
+PM-handoff overhaul).
 
 **What landed 2026-07-01 (this doc pass — direction changes a fresh PM must know):**
 1. **Nav pivoted** from a single section *switcher* to a **normal 3-item nav bar
@@ -92,7 +93,7 @@ superseded by the mega-menu nav. The two locked founder decisions still stand:
 | Slice | What | Status |
 |---|---|---|
 | **1** | Section model (`src/data/sections.jsx`) + top-bar section switcher | ✅ **shipped — PR #127** — ⚠ switcher UI now **superseded by Slice 3**; the `sections.jsx` data model is retained |
-| **2** | **Discover supersedes Resources** — fold ExternalResources cards into Discover, absorb `/community`, update links | ☐ **next** (unaffected by the pivot) |
+| **2** | **Discover supersedes Resources** — fold ExternalResources cards into Discover, absorb `/community`, update links | 🟡 **community fold implemented + reviewed on `claude/uil4b-pm-setup-duun55`** (code-review "approve w/ nits" + QA **PASS**; review nits being addressed pre-PR; **not yet PR'd**). Remaining for full Slice 2: ~45-link ExternalResources migration (Tranches A–C) + `/resources`+`/community` redirect treatment + Mobbin inspiration card |
 | **3** | **Mega-menu nav bar** — replace the switcher with a horizontal 3-label nav (Workspace · Discover · Learn); each label opens its own mega-menu dropdown (see reference styling below) | ☐ **NEW — needs a design spec first** |
 | **4** | **Workspace** mega-menu panel content + section-aware left sidebar | ☐ |
 | **5** | **Discover** mega-menu panel content + left sidebar | ☐ |

@@ -93,6 +93,8 @@ export const DISCOVER_CATEGORIES = [
     ]),
   },
   {
+    // NOTE: `community` is a distinct browse surface, NOT a DISCOVER_RESOURCES
+    // category value — the external grid short-circuits on it (see Discover.jsx).
     key: 'community',
     label: 'Community',
     color: 'var(--accent)',

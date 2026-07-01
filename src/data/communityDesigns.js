@@ -10,6 +10,8 @@
 //   c1, c2    gradient stops for the generated thumbnail (no external assets)
 //   saves     illustrative baseline save count
 //   url       outbound credit link (rendered nofollow, new tab)
+//   mine      (optional — local submissions only) flags an item the user authored
+//             on the Community Hub; absent on the curated seed below
 //
 // Thumbnails are generated gradients (no external assets / Storage dependency) so
 // the gallery renders instantly and offline.
