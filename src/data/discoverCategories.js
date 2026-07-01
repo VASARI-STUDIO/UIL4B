@@ -108,9 +108,17 @@ export const DISCOVER_CATEGORIES = [
 // Fast lookup by key.
 export const CATEGORY_MAP = Object.fromEntries(DISCOVER_CATEGORIES.map(c => [c.key, c]))
 
-// The filter-chip / browse-tile order (excludes community for 2a — community
-// resources are a Slice 2b surface). "All" is handled by the consumer.
+// The external-resource filter set (excludes community). Used by the empty-state
+// recovery chips, which route into the external grid, so it must stay
+// community-free. "All" is handled by the consumer.
 export const FILTER_CATEGORIES = DISCOVER_CATEGORIES.filter(c => c.key !== 'community')
+
+// The visible filter-chip / browse-tile order for the full Discover surface.
+// Slice 2 surfaces community here (the founder's locked "absorb /community
+// immediately"), so it includes every category. Consumers that browse the whole
+// surface (BrowseTiles, the toolbar chips) read this; the external-only grid
+// recovery keeps using FILTER_CATEGORIES.
+export const VISIBLE_CATEGORIES = DISCOVER_CATEGORIES
 
 export function categoryLabel(key) {
   return CATEGORY_MAP[key]?.label || key

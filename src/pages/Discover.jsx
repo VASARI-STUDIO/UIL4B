@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { DISCOVER_RESOURCES, resolveCollection } from '../data/discoverResources'
-import { FILTER_CATEGORIES, categoryLabel } from '../data/discoverCategories'
+import { VISIBLE_CATEGORIES, categoryLabel } from '../data/discoverCategories'
+import { COMMUNITY_DESIGNS } from '../data/communityDesigns'
 import DiscoverCard from '../components/discover/DiscoverCard'
+import CommunityCard from '../components/discover/CommunityCard'
 import FeaturedRail from '../components/discover/FeaturedRail'
 import BrowseTiles from '../components/discover/BrowseTiles'
 import CollectionsBand from '../components/discover/CollectionsBand'
@@ -20,9 +22,24 @@ import DiscoverModal from '../components/discover/DiscoverModal'
 
 const SAVES_KEY = 'vs-discover-saves'
 const BROKEN_KEY = 'vs-discover-broken'
+// Community saves live under their OWN key, shared with the Community Hub page —
+// deliberately NOT vs-discover-saves, so a bookmark on an external resource and a
+// heart on a community design never collide.
+const COMMUNITY_SAVES_KEY = 'vs-community-saves'
+const COMMUNITY_SUBMISSIONS_KEY = 'vs-community-submissions'
 
 function loadSet(key) {
   try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')) } catch { return new Set() }
+}
+
+// Read-only load of the user's local community submissions (authored on the
+// Community Hub). Discover surfaces them but never writes them — submission stays
+// the Community Hub's local-only placeholder.
+function loadCommunitySubmissions() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(COMMUNITY_SUBMISSIONS_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed : []
+  } catch { return [] }
 }
 
 const SORTS = [
@@ -60,6 +77,9 @@ export default function Discover({ toast, forcedType = null }) {
   // ─── Persistent state ─────────────────────────────────────────────────────
   const [saves, setSaves] = useState(() => loadSet(SAVES_KEY))
   const [broken, setBroken] = useState(() => loadSet(BROKEN_KEY))
+  // Community saves (own key) + a read-only snapshot of local submissions.
+  const [communitySaves, setCommunitySaves] = useState(() => loadSet(COMMUNITY_SAVES_KEY))
+  const [communitySubmissions] = useState(loadCommunitySubmissions)
 
   // ─── View state ───────────────────────────────────────────────────────────
   const [rawQuery, setRawQuery] = useState('')
@@ -71,6 +91,7 @@ export default function Discover({ toast, forcedType = null }) {
   const [modal, setModal] = useState(null) // { kind:'resource'|'collection', item }
 
   const gridRef = useRef(null)
+  const communityRef = useRef(null)
 
   // ─── Load (simulated, local-only) — gives us a real loading + error path ───
   // `phase` starts at 'loading' (initial state), so the effect only ever calls
@@ -108,13 +129,26 @@ export default function Discover({ toast, forcedType = null }) {
   useEffect(() => {
     try { localStorage.setItem(BROKEN_KEY, JSON.stringify([...broken])) } catch { /* quota / disabled */ }
   }, [broken])
+  useEffect(() => {
+    try { localStorage.setItem(COMMUNITY_SAVES_KEY, JSON.stringify([...communitySaves])) } catch { /* quota / disabled */ }
+  }, [communitySaves])
+
+  // ─── Community designs (local submissions first, then curated seed) ────────
+  // Mirrors the Community Hub's merge order so the same items rank the same way.
+  const communityDesigns = useMemo(
+    () => [...communitySubmissions, ...COMMUNITY_DESIGNS],
+    [communitySubmissions],
+  )
 
   // ─── Counts per category (drives Browse tiles + chip labels) ──────────────
   const counts = useMemo(() => {
     const out = {}
     for (const r of DISCOVER_RESOURCES) out[r.category] = (out[r.category] || 0) + 1
+    // Community is a distinct surface (not in DISCOVER_RESOURCES) — count its own
+    // designs so the browse tile shows a real number.
+    out.community = communityDesigns.length
     return out
-  }, [])
+  }, [communityDesigns])
 
   // ─── Featured (rail) — only in the full surface, max 4 ────────────────────
   const featured = useMemo(
@@ -154,6 +188,22 @@ export default function Discover({ toast, forcedType = null }) {
     })
   }, [])
 
+  const toggleCommunitySave = useCallback((id) => {
+    setCommunitySaves(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  // A saved item gets +1 on its displayed count so the ranking reacts to the
+  // user's own save — mirrors the Community Hub's illustrative behaviour.
+  const communityCount = useCallback(
+    (item) => item.saves + (communitySaves.has(item.id) ? 1 : 0),
+    [communitySaves],
+  )
+
   const reportBroken = useCallback((id) => {
     setBroken(prev => {
       if (prev.has(id)) return prev
@@ -174,9 +224,12 @@ export default function Discover({ toast, forcedType = null }) {
   const pickCategory = useCallback((key) => {
     setFilter(key)
     setSort('trending')
-    // Scroll the grid into view after the state settles.
+    // Scroll the relevant band into view after the state settles. Community lives
+    // in its own band (the external grid is hidden when it's the active filter),
+    // so target that; every other category scrolls to the external grid.
     requestAnimationFrame(() => {
-      gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const target = key === 'community' ? communityRef.current : gridRef.current
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
   }, [])
 
@@ -202,6 +255,10 @@ export default function Discover({ toast, forcedType = null }) {
   }, [visible.length, sort, query, filter, counts])
 
   const headingId = 'dsc-grid-heading'
+  const communityHeadingId = 'dsc-community-heading'
+  // When the Community chip is the active filter on the full surface, community
+  // is the focus: the external grid is hidden and the community band stands alone.
+  const communityActive = !focused && filter === 'community'
 
   // ─── Sub-renders ──────────────────────────────────────────────────────────
   const Toolbar = (
@@ -234,12 +291,12 @@ export default function Discover({ toast, forcedType = null }) {
           >
             All
           </button>
-          {FILTER_CATEGORIES.map(cat => (
+          {VISIBLE_CATEGORIES.map(cat => (
             <button
               key={cat.key}
               className={`pl-chip dsc-chip-cat${filter === cat.key ? ' active' : ''}`}
               data-cat={cat.key}
-              onClick={() => setFilter(cat.key)}
+              onClick={() => pickCategory(cat.key)}
               aria-pressed={filter === cat.key}
             >
               <span className="dsc-chip-dot" data-cat={cat.key} aria-hidden="true" />
@@ -310,47 +367,81 @@ export default function Discover({ toast, forcedType = null }) {
           {/* Browse by type (full surface only) */}
           {!focused && <BrowseTiles counts={counts} activeFilter={filter} onPick={pickCategory} />}
 
-          {/* Grid band */}
-          <section className="dsc-grid-band" ref={gridRef} aria-labelledby={headingId}>
-            <div className="section-h">
-              <h2 id={headingId}>
-                {focused
-                  ? 'All gradient resources'
-                  : filter === 'all' ? 'All resources' : categoryLabel(filter)}
-              </h2>
-              <span className="meta" aria-live="polite">
-                {visible.length} {visible.length === 1 ? 'resource' : 'resources'}
-              </span>
-            </div>
-
-            {emptyVariant ? (
-              <DiscoverEmpty
-                variant={emptyVariant}
-                categoryLabel={categoryLabel(filter)}
-                focused={focused}
-                hasQuery={!!query}
-                onClear={clearFilters}
-                onBrowseAll={() => { setSort('trending'); setFilter(forcedType || 'all') }}
-                onPickCategory={pickCategory}
-                onSubmit={onSubmit}
-              />
-            ) : (
-              <div className="ch-grid dsc-grid">
-                {visible.map(r => (
-                  <DiscoverCard
-                    key={r.id}
-                    resource={r}
-                    saved={saves.has(r.id)}
-                    broken={broken.has(r.id)}
-                    offline={offline}
-                    onToggleSave={toggleSave}
-                    onReport={reportBroken}
-                    onOpen={openResource}
-                  />
-                ))}
+          {/* From the community — an always-visible band on the full surface. When
+              the Community chip is active it's the sole grid (the external grid
+              below is hidden); otherwise it sits alongside the external resources.
+              Community designs are NOT external resources, so they render the
+              CommunityCard on its own ch-* markup. */}
+          {!focused && (
+            <section className="dsc-grid-band" ref={communityRef} aria-labelledby={communityHeadingId}>
+              <div className="section-h">
+                <h2 id={communityHeadingId}>From the community</h2>
+                <span className="meta">
+                  {communityDesigns.length} {communityDesigns.length === 1 ? 'design' : 'designs'}
+                </span>
               </div>
-            )}
-          </section>
+              {communityDesigns.length > 0 ? (
+                <div className="ch-grid dsc-grid">
+                  {communityDesigns.map(item => (
+                    <CommunityCard
+                      key={item.id}
+                      item={item}
+                      saved={communitySaves.has(item.id)}
+                      count={communityCount(item)}
+                      onToggle={toggleCommunitySave}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="ch-empty">No community designs yet — be the first to submit one.</div>
+              )}
+            </section>
+          )}
+
+          {/* External resource grid band — hidden when the Community chip scopes
+              the surface to community (its band above becomes the sole grid). */}
+          {!communityActive && (
+            <section className="dsc-grid-band" ref={gridRef} aria-labelledby={headingId}>
+              <div className="section-h">
+                <h2 id={headingId}>
+                  {focused
+                    ? 'All gradient resources'
+                    : filter === 'all' ? 'All resources' : categoryLabel(filter)}
+                </h2>
+                <span className="meta" aria-live="polite">
+                  {visible.length} {visible.length === 1 ? 'resource' : 'resources'}
+                </span>
+              </div>
+
+              {emptyVariant ? (
+                <DiscoverEmpty
+                  variant={emptyVariant}
+                  categoryLabel={categoryLabel(filter)}
+                  focused={focused}
+                  hasQuery={!!query}
+                  onClear={clearFilters}
+                  onBrowseAll={() => { setSort('trending'); setFilter(forcedType || 'all') }}
+                  onPickCategory={pickCategory}
+                  onSubmit={onSubmit}
+                />
+              ) : (
+                <div className="ch-grid dsc-grid">
+                  {visible.map(r => (
+                    <DiscoverCard
+                      key={r.id}
+                      resource={r}
+                      saved={saves.has(r.id)}
+                      broken={broken.has(r.id)}
+                      offline={offline}
+                      onToggleSave={toggleSave}
+                      onReport={reportBroken}
+                      onOpen={openResource}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Collections (full surface only) */}
           {!focused && <CollectionsBand onOpen={openCollection} />}
