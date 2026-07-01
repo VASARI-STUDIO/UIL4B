@@ -358,6 +358,7 @@ export const DISCOVER_RESOURCES = [
     whyUseful: 'A shortcut to a polished button, including interaction states. Use it as a reference and rebuild it in the UI Builder so it fits your design system.',
     relatedTools: [
       { label: 'UI Builder', route: '/ui-builder' },
+      { label: 'Box Shadow Generator', route: '/box-shadow' },
     ],
     added: '2026-06-21',
     featured: true,
