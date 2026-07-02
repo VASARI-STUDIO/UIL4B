@@ -16,7 +16,7 @@ import { ADMIN_EMAILS } from './utils/constants'
 
 // Static imports — small or always-visited pages (instant load)
 import Dashboard from './pages/Dashboard'
-import Landing from './pages/Landing'
+import Home from './pages/Home'
 import Login from './pages/Login'
 import CategoryDashboard from './pages/CategoryDashboard'
 import Onboarding from './pages/Onboarding'
@@ -318,7 +318,7 @@ export default function App() {
     return <Navigate to="/home" replace />
   }
   if (location.pathname === '/home') {
-    return <><Landing /><GoogleOneTap /></>
+    return <><Home /><GoogleOneTap /></>
   }
   if (location.pathname === '/onboarding') {
     return <Onboarding />
@@ -331,7 +331,7 @@ export default function App() {
       const onboarded = (() => { try { return localStorage.getItem('vs-onboarded') === '1' } catch { return true } })()
       return <Navigate to={onboarded ? '/dashboard' : '/onboarding'} replace />
     }
-    return <><Landing /><GoogleOneTap /></>
+    return <><Home /><GoogleOneTap /></>
   }
 
   return (
