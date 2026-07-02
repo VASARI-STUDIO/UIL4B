@@ -30,12 +30,13 @@ but we **remove all existing design styles** and start from a fresh canvas.
   with one-line descriptions).
 - **Dashboard page is removed** (not needed). **Home stays a sales page.**
 - **Structure first, tools later.** Every tool is a **blank "coming soon" page**
-  for now, **marked TBD in the nav with a `#`** (or visibly different) so the
-  founder can see what's unbuilt. **Do not import any tool logic yet** — just the
-  route + shell. Tools get built one slice at a time afterwards ("I will action
-  each one").
+  for now, **marked TBD in the nav with a subtle "Soon" badge** (founder-confirmed
+  2026-07-02 — chosen over a `#` prefix so the public menu reads as intentional,
+  not broken) so the founder can see what's unbuilt. **Do not import any tool logic
+  yet** — just the route + shell. Tools get built one slice at a time afterwards
+  ("I will action each one").
 - **Two "not-ready" systems, kept distinct:**
-  1. **Blank TBD tool pages** — public, in the nav, `#`-marked, "coming soon".
+  1. **Blank TBD tool pages** — public, in the nav, "Soon"-badged, "coming soon".
   2. **Hidden tools** reached by direct URL — keep the existing
      "🤫 You found something we're still building" page (`ComingSoon.jsx`),
      re-skinned. (Its old `/dashboard` link must be repointed — Dashboard is gone.)
@@ -56,12 +57,12 @@ Upgrade**, which becomes a **profile link** if the user is already Pro.
 
 ---
 
-## 2. Proposed tool tree  🔎 _pending founder confirmation before scaffold_
+## 2. Tool tree  ✅ _founder-confirmed 2026-07-02 — scaffolding_
 
 Main tools = **large heading** (a *system* with sub-tools built in). Sub-tools =
 **smaller font** beneath, each also getting its **own standalone page** (reused
 components). `→ /route` shown where a route already exists; **new blank pages get
-`#` in the nav until built.**
+a "Soon" badge in the nav until built.**
 
 ### CREATE (build)
 
@@ -98,18 +99,19 @@ components). `→ /route` shown where a route already exists; **new blank pages 
   SEO (Small-Business + Specialist) · Marketing Fundamentals / Social & Marketing ·
   AI Coding Assistants · Help Centre
 
-> Nothing above is imported yet except the **shell**. Blank pages carry `#` in the
-> nav. Colour is **one** client-side tool (no Vercel function). We stay within the
-> **12/12 serverless-function cap** — the rebuild adds no functions.
+> Nothing above is imported yet except the **shell**. Blank pages carry a "Soon"
+> badge in the nav. Colour is **one** client-side tool (no Vercel function). We stay
+> within the **12/12 serverless-function cap** — the rebuild adds no functions.
 
 ---
 
 ## 3. Phases (fastest path to V1; next tool set ~1 month later)
 
 - **Phase 0 — Reset (PM).** ✅ Backup branch pushed. ✅ Doc de-bloat → this doc +
-  `OWNER-ACTIONS.md`. ⏳ Founder checkpoint on the tool tree (§2) before scaffold.
-- **Phase 1 — Structure + sales page.** Design spec (Fable) → engineer builds:
-  route tree, mega-menu nav (Create/Discover/Learn) with `#` TBD markers, blank
+  `OWNER-ACTIONS.md`. ✅ Founder checkpoint (tool tree §2 confirmed; TBD = "Soon"
+  badge; design spec approved 2026-07-02).
+- **Phase 1 — Structure + sales page.** ⏳ Design spec (Fable) → engineer builds:
+  route tree, mega-menu nav (Create/Discover/Learn) with "Soon" TBD badges, blank
   "coming soon" tool pages, Mobbin-style sales page (placeholders, Awwwards
   micro-animations), generic tool-page shell (left in-tool nav + Upgrade→profile
   CTA), re-skinned `ComingSoon.jsx`. **Remove Dashboard.** Rename Workspace→Create.
