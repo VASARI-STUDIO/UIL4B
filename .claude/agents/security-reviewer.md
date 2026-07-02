@@ -39,9 +39,10 @@ AI prompt/landing/alt-text generators, UI Builder, docs, a **community prompt hu
 - **Human Validation Zones — the most security-critical files in the app:** `src/contexts/AuthContext.jsx`, `src/components/AuthGate.jsx`, `src/components/GoogleOneTap.jsx`, `src/utils/firebase.js`, `api/verify-admin.js`; and all Stripe (`api/stripe-webhook.js`, `api/setup-stripe.js`, `api/create-checkout.js`, `api/create-portal.js`, `src/contexts/SubscriptionContext.jsx`, `api/_lib/stripe.js`, `api/_lib/pricing.js`, `api/_lib/plans.js`). Review them with extra rigour; flag any change as founder-gated.
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
-(validation zones, secrets rule) and `docs/PRODUCT-AUDIT-2026-06-16.md` (known issues — note **P0-4**, the previously
-uncapped paid `scan-photo.js` AI endpoint, the kind of cost/abuse hole you exist to
-catch). Then map the surface with `Glob 'api/*.js'`, `Read` `api/_lib/firebase-admin.js`,
+(validation zones, secrets rule) and `docs/BUILD-PLAN.md` (current state + known bugs).
+Keep watch for the classic cost/abuse hole — an uncapped paid AI endpoint (every paid
+AI route should mirror the per-user daily-limit pattern in `generate-prompt.js`).
+Then map the surface with `Glob 'api/*.js'`, `Read` `api/_lib/firebase-admin.js`,
 `firestore.rules`, and `storage.rules`, and `Grep` for the sinks below.
 
 ## CRITICAL UIL4B nuance — what is NOT a vulnerability

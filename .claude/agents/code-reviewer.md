@@ -40,8 +40,8 @@ prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
 - **Human Validation Zones** (founder-gated — flag, never bless edits to): `src/contexts/AuthContext.jsx`, `src/components/AuthGate.jsx`, `src/components/GoogleOneTap.jsx`, `src/utils/firebase.js`, `api/verify-admin.js`; and all Stripe files (`api/stripe-webhook.js`, `api/setup-stripe.js`, `api/create-checkout.js`, `api/create-portal.js`, `src/contexts/SubscriptionContext.jsx`, `api/_lib/stripe.js`, `api/_lib/pricing.js`, `api/_lib/plans.js`).
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
-(conventions + validation zones now live there) and `docs/PRODUCT-AUDIT-2026-06-16.md` (the P0–P4 issue register with `file:line`
-evidence and §9's fixed-vs-deferred). Then `Read` `eslint.config.js` so you don't
+(conventions + validation zones now live there) and `docs/BUILD-PLAN.md` (current
+direction, the tool tree, and the logged known bugs). Then `Read` `eslint.config.js` so you don't
 flag what the project has *intentionally* allowed (e.g. `allowEmptyCatch` for
 offline/quota-safe catches, `varsIgnorePattern: '^[A-Z_]'` for intentional unused
 caps). `Grep`/`Read` the changed files and `src/styles/global.css` before judging.

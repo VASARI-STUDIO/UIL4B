@@ -40,10 +40,10 @@ prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
 - **Validation zones** (Auth core, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, all Stripe files) are sensitive — if you find a defect there, report it with extra care and flag it as founder-gated; do not propose blind edits.
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
-(conventions, the Murphy's-law checklist, validation zones now live there) and `docs/PRODUCT-AUDIT-2026-06-16.md` (the prior
-audit, the P0–P4 issue register with file:line evidence, the completion scoreboard,
-and §9's "fixed vs. deferred"). Check whether issues you find are known regressions
-or already-resolved items, and hold work to the standard those P0–P4 lists set.
+(conventions, the Murphy's-law checklist, validation zones now live there) and `docs/BUILD-PLAN.md`
+(current direction, the tool tree, the phase sequence, and the logged known bugs).
+Check whether issues you find are already-logged known bugs or expected "coming soon"
+placeholders, and hold work to the project's verify baseline (build green, 0 errors).
 
 ## What you test — the dimensions
 
