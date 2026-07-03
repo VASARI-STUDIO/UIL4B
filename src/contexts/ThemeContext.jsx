@@ -3,15 +3,16 @@ import { createContext, useContext, useState, useEffect } from 'react'
 const ThemeContext = createContext()
 
 export function ThemeProvider({ children }) {
-  // Dark is the default for everyone; light is opt-in via the toggle / Settings
-  // picker. A stored choice ('dark' or 'light') always wins; we never auto-follow
-  // the OS preference.
+  // Light is the default for everyone (the rebuilt "Foundry" system ships light
+  // first; dark returns later). Dark is opt-in via the toggle / Settings picker.
+  // A stored choice ('dark' or 'light') always wins; we never auto-follow the OS
+  // preference. Keep this in agreement with the FOUC guard in index.html.
   const [theme, setThemeState] = useState(() => {
     try {
       const stored = localStorage.getItem('vs-t')
-      return stored === 'light' ? 'light' : 'dark'
+      return stored === 'dark' ? 'dark' : 'light'
     } catch {
-      return 'dark'
+      return 'light'
     }
   })
 

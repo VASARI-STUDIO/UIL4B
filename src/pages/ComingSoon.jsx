@@ -13,8 +13,8 @@ export default function ComingSoon() {
         to everyone soon. Thanks for being curious (we won&rsquo;t tell anyone you peeked).
       </p>
       <div className="coming-actions">
-        <Link to="/dashboard" className="btn btn-accent">Back to the toolkit</Link>
-        <Link to="/home" className="btn">See what&rsquo;s ready now</Link>
+        <Link to="/color" className="ui-pill ui-pill-ink ui-pill-md">Explore the tools</Link>
+        <Link to="/home" className="ui-pill ui-pill-out ui-pill-md">See what&rsquo;s ready now</Link>
       </div>
     </div>
   )

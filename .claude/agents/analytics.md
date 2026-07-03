@@ -38,10 +38,11 @@ prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
 - **Validation zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, all Stripe files) are off-limits to edit. Signup events live near auth and upgrade events near Stripe — so when you recommend instrumenting them, route the work through `engineer` **as approval-gated**, and prefer hooks that don't modify the zone files themselves (e.g. observing auth/subscription context state, not editing the contexts' core logic).
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
-(analytics keys, constants, validation zones) and `docs/PRODUCT-AUDIT-2026-06-16.md` — especially **P0-6**
-("Admin analytics were per-browser localStorage, not aggregate") and §9, which
-records the `analytics-daily` Firestore aggregate that was added and the **owner
-action still pending: publish `firestore.rules` so the aggregate panel populates.**
+(analytics keys, constants, validation zones) and `docs/BUILD-PLAN.md` for the current
+state. Know the analytics history: the Admin dashboard once presented per-browser
+`localStorage` counts as if they were aggregate; an `analytics-daily` Firestore
+aggregate was added to fix that, and an **owner action is still pending — publish
+`firestore.rules` so the aggregate panel populates** (see `OWNER-ACTIONS.md`).
 Then `Read` `src/utils/analytics.js` (the source of truth for what's tracked) and
 `Grep` `src/pages/Admin.jsx` for how it's surfaced, plus call sites of the track
 functions across `src/`.

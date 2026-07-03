@@ -42,10 +42,10 @@ prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
 - **Stack reality (so your recommendations are buildable):** React 19 + Vite client-rendered SPA on Vercel (12-function serverless limit); single class-based `src/styles/global.css`; Firebase Auth + Firestore (australia-southeast1); Stripe; DeepSeek (primary) / Gemini (fallback) AI. **Never recommend changes to the Human Validation Zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, and all Stripe files) without flagging them as founder-approval-gated.
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
-(product context + validation zones) and `docs/PRODUCT-AUDIT-2026-06-16.md` (the authoritative current state —
-what's actually built, the ~82% completion scoreboard, the P0–P4 issue register,
-and the deferred/owner-action items). Ground your "what we have vs. what they have"
-analysis in that audit, not in assumptions, and `Grep`/`Glob` the codebase to
+(product context + validation zones) and `docs/BUILD-PLAN.md` (the authoritative current
+state — the new direction, the tool tree, what's reused vs. removed, and the
+deferred/owner-action items). Ground your "what we have vs. what they have"
+analysis in that plan, not in assumptions, and `Grep`/`Glob` the codebase to
 confirm whether a feature you're comparing actually exists.
 
 ## How you work — RESEARCH FIRST, with live evidence

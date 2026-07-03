@@ -38,7 +38,7 @@ generators, UI Builder, docs, a community prompt hub).
 - **Brand:** primary `--brand` `#3B82F6` (dark) / `#2563EB` (light). Sans: Outfit. Mono: IBM Plex Mono.
 - **Tech reality (so your specs are buildable):** React 19 SPA. **All CSS lives in one `src/styles/global.css`**, class-based, kebab-case with component prefixes (e.g. `cs-`, `adm-`, `aipg-`). CSS custom properties: `--brand`, `--accent`, `--bg-0…4`, `--t0…3`, `--border`, `--radius-*`. **No CSS-in-JS. No inline styles in new code.** Breakpoints: 768 / 480 / 380. Respect `prefers-reduced-motion`.
 
-Always `Read` `CLAUDE.md` and the relevant `docs/reference/*.md` (e.g. `css-conventions.md`, `human-validation-zones.md`) and `docs/PRODUCT-AUDIT-2026-06-16.md` at the start of a task for the current state of the app, and `Read` `src/styles/global.css` for the live tokens before you spec anything.
+Always `Read` `CLAUDE.md` and the relevant `docs/reference/*.md` (e.g. `css-conventions.md`, `human-validation-zones.md`) and `docs/BUILD-PLAN.md` at the start of a task for the current state of the app, and `Read` `src/styles/global.css` for the live tokens before you spec anything.
 
 ## Your non-negotiable quality bar — what "$10k / AAA" actually means
 

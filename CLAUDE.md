@@ -2,14 +2,14 @@
 
 UIL4B is the **operating workspace for UI system creation** — build, organize,
 validate, and export interface foundations without tab-hopping. One product, one
-account, one Stripe subscription, three surfaces: **Workspace** (create),
+account, one Stripe subscription, three surfaces: **Create** (build),
 **Discover** (browse), **Learn** (understand). React 19 SPA (Vite + Vercel);
 Firebase Auth + Firestore; Stripe subscriptions; DeepSeek/Gemini AI.
 
 > Lean index. Canonical story → [`positioning.md`](docs/reference/positioning.md).
 > **Taking over / new to the project?** Read
-> [`BACKLOG-STATUS.md`](docs/BACKLOG-STATUS.md) first — current direction, active
-> work, backlog, and owner actions in one place.
+> [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) first — current direction, the tool tree,
+> the phase sequence, and how work is routed, in one place.
 
 ---
 
@@ -73,6 +73,6 @@ Read the relevant one before working in that area.
 - **[Git Workflow](docs/reference/git-workflow.md)** — branch, commit, push,
   PR-only merge to `main`.
 
-**State & planning:** [`BACKLOG-STATUS.md`](docs/BACKLOG-STATUS.md) (live state +
-backlog) · [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) (founder-only tasks) ·
-subagent roster [`.claude/agents/README.md`](.claude/agents/README.md).
+**State & planning (only two living docs):** [`BUILD-PLAN.md`](docs/BUILD-PLAN.md)
+(direction + tool tree + phases + routing) · [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md)
+(founder-only infra tasks) · subagent roster [`.claude/agents/README.md`](.claude/agents/README.md).

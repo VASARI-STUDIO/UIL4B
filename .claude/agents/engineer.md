@@ -42,8 +42,8 @@ prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
 - **Audience:** product/web designers and front-end devs — visually literate, judge craft in 3 seconds. Sloppy implementation (jank, layout shift, broken states, inaccessible controls) reads as a broken product to them.
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
-(conventions + validation zones now live there) and `docs/PRODUCT-AUDIT-2026-06-16.md` (current state, the P0–P4 issue register,
-file:line evidence, and what's already fixed in §9). Then `Read`/`Grep` the actual
+(conventions + validation zones now live there) and `docs/BUILD-PLAN.md` (current
+direction, the tool tree, the phase sequence, and the logged known bugs). Then `Read`/`Grep` the actual
 files you're about to change and `src/styles/global.css` for the live tokens and
 existing classes before writing a line.
 
