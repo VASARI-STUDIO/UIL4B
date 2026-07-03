@@ -1,9 +1,7 @@
-import { Component, useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { Component, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
-import TopBar from './components/TopBar'
+import PillNav from './components/PillNav'
 import Toast from './components/Toast'
-import CommandPalette from './components/CommandPalette'
 import AppFooter from './components/AppFooter'
 import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/GoogleOneTap'
@@ -12,33 +10,19 @@ import { useClipboard } from './hooks/useClipboard'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { useAuth } from './contexts/AuthContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
-import { ADMIN_EMAILS } from './utils/constants'
+import { createRoutes } from './data/toolTree'
 
 // Static imports — small or always-visited pages (instant load)
-import Dashboard from './pages/Dashboard'
 import Home from './pages/Home'
 import Login from './pages/Login'
-import CategoryDashboard from './pages/CategoryDashboard'
 import Onboarding from './pages/Onboarding'
-import ComingSoon from './pages/ComingSoon'
+import CreateTool from './pages/CreateTool'
+import SurfaceLanding from './pages/SurfaceLanding'
 
-// Lazy imports — heavy or rarely-visited pages (code-split)
-const ColorStudio = lazy(() => import('./pages/ColorStudio'))
-const TypeScale = lazy(() => import('./pages/TypeScale'))
-const FontMatcher = lazy(() => import('./pages/FontMatcher'))
-const IconLibrary = lazy(() => import('./pages/IconLibrary'))
-const FileConverter = lazy(() => import('./pages/FileConverter'))
-const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
-const DocsDesign = lazy(() => import('./pages/DocsDesign'))
-const DocsSocial = lazy(() => import('./pages/DocsSocial'))
-const DocsThemes = lazy(() => import('./pages/DocsThemes'))
-const DocsBrand = lazy(() => import('./pages/DocsBrand'))
-const DocsSEO = lazy(() => import('./pages/DocsSEO'))
-const DocsMarketing = lazy(() => import('./pages/DocsMarketing'))
-const DocsAI = lazy(() => import('./pages/DocsAI'))
-const ExternalResources = lazy(() => import('./pages/ExternalResources'))
-const Discover = lazy(() => import('./pages/Discover'))
-const DiscoverGradients = lazy(() => import('./pages/DiscoverGradients'))
+// Lazy imports — the account, billing, legal and system pages (code-split),
+// rendered inside the PillNav app-shell. The Create tool pages, Discover and
+// Learn route through CreateTool / SurfaceLanding, so their old per-page imports
+// are gone until Phase 2 wires each tool's real logic back in.
 const Settings = lazy(() => import('./pages/Settings'))
 const Community = lazy(() => import('./pages/Community'))
 const Feedback = lazy(() => import('./pages/Feedback'))
@@ -48,19 +32,18 @@ const Admin = lazy(() => import('./pages/Admin'))
 const Projects = lazy(() => import('./pages/Projects'))
 const Checkout = lazy(() => import('./pages/Checkout'))
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
-const FontGallery = lazy(() => import('./pages/FontGallery'))
-const AltTextGenerator = lazy(() => import('./pages/AltTextGenerator'))
-const AiPromptGenerator = lazy(() => import('./pages/AiPromptGenerator'))
-const LandingPromptGenerator = lazy(() => import('./pages/LandingPromptGenerator'))
-const EmojiLibrary = lazy(() => import('./pages/EmojiLibrary'))
-const BoxShadowGenerator = lazy(() => import('./pages/BoxShadowGenerator'))
-const UIBuilder = lazy(() => import('./pages/UIBuilder'))
-const AutoBuilder = lazy(() => import('./pages/AutoBuilder'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
-const RatioCalculator = lazy(() => import('./pages/RatioCalculator'))
 const InfoCentre = lazy(() => import('./pages/InfoCentre'))
 const SeoInspector = lazy(() => import('./pages/SeoInspector'))
+
+// Create tool routes come straight from the single tool-tree source, so adding a
+// tool never needs a hand-edited <Route>. These paths — plus /discover and
+// /learn — render full-screen with their own PillNav (CreateTool / SurfaceLanding
+// mount it themselves). Every other route renders inside the shared PillNav
+// app-shell below; the old Sidebar + TopBar chrome is retired.
+const CREATE_PATHS = createRoutes()
+const CHROMELESS_PATHS = new Set([...CREATE_PATHS, '/discover', '/learn'])
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -106,79 +89,12 @@ function RequireAuth({ children }) {
   return children
 }
 
-// Gates alpha / not-yet-public tools so they can't be reached by direct URL.
-// Only admins (ADMIN_EMAILS) may open them; everyone else (logged out or not an
-// admin) sees a friendly "coming soon" page rather than being bounced, so a
-// stumbled-upon alpha URL feels intentional. Keeps access aligned with the
-// hidden nav/dashboard entries.
-function RequireAdmin({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
-        <div className="fg-loader" />
-      </div>
-    )
-  }
-  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
-  if (!isAdmin) return <ComingSoon />
-  return children
-}
-
-function KeyboardShortcutsOverlay({ open, onClose }) {
-  const ref = useRef(null)
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('keydown', onKey)
-    document.addEventListener('mousedown', onDown)
-    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown) }
-  }, [open, onClose])
-  if (!open) return null
-  const shortcuts = [
-    { keys: ['?'], desc: 'Show keyboard shortcuts' },
-    { keys: ['Space'], desc: 'Random palette (Colour Studio)' },
-    { keys: ['Ctrl', 'K'], desc: 'Open command palette' },
-    { keys: ['Esc'], desc: 'Close modal / popup' },
-  ]
-  return (
-    <div className="kbd-overlay" onMouseDown={onClose}>
-      <div className="kbd-panel" ref={ref} onMouseDown={e => e.stopPropagation()}>
-        <div className="kbd-header">
-          <h3>Keyboard Shortcuts</h3>
-          <button className="kbd-close" onClick={onClose} aria-label="Close">&#x2715;</button>
-        </div>
-        <ul className="kbd-list">
-          {shortcuts.map((s, i) => (
-            <li key={i} className="kbd-row">
-              <span className="kbd-keys">{s.keys.map((k, j) => (
-                <span key={j}><kbd className="kbd-key">{k}</kbd>{j < s.keys.length - 1 && <span className="kbd-plus">+</span>}</span>
-              ))}</span>
-              <span className="kbd-desc">{s.desc}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [paletteOpen, setPaletteOpen] = useState(false)
-  const [kbdOpen, setKbdOpen] = useState(false)
   const { user: authUser, loading: authLoading } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   const { message, visible, toast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
-
-  const toggleMenu = () => setMenuOpen(prev => !prev)
-  const openMenu = () => setMenuOpen(true)
-  const closeMenu = () => setMenuOpen(false)
-  const openPalette = () => setPaletteOpen(true)
-  const closePalette = () => setPaletteOpen(false)
 
   useEffect(() => {
     return initAnalytics()
@@ -186,9 +102,11 @@ export default function App() {
 
   useEffect(() => {
     document.querySelector('.main')?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    // Chromeless surfaces (Home / Create tools / Discover / Learn) scroll the
+    // window itself, not `.main`, so reset it too — a no-op on chrome pages.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     trackPageView(location.pathname)
     trackSessionPage(location.pathname)
-    setMenuOpen(false)
     const PAGE_TITLES = {
       '/': 'UI L4B | Design Toolkit',
       '/home': 'UI L4B | Design Toolkit',
@@ -286,33 +204,10 @@ export default function App() {
     }
   }, [location.pathname])
 
-  useEffect(() => {
-    document.body.classList.toggle('menu-open', menuOpen)
-    return () => document.body.classList.remove('menu-open')
-  }, [menuOpen])
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        setPaletteOpen(prev => !prev)
-        return
-      }
-      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const tag = e.target.tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return
-        e.preventDefault()
-        setKbdOpen(prev => !prev)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
-
-  // The sales / landing page is the public homepage. It renders full-screen,
-  // outside the app chrome. The root URL (/) serves it to logged-out visitors so
-  // it is the first page that loads and is indexable; logged-in users are sent
-  // straight to their dashboard but can still reach it via /home.
+  // The sales / landing page is the public homepage. It renders full-screen with
+  // its own PillNav. The root URL (/) serves it to logged-out visitors so it is
+  // the first page that loads and is indexable; logged-in visitors are sent on to
+  // /home (the Dashboard is gone).
   // /welcome is the legacy path — redirect it to /home so old links keep working.
   if (location.pathname === '/welcome') {
     return <Navigate to="/home" replace />
@@ -326,67 +221,64 @@ export default function App() {
   if (location.pathname === '/') {
     // Render the sales page immediately — first paint must not depend on Firebase
     // auth resolving (otherwise a slow/misconfigured auth init leaves a blank page).
-    // Once we positively know the visitor is logged in, send them to their dashboard.
+    // Once we positively know the visitor is logged in, canonicalise them onto
+    // /home (the Dashboard is gone); new sign-ups still route through onboarding.
     if (!authLoading && authUser) {
       const onboarded = (() => { try { return localStorage.getItem('vs-onboarded') === '1' } catch { return true } })()
-      return <Navigate to={onboarded ? '/dashboard' : '/onboarding'} replace />
+      return <Navigate to={onboarded ? '/home' : '/onboarding'} replace />
     }
     return <><Home /><GoogleOneTap /></>
   }
 
+  // Create tool shells + the Discover / Learn landings render full-screen with the
+  // floating PillNav, outside the legacy app chrome. Matched on a normalised path
+  // so a trailing slash or casing can't leak a chromeless route into the chrome
+  // router below. Discover / Learn get a per-surface key so the scroll-reveal
+  // observer re-scans when switching between them (they share one component).
+  const bare = location.pathname.toLowerCase().replace(/\/+$/, '') || '/'
+  if (CHROMELESS_PATHS.has(bare)) {
+    const surface = bare === '/discover' ? 'discover' : bare === '/learn' ? 'learn' : null
+    return (
+      <>
+        {surface ? <SurfaceLanding key={surface} surface={surface} /> : <CreateTool />}
+        <GoogleOneTap />
+      </>
+    )
+  }
+
   return (
-    <div className="app">
-      <Sidebar isOpen={menuOpen} onClose={closeMenu} />
+    <div className="app-shell">
+      <PillNav />
 
-      <div className="app-main">
-        <TopBar onMenuToggle={toggleMenu} onOpenMenu={openMenu} onCommandPalette={openPalette} />
-
-        <main className="main" key={location.pathname}>
-          <ErrorBoundary>
+      <main className="app-page" key={location.pathname}>
+        <ErrorBoundary>
           <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
             <Routes location={location}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/color" element={<ColorStudio onCopy={copy} toast={toast} />} />
-              <Route path="/typography" element={<CategoryDashboard categoryId="typography" />} />
-              <Route path="/imagery" element={<CategoryDashboard categoryId="imagery" onCopy={copy} toast={toast} />} />
-              <Route path="/icons-emoji" element={<CategoryDashboard categoryId="icons-emoji" onCopy={copy} toast={toast} />} />
-              <Route path="/ai-tools" element={<CategoryDashboard categoryId="ai" />} />
-              <Route path="/ui-builder-cat" element={<CategoryDashboard categoryId="ui-builder" onCopy={copy} toast={toast} />} />
-              <Route path="/docs" element={<CategoryDashboard categoryId="documentation" />} />
+              {/* Legacy tool URLs → the merged, canonical routes (all chromeless,
+                  caught by the early return above once redirected). */}
+              <Route path="/dashboard" element={<Navigate to="/home" replace />} />
               <Route path="/color-studio" element={<Navigate to="/color" replace />} />
               <Route path="/palette" element={<Navigate to="/color" replace />} />
               <Route path="/tints" element={<Navigate to="/color" replace />} />
               <Route path="/gradients" element={<Navigate to="/color" replace />} />
               <Route path="/contrast" element={<Navigate to="/color" replace />} />
               <Route path="/export" element={<Navigate to="/color" replace />} />
-              <Route path="/typescale" element={<TypeScale onCopy={copy} />} />
-              <Route path="/fontpairs" element={<FontMatcher onCopy={copy} toast={toast} />} />
-              <Route path="/fontgallery" element={<FontGallery onCopy={copy} toast={toast} />} />
-              <Route path="/icons" element={<IconLibrary onCopy={copy} />} />
               <Route path="/imgconvert" element={<Navigate to="/file-converter" replace />} />
-              <Route path="/file-converter" element={<RequireAdmin><FileConverter toast={toast} /></RequireAdmin>} />
-              <Route path="/alt-text" element={<RequireAdmin><AltTextGenerator toast={toast} /></RequireAdmin>} />
-              <Route path="/ai-prompt" element={<RequireAdmin><AiPromptGenerator toast={toast} /></RequireAdmin>} />
-              <Route path="/landing-prompts" element={<RequireAdmin><LandingPromptGenerator toast={toast} /></RequireAdmin>} />
-              <Route path="/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
-              <Route path="/emoji" element={<EmojiLibrary onCopy={copy} />} />
-              <Route path="/ratio" element={<RatioCalculator onCopy={copy} />} />
-              <Route path="/docs-design" element={<DocsDesign />} />
-              <Route path="/docs-social" element={<DocsSocial />} />
-              <Route path="/docs-themes" element={<DocsThemes />} />
-              <Route path="/docs-brand" element={<DocsBrand />} />
-              <Route path="/docs-seo" element={<DocsSEO />} />
-              <Route path="/docs-marketing" element={<DocsMarketing />} />
-              <Route path="/docs-ai" element={<DocsAI />} />
               <Route path="/video-frames" element={<Navigate to="/file-converter" replace />} />
-              <Route path="/box-shadow" element={<BoxShadowGenerator onCopy={copy} toast={toast} />} />
-              <Route path="/ui-builder" element={<RequireAdmin><UIBuilder onCopy={copy} toast={toast} /></RequireAdmin>} />
-              <Route path="/auto-builder" element={<RequireAdmin><AutoBuilder onCopy={copy} toast={toast} /></RequireAdmin>} />
-              <Route path="/design-reference" element={<Navigate to="/docs" replace />} />
-              <Route path="/resources" element={<ExternalResources />} />
-              <Route path="/discover" element={<Discover toast={toast} />} />
-              <Route path="/discover/gradients" element={<DiscoverGradients toast={toast} />} />
-              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/docs" element={<Navigate to="/learn" replace />} />
+              <Route path="/docs-design" element={<Navigate to="/learn" replace />} />
+              <Route path="/docs-social" element={<Navigate to="/learn" replace />} />
+              <Route path="/docs-themes" element={<Navigate to="/learn" replace />} />
+              <Route path="/docs-brand" element={<Navigate to="/learn" replace />} />
+              <Route path="/docs-seo" element={<Navigate to="/learn" replace />} />
+              <Route path="/docs-marketing" element={<Navigate to="/learn" replace />} />
+              <Route path="/docs-ai" element={<Navigate to="/learn" replace />} />
+              <Route path="/design-reference" element={<Navigate to="/learn" replace />} />
+              <Route path="/resources" element={<Navigate to="/discover" replace />} />
+              <Route path="/discover/gradients" element={<Navigate to="/discover" replace />} />
+
+              {/* Account, billing, legal and system pages — rendered inside the
+                  PillNav app-shell (the wrapper return below). */}
               <Route path="/login" element={<Login toast={toast} />} />
               <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
               <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
@@ -406,15 +298,12 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
-          </ErrorBoundary>
-          <AppFooter />
-        </main>
-      </div>
+        </ErrorBoundary>
+      </main>
 
+      <AppFooter />
       <Toast message={message} visible={visible} />
       <FeedbackButton />
-      <CommandPalette open={paletteOpen} onClose={closePalette} />
-      <KeyboardShortcutsOverlay open={kbdOpen} onClose={() => setKbdOpen(false)} />
       <GoogleOneTap />
     </div>
   )
