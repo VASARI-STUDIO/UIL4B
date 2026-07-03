@@ -35,6 +35,19 @@ PM operating model: [`project-manager.md`](docs/reference/project-manager.md).
 - Never mark work complete without running it
   ([`build-and-verify.md`](docs/reference/build-and-verify.md)).
 
+## Token economy
+
+Every turn re-sends the whole conversation, so large tool outputs get re-billed
+every turn until compaction — cost ≈ (tokens/turn) × (turns). Keep both low:
+
+- **Model:** mechanical/bulk work (edits, lint fixes, file moves, greps) → run
+  on Sonnet; reserve Opus for judgment-heavy design/architecture (Opus ≈ 5×).
+- **Sessions:** one task per session; `/clear` between unrelated tasks so the
+  old transcript stops being re-sent.
+- **Tool output is the biggest lever:** targeted Grep / `Read` with offset over
+  whole-file reads; cap MCP results (`perPage`, `minimal_output`, `errorsOnly`);
+  minimise screenshots; batch independent calls into one turn.
+
 ## Self-extension (auto skill creation)
 
 When a request reveals a **reusable, structured** capability gap no skill covers,
