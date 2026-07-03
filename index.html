@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en-AU" data-theme="dark">
+<html lang="en-AU" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>UI L4B | Design Toolkit</title>
 <meta name="description" content="Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion, video frames, and production-ready CSS exports.">
-<meta name="theme-color" content="#0A0B0D">
+<meta name="theme-color" content="#FAFAFA">
 <meta property="og:title" content="UI L4B | Design Toolkit">
 <meta property="og:description" content="Free browser-based design toolkit for colour, typography, imagery, and exports.">
 <meta property="og:type" content="website">
@@ -42,18 +42,18 @@
 /* Critical theme base — applied before the main stylesheet loads so SVG icons
    (stroke="currentColor") never flash black on dark mode first paint. */
 html[data-theme="dark"]{background:#0A0B0D;color:#e8e8e8;color-scheme:dark}
-html[data-theme="light"]{background:#fff;color:#171717;color-scheme:light}
+html[data-theme="light"]{background:#FAFAFA;color:#0A0A0B;color-scheme:light}
 body{background:inherit;color:inherit}
 svg{color:inherit}
 </style>
 <script>
 // Apply the saved theme synchronously, before first paint, so there is no
 // light/dark flash (FOUC). vs-t holds an explicit choice ('dark'|'light');
-// absent that we default to dark — matching ThemeContext, which also defaults
-// to dark and never auto-follows the OS. Keeping the two in agreement is what
-// kills the first-time light-OS visitor flip (P7). This preserves the app's
-// current effective default (dark); it does not change which theme users get.
-(function(){try{var r=document.documentElement;var t=localStorage.getItem('vs-t');if(t!=='dark'&&t!=='light'){t='dark'}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a=JSON.parse(localStorage.getItem('vs-appearance')||'{}');r.setAttribute('data-reduced-motion',String(!!a.reducedMotion))}catch(e){}})();
+// absent that we default to light — matching ThemeContext, which also defaults
+// to light and never auto-follows the OS. Keeping the two in agreement is what
+// kills the first-time visitor theme flip. The rebuilt design ships light-first;
+// dark returns later as an explicit opt-in.
+(function(){try{var r=document.documentElement;var t=localStorage.getItem('vs-t');if(t!=='dark'&&t!=='light'){t='light'}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a=JSON.parse(localStorage.getItem('vs-appearance')||'{}');r.setAttribute('data-reduced-motion',String(!!a.reducedMotion))}catch(e){}})();
 </script>
 </head>
 <body>

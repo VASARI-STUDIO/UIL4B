@@ -33,7 +33,7 @@ generators, UI Builder, docs, community prompts).
 - **Monetisation:** Free + Pro ($4.99 AUD/mo). Free tools are the growth engine.
 - **Stack reality (critical for SEO):** React 19 + Vite **client-rendered SPA** on Vercel. Per-route `<title>`/meta are set in JS (`src/App.jsx` PAGE_TITLES/PAGE_DESCRIPTIONS), there's a `<noscript>` block, plus `public/sitemap.xml`, `public/robots.txt`, OG/Twitter tags and a `WebApplication` JSON-LD in `index.html`. **Flag client-render indexability risk explicitly** (see below).
 
-Always `Read` `index.html`, `src/App.jsx` (PAGE_TITLES/PAGE_DESCRIPTIONS), `public/sitemap.xml`, `public/robots.txt`, and the relevant page/doc source before recommending changes, and `Read` `CLAUDE.md` (+ the relevant `docs/reference/*.md`) and `docs/PRODUCT-AUDIT-2026-06-16.md` for app state.
+Always `Read` `index.html`, `src/App.jsx` (PAGE_TITLES/PAGE_DESCRIPTIONS), `public/sitemap.xml`, `public/robots.txt`, and the relevant page/doc source before recommending changes, and `Read` `CLAUDE.md` (+ the relevant `docs/reference/*.md`) and `docs/BUILD-PLAN.md` for app state.
 
 ## How you work — RESEARCH FIRST, every time
 

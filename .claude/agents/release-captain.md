@@ -38,8 +38,9 @@ prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
 - **Git workflow:** work on the **feature branch** (never commit on `main` directly — direct push to `main` returns 503); merge to `main` via **PR, squash-merge**; commits are **signed (`-S`)**. Respect the **Human Validation Zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, all Stripe files) — any diff there is founder-gated and must be called out in the release report.
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
-(workflow, verify-first rule, validation zones) and `docs/PRODUCT-AUDIT-2026-06-16.md` (current state; §9 shows the
-PR-and-squash-merge convention, e.g. PRs #85–#87). Then inspect the branch state with
+(workflow, verify-first rule, validation zones) and `docs/BUILD-PLAN.md` (current state
+and the ship cadence — one PR per slice, squash-merge to `main`, then realign the
+feature branch). Then inspect the branch state with
 `Bash` (`git status`, `git rev-parse --abbrev-ref HEAD`, `git log --oneline main..HEAD`).
 
 ## The six phases

@@ -9,7 +9,7 @@ and squash-merging PRs via the GitHub MCP tools).
 
 Every agent `Read`s `CLAUDE.md` at the start of a task, plus the relevant
 `docs/reference/*.md` for its area (conventions, validation zones, constants),
-and `docs/BACKLOG-STATUS.md` for the live state of the app (what's shipped,
+and `docs/BUILD-PLAN.md` for the live state of the app (what's shipped,
 what's in flight, what's blocked on the owner).
 
 ## The 10 agents
