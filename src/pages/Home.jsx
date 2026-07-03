@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import { useReveal } from '../hooks/useReveal'
+import CreatePreview from '../components/CreatePreview'
+import { useHomeMotion } from '../hooks/useHomeMotion'
 import { CREATE_GROUPS } from '../data/toolTree'
 
 // The public homepage: a Mobbin-style sales page for UIL4B. It is intentionally
@@ -10,10 +11,12 @@ import { CREATE_GROUPS } from '../data/toolTree'
 // `CREATE_GROUPS` that feeds the nav and router, so the story can never claim a
 // tool the product doesn't have.
 //
-// Motion: the hero animates on load via CSS `fx-rise`; everything below the fold
-// reveals on scroll through `useReveal()` (which only toggles a class — no React
-// state, so we stay clear of the `set-state-in-effect` advisory). The single bit
-// of local state here is the Create category toggle, set from click only.
+// Motion: `useHomeMotion()` owns the home page's motion — Lenis smooth-scroll, a
+// GSAP hero entrance, scroll-triggered reveals and a light hero parallax — all
+// scoped to this route, torn down on unmount, and behind a reduced-motion guard.
+// It writes only to the DOM (never React state), so we stay clear of the
+// `set-state-in-effect` advisory. The single bit of local state here is the
+// Create category toggle, set from click only.
 
 // The three surfaces, as cards. `to` points at each surface's landing.
 const SURFACES = [
@@ -48,17 +51,49 @@ const SURFACES = [
 const COMMUNITY = ['System 01', 'System 02', 'System 03', 'System 04', 'System 05', 'System 06']
 
 export default function Home() {
-  useReveal()
+  const rootRef = useRef(null)
+  useHomeMotion(rootRef)
   const [active, setActive] = useState(CREATE_GROUPS[0].id)
   const activeGroup = CREATE_GROUPS.find((g) => g.id === active) || CREATE_GROUPS[0]
 
+  // Sliding indicator for the Create segmented control. We position a single
+  // "thumb" over whichever tab is active by measuring geometry and writing the
+  // element's style imperatively (via refs) — never React state — so we keep
+  // clear of the `set-state-in-effect` advisory and get a buttery CSS-eased
+  // slide. Measured from bounding rects so it stays exact regardless of the
+  // reveal transform or varying label widths.
+  const segRef = useRef(null)
+  const thumbRef = useRef(null)
+  const moveThumb = useCallback(() => {
+    const seg = segRef.current
+    const thumb = thumbRef.current
+    if (!seg || !thumb) return
+    const btn = seg.querySelector('[data-active="true"]')
+    if (!btn) return
+    const s = seg.getBoundingClientRect()
+    const b = btn.getBoundingClientRect()
+    thumb.style.width = `${b.width}px`
+    thumb.style.height = `${b.height}px`
+    thumb.style.transform = `translate(${b.left - s.left}px, ${b.top - s.top}px)`
+    thumb.style.opacity = '1'
+  }, [])
+
+  // Reposition on active change (layout effect = no flash) and on resize / font
+  // settle (rAF catches width shifts after the webfont swaps in).
+  useLayoutEffect(() => { moveThumb() }, [active, moveThumb])
+  useEffect(() => {
+    const onResize = () => moveThumb()
+    window.addEventListener('resize', onResize)
+    const raf = requestAnimationFrame(moveThumb)
+    return () => { window.removeEventListener('resize', onResize); cancelAnimationFrame(raf) }
+  }, [moveThumb])
+
   return (
-    <div className="home">
+    <div className="home" ref={rootRef}>
       <PillNav />
 
       {/* ── Hero ── */}
       <header className="home-hero">
-        <span className="home-hero-glyph" aria-hidden="true">U</span>
         <h1 className="home-hero-h1">The workspace for building UI systems.</h1>
         <p className="home-hero-sub">
           Colour, type, components, imagery, icons and AI — build, validate and export your
@@ -102,27 +137,29 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="home-toggles" role="tablist" aria-label="Create systems" data-reveal>
-            {CREATE_GROUPS.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                role="tab"
-                aria-selected={active === group.id}
-                className={active === group.id ? 'home-toggle is-active' : 'home-toggle'}
-                data-hue={group.hue}
-                onClick={() => setActive(group.id)}
-              >
-                <span className="fx-dot" aria-hidden="true" />
-                {group.label}
-              </button>
-            ))}
+          <div className="home-seg-wrap" data-reveal>
+            <div className="home-seg" role="tablist" aria-label="Create systems" ref={segRef}>
+              <span className="home-seg-thumb" aria-hidden="true" ref={thumbRef} />
+              {CREATE_GROUPS.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active === group.id}
+                  data-active={active === group.id}
+                  className="home-seg-tab"
+                  data-hue={group.hue}
+                  onClick={() => setActive(group.id)}
+                >
+                  <span className="fx-dot" aria-hidden="true" />
+                  {group.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="home-stage" data-reveal>
-            <div className="spec-frame" data-hue={activeGroup.hue} aria-live="polite">
-              <span className="spec-label">{activeGroup.label} · preview</span>
-            </div>
+          <div className="home-stage" data-reveal aria-live="polite">
+            <CreatePreview group={activeGroup} />
           </div>
         </div>
       </section>
@@ -315,7 +352,6 @@ export default function Home() {
 
           <div className="home-foot-legal">
             <div className="home-foot-brand">
-              <span className="pnav-glyph" aria-hidden="true">U</span>
               <span className="pnav-word">UIL4B</span>
             </div>
             <p className="home-foot-copy">© {new Date().getFullYear()} UIL4B · Build UI systems, faster.</p>

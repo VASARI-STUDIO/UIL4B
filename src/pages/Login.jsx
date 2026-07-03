@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 
@@ -109,6 +109,9 @@ export default function Login({ toast }) {
     <div className="sec">
       <div className="auth-container">
         <div className="auth-card card">
+          <Link to="/home" className="auth-brand" aria-label="UIL4B home">
+            <span className="pnav-word">UIL4B</span>
+          </Link>
           <div className="auth-header">
             <h1>{resetMode ? t('auth.resetPassword') : isSignup ? t('auth.createAccount') : t('auth.welcomeBack')}</h1>
             <p>{resetMode ? (t('auth.resetSubtitle') || "We'll send a reset link to your email") : isSignup ? t('auth.signUpSubtitle') : t('auth.signInSubtitle')}</p>
