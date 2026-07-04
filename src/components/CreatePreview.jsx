@@ -87,6 +87,20 @@ function IconSearch() {
     </svg>
   )
 }
+function IconImage() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.6" /><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" />
+    </svg>
+  )
+}
+function IconDown() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14" />
+    </svg>
+  )
+}
 
 /* ── 1 · Colour — live palette generator ───────────────────────────────── */
 
@@ -147,51 +161,33 @@ function ColourTool() {
   )
 }
 
-/* ── 2 · Type — live modular scale ─────────────────────────────────────── */
+/* ── 2 · Type — system-font gallery (click a face to copy its stack) ────── */
 
-const RATIOS = [
-  { n: 'Minor 3rd', r: 1.2 },
-  { n: 'Major 3rd', r: 1.25 },
-  { n: 'Perfect 4th', r: 1.333 },
-  { n: 'Golden', r: 1.618 },
-]
-const TYPE_ROWS = [
-  { key: 'display', label: 'Display', step: 2, sample: 'Build faster' },
-  { key: 'heading', label: 'Heading', step: 1, sample: 'Design the system' },
-  { key: 'body', label: 'Body', step: 0, sample: 'Foundations that scale with you.' },
+const FONTS = [
+  { name: 'Helvetica Neue', cat: 'Sans', stack: '"Helvetica Neue",Helvetica,Arial,sans-serif' },
+  { name: 'Georgia', cat: 'Serif', stack: 'Georgia,"Times New Roman",serif' },
+  { name: 'Palatino', cat: 'Serif', stack: '"Palatino Linotype",Palatino,"Book Antiqua",serif' },
+  { name: 'Verdana', cat: 'Sans', stack: 'Verdana,Geneva,sans-serif' },
+  { name: 'Trebuchet', cat: 'Sans', stack: '"Trebuchet MS",Tahoma,sans-serif' },
+  { name: 'Courier', cat: 'Mono', stack: '"Courier New",Courier,monospace' },
 ]
 
 function TypeTool() {
-  const [ri, setRi] = useState(2)
-  const r = RATIOS[ri].r
+  const [copied, flash] = useCopyFlash()
   return (
     <div className="tt">
-      <div className="tt-stage">
-        {TYPE_ROWS.map((row) => {
-          const px = Math.round(16 * r ** row.step)
-          return (
-            <div className="tt-line" key={row.key}>
-              <span className="tt-meta">{row.label} · {px}px</span>
-              <span
-                className="tt-sample"
-                style={{ fontSize: `clamp(15px, ${px / 16 * 0.9}rem, ${px}px)`, fontWeight: row.step ? 700 : 500 }}
-              >
-                {row.sample}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-      <div className="prev-controls prev-controls-seg">
-        {RATIOS.map((ratio, i) => (
+      <div className="tt-gallery">
+        {FONTS.map((f) => (
           <button
-            key={ratio.n}
+            key={f.name}
             type="button"
-            className="prev-seg-btn"
-            data-active={i === ri}
-            onClick={() => setRi(i)}
+            className="tt-line-btn"
+            data-copied={copied === f.name}
+            aria-label={`Copy ${f.name} font-family`}
+            onClick={() => flash(f.name, `font-family: ${f.stack};`)}
           >
-            {ratio.n}
+            <span className="tt-name" style={{ fontFamily: f.stack }}>{f.name}</span>
+            <span className="tt-tag">{copied === f.name ? 'Copied' : f.cat}</span>
           </button>
         ))}
       </div>
@@ -252,36 +248,123 @@ function ComponentTool() {
   )
 }
 
-/* ── 4 · Imagery — gradient generator ──────────────────────────────────── */
+/* ── 4 · Imagery — client-side image converter ─────────────────────────── */
 
-function makeGrad() {
-  const h1 = Math.floor(Math.random() * 360)
-  const h2 = (h1 + 40 + Math.random() * 90) % 360
-  const angle = [90, 120, 135, 165, 205][Math.floor(Math.random() * 5)]
-  return { c1: hslToHex(h1, 72, 58), c2: hslToHex(h2, 74, 46), angle }
+const IMG_FMT = [
+  { mime: 'image/webp', label: 'WebP', ext: 'webp' },
+  { mime: 'image/png', label: 'PNG', ext: 'png' },
+  { mime: 'image/jpeg', label: 'JPEG', ext: 'jpg' },
+]
+
+function kb(bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1048576) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / 1048576).toFixed(1)} MB`
 }
 
 function ImageryTool() {
-  const [g, setG] = useState(makeGrad)
-  const [copied, flash] = useCopyFlash()
-  const css = `linear-gradient(${g.angle}deg, ${g.c1}, ${g.c2})`
+  const [src, setSrc] = useState(null)
+  const [mime, setMime] = useState('image/webp')
+  const [out, setOut] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [drag, setDrag] = useState(false)
+  const imgRef = useRef(null)
+  const urlsRef = useRef([])
+
+  useEffect(() => () => { urlsRef.current.forEach((u) => URL.revokeObjectURL(u)) }, [])
+
+  const track = (url) => { urlsRef.current.push(url); return url }
+
+  const loadFile = (file) => {
+    setErr(''); setOut(null)
+    if (!file || !file.type.startsWith('image/')) { setErr('Please choose an image file.'); return }
+    const url = track(URL.createObjectURL(file))
+    const im = new Image()
+    im.onload = () => {
+      imgRef.current = im
+      setSrc({ url, name: file.name.replace(/\.[^.]+$/, '') || 'image', w: im.naturalWidth, h: im.naturalHeight, size: file.size })
+    }
+    im.onerror = () => setErr('That image could not be loaded.')
+    im.src = url
+  }
+
+  const convert = () => {
+    const im = imgRef.current
+    if (!im) return
+    setBusy(true); setErr('')
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = im.naturalWidth
+      canvas.height = im.naturalHeight
+      const ctx = canvas.getContext('2d')
+      if (mime === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height) }
+      ctx.drawImage(im, 0, 0)
+      const fmt = IMG_FMT.find((f) => f.mime === mime)
+      canvas.toBlob((blob) => {
+        if (!blob) { setErr('This browser could not encode that format.'); setBusy(false); return }
+        setOut({ url: track(URL.createObjectURL(blob)), size: blob.size, ext: fmt.ext })
+        setBusy(false)
+      }, mime, 0.92)
+    } catch {
+      setErr('Conversion failed.'); setBusy(false)
+    }
+  }
+
+  const onDrop = (e) => { e.preventDefault(); setDrag(false); loadFile(e.dataTransfer.files?.[0]) }
+  const reset = () => { setSrc(null); setOut(null); setErr(''); imgRef.current = null }
+
   return (
-    <div className="im">
-      <div className="im-canvas" style={{ backgroundImage: css }}>
-        <button
-          type="button"
-          className="im-copy"
-          aria-label="Copy CSS"
-          onClick={() => flash('grad', `background: ${css};`)}
+    <div className="imc">
+      {!src ? (
+        <label
+          className="imc-drop"
+          data-drag={drag}
+          onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={onDrop}
         >
-          {copied === 'grad' ? 'Copied' : <><IconCopy /> CSS</>}
-        </button>
-      </div>
+          <input type="file" accept="image/*" onChange={(e) => loadFile(e.target.files?.[0])} style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }} />
+          <IconImage />
+          <span className="imc-drop-title">Drop an image, or click to upload</span>
+          <span className="imc-drop-sub">Convert to WebP, PNG or JPEG — right in your browser</span>
+        </label>
+      ) : (
+        <div className="imc-work">
+          <div className="imc-preview">
+            <img src={src.url} alt="" />
+            <div className="imc-meta">
+              <span className="imc-name">{src.name}</span>
+              <span className="imc-dims">{src.w}×{src.h} · {kb(src.size)}</span>
+            </div>
+          </div>
+          <div className="imc-fmts" role="group" aria-label="Output format">
+            {IMG_FMT.map((f) => (
+              <button
+                key={f.mime}
+                type="button"
+                className="prev-seg-btn"
+                data-active={mime === f.mime}
+                onClick={() => { setMime(f.mime); setOut(null) }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {err && <p className="imc-err">{err}</p>}
       <div className="prev-controls">
-        <button type="button" className="prev-btn prev-btn-go" onClick={() => setG(makeGrad())}>
-          <IconShuffle /> Generate
-        </button>
-        <code className="im-code">{`${g.angle}deg · ${g.c1} → ${g.c2}`}</code>
+        {out ? (
+          <a className="prev-btn prev-btn-go" href={out.url} download={`${src.name}.${out.ext}`}>
+            <IconDown /> Download · {kb(out.size)}
+          </a>
+        ) : (
+          <button type="button" className="prev-btn prev-btn-go" disabled={!src || busy} onClick={convert}>
+            {busy ? 'Converting…' : <><IconImage /> Convert</>}
+          </button>
+        )}
+        {src && <button type="button" className="prev-btn" onClick={reset}>Clear</button>}
       </div>
     </div>
   )
@@ -341,25 +424,28 @@ function AiTool() {
   )
 }
 
-/* ── 6 · Icons — searchable set ────────────────────────────────────────── */
+/* ── 6 · Icons — searchable set (click copies the real SVG markup) ──────── */
+
+const svgOf = (inner) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`
 
 const ICON_SET = [
-  { n: 'search', kw: 'find magnify', p: <><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></> },
-  { n: 'home', kw: 'house', p: <><path d="M4 11l8-6 8 6" /><path d="M6 10v9h12v-9" /></> },
-  { n: 'heart', kw: 'like love', p: <path d="M12 20s-7-4.6-9.2-9A5 5 0 0 1 12 6a5 5 0 0 1 9.2 5c-2.2 4.4-9.2 9-9.2 9z" /> },
-  { n: 'star', kw: 'favourite rate', p: <path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z" /> },
-  { n: 'user', kw: 'person account', p: <><circle cx="12" cy="9" r="3.5" /><path d="M5 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5" /></> },
-  { n: 'bell', kw: 'notify alert', p: <><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" /><path d="M10 20a2 2 0 0 0 4 0" /></> },
-  { n: 'mail', kw: 'email message', p: <><rect x="3" y="6" width="18" height="12" rx="2" /><path d="m3 8 9 6 9-6" /></> },
-  { n: 'calendar', kw: 'date schedule', p: <><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M4 10h16M8 4v4M16 4v4" /></> },
-  { n: 'image', kw: 'photo picture', p: <><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.6" /><path d="m5 17 4.5-4 4 3.5 3-2.5L20 17" /></> },
-  { n: 'lock', kw: 'secure private', p: <><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></> },
-  { n: 'cloud', kw: 'weather upload', p: <path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.4A3.5 3.5 0 0 1 18 18z" /> },
-  { n: 'bolt', kw: 'flash power fast', p: <path d="M13 3 5 14h5l-1 7 8-11h-5z" /> },
-  { n: 'check', kw: 'done success', p: <><circle cx="12" cy="12" r="9" /><path d="m8 12 2.5 2.5L16 9" /></> },
-  { n: 'play', kw: 'video media', p: <path d="M8 5.5v13l11-6.5z" /> },
-  { n: 'settings', kw: 'gear config', p: <><circle cx="12" cy="12" r="3" /><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /></> },
-  { n: 'globe', kw: 'world web language', p: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18" /></> },
+  { n: 'search', kw: 'find magnify', p: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/>' },
+  { n: 'home', kw: 'house', p: '<path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/>' },
+  { n: 'heart', kw: 'like love', p: '<path d="M12 20s-7-4.6-9.2-9A5 5 0 0 1 12 6a5 5 0 0 1 9.2 5c-2.2 4.4-9.2 9-9.2 9z"/>' },
+  { n: 'star', kw: 'favourite rate', p: '<path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/>' },
+  { n: 'user', kw: 'person account', p: '<circle cx="12" cy="9" r="3.5"/><path d="M5 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5"/>' },
+  { n: 'bell', kw: 'notify alert', p: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/>' },
+  { n: 'mail', kw: 'email message', p: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="m3 8 9 6 9-6"/>' },
+  { n: 'calendar', kw: 'date schedule', p: '<rect x="4" y="6" width="16" height="14" rx="2"/><path d="M4 10h16M8 4v4M16 4v4"/>' },
+  { n: 'image', kw: 'photo picture', p: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.5-4 4 3.5 3-2.5L20 17"/>' },
+  { n: 'lock', kw: 'secure private', p: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>' },
+  { n: 'cloud', kw: 'weather upload', p: '<path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.4A3.5 3.5 0 0 1 18 18z"/>' },
+  { n: 'bolt', kw: 'flash power fast', p: '<path d="M13 3 5 14h5l-1 7 8-11h-5z"/>' },
+  { n: 'check', kw: 'done success', p: '<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>' },
+  { n: 'play', kw: 'video media', p: '<path d="M8 5.5v13l11-6.5z"/>' },
+  { n: 'settings', kw: 'gear config', p: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>' },
+  { n: 'globe', kw: 'world web language', p: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/>' },
 ]
 
 function IconsTool() {
@@ -384,23 +470,24 @@ function IconsTool() {
       {shown.length === 0 ? (
         <p className="ig-empty">No icons match “{q}”. Try “user”, “mail” or “star”.</p>
       ) : (
-        <div className="ig-grid">
-          {shown.map((ic) => (
-            <button
-              key={ic.n}
-              type="button"
-              className="ig-cell"
-              data-copied={copied === ic.n}
-              aria-label={`Copy ${ic.n} icon`}
-              title={ic.n}
-              onClick={() => flash(ic.n, ic.n)}
-            >
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {ic.p}
-              </svg>
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="ig-grid">
+            {shown.map((ic) => (
+              <button
+                key={ic.n}
+                type="button"
+                className="ig-cell"
+                data-copied={copied === ic.n}
+                aria-label={`Copy ${ic.n} icon SVG`}
+                title={ic.n}
+                onClick={() => flash(ic.n, svgOf(ic.p))}
+              >
+                <span className="ig-glyph" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svgOf(ic.p) }} />
+              </button>
+            ))}
+          </div>
+          <p className="prev-hint ig-hint">{shown.length} shown · click to copy SVG</p>
+        </>
       )}
     </div>
   )
