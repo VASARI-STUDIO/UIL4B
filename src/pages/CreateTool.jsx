@@ -1,18 +1,43 @@
+import { lazy, Suspense } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
+import Toast from '../components/Toast'
 import { findCreateGroup, resolveTool } from '../data/toolTree'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useToast } from '../hooks/useToast'
 
-// The in-tool shell for every Create route. Phase 1 is structure-only: each tool
-// renders a blank "coming soon" state, but the surrounding chrome — the left rail
-// of sibling tools in the same Create group, and the Upgrade / account CTA — is
-// real and driven entirely by src/data/toolTree.js, so it can never drift from
-// the nav or the router. When the founder builds a real tool, only the content
-// panel changes; the rail keeps working untouched.
+// The in-tool shell for every Create route. The surrounding chrome — the left
+// rail of sibling tools in the same Create group, and the Upgrade / account CTA —
+// is real and driven entirely by src/data/toolTree.js, so it can never drift from
+// the nav or the router.
+//
+// The content panel is a dispatcher:
+//   • a LIVE tool route (mapped in LIVE_TOOLS) lazy-loads and mounts the real
+//     library — its copy actions bubble up here as a toast;
+//   • anything still in the workshop renders the friendly 🤫 "still building"
+//     state, the same look as the standalone ComingSoon page.
 //
 // Auth + subscription are read ONLY, exactly like PillNav — to decide the
 // account chip vs. the upgrade box. Nothing here is ever written.
+
+const IconLibrary = lazy(() => import('./IconLibrary'))
+const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
+
+// Route → the component that is actually built. A Create route absent from this
+// map still renders the 🤫 state even if its group is flagged live — a safe
+// fallback that can never mount a half-finished screen.
+const LIVE_TOOLS = {
+  '/icons': IconLibrary,
+  '/emoji': EmojiLibrary,
+}
+
+// Match toolTree's own path handling (lowercase, strip query/hash, drop trailing
+// slash) so the LIVE_TOOLS lookup never misses on a stray slash or casing.
+function normPath(p) {
+  const s = (p || '').toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '')
+  return s || '/'
+}
 
 // Initials fallback for the Pro avatar when there's no photo.
 function initials(user) {
@@ -23,10 +48,34 @@ function initials(user) {
   return (first + second).toUpperCase()
 }
 
+// The 🤫 "still in the workshop" state — the same friendly, playful look as the
+// standalone ComingSoon page, but named for the tool the visitor actually reached.
+function SoonState({ title, isPro }) {
+  return (
+    <div className="coming-wrap">
+      <div className="coming-emoji" aria-hidden="true">🤫</div>
+      <div className="coming-eyebrow">Shhh&hellip;</div>
+      <h1 className="coming-title">{title} is still in the workshop.</h1>
+      <p className="coming-sub">
+        This one isn&rsquo;t quite ready for the world yet &mdash; we&rsquo;re switching UIL4B
+        on one system at a time, and it&rsquo;ll light up right here the moment it&rsquo;s done.
+        Thanks for being curious.
+      </p>
+      <div className="coming-actions">
+        <Link to="/home" className="ui-pill ui-pill-ink ui-pill-md">See what&rsquo;s ready</Link>
+        {!isPro && (
+          <Link to="/checkout" className="ui-pill ui-pill-out ui-pill-md">Go Pro</Link>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function CreateTool() {
   const location = useLocation()
   const { user } = useAuth()
   const { isPro } = useSubscription()
+  const { message, visible, toast } = useToast()
 
   const group = findCreateGroup(location.pathname)
   const { tool, name, isHome } = resolveTool(location.pathname)
@@ -35,7 +84,15 @@ export default function CreateTool() {
   // routes — but keeps the component honest if it's ever reused off-tree.
   if (!group) return <Navigate to="/home" replace />
 
+  // A live group's category home has no screen of its own — send it to the first
+  // real tool (e.g. /icons-emoji → /icons) so visitors never land on an empty home.
+  const firstTool = group.tools?.[0]
+  if (isHome && !group.soon && firstTool) {
+    return <Navigate to={firstTool.route} replace />
+  }
+
   const tools = group.tools || []
+  const LiveTool = group.soon ? null : LIVE_TOOLS[normPath(location.pathname)]
 
   return (
     <>
@@ -114,34 +171,19 @@ export default function CreateTool() {
           )}
         </div>
 
-        {/* ── Content: blank "coming soon" state (Phase 1) ── */}
-        <main className="rail-content">
-          <div className="soon">
-            <div className="spec-frame" data-hue={group.hue}>
-              <span className="spec-label">{name} · preview</span>
-            </div>
-            <div className="soon-mark">
-              <span className="soon-badge soon-badge-accent">In the workshop</span>
-            </div>
-            <h1 className="soon-title">{isHome ? group.label : name} is coming soon.</h1>
-            <p className="soon-text">
-              This is where {isHome ? 'the tools for ' : ''}
-              <b>{name}</b> will live. We&rsquo;re rebuilding UIL4B one system at a time —
-              {' '}{group.label} is next on the bench, and it switches on here the moment it&rsquo;s ready.
-            </p>
-            <div className="soon-actions">
-              <Link className="ui-pill ui-pill-ink ui-pill-md" to="/home">
-                See what&rsquo;s ready
-              </Link>
-              {!isPro && (
-                <Link className="ui-pill ui-pill-out ui-pill-md" to="/checkout">
-                  Go Pro
-                </Link>
-              )}
-            </div>
-          </div>
+        {/* ── Content: the live tool, or the 🤫 still-building state ── */}
+        <main className={LiveTool ? 'rail-content rail-content--live' : 'rail-content'}>
+          {LiveTool ? (
+            <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+              <LiveTool onCopy={() => toast('Copied to clipboard')} />
+            </Suspense>
+          ) : (
+            <SoonState title={isHome ? group.label : name} isPro={isPro} />
+          )}
         </main>
       </div>
+
+      <Toast message={message} visible={visible} />
     </>
   )
 }
