@@ -5,12 +5,14 @@
 //   2. the in-tool left rail (sibling tools in the same Create group),
 //   3. the router's Create route table (see `createRoutes()` + App.jsx).
 //
-// Phase 1 is structure-only: every destination renders a blank "coming soon"
-// shell, so every group carries `soon: true` and shows a "Soon" badge in the
-// nav. Each tool ALSO carries its own `soon` flag for later — when the founder
-// builds a category they flip the group to `soon: false`, and any still-unbuilt
-// sub-tool then surfaces its own badge. Category `hue` maps to a `--hue-*` token
-// in global.css via `data-hue` (never an inline colour).
+// Most groups are still structure-only: their destinations render the friendly
+// 🤫 "still building" state, so they carry `soon: true` and show a "Soon" badge
+// in the nav. The first LIVE category is Icons & Emoji (`soon: false`) — its
+// tools mount for real inside the Create shell. Each tool ALSO carries its own
+// `soon` flag: when the founder builds a category they flip the group to
+// `soon: false`, and any still-unbuilt sub-tool then surfaces its own badge.
+// Category `hue` maps to a `--hue-*` token in global.css via `data-hue` (never
+// an inline colour).
 
 export const CREATE_GROUPS = [
   {
@@ -28,6 +30,18 @@ export const CREATE_GROUPS = [
       { id: 'ui-colour', label: 'UI Colour', route: '/color', soon: false },
       { id: 'gradient', label: 'Gradient', route: '/color', soon: false },
       { id: 'contrast', label: 'Contrast Checker', route: '/color', soon: false },
+    ],
+  },
+  {
+    id: 'icons',
+    label: 'Icons & Emoji',
+    hue: 'icons',
+    home: '/icons-emoji',
+    desc: '200k icons and every emoji, copy-ready.',
+    soon: false,
+    tools: [
+      { id: 'icons', label: 'Icon Library', route: '/icons', soon: false },
+      { id: 'emoji', label: 'Emoji Library', route: '/emoji', soon: false },
     ],
   },
   {
@@ -80,18 +94,6 @@ export const CREATE_GROUPS = [
       { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', soon: false },
       { id: 'alt-text', label: 'Alt Text', route: '/alt-text', soon: false },
       { id: 'prompts', label: 'Prompt Library', route: '/prompts', soon: false },
-    ],
-  },
-  {
-    id: 'icons',
-    label: 'Icons & Emoji',
-    hue: 'icons',
-    home: '/icons-emoji',
-    desc: '200k icons and every emoji, copy-ready.',
-    soon: true,
-    tools: [
-      { id: 'icons', label: 'Icon Library', route: '/icons', soon: false },
-      { id: 'emoji', label: 'Emoji Library', route: '/emoji', soon: false },
     ],
   },
 ]

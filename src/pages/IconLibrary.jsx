@@ -263,13 +263,13 @@ function IconDetail({ icon, onClose, onCopy, paletteColors }) {
         </div>
 
         <div className="fg-detail-actions">
-          <button className="btn btn-accent" onClick={() => { doCopy(svgCode, 'svg'); if (onCopy) onCopy(svgCode) }}>
+          <button className="ui-pill ui-pill-accent ui-pill-sm" onClick={() => { doCopy(svgCode, 'svg'); if (onCopy) onCopy(svgCode) }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
             </svg>
             {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
           </button>
-          <button className="btn" onClick={() => {
+          <button className="ui-pill ui-pill-out ui-pill-sm" onClick={() => {
             try {
               const saved = JSON.parse(localStorage.getItem('vs-saved-icons') || '[]')
               const key = `${pack || 'emb'}-${name}`
@@ -289,7 +289,7 @@ function IconDetail({ icon, onClose, onCopy, paletteColors }) {
           {isCdn && (
             <a
               href={buildSvgUrl(API_HOSTS[0], pack, name, { ...previewParams, download: true })}
-              className="btn"
+              className="ui-pill ui-pill-out ui-pill-sm"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -304,7 +304,7 @@ function IconDetail({ icon, onClose, onCopy, paletteColors }) {
               href={`https://icon-sets.iconify.design/${pack}/${name}/`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn"
+              className="ui-pill ui-pill-ghost ui-pill-sm"
             >
               View on Iconify
             </a>
@@ -465,6 +465,12 @@ export default function IconLibrary({ onCopy }) {
     debounceSearch(q, pack)
   }
 
+  const handleClearSearch = () => {
+    setQuery('')
+    clearTimeout(timer.current)
+    browsePack(pack)
+  }
+
   const handlePackChange = (e) => {
     const p = e.target.value
     setPack(p)
@@ -493,60 +499,70 @@ export default function IconLibrary({ onCopy }) {
         <p>{t('tools.iconLibrary.description')}</p>
       </div>
       <div className="sub">
-        <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'var(--bg-0)', paddingTop: 8, paddingBottom: 8 }}>
-          <div className="row" style={{ marginBottom: 10, gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div className="seg-label">Search</div>
-              <input type="text" placeholder="Search icons..." style={{ width: '100%' }} value={query} onChange={handleQueryChange} />
-            </div>
-            <div style={{ minWidth: 130 }}>
-              <div className="seg-label">Pack</div>
-              <select style={{ width: '100%' }} value={pack} onChange={handlePackChange}>
-                <option value="">All packs (search)</option>
-                <optgroup label="Interface (outlined)">
-                  <option value="lucide">Lucide</option>
-                  <option value="tabler">Tabler</option>
-                  <option value="iconoir">Iconoir</option>
-                  <option value="heroicons">Heroicons</option>
-                  <option value="ph">Phosphor</option>
-                </optgroup>
-                <optgroup label="Interface (solid)">
-                  <option value="mdi">Material Design</option>
-                  <option value="material-symbols">Material Symbols</option>
-                  <option value="solar">Solar</option>
-                  <option value="fa6-solid">Font Awesome</option>
-                  <option value="carbon">Carbon</option>
-                </optgroup>
-                <optgroup label="Brand logos (coloured)">
-                  <option value="simple-icons">Simple Icons</option>
-                  <option value="logos">Logos (colour)</option>
-                  <option value="devicon">Devicon</option>
-                  <option value="skill-icons">Skill Icons</option>
-                </optgroup>
-                <optgroup label="Flags">
-                  <option value="circle-flags">Circle Flags</option>
-                  <option value="flag">Flag Icons</option>
-                  <option value="flagpack">Flagpack</option>
-                  <option value="cif">Currency Flags</option>
-                </optgroup>
-                <optgroup label="Flat & emoji">
-                  <option value="flat-color-icons">Flat Color Icons</option>
-                  <option value="twemoji">Twemoji</option>
-                  <option value="noto">Noto Emoji</option>
-                  <option value="fluent-emoji">Fluent Emoji</option>
-                  <option value="openmoji">OpenMoji</option>
-                </optgroup>
-              </select>
-            </div>
+        <div className="pl-toolbar">
+          <div className="pl-search-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="pl-search"
+              placeholder="Search icons…"
+              value={query}
+              onChange={handleQueryChange}
+            />
+            {query && (
+              <button type="button" className="pl-search-clear" aria-label="Clear search" onClick={handleClearSearch}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            )}
           </div>
-          <div className="pl-chips" style={{ marginBottom: 0 }}>
+
+          <select className="pl-select" value={pack} onChange={handlePackChange} aria-label="Icon pack">
+            <option value="">All packs (search)</option>
+            <optgroup label="Interface (outlined)">
+              <option value="lucide">Lucide</option>
+              <option value="tabler">Tabler</option>
+              <option value="iconoir">Iconoir</option>
+              <option value="heroicons">Heroicons</option>
+              <option value="ph">Phosphor</option>
+            </optgroup>
+            <optgroup label="Interface (solid)">
+              <option value="mdi">Material Design</option>
+              <option value="material-symbols">Material Symbols</option>
+              <option value="solar">Solar</option>
+              <option value="fa6-solid">Font Awesome</option>
+              <option value="carbon">Carbon</option>
+            </optgroup>
+            <optgroup label="Brand logos (coloured)">
+              <option value="simple-icons">Simple Icons</option>
+              <option value="logos">Logos (colour)</option>
+              <option value="devicon">Devicon</option>
+              <option value="skill-icons">Skill Icons</option>
+            </optgroup>
+            <optgroup label="Flags">
+              <option value="circle-flags">Circle Flags</option>
+              <option value="flag">Flag Icons</option>
+              <option value="flagpack">Flagpack</option>
+              <option value="cif">Currency Flags</option>
+            </optgroup>
+            <optgroup label="Flat & emoji">
+              <option value="flat-color-icons">Flat Color Icons</option>
+              <option value="twemoji">Twemoji</option>
+              <option value="noto">Noto Emoji</option>
+              <option value="fluent-emoji">Fluent Emoji</option>
+              <option value="openmoji">OpenMoji</option>
+            </optgroup>
+          </select>
+
+          <div className="pl-chips">
             {[
               { label: 'Outlined', packs: ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'] },
               { label: 'Solid', packs: ['mdi', 'material-symbols', 'fa6-solid', 'solar', 'carbon'] },
               { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack'] },
               { label: 'Coloured', packs: ['logos', 'devicon', 'skill-icons', 'flat-color-icons'] },
             ].map(f => (
-              <button key={f.label} className={`pl-chip${f.packs.includes(pack) ? ' active' : ''}`}
+              <button key={f.label} type="button" className={`pl-chip${f.packs.includes(pack) ? ' active' : ''}`}
                 onClick={() => { const p = f.packs.includes(pack) ? DEFAULT_PACK : f.packs[0]; setPack(p); browsePack(p) }}
               >{f.label}</button>
             ))}

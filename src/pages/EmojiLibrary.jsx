@@ -116,7 +116,6 @@ export default function EmojiLibrary({ onCopy }) {
         <p>Browse and copy emojis for your designs. Click any emoji to copy it.</p>
       </div>
 
-      <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'var(--bg-0)', paddingTop: 8, paddingBottom: 8 }}>
       <div className="pl-toolbar">
         <div className="pl-search-wrap">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -162,7 +161,6 @@ export default function EmojiLibrary({ onCopy }) {
             >{cat}</button>
           ))}
         </div>
-      </div>
       </div>
 
       <div className="emoji-sections">
