@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import NavIcon from './NavIcon'
 
 // The rebuilt marketing / app nav: a floating pill bar with three mega-menus
 // (Create / Discover / Learn) driven entirely by src/data/toolTree.js, so the
@@ -39,19 +40,29 @@ function SoonBadge({ accent }) {
   return <span className={accent ? 'soon-badge soon-badge-accent' : 'soon-badge'}>Soon</span>
 }
 
-// One Create group: bold heading (links to the category home) + smaller sub-tool
-// links. Discover / Learn groups have no sub-tools, so they render as a single
-// headed link with a description.
+// One nav group. The head is an icon tile (hue-tinted) beside a title/description
+// column; Create groups then list their sub-tools underneath. Discover / Learn
+// groups have no sub-tools, so they render as a self-contained card that lifts on
+// hover — the whole tile is the click target.
 function MenuGroup({ group, onNavigate }) {
   const hasTools = Array.isArray(group.tools) && group.tools.length > 0
   return (
-    <div className="pnav-group" data-hue={group.hue || (group.accent ? 'accent' : undefined)}>
+    <div
+      className={hasTools ? 'pnav-group' : 'pnav-group pnav-group--card'}
+      data-hue={group.hue || (group.accent ? 'accent' : undefined)}
+    >
       <Link className="pnav-group-head" to={group.home || group.route} onClick={onNavigate}>
-        <span className="fx-dot" aria-hidden="true" />
-        <span className="pnav-group-title">{group.label}</span>
-        {group.soon && <SoonBadge accent={group.accent} />}
+        <span className="pnav-ico" aria-hidden="true">
+          <NavIcon id={group.id} />
+        </span>
+        <span className="pnav-group-text">
+          <span className="pnav-group-title">
+            {group.label}
+            {group.soon && <SoonBadge accent={group.accent} />}
+          </span>
+          {group.desc && <span className="pnav-group-desc">{group.desc}</span>}
+        </span>
       </Link>
-      {group.desc && <p className="pnav-group-desc">{group.desc}</p>}
       {hasTools && (
         <ul className="pnav-sub">
           {group.tools.map((tool) => (
@@ -130,7 +141,6 @@ export default function PillNav() {
       >
         <div className="pnav-inner">
           <Link className="pnav-logo" to="/home" onClick={closeAll} aria-label="UIL4B home">
-            <span className="pnav-glyph" aria-hidden="true">U</span>
             <span className="pnav-word">UIL4B</span>
           </Link>
 
@@ -250,8 +260,10 @@ export default function PillNav() {
                         data-hue={group.hue || (group.accent ? 'accent' : undefined)}
                         onClick={closeAll}
                       >
-                        <span className="fx-dot" aria-hidden="true" />
-                        {group.label}
+                        <span className="pnav-acc-ico" aria-hidden="true">
+                          <NavIcon id={group.id} />
+                        </span>
+                        <span className="pnav-acc-label">{group.label}</span>
                         {group.soon && <SoonBadge accent={group.accent} />}
                       </Link>
                     ))}
