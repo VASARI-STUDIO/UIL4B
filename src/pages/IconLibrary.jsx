@@ -19,6 +19,21 @@ const COLORED_PACKS = new Set([
 ])
 const iconFilter = (pack) => (COLORED_PACKS.has(pack) ? 'none' : 'var(--icon-inv)')
 
+// Curated cross-pack collections. A chip aggregates every pack in its group so
+// "Coloured" shows colour icons from ALL colour packs, not just one — same for
+// the other styles. `packs` are real Iconify prefixes.
+const ICON_GROUPS = {
+  outlined: { label: 'Outlined', packs: ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'] },
+  solid: { label: 'Solid', packs: ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'carbon'] },
+  coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
+  flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
+  emoji: { label: 'Emoji', packs: ['twemoji', 'fluent-emoji', 'noto', 'openmoji'] },
+}
+const GROUP_ORDER = ['outlined', 'solid', 'coloured', 'flags', 'emoji']
+// Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
+// windowed anyway — nobody scrolls past a few thousand).
+const PER_PACK_CAP = 1500
+
 function buildSvgUrl(host, pack, name, params = {}) {
   let url = `${host}/${pack}/${name}.svg`
   const parts = []
@@ -340,6 +355,7 @@ export default function IconLibrary({ onCopy }) {
   const [loading, setLoading] = useState(true)
   const [activeCat] = useState('all')
   const [pack, setPack] = useState(DEFAULT_PACK)
+  const [group, setGroup] = useState(null)   // active cross-pack collection, or null for single-pack mode
   const [selected, setSelected] = useState(null)
   const timer = useRef(null)
   const cdnOk = useRef(null)
@@ -374,6 +390,7 @@ export default function IconLibrary({ onCopy }) {
   // Browse an entire icon set via the /collection endpoint — this is what fills
   // the grid with thousands of icons instead of a handful of search hits.
   const browsePack = useCallback((packFilter) => {
+    setGroup(null)
     if (!packFilter) { renderLocal('', '') ; return }
     const rid = ++reqId.current
     setLoading(true)
@@ -396,27 +413,74 @@ export default function IconLibrary({ onCopy }) {
       })
   }, [renderLocal])
 
-  const doSearch = useCallback((q, packFilter) => {
+  // Browse a whole collection (chip): fetch every pack in the group in parallel
+  // and round-robin interleave them so the grid mixes packs instead of dumping
+  // one pack before the next. This is what makes "Coloured" show colour icons
+  // from ALL colour packs at once.
+  const browseGroup = useCallback((groupKey) => {
+    const g = ICON_GROUPS[groupKey]
+    if (!g) return
+    const rid = ++reqId.current
+    setGroup(groupKey)
+    setPack('')
+    setLoading(true)
+    Promise.all(g.packs.map(p =>
+      fetchWithFallback(`/collection?prefix=${p}`, 6000)
+        .then(r => r.json())
+        .then(d => ({ names: collectionToNames(d).slice(0, PER_PACK_CAP), pack: p, ok: true }))
+        .catch(() => ({ names: [], pack: p, ok: false }))
+    ))
+      .then(results => {
+        if (rid !== reqId.current) return
+        if (!results.some(r => r.ok)) { cdnOk.current = false; renderLocal('', ''); return }
+        cdnOk.current = true
+        const lists = results.map(r => r.names.map(n => ({ pack: r.pack, name: n })))
+        const maxLen = lists.reduce((m, l) => Math.max(m, l.length), 0)
+        const merged = []
+        for (let i = 0; i < maxLen; i++) for (const l of lists) if (i < l.length) merged.push(l[i])
+        if (!merged.length) { renderLocal('', ''); return }
+        setIcons(merged.map(({ pack, name }) => ({ id: `${pack}:${name}`, pack, name, cdn: true })))
+        setVisible(PAGE_SIZE)
+        const hits = results.filter(r => r.names.length).length
+        setMode(`${g.label} · ${merged.length.toLocaleString()} icons · ${hits} packs`)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (rid !== reqId.current) return
+        cdnOk.current = false
+        renderLocal('', '')
+      })
+  }, [renderLocal])
+
+  const doSearch = useCallback((q, scope = {}) => {
     q = (q || '').trim()
-    // Empty query: browse the whole selected pack (or fall back to the local set).
+    const { pack: packFilter = '', group: groupKey = null } = scope
+    // Empty query: browse the active collection or pack (or fall back to local).
     if (!q || q.length < 2) {
-      browsePack(packFilter)
+      if (groupKey) browseGroup(groupKey)
+      else browsePack(packFilter)
       return
     }
     if (cdnOk.current === false) {
-      renderLocal(q, packFilter)
+      renderLocal(q, groupKey ? '' : packFilter)
       return
     }
     const rid = ++reqId.current
     setLoading(true)
-    const pfx = packFilter ? `prefix=${packFilter}&` : ''
-    fetchWithFallback(`/search?${pfx}query=${encodeURIComponent(q)}&limit=${API_LIMIT}`)
+    // A group scopes the search to its packs (Iconify `prefixes=`); a single pack
+    // uses `prefix=`; neither searches every set.
+    const params = new URLSearchParams()
+    if (groupKey) params.set('prefixes', ICON_GROUPS[groupKey].packs.join(','))
+    else if (packFilter) params.set('prefix', packFilter)
+    params.set('query', q)
+    params.set('limit', String(API_LIMIT))
+    fetchWithFallback(`/search?${params.toString()}`)
       .then(r => r.json())
       .then(d => {
         if (rid !== reqId.current) return
         cdnOk.current = true
         if (!d.icons || !d.icons.length) {
-          renderLocal(q, packFilter)
+          renderLocal(q, groupKey ? '' : packFilter)
           return
         }
         setIcons(d.icons.map(id => {
@@ -424,15 +488,16 @@ export default function IconLibrary({ onCopy }) {
           return { id, pack: p, name: n, cdn: true }
         }))
         setVisible(PAGE_SIZE)
-        setMode(`${d.icons.length.toLocaleString()} matches${d.total > d.icons.length ? '+' : ''} · Iconify`)
+        const scopeLabel = groupKey ? ICON_GROUPS[groupKey].label : 'Iconify'
+        setMode(`${d.icons.length.toLocaleString()} matches${d.total > d.icons.length ? '+' : ''} · ${scopeLabel}`)
         setLoading(false)
       })
       .catch(() => {
         if (rid !== reqId.current) return
         cdnOk.current = false
-        renderLocal(q, packFilter)
+        renderLocal(q, groupKey ? '' : packFilter)
       })
-  }, [renderLocal, browsePack])
+  }, [renderLocal, browsePack, browseGroup])
 
   // Initial load: browse the default pack so the grid is full on first paint.
   useEffect(() => {
@@ -454,30 +519,42 @@ export default function IconLibrary({ onCopy }) {
     return () => obs.disconnect()
   }, [icons.length])
 
-  const debounceSearch = useCallback((q, p) => {
+  const debounceSearch = useCallback((q, scope) => {
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => doSearch(q, p), 300)
+    timer.current = setTimeout(() => doSearch(q, scope), 300)
   }, [doSearch])
 
   const handleQueryChange = (e) => {
     const q = e.target.value
     setQuery(q)
-    debounceSearch(q, pack)
+    debounceSearch(q, { pack, group })
   }
 
   const handleClearSearch = () => {
     setQuery('')
     clearTimeout(timer.current)
-    browsePack(pack)
+    if (group) browseGroup(group)
+    else browsePack(pack)
   }
 
   const handlePackChange = (e) => {
     const p = e.target.value
+    if (p.startsWith('group:')) return   // synthetic active-collection label — not selectable
     setPack(p)
+    setGroup(null)
     // Switching packs with no query browses the new pack immediately (no debounce).
     clearTimeout(timer.current)
-    if (query.trim().length >= 2) doSearch(query, p)
+    if (query.trim().length >= 2) doSearch(query, { pack: p, group: null })
     else browsePack(p)
+  }
+
+  // Toggle a cross-pack collection chip: on → aggregate the group, off → back to
+  // the default pack.
+  const handleGroupToggle = (key) => {
+    setQuery('')
+    clearTimeout(timer.current)
+    if (group === key) { setPack(DEFAULT_PACK); browsePack(DEFAULT_PACK) }
+    else browseGroup(key)
   }
 
   const handleIconClick = (icon) => {
@@ -518,7 +595,8 @@ export default function IconLibrary({ onCopy }) {
             )}
           </div>
 
-          <select className="pl-select" value={pack} onChange={handlePackChange} aria-label="Icon pack">
+          <select className="pl-select" value={group ? `group:${group}` : pack} onChange={handlePackChange} aria-label="Icon pack">
+            {group && <option value={`group:${group}`}>◆ {ICON_GROUPS[group].label} collection</option>}
             <option value="">All packs (search)</option>
             <optgroup label="Interface (outlined)">
               <option value="lucide">Lucide</option>
@@ -556,20 +634,15 @@ export default function IconLibrary({ onCopy }) {
           </select>
 
           <div className="pl-chips">
-            {[
-              { label: 'Outlined', packs: ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'] },
-              { label: 'Solid', packs: ['mdi', 'material-symbols', 'fa6-solid', 'solar', 'carbon'] },
-              { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack'] },
-              { label: 'Coloured', packs: ['logos', 'devicon', 'skill-icons', 'flat-color-icons'] },
-            ].map(f => (
-              <button key={f.label} type="button" className={`pl-chip${f.packs.includes(pack) ? ' active' : ''}`}
-                onClick={() => { const p = f.packs.includes(pack) ? DEFAULT_PACK : f.packs[0]; setPack(p); browsePack(p) }}
-              >{f.label}</button>
+            {GROUP_ORDER.map(key => (
+              <button key={key} type="button" className={`pl-chip${group === key ? ' active' : ''}`}
+                onClick={() => handleGroupToggle(key)}
+              >{ICON_GROUPS[key].label}</button>
             ))}
           </div>
         </div>
 
-        {!pack && query.trim().length < 2 && !loading && (
+        {!pack && !group && query.trim().length < 2 && !loading && (
           <p style={{ fontSize: 12, color: 'var(--t2)', padding: '8px 0 4px' }}>
             Pick a pack to browse, or type at least 2 characters to search across every Iconify set.
           </p>
