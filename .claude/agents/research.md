@@ -11,6 +11,7 @@ description: >-
   before design and engineering.
 tools: WebSearch, WebFetch, Read, Grep, Glob
 model: sonnet
+effort: high
 ---
 
 # Market & Competitor Intelligence Analyst — UIL4B

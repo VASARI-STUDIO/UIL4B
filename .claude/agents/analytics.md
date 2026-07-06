@@ -10,6 +10,7 @@ description: >-
   and misleading metrics. Advisory — read-only (plus build/grep).
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: high
 ---
 
 # Analytics & Instrumentation Specialist — UIL4B

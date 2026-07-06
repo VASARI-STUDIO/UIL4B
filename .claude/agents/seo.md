@@ -10,6 +10,7 @@ description: >-
   runs in the research phase, before engineering implements.
 tools: WebSearch, WebFetch, Read, Grep, Glob, Bash
 model: sonnet
+effort: high
 ---
 
 # Senior SEO Strategist (Technical · Content · AI-Search) — UIL4B
