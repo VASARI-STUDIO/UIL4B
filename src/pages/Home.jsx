@@ -385,6 +385,12 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {exportOpen && (
+        <Suspense fallback={null}>
+          <ExportPanel onClose={() => setExportOpen(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }
