@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import CreatePreview from '../components/CreatePreview'
 import { useHomeMotion } from '../hooks/useHomeMotion'
 import { CREATE_GROUPS } from '../data/toolTree'
+
+// The real Export dialog, lazy-loaded so its (and its focus-trap's) code only
+// ships when a visitor actually asks to see the export formats.
+const ExportPanel = lazy(() => import('../components/ExportPanel'))
 
 // The public homepage: a Mobbin-style sales page for UIL4B. It is intentionally
 // image-light for Phase 1 — every "screenshot" is a `spec-frame` placeholder the
@@ -50,10 +54,23 @@ const SURFACES = [
 // here once Discover ships; for now they set the visual rhythm.
 const COMMUNITY = ['System 01', 'System 02', 'System 03', 'System 04', 'System 05', 'System 06']
 
+// Export section content. The format names + descriptions are kept verbatim in
+// sync with `ExportPanel`'s FORMATS so the homepage never promises a format the
+// real dialog doesn't list. The file names are a decorative faux-output stack.
+const EXPORT_FORMATS = [
+  { name: 'HTML design system', desc: 'A full page — tokens, components and styles as ready-to-ship HTML + CSS.' },
+  { name: 'CSS tokens', desc: 'Custom properties for colour, type, spacing and radii — drop into any stylesheet.' },
+  { name: 'JSON tokens', desc: 'Design tokens as JSON for pipelines and Style Dictionary.' },
+  { name: 'Tailwind theme', desc: 'A tailwind.config theme extension mapped to your system.' },
+  { name: 'Asset bundle', desc: 'Icons and swatches exported together as SVG + PNG.' },
+]
+const EXPORT_FILES = ['system.html', 'tokens.css', 'tokens.json', 'tailwind.config.js', 'assets.zip']
+
 export default function Home() {
   const rootRef = useRef(null)
   useHomeMotion(rootRef)
   const [active, setActive] = useState(CREATE_GROUPS[0].id)
+  const [exportOpen, setExportOpen] = useState(false)
   const activeGroup = CREATE_GROUPS.find((g) => g.id === active) || CREATE_GROUPS[0]
 
   // Sliding indicator for the Create segmented control. We position a single
@@ -94,10 +111,13 @@ export default function Home() {
 
       {/* ── Hero ── */}
       <header className="home-hero">
-        <h1 className="home-hero-h1">The workspace for building UI systems.</h1>
+        <h1 className="home-hero-h1">
+          <span className="home-hero-line"><span className="home-hero-line-in">Preview your design system</span></span>
+          <span className="home-hero-line"><span className="home-hero-line-in">before you ship it.</span></span>
+        </h1>
         <p className="home-hero-sub">
-          Colour, type, components, imagery, icons and AI — build, validate and export your
-          interface foundations without tab-hopping across a dozen tools.
+          Build colour, type, components and icons in one workspace — see them live, catch
+          what breaks, and export production-ready code.
         </p>
         <div className="home-hero-cta">
           <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/color">
@@ -110,20 +130,6 @@ export default function Home() {
         </div>
         <p className="home-hero-hint">Free to start · No credit card · Runs in your browser</p>
       </header>
-
-      {/* ── Trust strip (honest, no fake logos) ── */}
-      <div className="home-container">
-        <div className="home-trust" data-reveal>
-          <p className="home-trust-label">One workspace, every foundation</p>
-          <div className="home-stats">
-            <span className="home-stat"><b>6</b> tool systems</span>
-            <span className="home-stat"><b>200k+</b> icons</span>
-            <span className="home-stat"><b>Every</b> emoji</span>
-            <span className="home-stat"><b>100%</b> in-browser</span>
-            <span className="home-stat"><b>$0</b> to start</span>
-          </div>
-        </div>
-      </div>
 
       {/* ── Create: interactive category toggle ── */}
       <section className="home-section" id="create">
@@ -158,7 +164,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="home-stage" data-reveal aria-live="polite">
+          <div className="home-stage" data-reveal="media" aria-live="polite">
             <CreatePreview group={activeGroup} />
           </div>
         </div>
@@ -176,9 +182,9 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="home-surfaces">
+          <div className="home-surfaces" data-reveal-group>
             {SURFACES.map((s) => (
-              <article className="home-surface fx-lift" key={s.id} data-hue={s.hue} data-reveal>
+              <article className="home-surface fx-lift" key={s.id} data-hue={s.hue}>
                 <div className="spec-frame">
                   <span className="spec-label">{s.title}</span>
                 </div>
@@ -196,13 +202,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Validate / Export splits ── */}
+      {/* ── Validate ── */}
       <section className="home-section">
         <div className="home-container">
-          <div className="home-split" data-reveal>
-            <div className="home-split-copy">
+          <div className="home-split">
+            <div className="home-split-copy" data-reveal>
               <span className="home-eyebrow">Validate</span>
-              <h2 className="home-h2">Ship foundations that actually hold up.</h2>
+              <h2 className="home-h2">See it break here, not in production.</h2>
               <p className="home-lede">
                 Catch the problems before they reach production — contrast, scale and consistency,
                 checked as you build.
@@ -228,28 +234,49 @@ export default function Home() {
                 </li>
               </ul>
             </div>
-            <div className="home-split-media">
+            <div className="home-split-media" data-reveal="media">
               <div className="spec-frame">
                 <span className="spec-label">Contrast · report</span>
               </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="home-split reverse" data-reveal>
-            <div className="home-split-copy">
-              <span className="home-eyebrow">Export</span>
-              <h2 className="home-h2">Production-ready output, one copy away.</h2>
-              <p className="home-lede">
-                Everything you build leaves as clean, framework-ready code — no re-typing hex values
-                into your stylesheet.
-              </p>
-              <code className="home-code">:root &#123; --brand: #2563EB; &#125;</code>
+      {/* ── Export ── */}
+      <section className="home-section">
+        <div className="home-container">
+          <div className="home-head" data-reveal>
+            <span className="home-eyebrow">Export</span>
+            <h2 className="home-h2">Export the whole system, not just the swatches.</h2>
+            <p className="home-lede">
+              Everything you build leaves as clean, framework-ready code — tokens, components and
+              assets, in the format your stack already speaks.
+            </p>
+          </div>
+          <div className="home-export">
+            <ul className="home-export-list" data-reveal-group>
+              {EXPORT_FORMATS.map((f, i) => (
+                <li className={i === 0 ? 'home-export-row is-primary' : 'home-export-row'} key={f.name}>
+                  <span className="home-export-name">{f.name}</span>
+                  <span className="home-export-desc">{f.desc}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="home-export-stack" data-reveal="media" aria-hidden="true">
+              {EXPORT_FILES.map((file) => (
+                <div className="home-export-file" key={file}>
+                  <span className="home-export-file-dot" />
+                  <span className="home-export-file-name">{file}</span>
+                </div>
+              ))}
             </div>
-            <div className="home-split-media">
-              <div className="spec-frame">
-                <span className="spec-label">CSS · export</span>
-              </div>
-            </div>
+          </div>
+          <div className="home-export-cta">
+            <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={() => setExportOpen(true)}>
+              See the export formats
+              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
+            </button>
           </div>
         </div>
       </section>
