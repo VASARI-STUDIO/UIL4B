@@ -6,7 +6,7 @@ no parallel backlog. Owner-only infra tasks live in the **one** other doc,
 [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). Everything else in `docs/reference/*` is
 stable operating guardrails (read the relevant one before working in that area)._
 
-_Last updated: 2026-07-02 — start of the ground-up rebuild._
+_Last updated: 2026-07-07 — rebuild in flight; see §7 for the live A–F cluster program._
 
 ---
 
@@ -196,6 +196,62 @@ indexing, image-zoom pan/long-press); box-shadow rework; search depth; UI Kit;
 multi-page SEO crawler; team collaboration / white-label. Logged tech-debt:
 `useSlidingThumb` shared hook, reactive popup breakpoint, Slice-2 `onDown`
 double-fire guard.
+
+---
+
+## 7. Current cluster program (2026-07-07 — founder brain-dump, PM-regrouped)
+
+A ~45-item founder brain-dump, re-sequenced into clusters A–F. One PR per cluster
+→ squash-merge to `main` → realign the branch. Product principle throughout:
+**"users must understand what the app is ASAP — confused shoppers have empty carts."**
+
+- **Phase 0 (housekeeping) — ✅ DONE + MERGED (PR #134).** Sonnet agents → high
+  effort; stale design-spec doc reference cleaned.
+- **Cluster A — Nav & app shell — ✅ DONE + MERGED (PR #134).** Top-bar-only nav;
+  unified hover-expand search; ExportPanel; gear popover (theme + Settings) +
+  avatar popover (Account/Plans/Admin-hidden/Sign-out); day/night toggle;
+  mega-menu redesign (columns + promo card); black buttons → brand blue; removed
+  the Create tool rail; "Soon" badges on every nav category except Icon Library.
+- **Cluster B — Home page — ⏳ ENGINEER BUILDING.** Concept "the living preview":
+  the page IS a working demo. Remove the "One workspace, every foundation" trust
+  strip; award-grade micro-animations; mini-tools look better but carry **no** real
+  functionality (a fun interactive section); mini icon customiser per Lucide
+  "style as you please"; hero headline about previewing to ship *tested* design
+  systems; export section shows exporting full HTML design systems + other
+  formats; smooth page scroll on **all** pages (single app-level Lenis singleton +
+  `prefers-reduced-motion` opt-out; GSAP ScrollTrigger rides the shared Lenis).
+- **Cluster C — Icon & Emoji libraries — 🔧 SPEC COMPLETE, engineering PENDING**
+  (routed after B merges — both touch `global.css`, so serialise). Style-filter
+  bug already fixed + merged in PR #134. Build order: (1) **anti-tamper first** —
+  a live leak: current "Save to Project" writes `localStorage['vs-saved-icons']`
+  for **every** user with no Pro check; gate behind `isPro`, non-Pro sees a locked
+  control routing to `/checkout`. (2) `icust-*` customiser dialog (a11y sibling of
+  ExportPanel; stroke slider + Absolute toggle only when the icon is stroke-capable;
+  serialise current values on copy to dodge the Lucide copy-reset bug). (3)
+  `browseAll()` across all packs + "All packs" default select + skeleton/error
+  states. (4) "Custom Icons" category (named `Custom (name + iteration)`). (5)
+  page-width recents rail (copied + edited). (6) SEO copy rewrite of the header.
+  (7) Emoji: fix "not showing all" (IntersectionObserver sentinel stall — add
+  `visible` to effect deps, raise `PAGE_SIZE`; same fix applies to IconLibrary) +
+  skin-tone change must update the **whole** library (render the toned value, not
+  just append at copy).
+- **Cluster D — Pricing / Plans / Settings — 🔴 BLOCKED on Stripe connector auth.**
+  Target prices: lifetime **$129 AUD**, monthly **$4.99 AUD**, yearly ~30% less
+  ending .99 (**≈$41.99**), international .99 for USD/EUR/GBP/NZD/CAD. New Plans
+  page (remove plans from Settings); restyle Settings to the new UI but **keep** its
+  left nav; remove the Appearance section; default logo = user initials; default
+  background = brand-blue→darker gradient; Google sign-in uses the Google profile
+  icon (overridable); location autofills cities/countries. **Do not change any
+  displayed price until the Stripe prices are updated** (would mislead customers).
+  Stripe MCP needs interactive OAuth — founder must authorise via claude.ai
+  connector settings.
+- **Cluster E — Discover / Learn — PENDING.** Improve the Discover + Learn sales
+  pages; Discover gets a stylised world map (UIL4B icon on Brisbane, blips/hover/
+  click-to-region, no user info); add https://www.navbar.gallery/ to the resource
+  list.
+- **Cluster F — Colour tool — PENDING.** Import the tint generator; custom colours
+  drawn from the applicable side of the colour wheel (e.g. success = blue→yellow),
+  capped halfway.
 
 ---
 

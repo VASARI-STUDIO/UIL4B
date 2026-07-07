@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
 
-// One-shot scroll reveal. Adds `.is-in` to every `[data-reveal]` element the
-// first time it scrolls into view, then stops observing it. Deliberately touches
-// NO React state (keeps us clear of the `set-state-in-effect` advisory), so it is
-// safe to call from any page.
+// One-shot scroll reveal. Adds `.is-in` to every `[data-reveal]` (single element)
+// and `[data-reveal-group]` (whose children are the animated units) the first time
+// it scrolls into view, then stops observing it. Deliberately touches NO React
+// state (keeps us clear of the `set-state-in-effect` advisory), so it is safe to
+// call from any page. (The home route uses `useHomeMotion` instead, which drives
+// the same attributes with GSAP.)
 //
 // Resilience:
 //  - No IntersectionObserver (old/edge runtimes) → reveal everything immediately,
@@ -14,7 +16,9 @@ import { useEffect } from 'react'
 // Content in Phase 1 is static, so a single mount-time scan is sufficient.
 export function useReveal() {
   useEffect(() => {
-    const nodes = Array.from(document.querySelectorAll('[data-reveal]:not(.is-in)'))
+    const nodes = Array.from(
+      document.querySelectorAll('[data-reveal]:not(.is-in), [data-reveal-group]:not(.is-in)'),
+    )
     if (nodes.length === 0) return
 
     if (typeof IntersectionObserver === 'undefined') {
