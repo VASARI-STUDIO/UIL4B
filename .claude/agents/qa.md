@@ -10,6 +10,7 @@ description: >-
   final gate after engineering, before merge.
 tools: Read, Grep, Glob, Bash, WebFetch
 model: sonnet
+effort: high
 ---
 
 # QA Engineer — UIL4B

@@ -4160,6 +4160,9 @@ html.lenis,html.lenis body{height:auto}
 .ui-pill-block{width:100%}
 .ui-pill-arrow{transition:transform var(--dur-2) var(--ease-out)}
 .ui-pill:hover .ui-pill-arrow{transform:translateX(3px)}
+.ui-pill:disabled,.ui-pill[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
+.ui-pill:disabled:hover,.ui-pill[aria-disabled="true"]:hover{transform:none;box-shadow:none}
+.ui-pill:disabled:active,.ui-pill[aria-disabled="true"]:active{transform:none}
 
 /* ── Specimen-frame placeholder (token-native image stand-in) ── */
 .spec-frame{position:relative;display:grid;place-items:center;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden}
@@ -4183,19 +4186,61 @@ html.lenis,html.lenis body{height:auto}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
 .pnav-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
-.pnav-account{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 12px 0 6px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t0);text-decoration:none;font-size:var(--fs-body-s);font-weight:560;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
-.pnav-account:hover{border-color:var(--bh);background:var(--hvr);text-decoration:none}
 .pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--bg-3);display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--t1);flex:0 0 auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
 
+/* Right-cluster: hover-expand search + Export shell. The slot is a fixed 200px
+   with content right-aligned, so expanding the field / revealing Export never
+   shifts the centred nav triggers (no layout thrash). */
+.pnav-search{display:flex;align-items:center;justify-content:flex-end;gap:8px;width:200px;flex:0 0 auto}
+.pnav-search-field{display:inline-flex;align-items:center;gap:8px;height:40px;width:40px;padding:0;justify-content:center;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;overflow:hidden;cursor:pointer;transition:width var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-search-field .pnav-search-ico{flex:0 0 auto}
+.pnav-search-ph{max-width:0;opacity:0;overflow:hidden;transition:max-width var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out)}
+.pnav-search:hover .pnav-search-field,.pnav-search:focus-within .pnav-search-field{width:112px;padding:0 14px;justify-content:flex-start;border-color:var(--bh);color:var(--t0)}
+.pnav-search:hover .pnav-search-ph,.pnav-search:focus-within .pnav-search-ph{max-width:80px;opacity:1}
+.pnav-export{display:inline-flex;align-items:center;gap:7px;height:40px;max-width:0;padding:0;opacity:0;visibility:hidden;overflow:hidden;white-space:nowrap;border:none;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;cursor:pointer;transition:max-width var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),visibility var(--dur-3) var(--ease-inout),background var(--dur-2) var(--ease-out)}
+.pnav-search:hover .pnav-export,.pnav-search:focus-within .pnav-export{max-width:140px;padding:0 14px;opacity:1;visibility:visible}
+.pnav-export:hover{background:color-mix(in srgb,var(--accent) 18%,var(--bg-2))}
+
+/* Gear + avatar icon buttons and their popovers */
+.pnav-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-icon-btn:hover,.pnav-icon-btn[aria-expanded="true"]{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.pnav-avatar-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;padding:0;border:1px solid var(--border);background:var(--bg-1);border-radius:50%;cursor:pointer;overflow:hidden;transition:border-color var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
+.pnav-avatar-btn:hover,.pnav-avatar-btn[aria-expanded="true"]{border-color:var(--bh);box-shadow:var(--shadow-xs)}
+.pnav-avatar-btn .pnav-avatar{width:100%;height:100%}
+.pnav-pop-wrap{position:relative;flex:0 0 auto}
+.pnav-pop{position:absolute;top:calc(100% + 10px);right:0;z-index:130;width:260px;max-width:calc(100vw - 24px);padding:8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
+.pnav-pop-head{padding:8px 10px 4px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.pnav-pop-row{display:flex;flex-direction:column;gap:8px;padding:6px 10px 10px}
+.pnav-pop-row-label{font-size:var(--fs-body-s);font-weight:560;color:var(--t0)}
+.pnav-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--bg-2);border-radius:var(--radius-l)}
+.pnav-seg-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;border:none;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
+.pnav-seg-btn:hover{color:var(--t0)}
+.pnav-seg-btn[aria-pressed="true"]{background:var(--bg-1);color:var(--t0);box-shadow:var(--shadow-xs)}
+.pnav-pop-sep{height:1px;margin:4px 6px;background:var(--border)}
+.pnav-pop-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.pnav-pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
+.pnav-pop-item svg{flex:0 0 auto;color:var(--t2)}
+.pnav-pop-item--danger{color:var(--danger,#dc2626)}
+.pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--danger,#dc2626) 12%,var(--bg-1));color:var(--danger,#dc2626)}
+.pnav-pop--account{width:280px}
+.pnav-pop-id{display:flex;align-items:center;gap:12px;padding:10px}
+.pnav-pop-avatar{width:40px;height:40px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--bg-3);display:grid;place-items:center;font-size:14px;font-weight:600;color:var(--t1)}
+.pnav-pop-id-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:0 6px}
+.pnav-pop-id-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* Mega-menu panel — one shared node, morphs width per section */
 .pnav-menu{position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;width:960px;max-width:calc(100vw - 32px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-3) var(--ease-inout);animation:pnav-menu-in var(--dur-3) var(--ease-out)}
 @keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-6px) scale(.98)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
-.pnav-menu[data-menu="create"]{width:960px}
-.pnav-menu[data-menu="discover"]{width:640px}
-.pnav-menu[data-menu="learn"]{width:800px}
+.pnav-menu[data-menu="create"]{width:1120px}
+.pnav-menu[data-menu="discover"]{width:860px}
+.pnav-menu[data-menu="learn"]{width:940px}
 .pnav-menu-body{padding:32px 40px;animation:fx-fade var(--dur-2) var(--ease-out)}
+/* Menu body splits into the group grid (left) + a promo/feature card (right) */
+.pnav-menu-cols{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:40px;align-items:stretch}
 .pnav-grid{display:grid;gap:40px 48px}
 .pnav-menu[data-menu="create"] .pnav-grid{grid-template-columns:repeat(3,1fr)}
 .pnav-menu[data-menu="discover"] .pnav-grid,.pnav-menu[data-menu="learn"] .pnav-grid{grid-template-columns:repeat(2,1fr)}
@@ -4222,6 +4267,14 @@ html.lenis,html.lenis body{height:auto}
 /* Card variant: Discover/Learn groups have no sub-tools, so the whole tile is the link */
 .pnav-group--card .pnav-group-head{padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-0);transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .pnav-group--card .pnav-group-head:hover{border-color:color-mix(in srgb,var(--hue,var(--accent)) 40%,var(--border));background:var(--bg-1);transform:translateY(-2px);box-shadow:var(--shadow-s)}
+/* Promo / feature card — the right-hand rail of every mega-menu. Copy is
+   data-driven from NAV_SECTIONS[*].promo; the CTA links to the surface landing. */
+.pnav-promo{display:flex;flex-direction:column;gap:12px;padding:24px;border:1px solid color-mix(in srgb,var(--accent) 16%,var(--border));border-radius:var(--radius-xl);background:color-mix(in srgb,var(--accent) 7%,var(--bg-2))}
+.pnav-promo-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.pnav-promo-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
+.pnav-promo-blurb{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
+.pnav-promo-cta{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-body-s);font-weight:600;color:var(--accent);text-decoration:none;transition:color var(--dur-1) var(--ease-out)}
+.pnav-promo-cta:hover{color:var(--accent-strong);text-decoration:none}
 .pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 40px;border-top:1px solid var(--border);background:var(--bg-0)}
 .pnav-menu-foot-note{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .pnav-menu-foot-link{font-size:var(--fs-body-s);font-weight:560;color:var(--t0);text-decoration:none}
@@ -4239,6 +4292,30 @@ html.lenis,html.lenis body{height:auto}
 .pnav-acc-label{font-weight:560}
 .pnav-sheet-cta{position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;margin-top:24px;padding-top:16px;background:var(--bg-1)}
 
+/* ══ Export shell (exp-) — the polished, accessible Export dialog opened from the
+   nav search cluster. No real export yet: every format previews and the primary
+   action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
+.exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:rgba(0,0,0,.4);animation:cp-fade .14s ease}
+.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84vh,720px);overflow-y:auto;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
+.exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 16px}
+.exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
+.exp-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.exp-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
+.exp-sub{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
+.exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.exp-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.exp-formats{display:flex;flex-direction:column;gap:8px;padding:8px 24px 20px}
+.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;text-align:left;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.exp-fmt:hover{border-color:var(--bh);background:var(--bg-1)}
+.exp-fmt.is-active{border-color:color-mix(in srgb,var(--accent) 60%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--bg-1))}
+.exp-fmt-check{flex:0 0 auto;width:18px;height:18px;border:2px solid var(--bh);border-radius:50%;transition:border-color var(--dur-2) var(--ease-out)}
+.exp-fmt.is-active .exp-fmt-check{border-color:var(--accent);box-shadow:inset 0 0 0 4px var(--accent)}
+.exp-fmt-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.exp-fmt-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
+.exp-fmt-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
+.exp-fmt-soon{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
+.exp-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg-0)}
+
 /* ══ Kept-page wrapper (nav clearance + container) ══ */
 .pnav-clear{padding-top:calc(var(--nav-clear) + 16px)}
 .page-shell{max-width:1216px;margin:0 auto;padding-inline:clamp(20px,4vw,32px);padding-bottom:var(--s-9);min-height:60vh}
@@ -4254,36 +4331,13 @@ html.lenis,html.lenis body{height:auto}
 .app-page>*:first-child{padding-top:clamp(12px,3vw,32px)}
 
 /* ══ Tool-page shell (rail-) ══ */
-.rail-shell{display:grid;grid-template-columns:var(--sw) 1fr;min-height:100vh;padding-top:var(--nav-clear)}
-.rail{position:sticky;top:var(--nav-clear);align-self:start;height:calc(100vh - var(--nav-clear));display:flex;flex-direction:column;background:var(--bg-0);border-right:1px solid var(--border);padding:24px 12px;overflow-y:auto}
-.rail-cat{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.12em;text-transform:uppercase;color:var(--t2);text-decoration:none;padding:0 8px;margin-bottom:12px}
-.rail-cat:hover{color:var(--t0);text-decoration:none}
-.rail-list{list-style:none;display:flex;flex-direction:column;gap:2px}
-.rail-item{display:flex;align-items:center;gap:8px;min-height:36px;padding:0 12px;border-radius:var(--radius-s);font-size:var(--fs-body-s);font-weight:500;color:var(--t1);text-decoration:none;border:1px solid transparent;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
-.rail-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
-.rail-item.is-active{background:var(--bg-1);color:var(--t0);font-weight:600;border-color:var(--border);box-shadow:var(--shadow-xs)}
-.rail-item-soon{margin-left:auto;color:var(--t2)}
-.rail-spacer{flex:1 1 auto;min-height:16px}
-.rail-cta{background:var(--accent-bg);border:1px solid rgba(37,99,235,.20);border-radius:var(--radius-l);padding:16px}
-.rail-cta-title{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
-.rail-cta-desc{font-size:var(--fs-caption);color:var(--t2);margin:4px 0 12px;line-height:1.5}
-.rail-profile{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--radius-l);border:1px solid var(--border);text-decoration:none;color:var(--t0)}
-.rail-profile:hover{background:var(--hvr);text-decoration:none}
-.rail-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--bg-3);display:grid;place-items:center;font-size:13px;font-weight:600;color:var(--t1);flex:0 0 auto}
-.rail-profile-body{min-width:0;flex:1}
-.rail-profile-name{font-size:var(--fs-body-s);font-weight:560;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rail-pro{display:inline-block;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:1px 6px;margin-top:2px}
+/* The in-tool left rail is retired — navigation lives entirely in the PillNav
+   mega-menus, so the shell is a single full-width content column. */
+.rail-shell{display:grid;grid-template-columns:1fr;min-height:100vh;padding-top:var(--nav-clear)}
 .rail-content{min-width:0;padding:24px clamp(20px,4vw,48px) var(--s-9)}
-/* Library toolbars live inside the rail column: clear the floating nav when
-   they stick, and re-bleed to the rail gutter (not the retired .main's 64px). */
+/* Library toolbars live inside the content column: clear the floating nav when
+   they stick, and re-bleed to the content gutter. */
 .rail-content .pl-toolbar{top:var(--nav-clear);margin-left:calc(-1 * clamp(20px,4vw,48px));margin-right:calc(-1 * clamp(20px,4vw,48px));padding-left:clamp(20px,4vw,48px);padding-right:clamp(20px,4vw,48px)}
-/* Collapsed chip row (≤1024) */
-.rail-chips{display:none;position:sticky;top:var(--nav-clear);z-index:90;gap:8px;padding:12px 16px;overflow-x:auto;background:rgba(255,255,255,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);scroll-snap-type:x proximity}
-.rail-chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--radius-pill);background:var(--bg-2);color:var(--t1);font-size:var(--fs-body-s);font-weight:500;text-decoration:none;white-space:nowrap;scroll-snap-align:start;flex:0 0 auto}
-.rail-chip:hover{color:var(--t0);text-decoration:none}
-.rail-chip.is-active{background:var(--t0);color:#fff}
-.rail-chip-up{margin-left:auto;background:var(--accent);color:#fff}
-.rail-chip-up:hover{color:#fff}
 
 /* ══ Coming-soon tool state (soon-) ══ */
 .soon{max-width:560px;margin:0 auto;padding:var(--s-9) 0}
@@ -4542,10 +4596,8 @@ a.prev-btn{text-decoration:none}
 
 /* ══ Foundry responsive ══ */
 @media(max-width:1024px){
-  .rail-shell{grid-template-columns:1fr;padding-top:0}
-  .rail{display:none}
-  .rail-chips{display:flex}
-  .rail-content{padding-top:20px}
+  .pnav-menu-cols{grid-template-columns:1fr}
+  .pnav-promo{display:none}
   .home-surfaces{grid-template-columns:repeat(2,1fr)}
   .home-surface:nth-child(3){grid-column:1 / -1;max-width:560px;margin:0 auto;width:100%}
   .surface-grid{grid-template-columns:repeat(2,1fr)}
@@ -4554,6 +4606,12 @@ a.prev-btn{text-decoration:none}
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
   .pnav-mobile{display:inline-flex}
   .pnav-inner{padding:0 12px}
+  /* Collapse the search to a single tap-target; the Export button folds into
+     the Export panel (still reachable via the command palette on desktop). */
+  .pnav-search{width:40px}
+  .pnav-search:hover .pnav-search-field,.pnav-search:focus-within .pnav-search-field{width:40px;padding:0;justify-content:center}
+  .pnav-search:hover .pnav-search-ph,.pnav-search:focus-within .pnav-search-ph{max-width:0;opacity:0}
+  .pnav-export{display:none}
   .home-surfaces{grid-template-columns:1fr}
   .home-surface{max-width:560px;margin:0 auto;width:100%}
   .home-surface:nth-child(3){max-width:560px}
@@ -4568,13 +4626,16 @@ a.prev-btn{text-decoration:none}
   .pnav{top:12px;height:52px}
   .pnav-menu,.pnav-sheet{top:calc(12px + 52px + 8px)}
   .pnav-sheet{padding-top:calc(12px + 52px + 16px)}
+  /* Phone: drop the gear + inline action pills — those live in the sheet — so the
+     bar stays to logo · search · avatar · menu. */
+  .pnav-icon-btn{display:none}
+  .pnav-actions .ui-pill{display:none}
   .home-hero-cta{flex-direction:column}
   .home-hero-cta .ui-pill{width:100%}
   .home-foot-feat{grid-template-columns:1fr}
   .home-foot-cols{grid-template-columns:1fr}
   .home-card{width:200px}
   .home-stat{padding:0 12px;font-size:var(--fs-caption)}
-  .rail-chip{height:32px}
   .surface-grid{grid-template-columns:1fr}
 }
 @media(max-width:380px){
