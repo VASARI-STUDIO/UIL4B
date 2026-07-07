@@ -7,6 +7,7 @@ import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/GoogleOneTap'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
+import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { useAuth } from './contexts/AuthContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
@@ -92,6 +93,7 @@ function RequireAuth({ children }) {
 export default function App() {
   const { user: authUser, loading: authLoading } = useAuth()
   useFirestoreSync(authUser?.uid || null)
+  useSmoothScroll()
   const { message, visible, toast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
@@ -103,8 +105,12 @@ export default function App() {
   useEffect(() => {
     document.querySelector('.main')?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     // Chromeless surfaces (Home / Create tools / Discover / Learn) scroll the
-    // window itself, not `.main`, so reset it too — a no-op on chrome pages.
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    // window itself, not `.main`, so reset it too. When Lenis owns the scroll we
+    // must reset through it (a raw window.scrollTo desyncs its virtual position);
+    // when it's absent (reduced motion / teardown) fall back to native.
+    const lenis = getLenis()
+    if (lenis) lenis.scrollTo(0, { immediate: true })
+    else window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     trackPageView(location.pathname)
     trackSessionPage(location.pathname)
     const PAGE_TITLES = {
