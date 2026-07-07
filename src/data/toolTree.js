@@ -121,12 +121,44 @@ export const LEARN_GROUPS = [
   { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn', soon: true, accent: true },
 ]
 
-// Top-level nav model consumed by PillNav. `width` is the mega-menu panel width
-// (px) it morphs to when opened.
+// Top-level nav model consumed by PillNav. Each section also carries the copy for
+// its mega-menu promo card (the right-hand feature panel): an eyebrow, a heading,
+// a short blurb and a CTA that links to the relevant surface landing. `width` is a
+// legacy hint — the panel's real width is set per `data-menu` in global.css.
+//
+// NOTE (for PM / design): the `promo` copy below is first-pass placeholder text —
+// it's honest and on-brand, but it hasn't been through a copy pass. Flag for review.
 export const NAV_SECTIONS = [
-  { id: 'create', label: 'Create', groups: CREATE_GROUPS, width: 960 },
-  { id: 'discover', label: 'Discover', groups: DISCOVER_GROUPS, width: 640 },
-  { id: 'learn', label: 'Learn', groups: LEARN_GROUPS, width: 800 },
+  {
+    id: 'create', label: 'Create', groups: CREATE_GROUPS, width: 960,
+    promo: {
+      eyebrow: 'Create',
+      title: 'Your whole UI system, one workspace',
+      blurb: 'Build colour, type, components and icons that stay in sync — then export production-ready code.',
+      cta: 'See how it works',
+      href: '/home',
+    },
+  },
+  {
+    id: 'discover', label: 'Discover', groups: DISCOVER_GROUPS, width: 640,
+    promo: {
+      eyebrow: 'Discover',
+      title: 'Inspiration worth the tab',
+      blurb: 'Community UI systems, font pairings and prompts — curated, never scraped.',
+      cta: 'Browse Discover',
+      href: '/discover',
+    },
+  },
+  {
+    id: 'learn', label: 'Learn', groups: LEARN_GROUPS, width: 800,
+    promo: {
+      eyebrow: 'Learn',
+      title: 'Understand the why',
+      blurb: 'Principles, theme systems and guides that make your interfaces hold up.',
+      cta: 'Start learning',
+      href: '/learn',
+    },
+  },
 ]
 
 // Normalise a pathname: lowercase, strip query/hash, drop a trailing slash.

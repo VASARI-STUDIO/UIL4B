@@ -1,16 +1,27 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useTheme } from '../contexts/ThemeContext'
+import { ADMIN_EMAILS } from '../utils/constants'
 import NavIcon from './NavIcon'
+
+// Overlays are code-split: the command palette and the export shell only load
+// the first time a visitor actually opens them, so they never weigh on the nav's
+// first paint.
+const CommandPalette = lazy(() => import('./CommandPalette'))
+const ExportPanel = lazy(() => import('./ExportPanel'))
 
 // The rebuilt marketing / app nav: a floating pill bar with three mega-menus
 // (Create / Discover / Learn) driven entirely by src/data/toolTree.js, so the
 // menu can never drift from the router. One shared panel morphs width per
-// section (Coolors-footer homage); on mobile it becomes a full-screen sheet with
-// accordions. Auth + subscription are read ONLY — to decide account vs. upgrade
-// CTA — never written here.
+// section (Coolors-footer homage) and carries a right-hand promo card; on mobile
+// it becomes a full-screen sheet with accordions. The right cluster holds a
+// hover-expand search (reusing the CommandPalette index), an Export shell, a Gear
+// quick-preferences popover (day/night + link to full Settings) and an Avatar
+// account popover. Auth + subscription are read ONLY — to decide account vs.
+// upgrade CTA and to gate the admin link's *visibility* — never written here.
 //
 // State is set exclusively from user events (click / hover / scroll / key), never
 // synchronously inside an effect, so we stay clear of the `set-state-in-effect`
@@ -25,17 +36,61 @@ function Chevron() {
   )
 }
 
-// Initials for the avatar fallback when a user has no photo.
-function initials(user) {
-  const src = user?.displayName || user?.email || ''
+function SearchIcon() {
+  return (
+    <svg className="pnav-search-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.7" />
+      <path d="m20 20-3.2-3.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ExportIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+      <path d="M12 15V4m0 0 4 4m-4-4-4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M19.5 12a7.5 7.5 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7.5 7.5 0 0 0-2-1.2L16.7 3h-4l-.4 2.5a7.5 7.5 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7.6 7.6 0 0 0 4.5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1c.6.5 1.3.9 2 1.2l.4 2.5h4l.4-2.5c.7-.3 1.4-.7 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
+      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// Initials for the avatar fallback when a user has no profile photo.
+function initials(profile, user) {
+  const src = profile?.displayName || user?.email || ''
   const parts = src.trim().split(/[\s@.]+/).filter(Boolean)
   const first = parts[0]?.[0] || 'U'
   const second = parts.length > 1 ? parts[1][0] : ''
   return (first + second).toUpperCase()
 }
 
-// A "Soon" badge for any nav entry still under construction (Phase 1 = all of
-// them). The accent variant marks the conversion-adjacent Help entry.
+// A "Soon" badge for any nav entry still under construction (Phase 1 = all bar
+// Icons & Emoji). The accent variant marks the conversion-adjacent Help entry.
 function SoonBadge({ accent }) {
   return <span className={accent ? 'soon-badge soon-badge-accent' : 'soon-badge'}>Soon</span>
 }
@@ -80,15 +135,25 @@ function MenuGroup({ group, onNavigate }) {
 }
 
 export default function PillNav() {
-  const { user } = useAuth()
+  const { user, userProfile, logout } = useAuth()
   const { isPro } = useSubscription()
+  const { theme, setTheme } = useTheme()
   const [open, setOpen] = useState(null) // active mega-menu section id, or null
+  const [menu, setMenu] = useState(null) // 'gear' | 'avatar' | null
   const [sheet, setSheet] = useState(false) // mobile sheet open
   const [sheetSection, setSheetSection] = useState('create') // expanded accordion
   const [scrolled, setScrolled] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const navRef = useRef(null)
   const menuRef = useRef(null)
   const closeTimer = useRef(null)
+
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  const avatarUrl = userProfile?.photoURL || ''
+  const displayName = userProfile?.displayName || user?.email?.split('@')[0] || 'Account'
+  const accountEmail = userProfile?.email || user?.email || ''
+  const initialsStr = initials(userProfile, user)
 
   // Shrink the bar once the page scrolls; listener only, no state-in-effect.
   useEffect(() => {
@@ -98,14 +163,16 @@ export default function PillNav() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Close the desktop mega-menu on outside pointer or Escape.
+  // Close the desktop mega-menu and the gear/avatar popovers on outside pointer
+  // or Escape. The popovers live inside the nav, so an inside pointer is ignored.
   useEffect(() => {
     const onPointer = (e) => {
       if (navRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return
       setOpen(null)
+      setMenu(null)
     }
     const onKey = (e) => {
-      if (e.key === 'Escape') { setOpen(null); setSheet(false) }
+      if (e.key === 'Escape') { setOpen(null); setSheet(false); setMenu(null) }
     }
     document.addEventListener('pointerdown', onPointer)
     document.addEventListener('keydown', onKey)
@@ -124,10 +191,14 @@ export default function PillNav() {
   }, [sheet])
 
   const clearClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null } }
-  const hoverOpen = (id) => { clearClose(); setOpen(id) }
+  const hoverOpen = (id) => { clearClose(); setMenu(null); setOpen(id) }
   const hoverLeave = () => { clearClose(); closeTimer.current = setTimeout(() => setOpen(null), 120) }
-  const toggle = (id) => setOpen((cur) => (cur === id ? null : id))
-  const closeAll = () => { setOpen(null); setSheet(false) }
+  const toggle = (id) => { setMenu(null); setOpen((cur) => (cur === id ? null : id)) }
+  const toggleMenu = (which) => { setOpen(null); setMenu((cur) => (cur === which ? null : which)) }
+  const closeAll = () => { setOpen(null); setSheet(false); setMenu(null) }
+  const openSearch = () => { closeAll(); setSearchOpen(true) }
+  const openExport = () => { closeAll(); setExportOpen(true) }
+  const onSignOut = () => { setMenu(null); logout() }
 
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
 
@@ -162,32 +233,148 @@ export default function PillNav() {
           </div>
 
           <div className="pnav-actions">
-            {user ? (
-              <>
-                {!isPro && (
-                  <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/checkout" onClick={closeAll}>
-                    Upgrade
+            {/* Hover-expand search + Export — a fixed-width slot so expansion never
+                shifts the centred nav triggers. */}
+            <div className="pnav-search">
+              <button
+                type="button"
+                className="pnav-search-field"
+                aria-haspopup="dialog"
+                aria-expanded={searchOpen}
+                aria-label="Search UIL4B"
+                onClick={openSearch}
+              >
+                <SearchIcon />
+                <span className="pnav-search-ph">Search</span>
+              </button>
+              <button
+                type="button"
+                className="pnav-export"
+                aria-haspopup="dialog"
+                aria-expanded={exportOpen}
+                onClick={openExport}
+              >
+                <ExportIcon />
+                <span>Export</span>
+              </button>
+            </div>
+
+            {user && !isPro && (
+              <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/checkout" onClick={closeAll}>
+                Upgrade
+              </Link>
+            )}
+
+            {/* Gear — quick preferences (day/night + link to full settings) */}
+            <div className="pnav-pop-wrap">
+              <button
+                type="button"
+                className="pnav-icon-btn"
+                aria-haspopup="true"
+                aria-expanded={menu === 'gear'}
+                aria-label="Preferences"
+                onClick={() => toggleMenu('gear')}
+              >
+                <GearIcon />
+              </button>
+              {menu === 'gear' && (
+                <div className="pnav-pop" aria-label="Preferences">
+                  <p className="pnav-pop-head">Appearance</p>
+                  <div className="pnav-pop-row">
+                    <span className="pnav-pop-row-label">Theme</span>
+                    <div className="pnav-seg" role="group" aria-label="Theme">
+                      <button
+                        type="button"
+                        className="pnav-seg-btn"
+                        aria-pressed={theme === 'light'}
+                        onClick={() => setTheme('light')}
+                      >
+                        <SunIcon />
+                        Day
+                      </button>
+                      <button
+                        type="button"
+                        className="pnav-seg-btn"
+                        aria-pressed={theme === 'dark'}
+                        onClick={() => setTheme('dark')}
+                      >
+                        <MoonIcon />
+                        Night
+                      </button>
+                    </div>
+                  </div>
+                  <div className="pnav-pop-sep" />
+                  <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
+                    <GearIcon />
+                    <span>All settings</span>
                   </Link>
-                )}
-                <Link className="pnav-account" to="/settings" onClick={closeAll}>
-                  {user.photoURL ? (
-                    <img className="pnav-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />
+                </div>
+              )}
+            </div>
+
+            {user ? (
+              /* Avatar — account menu */
+              <div className="pnav-pop-wrap">
+                <button
+                  type="button"
+                  className="pnav-avatar-btn"
+                  aria-haspopup="true"
+                  aria-expanded={menu === 'avatar'}
+                  aria-label="Account menu"
+                  onClick={() => toggleMenu('avatar')}
+                >
+                  {avatarUrl ? (
+                    <img className="pnav-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
                   ) : (
-                    <span className="pnav-avatar" aria-hidden="true">{initials(user)}</span>
+                    <span className="pnav-avatar" aria-hidden="true">{initialsStr}</span>
                   )}
-                  <span>{isPro ? 'Pro' : 'Account'}</span>
-                </Link>
-              </>
+                </button>
+                {menu === 'avatar' && (
+                  <div className="pnav-pop pnav-pop--account" role="menu" aria-label="Account">
+                    <div className="pnav-pop-id">
+                      {avatarUrl ? (
+                        <img className="pnav-pop-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="pnav-pop-avatar" aria-hidden="true">{initialsStr}</span>
+                      )}
+                      <span className="pnav-pop-id-text">
+                        <span className="pnav-pop-id-name">
+                          {displayName}
+                          {isPro && <em className="pnav-pop-tag">Pro</em>}
+                        </span>
+                        {accountEmail && <span className="pnav-pop-id-email">{accountEmail}</span>}
+                      </span>
+                    </div>
+                    <div className="pnav-pop-sep" />
+                    <Link className="pnav-pop-item" role="menuitem" to="/settings" onClick={closeAll}>
+                      Account
+                    </Link>
+                    <Link className="pnav-pop-item" role="menuitem" to="/checkout" onClick={closeAll}>
+                      {isPro ? 'Manage plan' : 'Plans & upgrade'}
+                    </Link>
+                    {isAdmin && (
+                      <Link className="pnav-pop-item" role="menuitem" to="/admin" onClick={closeAll}>
+                        Admin dashboard
+                      </Link>
+                    )}
+                    <div className="pnav-pop-sep" />
+                    <button type="button" className="pnav-pop-item pnav-pop-item--danger" role="menuitem" onClick={onSignOut}>
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 <Link className="ui-pill ui-pill-ghost ui-pill-sm" to="/login" onClick={closeAll}>
                   Log in
                 </Link>
-                <Link className="ui-pill ui-pill-ink ui-pill-sm" to="/login" onClick={closeAll}>
+                <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/login" onClick={closeAll}>
                   Get started
                 </Link>
               </>
             )}
+
             <button
               type="button"
               className="pnav-mobile"
@@ -207,7 +394,8 @@ export default function PillNav() {
         </div>
       </nav>
 
-      {/* Desktop mega-menu: one shared panel, morphs width per section. */}
+      {/* Desktop mega-menu: one shared panel, morphs width per section, with a
+          data-driven promo card on the right. */}
       {activeSection && (
         <div
           ref={menuRef}
@@ -219,10 +407,23 @@ export default function PillNav() {
           onMouseLeave={hoverLeave}
         >
           <div className="pnav-menu-body">
-            <div className="pnav-grid">
-              {activeSection.groups.map((group) => (
-                <MenuGroup key={group.id} group={group} onNavigate={closeAll} />
-              ))}
+            <div className="pnav-menu-cols">
+              <div className="pnav-grid">
+                {activeSection.groups.map((group) => (
+                  <MenuGroup key={group.id} group={group} onNavigate={closeAll} />
+                ))}
+              </div>
+              {activeSection.promo && (
+                <aside className="pnav-promo">
+                  <span className="pnav-promo-eyebrow">{activeSection.promo.eyebrow}</span>
+                  <p className="pnav-promo-title">{activeSection.promo.title}</p>
+                  <p className="pnav-promo-blurb">{activeSection.promo.blurb}</p>
+                  <Link className="pnav-promo-cta" to={activeSection.promo.href} onClick={closeAll}>
+                    {activeSection.promo.cta}
+                    <span aria-hidden="true"> &rarr;</span>
+                  </Link>
+                </aside>
+              )}
             </div>
           </div>
           <div className="pnav-menu-foot">
@@ -274,12 +475,12 @@ export default function PillNav() {
           })}
           <div className="pnav-sheet-cta">
             {user ? (
-              <Link className="ui-pill ui-pill-ink ui-pill-lg ui-pill-block" to="/settings" onClick={closeAll}>
+              <Link className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" to="/settings" onClick={closeAll}>
                 Account
               </Link>
             ) : (
               <>
-                <Link className="ui-pill ui-pill-ink ui-pill-lg ui-pill-block" to="/login" onClick={closeAll}>
+                <Link className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" to="/login" onClick={closeAll}>
                   Get started
                 </Link>
                 <Link className="ui-pill ui-pill-out ui-pill-lg ui-pill-block" to="/login" onClick={closeAll}>
@@ -289,6 +490,17 @@ export default function PillNav() {
             )}
           </div>
         </div>
+      )}
+
+      {searchOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette open onClose={() => setSearchOpen(false)} />
+        </Suspense>
+      )}
+      {exportOpen && (
+        <Suspense fallback={null}>
+          <ExportPanel onClose={() => setExportOpen(false)} />
+        </Suspense>
       )}
     </>
   )

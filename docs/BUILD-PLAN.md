@@ -110,7 +110,7 @@ a "Soon" badge in the nav until built.**
 - **Phase 0 — Reset (PM).** ✅ Backup branch pushed. ✅ Doc de-bloat → this doc +
   `OWNER-ACTIONS.md`. ✅ Founder checkpoint (tool tree §2 confirmed; TBD = "Soon"
   badge; design spec approved 2026-07-02).
-- **Phase 1 — Structure + sales page.** ⏳ Design spec (Fable) → engineer builds:
+- **Phase 1 — Structure + sales page.** ⏳ Design spec (design) → engineer builds:
   route tree, mega-menu nav (Create/Discover/Learn) with "Soon" TBD badges, blank
   "coming soon" tool pages, Mobbin-style sales page (placeholders, Awwwards
   micro-animations), generic tool-page shell (left in-tool nav + Upgrade→profile

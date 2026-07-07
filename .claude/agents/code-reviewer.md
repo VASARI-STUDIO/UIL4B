@@ -11,6 +11,7 @@ description: >-
   alongside security-reviewer, before QA.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: high
 ---
 
 # Code-Quality Reviewer — UIL4B

@@ -24,7 +24,7 @@ const iconFilter = (pack) => (COLORED_PACKS.has(pack) ? 'none' : 'var(--icon-inv
 // the other styles. `packs` are real Iconify prefixes.
 const ICON_GROUPS = {
   outlined: { label: 'Outlined', packs: ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'] },
-  solid: { label: 'Solid', packs: ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'carbon'] },
+  solid: { label: 'Solid', packs: ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs'] },
   coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
   emoji: { label: 'Emoji', packs: ['twemoji', 'fluent-emoji', 'noto', 'openmoji'] },
@@ -33,6 +33,38 @@ const GROUP_ORDER = ['outlined', 'solid', 'coloured', 'flags', 'emoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
+
+// ── Style coherence ──────────────────────────────────────────────────────────
+// Several Iconify prefixes ship MULTIPLE styles under one prefix, so a raw
+// /collection dump mixes stroked and filled glyphs. That is why "Outlined" was
+// showing filled icons: Phosphor (`ph`) carries `-fill`/`-duotone` weights,
+// Heroicons/Iconoir carry `-solid`, Tabler carries `-filled`. These per-pack,
+// suffix-anchored matchers keep only the names whose glyph matches the chosen
+// style, so a style filter shows ONE coherent look (never a filled icon under
+// "Outlined"). Packs absent here are single-style — every name is kept.
+const STYLE_RULES = {
+  ph:                 { outlined: n => !/-(?:thin|light|bold|fill|duotone)$/.test(n) },
+  heroicons:          { outlined: n => !/-solid$/.test(n) },
+  iconoir:            { outlined: n => !/-solid$/.test(n) },
+  tabler:             { outlined: n => !/-filled$/.test(n) },
+  mdi:                { solid: n => !/-outline$/.test(n) },
+  'material-symbols': { solid: n => !/-(?:outline(?:-(?:rounded|sharp))?|rounded|sharp)$/.test(n) },
+  solar:              { solid: n => /-bold(?:-duotone)?$/.test(n) },
+}
+// The style a single pack browses in — so picking "Phosphor" under Interface
+// (outlined) directly never dumps its fill weights either.
+const PACK_STYLE = {
+  lucide: 'outlined', tabler: 'outlined', iconoir: 'outlined', heroicons: 'outlined', ph: 'outlined',
+  mdi: 'solid', 'material-symbols': 'solid', solar: 'solid', 'fa6-solid': 'solid', bxs: 'solid',
+}
+const matchesStyle = (pack, name, style) => {
+  const rule = STYLE_RULES[pack]?.[style]
+  return rule ? rule(name) : true
+}
+const keepStyle = (pack, names, style) => {
+  const rule = STYLE_RULES[pack]?.[style]
+  return rule ? names.filter(rule) : names
+}
 
 function buildSvgUrl(host, pack, name, params = {}) {
   let url = `${host}/${pack}/${name}.svg`
@@ -399,7 +431,7 @@ export default function IconLibrary({ onCopy }) {
       .then(d => {
         if (rid !== reqId.current) return
         cdnOk.current = true
-        const names = collectionToNames(d)
+        const names = keepStyle(packFilter, collectionToNames(d), PACK_STYLE[packFilter])
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
@@ -427,7 +459,7 @@ export default function IconLibrary({ onCopy }) {
     Promise.all(g.packs.map(p =>
       fetchWithFallback(`/collection?prefix=${p}`, 6000)
         .then(r => r.json())
-        .then(d => ({ names: collectionToNames(d).slice(0, PER_PACK_CAP), pack: p, ok: true }))
+        .then(d => ({ names: keepStyle(p, collectionToNames(d), groupKey).slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
@@ -483,13 +515,17 @@ export default function IconLibrary({ onCopy }) {
           renderLocal(q, groupKey ? '' : packFilter)
           return
         }
-        setIcons(d.icons.map(id => {
-          const [p, n] = id.split(':')
-          return { id, pack: p, name: n, cdn: true }
-        }))
+        // Keep only results matching the active style so a style-scoped search
+        // stays coherent (e.g. an "Outlined" search never returns filled hits).
+        const style = groupKey || PACK_STYLE[packFilter]
+        const items = d.icons
+          .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
+          .filter(ic => matchesStyle(ic.pack, ic.name, style))
+        if (!items.length) { renderLocal(q, groupKey ? '' : packFilter); return }
+        setIcons(items)
         setVisible(PAGE_SIZE)
         const scopeLabel = groupKey ? ICON_GROUPS[groupKey].label : 'Iconify'
-        setMode(`${d.icons.length.toLocaleString()} matches${d.total > d.icons.length ? '+' : ''} · ${scopeLabel}`)
+        setMode(`${items.length.toLocaleString()} matches${d.total > items.length ? '+' : ''} · ${scopeLabel}`)
         setLoading(false)
       })
       .catch(() => {
@@ -610,7 +646,7 @@ export default function IconLibrary({ onCopy }) {
               <option value="material-symbols">Material Symbols</option>
               <option value="solar">Solar</option>
               <option value="fa6-solid">Font Awesome</option>
-              <option value="carbon">Carbon</option>
+              <option value="bxs">BoxIcons</option>
             </optgroup>
             <optgroup label="Brand logos (coloured)">
               <option value="simple-icons">Simple Icons</option>

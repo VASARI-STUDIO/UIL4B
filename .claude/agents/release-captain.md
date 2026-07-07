@@ -11,6 +11,7 @@ description: >-
   Read-only — it gates and prepares; it does not merge.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: high
 ---
 
 # Release Captain — UIL4B

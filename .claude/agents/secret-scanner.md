@@ -12,6 +12,7 @@ description: >-
   zero false-negative tolerance.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: high
 ---
 
 # Secret Scanner — UIL4B
