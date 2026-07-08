@@ -240,6 +240,55 @@ export function generateTintScale(cfg) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Semantic-colour hue arcs (ColorStudio "Custom" states).
+// Given the reference "500" hex per semantic role, derive each role's canonical
+// hue and the arc of the wheel it may roam within. "Capped halfway": each arc
+// runs from the midpoint between the role's hue and its counter-clockwise
+// neighbour to the midpoint with its clockwise neighbour. Midpoints are shared,
+// so the arcs tile 360° exactly — no gaps, no overlap. That keeps a custom
+// "success" legibly green (it can lean lime or teal, never orange or blue).
+// Returns { [role]: { lo, hi, canonical } } in a monotonic frame (lo may be
+// negative for the role that straddles 0°); normalise with mod 360 before
+// feeding a hue to hslToHex.
+export function roleHueArcs(refHexByRole) {
+  const roles = Object.keys(refHexByRole)
+  const canon = {}
+  roles.forEach(r => { canon[r] = ((Math.round(hexToHsl(refHexByRole[r])[0]) % 360) + 360) % 360 })
+  const sorted = [...roles].sort((a, b) => canon[a] - canon[b])
+  const n = sorted.length
+  const arcs = {}
+  for (let i = 0; i < n; i++) {
+    const role = sorted[i]
+    const C = canon[role]
+    let P = canon[sorted[(i - 1 + n) % n]]   // counter-clockwise neighbour
+    let N = canon[sorted[(i + 1) % n]]        // clockwise neighbour
+    if (P > C) P -= 360
+    if (N < C) N += 360
+    arcs[role] = { lo: (P + C) / 2, hi: (C + N) / 2, canonical: C }
+  }
+  return arcs
+}
+
+export function roleHueArc(role, refHexByRole) {
+  return roleHueArcs(refHexByRole)[role]
+}
+
+// Build a 10-stop semantic ramp (labels 50…900) for a custom hue. Saturation &
+// lightness are held at the reference "500" shade so the mid-tone reads as a
+// proper 500; only hue changes. The light↔dark fan is produced by the existing
+// tint engine (generateTintScale) — this is the "import tint generator" reuse.
+// hueShift is 0 so the whole ramp stays inside the role's allowed arc.
+export function semanticRamp(hue, refHex) {
+  const [, refS, refL] = hexToHsl(refHex)
+  const base = hslToHex(((hue % 360) + 360) % 360, refS, refL)
+  const full = generateTintScale({
+    hex: base, mode: 'perceived', anchor: 5,
+    lMax: 96, lMin: 14, hueShift: 0, satMax: 0, satMin: 0,
+  })
+  return full.slice(0, 10)  // drop the 11th ('950') stop; state packs are 10 wide
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // HCT (Hue · Chroma · Tone) — minimal self-contained Material-3 port.
 // Ported from material-color-utilities (Apache-2.0) down to the CAM16 + HCT
 // solver we actually use, to avoid pulling the full package (bundle weight).
