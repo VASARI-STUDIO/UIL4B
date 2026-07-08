@@ -1,8 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
-import { useProject } from '../contexts/ProjectContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { getLenis } from '../hooks/useSmoothScroll'
 import UIKitGuide from '../components/UIKitGuide'
-import { addRecentIcon } from '../utils/recentIcons'
+import { addRecentIcon, getRecentIcons } from '../utils/recentIcons'
 
 const API_LIMIT = 999
 
@@ -17,7 +19,9 @@ const COLORED_PACKS = new Set([
   'emojione-v1', 'openmoji', 'fluent-emoji', 'fluent-emoji-flat', 'circle-flags',
   'flag', 'flagpack', 'cif', 'skill-icons', 'devicon', 'vscode-icons', 'token-branded',
 ])
-const iconFilter = (pack) => (COLORED_PACKS.has(pack) ? 'none' : 'var(--icon-inv)')
+// Theme-adaptive tint for the GRID/rail only (inverts monochrome art in dark mode).
+// The customizer Stage does NOT use this — it fixes contrast via a luminance swap.
+const invClass = (pack) => (COLORED_PACKS.has(pack) ? '' : 'ig-inv')
 
 // Curated cross-pack collections. A chip aggregates every pack in its group so
 // "Coloured" shows colour icons from ALL colour packs, not just one — same for
@@ -33,6 +37,15 @@ const GROUP_ORDER = ['outlined', 'solid', 'coloured', 'flags', 'emoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
+
+// Every pack across every group, de-duped — the default "All packs" aggregate.
+const ALL_PACKS = [...new Set(GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs))]
+// Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
+const ALL_INITIAL_PER_PACK = 250
+// Packs whose default style is genuinely stroke-based (the stroke slider applies).
+const STROKE_PACKS = new Set(ICON_GROUPS.outlined.packs)
+// Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
+const CUSTOM_KEY = 'vs-custom-icons'
 
 // ── Style coherence ──────────────────────────────────────────────────────────
 // Several Iconify prefixes ship MULTIPLE styles under one prefix, so a raw
@@ -100,263 +113,567 @@ async function fetchSvgText(pack, name, params = {}) {
   throw new Error('Failed to fetch icon SVG')
 }
 
-function IconDetail({ icon, onClose, onCopy, paletteColors }) {
-  const [size, setSize] = useState(48)
-  const [color, setColor] = useState('')
-  const [colorInput, setColorInput] = useState('')
+// ── Pure helpers (module scope — reused by the customizer + browse fns) ───────
+
+// Round-robin merge so the grid mixes packs (outlined+solid+coloured+…) instead
+// of dumping one pack fully before the next.
+function interleavePacks(lists) {
+  const maxLen = lists.reduce((m, l) => Math.max(m, l.length), 0)
+  const merged = []
+  for (let i = 0; i < maxLen; i++) for (const l of lists) if (i < l.length) merged.push(l[i])
+  return merged
+}
+
+// Pro-gated custom store. Callers MUST check isPro before invoking these for a
+// non-Pro user — the store is never touched for non-Pro (anti-tamper).
+function readCustomIcons() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY)
+    const list = raw ? JSON.parse(raw) : []
+    return Array.isArray(list) ? list : []
+  } catch { return [] }
+}
+function writeCustomIcons(list) {
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); return true }
+  catch { return false }
+}
+
+// Custom (base N) naming: count existing saves of the same base, then N = count+1.
+function nextCustomName(base, existing) {
+  const count = existing.filter(c => c.base === base).length
+  const iteration = count + 1
+  return { iteration, name: `Custom (${base} ${iteration})` }
+}
+
+// WCAG relative luminance of a hex colour (0 = black, 1 = white). Drives the
+// contrast-aware Stage swap so a black icon never disappears on #0E0E11.
+function relativeLuminance(hex) {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex || '')
+  if (!m) return 1
+  let h = m[1]
+  if (h.length === 3) h = h.split('').map(c => c + c).join('')
+  const toLin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+  const r = toLin(parseInt(h.slice(0, 2), 16))
+  const g = toLin(parseInt(h.slice(2, 4), 16))
+  const b = toLin(parseInt(h.slice(4, 6), 16))
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+// Sanitise arbitrary SVG markup (fetched OR pasted) before it ever touches the
+// DOM: parse, drop <script>, strip on* handlers and javascript: hrefs. Returns
+// the cleaned <svg> string, or null if it isn't valid SVG.
+function sanitizeSvgMarkup(text) {
+  if (!text || typeof text !== 'string') return null
+  try {
+    const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
+    if (doc.querySelector('parsererror')) return null
+    const svg = doc.querySelector('svg')
+    if (!svg) return null
+    svg.querySelectorAll('script').forEach(n => n.remove())
+    const walk = (el) => {
+      for (const a of [...el.attributes]) {
+        const name = a.name.toLowerCase()
+        const val = (a.value || '').trim().toLowerCase()
+        if (name.startsWith('on')) el.removeAttribute(a.name)
+        else if ((name === 'href' || name === 'xlink:href') && val.startsWith('javascript:')) el.removeAttribute(a.name)
+      }
+      for (const child of [...el.children]) walk(child)
+    }
+    walk(svg)
+    return svg.outerHTML
+  } catch { return null }
+}
+
+// Build a neutral (currentColor) base SVG for an embedded icon — no width/height
+// so the Stage CSS drives its size live.
+function embeddedSvgMarkup(icon) {
+  return icon.filled
+    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="${icon.d}"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${icon.d}"/></svg>`
+}
+
+// Heuristic: does this markup describe a stroke-based icon (so we show the
+// stroke control)? fill:none + a real stroke colour.
+function detectPastedStroke(svg) {
+  if (!svg) return false
+  return /fill\s*=\s*["']none["']/i.test(svg) && /stroke\s*=\s*["'](?!none)[^"']+["']/i.test(svg)
+}
+
+// Re-neutralise a saved custom's baked root colour back to currentColor so the
+// Stage can live-recolour it again on re-open.
+function normalizeCustomBase(svg) {
+  if (!svg) return svg
+  return svg
+    .replace(/(<svg\b[^>]*?)\sstroke="(?!none)[^"]*"/i, '$1 stroke="currentColor"')
+    .replace(/(<svg\b[^>]*?)\sfill="(?!none)[^"]*"/i, '$1 fill="currentColor"')
+}
+
+function svgToDataUri(svg) {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg || '')}`
+}
+
+// viewBox-centred rotate/flip transform used when baking output markup.
+function transformAttr(rotate, flipH, flipV, cx, cy) {
+  const parts = []
+  if (rotate) parts.push(`rotate(${rotate} ${cx} ${cy})`)
+  if (flipH || flipV) parts.push(`translate(${cx} ${cy}) scale(${flipH ? -1 : 1} ${flipV ? -1 : 1}) translate(${-cx} ${-cy})`)
+  return parts.join(' ')
+}
+
+// Bake the live customiser values into REAL SVG attributes so copied/saved/
+// downloaded markup matches the Stage exactly (this is the Lucide copy-reset
+// #2794 workaround — never fall back to defaults).
+function serializeCustomizedSvg(rawSvg, opts = {}) {
+  if (!rawSvg) return ''
+  const { size = 48, color, stroke, isStroke, absStroke, rotate = 0, flipH = false, flipV = false } = opts
+  let doc
+  try { doc = new DOMParser().parseFromString(rawSvg, 'image/svg+xml') } catch { return rawSvg }
+  const svg = doc.querySelector('svg')
+  if (!svg) return rawSvg
+  svg.setAttribute('width', String(size))
+  svg.setAttribute('height', String(size))
+  if (color) {
+    if (isStroke) {
+      svg.setAttribute('stroke', color)
+      if (svg.getAttribute('fill') && svg.getAttribute('fill') !== 'none') svg.setAttribute('fill', color)
+    } else {
+      svg.setAttribute('fill', color)
+    }
+  }
+  if (isStroke && stroke != null) {
+    svg.setAttribute('stroke-width', String(stroke))
+    if (absStroke) svg.setAttribute('vector-effect', 'non-scaling-stroke')
+  }
+  const vb = (svg.getAttribute('viewBox') || '0 0 24 24').split(/\s+/).map(Number)
+  const cx = (vb[0] || 0) + (vb[2] || 24) / 2
+  const cy = (vb[1] || 0) + (vb[3] || 24) / 2
+  const tf = transformAttr(rotate, flipH, flipV, cx, cy)
+  if (tf) {
+    const g = doc.createElementNS('http://www.w3.org/2000/svg', 'g')
+    g.setAttribute('transform', tf)
+    while (svg.firstChild) g.appendChild(svg.firstChild)
+    svg.appendChild(g)
+  }
+  return svg.outerHTML
+}
+
+// Robust clipboard write: async Clipboard API with a legacy execCommand
+// fallback. Returns whether the copy landed (so callers never fake success).
+async function writeClipboard(text) {
+  try {
+    if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return true }
+  } catch { /* fall through */ }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.setAttribute('readonly', '')
+    ta.style.cssText = 'position:absolute;left:-9999px;top:0'
+    document.body.appendChild(ta)
+    ta.select()
+    const ok = document.execCommand('copy')
+    ta.remove()
+    return ok
+  } catch { return false }
+}
+
+// Map an active icon to the recents payload. Pasted icons have no stable
+// identity, so they aren't tracked (returns null → addRecentIcon no-ops).
+function recentPayload(icon) {
+  if (!icon || icon.pasted) return null
+  if (icon.cdn) return { cdn: true, pack: icon.pack, name: icon.custom ? icon.base : icon.name }
+  if (icon.d) return { cdn: false, name: icon.name, d: icon.d, filled: !!icon.filled }
+  return null
+}
+
+// ── Icon customizer ──────────────────────────────────────────────────────────
+// Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
+// spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
+// serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
+function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
+  const navigate = useNavigate()
+  const panelRef = useRef(null)
+  const stageRef = useRef(null)
+  const hostRef = useRef(null)
+  const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
+
+  const [pasted, setPasted] = useState(null)      // { svg, isStroke } for add-mode
+  const [pasteText, setPasteText] = useState('')
+  const [pasteErr, setPasteErr] = useState(false)
+
+  const activeIcon = useMemo(() => {
+    if (icon) return icon
+    if (pasted) return { name: 'custom-icon', base: 'icon', svg: pasted.svg, cdn: false, filled: !pasted.isStroke, pasted: true }
+    return null
+  }, [icon, pasted])
+
+  // Seed controls from a re-opened custom's saved values.
+  const [size, setSize] = useState(() => (icon?.custom && icon.size) || 48)
+  const [color, setColor] = useState(() => (icon?.custom && icon.color) || '')
+  const [stroke, setStroke] = useState(() => (icon?.custom && icon.stroke) || 2)
+  const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke))
   const [rotate, setRotate] = useState(0)
   const [flipH, setFlipH] = useState(false)
   const [flipV, setFlipV] = useState(false)
-  const [svgCode, setSvgCode] = useState('')
-  const [copied, setCopied] = useState('')
   const [tab, setTab] = useState('svg')
-  const fetchRef = useRef(null)
+  const [copied, setCopied] = useState('')
+  const [savedState, setSavedState] = useState(() => (icon?.custom ? 'saved' : 'idle'))
 
-  const isCdn = icon.cdn
-  const pack = isCdn ? icon.pack : null
-  const name = icon.name
-  const isColored = pack && COLORED_PACKS.has(pack)
+  const isColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
+  const isStroke = useMemo(() => {
+    if (!activeIcon) return false
+    if (activeIcon.custom) return !!activeIcon.isStroke
+    if (activeIcon.svg) return detectPastedStroke(activeIcon.svg)
+    if (activeIcon.cdn) return STROKE_PACKS.has(activeIcon.pack) && matchesStyle(activeIcon.pack, activeIcon.name, 'outlined')
+    return !activeIcon.filled
+  }, [activeIcon])
+  const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
 
-  const transforms = []
-  if (rotate) transforms.push(`rotate(${rotate}deg)`)
-  if (flipH) transforms.push('scaleX(-1)')
-  if (flipV) transforms.push('scaleY(-1)')
-  const transformStyle = transforms.length ? transforms.join(' ') : undefined
+  // Synchronous base markup for non-CDN sources (memoised — no setState churn).
+  const localBase = useMemo(() => {
+    if (!activeIcon) return null
+    if (activeIcon.custom && activeIcon.svg) return normalizeCustomBase(activeIcon.svg)
+    if (activeIcon.svg) return sanitizeSvgMarkup(activeIcon.svg)
+    if (!activeIcon.cdn) return embeddedSvgMarkup(activeIcon)
+    return null
+  }, [activeIcon])
 
+  // CDN base fetched once per icon, keyed by identity so a stale response from a
+  // previous icon can never paint. All setState here is async (never in-render).
+  const [fetched, setFetched] = useState({ id: null, svg: null, err: false })
   useEffect(() => {
-    clearTimeout(fetchRef.current)
-    fetchRef.current = setTimeout(() => {
-      if (!isCdn) {
-        const c = color || 'currentColor'
-        const svg = icon.filled
-          ? `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${c}"><path d="${icon.d}"/></svg>`
-          : `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${icon.d}"/></svg>`
-        setSvgCode(svg)
-        return
-      }
-      const p = { size }
-      if (color) p.color = color
-      if (rotate) p.rotate = rotate
-      if (flipH) p.flipH = true
-      if (flipV) p.flipV = true
-      fetchSvgText(pack, name, p)
-        .then(setSvgCode)
-        .catch(() => setSvgCode('<!-- Failed to load SVG -->'))
-    }, 350)
-    return () => clearTimeout(fetchRef.current)
-  }, [isCdn, icon, pack, name, size, color, rotate, flipH, flipV])
+    if (!activeIcon || !activeIcon.cdn || activeIcon.custom) return
+    const id = activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`
+    let cancelled = false
+    fetchSvgText(activeIcon.pack, activeIcon.name, {})
+      .then(txt => {
+        if (cancelled) return
+        const clean = sanitizeSvgMarkup(txt)
+        setFetched(clean ? { id, svg: clean, err: false } : { id, svg: null, err: true })
+      })
+      .catch(() => { if (!cancelled) setFetched({ id, svg: null, err: true }) })
+    return () => { cancelled = true }
+  }, [activeIcon])
 
+  const currentId = activeIcon ? (activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`) : null
+  const fetchedBase = fetched.id === currentId ? fetched.svg : null
+  const loadErr = fetched.id === currentId ? fetched.err : false
+  const baseSvgText = localBase || fetchedBase
+
+  // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
   useEffect(() => {
+    const host = hostRef.current
+    if (!host) return
+    host.innerHTML = rendersInline && baseSvgText ? baseSvgText : ''
+  }, [rendersInline, baseSvgText])
+
+  // Live preview via the ONLY permitted inline-style channel: setProperty.
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    stage.style.setProperty('--ig-size', `${size}px`)
+    stage.style.setProperty('--ig-stroke', String(stroke))
+    stage.style.setProperty('--ig-color', color || '#F4F4F5')
+    const tf = []
+    if (rotate) tf.push(`rotate(${rotate}deg)`)
+    if (flipH) tf.push('scaleX(-1)')
+    if (flipV) tf.push('scaleY(-1)')
+    stage.style.setProperty('--ig-transform', tf.length ? tf.join(' ') : 'none')
+  }, [size, stroke, color, rotate, flipH, flipV])
+
+  // Lock body scroll + restore focus to the opener on unmount (mirror ExportPanel).
+  useEffect(() => {
+    const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey) }
+    getLenis()?.stop()
+    const opener = restoreRef.current
+    return () => {
+      document.body.style.overflow = prev
+      getLenis()?.start()
+      if (opener && typeof opener.focus === 'function') opener.focus()
+    }
+  }, [])
+
+  // Move focus into the panel, trap Tab, close on Escape (mirror ExportPanel).
+  useEffect(() => {
+    panelRef.current?.focus()
+    const onKey = (e) => {
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key !== 'Tab') return
+      const f = panelRef.current?.querySelectorAll(
+        'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      if (!f || f.length === 0) return
+      const first = f[0]
+      const last = f[f.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const previewParams = { size }
-  if (color && !isColored) previewParams.color = color
-  if (rotate) previewParams.rotate = rotate
-  if (flipH) previewParams.flipH = true
-  if (flipV) previewParams.flipV = true
-  const previewUrl = isCdn ? buildSvgUrl(API_HOSTS[0], pack, name, previewParams) : null
+  const serializedOutput = useMemo(
+    () => serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, rotate, flipH, flipV }),
+    [baseSvgText, size, color, stroke, isStroke, absStroke, rotate, flipH, flipV],
+  )
 
-  const cssLines = [`width: ${size}px;`, `height: ${size}px;`]
-  if (color) cssLines.push(`color: ${color};`)
-  if (transforms.length) cssLines.push(`transform: ${transforms.join(' ')};`)
-  const cssCode = `.icon {\n  ${cssLines.join('\n  ')}\n}`
+  const cssCode = useMemo(() => {
+    const lines = [`width: ${size}px;`, `height: ${size}px;`]
+    if (color) lines.push(`color: ${color};`)
+    const tf = []
+    if (rotate) tf.push(`rotate(${rotate}deg)`)
+    if (flipH) tf.push('scaleX(-1)')
+    if (flipV) tf.push('scaleY(-1)')
+    if (tf.length) lines.push(`transform: ${tf.join(' ')};`)
+    return `.icon {\n  ${lines.join('\n  ')}\n}`
+  }, [size, color, rotate, flipH, flipV])
 
-  const iconUrl = isCdn ? buildSvgUrl(API_HOSTS[0], pack, name, previewParams) : ''
+  const urlCode = useMemo(() => {
+    if (!activeIcon?.cdn || activeIcon.custom) return ''
+    const p = { size }
+    if (color && !isColoredPack) p.color = color
+    if (rotate) p.rotate = rotate
+    if (flipH) p.flipH = true
+    if (flipV) p.flipV = true
+    return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
+  }, [activeIcon, size, color, isColoredPack, rotate, flipH, flipV])
 
-  const doCopy = (text, label) => {
-    navigator.clipboard.writeText(text)
-    setCopied(label)
+  const stageImgUrl = useMemo(() => {
+    if (!activeIcon?.cdn) return ''
+    const p = { size }
+    if (color && !isColoredPack) p.color = color
+    if (rotate) p.rotate = rotate
+    if (flipH) p.flipH = true
+    if (flipV) p.flipV = true
+    return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
+  }, [activeIcon, size, color, isColoredPack, rotate, flipH, flipV])
+
+  const effectiveColor = rendersInline ? (color || '#F4F4F5') : (color || '#000000')
+  const stageIsLight = !isColoredPack && relativeLuminance(effectiveColor) < 0.35
+
+  const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
+
+  const applyPaste = () => {
+    const clean = sanitizeSvgMarkup(pasteText)
+    if (!clean) { setPasteErr(true); return }
+    setPasteErr(false)
+    setPasted({ svg: clean, isStroke: detectPastedStroke(clean) })
+  }
+
+  const handleCopySvg = async () => {
+    const ok = await writeClipboard(serializedOutput)
+    if (!ok) return
+    setCopied('svg')
+    setTimeout(() => setCopied(''), 2000)
+    if (onCopy) onCopy(serializedOutput)
+    addRecentIcon(recentPayload(activeIcon), 'copy')
+  }
+
+  const handleCopyCode = async () => {
+    const text = tab === 'svg' ? serializedOutput : tab === 'css' ? cssCode : urlCode
+    const ok = await writeClipboard(text)
+    if (!ok) return
+    setCopied('code')
     setTimeout(() => setCopied(''), 2000)
   }
 
-  const handleColorInput = (val) => {
-    setColorInput(val)
-    if (!val) { setColor(''); return }
-    if (/^#[0-9a-f]{3,8}$/i.test(val)) setColor(val)
+  const handleDownload = () => {
+    if (!serializedOutput) return
+    try {
+      const blob = new Blob([serializedOutput], { type: 'image/svg+xml' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(activeIcon?.name || 'icon').replace(/[^\w.-]+/g, '-')}.svg`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch { /* ignore */ }
   }
 
+  // ANTI-TAMPER: non-Pro is a no-op that routes to checkout BEFORE any compute —
+  // no record is built, and the Custom store is never read or written.
+  const handleSave = () => {
+    if (!isPro) { navigate('/checkout'); return }
+    if (!activeIcon || !baseSvgText) return
+    const existing = readCustomIcons()
+    const base = activeIcon.custom ? activeIcon.base : (activeIcon.cdn || activeIcon.d ? activeIcon.name : 'icon')
+    const { iteration, name } = nextCustomName(base, existing)
+    const colored = isColoredPack || !!color || (activeIcon.pasted === true && !isStroke)
+    const svg = serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, rotate, flipH, flipV })
+    const record = {
+      key: `${CUSTOM_KEY}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
+      base, iteration, name,
+      pack: activeIcon.pack || null, cdn: !!activeIcon.cdn,
+      svg, color: color || '', size, stroke, absStroke, isStroke, colored, ts: Date.now(),
+    }
+    if (!writeCustomIcons([record, ...existing])) { setSavedState('error'); return }
+    addRecentIcon(recentPayload(activeIcon), 'edit')
+    setSavedState('saved')
+  }
+
+  const saveLabel = savedState === 'saved' ? 'Saved to Custom Icons'
+    : savedState === 'error' ? 'Couldn’t save — retry'
+      : activeIcon?.custom ? 'Save as new' : 'Save to project'
+
+  const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
+
   return (
-    <div className="fg-detail-overlay" onClick={onClose}>
-      <div className="il-detail" onClick={e => e.stopPropagation()}>
-        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-
-        <div className="il-detail-preview">
-          {isCdn ? (
-            <img
-              src={previewUrl}
-              width={size}
-              height={size}
-              alt={name}
-              style={{ filter: !color && !isColored ? iconFilter(pack) : 'none' }}
-            />
-          ) : (
-            <svg
-              viewBox="0 0 24 24"
-              width={size}
-              height={size}
-              fill={icon.filled ? (color || 'currentColor') : 'none'}
-              stroke={icon.filled ? 'none' : (color || 'currentColor')}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ transform: transformStyle }}
-            >
-              <path d={icon.d} />
+    <div className="icust-overlay" onMouseDown={onClose}>
+      <div
+        className="icust-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="icust-title"
+        ref={panelRef}
+        tabIndex={-1}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="icust-head">
+          <div className="icust-head-text">
+            <span className="icust-eyebrow">{addMode && !activeIcon ? 'Add icon' : 'Customise'}</span>
+            <h2 className="icust-title" id="icust-title">{title}</h2>
+          </div>
+          <button type="button" className="icust-close" onClick={onClose} aria-label="Close customizer">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-          )}
+          </button>
         </div>
 
-        <div className="fg-detail-tags">
-          <span className="fg-tag">{pack || 'embedded'}</span>
-          <span className="fg-tag">{name}</span>
-          {isCdn && <span className="fg-tag">CDN</span>}
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Customize</div>
-          <div className="il-detail-controls">
-            <div className="il-detail-row">
-              <label>Size</label>
-              <input type="range" min="12" max="128" value={size} onChange={e => setSize(+e.target.value)} />
-              <span className="il-detail-value">{size}px</span>
+        {!activeIcon ? (
+          <div className="icust-paste">
+            <p className="icust-paste-help">Paste SVG markup or the full <code>&lt;svg&gt;…&lt;/svg&gt;</code>. Tune it on the stage, then copy — or save it to Custom Icons with Pro.</p>
+            <textarea
+              className="icust-paste-input"
+              value={pasteText}
+              onChange={(e) => { setPasteText(e.target.value); setPasteErr(false) }}
+              placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; …>…</svg>"
+              aria-label="SVG markup"
+              spellCheck={false}
+            />
+            {pasteErr && <p className="icust-err">That doesn’t look like valid SVG. Paste the full &lt;svg&gt;…&lt;/svg&gt;.</p>}
+            <div className="icust-foot">
+              <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={onClose}>Cancel</button>
+              <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={applyPaste}>Add to stage</button>
             </div>
-            <div className="il-detail-row">
-              <label>Color</label>
-              {isColored ? (
-                <span style={{ fontSize: 11, color: 'var(--t2)' }}>Original colours preserved</span>
-              ) : (
+          </div>
+        ) : (
+          <>
+            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
+              {rendersInline ? (
                 <>
-                  <input
-                    type="color"
-                    value={color || '#000000'}
-                    onChange={e => { setColor(e.target.value); setColorInput(e.target.value) }}
-                  />
-                  <input
-                    type="text"
-                    className="il-detail-color-input"
-                    value={colorInput}
-                    placeholder="currentColor"
-                    onChange={e => handleColorInput(e.target.value)}
-                  />
-                  {color && (
-                    <button className="il-detail-reset" onClick={() => { setColor(''); setColorInput('') }} title="Reset color" aria-label="Reset color">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  )}
+                  <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
+                  {!baseSvgText && <span className="icust-stage-msg">{loadErr ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
                 </>
+              ) : (
+                <img className="icust-stage-img" src={stageImgUrl} width={size} height={size} alt={activeIcon.name} />
               )}
             </div>
-            {!isColored && (
-              <div className="il-detail-row">
-                <label>Preset</label>
-                <div className="il-detail-seg" style={{ flexWrap: 'wrap' }}>
-                  <button className={!color ? 'active' : ''} onClick={() => { setColor(''); setColorInput('') }}>Default</button>
-                  <button className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); setColorInput('#000000') }}>Black</button>
-                  <button className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); setColorInput('#ffffff') }}>White</button>
-                  {paletteColors?.slice(0, 5).map((c, i) => (
-                    <button key={i} className={color === c ? 'active' : ''} onClick={() => { setColor(c); setColorInput(c) }} title={c} aria-label={`Set color to ${c}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 3, background: c, border: '1px solid rgba(0,0,0,.15)', flexShrink: 0 }} />
-                    </button>
+
+            <div className="icust-meta">
+              <span className="icust-tag">{activeIcon.custom ? 'Custom' : activeIcon.pasted ? 'Pasted' : (activeIcon.pack || 'embedded')}</span>
+              <span className="icust-tag">{activeIcon.name}</span>
+              {activeIcon.cdn && !activeIcon.custom && <span className="icust-tag">CDN</span>}
+            </div>
+
+            <div className="icust-controls">
+              <div className="icust-row">
+                <label htmlFor="icust-size">Size</label>
+                <input id="icust-size" type="range" min="12" max="128" value={size} onChange={(e) => { setSize(+e.target.value); markDirty() }} />
+                <span className="icust-value">{size}px</span>
+              </div>
+
+              <div className="icust-row">
+                <label>Colour</label>
+                {isColoredPack ? (
+                  <span className="icust-note">Original colours preserved</span>
+                ) : (
+                  <>
+                    <div className="icust-seg">
+                      <button type="button" className={!color ? 'active' : ''} onClick={() => { setColor(''); markDirty() }}>Default</button>
+                      <button type="button" className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); markDirty() }}>Black</button>
+                      <button type="button" className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); markDirty() }}>White</button>
+                    </div>
+                    <input type="color" className="icust-color" aria-label="Custom colour" value={color || '#000000'} onChange={(e) => { setColor(e.target.value); markDirty() }} />
+                  </>
+                )}
+              </div>
+
+              {isStroke && (
+                <div className="icust-row">
+                  <label htmlFor="icust-stroke">Stroke</label>
+                  <input id="icust-stroke" type="range" min="1" max="3" step="0.25" value={stroke} onChange={(e) => { setStroke(+e.target.value); markDirty() }} />
+                  <span className="icust-value">{stroke}</span>
+                  <button type="button" className={`icust-abs${absStroke ? ' active' : ''}`} aria-pressed={absStroke} onClick={() => { setAbsStroke(a => !a); markDirty() }}>Absolute</button>
+                </div>
+              )}
+
+              <div className="icust-row">
+                <label>Rotate</label>
+                <div className="icust-seg">
+                  {[0, 90, 180, 270].map(deg => (
+                    <button key={deg} type="button" className={rotate === deg ? 'active' : ''} onClick={() => { setRotate(deg); markDirty() }}>{deg}°</button>
                   ))}
                 </div>
               </div>
-            )}
-            <div className="il-detail-row">
-              <label>Rotate</label>
-              <div className="il-detail-seg">
-                {[0, 90, 180, 270].map(deg => (
-                  <button key={deg} className={rotate === deg ? 'active' : ''} onClick={() => setRotate(deg)}>
-                    {deg}°
+
+              <div className="icust-row">
+                <label>Flip</label>
+                <div className="icust-seg">
+                  <button type="button" className={flipH ? 'active' : ''} aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>Horizontal</button>
+                  <button type="button" className={flipV ? 'active' : ''} aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>Vertical</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="icust-code">
+              <div className="icust-code-tabs">
+                <button type="button" className={tab === 'svg' ? 'active' : ''} onClick={() => setTab('svg')}>SVG</button>
+                <button type="button" className={tab === 'css' ? 'active' : ''} onClick={() => setTab('css')}>CSS</button>
+                {activeIcon.cdn && !activeIcon.custom && <button type="button" className={tab === 'url' ? 'active' : ''} onClick={() => setTab('url')}>URL</button>}
+              </div>
+              <button type="button" className="icust-code-box" onClick={handleCopyCode}>
+                <span className="icust-code-hint">{copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
+                <code>{tab === 'svg' ? serializedOutput : tab === 'css' ? cssCode : urlCode}</code>
+              </button>
+            </div>
+
+            <div className="icust-foot">
+              <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={handleCopySvg}>
+                {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
+              </button>
+
+              {isPro ? (
+                <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleSave} disabled={savedState === 'saved'} aria-disabled={savedState === 'saved'}>
+                  {saveLabel}
+                </button>
+              ) : (
+                <div className="icust-save-lock">
+                  <button type="button" className="ui-pill ui-pill-out ui-pill-md icust-save--locked" aria-disabled="true" title="Saving custom icons is a Pro feature." onClick={() => navigate('/checkout')}>
+                    <span className="icust-lock-glyph" aria-hidden="true">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    </span>
+                    Save to project
+                    <span className="pnav-pop-tag">Pro</span>
                   </button>
-                ))}
-              </div>
-            </div>
-            <div className="il-detail-row">
-              <label>Flip</label>
-              <div className="il-detail-seg">
-                <button className={flipH ? 'active' : ''} onClick={() => setFlipH(!flipH)}>Horizontal</button>
-                <button className={flipV ? 'active' : ''} onClick={() => setFlipV(!flipV)}>Vertical</button>
-              </div>
-            </div>
-          </div>
-        </div>
+                  <Link className="icust-upgrade" to="/checkout">Upgrade to save →</Link>
+                </div>
+              )}
 
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Code</div>
-          <div className="il-detail-code-tabs">
-            <button className={tab === 'svg' ? 'active' : ''} onClick={() => setTab('svg')}>SVG</button>
-            <button className={tab === 'css' ? 'active' : ''} onClick={() => setTab('css')}>CSS</button>
-            {isCdn && <button className={tab === 'url' ? 'active' : ''} onClick={() => setTab('url')}>URL</button>}
-          </div>
-          <div
-            className="il-detail-code"
-            onClick={() => doCopy(tab === 'svg' ? svgCode : tab === 'css' ? cssCode : iconUrl, 'code')}
-          >
-            <span className="il-detail-code-hint">{copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
-            {tab === 'svg' && svgCode}
-            {tab === 'css' && cssCode}
-            {tab === 'url' && iconUrl}
-          </div>
-        </div>
+              <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleDownload}>Download</button>
 
-        <div className="fg-detail-actions">
-          <button className="ui-pill ui-pill-accent ui-pill-sm" onClick={() => { doCopy(svgCode, 'svg'); if (onCopy) onCopy(svgCode) }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            </svg>
-            {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
-          </button>
-          <button className="ui-pill ui-pill-out ui-pill-sm" onClick={() => {
-            try {
-              const saved = JSON.parse(localStorage.getItem('vs-saved-icons') || '[]')
-              const key = `${pack || 'emb'}-${name}`
-              if (!saved.find(s => s.key === key)) {
-                saved.push({ key, pack, name, cdn: !!isCdn, d: icon.d, filled: icon.filled, color })
-                localStorage.setItem('vs-saved-icons', JSON.stringify(saved))
-              }
-              setCopied('saved')
-              setTimeout(() => setCopied(p => p === 'saved' ? '' : p), 1500)
-            } catch {}
-          }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-            {copied === 'saved' ? 'Saved!' : 'Save to Project'}
-          </button>
-          {isCdn && (
-            <a
-              href={buildSvgUrl(API_HOSTS[0], pack, name, { ...previewParams, download: true })}
-              className="ui-pill ui-pill-out ui-pill-sm"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Download
-            </a>
-          )}
-          {isCdn && (
-            <a
-              href={`https://icon-sets.iconify.design/${pack}/${name}/`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ui-pill ui-pill-ghost ui-pill-sm"
-            >
-              View on Iconify
-            </a>
-          )}
-        </div>
+              {activeIcon.cdn && !activeIcon.custom && !activeIcon.pasted && (
+                <a className="ui-pill ui-pill-ghost ui-pill-md" href={`https://icon-sets.iconify.design/${activeIcon.pack}/${activeIcon.name}/`} target="_blank" rel="noopener noreferrer">
+                  View on Iconify
+                </a>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -375,25 +692,30 @@ function collectionToNames(d) {
 }
 
 const PAGE_SIZE = 120
-const DEFAULT_PACK = 'lucide'
 
 export default function IconLibrary({ onCopy }) {
   const { t } = useI18n()
-  const { design } = useProject()
+  const { isPro } = useSubscription()
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [icons, setIcons] = useState([])      // full result set (browse or search)
   const [visible, setVisible] = useState(PAGE_SIZE)
   const [mode, setMode] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [activeCat] = useState('all')
-  const [pack, setPack] = useState(DEFAULT_PACK)
-  const [group, setGroup] = useState(null)   // active cross-pack collection, or null for single-pack mode
+  const [pack, setPack] = useState('')
+  const [group, setGroup] = useState(null)   // active cross-pack collection, or null
+  const [source, setSource] = useState('all')  // all | group | pack | custom | search
   const [selected, setSelected] = useState(null)
+  const [addMode, setAddMode] = useState(false)
+  const [recents, setRecents] = useState(() => getRecentIcons())
   const timer = useRef(null)
   const cdnOk = useRef(null)
   const reqId = useRef(0)            // guards against out-of-order async responses
   const didInit = useRef(false)
   const sentinelRef = useRef(null)
+  const retryRef = useRef(null)     // re-runs the last browse for the error banner
 
   const renderLocal = useCallback((q, packFilter) => {
     const localIcons = window.icons || []
@@ -419,13 +741,53 @@ export default function IconLibrary({ onCopy }) {
     setLoading(false)
   }, [activeCat])
 
-  // Browse an entire icon set via the /collection endpoint — this is what fills
-  // the grid with thousands of icons instead of a handful of search hits.
-  const browsePack = useCallback((packFilter) => {
-    setGroup(null)
-    if (!packFilter) { renderLocal('', '') ; return }
+  // Load EVERY pack by default, progressively. Fire all /collection requests in
+  // parallel but append per-pack as each resolves (never Promise.all-block), and
+  // round-robin merge so the grid stays mixed. Skeleton shows until the first
+  // pack lands; a total failure surfaces the retry banner + built-in icons.
+  const browseAll = useCallback(() => {
     const rid = ++reqId.current
-    setLoading(true)
+    retryRef.current = browseAll
+    setSource('all'); setGroup(null); setPack('')
+    setLoading(true); setLoadError(false)
+    setIcons([]); setVisible(PAGE_SIZE); setMode('')
+    const lists = ALL_PACKS.map(() => [])
+    let settled = 0
+    let okCount = 0
+    ALL_PACKS.forEach((p, idx) => {
+      fetchWithFallback(`/collection?prefix=${p}`, 6000)
+        .then(r => r.json())
+        .then(d => {
+          if (rid !== reqId.current) return
+          cdnOk.current = true
+          okCount++
+          const names = keepStyle(p, collectionToNames(d), PACK_STYLE[p]).slice(0, ALL_INITIAL_PER_PACK)
+          lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
+          const merged = interleavePacks(lists)
+          setIcons(merged)
+          const sets = lists.filter(l => l.length).length
+          setMode(`All packs · ${merged.length.toLocaleString()} icons · ${sets} sets`)
+          if (merged.length) setLoading(false)
+        })
+        .catch(() => { /* this pack failed — others may still resolve */ })
+        .finally(() => {
+          if (rid !== reqId.current) return
+          settled++
+          if (settled === ALL_PACKS.length) {
+            setLoading(false)
+            if (okCount === 0) { cdnOk.current = false; setLoadError(true); renderLocal('', '') }
+          }
+        })
+    })
+  }, [renderLocal])
+
+  // Browse an entire icon set via the /collection endpoint.
+  const browsePack = useCallback((packFilter) => {
+    setSource('pack'); setGroup(null)
+    if (!packFilter) { browseAll(); return }
+    const rid = ++reqId.current
+    retryRef.current = () => browsePack(packFilter)
+    setLoading(true); setLoadError(false)
     fetchWithFallback(`/collection?prefix=${packFilter}`, 6000)
       .then(r => r.json())
       .then(d => {
@@ -441,21 +803,20 @@ export default function IconLibrary({ onCopy }) {
       .catch(() => {
         if (rid !== reqId.current) return
         cdnOk.current = false
+        setLoadError(true)
         renderLocal('', packFilter)
       })
-  }, [renderLocal])
+  }, [renderLocal, browseAll])
 
-  // Browse a whole collection (chip): fetch every pack in the group in parallel
-  // and round-robin interleave them so the grid mixes packs instead of dumping
-  // one pack before the next. This is what makes "Coloured" show colour icons
-  // from ALL colour packs at once.
+  // Browse a whole collection (chip): fetch every pack in the group and
+  // round-robin interleave them so the grid mixes packs.
   const browseGroup = useCallback((groupKey) => {
     const g = ICON_GROUPS[groupKey]
     if (!g) return
     const rid = ++reqId.current
-    setGroup(groupKey)
-    setPack('')
-    setLoading(true)
+    retryRef.current = () => browseGroup(groupKey)
+    setSource('group'); setGroup(groupKey); setPack('')
+    setLoading(true); setLoadError(false)
     Promise.all(g.packs.map(p =>
       fetchWithFallback(`/collection?prefix=${p}`, 6000)
         .then(r => r.json())
@@ -464,14 +825,12 @@ export default function IconLibrary({ onCopy }) {
     ))
       .then(results => {
         if (rid !== reqId.current) return
-        if (!results.some(r => r.ok)) { cdnOk.current = false; renderLocal('', ''); return }
+        if (!results.some(r => r.ok)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
         cdnOk.current = true
-        const lists = results.map(r => r.names.map(n => ({ pack: r.pack, name: n })))
-        const maxLen = lists.reduce((m, l) => Math.max(m, l.length), 0)
-        const merged = []
-        for (let i = 0; i < maxLen; i++) for (const l of lists) if (i < l.length) merged.push(l[i])
+        const lists = results.map(r => r.names.map(n => ({ id: `${r.pack}:${n}`, pack: r.pack, name: n, cdn: true })))
+        const merged = interleavePacks(lists)
         if (!merged.length) { renderLocal('', ''); return }
-        setIcons(merged.map(({ pack, name }) => ({ id: `${pack}:${name}`, pack, name, cdn: true })))
+        setIcons(merged)
         setVisible(PAGE_SIZE)
         const hits = results.filter(r => r.names.length).length
         setMode(`${g.label} · ${merged.length.toLocaleString()} icons · ${hits} packs`)
@@ -480,17 +839,33 @@ export default function IconLibrary({ onCopy }) {
       .catch(() => {
         if (rid !== reqId.current) return
         cdnOk.current = false
+        setLoadError(true)
         renderLocal('', '')
       })
   }, [renderLocal])
 
+  // Custom Icons category. ANTI-TAMPER: for non-Pro this NEVER reads the store —
+  // it renders the locked promo instead (handled in the render tree).
+  const browseCustom = useCallback(() => {
+    retryRef.current = browseCustom
+    reqId.current++            // cancel any in-flight browse
+    setSource('custom'); setGroup(null); setPack('')
+    setQuery(''); setLoadError(false)
+    if (!isPro) { setIcons([]); setVisible(PAGE_SIZE); setMode(''); setLoading(false); return }
+    const list = readCustomIcons()
+    setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
+    setVisible(PAGE_SIZE)
+    setMode(`Custom Icons · ${list.length.toLocaleString()} saved`)
+    setLoading(false)
+  }, [isPro])
+
   const doSearch = useCallback((q, scope = {}) => {
     q = (q || '').trim()
     const { pack: packFilter = '', group: groupKey = null } = scope
-    // Empty query: browse the active collection or pack (or fall back to local).
     if (!q || q.length < 2) {
       if (groupKey) browseGroup(groupKey)
-      else browsePack(packFilter)
+      else if (packFilter) browsePack(packFilter)
+      else browseAll()
       return
     }
     if (cdnOk.current === false) {
@@ -498,9 +873,9 @@ export default function IconLibrary({ onCopy }) {
       return
     }
     const rid = ++reqId.current
-    setLoading(true)
-    // A group scopes the search to its packs (Iconify `prefixes=`); a single pack
-    // uses `prefix=`; neither searches every set.
+    retryRef.current = () => doSearch(q, scope)
+    setSource('search')
+    setLoading(true); setLoadError(false)
     const params = new URLSearchParams()
     if (groupKey) params.set('prefixes', ICON_GROUPS[groupKey].packs.join(','))
     else if (packFilter) params.set('prefix', packFilter)
@@ -515,8 +890,6 @@ export default function IconLibrary({ onCopy }) {
           renderLocal(q, groupKey ? '' : packFilter)
           return
         }
-        // Keep only results matching the active style so a style-scoped search
-        // stays coherent (e.g. an "Outlined" search never returns filled hits).
         const style = groupKey || PACK_STYLE[packFilter]
         const items = d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
@@ -531,20 +904,22 @@ export default function IconLibrary({ onCopy }) {
       .catch(() => {
         if (rid !== reqId.current) return
         cdnOk.current = false
+        setLoadError(true)
         renderLocal(q, groupKey ? '' : packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup])
+  }, [renderLocal, browsePack, browseGroup, browseAll])
 
-  // Initial load: browse the default pack so the grid is full on first paint.
+  // Initial load: all packs, so the grid shows catalogue breadth on first paint.
   useEffect(() => {
     if (didInit.current) return
     didInit.current = true
-    // Defer out of the effect body so the kickoff fetch's setState isn't synchronous.
-    const id = setTimeout(() => browsePack(DEFAULT_PACK), 0)
+    const id = setTimeout(() => browseAll(), 0)
     return () => clearTimeout(id)
-  }, [browsePack])
+  }, [browseAll])
 
-  // Infinite scroll — reveal another page as the sentinel comes into view.
+  // Infinite scroll — reveal another page as the sentinel comes into view. The
+  // `visible` dep makes the observer reconnect after each reveal so it keeps
+  // draining while the sentinel stays inside the rootMargin (fixes the stall).
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
@@ -553,7 +928,7 @@ export default function IconLibrary({ onCopy }) {
     }, { rootMargin: '600px' })
     obs.observe(el)
     return () => obs.disconnect()
-  }, [icons.length])
+  }, [icons.length, visible])
 
   const debounceSearch = useCallback((q, scope) => {
     clearTimeout(timer.current)
@@ -570,47 +945,95 @@ export default function IconLibrary({ onCopy }) {
     setQuery('')
     clearTimeout(timer.current)
     if (group) browseGroup(group)
-    else browsePack(pack)
+    else if (source === 'custom') browseCustom()
+    else if (pack) browsePack(pack)
+    else browseAll()
   }
 
   const handlePackChange = (e) => {
     const p = e.target.value
-    if (p.startsWith('group:')) return   // synthetic active-collection label — not selectable
-    setPack(p)
-    setGroup(null)
-    // Switching packs with no query browses the new pack immediately (no debounce).
+    if (p.startsWith('group:')) return   // synthetic active-collection label
     clearTimeout(timer.current)
-    if (query.trim().length >= 2) doSearch(query, { pack: p, group: null })
-    else browsePack(p)
+    if (p === 'all') { setQuery(''); browseAll() }
+    else if (p === 'custom') { setQuery(''); browseCustom() }
+    else {
+      setPack(p); setGroup(null); setSource('pack')
+      if (query.trim().length >= 2) doSearch(query, { pack: p, group: null })
+      else browsePack(p)
+    }
   }
 
-  // Toggle a cross-pack collection chip: on → aggregate the group, off → back to
-  // the default pack.
+  // Toggle a cross-pack collection chip: on → aggregate the group, off → All packs.
   const handleGroupToggle = (key) => {
     setQuery('')
     clearTimeout(timer.current)
-    if (group === key) { setPack(DEFAULT_PACK); browsePack(DEFAULT_PACK) }
+    if (group === key) browseAll()
     else browseGroup(key)
   }
 
   const handleIconClick = (icon) => {
+    setAddMode(false)
     setSelected(icon)
-    if (icon.cdn) {
-      addRecentIcon({ cdn: true, pack: icon.pack, name: icon.name })
-    } else {
-      addRecentIcon({ cdn: false, name: icon.name, d: icon.d, filled: icon.filled })
-    }
   }
+
+  const handleAddIcon = () => {
+    setSelected(null)
+    setAddMode(true)
+  }
+
+  const handleCloseCustomizer = useCallback(() => {
+    setSelected(null)
+    setAddMode(false)
+    setRecents(getRecentIcons())
+    if (source === 'custom' && isPro) browseCustom()
+  }, [source, isPro, browseCustom])
+
+  const selectValue = group ? `group:${group}` : source === 'custom' ? 'custom' : source === 'all' ? 'all' : pack
 
   const shown = icons.slice(0, visible)
   const hasMore = visible < icons.length
+  const customLocked = source === 'custom' && !isPro
+  const customEmpty = source === 'custom' && isPro && !loading && icons.length === 0
+  const searchEmpty = source !== 'custom' && !loading && icons.length === 0 && !loadError
 
   return (
     <div className="sec">
       <div className="sec-h">
-        <h1>{t('iconLibrary.title')}</h1>
-        <p>{t('tools.iconLibrary.description')}</p>
+        <div className="sec-h-eyebrow">{t('iconLibrary.eyebrow')}</div>
+        <h1>{t('iconLibrary.heading')}</h1>
+        <p>{t('iconLibrary.subtitle')}</p>
       </div>
+
+      {recents.length > 0 && (
+        <div className="ig-rail">
+          <div className="ig-rail-head">Recent</div>
+          <div className="ig-rail-track">
+            {recents.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                className="ig-rail-item"
+                aria-label={`${r.action === 'edit' ? 'Edited' : 'Copied'} ${r.name} — open to customise`}
+                onClick={() => handleIconClick(r)}
+              >
+                {r.cdn ? (
+                  <img src={`https://api.iconify.design/${r.pack}/${r.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" />
+                ) : (
+                  <svg viewBox="0 0 24 24" fill={r.filled ? 'currentColor' : 'none'} stroke={r.filled ? 'none' : 'currentColor'} aria-hidden="true"><path d={r.d} /></svg>
+                )}
+                <span className={`ig-rail-badge ig-rail-badge--${r.action === 'edit' ? 'edit' : 'copy'}`} aria-hidden="true">
+                  {r.action === 'edit' ? (
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                  ) : (
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="sub">
         <div className="pl-toolbar">
           <div className="pl-search-wrap">
@@ -631,9 +1054,12 @@ export default function IconLibrary({ onCopy }) {
             )}
           </div>
 
-          <select className="pl-select" value={group ? `group:${group}` : pack} onChange={handlePackChange} aria-label="Icon pack">
+          <select className="pl-select" value={selectValue} onChange={handlePackChange} aria-label="Icon pack">
             {group && <option value={`group:${group}`}>◆ {ICON_GROUPS[group].label} collection</option>}
-            <option value="">All packs (search)</option>
+            <option value="all">All packs</option>
+            <optgroup label="Yours">
+              <option value="custom">Custom Icons</option>
+            </optgroup>
             <optgroup label="Interface (outlined)">
               <option value="lucide">Lucide</option>
               <option value="tabler">Tabler</option>
@@ -669,72 +1095,117 @@ export default function IconLibrary({ onCopy }) {
             </optgroup>
           </select>
 
+          <button type="button" className="ig-addbtn" onClick={handleAddIcon}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            Add icon
+          </button>
+
           <div className="pl-chips">
+            <button type="button" className={`pl-chip${source === 'custom' ? ' active' : ''}`} onClick={() => browseCustom()}>Custom</button>
             {GROUP_ORDER.map(key => (
-              <button key={key} type="button" className={`pl-chip${group === key ? ' active' : ''}`}
-                onClick={() => handleGroupToggle(key)}
-              >{ICON_GROUPS[key].label}</button>
+              <button key={key} type="button" className={`pl-chip${group === key ? ' active' : ''}`} onClick={() => handleGroupToggle(key)}>
+                {ICON_GROUPS[key].label}
+              </button>
             ))}
           </div>
         </div>
 
-        {!pack && !group && query.trim().length < 2 && !loading && (
-          <p style={{ fontSize: 12, color: 'var(--t2)', padding: '8px 0 4px' }}>
-            Pick a pack to browse, or type at least 2 characters to search across every Iconify set.
-          </p>
-        )}
-
-        <div className="ig">
-          {shown.map((icon, idx) => (
-            <div key={`${idx}-${icon.pack || ''}-${icon.name || ''}`} className="ic" onClick={() => handleIconClick(icon)}>
-              {icon.cdn ? (
-                <img
-                  src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`}
-                  width="24" height="24"
-                  style={{ filter: iconFilter(icon.pack) }}
-                  loading="lazy"
-                  alt={icon.name}
-                />
-              ) : (
-                <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'}>
-                  <path d={icon.d} />
-                </svg>
-              )}
-              <span>{icon.name}</span>
-              <span style={{ fontSize: 6, color: 'var(--t3)' }}>{icon.pack}</span>
-            </div>
-          ))}
-        </div>
-
-        {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
-
-        {loading && (
-          <p style={{ fontSize: 12, color: 'var(--t2)', marginTop: 16, textAlign: 'center' }}>Loading icons…</p>
-        )}
-
-        {!loading && icons.length === 0 && (
-          <div className="pl-empty" style={{ padding: '48px 20px' }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <p>No icons match — try a different search, or refresh if the icon set didn&apos;t load.</p>
+        {customLocked ? (
+          <div className="ig-custom-lock">
+            <span className="ig-custom-lock-glyph" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+            </span>
+            <h3 className="ig-custom-lock-title">Save your customised icons</h3>
+            <p className="ig-custom-lock-sub">Pro keeps every icon you tweak in one place, ready to reuse across projects.</p>
+            <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={() => navigate('/checkout')}>Upgrade to Pro</button>
           </div>
-        )}
+        ) : (
+          <>
+            {loadError && (
+              <div className="ig-notice">
+                <span>Couldn’t reach the icon service — showing built-in icons.</span>
+                <button type="button" className="ui-pill ui-pill-out ui-pill-sm" onClick={() => retryRef.current?.()}>Try again</button>
+              </div>
+            )}
 
-        {!loading && icons.length > 0 && (
-          <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 12 }}>
-            Showing {shown.length.toLocaleString()} of {icons.length.toLocaleString()} &middot; {mode}
-          </p>
+            <div className="ig">
+              {loading && icons.length === 0
+                ? Array.from({ length: 24 }).map((_, i) => (
+                  <div key={`skel-${i}`} className="ig-skel" aria-hidden="true">
+                    <div className="sk ig-skel-glyph" />
+                    <div className="sk ig-skel-label" />
+                  </div>
+                ))
+                : shown.map((icon, idx) => (
+                  <div
+                    key={icon.id || icon.key || `${idx}-${icon.name || ''}`}
+                    className="ic"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Customise ${icon.name}`}
+                    onClick={() => handleIconClick(icon)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIconClick(icon) } }}
+                  >
+                    {icon.custom ? (
+                      <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
+                    ) : icon.cdn ? (
+                      <img
+                        src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`}
+                        width="24" height="24"
+                        className={invClass(icon.pack)}
+                        loading="lazy"
+                        alt={icon.name}
+                      />
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'}>
+                        <path d={icon.d} />
+                      </svg>
+                    )}
+                    <span>{icon.name}</span>
+                    {!icon.custom && <span className="ic-pack">{icon.pack}</span>}
+                  </div>
+                ))}
+            </div>
+
+            {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}
+
+            {loading && icons.length > 0 && (
+              <p className="ig-status">Loading more…</p>
+            )}
+
+            {customEmpty && (
+              <div className="ig-custom-empty">No custom icons yet — open any icon, adjust it on the stage, and hit Save to keep it here.</div>
+            )}
+
+            {searchEmpty && (
+              <div className="pl-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <p>{query.trim()
+                  ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
+                  : 'No icons to show — try another pack or search.'}</p>
+              </div>
+            )}
+
+            {!loading && icons.length > 0 && (
+              <p className="ig-status">
+                Showing {shown.length.toLocaleString()} of {icons.length.toLocaleString()} · {mode}
+              </p>
+            )}
+          </>
         )}
       </div>
       <UIKitGuide step="icons" />
 
-      {selected && (
-        <IconDetail
+      {(selected || addMode) && (
+        <IconCustomizer
+          key={selected ? (selected.id || selected.key || `${selected.pack || 'emb'}:${selected.name}`) : 'add'}
           icon={selected}
-          onClose={() => setSelected(null)}
+          addMode={addMode && !selected}
+          isPro={isPro}
+          onClose={handleCloseCustomizer}
           onCopy={onCopy}
-          paletteColors={design?.palette?.colors}
         />
       )}
     </div>
