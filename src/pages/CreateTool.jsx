@@ -19,15 +19,17 @@ import { useToast } from '../hooks/useToast'
 // Subscription is read ONLY, exactly like PillNav — to tailor the still-building
 // state's upgrade prompt. Nothing here is ever written.
 
-const IconLibrary = lazy(() => import('./IconLibrary'))
-const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
+// Icons and Emoji share ONE surface: both routes mount the merged wrapper, which
+// derives its active tab from the path (so the mega-menu deep-links stay valid)
+// and flips between the two libraries via a large segmented pill title.
+const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 
 // Route → the component that is actually built. A Create route absent from this
 // map still renders the 🤫 state even if its group is flagged live — a safe
 // fallback that can never mount a half-finished screen.
 const LIVE_TOOLS = {
-  '/icons': IconLibrary,
-  '/emoji': EmojiLibrary,
+  '/icons': IconEmojiLibrary,
+  '/emoji': IconEmojiLibrary,
 }
 
 // Match toolTree's own path handling (lowercase, strip query/hash, drop trailing
