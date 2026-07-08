@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import en from '../locales/en.json'
+import enUS from '../locales/en-US.json'
 
 const I18nContext = createContext()
 const STORAGE_KEY = 'vs-lang'
@@ -28,10 +29,11 @@ function detectBrowserLang() {
   return 'en'
 }
 
-// Seed the default (en) locale into the cache so first paint is synchronous —
-// t() never returns a raw translation key on the first frame. Other locales
-// (en-US, es, …) still load async and swap in via the effect below.
-let localeCache = { en }
+// Seed both English locales into the cache so first paint is synchronous for the
+// dominant en / en-US segment — t() never returns a raw key on the first frame,
+// and en-US users don't see the Colour→Color flash. Other locales (es, …) still
+// load async and swap in via the effect below.
+let localeCache = { en, 'en-US': enUS }
 
 function resolve(obj, path) {
   return path.split('.').reduce((o, k) => o?.[k], obj)
@@ -41,10 +43,11 @@ export function I18nProvider({ children }) {
   const [lang, setLangState] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) || detectBrowserLang() } catch { return 'en' }
   })
-  // Seed with the statically-imported default locale so the very first paint
-  // renders real copy, not raw keys (P1). If the active language is en, this is
-  // already correct; any other language overwrites it async in the effect below.
-  const [messages, setMessages] = useState(en)
+  // Seed synchronously from the statically-imported English locales so the very
+  // first paint renders the correct copy — no raw keys, and no Colour→Color flash
+  // for en-US users (P1). Non-English locales fall back to en here, then swap in
+  // async via the effect below.
+  const [messages, setMessages] = useState(() => localeCache[lang] || en)
 
   useEffect(() => {
     let cancelled = false
