@@ -6,8 +6,9 @@ no parallel backlog. Owner-only infra tasks live in the **one** other doc,
 [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). Everything else in `docs/reference/*` is
 stable operating guardrails (read the relevant one before working in that area)._
 
-_Last updated: 2026-07-07 — Clusters A + B merged to `main`; Cluster C paused on the
-account session limit (resets ≈7:30pm UTC). See §7 for the live A–F cluster program._
+_Last updated: 2026-07-08 — Clusters A–C, E, F, G merged to `main`, plus Cluster D's
+safe slice (PR #139). The only work left is the Cluster D remainder, and it is
+externally blocked (Stripe OAuth + a Human Validation Zone). See §7._
 
 ---
 
@@ -202,7 +203,7 @@ double-fire guard.
 
 ## 7. Current cluster program (2026-07-07 — founder brain-dump, PM-regrouped)
 
-A ~45-item founder brain-dump, re-sequenced into clusters A–F. One PR per cluster
+A ~45-item founder brain-dump, re-sequenced into clusters A–G. One PR per cluster
 → squash-merge to `main` → realign the branch. Product principle throughout:
 **"users must understand what the app is ASAP — confused shoppers have empty carts."**
 
@@ -222,42 +223,36 @@ A ~45-item founder brain-dump, re-sequenced into clusters A–F. One PR per clus
   primary action is a disabled "Soon" so we never imply an unbuilt capability);
   smooth page scroll on **all** pages (single app-level Lenis singleton +
   `prefers-reduced-motion` opt-out; GSAP ScrollTrigger rides the shared Lenis).
-- **Cluster C — Icon & Emoji libraries — 🔧 SPEC COMPLETE, engineering DISPATCHED
-  but PAUSED on the account session limit** (B has merged, so `global.css` is now
-  free to touch; engineer read the full spec + explored precedents, made no edits,
-  then hit the rolling limit — 3rd trip today; resets ≈7:30pm UTC. Re-dispatch or
-  resume the engineer only after the reset — earlier retries can push the window
-  later. Full build-ready spec lives in the session scratchpad.) Style-filter
-  bug already fixed + merged in PR #134. Build order: (1) **anti-tamper first** —
-  a live leak: current "Save to Project" writes `localStorage['vs-saved-icons']`
-  for **every** user with no Pro check; gate behind `isPro`, non-Pro sees a locked
-  control routing to `/checkout`. (2) `icust-*` customiser dialog (a11y sibling of
-  ExportPanel; stroke slider + Absolute toggle only when the icon is stroke-capable;
-  serialise current values on copy to dodge the Lucide copy-reset bug). (3)
-  `browseAll()` across all packs + "All packs" default select + skeleton/error
-  states. (4) "Custom Icons" category (named `Custom (name + iteration)`). (5)
-  page-width recents rail (copied + edited). (6) SEO copy rewrite of the header.
-  (7) Emoji: fix "not showing all" (IntersectionObserver sentinel stall — add
-  `visible` to effect deps, raise `PAGE_SIZE`; same fix applies to IconLibrary) +
-  skin-tone change must update the **whole** library (render the toned value, not
-  just append at copy).
-- **Cluster D — Pricing / Plans / Settings — 🔴 BLOCKED on Stripe connector auth.**
-  Target prices: lifetime **$129 AUD**, monthly **$4.99 AUD**, yearly ~30% less
-  ending .99 (**≈$41.99**), international .99 for USD/EUR/GBP/NZD/CAD. New Plans
-  page (remove plans from Settings); restyle Settings to the new UI but **keep** its
-  left nav; remove the Appearance section; default logo = user initials; default
-  background = brand-blue→darker gradient; Google sign-in uses the Google profile
-  icon (overridable); location autofills cities/countries. **Do not change any
-  displayed price until the Stripe prices are updated** (would mislead customers).
-  Stripe MCP needs interactive OAuth — founder must authorise via claude.ai
-  connector settings.
-- **Cluster E — Discover / Learn — PENDING.** Improve the Discover + Learn sales
-  pages; Discover gets a stylised world map (UIL4B icon on Brisbane, blips/hover/
-  click-to-region, no user info); add https://www.navbar.gallery/ to the resource
-  list.
-- **Cluster F — Colour tool — PENDING.** Import the tint generator; custom colours
-  drawn from the applicable side of the colour wheel (e.g. success = blue→yellow),
-  capped halfway.
+- **Cluster C — Icon & Emoji libraries — ✅ DONE + MERGED (PR #136).** Icon
+  customiser (`icust-*` dialog, stroke/Absolute controls, copy-time serialisation to
+  dodge the Lucide copy-reset bug), the "Custom Icons" library, cross-pack browse +
+  skeleton/error states, and the emoji "show all" + whole-library skin-tone fixes all
+  shipped. The anti-tamper leak is closed: the old ungated `vs-saved-icons` write is
+  gone and the custom store is `isPro`-gated end-to-end (non-Pro routes to
+  `/checkout`). Icon + Emoji were then unified into one pill-toggle surface in
+  Cluster G (PR #137).
+- **Cluster D — Pricing / Plans / Settings — 🟡 SAFE SLICE MERGED (PR #139);
+  remainder externally blocked.** Shipped: Settings restyled to the new UI (left nav
+  kept), the Appearance section replaced by **Accessibility**, default avatar = user
+  initials on a brand-blue→darker gradient, and location-field autocomplete (real
+  cities/countries via a native `<datalist>`). **Still blocked — needs the founder:**
+  (1) the new **Plans page + price changes** (lifetime **$129 AUD**, monthly
+  **$4.99 AUD**, yearly **≈$41.99 AUD**, `.99` international for USD/EUR/GBP/NZD/CAD),
+  removing plans from Settings — Stripe MCP needs interactive OAuth and **no
+  displayed price may change until the Stripe prices are updated** (would mislead
+  customers); (2) the **Google-profile-icon default avatar** (overridable), which
+  touches a Human Validation Zone (`GoogleOneTap.jsx` / `AuthContext.jsx`) and needs
+  founder sign-off.
+- **Cluster E — Discover / Learn — ✅ DONE + MERGED (PR #136).** Discover + Learn
+  sales pages improved; Discover's stylised world map shipped (UIL4B marker on
+  Brisbane, hover/click-to-region, no user info). **One sub-item still open:** add
+  https://www.navbar.gallery/ to the resource list (not yet present in the source).
+- **Cluster F — Colour tool — ✅ DONE + MERGED (PR #136).** Tint generator imported;
+  custom semantic colours are drawn from the applicable side of the colour wheel
+  (e.g. success = blue→yellow), capped halfway.
+- **Cluster G — Unify Icon + Emoji — ✅ DONE + MERGED (PR #137).** Merged the Icon +
+  Emoji libraries into one pill-toggle surface; fixed the malformed nav SVGs (gear,
+  search) and the hover-reveal of the gear/avatar controls.
 
 ---
 
