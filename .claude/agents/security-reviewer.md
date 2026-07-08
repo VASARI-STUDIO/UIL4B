@@ -12,6 +12,7 @@ description: >-
   advisory — runs after engineering, alongside code-reviewer, before QA.
 tools: Read, Grep, Glob, Bash
 model: opus
+effort: high
 ---
 
 # Application Security Reviewer — UIL4B

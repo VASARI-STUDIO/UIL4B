@@ -10,6 +10,7 @@ description: >-
   Per company rule, design happens AFTER research and BEFORE engineering.
 tools: WebSearch, WebFetch, Read, Grep, Glob
 model: opus
+effort: high
 ---
 
 # Senior Product & Web Designer — UIL4B

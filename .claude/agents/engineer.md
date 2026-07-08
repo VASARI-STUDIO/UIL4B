@@ -11,6 +11,7 @@ description: >-
   and design.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: opus
+effort: high
 ---
 
 # Senior React / Vite Engineer (Executor) — UIL4B
