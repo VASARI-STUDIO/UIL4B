@@ -217,6 +217,18 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .sec-h-eyebrow::before{content:'';width:24px;height:1px;background:var(--t3)}
 .sub{margin-bottom:48px}
 
+/* ─── Merged Icon + Emoji library — the page title IS a segmented pill ─── */
+/* One surface, two libraries: the large serif segmented control flips between
+   Icons and Emoji (each embedded child library drops its own <h1>, so this
+   header owns the title). Semantic tokens keep it correct in light + dark; the
+   active segment reads as a raised thumb, matching .pnav-seg-btn's pattern. */
+.sec-h.lib-head{margin-bottom:40px}
+.lib-switch{display:inline-flex;gap:4px;padding:5px;margin-bottom:16px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
+.lib-switch-btn{appearance:none;border:none;cursor:pointer;font-family:var(--serif);font-weight:500;font-size:clamp(22px,3.4vw,34px);letter-spacing:-.02em;line-height:1.15;color:var(--t2);background:none;padding:.24em .68em;border-radius:var(--radius-pill);transition:color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
+.lib-switch-btn:hover{color:var(--t1)}
+.lib-switch-btn.is-active{color:var(--t0);background:var(--bg-1);box-shadow:var(--shadow-xs)}
+.lib-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
 /* ─── Color Studio Nav & Sections ─── */
 /* Pill-nav (CS#1/2/2.1): glass panel + absolutely-positioned sliding thumb whose
    x/width are JS-measured from the active button (--cs-thumb-x/--cs-thumb-w set
@@ -4190,16 +4202,21 @@ html.lenis,html.lenis body{height:auto}
 /* ══ Pill nav ══ */
 .pnav{position:fixed;top:var(--nav-top);left:50%;transform:translateX(-50%);width:min(1120px,calc(100vw - 32px));height:var(--nav-h);z-index:120;border-radius:var(--radius-pill);background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);border:1px solid var(--border);box-shadow:var(--shadow-nav);transition:height var(--dur-3) var(--ease-inout),background var(--dur-3) var(--ease-inout),box-shadow var(--dur-3) var(--ease-inout)}
 .pnav.is-scrolled{height:52px;background:rgba(255,255,255,.92);box-shadow:var(--shadow-m)}
-.pnav-inner{display:flex;align-items:center;gap:16px;height:100%;padding:0 10px 0 16px}
-.pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none;flex:0 0 auto}
+/* Grid minmax(0,1fr) auto minmax(0,1fr) so the three menu triggers sit
+   true-centred in the bar regardless of how wide the logo or the right cluster
+   get — the two side tracks always resolve to the same width (the minmax floor
+   of 0 lets them shrink in lockstep), so revealing the utility cluster on hover
+   grows both gutters evenly and never nudges the centred triggers. */
+.pnav-inner{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:16px;height:100%;padding:0 10px 0 16px}
+.pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none;justify-self:start}
 .pnav-logo:hover{text-decoration:none}
 .pnav-word{font-size:var(--fs-h5);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
-.pnav-items{display:flex;align-items:center;gap:2px;margin:0 auto}
+.pnav-items{display:flex;align-items:center;gap:2px;justify-self:center}
 .pnav-trigger{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border:none;background:none;font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-trigger:hover,.pnav-trigger[aria-expanded="true"]{background:var(--hvr);color:var(--t0)}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
-.pnav-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end}
 .pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--bg-3);display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--t1);flex:0 0 auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
@@ -4224,6 +4241,19 @@ html.lenis,html.lenis body{height:auto}
 .pnav-avatar-btn:hover,.pnav-avatar-btn[aria-expanded="true"]{border-color:var(--bh);box-shadow:var(--shadow-xs)}
 .pnav-avatar-btn .pnav-avatar{width:100%;height:100%}
 .pnav-pop-wrap{position:relative;flex:0 0 auto}
+
+/* Utility cluster — settings (gear) + account (avatar) collapse to a single
+   reveal handle at rest, keeping the resting bar minimal so the three triggers
+   read centred. They expand on hover, keyboard focus, or a tap of the handle
+   (which pins them open via .is-open); the caret rotates to signal state. */
+.pnav-util{display:flex;align-items:center}
+.pnav-util .pnav-pop-wrap{max-width:0;opacity:0;transform:scale(.86);overflow:hidden;pointer-events:none;transition:max-width var(--dur-3) var(--ease-inout),margin-left var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+.pnav-util-handle{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out),margin-left var(--dur-3) var(--ease-inout)}
+.pnav-util-handle:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.pnav-util-caret{transition:transform var(--dur-2) var(--ease-out)}
+.pnav-util:hover .pnav-pop-wrap,.pnav-util:focus-within .pnav-pop-wrap,.pnav-util.is-open .pnav-pop-wrap{max-width:44px;margin-left:8px;opacity:1;transform:none;overflow:visible;pointer-events:auto}
+.pnav-util:hover .pnav-util-handle,.pnav-util:focus-within .pnav-util-handle,.pnav-util.is-open .pnav-util-handle{margin-left:8px;border-color:var(--bh);color:var(--t0)}
+.pnav-util:hover .pnav-util-caret,.pnav-util:focus-within .pnav-util-caret,.pnav-util.is-open .pnav-util-caret{transform:rotate(180deg)}
 .pnav-pop{position:absolute;top:calc(100% + 10px);right:0;z-index:130;width:260px;max-width:calc(100vw - 24px);padding:8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
 .pnav-pop-head{padding:8px 10px 4px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .pnav-pop-row{display:flex;flex-direction:column;gap:8px;padding:6px 10px 10px}
@@ -4359,7 +4389,8 @@ html.lenis,html.lenis body{height:auto}
 .icust-stage{position:relative;display:grid;place-items:center;min-height:220px;margin:4px 24px 0;padding:24px;border-radius:var(--radius-xl);background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);overflow:hidden;--ig-size:48px;--ig-stroke:2;--ig-color:#F4F4F5;--ig-transform:none}
 .icust-stage--light{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 .icust-stage-host{display:grid;place-items:center;line-height:0}
-.icust-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);stroke-width:var(--ig-stroke);transform:var(--ig-transform,none);transform-origin:center;transition:width var(--dur-2) var(--ease-out),height var(--dur-2) var(--ease-out)}
+.icust-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);transform:var(--ig-transform,none);transform-origin:center;transition:width var(--dur-2) var(--ease-out),height var(--dur-2) var(--ease-out)}
+.icust-stage-host svg,.icust-stage-host svg *{stroke-width:var(--ig-stroke)}
 .icust-stage.is-abs .icust-stage-host svg,.icust-stage.is-abs .icust-stage-host svg *{vector-effect:non-scaling-stroke}
 .icust-stage-img{display:block;max-width:100%;height:auto}
 .icust-stage-msg{position:absolute;font-family:var(--mono);font-size:var(--fs-caption);color:rgba(244,244,245,.55)}
@@ -4796,7 +4827,12 @@ a.prev-btn{text-decoration:none}
 @media(max-width:768px){
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
   .pnav-mobile{display:inline-flex}
-  .pnav-inner{padding:0 12px}
+  /* Touch has no hover — fall back to a simple flexed bar (logo · actions) and
+     show the account inline instead of behind the reveal handle. */
+  .pnav-inner{display:flex;align-items:center;justify-content:space-between;padding:0 12px}
+  .pnav-util-handle{display:none}
+  .pnav-util .pnav-pop-wrap{max-width:none;margin-left:0;opacity:1;transform:none;overflow:visible;pointer-events:auto}
+  .pnav-util .pnav-pop-wrap + .pnav-pop-wrap{margin-left:8px}
   /* Collapse the search to a single tap-target; the Export button folds into
      the Export panel (still reachable via the command palette on desktop). */
   .pnav-search{width:40px}
