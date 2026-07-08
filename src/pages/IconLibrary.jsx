@@ -30,10 +30,11 @@ const ICON_GROUPS = {
   outlined: { label: 'Outlined', packs: ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'] },
   solid: { label: 'Solid', packs: ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs'] },
   coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
+  brands: { label: 'Brand logos', packs: ['simple-icons', 'logos', 'devicon', 'skill-icons'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
   emoji: { label: 'Emoji', packs: ['twemoji', 'fluent-emoji', 'noto', 'openmoji'] },
 }
-const GROUP_ORDER = ['outlined', 'solid', 'coloured', 'flags', 'emoji']
+const GROUP_ORDER = ['outlined', 'solid', 'coloured', 'brands', 'flags', 'emoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
@@ -693,7 +694,7 @@ function collectionToNames(d) {
 
 const PAGE_SIZE = 120
 
-export default function IconLibrary({ onCopy }) {
+export default function IconLibrary({ onCopy, embedded }) {
   const { t } = useI18n()
   const { isPro } = useSubscription()
   const navigate = useNavigate()
@@ -963,12 +964,23 @@ export default function IconLibrary({ onCopy }) {
     }
   }
 
-  // Toggle a cross-pack collection chip: on → aggregate the group, off → All packs.
+  // Toggle a cross-pack collection chip. Keep any active search text and AND the
+  // group into the query instead of clearing it; only browse the group when the
+  // search box is empty.
   const handleGroupToggle = (key) => {
-    setQuery('')
     clearTimeout(timer.current)
-    if (group === key) browseAll()
-    else browseGroup(key)
+    const q = query.trim()
+    const nextGroup = group === key ? null : key
+    setGroup(nextGroup)
+    setPack('')
+    if (q.length >= 2) {
+      setSource('search')
+      doSearch(query, { pack: '', group: nextGroup })
+    } else if (nextGroup) {
+      browseGroup(nextGroup)
+    } else {
+      browseAll()
+    }
   }
 
   const handleIconClick = (icon) => {
@@ -998,11 +1010,13 @@ export default function IconLibrary({ onCopy }) {
 
   return (
     <div className="sec">
-      <div className="sec-h">
-        <div className="sec-h-eyebrow">{t('iconLibrary.eyebrow')}</div>
-        <h1>{t('iconLibrary.heading')}</h1>
-        <p>{t('iconLibrary.subtitle')}</p>
-      </div>
+      {!embedded && (
+        <div className="sec-h">
+          <div className="sec-h-eyebrow">{t('iconLibrary.eyebrow')}</div>
+          <h1>{t('iconLibrary.heading')}</h1>
+          <p>{t('iconLibrary.subtitle')}</p>
+        </div>
+      )}
 
       {recents.length > 0 && (
         <div className="ig-rail">
