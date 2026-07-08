@@ -325,8 +325,8 @@ function TypographyDashboard({ cat, tools, quickActions, pinned, togglePinned, t
 
       <div className="typo-cta-footer">
         <p>Typography set? Fine-tune your accessibility and motion preferences.</p>
-        <NavLink to="/settings" state={{ section: 'appearance' }} className="typo-cta-link">
-          Appearance settings <ArrowIcon />
+        <NavLink to="/settings" state={{ section: 'accessibility' }} className="typo-cta-link">
+          Accessibility settings <ArrowIcon />
         </NavLink>
       </div>
     </div>

@@ -410,7 +410,7 @@
   "settings": {
     "title": "设置",
     "subtitle": "管理您的偏好设置、账户和数据。",
-    "appearance": "外观",
+    "accessibility": "无障碍",
     "theme": "主题",
     "dark": "深色",
     "light": "浅色",

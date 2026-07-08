@@ -410,7 +410,7 @@
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Verwalten Sie Ihre Einstellungen, Ihr Konto und Ihre Daten.",
-    "appearance": "Erscheinungsbild",
+    "accessibility": "Barrierefreiheit",
     "theme": "Design",
     "dark": "Dunkel",
     "light": "Hell",

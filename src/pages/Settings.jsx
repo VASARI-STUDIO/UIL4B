@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { LOCATIONS } from '../data/locations'
 
 const STORAGE_DISCLOSURE = [
   { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
@@ -28,10 +28,11 @@ function Check() {
   )
 }
 
-function EditField({ label, value, onSave, type = 'text', placeholder }) {
+function EditField({ label, value, onSave, type = 'text', placeholder, options }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value || '')
   const [error, setError] = useState('')
+  const listId = useId()
 
   const handleSave = () => {
     try {
@@ -66,7 +67,13 @@ function EditField({ label, value, onSave, type = 'text', placeholder }) {
           placeholder={placeholder}
           style={{ flex: 1 }}
           autoFocus
+          list={options ? listId : undefined}
         />
+        {options && (
+          <datalist id={listId}>
+            {options.map(o => <option key={o} value={o} />)}
+          </datalist>
+        )}
         <button className="btn btn-accent btn-s" onClick={handleSave}>Save</button>
         <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
       </div>
@@ -231,7 +238,7 @@ function NavIcon({ id }) {
   const props = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: sw, strokeLinecap: 'round', strokeLinejoin: 'round' }
   switch (id) {
     case 'subscription': return <svg {...props}><path d="M20 12V8H6a2 2 0 1 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
-    case 'appearance': return <svg {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    case 'accessibility': return <svg {...props}><circle cx="12" cy="5" r="1"/><path d="m9 20 3-6 3 6"/><path d="m6 8 6 2 6-2"/><path d="M12 10v4"/></svg>
     case 'language': return <svg {...props}><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     case 'account': return <svg {...props}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     case 'data': return <svg {...props}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
@@ -242,7 +249,6 @@ function NavIcon({ id }) {
 
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
-  const { theme, setTheme } = useTheme()
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, subscription, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
@@ -317,7 +323,7 @@ export default function Settings({ toast }) {
 
   const sections = [
     { id: 'support', label: 'Support' },
-    { id: 'appearance', label: t('settings.appearance') || 'Appearance' },
+    { id: 'accessibility', label: t('settings.accessibility') || 'Accessibility' },
     { id: 'language', label: t('settings.language') || 'Language' },
     ...(user ? [{ id: 'account', label: t('settings.account') || 'Account' }] : []),
     { id: 'data', label: t('settings.dataManagement') || 'Data' },
@@ -329,7 +335,7 @@ export default function Settings({ toast }) {
       <div className="sec-h">
         <div className="sec-h-eyebrow">Settings</div>
         <h1>Make it <em>yours</em>.</h1>
-        <p>Customise appearance, manage your account, and control how your data is stored.</p>
+        <p>Manage your account, set your preferences, and control how your data is stored.</p>
       </div>
 
       <div className="settings-grid">
@@ -471,31 +477,14 @@ export default function Settings({ toast }) {
             )}
           </section>
 
-          {/* Appearance */}
-          <section id="set-appearance" className="settings-section">
+          {/* Accessibility */}
+          <section id="set-accessibility" className="settings-section">
             <div className="settings-section-h">
-              <h2>Appearance</h2>
-              <p>Choose your theme. UIL4B is light by default — switch to dark any time.</p>
+              <h2>Accessibility</h2>
+              <p>Reduce motion for a calmer, distraction-free interface. Your light or dark theme lives in the top-nav settings menu.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-label">Theme</div>
-                    <div className="settings-row-meta">Currently using {theme} mode</div>
-                  </div>
-                  <div className="theme-pill" role="group" aria-label="Theme">
-                    <button className={`theme-pill-opt${theme === 'light' ? ' active' : ''}`} onClick={() => setTheme('light')} aria-pressed={theme === 'light'}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-                      Light
-                    </button>
-                    <button className={`theme-pill-opt${theme === 'dark' ? ' active' : ''}`} onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                      Dark
-                    </button>
-                  </div>
-                </div>
-
                 <div className="toggle-row">
                   <div className="toggle-row-info">
                     <div className="toggle-row-label">Reduced motion</div>
@@ -566,7 +555,7 @@ export default function Settings({ toast }) {
                 <div className="settings-card-body">
                   <EditField label="Display name" value={userProfile?.displayName} onSave={(v) => { updateProfile({ displayName: v }); toast('Display name updated') }} placeholder="Enter your display name" />
                   <EmailEditField value={user.email} onSave={(email, pw) => { updateEmail(email, pw); toast('Email updated') }} />
-                  <EditField label="Location" value={userProfile?.location} onSave={(v) => { updateProfile({ location: v }); toast('Location updated') }} placeholder="e.g. Melbourne, Australia" />
+                  <EditField label="Location" value={userProfile?.location} onSave={(v) => { updateProfile({ location: v }); toast('Location updated') }} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} />
                   <EditField label="Company / studio" value={userProfile?.company} onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }} placeholder="e.g. Acme Design" />
                   <EditField label="Website" value={userProfile?.website} type="url" onSave={(v) => { updateProfile({ website: v }); toast('Website updated') }} placeholder="https://yoursite.com" />
                   <EditField label="Bio" value={userProfile?.bio} onSave={(v) => { updateProfile({ bio: v }); toast('Bio updated') }} placeholder="A short bio about yourself" />

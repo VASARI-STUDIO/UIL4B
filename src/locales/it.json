@@ -410,7 +410,7 @@
   "settings": {
     "title": "Impostazioni",
     "subtitle": "Gestisci le tue preferenze, il tuo account e i tuoi dati.",
-    "appearance": "Aspetto",
+    "accessibility": "Accessibilità",
     "theme": "Tema",
     "dark": "Scuro",
     "light": "Chiaro",
