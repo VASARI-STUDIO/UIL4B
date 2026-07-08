@@ -71,7 +71,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .topbar-pin.is-pinned{color:var(--accent)}
 .topbar-icon-btn:hover{background:var(--brand-bg);color:var(--brand)}
 .topbar-notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--err)}
-.topbar-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--accent-bg);color:var(--accent);font-weight:700;font-size:13px;text-decoration:none!important;flex-shrink:0;transition:all .22s;border:2px solid var(--border)}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:#fff;font-weight:700;font-size:13px;text-decoration:none!important;flex-shrink:0;transition:all .22s;border:2px solid var(--border)}
 .topbar-avatar:hover{border-color:var(--bh)}
 .topbar-avatar img{width:100%;height:100%;object-fit:cover}
 .topbar-avatar-guest{background:var(--bg-2);color:var(--t2)}
@@ -79,7 +79,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 /* Profile quick menu */
 .profile-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:240px;max-width:calc(100vw - 16px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:200;padding:6px;animation:cp-rise .15s cubic-bezier(.2,0,0,1)}
 .profile-menu-head{display:flex;align-items:center;gap:10px;padding:10px 10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px}
-.profile-menu-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--accent-bg);color:var(--accent);font-weight:700;font-size:14px;flex-shrink:0}
+.profile-menu-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
 .profile-menu-avatar img{width:100%;height:100%;object-fit:cover}
 .profile-menu-name{font-size:13px;font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .profile-menu-email{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -186,7 +186,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .sidebar-user{display:flex;align-items:center;gap:6px;padding:10px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);margin-top:4px}
 .sidebar-user-link{display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none!important;color:inherit;border-radius:var(--radius-s);transition:opacity var(--t)}
 .sidebar-user-link:hover{opacity:.8}
-.sidebar-user-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--accent-bg);color:var(--accent);font-weight:700;font-size:14px;flex-shrink:0}
+.sidebar-user-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
 .sidebar-user-avatar img{width:100%;height:100%;object-fit:cover}
 .sidebar-user-info{flex:1;min-width:0}
 .sidebar-user-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
@@ -1705,7 +1705,7 @@ img,svg,video{max-width:100%;height:auto}
 
 /* Profile header */
 .settings-profile{display:flex;align-items:center;gap:18px;padding:24px;background:linear-gradient(135deg,var(--accent-bg),transparent);border-bottom:1px solid var(--border)}
-.settings-profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;font-weight:500;border:2px solid var(--border);overflow:hidden;flex-shrink:0}
+.settings-profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--avatar-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;font-weight:500;border:2px solid var(--border);overflow:hidden;flex-shrink:0}
 .settings-profile-avatar img{width:100%;height:100%;object-fit:cover}
 .settings-profile-info{flex:1;min-width:0}
 .settings-profile-name{font-family:var(--serif);font-size:22px;font-weight:500;letter-spacing:-.015em;color:var(--t0);line-height:1.35}
@@ -4109,6 +4109,8 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --border:rgba(10,10,11,.08);--bh:rgba(10,10,11,.16);--hvr:rgba(10,10,11,.04);--scrim:rgba(10,10,11,.32);
   --accent:#2563EB;--accent-strong:#1D4ED8;--accent-soft:#3B82F6;--accent-bg:rgba(37,99,235,.08);
   --brand:#2563EB;--brand-soft:#3B82F6;--brand-bg:rgba(37,99,235,.08);--info:#2563EB;--info-bg:rgba(37,99,235,.08);
+  /* Default-avatar background: brand-blue → darker. References --brand/--accent-strong so it resolves per-theme at use-site. */
+  --avatar-grad:linear-gradient(140deg,var(--brand),var(--accent-strong));
   --ok:#15803D;--warn:#A16207;--err:#DC2626;
   --shadow-xs:0 1px 2px rgba(10,10,11,.04);
   --shadow-s:0 1px 2px rgba(10,10,11,.04),0 2px 8px rgba(10,10,11,.04);
@@ -4217,7 +4219,7 @@ html.lenis,html.lenis body{height:auto}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
 .pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end}
-.pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--bg-3);display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--t1);flex:0 0 auto}
+.pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
 
@@ -4270,7 +4272,7 @@ html.lenis,html.lenis body{height:auto}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--danger,#dc2626) 12%,var(--bg-1));color:var(--danger,#dc2626)}
 .pnav-pop--account{width:280px}
 .pnav-pop-id{display:flex;align-items:center;gap:12px;padding:10px}
-.pnav-pop-avatar{width:40px;height:40px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--bg-3);display:grid;place-items:center;font-size:14px;font-weight:600;color:var(--t1)}
+.pnav-pop-avatar{width:40px;height:40px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:14px;font-weight:600;color:#fff}
 .pnav-pop-id-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:0 6px}
