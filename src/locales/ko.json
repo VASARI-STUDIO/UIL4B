@@ -410,7 +410,7 @@
   "settings": {
     "title": "설정",
     "subtitle": "환경 설정, 계정 및 데이터를 관리합니다.",
-    "appearance": "외관",
+    "accessibility": "접근성",
     "theme": "테마",
     "dark": "다크",
     "light": "라이트",
