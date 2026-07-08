@@ -174,10 +174,10 @@ a "Soon" badge in the nav until built.**
 
 ### 🐞 Known bugs (carried over — fix when the relevant tool is rebuilt)
 
-1. **Colour/Color label flash on refresh.** Two locale files —
-   `src/locales/en.json` (British "Colour Studio") vs `src/locales/en-US.json`
-   (American "Color Studio"); British paints first, US resolves and re-renders.
-   **Fix:** resolve active locale synchronously before first paint.
+1. ~~**Colour/Color label flash on refresh.**~~ ✅ **FIXED.** `en-US` is now
+   statically imported and seeded into the `I18nContext` locale cache, so the
+   active English locale resolves synchronously on first paint — no British→American
+   re-render. Non-English locales keep their async code-split.
 2. **Font-gallery FOUT on scroll.** `src/pages/FontGallery.jsx` lazy-loads each
    font via an `IntersectionObserver` and swaps placeholder→real per card — janky
    reflow. **Fix:** preload the visible set + reserve card metrics + reliable
@@ -245,8 +245,8 @@ A ~45-item founder brain-dump, re-sequenced into clusters A–G. One PR per clus
   founder sign-off.
 - **Cluster E — Discover / Learn — ✅ DONE + MERGED (PR #136).** Discover + Learn
   sales pages improved; Discover's stylised world map shipped (UIL4B marker on
-  Brisbane, hover/click-to-region, no user info). **One sub-item still open:** add
-  https://www.navbar.gallery/ to the resource list (not yet present in the source).
+  Brisbane, hover/click-to-region, no user info); navbar.gallery is in the curated
+  Discover resource list (`discoverResources.js`, a featured entry).
 - **Cluster F — Colour tool — ✅ DONE + MERGED (PR #136).** Tint generator imported;
   custom semantic colours are drawn from the applicable side of the colour wheel
   (e.g. success = blue→yellow), capped halfway.
