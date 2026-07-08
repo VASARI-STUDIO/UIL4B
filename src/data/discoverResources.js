@@ -182,6 +182,24 @@ export const DISCOVER_RESOURCES = [
     ],
     added: '2026-05-30',
   },
+  {
+    id: 'navbar-gallery',
+    title: 'Navbar Gallery',
+    host: 'navbar.gallery',
+    url: 'https://www.navbar.gallery/',
+    category: 'inspiration',
+    free: true,
+    tags: ['inspiration', 'navigation', 'navbar', 'header', 'menu', 'patterns'],
+    shortDescription: 'The largest library of navigation-bar inspiration on the web — hundreds of real headers and menus, filterable by style and industry.',
+    useCase: 'Navigation & header patterns',
+    difficulty: 'Beginner',
+    whyUseful: 'The navbar sets the tone for the whole product, and it is the one component most sites get wrong. Study how shipped sites structure their navigation, mega-menus and mobile drawers here, then rebuild the pattern that fits your system in the UI Builder.',
+    relatedTools: [
+      { label: 'UI Builder', route: '/ui-builder' },
+    ],
+    added: '2026-07-08',
+    featured: true,
+  },
 
   // ─── Dev tools ───────────────────────────────────────────────────────────
   {

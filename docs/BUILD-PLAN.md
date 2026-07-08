@@ -6,7 +6,8 @@ no parallel backlog. Owner-only infra tasks live in the **one** other doc,
 [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). Everything else in `docs/reference/*` is
 stable operating guardrails (read the relevant one before working in that area)._
 
-_Last updated: 2026-07-07 — rebuild in flight; see §7 for the live A–F cluster program._
+_Last updated: 2026-07-07 — Clusters A + B merged to `main`; Cluster C paused on the
+account session limit (resets ≈7:30pm UTC). See §7 for the live A–F cluster program._
 
 ---
 
@@ -212,16 +213,21 @@ A ~45-item founder brain-dump, re-sequenced into clusters A–F. One PR per clus
   avatar popover (Account/Plans/Admin-hidden/Sign-out); day/night toggle;
   mega-menu redesign (columns + promo card); black buttons → brand blue; removed
   the Create tool rail; "Soon" badges on every nav category except Icon Library.
-- **Cluster B — Home page — ⏳ ENGINEER BUILDING.** Concept "the living preview":
-  the page IS a working demo. Remove the "One workspace, every foundation" trust
-  strip; award-grade micro-animations; mini-tools look better but carry **no** real
-  functionality (a fun interactive section); mini icon customiser per Lucide
-  "style as you please"; hero headline about previewing to ship *tested* design
-  systems; export section shows exporting full HTML design systems + other
-  formats; smooth page scroll on **all** pages (single app-level Lenis singleton +
+- **Cluster B — Home page — ✅ DONE + MERGED (PR #135).** Concept "the living
+  preview": the page IS a working demo. Removed the "One workspace, every
+  foundation" trust strip; award-grade micro-animations; mini-tools look better but
+  carry **no** real functionality (a fun interactive section); hero headline about
+  previewing to ship *tested* design systems; Export section showcases the full
+  format list and opens the lazy, focus-trapped `ExportPanel` (preview-only —
+  primary action is a disabled "Soon" so we never imply an unbuilt capability);
+  smooth page scroll on **all** pages (single app-level Lenis singleton +
   `prefers-reduced-motion` opt-out; GSAP ScrollTrigger rides the shared Lenis).
-- **Cluster C — Icon & Emoji libraries — 🔧 SPEC COMPLETE, engineering PENDING**
-  (routed after B merges — both touch `global.css`, so serialise). Style-filter
+- **Cluster C — Icon & Emoji libraries — 🔧 SPEC COMPLETE, engineering DISPATCHED
+  but PAUSED on the account session limit** (B has merged, so `global.css` is now
+  free to touch; engineer read the full spec + explored precedents, made no edits,
+  then hit the rolling limit — 3rd trip today; resets ≈7:30pm UTC. Re-dispatch or
+  resume the engineer only after the reset — earlier retries can push the window
+  later. Full build-ready spec lives in the session scratchpad.) Style-filter
   bug already fixed + merged in PR #134. Build order: (1) **anti-tamper first** —
   a live leak: current "Save to Project" writes `localStorage['vs-saved-icons']`
   for **every** user with no Pro check; gate behind `isPro`, non-Pro sees a locked

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import { NavLink, useSearchParams } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, mixHex, describeColor, T_LABELS, autoTonalPalette, tonalRamp, applyAdjust, hexToHct, simCvd, fixForeground, derivePreviewRoles } from '../utils/colors'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, mixHex, describeColor, T_LABELS, autoTonalPalette, tonalRamp, applyAdjust, hexToHct, simCvd, fixForeground, derivePreviewRoles, roleHueArcs, semanticRamp } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useI18n } from '../contexts/I18nContext'
@@ -98,6 +98,27 @@ const STATE_BUNDLES = [
   { name: 'Apple', config: { success: 3, warning: 3, error: 3, info: 3 } },
   { name: 'Tailwind', config: { success: 5, warning: 5, error: 5, info: 5 } },
 ]
+
+// Reference "500" hex per role, taken from the Default bundle — the canonical
+// seed for each role's custom hue arc and generated ramp (Cluster F).
+const STATE_REF_HEX = Object.fromEntries(
+  Object.entries(STATE_BUNDLES[0].config).map(([role, idx]) => [role, STATE_PRESETS[role][idx].shades[5]])
+)
+// Per-role hue arcs, capped at the midpoints to adjacent roles so a custom
+// semantic colour stays legible (green success can lean lime/teal, never blue).
+const ROLE_ARCS = roleHueArcs(STATE_REF_HEX)
+
+// Resolve a role's selection to its 10 shades. `sel` is either an integer preset
+// index or a custom `{ custom: hue }` object. Central resolver so every consumer
+// — the live strip, the CSS export, the HTML export, the localStorage cache —
+// agrees on how a custom hue expands into a ramp.
+function resolveStateShades(state, sel) {
+  if (sel && typeof sel === 'object' && Number.isFinite(sel.custom)) {
+    return semanticRamp(sel.custom, STATE_REF_HEX[state])
+  }
+  const idx = Number.isInteger(sel) ? sel : 0
+  return (STATE_PRESETS[state][idx] || STATE_PRESETS[state][0]).shades
+}
 
 const GRAD_PRESETS = [
   { n: 'Indigo Rose', stops: [{ color: '#667eea', pos: 0 }, { color: '#764ba2', pos: 100 }], angle: 135, type: 'Linear' },
@@ -2005,7 +2026,7 @@ export default function ColorStudio({ onCopy, toast }) {
     // export (in TopBar) can include them without needing STATE_PRESETS.
     try {
       const resolved = Object.fromEntries(
-        Object.entries(stateColors).map(([state, idx]) => [state, STATE_PRESETS[state][idx].shades])
+        Object.entries(stateColors).map(([state, sel]) => [state, resolveStateShades(state, sel)])
       )
       localStorage.setItem('vs-state-shades', JSON.stringify(resolved))
     } catch { /* ignore */ }
@@ -2102,8 +2123,8 @@ export default function ColorStudio({ onCopy, toast }) {
     const buildVars = () => {
       const colorVars = allColors.map((c, i) => `  --color-${labels[i].toLowerCase().replace(/\s+/g, '-')}: ${c};`).join('\n')
       const tintVars = tintScale.map((c, i) => `  --tint-${i + 1}: ${c};`).join('\n')
-      const stateVars = Object.entries(stateColors).map(([state, presetIdx]) => {
-        const shades = STATE_PRESETS[state][presetIdx].shades
+      const stateVars = Object.entries(stateColors).map(([state, sel]) => {
+        const shades = resolveStateShades(state, sel)
         return shades.map((c, i) => `  --${state}-${stateLabels[i]}: ${c};`).join('\n')
       }).join('\n')
       return { colorVars, tintVars, stateVars }
@@ -2111,8 +2132,8 @@ export default function ColorStudio({ onCopy, toast }) {
 
     const generateHTML = () => {
       const { colorVars, tintVars, stateVars } = buildVars()
-      const stateEntries = Object.entries(stateColors).map(([state, presetIdx]) => ({
-        name: state, shades: STATE_PRESETS[state][presetIdx].shades
+      const stateEntries = Object.entries(stateColors).map(([state, sel]) => ({
+        name: state, shades: resolveStateShades(state, sel)
       }))
       const isDark = theme === 'dark'
       const rdMap = { none: ['0px', '0px'], subtle: ['6px', '4px'], default: ['12px', '8px'], pronounced: ['20px', '14px'] }
@@ -2767,10 +2788,26 @@ ${stateVars}
     })
   }
 
-  const stateCSS = Object.entries(stateColors).map(([state, presetIdx]) => {
-    const preset = STATE_PRESETS[state][presetIdx]
-    return preset.shades.map((c, i) => `  --${state}-${STATE_LABELS[i]}: ${c};`).join('\n')
+  const stateCSS = Object.entries(stateColors).map(([state, sel]) => {
+    const shades = resolveStateShades(state, sel)
+    return shades.map((c, i) => `  --${state}-${STATE_LABELS[i]}: ${c};`).join('\n')
   }).join('\n')
+
+  // "Custom" semantic-hue helpers (Cluster F). Switching a role to Custom seeds
+  // the slider at its canonical hue; pasting a hex rotates the pasted hue into
+  // the role's arc and clamps it (imports any brand colour, still legible).
+  const setCustomHue = (state, hue) => setStateColors({ ...stateColors, [state]: { custom: Math.round(hue) } })
+  const applyHexToArc = (state, raw) => {
+    const hex = (raw || '').trim().replace(/^#?/, '#')
+    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return false
+    const arc = ROLE_ARCS[state]
+    const mid = (arc.lo + arc.hi) / 2
+    let h = hexToHsl(hex)[0]
+    while (h - mid > 180) h -= 360
+    while (h - mid < -180) h += 360
+    setCustomHue(state, Math.max(arc.lo, Math.min(arc.hi, h)))
+    return true
+  }
   const fullCSS = `:root {\n${allColors.map((x, i) => `  --color-${i + 1}: ${x};`).join('\n')}\n\n${stateCSS}\n}`
 
   const resolveStop = (s, i) => s.color || allColors[i] || allColors[0]
@@ -3182,26 +3219,60 @@ ${stateVars}
         </div>
         {!collapsed.states && <>
         {Object.entries(STATE_PRESETS).map(([state, presets]) => {
-          const activeIdx = stateColors[state]
-          const active = presets[activeIdx]
+          const sel = stateColors[state]
+          const isCustom = sel && typeof sel === 'object' && Number.isFinite(sel.custom)
+          const shades = resolveStateShades(state, sel)
+          const arc = ROLE_ARCS[state]
           return (
             <div key={state} style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 3, background: active.shades[5] }} />
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: shades[5] }} />
                 <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'capitalize' }}>{state}</span>
-                <div style={{ display: 'flex', gap: 3, marginLeft: 'auto' }}>
+                <div style={{ display: 'flex', gap: 3, marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {presets.map((p, pi) => (
                     <button key={p.name} onClick={() => setStateColors({ ...stateColors, [state]: pi })}
-                      className={`pt-t${pi === activeIdx ? ' on' : ''}`} style={{ padding: '3px 8px', fontSize: 9 }}
+                      className={`pt-t${!isCustom && pi === sel ? ' on' : ''}`} style={{ padding: '3px 8px', fontSize: 9 }}
                     ><span className="state-preset-full">{p.name}</span><span className="state-preset-short">{p.name === 'Tailwind' ? 'TW' : p.name}</span></button>
                   ))}
+                  <button
+                    onClick={() => (isCustom ? setStateColors({ ...stateColors, [state]: STATE_BUNDLES[0].config[state] }) : setCustomHue(state, arc.canonical))}
+                    className={`pt-t${isCustom ? ' on' : ''}`} style={{ padding: '3px 8px', fontSize: 9 }} aria-pressed={isCustom}
+                  >Custom</button>
                 </div>
               </div>
               <div style={{ display: 'flex', borderRadius: 'var(--radius-s)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                {active.shades.map((shade, si) => (
+                {shades.map((shade, si) => (
                   <StateShade key={si} shade={shade} label={STATE_LABELS[si]} onCopy={onCopy} />
                 ))}
               </div>
+              {isCustom && (() => {
+                const [, refS, refL] = hexToHsl(STATE_REF_HEX[state])
+                const norm = h => ((h % 360) + 360) % 360
+                const at = h => hslToHex(norm(h), refS, refL)
+                const grad = `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1].map(t => at(arc.lo + t * (arc.hi - arc.lo))).join(', ')})`
+                const curName = describeColor(at(sel.custom))
+                return (
+                  <div className="cs-hue" style={{ '--arc-grad': grad }}>
+                    <div className="cs-hue-top">
+                      <span className="cs-hue-name">{curName}</span>
+                      <span className="cs-hue-val">{norm(sel.custom)}°</span>
+                    </div>
+                    <input type="range" className="cs-hue-slider"
+                      min={Math.round(arc.lo)} max={Math.round(arc.hi)} step="1" value={sel.custom}
+                      aria-label={`${state} custom hue`} aria-valuetext={curName}
+                      onChange={e => setCustomHue(state, Number(e.target.value))}
+                    />
+                    <div className="cs-hue-ends">
+                      <span>{describeColor(at(arc.lo))}</span>
+                      <input type="text" className="cs-hue-hex" placeholder="Paste hex" maxLength={7}
+                        aria-label={`Import a hex colour for ${state}`}
+                        onKeyDown={e => { if (e.key === 'Enter' && applyHexToArc(state, e.currentTarget.value)) e.currentTarget.value = '' }}
+                      />
+                      <span>{describeColor(at(arc.hi))}</span>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )
         })}
