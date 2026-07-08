@@ -1,8 +1,8 @@
-// Tracks the icons a user has most recently copied from the Icon Library so the
-// dashboard can surface them as a "quick access" strip. Stored locally; capped
-// to keep the list tight and the bento preview legible.
+// Tracks the icons a user has most recently copied or edited in the Icon Library
+// so the library rail and the dashboard can surface them as a "quick access"
+// strip. Stored locally; capped to keep the list tight and the preview legible.
 const KEY = 'vs-recent-icons'
-const MAX = 12
+const MAX = 20
 
 export function getRecentIcons() {
   try {
@@ -14,14 +14,16 @@ export function getRecentIcons() {
   }
 }
 
-export function addRecentIcon(icon) {
+export function addRecentIcon(icon, action = 'copy') {
   if (!icon) return
   try {
     // Stable identity: pack:name for CDN icons, name for embedded ones.
     const key = icon.cdn ? `${icon.pack}:${icon.name}` : `local:${icon.name}`
+    const ts = Date.now()
     const entry = icon.cdn
-      ? { key, cdn: true, pack: icon.pack, name: icon.name }
-      : { key, cdn: false, name: icon.name, d: icon.d, filled: !!icon.filled }
+      ? { key, action, ts, cdn: true, pack: icon.pack, name: icon.name }
+      : { key, action, ts, cdn: false, name: icon.name, d: icon.d, filled: !!icon.filled }
+    // Re-inserting an existing key promotes it to the front with the latest action.
     const next = [entry, ...getRecentIcons().filter(i => i.key !== key)].slice(0, MAX)
     localStorage.setItem(KEY, JSON.stringify(next))
   } catch {

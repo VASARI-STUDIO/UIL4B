@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useI18n } from '../contexts/I18nContext'
 
-const PAGE_SIZE = 200
+const PAGE_SIZE = 400
 
 const CATEGORY_KEYWORDS = {
   Smileys: ['smile', 'happy', 'sad', 'angry', 'face', 'laugh', 'cry', 'love', 'think', 'sick', 'cool', 'wink', 'tongue', 'skull', 'ghost', 'robot', 'devil', 'poop', 'scared', 'nervous', 'silly', 'party', 'nerd', 'sleepy', 'disguise', 'vomit', 'hot', 'cold', 'dizzy', 'explode', 'cowboy', 'clown', 'alien', 'demon', 'kiss', 'cat'],
@@ -34,7 +35,43 @@ function parseEmojis(str) {
   return str.split(/\s+/).filter(Boolean)
 }
 
+// Emoji_Modifier_Base — the code points that accept a Fitzpatrick skin-tone
+// modifier (Unicode 15). Anything outside this set (or any ZWJ sequence) is
+// shown and copied unchanged, so we never emit a broken base-plus-swatch pair
+// (e.g. a car followed by a floating skin square).
+const MODIFIER_BASE = new Set()
+const MODIFIER_RANGES = [
+  [0x261D, 0x261D], [0x26F9, 0x26F9], [0x270A, 0x270D],
+  [0x1F385, 0x1F385], [0x1F3C2, 0x1F3C4], [0x1F3C7, 0x1F3C7], [0x1F3CA, 0x1F3CC],
+  [0x1F442, 0x1F443], [0x1F446, 0x1F450], [0x1F466, 0x1F478], [0x1F47C, 0x1F47C],
+  [0x1F481, 0x1F483], [0x1F485, 0x1F487], [0x1F48F, 0x1F48F], [0x1F491, 0x1F491],
+  [0x1F4AA, 0x1F4AA], [0x1F574, 0x1F575], [0x1F57A, 0x1F57A], [0x1F590, 0x1F590],
+  [0x1F595, 0x1F596], [0x1F645, 0x1F647], [0x1F64B, 0x1F64F], [0x1F6A3, 0x1F6A3],
+  [0x1F6B4, 0x1F6B6], [0x1F6C0, 0x1F6C0], [0x1F6CC, 0x1F6CC], [0x1F90C, 0x1F90C],
+  [0x1F90F, 0x1F90F], [0x1F918, 0x1F91F], [0x1F926, 0x1F926], [0x1F930, 0x1F939],
+  [0x1F93D, 0x1F93E], [0x1F977, 0x1F977], [0x1F9B5, 0x1F9B6], [0x1F9BB, 0x1F9BB],
+  [0x1F9CD, 0x1F9CF], [0x1F9D1, 0x1F9DD], [0x1FAC3, 0x1FAC5], [0x1FAF0, 0x1FAF8],
+]
+MODIFIER_RANGES.forEach(([a, b]) => { for (let c = a; c <= b; c++) MODIFIER_BASE.add(c) })
+
+function supportsSkinTone(emoji) {
+  if (!emoji) return false
+  const cps = [...emoji]
+  if (cps.some(c => c.codePointAt(0) === 0x200D)) return false   // ZWJ sequence → skip (v1)
+  return MODIFIER_BASE.has(cps[0].codePointAt(0))
+}
+
+// Insert the tone right after the base code point, dropping an emoji-presentation
+// selector (U+FE0F) that must not sit between the base and its modifier.
+function toneOf(emoji, tone) {
+  if (!tone) return emoji
+  const cps = [...emoji]
+  const rest = cps.slice(1).filter((c, i) => !(i === 0 && c.codePointAt(0) === 0xFE0F))
+  return cps[0] + tone + rest.join('')
+}
+
 export default function EmojiLibrary({ onCopy }) {
+  const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [activeCat, setActiveCat] = useState(null)
   const [copied, setCopied] = useState(null)
@@ -96,10 +133,10 @@ export default function EmojiLibrary({ onCopy }) {
     }, { rootMargin: '600px' })
     obs.observe(el)
     return () => obs.disconnect()
-  }, [filteredCount])
+  }, [filteredCount, visible])
 
   const handleCopy = useCallback((emoji) => {
-    const text = skinTone ? emoji + skinTone : emoji
+    const text = supportsSkinTone(emoji) ? toneOf(emoji, skinTone) : emoji
     navigator.clipboard.writeText(text)
     onCopy(text)
     setCopied(emoji)
@@ -113,9 +150,9 @@ export default function EmojiLibrary({ onCopy }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">Emoji Library</div>
-        <h1>Emoji Library</h1>
-        <p>Browse and copy emojis for your designs. Click any emoji to copy it.</p>
+        <div className="sec-h-eyebrow">{t('emojiLibrary.eyebrow')}</div>
+        <h1>{t('emojiLibrary.heading')}</h1>
+        <p>{t('emojiLibrary.subtitle')}</p>
       </div>
 
       <div className="pl-toolbar">
@@ -175,16 +212,19 @@ export default function EmojiLibrary({ onCopy }) {
                 <span className="emoji-section-count">{group.total}</span>
               </div>
               <div className="emoji-grid">
-                {group.emojis.map((emoji, i) => (
-                  <button
-                    key={i}
-                    className={`emoji-cell${copied === emoji ? ' copied' : ''}`}
-                    onClick={() => handleCopy(emoji)}
-                    title={`Copy ${emoji}`}
-                  >
-                    <span className="emoji-char">{emoji}</span>
-                  </button>
-                ))}
+                {group.emojis.map((emoji, i) => {
+                  const shown = supportsSkinTone(emoji) ? toneOf(emoji, skinTone) : emoji
+                  return (
+                    <button
+                      key={i}
+                      className={`emoji-cell${copied === emoji ? ' copied' : ''}`}
+                      onClick={() => handleCopy(emoji)}
+                      title={`Copy ${shown}`}
+                    >
+                      <span className="emoji-char">{shown}</span>
+                    </button>
+                  )
+                })}
               </div>
             </section>
           )
