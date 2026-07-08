@@ -38,9 +38,9 @@ function Chevron() {
 
 function SearchIcon() {
   return (
-    <svg className="pnav-search-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.7" />
-      <path d="m20 20-3.2-3.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <svg className="pnav-search-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7.25" />
+      <path d="m20 20-3.65-3.65" />
     </svg>
   )
 }
@@ -55,10 +55,12 @@ function ExportIcon() {
 }
 
 function GearIcon() {
+  // Canonical Lucide "settings" cog — even, well-formed teeth that stay crisp at
+  // nav size (the previous hand-rolled path rendered lumpy/asymmetric).
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M19.5 12a7.5 7.5 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7.5 7.5 0 0 0-2-1.2L16.7 3h-4l-.4 2.5a7.5 7.5 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7.6 7.6 0 0 0 4.5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1c.6.5 1.3.9 2 1.2l.4 2.5h4l.4-2.5c.7-.3 1.4-.7 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   )
 }
@@ -145,6 +147,7 @@ export default function PillNav() {
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [utilOpen, setUtilOpen] = useState(false) // gear+avatar revealed (pinned via handle)
   const navRef = useRef(null)
   const menuRef = useRef(null)
   const closeTimer = useRef(null)
@@ -170,9 +173,10 @@ export default function PillNav() {
       if (navRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return
       setOpen(null)
       setMenu(null)
+      setUtilOpen(false)
     }
     const onKey = (e) => {
-      if (e.key === 'Escape') { setOpen(null); setSheet(false); setMenu(null) }
+      if (e.key === 'Escape') { setOpen(null); setSheet(false); setMenu(null); setUtilOpen(false) }
     }
     document.addEventListener('pointerdown', onPointer)
     document.addEventListener('keydown', onKey)
@@ -195,7 +199,7 @@ export default function PillNav() {
   const hoverLeave = () => { clearClose(); closeTimer.current = setTimeout(() => setOpen(null), 120) }
   const toggle = (id) => { setMenu(null); setOpen((cur) => (cur === id ? null : id)) }
   const toggleMenu = (which) => { setOpen(null); setMenu((cur) => (cur === which ? null : which)) }
-  const closeAll = () => { setOpen(null); setSheet(false); setMenu(null) }
+  const closeAll = () => { setOpen(null); setSheet(false); setMenu(null); setUtilOpen(false) }
   const openSearch = () => { closeAll(); setSearchOpen(true) }
   const openExport = () => { closeAll(); setExportOpen(true) }
   const onSignOut = () => { setMenu(null); logout() }
@@ -265,106 +269,7 @@ export default function PillNav() {
               </Link>
             )}
 
-            {/* Gear — quick preferences (day/night + link to full settings) */}
-            <div className="pnav-pop-wrap">
-              <button
-                type="button"
-                className="pnav-icon-btn"
-                aria-haspopup="true"
-                aria-expanded={menu === 'gear'}
-                aria-label="Preferences"
-                onClick={() => toggleMenu('gear')}
-              >
-                <GearIcon />
-              </button>
-              {menu === 'gear' && (
-                <div className="pnav-pop" aria-label="Preferences">
-                  <p className="pnav-pop-head">Appearance</p>
-                  <div className="pnav-pop-row">
-                    <span className="pnav-pop-row-label">Theme</span>
-                    <div className="pnav-seg" role="group" aria-label="Theme">
-                      <button
-                        type="button"
-                        className="pnav-seg-btn"
-                        aria-pressed={theme === 'light'}
-                        onClick={() => setTheme('light')}
-                      >
-                        <SunIcon />
-                        Day
-                      </button>
-                      <button
-                        type="button"
-                        className="pnav-seg-btn"
-                        aria-pressed={theme === 'dark'}
-                        onClick={() => setTheme('dark')}
-                      >
-                        <MoonIcon />
-                        Night
-                      </button>
-                    </div>
-                  </div>
-                  <div className="pnav-pop-sep" />
-                  <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
-                    <GearIcon />
-                    <span>All settings</span>
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {user ? (
-              /* Avatar — account menu */
-              <div className="pnav-pop-wrap">
-                <button
-                  type="button"
-                  className="pnav-avatar-btn"
-                  aria-haspopup="true"
-                  aria-expanded={menu === 'avatar'}
-                  aria-label="Account menu"
-                  onClick={() => toggleMenu('avatar')}
-                >
-                  {avatarUrl ? (
-                    <img className="pnav-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="pnav-avatar" aria-hidden="true">{initialsStr}</span>
-                  )}
-                </button>
-                {menu === 'avatar' && (
-                  <div className="pnav-pop pnav-pop--account" role="menu" aria-label="Account">
-                    <div className="pnav-pop-id">
-                      {avatarUrl ? (
-                        <img className="pnav-pop-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="pnav-pop-avatar" aria-hidden="true">{initialsStr}</span>
-                      )}
-                      <span className="pnav-pop-id-text">
-                        <span className="pnav-pop-id-name">
-                          {displayName}
-                          {isPro && <em className="pnav-pop-tag">Pro</em>}
-                        </span>
-                        {accountEmail && <span className="pnav-pop-id-email">{accountEmail}</span>}
-                      </span>
-                    </div>
-                    <div className="pnav-pop-sep" />
-                    <Link className="pnav-pop-item" role="menuitem" to="/settings" onClick={closeAll}>
-                      Account
-                    </Link>
-                    <Link className="pnav-pop-item" role="menuitem" to="/checkout" onClick={closeAll}>
-                      {isPro ? 'Manage plan' : 'Plans & upgrade'}
-                    </Link>
-                    {isAdmin && (
-                      <Link className="pnav-pop-item" role="menuitem" to="/admin" onClick={closeAll}>
-                        Admin dashboard
-                      </Link>
-                    )}
-                    <div className="pnav-pop-sep" />
-                    <button type="button" className="pnav-pop-item pnav-pop-item--danger" role="menuitem" onClick={onSignOut}>
-                      Sign out
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
+            {!user && (
               <>
                 <Link className="ui-pill ui-pill-ghost ui-pill-sm" to="/login" onClick={closeAll}>
                   Log in
@@ -374,6 +279,126 @@ export default function PillNav() {
                 </Link>
               </>
             )}
+
+            {/* Utility cluster — settings + account sit hidden at rest and reveal
+                on hover / focus (or a tap of the handle), so the resting bar stays
+                minimal and the three menu triggers read as centred. */}
+            <div className={'pnav-util' + (utilOpen || menu ? ' is-open' : '')}>
+              {/* Gear — quick preferences (day/night + link to full settings) */}
+              <div className="pnav-pop-wrap">
+                <button
+                  type="button"
+                  className="pnav-icon-btn"
+                  aria-haspopup="true"
+                  aria-expanded={menu === 'gear'}
+                  aria-label="Preferences"
+                  onClick={() => toggleMenu('gear')}
+                >
+                  <GearIcon />
+                </button>
+                {menu === 'gear' && (
+                  <div className="pnav-pop" aria-label="Preferences">
+                    <p className="pnav-pop-head">Appearance</p>
+                    <div className="pnav-pop-row">
+                      <span className="pnav-pop-row-label">Theme</span>
+                      <div className="pnav-seg" role="group" aria-label="Theme">
+                        <button
+                          type="button"
+                          className="pnav-seg-btn"
+                          aria-pressed={theme === 'light'}
+                          onClick={() => setTheme('light')}
+                        >
+                          <SunIcon />
+                          Day
+                        </button>
+                        <button
+                          type="button"
+                          className="pnav-seg-btn"
+                          aria-pressed={theme === 'dark'}
+                          onClick={() => setTheme('dark')}
+                        >
+                          <MoonIcon />
+                          Night
+                        </button>
+                      </div>
+                    </div>
+                    <div className="pnav-pop-sep" />
+                    <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
+                      <GearIcon />
+                      <span>All settings</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {user && (
+                /* Avatar — account menu */
+                <div className="pnav-pop-wrap">
+                  <button
+                    type="button"
+                    className="pnav-avatar-btn"
+                    aria-haspopup="true"
+                    aria-expanded={menu === 'avatar'}
+                    aria-label="Account menu"
+                    onClick={() => toggleMenu('avatar')}
+                  >
+                    {avatarUrl ? (
+                      <img className="pnav-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="pnav-avatar" aria-hidden="true">{initialsStr}</span>
+                    )}
+                  </button>
+                  {menu === 'avatar' && (
+                    <div className="pnav-pop pnav-pop--account" role="menu" aria-label="Account">
+                      <div className="pnav-pop-id">
+                        {avatarUrl ? (
+                          <img className="pnav-pop-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="pnav-pop-avatar" aria-hidden="true">{initialsStr}</span>
+                        )}
+                        <span className="pnav-pop-id-text">
+                          <span className="pnav-pop-id-name">
+                            {displayName}
+                            {isPro && <em className="pnav-pop-tag">Pro</em>}
+                          </span>
+                          {accountEmail && <span className="pnav-pop-id-email">{accountEmail}</span>}
+                        </span>
+                      </div>
+                      <div className="pnav-pop-sep" />
+                      <Link className="pnav-pop-item" role="menuitem" to="/settings" onClick={closeAll}>
+                        Account
+                      </Link>
+                      <Link className="pnav-pop-item" role="menuitem" to="/checkout" onClick={closeAll}>
+                        {isPro ? 'Manage plan' : 'Plans & upgrade'}
+                      </Link>
+                      {isAdmin && (
+                        <Link className="pnav-pop-item" role="menuitem" to="/admin" onClick={closeAll}>
+                          Admin dashboard
+                        </Link>
+                      )}
+                      <div className="pnav-pop-sep" />
+                      <button type="button" className="pnav-pop-item pnav-pop-item--danger" role="menuitem" onClick={onSignOut}>
+                        Sign out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Reveal handle — the always-visible affordance; the caret rotates
+                  to point inward once the cluster is open. */}
+              <button
+                type="button"
+                className="pnav-util-handle"
+                aria-expanded={utilOpen || !!menu}
+                aria-label={utilOpen || menu ? 'Hide settings and account' : 'Show settings and account'}
+                onClick={() => setUtilOpen((o) => !o)}
+              >
+                <svg className="pnav-util-caret" viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true">
+                  <path d="M7.5 2.5 4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
 
             <button
               type="button"
