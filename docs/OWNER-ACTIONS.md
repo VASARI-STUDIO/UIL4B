@@ -106,9 +106,11 @@ save it in Stripe.
    Stripe prices are immutable, so this **creates a fresh price, moves the lookup
    key onto it, and archives the old one** — checkout keeps working and each
    customer sees their local currency automatically.
-3. Update the fallback so a Stripe outage can't show a stale figure:
-   `api/_lib/pricing.js → DEFAULT_PRICES` (today AUD monthly 7.99 / yearly 79.99 →
-   set 4.99 / 41.99, and mirror any international change).
+3. Update **both** fallbacks so a Stripe outage can't show a stale figure:
+   the server anchor `api/_lib/pricing.js → DEFAULT_PRICES` (today AUD monthly
+   7.99 / yearly 79.99 → set 4.99 / 41.99, and mirror any international change),
+   **and** the client display anchor `src/hooks/usePrices.js → FALLBACK` (the AUD
+   figure shown only before `/api/get-prices` resolves or if it's unreachable).
 
 **⚠ Lifetime needs code first — NOT a dashboard-only task.** Entitlement today is
 subscription-only: `api/_lib/plans.js → planForSubscription` reads a Stripe
@@ -122,11 +124,15 @@ engineering must: (1) add a one-time (non-recurring) Price + a
 that flag. **Don't create the Stripe lifetime price until that code is merged**, or
 buyers pay and get nothing. (Tracked as an engineering slice.)
 
-**In-app (engineering slice — not an owner action, listed so the sequence is
-clear):** build the new **Plans page** against the targets above and **remove the
-plan/pricing block from Settings** (Settings keeps *Manage billing* + *Cancel*
-only). No displayed price may change until the live Stripe amounts are saved —
-otherwise the page quotes a price Stripe won't charge.
+**In-app (engineering — status):** ✅ **Done (PR #145).** Every price surface
+(Landing, Settings, Onboarding, Checkout, HelpCentre) now reads live amounts from
+`/api/get-prices` via the shared `src/hooks/usePrices.js` hook, so **no displayed
+price can diverge from what Stripe charges** — when you flip the ladder in step 2
+the whole UI updates with zero code change, and the "Save N%" badge is computed
+from the same two live numbers so it can't contradict them. Optional,
+founder-gated design follow-up (not a safety requirement): a dedicated **Plans**
+page and trimming the pricing block out of Settings (Settings would keep *Manage
+billing* + *Cancel* only).
 
 ### 2b. Retention coupon — exact codes & amounts
 
