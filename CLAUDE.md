@@ -8,8 +8,9 @@ Firebase Auth + Firestore; Stripe subscriptions; DeepSeek/Gemini AI.
 
 > Lean index. Canonical story → [`positioning.md`](docs/reference/positioning.md).
 > **Taking over / new to the project?** Read
-> [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) first — current direction, the tool tree,
-> the phase sequence, and how work is routed, in one place.
+> [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) first — a lean hub: current direction +
+> a live status snapshot, linking out to the tool tree, roadmap, and how work is
+> routed. Read only the sub-file you need.
 
 ---
 
@@ -86,6 +87,7 @@ Read the relevant one before working in that area.
 - **[Git Workflow](docs/reference/git-workflow.md)** — branch, commit, push,
   PR-only merge to `main`.
 
-**State & planning (only two living docs):** [`BUILD-PLAN.md`](docs/BUILD-PLAN.md)
-(direction + tool tree + phases + routing) · [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md)
+**State & planning (two living areas):** [`BUILD-PLAN.md`](docs/BUILD-PLAN.md)
+(hub: direction + live status; sub-files in [`docs/build-plan/`](docs/build-plan)
+for the tool tree + roadmap) · [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md)
 (founder-only infra tasks) · subagent roster [`.claude/agents/README.md`](.claude/agents/README.md).
