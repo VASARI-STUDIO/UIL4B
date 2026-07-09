@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useProPrice } from '../hooks/usePrices'
 
 const ONBOARDED_KEY = 'vs-onboarded'
 
@@ -47,6 +48,7 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState({})
   const [billing, setBilling] = useState('yearly')
   const [busy, setBusy] = useState(false)
+  const proPrice = useProPrice()
 
   // Onboarding only makes sense for a signed-in user. While auth is still
   // resolving we show the flow shell; if definitively signed out, go to login.
@@ -138,7 +140,7 @@ export default function Onboarding() {
             <div className="onb-billing">
               <button className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
               <button className={billing === 'yearly' ? 'active' : ''} onClick={() => setBilling('yearly')}>
-                Yearly <span className="onb-save">Save 33%</span>
+                Yearly {proPrice.savingsPct > 0 && <span className="onb-save">Save {proPrice.savingsPct}%</span>}
               </button>
             </div>
 
@@ -158,15 +160,15 @@ export default function Onboarding() {
                 <span className="onb-tier-flag">Best value</span>
                 <div className="onb-tier-name">Pro</div>
                 <div className="onb-tier-price">
-                  <span className="onb-tier-amount">{billing === 'yearly' ? '$39.99' : '$4.99'}</span>
+                  <span className="onb-tier-amount">{billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly}</span>
                   <span className="onb-tier-per">{billing === 'yearly' ? '/year' : '/month'}</span>
                 </div>
-                <div className="onb-tier-sub">{billing === 'yearly' ? 'AUD · ~$3.33/mo' : 'AUD · billed monthly'}</div>
+                <div className="onb-tier-sub">{billing === 'yearly' ? `AUD · ${proPrice.yearlyPerMonth}/mo` : 'AUD · billed monthly'}</div>
                 <ul className="onb-tier-list">
                   {PRO_FEATURES.map(f => <li key={f}><CheckIcon /> {f}</li>)}
                 </ul>
                 <button className="btn btn-accent onb-tier-btn" onClick={finishPro} disabled={busy}>
-                  {busy ? 'Redirecting to Stripe…' : `Go Pro — ${billing === 'yearly' ? '$39.99/yr' : '$4.99/mo'}`}
+                  {busy ? 'Redirecting to Stripe…' : `Go Pro — ${billing === 'yearly' ? `${proPrice.yearlyTotal}/yr` : `${proPrice.monthly}/mo`}`}
                 </button>
                 <div className="onb-tier-foot">Secure checkout via Stripe · cancel anytime</div>
               </div>
