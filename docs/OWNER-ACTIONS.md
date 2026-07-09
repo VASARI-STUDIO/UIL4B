@@ -1,7 +1,7 @@
 # UIL4B — Owner Action List
 
 Things only **you** can do (credentials, dashboards, infra) to fully activate the
-work that's now in the codebase. Ordered by impact. Last reviewed 2026-06-30.
+work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-09.
 
 > **⚠ Status is uncertain — verify before you fix.** As of 2026-06-30 you weren't
 > sure which of these you'd already done, and the agent environment **cannot reach
@@ -55,7 +55,80 @@ service-account blob, so a *slightly* mis-pasted value self-heals — but an out
 
 ---
 
-## 🟠 2. Stripe retention coupon — exact codes & amounts
+## 🔴 2. Pricing & billing
+
+### 2a. Flip to the new price ladder (Stripe)
+
+**▶ Read live first (authoritative):** open the in-app **admin Stripe panel**
+(`/admin` → Setup Stripe; it calls `GET /api/setup-stripe`, which expands live
+`currency_options`) **and** check Vercel for `STRIPE_PRICE_MONTHLY` /
+`STRIPE_PRICE_YEARLY`. Those two together are the truth of what's charged today.
+Everything below is the **target** to change it *to* — no price changes until you
+save it in Stripe.
+
+**What's live today (read-only Stripe check, 2026-07-09):**
+- One product: **UIL4B Pro** (`prod_Uh3MFir6kwPWS3`); every plan hangs off it.
+- Canonical prices resolve by **lookup key** (`uil4b_pro_monthly`,
+  `uil4b_pro_yearly`), base currency **USD**, other currencies attached as
+  `currency_options`. Live base amounts: **US$4.99/mo** (`price_1ThfmX…`) and
+  **US$39.99/yr** (`price_1ThfmY…`).
+- ⚠ **Checkout can override the lookup key.** `create-checkout.js` uses
+  `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` **if set** — those pin checkout
+  to a specific price ID and win over the lookup key. If they point at an AUD
+  object below, AUD (not USD) is what's actually charged. Confirm in Vercel.
+- **No lifetime price exists.** Lifetime needs code first — see the ⚠ block below.
+- **Legacy AUD price objects (candidates to archive):**
+  `price_1TgBrEE5YhjGQhQ5b2L72tJZ` (A$7.99), `price_1TgBrEE5YhjGQhQ5iUyc0hq6`
+  (A$69.99), `price_1R3wo2E5YhjGQhQ5x9JjC9zN` (A$89.99),
+  `price_1R3wnsE5YhjGQhQ5op14WVt6` (A$89.99), `price_1R3wX9E5YhjGQhQ532RNnYgn`
+  (A$99.99). None are lookup-keyed. **Archive only after** confirming each is
+  neither the target of the env vars above nor attached to an active subscription
+  (archiving is reversible and does not cancel existing subs, but it stops new
+  checkouts that resolve to that exact ID).
+
+**Target ladder** — AUD is the anchor (your numbers, final); international ends in
+`.99` (values below are **recommended — confirm before saving, this is real money**):
+
+| Interval | AUD (anchor) | USD | EUR | GBP | NZD | CAD |
+|---|---|---|---|---|---|---|
+| **Monthly** | **A$4.99** | $4.99 | €4.99 | £3.99 | NZ$5.99 | C$4.99 |
+| **Yearly** | **A$41.99** | $39.99 | €39.99 | £34.99 | NZ$44.99 | C$41.99 |
+| **Lifetime** ⚠ | **A$129** | $89.99 | €84.99 | £74.99 | NZ$139.99 | C$119.99 |
+
+*(SGD + CHF are also supported in code — leave as-is, or extend the row to match.)*
+
+**Change monthly & yearly (no code needed):**
+1. In Vercel, settle the env vars: if `STRIPE_PRICE_MONTHLY` / `_YEARLY` are
+   **set**, they override the lookup key, so a panel edit won't reach checkout
+   until you repoint or **clear** them. Simplest: clear both, so checkout resolves
+   by lookup key (the panel always keeps the key on the newest price).
+2. Admin Stripe panel → edit the AUD (and any international) amount → **Save**.
+   Stripe prices are immutable, so this **creates a fresh price, moves the lookup
+   key onto it, and archives the old one** — checkout keeps working and each
+   customer sees their local currency automatically.
+3. Update the fallback so a Stripe outage can't show a stale figure:
+   `api/_lib/pricing.js → DEFAULT_PRICES` (today AUD monthly 7.99 / yearly 79.99 →
+   set 4.99 / 41.99, and mirror any international change).
+
+**⚠ Lifetime needs code first — NOT a dashboard-only task.** Entitlement today is
+subscription-only: `api/_lib/plans.js → planForSubscription` reads a Stripe
+**subscription** status, and `create-checkout.js` is hardcoded to
+`mode: 'subscription'`. A lifetime purchase is a **one-time payment** with no
+subscription, so as-built a lifetime buyer resolves to **Free**. To ship it,
+engineering must: (1) add a one-time (non-recurring) Price + a
+`uil4b_pro_lifetime` lookup key; (2) branch checkout to `mode: 'payment'` for it;
+(3) on that price's `checkout.session.completed` webhook, write a permanent
+`lifetime: true` flag to the user's Firestore doc; (4) make plan resolution honour
+that flag. **Don't create the Stripe lifetime price until that code is merged**, or
+buyers pay and get nothing. (Tracked as an engineering slice.)
+
+**In-app (engineering slice — not an owner action, listed so the sequence is
+clear):** build the new **Plans page** against the targets above and **remove the
+plan/pricing block from Settings** (Settings keeps *Manage billing* + *Cancel*
+only). No displayed price may change until the live Stripe amounts are saved —
+otherwise the page quotes a price Stripe won't charge.
+
+### 2b. Retention coupon — exact codes & amounts
 
 **Recommended — one coupon, the cancel flow uses it:**
 
@@ -67,7 +140,7 @@ service-account blob, so a *slightly* mis-pasted value self-heals — but an out
 | Coupon ID (code) | **`RETAIN50`** (set a custom ID, or let Stripe auto-generate and note it) |
 | Name | `Retention — 50% off 3 months` |
 
-Why this: it's the standard win-back — meaningful but time-boxed (Pro is $4.99/mo → ~$2.50/mo for 3 months), recovers churn without permanently halving revenue, and is **safe for both monthly and yearly** subscribers.
+Why this: it's the standard win-back — meaningful but time-boxed (Pro monthly is ~A$4.99 → ~A$2.50/mo for 3 months), recovers churn without permanently halving revenue, and is **safe for both monthly and yearly** subscribers.
 
 **Steps:**
 1. Stripe Dashboard → **Product catalogue → Coupons → + New** → enter the values above → Save. *(Customers never type the code — the portal applies it automatically; the ID is just for your reference / the optional env var.)*
