@@ -39,8 +39,9 @@ Founder rule (2026-06-30): **don't over-route.** The build/lint gate is cheap
 (local, zero model cost); the multi-agent review gate is not. So:
 
 - **After each change** → run the **simple check**: `npx vite build` +
-  `npx eslint .`. Baseline today is **0 errors / 31 warnings** — match it; don't
-  add new warnings and don't "fix" the pre-existing 31.
+  `npx eslint .`. Baseline: **0 errors**; the only warnings are pre-existing
+  `set-state-in-effect` hints (~30) — match the current count, don't add new ones
+  and don't "fix" the existing ones.
 - **After a cluster of related changes** → run **one combined code-review + qa**
   over the whole batch, then merge. Not a fresh review per micro-edit.
 - **Security-sensitive code is never batched away.** Anything touching `/api`,

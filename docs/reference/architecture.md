@@ -31,14 +31,16 @@ api/
 The code is still organised route-per-page, but the **product story** groups
 every page under one of three surfaces (see `positioning.md`):
 
-- **Workspace** — create: build/validate/export UI foundations (the Tools).
+- **Create** — build/validate/export UI foundations (the Tools).
 - **Discover** — browse: community + curated external resources (replaces the
   old "Library" framing — see `discover.md`).
 - **Learn** — understand: docs, principles, guides.
 
-This is a *naming and IA* lens, not a folder move — pages stay in `src/pages/`.
-The in-app navigation reorg to make these surfaces real is a separate
-multi-slice effort (the "north star" in `positioning.md`), not done yet.
+The three surfaces are driven by `src/data/toolTree.js` and made real by the
+rebuilt mega-menu nav (Create/Discover/Learn, shipped). Pages still live
+route-per-page in `src/pages/` — this is a *naming and IA* lens, not a folder
+move. (The context is still named `WorkspaceContext`; only the surface label
+changed Workspace→Create.)
 
 ## Contexts (`src/contexts/`)
 
