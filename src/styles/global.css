@@ -4305,11 +4305,23 @@ html.lenis,html.lenis body{height:auto}
    from the sub-tools listed beneath it. */
 .pnav-menu[data-menu="create"] .pnav-group-head::after{content:'→';margin-left:auto;align-self:center;font-size:16px;color:var(--t3);opacity:.4;transform:translateX(-2px);transition:opacity var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-menu[data-menu="create"] .pnav-group-head:hover::after{opacity:1;transform:translateX(0);color:var(--hue,var(--accent))}
-.pnav-sub{list-style:none;display:flex;flex-direction:column;gap:2px;margin:12px 0 0 52px}
-.pnav-sublink{display:flex;align-items:center;gap:8px;min-height:32px;padding:5px 10px;border-radius:var(--radius-s);font-size:var(--fs-body-s);font-weight:500;color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+/* Sub-tool list — one row per tool: a status dot, the label, and (mixed case
+   only) a "Soon" pill. The dot is filled in the category hue when the tool is
+   live and a hollow ring when it's still coming, so live vs. upcoming reads at a
+   glance without a badge on every row. */
+.pnav-sub{list-style:none;display:flex;flex-direction:column;gap:1px;margin:10px 0 0 52px}
+.pnav-sublink{display:flex;align-items:center;gap:9px;min-height:32px;padding:5px 10px;border-radius:var(--radius-s);font-size:var(--fs-body-s);font-weight:500;color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.pnav-sub-dot{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--hue,var(--accent));transition:background var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out),transform var(--dur-1) var(--ease-out)}
+.pnav-sub-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav-sublink .soon-badge{margin-left:auto}
 .pnav-sublink:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
-.pnav-sublink[data-soon="true"]{color:var(--t2)}
-.pnav-sublink[data-soon="true"]:hover{color:var(--t2)}
+.pnav-sublink:hover .pnav-sub-dot{transform:scale(1.2)}
+/* Coming-soon tool: muted label + hollow ring dot — the router sends every tool
+   under a soon-flagged category to the 🤫 state, so the nav says so honestly. */
+.pnav-sublink[data-soon]{color:var(--t3)}
+.pnav-sublink[data-soon] .pnav-sub-dot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--t3)}
+.pnav-sublink[data-soon]:hover{color:var(--t2)}
+.pnav-sublink[data-soon]:hover .pnav-sub-dot{transform:none;box-shadow:inset 0 0 0 1.5px var(--t2)}
 /* Card variant: Discover/Learn groups have no sub-tools, so the whole tile is the link */
 .pnav-group--card .pnav-group-head{padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-0);transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .pnav-group--card .pnav-group-head:hover{border-color:color-mix(in srgb,var(--hue,var(--accent)) 40%,var(--border));background:var(--bg-1);transform:translateY(-2px);box-shadow:var(--shadow-s)}
