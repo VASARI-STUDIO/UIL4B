@@ -166,7 +166,6 @@ export default function PillNav() {
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
-  const [utilOpen, setUtilOpen] = useState(false) // gear+avatar revealed (pinned via handle)
   const navRef = useRef(null)
   const menuRef = useRef(null)
   const closeTimer = useRef(null)
@@ -192,10 +191,9 @@ export default function PillNav() {
       if (navRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return
       setOpen(null)
       setMenu(null)
-      setUtilOpen(false)
     }
     const onKey = (e) => {
-      if (e.key === 'Escape') { setOpen(null); setSheet(false); setMenu(null); setUtilOpen(false) }
+      if (e.key === 'Escape') { setOpen(null); setSheet(false); setMenu(null) }
     }
     document.addEventListener('pointerdown', onPointer)
     document.addEventListener('keydown', onKey)
@@ -218,7 +216,7 @@ export default function PillNav() {
   const hoverLeave = () => { clearClose(); closeTimer.current = setTimeout(() => setOpen(null), 120) }
   const toggle = (id) => { setMenu(null); setOpen((cur) => (cur === id ? null : id)) }
   const toggleMenu = (which) => { setOpen(null); setMenu((cur) => (cur === which ? null : which)) }
-  const closeAll = () => { setOpen(null); setSheet(false); setMenu(null); setUtilOpen(false) }
+  const closeAll = () => { setOpen(null); setSheet(false); setMenu(null) }
   const openSearch = () => { closeAll(); setSearchOpen(true) }
   const openExport = () => { closeAll(); setExportOpen(true) }
   const onSignOut = () => { setMenu(null); logout() }
@@ -229,35 +227,18 @@ export default function PillNav() {
     <>
       <nav
         ref={navRef}
-        className={scrolled ? 'pnav is-scrolled' : 'pnav'}
+        className={'pnav' + (scrolled ? ' is-scrolled' : '') + (open || menu ? ' is-expanded' : '')}
         aria-label="Primary"
         onMouseLeave={hoverLeave}
       >
         <div className="pnav-inner">
-          <Link className="pnav-logo" to="/home" onClick={closeAll} aria-label="UIL4B home">
-            <span className="pnav-word">UIL4B</span>
-          </Link>
+          <div className="pnav-lead">
+            <Link className="pnav-logo" to="/home" onClick={closeAll} aria-label="UIL4B home">
+              <span className="pnav-word">UIL4B</span>
+            </Link>
 
-          <div className="pnav-items">
-            {NAV_SECTIONS.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                className="pnav-trigger"
-                aria-expanded={open === section.id}
-                aria-haspopup="true"
-                onClick={() => toggle(section.id)}
-                onMouseEnter={() => hoverOpen(section.id)}
-              >
-                {section.label}
-                <Chevron />
-              </button>
-            ))}
-          </div>
-
-          <div className="pnav-actions">
-            {/* Hover-expand search + Export — a fixed-width slot so expansion never
-                shifts the centred nav triggers. */}
+            {/* Search + Export — revealed on pill hover / focus / when a menu is
+                pinned open, sitting to the LEFT of the three triggers. */}
             <div className="pnav-search">
               <button
                 type="button"
@@ -281,7 +262,26 @@ export default function PillNav() {
                 <span>Export</span>
               </button>
             </div>
+          </div>
 
+          <div className="pnav-items">
+            {NAV_SECTIONS.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                className="pnav-trigger"
+                aria-expanded={open === section.id}
+                aria-haspopup="true"
+                onClick={() => toggle(section.id)}
+                onMouseEnter={() => hoverOpen(section.id)}
+              >
+                {section.label}
+                <Chevron />
+              </button>
+            ))}
+          </div>
+
+          <div className="pnav-actions">
             {user && !isPro && (
               <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/checkout" onClick={closeAll}>
                 Upgrade
@@ -300,9 +300,9 @@ export default function PillNav() {
             )}
 
             {/* Utility cluster — settings + account sit hidden at rest and reveal
-                on hover / focus (or a tap of the handle), so the resting bar stays
-                minimal and the three menu triggers read as centred. */}
-            <div className={'pnav-util' + (utilOpen || menu ? ' is-open' : '')}>
+                as the whole pill expands on hover / focus (or when a menu is
+                pinned open), so the resting bar stays minimal. */}
+            <div className="pnav-util">
               {/* Gear — quick preferences (day/night + link to full settings) */}
               <div className="pnav-pop-wrap">
                 <button
@@ -403,20 +403,6 @@ export default function PillNav() {
                   )}
                 </div>
               )}
-
-              {/* Reveal handle — the always-visible affordance; the caret rotates
-                  to point inward once the cluster is open. */}
-              <button
-                type="button"
-                className="pnav-util-handle"
-                aria-expanded={utilOpen || !!menu}
-                aria-label={utilOpen || menu ? 'Hide settings and account' : 'Show settings and account'}
-                onClick={() => setUtilOpen((o) => !o)}
-              >
-                <svg className="pnav-util-caret" viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true">
-                  <path d="M7.5 2.5 4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
             </div>
 
             <button
