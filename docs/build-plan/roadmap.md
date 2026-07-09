@@ -59,14 +59,19 @@ squash-merge → realign the branch.
   skeleton/error states, emoji "show all" + skin-tone fixes. Anti-tamper closed:
   the ungated `vs-saved-icons` write is gone; the custom store is `isPro`-gated
   end-to-end.
-- **Cluster D — Pricing / Plans / Settings — 🟡 SAFE SLICE MERGED (#139);
+- **Cluster D — Pricing / Plans / Settings — 🟡 SAFE SLICE MERGED (#139, #145);
   remainder founder-gated.** Shipped: Settings restyled (left nav kept), Appearance
   → **Accessibility**, default avatar = initials on a brand-blue gradient,
-  location-field autocomplete (native `<datalist>`). **Still needs the founder:**
-  (1) the **Plans page + price flip** — lifetime **$129 AUD**, monthly
-  **$4.99 AUD**, yearly **≈$41.99 AUD**, `.99` international, removing plans from
-  Settings; Stripe MCP is now **live**, but **no displayed price may change until
-  the founder updates the live Stripe prices** (would mislead customers) — targets
+  location-field autocomplete (native `<datalist>`) (#139); and **every price
+  surface (Landing, Settings, Onboarding, Checkout, HelpCentre) now reads live
+  Stripe amounts via `src/hooks/usePrices.js`**, so no displayed price can diverge
+  from what Stripe charges and the founder's flip propagates UI-wide with zero code
+  change (#145). **Still needs the founder:** (1) the **price flip** — save the new
+  ladder in Stripe: monthly **$4.99 AUD**, yearly **≈$41.99 AUD**, lifetime
+  **$129 AUD**, `.99` international (a live price is real money / a Human Validation
+  Zone); lifetime also **needs code first** (one-time price + `mode:'payment'` +
+  webhook flag) so it stays a non-advertised "coming soon" placeholder; optional UI
+  follow-up is a dedicated **Plans** page + trimming pricing from Settings — targets
   + steps in [`../OWNER-ACTIONS.md`](../OWNER-ACTIONS.md); (2) the **Google-profile
   default avatar** (overridable), which touches a Human Validation Zone
   (`GoogleOneTap.jsx` / `AuthContext.jsx`).
