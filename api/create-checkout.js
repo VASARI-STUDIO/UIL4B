@@ -32,6 +32,9 @@ export default async function handler(req, res) {
 
   const cred = credentialProblem()
   if (cred) {
+    // Logged so the exact credential state is visible in Vercel runtime logs
+    // (the response body carries the same string for the browser console).
+    console.error('create-checkout credential problem:', cred)
     return res.status(500).json({ error: `Server configuration issue: ${cred}` })
   }
 
@@ -53,6 +56,7 @@ export default async function handler(req, res) {
       : null
     const priceId = await resolvePrice(stripe, interval)
     if (!priceId) {
+      console.error('create-checkout: no Stripe price resolved for interval', interval)
       return res.status(500).json({ error: 'Stripe prices not found. Visit /admin and run Setup Stripe, or set STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY in Vercel.' })
     }
 
