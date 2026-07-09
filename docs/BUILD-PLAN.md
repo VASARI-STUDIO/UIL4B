@@ -36,17 +36,22 @@ library, reused Colour / Typography / Imagery / AI tool shells, **Discover +
 Learn** sales pages (with the Brisbane world-map marker), **Settings** restyled
 (Accessibility section, initials-on-gradient default avatar, city/country
 autocomplete). That covers **Clusters A–C, E, F, G** and **Cluster D's safe
-slice** (PRs #134–#142). Colour→Color first-paint flash fixed (#141). Curated
-agent skills vendored + dead preview images removed (#142).
+slice** (PRs #134–#145). Colour→Color first-paint flash fixed (#141). Curated
+agent skills vendored + dead preview images removed (#142). Every price surface
+(Landing, Settings, Onboarding, Checkout, HelpCentre) now reads live Stripe data
+via `src/hooks/usePrices.js`, so the founder's price flip propagates to the whole
+UI with zero code change (#145).
 
 **Next / founder-gated — Cluster D remainder:**
-- **Plans page + price flip.** Targets: lifetime **$129 AUD**, monthly
-  **$4.99 AUD**, yearly **≈$41.99 AUD**, `.99` international (USD/EUR/GBP/NZD/CAD);
-  remove plans from Settings. Stripe MCP is **now live** (`acct_1IGeNNE5…`), **but
-  a live price is real money and a Human Validation Zone** → the **founder flips
-  the Stripe prices**; the PM builds the UI against the targets and **never
-  displays a price the live Stripe object doesn't charge.** Target prices +
-  exact steps live in [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md).
+- **Price flip (real money — founder only).** UI is ready — every surface reads
+  live `/api/get-prices`, so nothing displays a price Stripe doesn't charge
+  (#145). What's left is the **founder saving the new ladder in Stripe**: monthly
+  **$4.99 AUD**, yearly **≈$41.99 AUD**, lifetime **$129 AUD**, `.99` international
+  (USD/EUR/GBP/NZD/CAD). A live price is a Human Validation Zone; exact steps in
+  [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). Lifetime also **needs code first**
+  (one-time price + `mode:'payment'` + webhook flag) — kept a "coming soon"
+  placeholder, not advertised. Optional: a dedicated **Plans** page + removing the
+  pricing block from Settings.
 - **Google-profile default avatar** (overridable) — touches `GoogleOneTap.jsx` /
   `AuthContext.jsx` (HVZ), needs founder sign-off.
 
