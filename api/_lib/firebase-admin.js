@@ -24,7 +24,16 @@ function ensureApp() {
   let serviceAccount = null
   if (raw) {
     try {
-      serviceAccount = JSON.parse(raw)
+      // Accept either raw service-account JSON or a base64-encoded copy of it.
+      // Base64 is the safer form to store in an env var: it survives intact
+      // where a raw paste often mangles the private_key's PEM line breaks.
+      // JSON always starts with "{", so anything else is treated as base64.
+      let text = raw
+      if (!text.startsWith('{')) {
+        const decoded = Buffer.from(text, 'base64').toString('utf8').trim()
+        if (decoded.startsWith('{')) text = decoded
+      }
+      serviceAccount = JSON.parse(text)
       // Handle a double-encoded value (the whole JSON pasted as a quoted
       // string), which JSON.parse returns as a string rather than an object.
       if (typeof serviceAccount === 'string') serviceAccount = JSON.parse(serviceAccount)
@@ -69,7 +78,7 @@ export function credentialProblem() {
     return 'FIREBASE_SERVICE_ACCOUNT_KEY was parsed but Firebase rejected it — usually the private_key line breaks were mangled when pasting it into the environment variable. Re-generate the key (Firebase Console → Project Settings → Service Accounts → Generate new private key) and paste the raw .json contents exactly, unmodified.'
   }
   if (credentialStatus === 'invalid-json') {
-    return 'FIREBASE_SERVICE_ACCOUNT_KEY is set but is not the service account JSON. In Firebase Console → Project Settings → Service Accounts, click "Generate new private key" and paste the entire contents of the downloaded .json file (it starts with {"type":"service_account",...}) — not the code snippet shown on that page.'
+    return 'FIREBASE_SERVICE_ACCOUNT_KEY is set but could not be read as the service account JSON. Paste the entire contents of the downloaded .json file (it starts with {"type":"service_account",...}) — or a base64-encoded copy of that exact file — into the env var. Generate it in Firebase Console → Project Settings → Service Accounts → "Generate new private key"; do not paste the code snippet shown on that page.'
   }
   return 'FIREBASE_SERVICE_ACCOUNT_KEY is not set in the server environment. Generate a private key in Firebase Console → Project Settings → Service Accounts and paste the .json file contents into Vercel.'
 }
