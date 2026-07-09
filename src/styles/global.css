@@ -622,11 +622,15 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
 .emoji-sections{display:flex;flex-direction:column;gap:32px}
+/* Skip layout+paint for off-screen sections so the browser never rasterises
+   hundreds of colour-emoji glyphs up front. `auto` remembers each section's real
+   height after its first render; 480px is only the pre-measure placeholder. */
+.emoji-section{content-visibility:auto;contain-intrinsic-size:auto 480px}
 .emoji-section-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .emoji-section-head h3{font-size:14px;font-weight:700;letter-spacing:-.01em}
 .emoji-section-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
 .emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px}
-.emoji-cell{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:all .15s;position:relative}
+.emoji-cell{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background .15s,border-color .15s,transform .15s;position:relative}
 .emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2)}
 .emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent)}
 .emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;font-family:var(--font)}
