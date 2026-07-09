@@ -4206,38 +4206,37 @@ html.lenis,html.lenis body{height:auto}
 .soon-badge-accent{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
 
 /* ══ Pill nav ══ */
-.pnav{position:fixed;top:var(--nav-top);left:50%;transform:translateX(-50%);width:min(1120px,calc(100vw - 32px));height:var(--nav-h);z-index:120;border-radius:var(--radius-pill);background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);border:1px solid var(--border);box-shadow:var(--shadow-nav);transition:height var(--dur-3) var(--ease-inout),background var(--dur-3) var(--ease-inout),box-shadow var(--dur-3) var(--ease-inout)}
+.pnav{position:fixed;top:var(--nav-top);left:50%;transform:translateX(-50%);width:fit-content;max-width:calc(100vw - 32px);height:var(--nav-h);z-index:120;border-radius:var(--radius-pill);background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);border:1px solid var(--border);box-shadow:var(--shadow-nav);transition:height var(--dur-3) var(--ease-inout),background var(--dur-3) var(--ease-inout),box-shadow var(--dur-3) var(--ease-inout)}
 .pnav.is-scrolled{height:52px;background:rgba(255,255,255,.92);box-shadow:var(--shadow-m)}
-/* Grid minmax(0,1fr) auto minmax(0,1fr) so the three menu triggers sit
-   true-centred in the bar regardless of how wide the logo or the right cluster
-   get — the two side tracks always resolve to the same width (the minmax floor
-   of 0 lets them shrink in lockstep), so revealing the utility cluster on hover
-   grows both gutters evenly and never nudges the centred triggers. */
-.pnav-inner{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:16px;height:100%;padding:0 10px 0 16px}
-.pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none;justify-self:start}
+/* Flex row: [lead (logo + collapsible search)] [triggers] [actions]. The pill
+   shrink-wraps its content (width:fit-content), so revealing the search on the
+   left and the utility cluster on the right visibly grows the bar on hover. */
+.pnav-inner{display:flex;align-items:center;gap:10px;height:100%;padding:0 12px}
+.pnav-lead{display:flex;align-items:center;gap:0;min-width:0}
+.pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
 .pnav-word{font-size:var(--fs-h5);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
-.pnav-items{display:flex;align-items:center;gap:2px;justify-self:center}
+.pnav-items{display:flex;align-items:center;gap:2px}
 .pnav-trigger{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border:none;background:none;font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-trigger:hover,.pnav-trigger[aria-expanded="true"]{background:var(--hvr);color:var(--t0)}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
-.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end}
+.pnav-actions{display:flex;align-items:center;gap:8px}
 .pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
 
-/* Right-cluster: hover-expand search + Export shell. The slot is a fixed 200px
-   with content right-aligned, so expanding the field / revealing Export never
-   shifts the centred nav triggers (no layout thrash). */
-.pnav-search{display:flex;align-items:center;justify-content:flex-end;gap:8px;width:200px;flex:0 0 auto}
-.pnav-search-field{display:inline-flex;align-items:center;gap:8px;height:40px;width:40px;padding:0;justify-content:center;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;overflow:hidden;cursor:pointer;transition:width var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+/* Left reveal — search + Export sit fully collapsed at rest (to the LEFT of the
+   three triggers) and expand together when the whole pill is hovered, focused, or
+   pinned open (a menu is active). The parent handles the collapse so the field
+   and Export render their full form once revealed. */
+.pnav-search{display:flex;align-items:center;gap:8px;max-width:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-width var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),margin-left var(--dur-3) var(--ease-inout)}
+.pnav:hover .pnav-search,.pnav:focus-within .pnav-search,.pnav.is-expanded .pnav-search{max-width:320px;opacity:1;overflow:visible;pointer-events:auto;margin-left:10px}
+.pnav-search-field{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-search-field:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .pnav-search-field .pnav-search-ico{flex:0 0 auto}
-.pnav-search-ph{max-width:0;opacity:0;overflow:hidden;transition:max-width var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out)}
-.pnav-search:hover .pnav-search-field,.pnav-search:focus-within .pnav-search-field{width:112px;padding:0 14px;justify-content:flex-start;border-color:var(--bh);color:var(--t0)}
-.pnav-search:hover .pnav-search-ph,.pnav-search:focus-within .pnav-search-ph{max-width:80px;opacity:1}
-.pnav-export{display:inline-flex;align-items:center;gap:7px;height:40px;max-width:0;padding:0;opacity:0;visibility:hidden;overflow:hidden;white-space:nowrap;border:none;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;cursor:pointer;transition:max-width var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),visibility var(--dur-3) var(--ease-inout),background var(--dur-2) var(--ease-out)}
-.pnav-search:hover .pnav-export,.pnav-search:focus-within .pnav-export{max-width:140px;padding:0 14px;opacity:1;visibility:visible}
+.pnav-search-ph{white-space:nowrap}
+.pnav-export{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;white-space:nowrap;border:none;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;cursor:pointer;transition:background var(--dur-2) var(--ease-out)}
 .pnav-export:hover{background:color-mix(in srgb,var(--accent) 18%,var(--bg-2))}
 
 /* Gear + avatar icon buttons and their popovers */
@@ -4248,18 +4247,12 @@ html.lenis,html.lenis body{height:auto}
 .pnav-avatar-btn .pnav-avatar{width:100%;height:100%}
 .pnav-pop-wrap{position:relative;flex:0 0 auto}
 
-/* Utility cluster — settings (gear) + account (avatar) collapse to a single
-   reveal handle at rest, keeping the resting bar minimal so the three triggers
-   read centred. They expand on hover, keyboard focus, or a tap of the handle
-   (which pins them open via .is-open); the caret rotates to signal state. */
+/* Right reveal — settings (gear) + account (avatar) sit fully collapsed at rest
+   and expand together as the whole pill grows on hover, keyboard focus, or when a
+   menu is pinned open (.is-expanded), keeping the resting bar minimal. */
 .pnav-util{display:flex;align-items:center}
 .pnav-util .pnav-pop-wrap{max-width:0;opacity:0;transform:scale(.86);overflow:hidden;pointer-events:none;transition:max-width var(--dur-3) var(--ease-inout),margin-left var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
-.pnav-util-handle{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out),margin-left var(--dur-3) var(--ease-inout)}
-.pnav-util-handle:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.pnav-util-caret{transition:transform var(--dur-2) var(--ease-out)}
-.pnav-util:hover .pnav-pop-wrap,.pnav-util:focus-within .pnav-pop-wrap,.pnav-util.is-open .pnav-pop-wrap{max-width:44px;margin-left:8px;opacity:1;transform:none;overflow:visible;pointer-events:auto}
-.pnav-util:hover .pnav-util-handle,.pnav-util:focus-within .pnav-util-handle,.pnav-util.is-open .pnav-util-handle{margin-left:8px;border-color:var(--bh);color:var(--t0)}
-.pnav-util:hover .pnav-util-caret,.pnav-util:focus-within .pnav-util-caret,.pnav-util.is-open .pnav-util-caret{transform:rotate(180deg)}
+.pnav:hover .pnav-util .pnav-pop-wrap,.pnav:focus-within .pnav-util .pnav-pop-wrap,.pnav.is-expanded .pnav-util .pnav-pop-wrap{max-width:44px;margin-left:8px;opacity:1;transform:none;overflow:visible;pointer-events:auto}
 .pnav-pop{position:absolute;top:calc(100% + 10px);right:0;z-index:130;width:260px;max-width:calc(100vw - 24px);padding:8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
 .pnav-pop-head{padding:8px 10px 4px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .pnav-pop-row{display:flex;flex-direction:column;gap:8px;padding:6px 10px 10px}
@@ -4610,6 +4603,11 @@ html.lenis,html.lenis body{height:auto}
 /* Hero */
 .home-hero{text-align:center;max-width:880px;margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-9)) 24px var(--s-9)}
 .home-hero-h1{font-size:var(--fs-display);font-weight:700;letter-spacing:-.032em;line-height:1.02;color:var(--t0);text-wrap:balance}
+/* Each headline line is its own block so the two phrases break cleanly instead of
+   colliding ("design systembefore"); the inner span is inline-block so GSAP's
+   yPercent slide-up reveal (useHomeMotion) has a transformable box to animate. */
+.home-hero-line{display:block}
+.home-hero-line-in{display:inline-block}
 .home-hero-sub{font-size:var(--fs-lede);color:var(--t1);line-height:1.5;max-width:560px;margin:var(--s-5) auto 0;text-wrap:pretty}
 .home-hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:var(--s-6)}
 .home-hero-hint{font-size:var(--fs-caption);color:var(--t2);margin-top:var(--s-4)}
@@ -4845,17 +4843,17 @@ a.prev-btn{text-decoration:none}
 @media(max-width:768px){
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
   .pnav-mobile{display:inline-flex}
-  /* Touch has no hover — fall back to a simple flexed bar (logo · actions) and
-     show the account inline instead of behind the reveal handle. */
+  /* Touch has no hover — give the pill a fixed width and reveal both flanks
+     unconditionally so search + account are always reachable without hover. */
+  .pnav{width:min(560px,calc(100vw - 24px))}
   .pnav-inner{display:flex;align-items:center;justify-content:space-between;padding:0 12px}
-  .pnav-util-handle{display:none}
   .pnav-util .pnav-pop-wrap{max-width:none;margin-left:0;opacity:1;transform:none;overflow:visible;pointer-events:auto}
   .pnav-util .pnav-pop-wrap + .pnav-pop-wrap{margin-left:8px}
-  /* Collapse the search to a single tap-target; the Export button folds into
-     the Export panel (still reachable via the command palette on desktop). */
-  .pnav-search{width:40px}
-  .pnav-search:hover .pnav-search-field,.pnav-search:focus-within .pnav-search-field{width:40px;padding:0;justify-content:center}
-  .pnav-search:hover .pnav-search-ph,.pnav-search:focus-within .pnav-search-ph{max-width:0;opacity:0}
+  /* Search stays revealed but collapses to an icon-only tap target; Export folds
+     away (still reachable via the command palette on desktop). */
+  .pnav-search{max-width:none;opacity:1;overflow:visible;pointer-events:auto;margin-left:0}
+  .pnav-search-field{width:40px;padding:0;justify-content:center}
+  .pnav-search-ph{display:none}
   .pnav-export{display:none}
   .home-surfaces{grid-template-columns:1fr}
   .home-surface{max-width:560px;margin:0 auto;width:100%}
