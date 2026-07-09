@@ -96,7 +96,9 @@ squash-merge → realign the branch.
 
 ## 🔴 Owner-blocking (can't be coded) → [`../OWNER-ACTIONS.md`](../OWNER-ACTIONS.md)
 
-Stripe price flip (Plans page) · AI keys (Firebase service-account + DeepSeek) ·
+Stripe monthly/yearly price flip (targets in OWNER-ACTIONS; the **lifetime tier
+needs code first** — a one-time price + entitlement, not a Stripe-only edit) ·
+AI keys (Firebase service-account + DeepSeek) ·
 Stripe `RETAIN50` coupon + portal · Firebase Storage + `storage.rules` /
 `firestore.rules` · `og-image.png` (1200×630) · SEO prerender decision.
 
