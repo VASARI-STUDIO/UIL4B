@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useProPrice } from '../hooks/usePrices'
 import { LOCATIONS } from '../data/locations'
 
 const STORAGE_DISCLOSURE = [
@@ -256,6 +257,7 @@ export default function Settings({ toast }) {
   const [confirmClear, setConfirmClear] = useState(false)
   const [billing, setBilling] = useState('yearly')
   const [checkingOut, setCheckingOut] = useState(false)
+  const proPrice = useProPrice()
   const [coffeeIdx, setCoffeeIdx] = useState(0)
   const location = useLocation()
 
@@ -401,7 +403,7 @@ export default function Settings({ toast }) {
                 <div className="sub-billing-toggle" role="tablist" aria-label="Billing interval">
                   <button role="tab" aria-selected={billing === 'monthly'} className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
                   <button role="tab" aria-selected={billing === 'yearly'} className={billing === 'yearly' ? 'active' : ''} onClick={() => setBilling('yearly')}>
-                    Yearly <span className="sub-save">Save 33%</span>
+                    Yearly {proPrice.savingsPct > 0 && <span className="sub-save">Save {proPrice.savingsPct}%</span>}
                   </button>
                 </div>
 
@@ -427,10 +429,10 @@ export default function Settings({ toast }) {
                     <div className="sub-tier-head">
                       <div className="sub-tier-name">Pro</div>
                       <div className="sub-tier-price">
-                        <span className="sub-tier-amount">{billing === 'yearly' ? '$39.99' : '$4.99'}</span>
+                        <span className="sub-tier-amount">{billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly}</span>
                         <span className="sub-tier-per">{billing === 'yearly' ? 'per year' : 'per month'}</span>
                       </div>
-                      <div className="sub-tier-sub">{billing === 'yearly' ? 'AUD · ~$3.33/mo, save 33% · 7-day free trial' : 'AUD · billed monthly'}</div>
+                      <div className="sub-tier-sub">{billing === 'yearly' ? `AUD · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? `, save ${proPrice.savingsPct}%` : ''} · 7-day free trial` : 'AUD · billed monthly'}</div>
                     </div>
                     <ul className="sub-tier-list">
                       <li><Check /> <strong>Everything in Free, plus:</strong></li>
@@ -446,7 +448,7 @@ export default function Settings({ toast }) {
                       onClick={() => startCheckout(billing)}
                       disabled={!user || subLoading || checkingOut}
                     >
-                      {checkingOut ? 'Opening checkout…' : billing === 'yearly' ? 'Start 7-day free trial' : 'Upgrade — $4.99/mo'}
+                      {checkingOut ? 'Opening checkout…' : billing === 'yearly' ? 'Start 7-day free trial' : `Upgrade — ${proPrice.monthly}/mo`}
                     </button>
                     <div className="sub-tier-foot">Secure checkout via Stripe · cancel anytime</div>
                     <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: 'var(--t1)', transition: 'opacity .3s' }}>

@@ -4,24 +4,21 @@ import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
+import { useProPrice } from '../hooks/usePrices'
 
 const PLANS = {
   monthly: {
     interval: 'monthly',
     name: 'UIL4B Pro',
     cadence: 'Monthly',
-    amount: '$4.99',
     per: 'per month',
-    note: 'AUD · billed monthly · cancel anytime',
     trial: null,
   },
   yearly: {
     interval: 'yearly',
     name: 'UIL4B Pro',
     cadence: 'Yearly',
-    amount: '$39.99',
     per: 'per year',
-    note: 'AUD · ~$3.33/mo · save 33%',
     trial: '7-day free trial — you won\'t be charged today',
   },
 }
@@ -50,6 +47,11 @@ export default function Checkout() {
 
   const planKey = params.get('plan') === 'monthly' ? 'monthly' : 'yearly'
   const plan = PLANS[planKey]
+  const proPrice = useProPrice()
+  const amount = planKey === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly
+  const note = planKey === 'yearly'
+    ? `AUD · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · save ${proPrice.savingsPct}%` : ''}`
+    : 'AUD · billed monthly · cancel anytime'
   const [error, setError] = useState('')
 
   const stripePromise = useMemo(() => getStripe(), [])
@@ -88,12 +90,12 @@ export default function Checkout() {
                 <div className="checkout-plan-cadence">{plan.cadence} plan</div>
               </div>
               <div className="checkout-plan-price">
-                <span className="checkout-plan-amount">{plan.amount}</span>
+                <span className="checkout-plan-amount">{amount}</span>
                 <span className="checkout-plan-per">{plan.per}</span>
               </div>
             </div>
 
-            <div className="checkout-plan-note">{plan.note}</div>
+            <div className="checkout-plan-note">{note}</div>
 
             {plan.trial && (
               <div className="checkout-trial">
@@ -112,7 +114,7 @@ export default function Checkout() {
               {planKey === 'yearly' ? (
                 <NavLink to="/checkout?plan=monthly">Switch to monthly billing</NavLink>
               ) : (
-                <NavLink to="/checkout?plan=yearly">Switch to yearly &amp; save 33%</NavLink>
+                <NavLink to="/checkout?plan=yearly">Switch to yearly{proPrice.savingsPct > 0 ? ` & save ${proPrice.savingsPct}%` : ''}</NavLink>
               )}
             </div>
           </div>

@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { loadFont } from '../utils/googleFonts'
 import { CATEGORIES, TOOLS } from '../data/tools'
+import { useProPrice } from '../hooks/usePrices'
 
 const VISITED_KEY = 'vs-visited'
 
@@ -90,23 +91,6 @@ const PRO_FEATURES = [
   'Advanced design-system exports',
   'Priority support',
 ]
-
-function useDynamicPrices() {
-  const [prices, setPrices] = useState(null)
-  useEffect(() => {
-    fetch('/api/get-prices')
-      .then(r => r.json())
-      .then(d => setPrices(d))
-      .catch(() => {})
-  }, [])
-  return prices
-}
-
-function formatPrice(amount, currency = 'usd') {
-  const symbols = { usd: '$', eur: '€', gbp: '£', aud: 'A$', nzd: 'NZ$', cad: 'C$', sgd: 'S$', chf: 'Fr' }
-  const sym = symbols[currency] || '$'
-  return `${sym}${Number(amount).toFixed(2)}`
-}
 
 const DEMO_LABELS = ['Primary', 'Dark', 'Accent', 'Light', 'Base']
 
@@ -573,19 +557,7 @@ export default function Landing() {
   const toolsMenuRef = useRef(null)
   const loggedIn = !!user
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0]
-  const dynamicPrices = useDynamicPrices()
-
-  const proPrice = useMemo(() => {
-    const cur = 'aud'
-    if (!dynamicPrices) return { monthly: 'A$4.99', yearly: 'A$3.33', yearlyTotal: 'A$39.99' }
-    const m = dynamicPrices.monthly?.[cur]
-    const y = dynamicPrices.yearly?.[cur]
-    return {
-      monthly: m ? formatPrice(m, cur) : 'A$4.99',
-      yearly: y ? formatPrice(y / 12, cur) : 'A$3.33',
-      yearlyTotal: y ? formatPrice(y, cur) : 'A$39.99',
-    }
-  }, [dynamicPrices])
+  const proPrice = useProPrice()
 
   const enter = () => {
     try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
@@ -871,7 +843,7 @@ export default function Landing() {
               Monthly
             </button>
             <button type="button" className={`landing-billing-opt${billing === 'yearly' ? ' is-active' : ''}`} onClick={() => setBilling('yearly')} aria-pressed={billing === 'yearly'}>
-              Yearly <span className="landing-billing-save">Save 33%</span>
+              Yearly {proPrice.savingsPct > 0 && <span className="landing-billing-save">Save {proPrice.savingsPct}%</span>}
             </button>
           </div>
           <div className="landing-pricing-grid">
@@ -904,7 +876,7 @@ export default function Landing() {
               </span>
               <div className="landing-tier-name">Pro</div>
               <div className="landing-tier-price">
-                <span className="landing-tier-amount">{billing === 'yearly' ? proPrice.yearly : proPrice.monthly}</span>
+                <span className="landing-tier-amount">{billing === 'yearly' ? proPrice.yearlyPerMonth : proPrice.monthly}</span>
                 <span className="landing-tier-period">{billing === 'yearly' ? 'per month, billed yearly' : 'per month'}</span>
               </div>
               <div className="landing-tier-note">
