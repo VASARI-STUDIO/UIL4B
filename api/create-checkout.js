@@ -83,7 +83,10 @@ export default async function handler(req, res) {
     }
 
     const sessionParams = {
-      ui_mode: 'embedded',
+      // Stripe renamed the embedded Checkout ui_mode: 'embedded' is rejected by
+      // the live API ("no longer supported. Use 'embedded_page' instead."). The
+      // client still consumes the same client_secret via <EmbeddedCheckout>.
+      ui_mode: 'embedded_page',
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
