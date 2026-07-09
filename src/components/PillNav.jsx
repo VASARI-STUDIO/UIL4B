@@ -101,6 +101,15 @@ function SoonBadge({ accent }) {
 // column; Create groups then list their sub-tools underneath. Discover / Learn
 // groups have no sub-tools, so they render as a self-contained card that lifts on
 // hover — the whole tile is the click target.
+//
+// Soon signalling matches what the router ACTUALLY does: a whole category flagged
+// `soon` routes every one of its tools to the 🤫 state (see CreateTool.jsx), so a
+// tool reads as coming-soon whenever `group.soon || tool.soon`. The category title
+// carries the single "Soon" badge; each tool then shows a status dot — filled in
+// its category hue when it's live, hollow when it's still coming — so live vs.
+// upcoming is legible at a glance without stamping a redundant pill on every row.
+// The per-tool "Soon" pill only appears in the mixed case (a live category with an
+// individual tool still unbuilt), which is where the extra signal actually helps.
 function MenuGroup({ group, onNavigate }) {
   const hasTools = Array.isArray(group.tools) && group.tools.length > 0
   return (
@@ -122,14 +131,24 @@ function MenuGroup({ group, onNavigate }) {
       </Link>
       {hasTools && (
         <ul className="pnav-sub">
-          {group.tools.map((tool) => (
-            <li key={tool.id}>
-              <Link className="pnav-sublink" to={tool.route} data-soon={tool.soon} onClick={onNavigate}>
-                {tool.label}
-                {tool.soon && <SoonBadge />}
-              </Link>
-            </li>
-          ))}
+          {group.tools.map((tool) => {
+            const soon = group.soon || tool.soon
+            return (
+              <li key={tool.id}>
+                <Link
+                  className="pnav-sublink"
+                  to={tool.route}
+                  data-soon={soon ? 'true' : undefined}
+                  aria-label={soon ? `${tool.label} — coming soon` : undefined}
+                  onClick={onNavigate}
+                >
+                  <span className="pnav-sub-dot" aria-hidden="true" />
+                  <span className="pnav-sub-label">{tool.label}</span>
+                  {tool.soon && !group.soon && <SoonBadge />}
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>
