@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 
 const PAGE_SIZE = 400
@@ -70,6 +70,30 @@ function toneOf(emoji, tone) {
   return cps[0] + tone + rest.join('')
 }
 
+// EMOJI_DATA is fully static, so parse every group and flag each emoji's
+// skin-tone support exactly once at module load. Rendering is then a pure lookup
+// — no per-cell code-point spreading on every scroll, keystroke, or copy.
+const PARSED_EMOJI_DATA = EMOJI_DATA.map(g => ({
+  cat: g.cat,
+  items: parseEmojis(g.emojis).map(char => ({ char, tone: supportsSkinTone(char) })),
+}))
+const TOTAL_COUNT = PARSED_EMOJI_DATA.reduce((sum, g) => sum + g.items.length, 0)
+
+// One memoised cell so a copy (which flips `copied` on the parent) re-renders
+// only the two affected cells, not the entire ~1800-cell grid. Props are compared
+// by value, so `shown` only changes when the skin tone actually changes.
+const EmojiCell = memo(function EmojiCell({ emoji, shown, isCopied, onCopy }) {
+  return (
+    <button
+      className={`emoji-cell${isCopied ? ' copied' : ''}`}
+      onClick={() => onCopy(emoji)}
+      title={`Copy ${shown}`}
+    >
+      <span className="emoji-char">{shown}</span>
+    </button>
+  )
+})
+
 export default function EmojiLibrary({ onCopy, embedded }) {
   const { t } = useI18n()
   const [search, setSearch] = useState('')
@@ -81,41 +105,34 @@ export default function EmojiLibrary({ onCopy, embedded }) {
 
   const allCategories = EMOJI_DATA.map(d => d.cat)
 
-  const filteredData = useMemo(() => {
+  const filteredGroups = useMemo(() => {
     const q = search.toLowerCase().trim()
-    let data = activeCat ? EMOJI_DATA.filter(d => d.cat === activeCat) : EMOJI_DATA
-    if (!q) return data
-    return data.map(group => {
+    const base = activeCat ? PARSED_EMOJI_DATA.filter(g => g.cat === activeCat) : PARSED_EMOJI_DATA
+    if (!q) return base
+    return base.filter(group => {
       const keywords = CATEGORY_KEYWORDS[group.cat] || []
-      const catMatch = group.cat.toLowerCase().includes(q) || keywords.some(k => k.includes(q) || q.includes(k))
-      return { ...group, emojis: catMatch ? group.emojis : '' }
-    }).filter(g => parseEmojis(g.emojis).length > 0)
+      return group.cat.toLowerCase().includes(q) || keywords.some(k => k.includes(q) || q.includes(k))
+    })
   }, [search, activeCat])
 
-  // Pre-parse each group's emoji array and compute the total emoji count so we
-  // can window the render and drive the infinite-scroll sentinel.
-  const parsedGroups = useMemo(
-    () => filteredData.map(g => ({ cat: g.cat, emojis: parseEmojis(g.emojis) })),
-    [filteredData]
-  )
   const filteredCount = useMemo(
-    () => parsedGroups.reduce((sum, g) => sum + g.emojis.length, 0),
-    [parsedGroups]
+    () => filteredGroups.reduce((sum, g) => sum + g.items.length, 0),
+    [filteredGroups]
   )
 
-  // Build the windowed list of sections: only render up to `visible` emoji,
-  // truncating the section that straddles the boundary.
+  // Window the render: only emit up to `visible` emoji, truncating the section
+  // that straddles the boundary. Drives the infinite-scroll sentinel below.
   const shownGroups = useMemo(() => {
     const out = []
     let budget = visible
-    for (const g of parsedGroups) {
+    for (const g of filteredGroups) {
       if (budget <= 0) break
-      const slice = g.emojis.slice(0, budget)
-      out.push({ cat: g.cat, total: g.emojis.length, emojis: slice })
+      const slice = g.items.slice(0, budget)
+      out.push({ cat: g.cat, total: g.items.length, items: slice })
       budget -= slice.length
     }
     return out
-  }, [parsedGroups, visible])
+  }, [filteredGroups, visible])
 
   const hasMore = visible < filteredCount
 
@@ -142,10 +159,6 @@ export default function EmojiLibrary({ onCopy, embedded }) {
     setCopied(emoji)
     setTimeout(() => setCopied(null), 1200)
   }, [onCopy, skinTone])
-
-  // EMOJI_DATA is static — parse the full set once, not on every render
-  // (this ran on every scroll/keystroke and was the source of the scroll lag).
-  const totalCount = useMemo(() => EMOJI_DATA.reduce((sum, g) => sum + parseEmojis(g.emojis).length, 0), [])
 
   return (
     <div className="sec">
@@ -192,7 +205,7 @@ export default function EmojiLibrary({ onCopy, embedded }) {
 
         <div className="pl-chips">
           <button className={`pl-chip${!activeCat ? ' active' : ''}`} onClick={() => setCatReset(null)}>
-            All ({totalCount})
+            All ({TOTAL_COUNT})
           </button>
           {allCategories.map(cat => (
             <button
@@ -206,7 +219,7 @@ export default function EmojiLibrary({ onCopy, embedded }) {
 
       <div className="emoji-sections">
         {shownGroups.map(group => {
-          if (!group.emojis.length) return null
+          if (!group.items.length) return null
           return (
             <section key={group.cat} className="emoji-section">
               <div className="emoji-section-head">
@@ -214,19 +227,15 @@ export default function EmojiLibrary({ onCopy, embedded }) {
                 <span className="emoji-section-count">{group.total}</span>
               </div>
               <div className="emoji-grid">
-                {group.emojis.map((emoji, i) => {
-                  const shown = supportsSkinTone(emoji) ? toneOf(emoji, skinTone) : emoji
-                  return (
-                    <button
-                      key={i}
-                      className={`emoji-cell${copied === emoji ? ' copied' : ''}`}
-                      onClick={() => handleCopy(emoji)}
-                      title={`Copy ${shown}`}
-                    >
-                      <span className="emoji-char">{shown}</span>
-                    </button>
-                  )
-                })}
+                {group.items.map((item, i) => (
+                  <EmojiCell
+                    key={i}
+                    emoji={item.char}
+                    shown={item.tone && skinTone ? toneOf(item.char, skinTone) : item.char}
+                    isCopied={copied === item.char}
+                    onCopy={handleCopy}
+                  />
+                ))}
               </div>
             </section>
           )
