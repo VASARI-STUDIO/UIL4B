@@ -32,6 +32,7 @@ const Terms = lazy(() => import('./pages/Terms'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Projects = lazy(() => import('./pages/Projects'))
 const Checkout = lazy(() => import('./pages/Checkout'))
+const Plans = lazy(() => import('./pages/Plans'))
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
@@ -140,6 +141,7 @@ export default function App() {
       '/projects': 'UI L4B | Projects',
       '/settings': 'UI L4B | Settings',
       '/login': 'UI L4B | Sign In',
+      '/plans': 'UI L4B | Pricing & Plans',
       '/checkout': 'UI L4B | Checkout',
       '/community': 'UI L4B | Community',
       '/feedback': 'UI L4B | Feedback',
@@ -186,6 +188,7 @@ export default function App() {
       '/projects': 'Manage and organise your saved design projects. Access colour palettes, font selections, and exported assets.',
       '/settings': 'Customise your UI L4B experience. Manage theme, appearance, subscription, and account preferences.',
       '/login': 'Sign in to UI L4B to save projects, sync settings, and unlock AI-powered design tools.',
+      '/plans': 'Simple, honest pricing for UI L4B. Start free forever — 40 AI generations a day, unlimited palettes and exports — or upgrade to Pro for 1,000 daily AI generations and higher-quality models.',
       '/checkout': 'Upgrade to UI L4B Pro for 1,000 daily AI generations, higher-quality models, and synced projects.',
       '/community': 'Join the UI L4B community. Share designs, discover inspiration, and connect with other designers and developers.',
       '/feedback': 'Share your feedback, report bugs, or request features for UI L4B. We read every submission.',
@@ -287,6 +290,8 @@ export default function App() {
                   PillNav app-shell (the wrapper return below). */}
               <Route path="/login" element={<Login toast={toast} />} />
               <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
+              <Route path="/plans" element={<Plans />} />
+              <Route path="/pricing" element={<Navigate to="/plans" replace />} />
               <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
               <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
               <Route path="/settings" element={<Settings toast={toast} />} />

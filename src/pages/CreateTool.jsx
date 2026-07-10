@@ -55,7 +55,7 @@ function SoonState({ title, isPro }) {
       <div className="coming-actions">
         <Link to="/home" className="ui-pill ui-pill-ink ui-pill-md">See what&rsquo;s ready</Link>
         {!isPro && (
-          <Link to="/checkout" className="ui-pill ui-pill-out ui-pill-md">Go Pro</Link>
+          <Link to="/plans" className="ui-pill ui-pill-out ui-pill-md">Go Pro</Link>
         )}
       </div>
     </div>
