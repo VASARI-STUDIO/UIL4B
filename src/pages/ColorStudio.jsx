@@ -2845,7 +2845,7 @@ ${stateVars}
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600 }}>Load:</span>
                 {projects.slice(-5).map(p => (
-                  <button key={p.id} className="btn btn-s" onClick={() => { loadProject(p.id); onCopy?.('Loaded: ' + p.name) }}
+                  <button key={p.id} className="btn btn-s" onClick={() => { loadProject(p.id); toast?.('Loaded: ' + p.name) }}
                     style={{ padding: '3px 10px', fontSize: 10 }}
                   >{p.name}</button>
                 ))}
@@ -2857,16 +2857,16 @@ ${stateVars}
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input type="text" value={saveProjectName} onChange={e => setSaveProjectName(e.target.value)}
                     placeholder="Project name..." style={{ flex: 1, fontSize: 12 }}
-                    onKeyDown={e => { if (e.key === 'Enter' && saveProjectName.trim()) { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); onCopy?.('Project saved') } }}
+                    onKeyDown={e => { if (e.key === 'Enter' && saveProjectName.trim()) { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); toast?.('Project saved') } }}
                   />
-                  <button className="btn btn-accent btn-s" onClick={() => { if (saveProjectName.trim()) { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); onCopy?.('Project saved') } }}
+                  <button className="btn btn-accent btn-s" onClick={() => { if (saveProjectName.trim()) { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); toast?.('Project saved') } }}
                     style={{ padding: '4px 12px', fontSize: 11 }}>Save</button>
                 </div>
                 {projects.length > 0 && (
                   <>
                     <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t3)', marginTop: 12, marginBottom: 6 }}>Overwrite existing</div>
                     {projects.slice(-5).map(p => (
-                      <button key={p.id} onClick={() => { overwriteProject(p.id); setSaveMenuOpen(false); onCopy?.('Updated: ' + p.name) }}
+                      <button key={p.id} onClick={() => { overwriteProject(p.id); setSaveMenuOpen(false); toast?.('Updated: ' + p.name) }}
                         style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '6px 0', fontSize: 11, color: 'var(--t1)', cursor: 'pointer', fontFamily: 'var(--font)', borderBottom: '1px solid var(--border)' }}
                       >{p.name} <span style={{ fontSize: 9, color: 'var(--t3)' }}>{new Date(p.updatedAt).toLocaleDateString()}</span></button>
                     ))}
@@ -3220,7 +3220,10 @@ ${stateVars}
         {!collapsed.states && <>
         {Object.entries(STATE_PRESETS).map(([state, presets]) => {
           const sel = stateColors[state]
-          const isCustom = sel && typeof sel === 'object' && Number.isFinite(sel.custom)
+          // NB: coerce to a real boolean. `sel` is 0 for the default preset of
+          // several states, and a bare `sel && …` short-circuits to the number 0
+          // — which then leaks as a stray "0" via `{isCustom && …}` below.
+          const isCustom = !!(sel && typeof sel === 'object' && Number.isFinite(sel.custom))
           const shades = resolveStateShades(state, sel)
           const arc = ROLE_ARCS[state]
           return (
