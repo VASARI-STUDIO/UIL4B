@@ -4211,7 +4211,7 @@ html.lenis,html.lenis body{height:auto}
 /* Flex row: [lead (logo + collapsible search)] [triggers] [actions]. The pill
    shrink-wraps its content (width:fit-content), so revealing the search on the
    left and the utility cluster on the right visibly grows the bar on hover. */
-.pnav-inner{display:flex;align-items:center;gap:10px;height:100%;padding:0 12px}
+.pnav-inner{display:flex;align-items:center;gap:16px;height:100%;padding:0 16px 0 22px}
 .pnav-lead{display:flex;align-items:center;gap:0;min-width:0}
 .pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
@@ -4236,7 +4236,10 @@ html.lenis,html.lenis body{height:auto}
 .pnav-search-field:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .pnav-search-field .pnav-search-ico{flex:0 0 auto}
 .pnav-search-ph{white-space:nowrap}
-.pnav-export{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;white-space:nowrap;border:none;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;cursor:pointer;transition:background var(--dur-2) var(--ease-out)}
+/* Export lives in the RIGHT actions cluster now: collapsed at rest, revealed
+   with the pill on hover / focus / pinned-open, ahead of the Upgrade pill. */
+.pnav-export{display:inline-flex;align-items:center;gap:7px;height:40px;max-width:0;padding:0;white-space:nowrap;border:none;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;opacity:0;overflow:hidden;pointer-events:none;cursor:pointer;transition:max-width var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.pnav:hover .pnav-export,.pnav:focus-within .pnav-export,.pnav.is-expanded .pnav-export{max-width:160px;padding:0 14px;opacity:1;overflow:visible;pointer-events:auto}
 .pnav-export:hover{background:color-mix(in srgb,var(--accent) 18%,var(--bg-2))}
 
 /* Gear + avatar icon buttons and their popovers */
@@ -4276,15 +4279,15 @@ html.lenis,html.lenis body{height:auto}
 .pnav-pop-id-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Mega-menu panel — one shared node, morphs width per section */
-.pnav-menu{position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;width:960px;max-width:calc(100vw - 32px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-3) var(--ease-inout);animation:pnav-menu-in var(--dur-3) var(--ease-out)}
+.pnav-menu{position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;width:1040px;max-width:calc(100vw - 32px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-3) var(--ease-inout);animation:pnav-menu-in var(--dur-3) var(--ease-out)}
 @keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-6px) scale(.98)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
-.pnav-menu[data-menu="create"]{width:1120px}
-.pnav-menu[data-menu="discover"]{width:860px}
-.pnav-menu[data-menu="learn"]{width:940px}
-.pnav-menu-body{padding:32px 40px;animation:fx-fade var(--dur-2) var(--ease-out)}
+.pnav-menu[data-menu="create"]{width:1200px}
+.pnav-menu[data-menu="discover"]{width:940px}
+.pnav-menu[data-menu="learn"]{width:1020px}
+.pnav-menu-body{padding:40px 48px;animation:fx-fade var(--dur-2) var(--ease-out)}
 /* Menu body splits into the group grid (left) + a promo/feature card (right) */
-.pnav-menu-cols{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:40px;align-items:stretch}
-.pnav-grid{display:grid;gap:40px 48px}
+.pnav-menu-cols{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:56px;align-items:stretch}
+.pnav-grid{display:grid;gap:44px 56px}
 .pnav-menu[data-menu="create"] .pnav-grid{grid-template-columns:repeat(3,1fr)}
 .pnav-menu[data-menu="discover"] .pnav-grid,.pnav-menu[data-menu="learn"] .pnav-grid{grid-template-columns:repeat(2,1fr)}
 .pnav-group{min-width:0}
@@ -4330,7 +4333,7 @@ html.lenis,html.lenis body{height:auto}
 .pnav-promo-blurb{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
 .pnav-promo-cta{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-body-s);font-weight:600;color:var(--accent);text-decoration:none;transition:color var(--dur-1) var(--ease-out)}
 .pnav-promo-cta:hover{color:var(--accent-strong);text-decoration:none}
-.pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 40px;border-top:1px solid var(--border);background:var(--bg-0)}
+.pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 48px;border-top:1px solid var(--border);background:var(--bg-0)}
 .pnav-menu-foot-note{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .pnav-menu-foot-link{font-size:var(--fs-body-s);font-weight:560;color:var(--t0);text-decoration:none}
 

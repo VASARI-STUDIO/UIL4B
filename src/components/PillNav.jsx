@@ -54,6 +54,18 @@ function ExportIcon() {
   )
 }
 
+function MeatballIcon() {
+  // Horizontal 3-dot "more" affordance — the resting utility button. Reads as
+  // "additional options" and stays crisp at nav size.
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.75" />
+      <circle cx="12" cy="12" r="1.75" />
+      <circle cx="19" cy="12" r="1.75" />
+    </svg>
+  )
+}
+
 function GearIcon() {
   // Canonical Lucide "settings" cog — even, well-formed teeth that stay crisp at
   // nav size (the previous hand-rolled path rendered lumpy/asymmetric).
@@ -237,8 +249,9 @@ export default function PillNav() {
               <span className="pnav-word">UIL4B</span>
             </Link>
 
-            {/* Search + Export — revealed on pill hover / focus / when a menu is
-                pinned open, sitting to the LEFT of the three triggers. */}
+            {/* Search — revealed on pill hover / focus / when a menu is pinned
+                open, sitting to the LEFT of the three triggers. Export now lives
+                on the RIGHT, in the actions cluster. */}
             <div className="pnav-search">
               <button
                 type="button"
@@ -250,16 +263,6 @@ export default function PillNav() {
               >
                 <SearchIcon />
                 <span className="pnav-search-ph">Search</span>
-              </button>
-              <button
-                type="button"
-                className="pnav-export"
-                aria-haspopup="dialog"
-                aria-expanded={exportOpen}
-                onClick={openExport}
-              >
-                <ExportIcon />
-                <span>Export</span>
               </button>
             </div>
           </div>
@@ -282,6 +285,19 @@ export default function PillNav() {
           </div>
 
           <div className="pnav-actions">
+            {/* Export — collapsed at rest, revealed with the pill on hover /
+                focus / pinned-open, sitting on the RIGHT ahead of Upgrade. */}
+            <button
+              type="button"
+              className="pnav-export"
+              aria-haspopup="dialog"
+              aria-expanded={exportOpen}
+              onClick={openExport}
+            >
+              <ExportIcon />
+              <span>Export</span>
+            </button>
+
             {user && !isPro && (
               <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/checkout" onClick={closeAll}>
                 Upgrade
@@ -310,10 +326,10 @@ export default function PillNav() {
                   className="pnav-icon-btn"
                   aria-haspopup="true"
                   aria-expanded={menu === 'gear'}
-                  aria-label="Preferences"
+                  aria-label="More options"
                   onClick={() => toggleMenu('gear')}
                 >
-                  <GearIcon />
+                  <MeatballIcon />
                 </button>
                 {menu === 'gear' && (
                   <div className="pnav-pop" aria-label="Preferences">
