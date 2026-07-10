@@ -455,8 +455,15 @@ export default function PillNav() {
           <div className="pnav-menu-body">
             <div className="pnav-menu-cols">
               <div className="pnav-grid">
-                {activeSection.groups.map((group) => (
-                  <MenuGroup key={group.id} group={group} onNavigate={closeAll} />
+                {activeSection.columns.map((col) => (
+                  <div className="pnav-col" key={col.label}>
+                    <p className="pnav-col-label">{col.label}</p>
+                    <div className="pnav-col-groups">
+                      {col.groups.map((group) => (
+                        <MenuGroup key={group.id} group={group} onNavigate={closeAll} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
               {activeSection.promo && (
