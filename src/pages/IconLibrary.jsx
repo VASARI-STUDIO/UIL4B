@@ -692,6 +692,25 @@ function collectionToNames(d) {
   return names
 }
 
+// ── Collection cache ──────────────────────────────────────────────────────────
+// Module-level (survives remounts) cache of parsed /collection responses, keyed by
+// Iconify prefix. Every browse path (All packs / single pack / cross-pack group /
+// search-clear) funnels through getCollectionNames, so a pack is fetched from the
+// CDN at most ONCE per session. Switching packs or collections — or bouncing back
+// to "All packs" — then paints from memory with no network round-trip. Caches the
+// RAW de-duped name list + title; each caller still applies its own style filter.
+const COLLECTION_CACHE = new Map()
+
+async function getCollectionNames(pack) {
+  const hit = COLLECTION_CACHE.get(pack)
+  if (hit) return hit
+  const r = await fetchWithFallback(`/collection?prefix=${pack}`, 6000)
+  const d = await r.json()
+  const entry = { names: collectionToNames(d), title: d.title || pack }
+  COLLECTION_CACHE.set(pack, entry)
+  return entry
+}
+
 const PAGE_SIZE = 120
 
 export default function IconLibrary({ onCopy, embedded }) {
@@ -750,19 +769,37 @@ export default function IconLibrary({ onCopy, embedded }) {
     const rid = ++reqId.current
     retryRef.current = browseAll
     setSource('all'); setGroup(null); setPack('')
-    setLoading(true); setLoadError(false)
-    setIcons([]); setVisible(PAGE_SIZE); setMode('')
+    setLoadError(false)
+    setVisible(PAGE_SIZE); setMode('')
     const lists = ALL_PACKS.map(() => [])
+
+    // Warm-cache fast path: if every pack is already cached (e.g. returning to
+    // "All packs" after browsing a single pack), paint synchronously with no
+    // network and no skeleton flash.
+    if (ALL_PACKS.every(p => COLLECTION_CACHE.has(p))) {
+      cdnOk.current = true
+      ALL_PACKS.forEach((p, idx) => {
+        const names = keepStyle(p, COLLECTION_CACHE.get(p).names, PACK_STYLE[p]).slice(0, ALL_INITIAL_PER_PACK)
+        lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
+      })
+      const merged = lists.flat()
+      setIcons(merged)
+      setMode(`All packs · ${merged.length.toLocaleString()} icons · ${ALL_PACKS.length} sets`)
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setIcons([])
     let settled = 0
     let okCount = 0
     ALL_PACKS.forEach((p, idx) => {
-      fetchWithFallback(`/collection?prefix=${p}`, 6000)
-        .then(r => r.json())
-        .then(d => {
+      getCollectionNames(p)
+        .then(({ names: raw }) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
           okCount++
-          const names = keepStyle(p, collectionToNames(d), PACK_STYLE[p]).slice(0, ALL_INITIAL_PER_PACK)
+          const names = keepStyle(p, raw, PACK_STYLE[p]).slice(0, ALL_INITIAL_PER_PACK)
           lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
           // Default sort = pack-by-pack: lists stays in ALL_PACKS order and each
           // pack's icons are contiguous, so flat() groups every pack together
@@ -793,16 +830,15 @@ export default function IconLibrary({ onCopy, embedded }) {
     const rid = ++reqId.current
     retryRef.current = () => browsePack(packFilter)
     setLoading(true); setLoadError(false)
-    fetchWithFallback(`/collection?prefix=${packFilter}`, 6000)
-      .then(r => r.json())
-      .then(d => {
+    getCollectionNames(packFilter)
+      .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
-        const names = keepStyle(packFilter, collectionToNames(d), PACK_STYLE[packFilter])
+        const names = keepStyle(packFilter, raw, PACK_STYLE[packFilter])
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
-        setMode(`${d.title || packFilter} · ${names.length.toLocaleString()} icons`)
+        setMode(`${title} · ${names.length.toLocaleString()} icons`)
         setLoading(false)
       })
       .catch(() => {
@@ -823,9 +859,8 @@ export default function IconLibrary({ onCopy, embedded }) {
     setSource('group'); setGroup(groupKey); setPack('')
     setLoading(true); setLoadError(false)
     Promise.all(g.packs.map(p =>
-      fetchWithFallback(`/collection?prefix=${p}`, 6000)
-        .then(r => r.json())
-        .then(d => ({ names: keepStyle(p, collectionToNames(d), groupKey).slice(0, PER_PACK_CAP), pack: p, ok: true }))
+      getCollectionNames(p)
+        .then(({ names }) => ({ names: keepStyle(p, names, groupKey).slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
@@ -1004,13 +1039,58 @@ export default function IconLibrary({ onCopy, embedded }) {
     if (source === 'custom' && isPro) browseCustom()
   }, [source, isPro, browseCustom])
 
+  // Clear-all for the two My Icons sections. Saved (custom) is Pro-only and wipes
+  // the store; Recently copied is available to everyone and wipes the recents.
+  const handleClearCustom = useCallback(() => {
+    if (!isPro) return
+    writeCustomIcons([])
+    setIcons([])
+    setMode('Custom Icons · 0 saved')
+  }, [isPro])
+
+  const handleClearRecents = useCallback(() => {
+    clearRecentIcons()
+    setRecents([])
+  }, [])
+
   const selectValue = group ? `group:${group}` : source === 'custom' ? 'custom' : source === 'all' ? 'all' : pack
 
   const shown = icons.slice(0, visible)
   const hasMore = visible < icons.length
-  const customLocked = source === 'custom' && !isPro
-  const customEmpty = source === 'custom' && isPro && !loading && icons.length === 0
-  const searchEmpty = source !== 'custom' && !loading && icons.length === 0 && !loadError
+  const isMyIcons = source === 'custom'
+  const searchEmpty = !isMyIcons && !loading && icons.length === 0 && !loadError
+
+  // Shared glyph renderer — one code path for custom (saved), CDN and embedded
+  // icons, reused by the main grid and both My Icons sections.
+  const iconGlyph = (icon) => {
+    if (icon.custom) {
+      return <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
+    }
+    if (icon.cdn) {
+      return <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} />
+    }
+    return (
+      <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} aria-hidden="true">
+        <path d={icon.d} />
+      </svg>
+    )
+  }
+
+  const renderCell = (icon, idx) => (
+    <div
+      key={icon.id || icon.key || `${idx}-${icon.name || ''}`}
+      className="ic"
+      role="button"
+      tabIndex={0}
+      aria-label={`Customise ${icon.name}`}
+      onClick={() => handleIconClick(icon)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIconClick(icon) } }}
+    >
+      {iconGlyph(icon)}
+      <span>{icon.name}</span>
+      {!icon.custom && icon.pack && <span className="ic-pack">{icon.pack}</span>}
+    </div>
+  )
 
   return (
     <div className="sec">
@@ -1022,7 +1102,7 @@ export default function IconLibrary({ onCopy, embedded }) {
         </div>
       )}
 
-      {recents.length > 0 && (
+      {recents.length > 0 && !isMyIcons && (
         <div className="ig-rail">
           <div className="ig-rail-head">
             Recent
@@ -1088,7 +1168,7 @@ export default function IconLibrary({ onCopy, embedded }) {
             {group && <option value={`group:${group}`}>◆ {ICON_GROUPS[group].label} collection</option>}
             <option value="all">All packs</option>
             <optgroup label="Yours">
-              <option value="custom">Custom Icons</option>
+              <option value="custom">My Icons</option>
             </optgroup>
             <optgroup label="Interface (outlined)">
               <option value="lucide">Lucide</option>
@@ -1131,7 +1211,7 @@ export default function IconLibrary({ onCopy, embedded }) {
           </button>
 
           <div className="pl-chips">
-            <button type="button" className={`pl-chip${source === 'custom' ? ' active' : ''}`} onClick={() => browseCustom()}>Custom</button>
+            <button type="button" className={`pl-chip${source === 'custom' ? ' active' : ''}`} onClick={() => browseCustom()}>My Icons</button>
             {GROUP_ORDER.map(key => (
               <button key={key} type="button" className={`pl-chip${group === key ? ' active' : ''}`} onClick={() => handleGroupToggle(key)}>
                 {ICON_GROUPS[key].label}
@@ -1140,14 +1220,53 @@ export default function IconLibrary({ onCopy, embedded }) {
           </div>
         </div>
 
-        {customLocked ? (
-          <div className="ig-custom-lock">
-            <span className="ig-custom-lock-glyph" aria-hidden="true">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-            </span>
-            <h3 className="ig-custom-lock-title">Save your customised icons</h3>
-            <p className="ig-custom-lock-sub">Pro keeps every icon you tweak in one place, ready to reuse across projects.</p>
-            <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={() => navigate('/checkout')}>Upgrade to Pro</button>
+        {isMyIcons ? (
+          // ── My Icons: two distinct collections, each independently clearable ──
+          // 1) Saved — icons customised + saved to the project (Pro-gated store);
+          // 2) Recently copied — every icon copied out, for quick reuse (all users).
+          <div className="ig-myicons">
+            <section className="ig-mysec">
+              <div className="ig-mysec-head">
+                <h3 className="ig-mysec-title">Saved</h3>
+                {isPro && icons.length > 0 && (
+                  <button type="button" className="ig-rail-clear" onClick={handleClearCustom} title="Clear all saved icons">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    Clear all
+                  </button>
+                )}
+              </div>
+              {!isPro ? (
+                <div className="ig-custom-lock">
+                  <span className="ig-custom-lock-glyph" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  </span>
+                  <h3 className="ig-custom-lock-title">Save your customised icons</h3>
+                  <p className="ig-custom-lock-sub">Pro keeps every icon you tweak in one place, ready to reuse across projects.</p>
+                  <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={() => navigate('/checkout')}>Upgrade to Pro</button>
+                </div>
+              ) : icons.length > 0 ? (
+                <div className="ig">{shown.map(renderCell)}</div>
+              ) : (
+                <div className="ig-custom-empty">No saved icons yet — open any icon, adjust it on the stage, and hit Save to keep it here.</div>
+              )}
+            </section>
+
+            <section className="ig-mysec">
+              <div className="ig-mysec-head">
+                <h3 className="ig-mysec-title">Recently copied</h3>
+                {recents.length > 0 && (
+                  <button type="button" className="ig-rail-clear" onClick={handleClearRecents} title="Clear recently copied">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    Clear all
+                  </button>
+                )}
+              </div>
+              {recents.length > 0 ? (
+                <div className="ig">{recents.map(renderCell)}</div>
+              ) : (
+                <div className="ig-custom-empty">Icons you copy show up here for quick reuse.</div>
+              )}
+            </section>
           </div>
         ) : (
           <>
@@ -1166,45 +1285,13 @@ export default function IconLibrary({ onCopy, embedded }) {
                     <div className="sk ig-skel-label" />
                   </div>
                 ))
-                : shown.map((icon, idx) => (
-                  <div
-                    key={icon.id || icon.key || `${idx}-${icon.name || ''}`}
-                    className="ic"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Customise ${icon.name}`}
-                    onClick={() => handleIconClick(icon)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIconClick(icon) } }}
-                  >
-                    {icon.custom ? (
-                      <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
-                    ) : icon.cdn ? (
-                      <img
-                        src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`}
-                        width="24" height="24"
-                        className={invClass(icon.pack)}
-                        loading="lazy"
-                        alt={icon.name}
-                      />
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'}>
-                        <path d={icon.d} />
-                      </svg>
-                    )}
-                    <span>{icon.name}</span>
-                    {!icon.custom && <span className="ic-pack">{icon.pack}</span>}
-                  </div>
-                ))}
+                : shown.map(renderCell)}
             </div>
 
             {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}
 
             {loading && icons.length > 0 && (
               <p className="ig-status">Loading more…</p>
-            )}
-
-            {customEmpty && (
-              <div className="ig-custom-empty">No custom icons yet — open any icon, adjust it on the stage, and hit Save to keep it here.</div>
             )}
 
             {searchEmpty && (
