@@ -21,11 +21,11 @@ export const CREATE_GROUPS = [
     hue: 'colour',
     home: '/color',
     desc: 'Palettes, tints, gradients and contrast — one system.',
-    soon: true,
+    soon: false,
     // Colour is one merged client tool: every sub-generator lives on /color.
     tools: [
       { id: 'palette', label: 'Palette', route: '/color', soon: false },
-      { id: 'semantic', label: 'Semantic Colour', route: '/color', soon: true },
+      { id: 'semantic', label: 'Semantic Colour', route: '/color', soon: false },
       { id: 'tint', label: 'Tint', route: '/color', soon: false },
       { id: 'ui-colour', label: 'UI Colour', route: '/color', soon: false },
       { id: 'gradient', label: 'Gradient', route: '/color', soon: false },

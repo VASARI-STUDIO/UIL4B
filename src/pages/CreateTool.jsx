@@ -5,6 +5,7 @@ import Toast from '../components/Toast'
 import { findCreateGroup, resolveTool } from '../data/toolTree'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useToast } from '../hooks/useToast'
+import { useClipboard } from '../hooks/useClipboard'
 
 // The in-tool shell for every Create route. Navigation now lives entirely in the
 // top PillNav (the mega-menus own the tool tree), so this shell is a single,
@@ -24,10 +25,15 @@ import { useToast } from '../hooks/useToast'
 // and flips between the two libraries via a large segmented pill title.
 const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 
+// Colour System Generator — one merged client tool; every sub-generator
+// (palette / semantic / tint / UI colour / gradient / contrast) lives on /color.
+const ColorStudio = lazy(() => import('./ColorStudio'))
+
 // Route → the component that is actually built. A Create route absent from this
 // map still renders the 🤫 state even if its group is flagged live — a safe
 // fallback that can never mount a half-finished screen.
 const LIVE_TOOLS = {
+  '/color': ColorStudio,
   '/icons': IconEmojiLibrary,
   '/emoji': IconEmojiLibrary,
 }
@@ -66,6 +72,10 @@ export default function CreateTool() {
   const location = useLocation()
   const { isPro } = useSubscription()
   const { message, visible, toast } = useToast()
+  // Live tools that copy values (ColorStudio) call onCopy(value) to WRITE the
+  // clipboard + toast; the icon/emoji libraries write the clipboard themselves
+  // and use onCopy purely as a notification (harmless idempotent re-write here).
+  const copy = useClipboard(toast)
 
   const group = findCreateGroup(location.pathname)
   const { name, isHome } = resolveTool(location.pathname)
@@ -76,8 +86,10 @@ export default function CreateTool() {
 
   // A live group's category home has no screen of its own — send it to the first
   // real tool (e.g. /icons-emoji → /icons) so visitors never land on an empty home.
+  // Skip when the first tool IS the category home (Colour lives entirely on
+  // /color) — redirecting a route to itself would loop.
   const firstTool = group.tools?.[0]
-  if (isHome && !group.soon && firstTool) {
+  if (isHome && !group.soon && firstTool && normPath(firstTool.route) !== normPath(group.home)) {
     return <Navigate to={firstTool.route} replace />
   }
 
@@ -92,7 +104,7 @@ export default function CreateTool() {
         <main className={LiveTool ? 'rail-content rail-content--live' : 'rail-content'}>
           {LiveTool ? (
             <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
-              <LiveTool onCopy={() => toast('Copied to clipboard')} />
+              <LiveTool onCopy={copy} toast={toast} />
             </Suspense>
           ) : (
             <SoonState title={isHome ? group.label : name} isPro={isPro} />
