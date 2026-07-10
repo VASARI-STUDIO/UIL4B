@@ -94,6 +94,37 @@ function MoonIcon() {
   )
 }
 
+// The day/night segmented control, shared by the account popover (signed in) and
+// the compact menu popover (signed out) so the theme toggle reads identically in
+// both places.
+function ThemeSeg({ theme, setTheme }) {
+  return (
+    <div className="pnav-pop-row">
+      <span className="pnav-pop-row-label">Theme</span>
+      <div className="pnav-seg" role="group" aria-label="Theme">
+        <button
+          type="button"
+          className="pnav-seg-btn"
+          aria-pressed={theme === 'light'}
+          onClick={() => setTheme('light')}
+        >
+          <SunIcon />
+          Day
+        </button>
+        <button
+          type="button"
+          className="pnav-seg-btn"
+          aria-pressed={theme === 'dark'}
+          onClick={() => setTheme('dark')}
+        >
+          <MoonIcon />
+          Night
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // Initials for the avatar fallback when a user has no profile photo.
 function initials(profile, user) {
   const src = profile?.displayName || user?.email || ''
@@ -172,7 +203,7 @@ export default function PillNav() {
   const { isPro } = useSubscription()
   const { theme, setTheme } = useTheme()
   const [open, setOpen] = useState(null) // active mega-menu section id, or null
-  const [menu, setMenu] = useState(null) // 'gear' | 'avatar' | null
+  const [menu, setMenu] = useState(null) // 'account' | null (merged profile + settings popover)
   const [sheet, setSheet] = useState(false) // mobile sheet open
   const [sheetSection, setSheetSection] = useState('create') // expanded accordion
   const [scrolled, setScrolled] = useState(false)
@@ -298,93 +329,54 @@ export default function PillNav() {
               <span>Export</span>
             </button>
 
+            {/* Conversion + auth CTAs — hidden at rest, revealed with the pill on
+                hover / focus / pinned-open (so the resting bar stays minimal). The
+                Upgrade path also lives inside the account popover for signed-in
+                users, so hiding it at rest never orphans it. */}
             {user && !isPro && (
-              <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/checkout" onClick={closeAll}>
+              <Link className="ui-pill ui-pill-accent ui-pill-sm pnav-cta-reveal" to="/checkout" onClick={closeAll}>
                 Upgrade
               </Link>
             )}
 
             {!user && (
               <>
-                <Link className="ui-pill ui-pill-ghost ui-pill-sm" to="/login" onClick={closeAll}>
+                <Link className="ui-pill ui-pill-ghost ui-pill-sm pnav-cta-reveal" to="/login" onClick={closeAll}>
                   Log in
                 </Link>
-                <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/login" onClick={closeAll}>
+                <Link className="ui-pill ui-pill-accent ui-pill-sm pnav-cta-reveal" to="/login" onClick={closeAll}>
                   Get started
                 </Link>
               </>
             )}
 
-            {/* Utility cluster — settings + account sit hidden at rest and reveal
-                as the whole pill expands on hover / focus (or when a menu is
-                pinned open), so the resting bar stays minimal. */}
-            <div className="pnav-util">
-              {/* Gear — quick preferences (day/night + link to full settings) */}
-              <div className="pnav-pop-wrap">
-                <button
-                  type="button"
-                  className="pnav-icon-btn"
-                  aria-haspopup="true"
-                  aria-expanded={menu === 'gear'}
-                  aria-label="More options"
-                  onClick={() => toggleMenu('gear')}
-                >
-                  <MeatballIcon />
-                </button>
-                {menu === 'gear' && (
-                  <div className="pnav-pop" aria-label="Preferences">
-                    <p className="pnav-pop-head">Appearance</p>
-                    <div className="pnav-pop-row">
-                      <span className="pnav-pop-row-label">Theme</span>
-                      <div className="pnav-seg" role="group" aria-label="Theme">
-                        <button
-                          type="button"
-                          className="pnav-seg-btn"
-                          aria-pressed={theme === 'light'}
-                          onClick={() => setTheme('light')}
-                        >
-                          <SunIcon />
-                          Day
-                        </button>
-                        <button
-                          type="button"
-                          className="pnav-seg-btn"
-                          aria-pressed={theme === 'dark'}
-                          onClick={() => setTheme('dark')}
-                        >
-                          <MoonIcon />
-                          Night
-                        </button>
-                      </div>
-                    </div>
-                    <div className="pnav-pop-sep" />
-                    <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
-                      <GearIcon />
-                      <span>All settings</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-              {user && (
-                /* Avatar — account menu */
+            {/* Profile — the avatar sits hidden at rest and reveals as the whole
+                pill expands on hover / focus (or when the menu is pinned open).
+                Hovering it darkens/blurs the photo and overlays a settings cog to
+                signal that account AND preferences now live behind it. It opens the
+                merged account+settings popover. */}
+            {user && (
+              <div className="pnav-util">
                 <div className="pnav-pop-wrap">
                   <button
                     type="button"
                     className="pnav-avatar-btn"
                     aria-haspopup="true"
-                    aria-expanded={menu === 'avatar'}
-                    aria-label="Account menu"
-                    onClick={() => toggleMenu('avatar')}
+                    aria-expanded={menu === 'account'}
+                    aria-label="Account and settings"
+                    onClick={() => toggleMenu('account')}
                   >
                     {avatarUrl ? (
                       <img className="pnav-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
                     ) : (
                       <span className="pnav-avatar" aria-hidden="true">{initialsStr}</span>
                     )}
+                    <span className="pnav-avatar-cog" aria-hidden="true">
+                      <GearIcon />
+                    </span>
                   </button>
-                  {menu === 'avatar' && (
-                    <div className="pnav-pop pnav-pop--account" role="menu" aria-label="Account">
+                  {menu === 'account' && (
+                    <div className="pnav-pop pnav-pop--account" role="menu" aria-label="Account and settings">
                       <div className="pnav-pop-id">
                         {avatarUrl ? (
                           <img className="pnav-pop-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
@@ -400,8 +392,12 @@ export default function PillNav() {
                         </span>
                       </div>
                       <div className="pnav-pop-sep" />
+                      <p className="pnav-pop-head">Appearance</p>
+                      <ThemeSeg theme={theme} setTheme={setTheme} />
+                      <div className="pnav-pop-sep" />
                       <Link className="pnav-pop-item" role="menuitem" to="/settings" onClick={closeAll}>
-                        Account
+                        <GearIcon />
+                        <span>Account &amp; settings</span>
                       </Link>
                       <Link className="pnav-pop-item" role="menuitem" to="/checkout" onClick={closeAll}>
                         {isPro ? 'Manage plan' : 'Plans & upgrade'}
@@ -417,6 +413,37 @@ export default function PillNav() {
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Compact "more" affordance — the single control on the resting pill,
+                replacing the old always-on Upgrade button. It collapses away once
+                the pill expands (the avatar takes over for signed-in users), except
+                while its own popover is open. For signed-out visitors it carries the
+                theme toggle + auth links so preferences stay reachable. */}
+            <div className="pnav-pop-wrap pnav-more-wrap">
+              <button
+                type="button"
+                className="pnav-more"
+                aria-haspopup="true"
+                aria-expanded={!user && menu === 'account'}
+                aria-label={user ? 'Account and settings' : 'Menu'}
+                onClick={() => toggleMenu('account')}
+              >
+                <MeatballIcon />
+              </button>
+              {!user && menu === 'account' && (
+                <div className="pnav-pop" aria-label="Menu">
+                  <p className="pnav-pop-head">Appearance</p>
+                  <ThemeSeg theme={theme} setTheme={setTheme} />
+                  <div className="pnav-pop-sep" />
+                  <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
+                    Log in
+                  </Link>
+                  <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
+                    Get started
+                  </Link>
                 </div>
               )}
             </div>
