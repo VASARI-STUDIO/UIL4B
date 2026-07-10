@@ -175,7 +175,7 @@ export default function App() {
       '/discover/gradients': 'A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.',
       '/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
       '/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
-      '/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by DeepSeek and Gemini.',
+      '/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by OpenRouter and Gemini.',
       '/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
       '/prompts': 'Browse and submit community design prompts for AI image and web generators.',
       '/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',

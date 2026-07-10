@@ -18,7 +18,7 @@ serverless functions under `/api`.
 | **Auth** | Firebase Auth ^11.9 | Google One Tap + email/password. |
 | **Database** | Firestore (region `australia-southeast1`) | Project `uil4b-357c5`. |
 | **Server SDK** | `firebase-admin` ^13 | Server-only, in `/api` + `api/_lib/firebase-admin.js`. |
-| **AI** | DeepSeek (primary), Gemini (fallback) | Server-side only; keys are non-`VITE_` env vars. |
+| **AI** | OpenRouter (primary), Gemini (fallback) | Server-side only; keys are non-`VITE_` env vars. |
 | **Payments** | Stripe (`stripe` ^22 server, `@stripe/stripe-js` / `@stripe/react-stripe-js` client) | Embedded checkout + customer portal. |
 | **Zip/Export** | `jszip` ^3.10 | Used by the export/handoff builders. |
 | **Lint** | ESLint ^9 (flat config `eslint.config.js`) | `react-hooks` + `react-refresh` plugins. |
@@ -38,7 +38,7 @@ npm run setup:stripe # node scripts/setup-stripe.js  (founder-gated, see human-v
 - **Client bundle** (`src/`): may read `import.meta.env.VITE_*` only. Anything
   `VITE_`-prefixed ships to the browser — treat it as public.
 - **Server** (`/api/*.js`): reads real secrets from `process.env` (no `VITE_`
-  prefix). DeepSeek/Gemini/Stripe secret keys and the Firebase service account
+  prefix). OpenRouter/Gemini/Stripe secret keys and the Firebase service account
   live here only.
 - **Public-by-design values are NOT secrets**: the Firebase web `apiKey`, the
   Stripe publishable key, and the Google client ID are meant to ship in the
@@ -46,8 +46,9 @@ npm run setup:stripe # node scripts/setup-stripe.js  (founder-gated, see human-v
 
 ## AI backends
 
-- **DeepSeek** is the primary generator; **Gemini** is the fallback.
-- Server env keys in use across `/api`: `DEEPSEEK_API_KEY` / `DEEPSEEK_KEY`,
+- **OpenRouter** is the primary generator; **Gemini** is the fallback.
+- Server env keys in use across `/api`: `OPENROUTER_API_KEY` (+ optional
+  `OPENROUTER_MODEL`, default `deepseek/deepseek-chat`),
   `GEMINI_API_KEY` / `GEMINI_KEY`, `GOOGLE_API_KEY`,
   `GOOGLE_GENERATIVE_AI_API_KEY`, and `GOOGLE_FONTS_API_KEY` (fonts).
 - Always assume an AI provider can be down — degrade gracefully (see

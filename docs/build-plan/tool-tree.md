@@ -78,7 +78,7 @@ Typography (`/fontgallery`, `/fontpairs`, `/typescale`) · UI (`/ui-builder`,
 (`/ai-prompt`, `/landing-prompts`, `/alt-text`, `/prompts`) · Icons/Emoji
 (`/icons`, `/emoji`).
 
-**Kept infra/features:** Firebase Auth/Firestore, Stripe, DeepSeek/Gemini AI,
+**Kept infra/features:** Firebase Auth/Firestore, Stripe, OpenRouter/Gemini AI,
 feedback tool, admin dashboard, `sections.jsx` surface model (Workspace→Create),
 `ComingSoon.jsx` hidden-tool page. **Removed:** Dashboard page; all prior design
 styling. Backup of the pre-rebuild app: `backup/pre-redesign-2026-07-02`.

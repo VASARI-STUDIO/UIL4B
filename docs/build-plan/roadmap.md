@@ -103,7 +103,7 @@ squash-merge → realign the branch.
 
 Stripe monthly/yearly price flip (targets in OWNER-ACTIONS; the **lifetime tier
 needs code first** — a one-time price + entitlement, not a Stripe-only edit) ·
-AI keys (Firebase service-account + DeepSeek) ·
+AI keys (Firebase service-account + OpenRouter) ·
 Stripe `RETAIN50` coupon + portal · Firebase Storage + `storage.rules` /
 `firestore.rules` · `og-image.png` (1200×630) · SEO prerender decision.
 

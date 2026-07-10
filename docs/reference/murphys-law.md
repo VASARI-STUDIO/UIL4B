@@ -26,7 +26,7 @@ Every interactive feature must visibly handle all four:
 
 ## Resilience expectations
 
-- **External services can fail.** DeepSeek/Gemini/Stripe/Firebase being down
+- **External services can fail.** OpenRouter/Gemini/Stripe/Firebase being down
   must not crash the page. Catch, message, and offer a retry or fallback.
 - **Double-submit guard.** Disable buttons during async work.
 - **localStorage may throw.** Wrap reads/writes in `try/catch` (the codebase
