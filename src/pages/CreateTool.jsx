@@ -29,6 +29,12 @@ const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 // (palette / semantic / tint / UI colour / gradient / contrast) lives on /color.
 const ColorStudio = lazy(() => import('./ColorStudio'))
 
+// Imagery & Media — client-side asset tools. FileConverter bundles image
+// convert/compress + video→GIF/frames (ffmpeg.wasm, loaded on demand);
+// RatioCalculator is a light aspect-ratio helper.
+const FileConverter = lazy(() => import('./FileConverter'))
+const RatioCalculator = lazy(() => import('./RatioCalculator'))
+
 // Route → the component that is actually built. A Create route absent from this
 // map still renders the 🤫 state even if its group is flagged live — a safe
 // fallback that can never mount a half-finished screen.
@@ -36,6 +42,8 @@ const LIVE_TOOLS = {
   '/color': ColorStudio,
   '/icons': IconEmojiLibrary,
   '/emoji': IconEmojiLibrary,
+  '/file-converter': FileConverter,
+  '/ratio': RatioCalculator,
 }
 
 // Match toolTree's own path handling (lowercase, strip query/hash, drop trailing
