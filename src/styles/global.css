@@ -4448,7 +4448,10 @@ html.lenis,html.lenis body{height:auto}
 
 /* Recents rail */
 .ig-rail{margin:8px 0 28px}
-.ig-rail-head{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
+.ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
+.ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--radius-s);background:none;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.ig-rail-clear:hover{color:var(--accent);border-color:var(--border);background:var(--bg-1)}
+.ig-rail-clear svg{width:11px;height:11px}
 .ig-rail-track{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .ig-rail-track::-webkit-scrollbar{display:none}
 .ig-rail-item{position:relative;flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-1) var(--ease-out)}
@@ -4752,7 +4755,7 @@ a.prev-btn{text-decoration:none}
 .ig-search:focus-within{border-color:var(--hue,var(--accent))}
 .ig-search input{flex:1;min-width:0;border:none;background:none;outline:none;font-family:var(--font);font-size:14px;color:var(--t0)}
 .ig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:8px}
-.ig-cell{position:relative;aspect-ratio:1;display:grid;place-items:center;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t1);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+.ig-cell{position:relative;aspect-ratio:1;display:grid;place-items:center;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t1);cursor:pointer;content-visibility:auto;contain-intrinsic-size:auto 54px;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
 .ig-cell:hover{color:var(--hue,var(--accent));border-color:color-mix(in srgb,var(--hue,var(--accent)) 45%,var(--border));transform:translateY(-2px)}
 .ig-cell[data-copied="true"]{color:var(--hue,var(--accent));background:color-mix(in srgb,var(--hue,var(--accent)) 14%,var(--bg-1));border-color:color-mix(in srgb,var(--hue,var(--accent)) 45%,var(--border))}
 .ig-cell[data-copied="true"]::after{content:'Copied';position:absolute;inset:auto 0 -20px;font-size:10px;font-weight:600;color:var(--hue,var(--accent));text-align:center}

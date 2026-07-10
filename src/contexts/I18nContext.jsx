@@ -83,6 +83,10 @@ export function I18nProvider({ children }) {
   const t = useCallback((key, replacements) => {
     if (!messages) return key
     let val = resolve(messages, key)
+    // Fall back to the complete base locale (en) before ever surfacing a raw key,
+    // so a key missing from en-US / a partial locale never leaks (e.g. the
+    // "emojiLibrary.subtitle" string that showed on the Icon/Emoji surface).
+    if (val == null && messages !== en) val = resolve(en, key)
     if (val == null) return key
     if (Array.isArray(val)) return val
     if (typeof val !== 'string') return key
