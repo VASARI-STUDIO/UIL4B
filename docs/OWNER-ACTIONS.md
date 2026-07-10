@@ -18,7 +18,7 @@ work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-09.
 **▶ Check first (30 sec):** open
 `https://uil4b.com/api/generate-prompt?diag=uil4b-dev-2026` in your browser (or
 `curl` it). You want to see `firebaseCredential: "ok"` and both `GEMINI_API_KEY`
-and `DEEPSEEK_API_KEY` reported as `set (… chars)`. If all three are healthy,
+and `OPENROUTER_API_KEY` reported as `set (… chars)`. If all three are healthy,
 **this item is done — skip the fix.** (Even quicker: sign in and open the Alt Text
 Generator; if it works, AI is alive.)
 
@@ -27,7 +27,7 @@ Generator; if it works, AI is alive.)
 | Env var | Status then | Verdict |
 |---|---|---|
 | `GEMINI_API_KEY` | **set (39 chars)** | ✅ present, correct length |
-| `DEEPSEEK_API_KEY` | **MISSING** | ❌ not set in Production |
+| `OPENROUTER_API_KEY` | **MISSING** | ❌ not set in Production (replaces DEEPSEEK_API_KEY) |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | **set, but not valid service-account JSON** | ❌ malformed |
 
 If the check above still shows those failures: every AI tool verifies your login
@@ -43,7 +43,7 @@ matter how correct the AI keys are.
    - Firebase Console → ⚙ **Project Settings → Service Accounts → Generate new private key** → a `.json` file downloads.
    - Open it, copy the **entire** contents (starts with `{"type":"service_account","project_id":"uil4b-357c5",...}`) and paste that as the value. **Not** the code snippet on that page, **not** the web `firebaseConfig`.
    - Scope: **Production** (+ Preview if you want previews to work).
-2. **`DEEPSEEK_API_KEY`** — currently missing in Production. Add it (DeepSeek dashboard → API keys), scoped to **Production**, no surrounding quotes/spaces. *(Gemini already works as the fallback, so AI will function once Firebase is fixed even before you add DeepSeek — but DeepSeek is the primary prompt model, so add it.)*
+2. **`OPENROUTER_API_KEY`** — the primary AI provider (replaces DeepSeek). Add it (OpenRouter → https://openrouter.ai/keys, key starts with `sk-or-`), scoped to **Production**, no surrounding quotes/spaces. *(Gemini already works as the fallback, so AI will function once Firebase is fixed even before you add OpenRouter — but OpenRouter is the primary prompt model, so add it.)* Optional: `OPENROUTER_MODEL` to override the default `deepseek/deepseek-chat`.
 3. **Redeploy** — Vercel env-var changes only take effect on the next deployment.
 4. **Verify** — re-run the diagnostic URL above. You want `firebaseCredential: "ok"` and both keys `set (... chars)`. (Or just open the Alt Text Generator while signed in — the on-screen error now names the exact cause.)
 
@@ -51,7 +51,7 @@ The code now strips stray quotes/newlines from the AI keys and decodes a double-
 service-account blob, so a *slightly* mis-pasted value self-heals — but an outright-wrong value
 (as now) still needs re-pasting. All three keys are server-only (never `VITE_`):
 `FIREBASE_SERVICE_ACCOUNT_KEY` (verifies logins on every AI call), `GEMINI_API_KEY`
-(alt-text + photo-scan + fallback), `DEEPSEEK_API_KEY` (prompt generation).
+(alt-text + photo-scan + fallback), `OPENROUTER_API_KEY` (prompt generation).
 
 ---
 
@@ -206,4 +206,4 @@ The app is a client-rendered SPA, so Google sees deferred/partial content and **
 
 ### Quick reference: every env var, in one place
 **Client (`VITE_` — likely already set):** `VITE_FIREBASE_*`, `VITE_GOOGLE_CLIENT_ID`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_GOOGLE_FONTS_API_KEY` (optional).
-**Server (set in Vercel, NO `VITE_` prefix):** `FIREBASE_SERVICE_ACCOUNT_KEY` ⬅ *fixes AI*, `GEMINI_API_KEY` ⬅ *fixes AI*, `DEEPSEEK_API_KEY` ⬅ *fixes AI*, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `STRIPE_RETENTION_COUPON` (optional).
+**Server (set in Vercel, NO `VITE_` prefix):** `FIREBASE_SERVICE_ACCOUNT_KEY` ⬅ *fixes AI*, `GEMINI_API_KEY` ⬅ *fixes AI*, `OPENROUTER_API_KEY` ⬅ *fixes AI (replaces DEEPSEEK_API_KEY)*, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `STRIPE_PRICE_LIFETIME` (Early Investor), `STRIPE_RETENTION_COUPON` (optional).

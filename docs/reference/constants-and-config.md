@@ -48,7 +48,8 @@ is in `css-conventions.md`.
 
 ## Server env vars (non-`VITE_`, server-only)
 
-- **AI**: `DEEPSEEK_API_KEY` / `DEEPSEEK_KEY`, `GEMINI_API_KEY` / `GEMINI_KEY`,
+- **AI**: `OPENROUTER_API_KEY` (+ optional `OPENROUTER_MODEL`, default
+  `deepseek/deepseek-chat`), `GEMINI_API_KEY` / `GEMINI_KEY`,
   `GOOGLE_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `GOOGLE_FONTS_API_KEY`.
 - **Stripe**: secret key + webhook signing secret (founder-gated).
 - **Firebase Admin**: service-account credentials (the `private_key` is a hard

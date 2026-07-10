@@ -64,7 +64,7 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Graduate out of alpha once prompt quality is validated',
       'Add user prompt history / saved presets',
-      'Monitor DeepSeek vs Gemini fallback reliability',
+      'Monitor OpenRouter vs Gemini fallback reliability',
     ],
     updated: '2026-06-17',
   },
@@ -307,9 +307,9 @@ export const MODULE_BOARD = [
     area: 'Infra',
     status: 'live',
     health: 'watch',
-    summary: 'DeepSeek primary with Gemini fallback and tuned sampling.',
+    summary: 'OpenRouter primary with Gemini fallback and tuned sampling.',
     recentChanges: [
-      'Verified DeepSeek connection + added Gemini fallback (DS-01)',
+      'Migrated primary provider DeepSeek → OpenRouter, kept Gemini fallback (DS-01)',
       'Chain-of-thought prompt + tuned sampling (temp 0.75 / top_p 0.9) (DS-02)',
     ],
     nextSteps: [

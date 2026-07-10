@@ -50,7 +50,7 @@ Firebase rules + authorised domains:
 - Google **client ID**
 
 Real secrets are **server-only `process.env`**, never `VITE_`-prefixed
-(Stripe secret key, DeepSeek/Gemini keys, Firebase service-account
+(Stripe secret key, OpenRouter/Gemini keys, Firebase service-account
 `private_key`). A leaked service-account `private_key` is a hard BLOCK.
 
 ## If a task requires changing a gated file

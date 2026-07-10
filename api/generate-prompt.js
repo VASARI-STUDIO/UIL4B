@@ -6,7 +6,12 @@ export const config = {
   api: { bodyParser: { sizeLimit: '2mb' } },
 }
 
-const DEEPSEEK_KEY = cleanKey(process.env.DEEPSEEK_API_KEY)
+// Primary AI provider is now OpenRouter (OpenAI-compatible gateway). It lets us
+// swap the underlying model with a single env var and keeps one billing account
+// across providers. OPENROUTER_MODEL overrides the default without a code change.
+const OPENROUTER_KEY = cleanKey(process.env.OPENROUTER_API_KEY)
+const OPENROUTER_MODEL = (process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat').trim()
+const OPENROUTER_REFERER = process.env.OPENROUTER_SITE_URL || 'https://uil4b.com'
 const GEMINI_KEY = cleanKey(process.env.GEMINI_API_KEY)
 const GEMINI_MODEL = 'gemini-2.0-flash'
 
@@ -24,12 +29,18 @@ Output rules:
 - Use comma-separated descriptors. Keep it under 300 words.
 - If a target platform is specified, format for its syntax conventions.`
 
-async function callDeepSeek(userMessage, opts = {}) {
-  const r = await fetch('https://api.deepseek.com/chat/completions', {
+async function callOpenRouter(userMessage, opts = {}) {
+  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}` },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENROUTER_KEY}`,
+      // Attribution headers OpenRouter uses for app ranking / rate-limit context.
+      'HTTP-Referer': OPENROUTER_REFERER,
+      'X-Title': 'UI L4B',
+    },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: OPENROUTER_MODEL,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
@@ -42,19 +53,26 @@ async function callDeepSeek(userMessage, opts = {}) {
   })
   if (!r.ok) {
     const text = await r.text()
-    const err = new Error(`DeepSeek ${r.status}`)
+    const err = new Error(`OpenRouter ${r.status}`)
     err.status = r.status
     err.detail = text.slice(0, 500)
     throw err
   }
   const data = await r.json()
+  // OpenRouter surfaces upstream provider errors in a 200 body's `error` field.
+  if (data?.error) {
+    const err = new Error(`OpenRouter upstream: ${data.error.message || 'error'}`)
+    err.status = data.error.code || 502
+    err.detail = JSON.stringify(data.error).slice(0, 500)
+    throw err
+  }
   const prompt = data?.choices?.[0]?.message?.content?.trim() || ''
-  if (!prompt) throw new Error('DeepSeek returned empty response')
+  if (!prompt) throw new Error('OpenRouter returned empty response')
   return prompt
 }
 
-// Fallback provider: Gemini. Used only when DeepSeek is unavailable so the tool
-// keeps working until DeepSeek is fully proven in production.
+// Fallback provider: Gemini. Used only when OpenRouter is unavailable so the tool
+// keeps working through a provider outage or a misconfigured key.
 async function callGemini(userMessage, opts = {}) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`
   const r = await fetch(url, {
@@ -95,7 +113,8 @@ export default async function handler(req, res) {
     let cred
     try { cred = credentialProblem() || 'ok' } catch (e) { cred = 'error: ' + String(e?.message || e).slice(0, 120) }
     return res.status(200).json({
-      deepseekKey: DEEPSEEK_KEY ? `set (${DEEPSEEK_KEY.length} chars)` : 'MISSING',
+      openrouterKey: OPENROUTER_KEY ? `set (${OPENROUTER_KEY.length} chars)` : 'MISSING',
+      openrouterModel: OPENROUTER_MODEL,
       geminiKey: GEMINI_KEY ? `set (${GEMINI_KEY.length} chars)` : 'MISSING',
       firebaseCredential: cred,
       node: process.version,
@@ -107,7 +126,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  if (!DEEPSEEK_KEY && !GEMINI_KEY) return res.status(500).json({ error: 'AI is not configured on the server: set DEEPSEEK_API_KEY (and/or GEMINI_API_KEY) in the deployment environment.' })
+  if (!OPENROUTER_KEY && !GEMINI_KEY) return res.status(500).json({ error: 'AI is not configured on the server: set OPENROUTER_API_KEY (and/or GEMINI_API_KEY) in the deployment environment.' })
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -156,19 +175,19 @@ export default async function handler(req, res) {
   if (style) userMessage += `\nStyle: ${style.slice(0, 200)}`
   if (platform) userMessage += `\nTarget platform: ${platform.slice(0, 100)}`
 
-  // Try DeepSeek (primary), then fall back to Gemini so the tool stays up while
-  // DeepSeek is being proven out in production.
+  // Try OpenRouter (primary), then fall back to Gemini so the tool stays up
+  // through a provider outage or a misconfigured OpenRouter key.
   let prompt = ''
   let provider = ''
   let lastErr = null
 
-  if (DEEPSEEK_KEY) {
+  if (OPENROUTER_KEY) {
     try {
-      prompt = await callDeepSeek(userMessage)
-      provider = 'deepseek'
+      prompt = await callOpenRouter(userMessage)
+      provider = 'openrouter'
     } catch (err) {
       lastErr = err
-      console.error('DeepSeek failed, will try Gemini fallback:', err.status || '', err.detail || err.message)
+      console.error('OpenRouter failed, will try Gemini fallback:', err.status || '', err.detail || err.message)
     }
   }
 
@@ -189,7 +208,7 @@ export default async function handler(req, res) {
     // 401/403 from a provider means the key was rejected — surface that plainly
     // so a misconfigured key is obvious rather than a vague "unavailable".
     if (lastErr?.status === 401 || lastErr?.status === 403) {
-      return res.status(502).json({ error: `AI provider rejected the API key (${lastErr.status}). Check DEEPSEEK_API_KEY / GEMINI_API_KEY in the deployment environment — re-paste with no quotes or trailing spaces, then redeploy.`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
+      return res.status(502).json({ error: `AI provider rejected the API key (${lastErr.status}). Check OPENROUTER_API_KEY / GEMINI_API_KEY in the deployment environment — re-paste with no quotes or trailing spaces, then redeploy.`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
     }
     return res.status(502).json({ error: `AI providers unavailable (${lastErr?.message || 'unknown error'}).`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
   }
