@@ -76,7 +76,7 @@ export const CREATE_GROUPS = [
     hue: 'imagery',
     home: '/imagery',
     desc: 'Convert, compress and frame every asset.',
-    soon: true,
+    soon: false,
     tools: [
       { id: 'file-converter', label: 'File Converter', route: '/file-converter', soon: false },
       { id: 'ratio', label: 'Aspect Ratio', route: '/ratio', soon: false },
