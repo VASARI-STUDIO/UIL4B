@@ -121,16 +121,54 @@ export const LEARN_GROUPS = [
   { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn', soon: true, accent: true },
 ]
 
-// Top-level nav model consumed by PillNav. Each section also carries the copy for
-// its mega-menu promo card (the right-hand feature panel): an eyebrow, a heading,
-// a short blurb and a CTA that links to the relevant surface landing. `width` is a
-// legacy hint — the panel's real width is set per `data-menu` in global.css.
+// Desktop mega-menu column groupings. The flat `groups` list still drives the
+// router and the mobile sheet; on desktop those same group objects are dealt into
+// 2–3 labelled columns so related tools sit under a short, scannable eyebrow. Each
+// spec entry names the column and the group ids (in order) that fall under it —
+// resolved to shared group references so the menu can never drift from the tree.
+function toColumns(groups, spec) {
+  const seen = new Set()
+  const cols = spec.map(({ label, ids }) => {
+    const items = ids
+      .map((id) => groups.find((g) => g.id === id))
+      .filter((g) => g && !seen.has(g.id) && seen.add(g.id))
+    return { label, groups: items }
+  })
+  // Safety net: any group the spec forgot lands in a trailing "More" column, so a
+  // newly-added tool is never silently dropped from the menu.
+  const rest = groups.filter((g) => !seen.has(g.id))
+  if (rest.length) cols.push({ label: 'More', groups: rest })
+  return cols.filter((c) => c.groups.length)
+}
+
+const CREATE_COLUMNS = toColumns(CREATE_GROUPS, [
+  { label: 'Foundations', ids: ['colour', 'type'] },
+  { label: 'Components & Icons', ids: ['component', 'icons'] },
+  { label: 'Media & AI', ids: ['imagery', 'ai'] },
+])
+
+const DISCOVER_COLUMNS = toColumns(DISCOVER_GROUPS, [
+  { label: 'Community', ids: ['inspiration', 'community-fonts', 'community-prompts'] },
+  { label: 'Your library', ids: ['curated', 'collections'] },
+])
+
+const LEARN_COLUMNS = toColumns(LEARN_GROUPS, [
+  { label: 'Foundations', ids: ['principles', 'themes', 'brand', 'typography'] },
+  { label: 'Growth & help', ids: ['seo', 'marketing', 'ai-assistants', 'help'] },
+])
+
+// Top-level nav model consumed by PillNav. Each section carries its flat `groups`
+// (router + mobile sheet), `columns` (the labelled desktop mega-menu layout), and
+// the copy for its promo card (the right-hand feature panel): an eyebrow, a
+// heading, a short blurb and a CTA that links to the relevant surface landing.
+// `width` is a legacy hint — the panel's real width is set per `data-menu` in
+// global.css.
 //
 // NOTE (for PM / design): the `promo` copy below is first-pass placeholder text —
 // it's honest and on-brand, but it hasn't been through a copy pass. Flag for review.
 export const NAV_SECTIONS = [
   {
-    id: 'create', label: 'Create', groups: CREATE_GROUPS, width: 960,
+    id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_COLUMNS, width: 960,
     promo: {
       eyebrow: 'Create',
       title: 'Your whole UI system, one workspace',
@@ -140,7 +178,7 @@ export const NAV_SECTIONS = [
     },
   },
   {
-    id: 'discover', label: 'Discover', groups: DISCOVER_GROUPS, width: 640,
+    id: 'discover', label: 'Discover', groups: DISCOVER_GROUPS, columns: DISCOVER_COLUMNS, width: 640,
     promo: {
       eyebrow: 'Discover',
       title: 'Inspiration worth the tab',
@@ -150,7 +188,7 @@ export const NAV_SECTIONS = [
     },
   },
   {
-    id: 'learn', label: 'Learn', groups: LEARN_GROUPS, width: 800,
+    id: 'learn', label: 'Learn', groups: LEARN_GROUPS, columns: LEARN_COLUMNS, width: 800,
     promo: {
       eyebrow: 'Learn',
       title: 'Understand the why',

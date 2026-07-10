@@ -4293,9 +4293,15 @@ html.lenis,html.lenis body{height:auto}
 .pnav-menu-body{padding:40px 48px;animation:fx-fade var(--dur-2) var(--ease-out)}
 /* Menu body splits into the group grid (left) + a promo/feature card (right) */
 .pnav-menu-cols{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:56px;align-items:stretch}
-.pnav-grid{display:grid;gap:44px 56px}
+.pnav-grid{display:grid;column-gap:56px;row-gap:0}
 .pnav-menu[data-menu="create"] .pnav-grid{grid-template-columns:repeat(3,1fr)}
 .pnav-menu[data-menu="discover"] .pnav-grid,.pnav-menu[data-menu="learn"] .pnav-grid{grid-template-columns:repeat(2,1fr)}
+/* Each column is a labelled stack: a small uppercase eyebrow with a hairline
+   rule (Velt-style) captions a group of related tools sitting beneath it. */
+.pnav-col{display:flex;flex-direction:column;min-width:0}
+.pnav-col-label{margin:0 0 20px;padding-bottom:11px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.pnav-col-groups{display:flex;flex-direction:column;gap:30px;min-width:0}
+.pnav-menu[data-menu="discover"] .pnav-col-groups,.pnav-menu[data-menu="learn"] .pnav-col-groups{gap:10px}
 .pnav-group{min-width:0}
 .pnav-group-head{display:flex;align-items:flex-start;gap:12px;text-decoration:none;color:var(--t0)}
 .pnav-group-head:hover{text-decoration:none}
