@@ -661,7 +661,7 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
                     Save to project
                     <span className="pnav-pop-tag">Pro</span>
                   </button>
-                  <Link className="icust-upgrade" to="/checkout">Upgrade to save →</Link>
+                  <Link className="icust-upgrade" to="/plans">Upgrade to save →</Link>
                 </div>
               )}
 

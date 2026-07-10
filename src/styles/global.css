@@ -1669,6 +1669,32 @@ img,svg,video{max-width:100%;height:auto}
   .sub-tiers{grid-template-columns:1fr}
 }
 
+/* Public pricing / plans page */
+.plans-page{max-width:1120px}
+.plans-tiers{grid-template-columns:repeat(3,1fr)}
+.plans-tier-soon{opacity:.6}
+.plans-tier-soon .sub-tier-btn{pointer-events:none}
+.plans-flag-soon{background:var(--bg-2);color:var(--t2)}
+.plans-pro-banner{display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:18px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 10%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));font-size:13px;color:var(--t1);line-height:1.5}
+.plans-pro-banner svg{flex-shrink:0;color:var(--accent)}
+.plans-pro-banner a{color:var(--accent);font-weight:600;white-space:nowrap}
+.plans-compare{text-align:center;margin-top:8px;font-size:12px;color:var(--t1);min-height:1.4em}
+.plans-compare span{margin-right:4px}
+.plans-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 28px;margin-top:26px;padding-top:22px;border-top:1px solid var(--border)}
+.plans-trust span{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--t2)}
+.plans-trust .sub-check{color:var(--accent)}
+.plans-faq{max-width:720px;margin:44px auto 0}
+.plans-faq-h{font-size:20px;font-weight:700;letter-spacing:-.02em;text-align:center;margin-bottom:18px;color:var(--t0)}
+.plans-faq-item{border-bottom:1px solid var(--border)}
+.plans-faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 2px;background:none;border:none;font-family:var(--font);font-size:15px;font-weight:600;color:var(--t0);text-align:left;cursor:pointer;transition:color .18s}
+.plans-faq-q:hover{color:var(--accent)}
+.plans-faq-q svg{flex-shrink:0;color:var(--t2);transition:transform .2s var(--ease-out)}
+.plans-faq-item.open .plans-faq-q svg{transform:rotate(180deg)}
+.plans-faq-a{padding:0 2px 18px;font-size:14px;line-height:1.6;color:var(--t1)}
+@media(max-width:900px){
+  .plans-tiers{grid-template-columns:1fr}
+}
+
 /* Embedded checkout page */
 .checkout-page{max-width:1040px}
 .checkout-grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:24px;align-items:start}
