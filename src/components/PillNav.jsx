@@ -334,7 +334,7 @@ export default function PillNav() {
                 Upgrade path also lives inside the account popover for signed-in
                 users, so hiding it at rest never orphans it. */}
             {user && !isPro && (
-              <Link className="ui-pill ui-pill-accent ui-pill-sm pnav-cta-reveal" to="/checkout" onClick={closeAll}>
+              <Link className="ui-pill ui-pill-accent ui-pill-sm pnav-cta-reveal" to="/plans" onClick={closeAll}>
                 Upgrade
               </Link>
             )}
@@ -399,7 +399,7 @@ export default function PillNav() {
                         <GearIcon />
                         <span>Account &amp; settings</span>
                       </Link>
-                      <Link className="pnav-pop-item" role="menuitem" to="/checkout" onClick={closeAll}>
+                      <Link className="pnav-pop-item" role="menuitem" to={isPro ? '/settings' : '/plans'} state={isPro ? { section: 'support' } : undefined} onClick={closeAll}>
                         {isPro ? 'Manage plan' : 'Plans & upgrade'}
                       </Link>
                       {isAdmin && (

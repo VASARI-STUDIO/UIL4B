@@ -699,7 +699,7 @@ export default function Projects({ toast }) {
               {isPro ? (
                 <>{folderLimit} folders</>
               ) : (
-                <>{folderLimit} folders · <NavLink to="/pricing">Upgrade for 10</NavLink></>
+                <>{folderLimit} folders · <NavLink to="/plans">Upgrade for 10</NavLink></>
               )}
             </span>
           </div>
