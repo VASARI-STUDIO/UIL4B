@@ -4211,17 +4211,23 @@ html.lenis,html.lenis body{height:auto}
 /* Flex row: [lead (logo + collapsible search)] [triggers] [actions]. The pill
    shrink-wraps its content (width:fit-content), so revealing the search on the
    left and the utility cluster on the right visibly grows the bar on hover. */
-.pnav-inner{display:flex;align-items:center;gap:16px;height:100%;padding:0 16px 0 22px}
+.pnav-inner{display:flex;align-items:center;gap:16px;height:100%;padding:0 16px 0 22px;transition:gap var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout)}
+/* Expanded pill breathes: as the bar grows on hover/focus/pinned-open it also
+   opens up its internal whitespace (wider group gaps + roomier side padding) so
+   the fuller row feels calm and uncramped, not just longer. */
+.pnav:hover .pnav-inner,.pnav:focus-within .pnav-inner,.pnav.is-expanded .pnav-inner{gap:26px;padding:0 22px 0 28px}
+.pnav:hover .pnav-items,.pnav:focus-within .pnav-items,.pnav.is-expanded .pnav-items{gap:6px}
+.pnav:hover .pnav-actions,.pnav:focus-within .pnav-actions,.pnav.is-expanded .pnav-actions{gap:12px}
 .pnav-lead{display:flex;align-items:center;gap:0;min-width:0}
 .pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
 .pnav-word{font-size:var(--fs-h5);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
-.pnav-items{display:flex;align-items:center;gap:2px}
+.pnav-items{display:flex;align-items:center;gap:2px;transition:gap var(--dur-3) var(--ease-inout)}
 .pnav-trigger{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border:none;background:none;font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-trigger:hover,.pnav-trigger[aria-expanded="true"]{background:var(--hvr);color:var(--t0)}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
-.pnav-actions{display:flex;align-items:center;gap:8px}
+.pnav-actions{display:flex;align-items:center;gap:8px;transition:gap var(--dur-3) var(--ease-inout)}
 .pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
