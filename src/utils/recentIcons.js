@@ -31,6 +31,12 @@ export function addRecentIcon(icon, action = 'copy') {
   }
 }
 
+// Wipe the recent-icons strip. One call, one confirm-free clear — the rail hides
+// itself the moment the list is empty. Safe if storage is disabled/full.
+export function clearRecentIcons() {
+  try { localStorage.removeItem(KEY) } catch { /* ignore quota/access errors */ }
+}
+
 // Rebuild the copyable SVG markup for an embedded icon. CDN icons are fetched
 // on demand (their markup isn't stored), so this returns null for them.
 export function iconToSvg(icon) {

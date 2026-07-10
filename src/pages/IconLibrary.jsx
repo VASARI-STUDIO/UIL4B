@@ -4,7 +4,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { getLenis } from '../hooks/useSmoothScroll'
 import UIKitGuide from '../components/UIKitGuide'
-import { addRecentIcon, getRecentIcons } from '../utils/recentIcons'
+import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 
 const API_LIMIT = 999
 
@@ -764,7 +764,11 @@ export default function IconLibrary({ onCopy, embedded }) {
           okCount++
           const names = keepStyle(p, collectionToNames(d), PACK_STYLE[p]).slice(0, ALL_INITIAL_PER_PACK)
           lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
-          const merged = interleavePacks(lists)
+          // Default sort = pack-by-pack: lists stays in ALL_PACKS order and each
+          // pack's icons are contiguous, so flat() groups every pack together
+          // (Lucide block, then Tabler, …) regardless of which request resolves
+          // first — no round-robin interleave.
+          const merged = lists.flat()
           setIcons(merged)
           const sets = lists.filter(l => l.length).length
           setMode(`All packs · ${merged.length.toLocaleString()} icons · ${sets} sets`)
@@ -1020,7 +1024,19 @@ export default function IconLibrary({ onCopy, embedded }) {
 
       {recents.length > 0 && (
         <div className="ig-rail">
-          <div className="ig-rail-head">Recent</div>
+          <div className="ig-rail-head">
+            Recent
+            <button
+              type="button"
+              className="ig-rail-clear"
+              aria-label="Clear recent icons"
+              title="Clear recent"
+              onClick={() => { clearRecentIcons(); setRecents([]) }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              Clear
+            </button>
+          </div>
           <div className="ig-rail-track">
             {recents.map((r) => (
               <button
