@@ -4158,6 +4158,38 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 [data-hue="icons"]{--hue:var(--hue-icons)}
 [data-hue="accent"]{--hue:var(--accent)}
 
+/* ── Sitemap (/sitemap) — the full visual map of the product ──
+   Each Create category carries data-hue, so its dot + Soon badge tint match the
+   mega-menu and the in-tool shell. Non-hued sections fall back to --accent. */
+.smap-surface{margin-top:64px}
+.smap-surface:first-of-type{margin-top:48px}
+.smap-surface-h{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.smap-surface-h h2{font-family:var(--serif);font-size:var(--fs-h2);font-weight:500;letter-spacing:-.02em;color:var(--t0);margin:0 0 6px}
+.smap-surface-h p{font-size:var(--fs-body-s);color:var(--t2);margin:0;max-width:60ch}
+.smap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.smap-grid--two{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.smap-cat{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);padding:20px;transition:border-color var(--dur-3) var(--ease-out),box-shadow var(--dur-3) var(--ease-out)}
+.smap-cat:hover{border-color:var(--bh);box-shadow:var(--shadow-s)}
+.smap-cat-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.smap-cat-h h3{font-size:var(--fs-h5);font-weight:600;letter-spacing:-.01em;color:var(--t0);margin:0}
+.smap-cat-dot{width:8px;height:8px;border-radius:50%;background:var(--hue,var(--accent));flex:0 0 auto}
+.smap-cat-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.5;margin:0 0 14px}
+.smap-links{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.smap-link{margin:0}
+.smap-link-a{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:8px 12px;padding:8px 10px;margin:0 -10px;border-radius:calc(var(--radius) - 4px);text-decoration:none;transition:background var(--dur-2) var(--ease-out)}
+.smap-link-a:hover{background:var(--hvr)}
+.smap-link-a.active .smap-link-label{color:var(--hue,var(--accent))}
+.smap-link-label{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:500;color:var(--t0)}
+.smap-link-a:hover .smap-link-label{color:var(--hue,var(--accent))}
+.smap-link-route{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);text-align:right;white-space:nowrap}
+.smap-link-note{grid-column:1/-1;font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
+.smap-soon{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--hue,var(--accent));background:color-mix(in srgb,var(--hue,var(--accent)) 12%,transparent);border-radius:999px;padding:2px 7px;line-height:1;flex:0 0 auto}
+.smap-soon--inline{vertical-align:middle;margin:0 1px}
+@media(max-width:520px){
+  .smap-link-a{grid-template-columns:1fr}
+  .smap-link-route{text-align:left}
+}
+
 /* ── Motion utilities (fx-) ── */
 .fx-dot{width:8px;height:8px;border-radius:50%;background:var(--hue,var(--accent));display:inline-block;flex:0 0 auto;transition:transform var(--dur-2) var(--ease-spring)}
 .fx-underline{background-image:linear-gradient(currentColor,currentColor);background-size:0% 1px;background-position:0 100%;background-repeat:no-repeat;transition:background-size var(--dur-3) var(--ease-out)}
