@@ -20,6 +20,7 @@ export default function AppFooter() {
           <NavLink to="/feedback">Feedback</NavLink>
         </nav>
         <nav className="app-footer-legal">
+          <NavLink to="/sitemap">Sitemap</NavLink>
           <NavLink to="/privacy">Privacy</NavLink>
           <NavLink to="/terms">Terms</NavLink>
           <span className="app-footer-copy">© {year} UIL4B</span>

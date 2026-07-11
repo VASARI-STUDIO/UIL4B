@@ -29,6 +29,7 @@ const Community = lazy(() => import('./pages/Community'))
 const Feedback = lazy(() => import('./pages/Feedback'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
+const SiteMap = lazy(() => import('./pages/SiteMap'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Projects = lazy(() => import('./pages/Projects'))
 const Checkout = lazy(() => import('./pages/Checkout'))
@@ -150,6 +151,7 @@ export default function App() {
       '/seo': 'UI L4B | SEO Specialist',
       '/privacy': 'UI L4B | Privacy',
       '/terms': 'UI L4B | Terms',
+      '/sitemap': 'UI L4B | Sitemap',
       '/admin': 'UI L4B | Admin',
       '/docs-themes': 'UI L4B | UI Design Themes',
       '/docs-brand': 'UI L4B | Brand Colour Guide',
@@ -197,6 +199,7 @@ export default function App() {
       '/seo': 'Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.',
       '/privacy': 'UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.',
       '/terms': 'UI L4B terms of service. Usage rules, intellectual property, and account policies.',
+      '/sitemap': 'The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.',
       '/admin': DEFAULT_DESCRIPTION,
       '/docs-themes': 'Learn about UI design themes — dark mode, light mode, and custom theme systems for modern web applications.',
       '/docs-brand': 'A practical guide to choosing brand colours. Understand colour psychology, contrast, and accessibility basics.',
@@ -299,6 +302,8 @@ export default function App() {
               <Route path="/feedback" element={<Feedback toast={toast} />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/sitemap" element={<SiteMap />} />
+              <Route path="/site-map" element={<Navigate to="/sitemap" replace />} />
               <Route path="/help" element={<HelpCentre />} />
               <Route path="/info" element={<InfoCentre />} />
               <Route path="/seo" element={<SeoInspector onCopy={copy} toast={toast} />} />
