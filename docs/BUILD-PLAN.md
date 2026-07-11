@@ -4,7 +4,7 @@ _The **read-first** doc: current direction + a live status snapshot, with the
 detail split out so a session reads only the slice it needs. Update the snapshot
 **in place** — no dated copies, no parallel backlog._
 
-_Last updated: 2026-07-09._
+_Last updated: 2026-07-11._
 
 ---
 
@@ -25,7 +25,7 @@ Full rebuild detail (the two "not-ready" systems, phases, cluster-by-cluster log
 
 ---
 
-## Status snapshot (2026-07-09)
+## Status snapshot (2026-07-11)
 
 **`main` health:** build green · ESLint 0 errors / ~30 advisory warnings (all
 pre-existing `set-state-in-effect` hints — match, never add).
@@ -41,6 +41,16 @@ agent skills vendored + dead preview images removed (#142). Every price surface
 (Landing, Settings, Onboarding, Checkout, HelpCentre) now reads live Stripe data
 via `src/hooks/usePrices.js`, so the founder's price flip propagates to the whole
 UI with zero code change (#145).
+
+**July backlog — fully shipped to production (direct-to-`main`):** OpenRouter AI
+migration; nav mega-menu column redesign; public **`/plans`** pricing page with
+upgrade-CTA routing; three live Create tools wired (**Colour Studio** at `/color`,
+**File Converter** + **Aspect Ratio** under Imagery); Icon/Emoji perf overhaul
+(keep-alive tabs, collection cache, **My Icons** page); the nav-pill rework
+(3-dots at rest, merged profile+settings popover, cog-on-hover avatar, wider
+expanded state); and the full visual **`/sitemap`** page — every destination laid
+out by surface, Create/Discover/Learn derived from `toolTree.js` so it can't drift
+(distinct from the crawler-facing `public/sitemap.xml`). All build+lint+QA-gated.
 
 **Next / founder-gated — Cluster D remainder:**
 - **Price flip (real money — founder only).** UI is ready — every surface reads
