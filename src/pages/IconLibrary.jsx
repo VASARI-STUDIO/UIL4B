@@ -323,7 +323,7 @@ const JOIN_OPTS = [
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
-function IconCustomizer({ icon, addMode, isPro, onClose, onCopy, onPick }) {
+function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, onCopy, onPick }) {
   const navigate = useNavigate()
   const { theme } = useTheme()
   // The stage follows the site theme: in light mode an un-tinted icon previews
@@ -358,6 +358,10 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy, onPick }) {
   const [flipV, setFlipV] = useState(false)
   const [copied, setCopied] = useState('')
   const [savedState, setSavedState] = useState(() => (icon?.custom ? 'saved' : 'idle'))
+  // How many custom icons are already saved — drives the free-tier cap in the
+  // footer. Read once on mount; bumped after a successful save.
+  const [savedCount, setSavedCount] = useState(() => readCustomIcons().length)
+  const atSaveCap = !isPro && savedCount >= saveLimit
 
   const isColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
   const isStroke = useMemo(() => {
@@ -548,9 +552,10 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy, onPick }) {
   // ANTI-TAMPER: non-Pro is a no-op that routes to checkout BEFORE any compute —
   // no record is built, and the Custom store is never read or written.
   const handleSave = () => {
-    if (!isPro) { navigate('/checkout'); return }
     if (!activeIcon || !baseSvgText) return
     const existing = readCustomIcons()
+    // Free-tier cap: route to checkout only once the allowance is used up.
+    if (!isPro && existing.length >= saveLimit) { navigate('/checkout'); return }
     const base = activeIcon.custom ? activeIcon.base : (activeIcon.cdn || activeIcon.d ? activeIcon.name : 'icon')
     const { iteration, name } = nextCustomName(base, existing)
     const colored = isColoredPack || !!color || (activeIcon.pasted === true && !isStroke)
@@ -563,6 +568,7 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy, onPick }) {
     }
     if (!writeCustomIcons([record, ...existing])) { setSavedState('error'); return }
     addRecentIcon(recentPayload(activeIcon), 'edit')
+    setSavedCount(existing.length + 1)
     setSavedState('saved')
   }
 
@@ -726,22 +732,22 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy, onPick }) {
                 {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
               </button>
 
-              {isPro ? (
+              {!atSaveCap ? (
                 <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleSave} disabled={savedState === 'saved'} aria-disabled={savedState === 'saved'}>
                   {saveLabel}
                 </button>
               ) : (
                 <div className="icust-save-lock">
-                  <button type="button" className="ui-pill ui-pill-out ui-pill-md icust-save--locked" aria-disabled="true" title="Saving custom icons is a Pro feature." onClick={() => navigate('/checkout')}>
+                  <button type="button" className="ui-pill ui-pill-out ui-pill-md icust-save--locked" aria-disabled="true" title={`Free plan saves up to ${saveLimit} custom icons.`} onClick={() => navigate('/checkout')}>
                     <span className="icust-lock-glyph" aria-hidden="true">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                       </svg>
                     </span>
-                    Save to project
+                    {saveLimit} of {saveLimit} saved
                     <span className="pnav-pop-tag">Pro</span>
                   </button>
-                  <Link className="icust-upgrade" to="/plans">Upgrade to save →</Link>
+                  <Link className="icust-upgrade" to="/plans">Upgrade for unlimited →</Link>
                 </div>
               )}
 
@@ -815,7 +821,9 @@ const PAGE_SIZE = 120
 
 export default function IconLibrary({ onCopy, embedded }) {
   const { t } = useI18n()
-  const { isPro } = useSubscription()
+  const { isPro, plan } = useSubscription()
+  // Free-tier custom-icon allowance (Pro → Infinity). Single source: the plan.
+  const customIconLimit = plan?.limits?.['custom-icons'] ?? Infinity
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [icons, setIcons] = useState([])      // full result set (browse or search)
@@ -984,20 +992,19 @@ export default function IconLibrary({ onCopy, embedded }) {
       })
   }, [renderLocal])
 
-  // Custom Icons category. ANTI-TAMPER: for non-Pro this NEVER reads the store —
-  // it renders the locked promo instead (handled in the render tree).
+  // Custom Icons category. Free accounts get a real allowance (see
+  // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
   const browseCustom = useCallback(() => {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
     setSource('custom'); setGroup(null); setPack('')
     setQuery(''); setLoadError(false)
-    if (!isPro) { setIcons([]); setVisible(PAGE_SIZE); setMode(''); setLoading(false); return }
     const list = readCustomIcons()
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
     setVisible(PAGE_SIZE)
     setMode(`Custom Icons · ${list.length.toLocaleString()} saved`)
     setLoading(false)
-  }, [isPro])
+  }, [])
 
   const doSearch = useCallback((q, scope = {}) => {
     q = (q || '').trim()
@@ -1136,17 +1143,16 @@ export default function IconLibrary({ onCopy, embedded }) {
     setSelected(null)
     setAddMode(false)
     setRecents(getRecentIcons())
-    if (source === 'custom' && isPro) browseCustom()
-  }, [source, isPro, browseCustom])
+    if (source === 'custom') browseCustom()
+  }, [source, browseCustom])
 
   // Clear-all for the two My Icons sections. Saved (custom) is Pro-only and wipes
   // the store; Recently copied is available to everyone and wipes the recents.
   const handleClearCustom = useCallback(() => {
-    if (!isPro) return
     writeCustomIcons([])
     setIcons([])
     setMode('Custom Icons · 0 saved')
-  }, [isPro])
+  }, [])
 
   const handleClearRecents = useCallback(() => {
     clearRecentIcons()
@@ -1328,26 +1334,23 @@ export default function IconLibrary({ onCopy, embedded }) {
             <section className="ig-mysec">
               <div className="ig-mysec-head">
                 <h3 className="ig-mysec-title">Saved</h3>
-                {isPro && icons.length > 0 && (
+                {icons.length > 0 && (
                   <button type="button" className="ig-rail-clear" onClick={handleClearCustom} title="Clear all saved icons">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     Clear all
                   </button>
                 )}
               </div>
-              {!isPro ? (
-                <div className="ig-custom-lock">
-                  <span className="ig-custom-lock-glyph" aria-hidden="true">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                  </span>
-                  <h3 className="ig-custom-lock-title">Save your customised icons</h3>
-                  <p className="ig-custom-lock-sub">Pro keeps every icon you tweak in one place, ready to reuse across projects.</p>
-                  <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={() => navigate('/checkout')}>Upgrade to Pro</button>
-                </div>
-              ) : icons.length > 0 ? (
+              {icons.length > 0 ? (
                 <div className="ig">{shown.map(renderCell)}</div>
               ) : (
                 <div className="ig-custom-empty">No saved icons yet — open any icon, adjust it on the stage, and hit Save to keep it here.</div>
+              )}
+              {!isPro && (
+                <p className="ig-custom-hint">
+                  {Math.min(icons.length, customIconLimit)} of {customIconLimit} free saves used ·{' '}
+                  <button type="button" className="ig-custom-hint-link" onClick={() => navigate('/checkout')}>Go Pro for unlimited</button>
+                </p>
               )}
             </section>
 
@@ -1421,6 +1424,7 @@ export default function IconLibrary({ onCopy, embedded }) {
           icon={selected}
           addMode={addMode && !selected}
           isPro={isPro}
+          saveLimit={customIconLimit}
           onClose={handleCloseCustomizer}
           onCopy={onCopy}
           onPick={handleIconClick}

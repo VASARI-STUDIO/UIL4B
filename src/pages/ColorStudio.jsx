@@ -2887,9 +2887,9 @@ ${stateVars}
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input type="text" value={saveProjectName} onChange={e => setSaveProjectName(e.target.value)}
                     placeholder="Project name..." style={{ flex: 1, fontSize: 12 }}
-                    onKeyDown={e => { if (e.key === 'Enter' && saveProjectName.trim()) { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); toast?.('Project saved') } }}
+                    onKeyDown={e => { if (e.key === 'Enter' && saveProjectName.trim()) { try { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); toast?.('Project saved') } catch (err) { toast?.(err.message || 'Couldn’t save') } } }}
                   />
-                  <button className="btn btn-accent btn-s" onClick={() => { if (saveProjectName.trim()) { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); toast?.('Project saved') } }}
+                  <button className="btn btn-accent btn-s" onClick={() => { if (saveProjectName.trim()) { try { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); toast?.('Project saved') } catch (err) { toast?.(err.message || 'Couldn’t save') } } }}
                     style={{ padding: '4px 12px', fontSize: 11 }}>Save</button>
                 </div>
                 {projects.length > 0 && (

@@ -24,8 +24,26 @@ function detectCurrency() {
   return null
 }
 
-const FREE_PLAN = { id: 'free', label: 'Free', limits: { 'alt-text': 40, 'prompts-ai': 40, 'ai-default': 40 } }
-const PRO_PLAN = { id: 'pro', label: 'Pro', limits: { 'alt-text': 1000, 'prompts-ai': 1000, 'ai-default': 1000 } }
+// Free-tier save allowance — the single source of truth for BOTH enforcement
+// (ProjectContext, IconLibrary) and the pricing copy (Plans.jsx). Saving is no
+// longer fully Pro-gated: a free account gets a real allowance, and Pro lifts
+// the cap. Change the numbers here and every surface follows.
+export const FREE_SAVE_LIMITS = { projects: 3, customIcons: 8 }
+
+const FREE_PLAN = {
+  id: 'free', label: 'Free',
+  limits: {
+    'alt-text': 40, 'prompts-ai': 40, 'ai-default': 40,
+    projects: FREE_SAVE_LIMITS.projects, 'custom-icons': FREE_SAVE_LIMITS.customIcons,
+  },
+}
+const PRO_PLAN = {
+  id: 'pro', label: 'Pro',
+  limits: {
+    'alt-text': 1000, 'prompts-ai': 1000, 'ai-default': 1000,
+    projects: Infinity, 'custom-icons': Infinity,
+  },
+}
 
 function planForSubscription(sub) {
   if (!sub) return FREE_PLAN

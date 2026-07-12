@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { useAuth } from './AuthContext'
+import { useSubscription } from './SubscriptionContext'
 import { db } from '../utils/firebase'
 
 const ProjectContext = createContext()
@@ -125,9 +126,14 @@ function projectListsEqual(a, b) {
 
 export function ProjectProvider({ children }) {
   const { user } = useAuth()
+  const { plan } = useSubscription()
   const userKey = user?.email?.toLowerCase() || null
 
   const uid = user?.uid || null
+
+  // Free-tier save cap. Read live from the active plan so it stays in one place
+  // (SubscriptionContext) — Pro resolves to Infinity, so this is a no-op for Pro.
+  const projectLimit = plan?.limits?.projects ?? Infinity
 
   const [design, setDesign] = useState(loadCurrent)
   const [allProjects, setAllProjects] = useState(loadAllProjects)
@@ -189,6 +195,12 @@ export function ProjectProvider({ children }) {
 
   const saveProject = useCallback((name, opts = {}) => {
     if (!userKey) throw new Error('Sign in to save projects')
+    // Free-tier cap: block a NEW save once the allowance is reached. Never
+    // touches existing projects (non-destructive) and never blocks sync merges.
+    const current = allProjects[userKey] || []
+    if (current.length >= projectLimit) {
+      throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
+    }
     const id = newId()
     const snapshot = opts.blank ? DEFAULT_DESIGN : design
     const project = {
@@ -204,7 +216,7 @@ export function ProjectProvider({ children }) {
       return next
     })
     return id
-  }, [design, userKey])
+  }, [design, userKey, allProjects, projectLimit])
 
   const updateProject = useCallback((id, patch) => {
     if (!userKey) return
@@ -364,6 +376,8 @@ export function ProjectProvider({ children }) {
     design,
     projects,
     canSaveProjects: !!userKey,
+    projectLimit,
+    atProjectLimit: (allProjects[userKey] || []).length >= projectLimit,
     setPalette,
     setFonts,
     setTypeScale,
