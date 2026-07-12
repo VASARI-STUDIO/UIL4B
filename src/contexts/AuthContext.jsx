@@ -21,6 +21,8 @@ import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
 const AuthContext = createContext()
 const PROFILE_CACHE_KEY = 'vs-profile-cache'
 const GOOGLE_RETURNING_KEY = 'vs-google-returning'
+const ACCOUNTS_KEY = 'vs-accounts'
+const MAX_KNOWN_ACCOUNTS = 5
 
 const DEFAULT_PROFILE = {
   displayName: '',
@@ -55,6 +57,27 @@ function removeCachedProfile(uid) {
   } catch {}
 }
 
+// Device-level registry of accounts that have signed in here, powering the
+// account switcher. Holds display data only (no tokens, no credentials) —
+// switching always re-authenticates through Firebase.
+function getKnownAccounts() {
+  try {
+    const list = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '[]')
+    return Array.isArray(list) ? list : []
+  } catch { return [] }
+}
+
+function persistKnownAccounts(list) {
+  try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list)) } catch { /* ignore */ }
+}
+
+function upsertKnownAccount(account) {
+  const rest = getKnownAccounts().filter((a) => a.uid !== account.uid)
+  const list = [account, ...rest].slice(0, MAX_KNOWN_ACCOUNTS)
+  persistKnownAccounts(list)
+  return list
+}
+
 async function loadProfileFromFirestore(uid) {
   try {
     const snap = await getDoc(doc(db, 'users', uid))
@@ -72,12 +95,21 @@ export function AuthProvider({ children }) {
   const [firebaseUser, setFirebaseUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [knownAccounts, setKnownAccounts] = useState(getKnownAccounts)
   const profileRef = useRef(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(firebaseAuth, (fbUser) => {
       if (fbUser) {
         setFirebaseUser(fbUser)
+        setKnownAccounts(upsertKnownAccount({
+          uid: fbUser.uid,
+          email: fbUser.email || '',
+          displayName: fbUser.displayName || '',
+          photoURL: fbUser.photoURL || '',
+          provider: fbUser.providerData?.[0]?.providerId || 'password',
+          lastUsed: Date.now(),
+        }))
 
         const cached = getCachedProfile(fbUser.uid)
         const initial = cached || {
@@ -172,6 +204,37 @@ export function AuthProvider({ children }) {
     try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
   }, [])
 
+  // Switch to another known account. Firebase holds a single session, so a
+  // switch is always sign-out + re-authenticate — we never store credentials.
+  // Google accounts re-auth through a popup pre-selected via login_hint; for
+  // password accounts the caller sends the user to /login with the email
+  // prefilled ({ needsLogin: true }).
+  const switchAccount = useCallback(async (target) => {
+    if (!target?.uid || target.uid === firebaseAuth.currentUser?.uid) return { switched: false }
+    await signOut(firebaseAuth)
+    if (target.provider === 'google.com') {
+      try {
+        const provider = new GoogleAuthProvider()
+        if (target.email) provider.setCustomParameters({ login_hint: target.email })
+        await signInWithPopup(firebaseAuth, provider)
+        try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
+        return { switched: true }
+      } catch {
+        // Popup closed or blocked — fall through to the manual login page.
+        return { switched: false, needsLogin: true, email: target.email }
+      }
+    }
+    return { switched: false, needsLogin: true, email: target.email }
+  }, [])
+
+  const removeKnownAccount = useCallback((uid) => {
+    // The signed-in account stays listed — sign out first to forget it.
+    if (uid === firebaseAuth.currentUser?.uid) return
+    const list = getKnownAccounts().filter((a) => a.uid !== uid)
+    persistKnownAccounts(list)
+    setKnownAccounts(list)
+  }, [])
+
   const updateProfile = useCallback((fields) => {
     if (!firebaseUser || !profileRef.current) return
     const updated = { ...profileRef.current, ...fields }
@@ -222,6 +285,9 @@ export function AuthProvider({ children }) {
     const uid = firebaseUser.uid
     try { await deleteDoc(doc(db, 'users', uid)) } catch {}
     removeCachedProfile(uid)
+    const remaining = getKnownAccounts().filter((a) => a.uid !== uid)
+    persistKnownAccounts(remaining)
+    setKnownAccounts(remaining)
     await deleteUser(firebaseUser)
   }, [firebaseUser])
 
@@ -229,6 +295,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user, userProfile, loading,
       login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,
+      knownAccounts, switchAccount, removeKnownAccount,
       updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,
     }}>
       {children}
