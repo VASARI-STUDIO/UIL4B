@@ -17,7 +17,9 @@ async function requireAdmin(req) {
   }
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
-    if (!ADMIN_EMAILS.includes(decoded.email?.toLowerCase())) {
+    // Require a Firebase-verified email — an unverified signup could
+    // otherwise register the admin address and pass the allowlist check.
+    if (!decoded.email_verified || !ADMIN_EMAILS.includes(decoded.email?.toLowerCase())) {
       return { error: 'Admin access required', status: 403 }
     }
     return { decoded }
