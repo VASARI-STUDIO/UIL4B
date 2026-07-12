@@ -1750,6 +1750,18 @@ function PreviewUpsell({ onUpgrade }) {
   )
 }
 
+// The six colour tools, each a focused view of a /color section. The footer at
+// the bottom of every tool links across to the others (see focusSection). Order
+// mirrors the mega-menu; contrast + tint live in the palette section's popovers.
+const COLOUR_TOOLS = [
+  { id: 'palette', label: 'Palette', section: 'palette', desc: 'Build the core ramp' },
+  { id: 'semantic', label: 'Semantic Colour', section: 'states', desc: 'Success, warning, error' },
+  { id: 'ui-colour', label: 'UI Colour', section: 'systems', desc: 'Surfaces, text, borders' },
+  { id: 'gradient', label: 'Gradient', section: 'gradients', desc: 'Blend across your palette' },
+  { id: 'tint', label: 'Tint', section: 'palette', desc: 'Scale any swatch' },
+  { id: 'contrast', label: 'Contrast Checker', section: 'palette', desc: 'Verify AA / AAA' },
+]
+
 export default function ColorStudio({ onCopy, toast }) {
   const { t } = useI18n()
   const { theme } = useTheme()
@@ -1845,6 +1857,18 @@ export default function ColorStudio({ onCopy, toast }) {
   const [activeSection, setActiveSection] = useState('palette')
   const toggleCollapse = useCallback((id) => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })), [])
 
+  // ── Focused single-tool view ──
+  // Each colour tool reads as its own page: expand ONLY the target section,
+  // collapse every sibling, then smooth-scroll to it. The shared palette still
+  // lives one expand away, so the "stays in sync" core value is never lost.
+  // Used by both the ?tool= deep-link handler and the "More colour tools" footer.
+  const focusSection = useCallback((sectionId) => {
+    setCollapsed(SECTIONS.reduce((acc, s) => { acc[s.id] = s.id !== sectionId; return acc }, {}))
+    requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [SECTIONS])
+
   // ── Discover hand-off: ?preset=<slug>&tab=gradient ──
   // When the user picks "Use in Gradient Generator" from Discover, we arrive
   // with a preset slug. Match it against GRAD_PRESETS by slugified name, apply
@@ -1896,14 +1920,11 @@ export default function ColorStudio({ onCopy, toast }) {
       tint: 'palette',
     }
     const sectionId = TOOL_TO_SECTION[tool] || 'palette'
-    setCollapsed(prev => ({ ...prev, [sectionId]: false }))
-    requestAnimationFrame(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
+    focusSection(sectionId)
     const next = new URLSearchParams(searchParams)
     next.delete('tool')
     setSearchParams(next, { replace: true })
-  }, [searchParams, setSearchParams])
+  }, [searchParams, setSearchParams, focusSection])
 
   useEffect(() => {
     const els = SECTIONS.map(s => document.getElementById(s.id)).filter(Boolean)
@@ -3620,6 +3641,26 @@ ${stateVars}
           </div>
         )}
       </section>
+
+      {/* ── More colour tools — cross-links to every sibling tool ──
+          Each opens that tool as its own focused view (expand it, collapse the
+          rest, scroll to it). The combined page stays whole underneath. */}
+      <nav className="cs-tools-footer" aria-label="More colour tools">
+        <h2 className="cs-tools-footer-title">More colour tools</h2>
+        <div className="cs-tools-footer-grid">
+          {COLOUR_TOOLS.map(tool => (
+            <button
+              key={tool.id}
+              type="button"
+              className="cs-tools-footer-link"
+              onClick={() => focusSection(tool.section)}
+            >
+              <strong>{tool.label}</strong>
+              <span>{tool.desc}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
       {/* ── Flow CTA: Next step → Typography ── */}
       <div className="cs-next-step">

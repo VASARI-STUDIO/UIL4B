@@ -270,10 +270,10 @@ export default function App() {
                   caught by the early return above once redirected). */}
               <Route path="/dashboard" element={<Navigate to="/home" replace />} />
               <Route path="/color-studio" element={<Navigate to="/color" replace />} />
-              <Route path="/palette" element={<Navigate to="/color" replace />} />
-              <Route path="/tints" element={<Navigate to="/color" replace />} />
-              <Route path="/gradients" element={<Navigate to="/color" replace />} />
-              <Route path="/contrast" element={<Navigate to="/color" replace />} />
+              <Route path="/palette" element={<Navigate to="/color?tool=palette" replace />} />
+              <Route path="/tints" element={<Navigate to="/color?tool=tint" replace />} />
+              <Route path="/gradients" element={<Navigate to="/color?tool=gradient" replace />} />
+              <Route path="/contrast" element={<Navigate to="/color?tool=contrast" replace />} />
               <Route path="/export" element={<Navigate to="/color" replace />} />
               <Route path="/imgconvert" element={<Navigate to="/file-converter" replace />} />
               <Route path="/video-frames" element={<Navigate to="/file-converter" replace />} />
