@@ -47,9 +47,11 @@ function SearchIcon() {
 
 function ExportIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-      <path d="M12 15V4m0 0 4 4m-4-4-4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+         strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 4h6v6" />
+      <path d="M20 4 11 13" />
+      <path d="M18 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4.5" />
     </svg>
   )
 }
@@ -134,67 +136,54 @@ function initials(profile, user) {
   return (first + second).toUpperCase()
 }
 
-// A "Soon" badge for any nav entry still under construction (Phase 1 = all bar
-// Icons & Emoji). The accent variant marks the conversion-adjacent Help entry.
-function SoonBadge({ accent }) {
-  return <span className={accent ? 'soon-badge soon-badge-accent' : 'soon-badge'}>Soon</span>
-}
-
-// One nav group. The head is an icon tile (hue-tinted) beside a title/description
-// column; Create groups then list their sub-tools underneath. Discover / Learn
-// groups have no sub-tools, so they render as a self-contained card that lifts on
-// hover — the whole tile is the click target.
-//
-// Soon signalling matches what the router ACTUALLY does: a whole category flagged
-// `soon` routes every one of its tools to the 🤫 state (see CreateTool.jsx), so a
-// tool reads as coming-soon whenever `group.soon || tool.soon`. The category title
-// carries the single "Soon" badge; each tool then shows a status dot — filled in
-// its category hue when it's live, hollow when it's still coming — so live vs.
-// upcoming is legible at a glance without stamping a redundant pill on every row.
-// The per-tool "Soon" pill only appears in the mixed case (a live category with an
-// individual tool still unbuilt), which is where the extra signal actually helps.
-function MenuGroup({ group, onNavigate }) {
-  const hasTools = Array.isArray(group.tools) && group.tools.length > 0
+// Inline mini design-system mock for the promo card — zero external assets (strict
+// CSP compliant). Every fill/stroke references a design token, so the visual
+// re-themes with the app and stays crisp at any DPI. Keyed by section so each
+// mega-menu gets a distinct picture: Create = a swatch/type card, Discover =
+// stacked inspiration cards, Learn = an open book. Purely decorative → aria-hidden
+// is set by the wrapping `.pnav-promo-visual`.
+function PromoMock({ section }) {
+  if (section === 'discover') {
+    return (
+      <svg className="pnav-promo-svg" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect x="8" y="8" width="184" height="104" rx="10" fill="var(--bg-1)" stroke="var(--border)" />
+        <rect x="26" y="32" width="98" height="66" rx="8" fill="var(--bg-2)" stroke="var(--border)" />
+        <rect x="46" y="22" width="98" height="66" rx="8" fill="var(--bg-1)" stroke="var(--border)" />
+        <rect x="58" y="34" width="30" height="18" rx="5" fill="var(--hue-colour)" />
+        <rect x="94" y="34" width="30" height="18" rx="5" fill="var(--hue-ai)" />
+        <rect x="58" y="60" width="72" height="7" rx="3.5" fill="var(--t2)" />
+        <rect x="58" y="73" width="48" height="7" rx="3.5" fill="var(--t3)" />
+      </svg>
+    )
+  }
+  if (section === 'learn') {
+    return (
+      <svg className="pnav-promo-svg" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect x="8" y="8" width="184" height="104" rx="10" fill="var(--bg-1)" stroke="var(--border)" />
+        <path d="M100 28c-13-8-29-8-42-4v64c13-4 29-4 42 4z" fill="var(--bg-2)" stroke="var(--border)" strokeLinejoin="round" />
+        <path d="M100 28c13-8 29-8 42-4v64c-13-4-29-4-42 4z" fill="var(--bg-2)" stroke="var(--border)" strokeLinejoin="round" />
+        <path d="M100 28v64" stroke="var(--border)" />
+        <rect x="66" y="42" width="26" height="6" rx="3" fill="var(--t3)" />
+        <rect x="66" y="56" width="22" height="6" rx="3" fill="var(--t3)" />
+        <rect x="66" y="70" width="24" height="6" rx="3" fill="var(--t3)" />
+        <rect x="108" y="42" width="26" height="6" rx="3" fill="var(--t3)" />
+        <rect x="108" y="56" width="18" height="6" rx="3" fill="var(--t3)" />
+        <rect x="118" y="18" width="14" height="26" rx="2" fill="var(--accent)" />
+      </svg>
+    )
+  }
+  // create (default) — swatch row, type ramp, one outlined component chip.
   return (
-    <div
-      className={hasTools ? 'pnav-group' : 'pnav-group pnav-group--card'}
-      data-hue={group.hue || (group.accent ? 'accent' : undefined)}
-    >
-      <Link className="pnav-group-head" to={group.home || group.route} onClick={onNavigate}>
-        <span className="pnav-ico" aria-hidden="true">
-          <NavIcon id={group.id} />
-        </span>
-        <span className="pnav-group-text">
-          <span className="pnav-group-title">
-            {group.label}
-            {group.soon && <SoonBadge accent={group.accent} />}
-          </span>
-          {group.desc && <span className="pnav-group-desc">{group.desc}</span>}
-        </span>
-      </Link>
-      {hasTools && (
-        <ul className="pnav-sub">
-          {group.tools.map((tool) => {
-            const soon = group.soon || tool.soon
-            return (
-              <li key={tool.id}>
-                <Link
-                  className="pnav-sublink"
-                  to={tool.route}
-                  data-soon={soon ? 'true' : undefined}
-                  aria-label={soon ? `${tool.label} — coming soon` : undefined}
-                  onClick={onNavigate}
-                >
-                  <span className="pnav-sub-dot" aria-hidden="true" />
-                  <span className="pnav-sub-label">{tool.label}</span>
-                  {tool.soon && !group.soon && <SoonBadge />}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </div>
+    <svg className="pnav-promo-svg" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect x="8" y="8" width="184" height="104" rx="10" fill="var(--bg-1)" stroke="var(--border)" />
+      <rect x="20" y="20" width="34" height="22" rx="6" fill="var(--hue-colour)" />
+      <rect x="61" y="20" width="34" height="22" rx="6" fill="var(--hue-type)" />
+      <rect x="102" y="20" width="34" height="22" rx="6" fill="var(--hue-component)" />
+      <rect x="143" y="20" width="34" height="22" rx="6" fill="var(--hue-ai)" />
+      <rect x="20" y="56" width="120" height="8" rx="4" fill="var(--t2)" />
+      <rect x="20" y="72" width="80" height="8" rx="4" fill="var(--t3)" />
+      <rect x="20" y="90" width="66" height="16" rx="8" fill="none" stroke="var(--accent)" strokeWidth="1.5" />
+    </svg>
   )
 }
 
@@ -265,6 +254,8 @@ export default function PillNav() {
   const onSignOut = () => { setMenu(null); logout() }
 
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
+  // Mobile sheet promo = the currently-expanded accordion's promo (or none).
+  const sheetPromo = NAV_SECTIONS.find((s) => s.id === sheetSection)?.promo || null
 
   return (
     <>
@@ -485,23 +476,40 @@ export default function PillNav() {
                 {activeSection.columns.map((col) => (
                   <div className="pnav-col" key={col.label}>
                     <p className="pnav-col-label">{col.label}</p>
-                    <div className="pnav-col-groups">
-                      {col.groups.map((group) => (
-                        <MenuGroup key={group.id} group={group} onNavigate={closeAll} />
+                    <ul className="pnav-toollist">
+                      {col.tools.map((t) => (
+                        <li key={t.id}>
+                          <Link
+                            className="pnav-tool"
+                            to={t.route}
+                            data-hue={t.hue}
+                            data-soon={t.soon ? 'true' : undefined}
+                            aria-label={t.soon ? `${t.label} — coming soon` : undefined}
+                            onClick={closeAll}
+                          >
+                            <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
+                            <span className="pnav-tool-label">{t.label}</span>
+                            {t.soon && <span className="soon-badge">Soon</span>}
+                          </Link>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
                 ))}
+                <Link className="pnav-viewall" to={activeSection.viewAllHref} onClick={closeAll}>
+                  View all {activeSection.label} tools <span aria-hidden="true">→</span>
+                </Link>
               </div>
               {activeSection.promo && (
                 <aside className="pnav-promo">
+                  <div className="pnav-promo-visual" aria-hidden="true"><PromoMock section={activeSection.id} /></div>
                   <span className="pnav-promo-eyebrow">{activeSection.promo.eyebrow}</span>
                   <p className="pnav-promo-title">{activeSection.promo.title}</p>
                   <p className="pnav-promo-blurb">{activeSection.promo.blurb}</p>
-                  <Link className="pnav-promo-cta" to={activeSection.promo.href} onClick={closeAll}>
-                    {activeSection.promo.cta}
-                    <span aria-hidden="true"> &rarr;</span>
-                  </Link>
+                  <div className="pnav-promo-actions">
+                    <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={activeSection.promo.href} onClick={closeAll}>Learn more</Link>
+                    <Link className="ui-pill ui-pill-accent ui-pill-sm" to={activeSection.promo.docsHref} onClick={closeAll}>View docs</Link>
+                  </div>
                 </aside>
               )}
             </div>
@@ -533,26 +541,44 @@ export default function PillNav() {
                 </button>
                 {expanded && (
                   <div className="pnav-acc-panel">
-                    {section.groups.map((group) => (
-                      <Link
-                        key={group.id}
-                        className="pnav-acc-link"
-                        to={group.home || group.route}
-                        data-hue={group.hue || (group.accent ? 'accent' : undefined)}
-                        onClick={closeAll}
-                      >
-                        <span className="pnav-acc-ico" aria-hidden="true">
-                          <NavIcon id={group.id} />
-                        </span>
-                        <span className="pnav-acc-label">{group.label}</span>
-                        {group.soon && <SoonBadge accent={group.accent} />}
-                      </Link>
+                    {section.columns.map((col) => (
+                      <div className="pnav-acc-col" key={col.label}>
+                        <p className="pnav-acc-colhead">{col.label}</p>
+                        {col.tools.map((t) => (
+                          <Link
+                            key={t.id}
+                            className="pnav-acc-link"
+                            to={t.route}
+                            data-hue={t.hue}
+                            data-soon={t.soon ? 'true' : undefined}
+                            aria-label={t.soon ? `${t.label} — coming soon` : undefined}
+                            onClick={closeAll}
+                          >
+                            <span className="pnav-acc-ico" aria-hidden="true">
+                              <NavIcon id={t.icon} />
+                            </span>
+                            <span className="pnav-acc-label">{t.label}</span>
+                            {t.soon && <span className="soon-badge">Soon</span>}
+                          </Link>
+                        ))}
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
             )
           })}
+          {sheetPromo && (
+            <div className="pnav-sheet-promo">
+              <span className="pnav-promo-eyebrow">{sheetPromo.eyebrow}</span>
+              <p className="pnav-promo-title">{sheetPromo.title}</p>
+              <p className="pnav-promo-blurb">{sheetPromo.blurb}</p>
+              <div className="pnav-promo-actions">
+                <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={sheetPromo.href} onClick={closeAll}>Learn more</Link>
+                <Link className="ui-pill ui-pill-accent ui-pill-sm" to={sheetPromo.docsHref} onClick={closeAll}>View docs</Link>
+              </div>
+            </div>
+          )}
           <div className="pnav-sheet-cta">
             {user ? (
               <Link className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" to="/settings" onClick={closeAll}>

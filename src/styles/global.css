@@ -1670,11 +1670,32 @@ img,svg,video{max-width:100%;height:auto}
 }
 
 /* Public pricing / plans page */
+/* Visually-hidden helper — content stays in the accessibility tree (screen
+   readers, e.g. the comparison table's <caption>) but is removed from view. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .plans-page{max-width:1120px}
-.plans-tiers{grid-template-columns:repeat(3,1fr)}
+.plans-tiers{grid-template-columns:repeat(3,1fr);align-items:center}
+/* Pro is centre-stage: lifted, scaled and the ONLY glowing CTA. Scoped to the
+   plans page so the Settings sub-tier cards keep their flat treatment. */
+.plans-tiers .sub-tier-pro{transform:translateY(-10px) scale(1.025);z-index:2;border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:color-mix(in srgb,var(--accent) 6%,var(--card));box-shadow:0 24px 48px -20px color-mix(in srgb,var(--accent) 55%,transparent),var(--ring)}
+.plans-tiers .sub-tier-pro .sub-tier-flag{background:var(--accent);color:var(--accent-fg)}
+.plans-tiers .sub-tier-pro .sub-tier-btn{box-shadow:var(--shadow-glow)}
 .plans-tier-soon{opacity:.6}
 .plans-tier-soon .sub-tier-btn{pointer-events:none}
 .plans-flag-soon{background:var(--bg-2);color:var(--t2)}
+/* Anchor / bundling line above the comparison table */
+.plans-anchor{margin:44px auto 0;max-width:760px;text-align:center;font-size:var(--fs-body);color:var(--t1);line-height:1.55}
+.plans-anchor strong{color:var(--t0)}
+/* Comparison table — real <table>, horizontally scrollable on narrow viewports
+   with a subtle right-edge fade to hint the overflow. */
+.plans-compare-wrap{margin-top:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.plans-compare-table{width:100%;min-width:520px;border-collapse:collapse;font-size:var(--fs-body-s)}
+.plans-compare-table th,.plans-compare-table td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border)}
+.plans-compare-table thead th{font-family:var(--mono);font-size:var(--fs-caption);text-transform:uppercase;letter-spacing:.06em;color:var(--t2)}
+.plans-compare-table td:first-child{color:var(--t1);font-weight:560}
+.plans-compare-table .pct-pro{background:var(--accent-bg);color:var(--t0);font-weight:600}
+.plans-compare-table thead .pct-pro{color:var(--accent)}
+.plans-compare-table .pct-none{color:var(--t3)}
 .plans-pro-banner{display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:18px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 10%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));font-size:13px;color:var(--t1);line-height:1.5}
 .plans-pro-banner svg{flex-shrink:0;color:var(--accent)}
 .plans-pro-banner a{color:var(--accent);font-weight:600;white-space:nowrap}
@@ -1693,6 +1714,13 @@ img,svg,video{max-width:100%;height:auto}
 .plans-faq-a{padding:0 2px 18px;font-size:14px;line-height:1.6;color:var(--t1)}
 @media(max-width:900px){
   .plans-tiers{grid-template-columns:1fr}
+  /* Pro to the top (primacy) and drop the lift so it sits flush in the stack. */
+  .plans-tiers .sub-tier-pro{transform:none;order:-1}
+}
+/* At ≤640 the table scrolls; a right-edge mask hints the overflow. Scoped here so
+   the Pro column's right edge is never dimmed on wider, non-scrolling layouts. */
+@media(max-width:640px){
+  .plans-compare-wrap{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
 }
 
 /* Embedded checkout page */
@@ -4379,7 +4407,7 @@ html.lenis,html.lenis body{height:auto}
 .pnav-menu[data-menu="learn"]{width:1020px}
 .pnav-menu-body{padding:40px 48px;animation:fx-fade var(--dur-2) var(--ease-out)}
 /* Menu body splits into the group grid (left) + a promo/feature card (right) */
-.pnav-menu-cols{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:56px;align-items:stretch}
+.pnav-menu-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:56px;align-items:stretch}
 .pnav-grid{display:grid;column-gap:56px;row-gap:0}
 .pnav-menu[data-menu="create"] .pnav-grid{grid-template-columns:repeat(3,1fr)}
 .pnav-menu[data-menu="discover"] .pnav-grid,.pnav-menu[data-menu="learn"] .pnav-grid{grid-template-columns:repeat(2,1fr)}
@@ -4428,14 +4456,47 @@ html.lenis,html.lenis body{height:auto}
 /* Card variant: Discover/Learn groups have no sub-tools, so the whole tile is the link */
 .pnav-group--card .pnav-group-head{padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-0);transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .pnav-group--card .pnav-group-head:hover{border-color:color-mix(in srgb,var(--hue,var(--accent)) 40%,var(--border));background:var(--bg-1);transform:translateY(-2px);box-shadow:var(--shadow-s)}
+/* ── Flat icon+label tool rows — one row per tool under a column eyebrow.
+   Replaces the old group-head + sub-dot list for maximum scannable density.
+   The icon tile takes its colour from the row's data-hue (falls back to accent). */
+.pnav-toollist{list-style:none;display:flex;flex-direction:column;gap:2px;margin:0;padding:0}
+.pnav-tool{display:flex;align-items:center;gap:12px;min-height:40px;padding:7px 10px;border-radius:var(--radius-s);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.pnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
+.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent));transition:background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+.pnav-tool:hover .pnav-tool-ico{background:color-mix(in srgb,var(--hue,var(--accent)) 20%,var(--bg-2));transform:translateY(-1px)}
+.pnav-tool-ico svg{width:16px;height:16px}
+.pnav-tool-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-body-s);font-weight:560}
+.pnav-tool .soon-badge{margin-left:auto}
+.pnav-tool[data-soon] .pnav-tool-label{color:var(--t3)}
+.pnav-tool[data-soon] .pnav-tool-ico{opacity:.6}
+.pnav-tool[data-soon]:hover .pnav-tool-label{color:var(--t2)}
+.pnav-tool:focus-visible{outline-offset:-2px}
+/* Subtle staggered reveal on menu open (row-by-row). Reduced-motion is handled
+   globally (animation-duration clamped), so no per-rule guard is needed. */
+@keyframes pnav-tool-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pnav-tool{animation:pnav-tool-in var(--dur-2) var(--ease-out) backwards}
+.pnav-toollist li:nth-child(2) .pnav-tool{animation-delay:24ms}
+.pnav-toollist li:nth-child(3) .pnav-tool{animation-delay:48ms}
+.pnav-toollist li:nth-child(4) .pnav-tool{animation-delay:72ms}
+.pnav-toollist li:nth-child(5) .pnav-tool{animation-delay:96ms}
+.pnav-toollist li:nth-child(6) .pnav-tool{animation-delay:120ms}
+.pnav-toollist li:nth-child(7) .pnav-tool{animation-delay:144ms}
+.pnav-toollist li:nth-child(8) .pnav-tool{animation-delay:168ms}
+
+/* "View all … tools →" — spans the full column grid at the foot of the menu. */
+.pnav-viewall{grid-column:1/-1;display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--mono);font-size:var(--fs-caption);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);text-decoration:none;transition:gap var(--dur-2) var(--ease-out)}
+.pnav-viewall:hover{gap:10px;color:var(--accent-strong);text-decoration:none}
+
 /* Promo / feature card — the right-hand rail of every mega-menu. Copy is
-   data-driven from NAV_SECTIONS[*].promo; the CTA links to the surface landing. */
-.pnav-promo{display:flex;flex-direction:column;gap:12px;padding:24px;border:1px solid color-mix(in srgb,var(--accent) 16%,var(--border));border-radius:var(--radius-xl);background:color-mix(in srgb,var(--accent) 7%,var(--bg-2))}
+   data-driven from NAV_SECTIONS[*].promo; carries an inline SVG mock + two CTAs. */
+.pnav-promo{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:var(--radius-xl);background:color-mix(in srgb,var(--accent) 8%,var(--bg-0));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));box-shadow:var(--ring)}
+.pnav-promo-visual{border-radius:var(--radius-l);overflow:hidden;background:var(--bg-1);border:1px solid var(--border);aspect-ratio:16/10;margin-bottom:4px}
+.pnav-promo-svg{display:block;width:100%;height:100%}
 .pnav-promo-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
 .pnav-promo-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .pnav-promo-blurb{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
-.pnav-promo-cta{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-body-s);font-weight:600;color:var(--accent);text-decoration:none;transition:color var(--dur-1) var(--ease-out)}
-.pnav-promo-cta:hover{color:var(--accent-strong);text-decoration:none}
+.pnav-promo-actions{display:flex;gap:8px;margin-top:auto}
+.pnav-promo-actions .ui-pill{flex:1}
 .pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 48px;border-top:1px solid var(--border);background:var(--bg-0)}
 .pnav-menu-foot-note{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .pnav-menu-foot-link{font-size:var(--fs-body-s);font-weight:560;color:var(--t0);text-decoration:none}
@@ -4451,7 +4512,19 @@ html.lenis,html.lenis body{height:auto}
 .pnav-acc-link:hover{color:var(--t0);text-decoration:none}
 .pnav-acc-ico{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent))}
 .pnav-acc-label{font-weight:560}
+/* Column eyebrow inside an expanded accordion, plus soon-badge push + dimming. */
+.pnav-acc-col + .pnav-acc-col{margin-top:4px}
+.pnav-acc-colhead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:14px 0 6px}
+.pnav-acc-link .soon-badge{margin-left:auto}
+.pnav-acc-link[data-soon] .pnav-acc-label{color:var(--t3)}
+.pnav-acc-link[data-soon] .pnav-acc-ico{opacity:.6}
+/* Section-matched promo, rendered above the sheet CTA (title + blurb + 2 CTAs,
+   no SVG mock on mobile). */
+.pnav-sheet-promo{margin-top:20px;padding:16px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 8%,var(--bg-0));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border))}
+.pnav-sheet-promo .pnav-promo-title{font-size:var(--fs-h5)}
+.pnav-sheet-promo .pnav-promo-actions{margin-top:12px}
 .pnav-sheet-cta{position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;margin-top:24px;padding-top:16px;background:var(--bg-1)}
+@media(max-width:380px){.pnav-sheet-promo .pnav-promo-actions{flex-direction:column}}
 
 /* ══ Export shell (exp-) — the polished, accessible Export dialog opened from the
    nav search cluster. No real export yet: every format previews and the primary

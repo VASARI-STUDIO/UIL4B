@@ -91,10 +91,11 @@ export default function Plans() {
             <div className="sub-tier-price"><span className="sub-tier-amount">$0</span><span className="sub-tier-per">forever</span></div>
           </div>
           <ul className="sub-tier-list">
-            <li><Check /> All core design tools</li>
-            <li><Check /> Unlimited palettes, scales &amp; exports</li>
-            <li><Check /> 40 AI generations per day</li>
-            <li><Check /> Local browser saves</li>
+            <li><Check /> Every tool, fully usable</li>
+            <li><Check /> 40 AI generations/day · standard models</li>
+            <li><Check /> Local saves — up to 25</li>
+            <li><Check /> Basic export: CSS tokens (small UIL4B credit)</li>
+            <li><Check /> Community support</li>
           </ul>
           {user ? (
             <button className="btn sub-tier-btn" disabled>{isPro ? 'Included in Pro' : 'Your current plan'}</button>
@@ -106,7 +107,7 @@ export default function Plans() {
 
         {/* Pro */}
         <div className="sub-tier sub-tier-pro">
-          <span className="sub-tier-flag">Recommended</span>
+          <span className="sub-tier-flag">Most popular</span>
           <div className="sub-tier-head">
             <div className="sub-tier-name">Pro</div>
             <div className="sub-tier-price">
@@ -116,12 +117,12 @@ export default function Plans() {
             <div className="sub-tier-sub">{billing === 'yearly' ? `AUD · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? `, save ${proPrice.savingsPct}%` : ''} · 7-day free trial` : 'AUD · billed monthly'}</div>
           </div>
           <ul className="sub-tier-list">
-            <li><Check /> <strong>Everything in Free, plus:</strong></li>
-            {billing === 'yearly' && <li><Check /> <strong>7-day free trial</strong> — cancel anytime</li>}
-            <li><Check /> 1,000 AI generations per day</li>
-            <li><Check /> Higher-quality AI models</li>
-            <li><Check /> Projects synced across devices</li>
-            <li><Check /> Advanced design-system exports</li>
+            <li><Check /> <strong>Everything in Free — with the limits removed</strong></li>
+            <li><Check /> 1,000 AI generations/day · higher-quality models</li>
+            <li><Check /> Cloud-synced projects · unlimited saves &amp; collections</li>
+            <li><Check /> Every export format: HTML system · JSON · Tailwind · asset bundle</li>
+            <li><Check /> No UIL4B branding on exports</li>
+            <li><Check /> Advanced &ldquo;extra&rdquo; edit tools</li>
             <li><Check /> Priority support</li>
           </ul>
           {isPro ? (
@@ -159,6 +160,63 @@ export default function Plans() {
           </ul>
           <button className="btn sub-tier-btn" disabled>Coming soon</button>
         </div>
+      </div>
+
+      {/* Anchor / bundling line + at-a-glance comparison table */}
+      <p className="plans-anchor">Everything you&apos;d otherwise buy across <strong>6 separate tools</strong> — one subscription.</p>
+      <div className="plans-compare-wrap">
+        <table className="plans-compare-table">
+          <caption className="sr-only">Free versus Pro feature comparison</caption>
+          <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col">Free</th>
+              <th scope="col" className="pct-pro">Pro</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Design tools</td>
+              <td>All tools</td>
+              <td className="pct-pro">All tools</td>
+            </tr>
+            <tr>
+              <td>AI generations / day</td>
+              <td>40 · standard</td>
+              <td className="pct-pro">1,000 · better models</td>
+            </tr>
+            <tr>
+              <td>Saves &amp; collections</td>
+              <td>Local, up to 25</td>
+              <td className="pct-pro">Cloud-synced, unlimited</td>
+            </tr>
+            <tr>
+              <td>Projects across devices</td>
+              <td className="pct-none">Not included</td>
+              <td className="pct-pro">Included</td>
+            </tr>
+            <tr>
+              <td>Export formats</td>
+              <td>CSS tokens</td>
+              <td className="pct-pro">CSS · HTML · JSON · Tailwind · assets</td>
+            </tr>
+            <tr>
+              <td>UIL4B branding on exports</td>
+              <td>Shown</td>
+              <td className="pct-pro">Removed</td>
+            </tr>
+            <tr>
+              <td>Advanced edit tools</td>
+              <td className="pct-none">Not included</td>
+              <td className="pct-pro">Included</td>
+            </tr>
+            <tr>
+              <td>Support</td>
+              <td>Community</td>
+              <td className="pct-pro">Priority</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* Reassurance strip */}
