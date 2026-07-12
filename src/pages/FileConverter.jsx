@@ -3,12 +3,6 @@ import JSZip from 'jszip'
 import { takePendingImages } from '../utils/imageHandoff'
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const ALPHA_BADGE_STYLE = {
-  fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase',
-  padding: '2px 8px', borderRadius: 'var(--radius-s)',
-  background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', marginLeft: 8,
-}
-
 const MODES = [
   { id: 'image', label: 'Image' },
   { id: 'gif', label: 'Video → GIF' },
@@ -98,7 +92,7 @@ export default function FileConverter({ toast }) {
         <div className="sec-h-eyebrow">File Converter</div>
         <h1>
           File Converter
-          <span style={ALPHA_BADGE_STYLE}>Alpha</span>
+          <span className="fc-alpha">Alpha</span>
         </h1>
         <p>
           Convert images, turn short videos into GIFs, or extract video frames — all in
@@ -112,7 +106,7 @@ export default function FileConverter({ toast }) {
         {MODES.map(m => (
           <button
             key={m.id}
-            className={`pt-t fc-tab${mode === m.id ? ' on' : ''}`}
+            className={`fc-tab${mode === m.id ? ' on' : ''}`}
             onClick={() => setMode(m.id)}
             aria-pressed={mode === m.id}
             aria-label={`${m.label}${m.id === '3d' ? ' (coming soon)' : ''} converter`}
@@ -151,8 +145,13 @@ function DropZone({ accept, multiple, onFiles, hint, sub }) {
         if (e.dataTransfer.files?.length) onFiles(e.dataTransfer.files)
       }}
     >
-      <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 4 }}>{hint}</p>
-      <p style={{ fontSize: 11, color: 'var(--t2)' }}>{sub}</p>
+      <span className="fc-drop-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" />
+        </svg>
+      </span>
+      <p className="fc-drop-hint">{hint}</p>
+      <p className="fc-drop-sub">{sub}</p>
       <input
         ref={inputRef}
         type="file"
