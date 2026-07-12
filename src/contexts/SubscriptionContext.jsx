@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { auth as firebaseAuth } from '../utils/firebase'
+import { ADMIN_EMAILS } from '../utils/constants'
 
 const SubscriptionContext = createContext()
 
@@ -76,7 +77,13 @@ export function SubscriptionProvider({ children }) {
     return unsub
   }, [user?.uid])
 
-  const plan = planForSubscription(subscription)
+  // Founder/admin accounts get Pro entitlements without a Stripe subscription.
+  // This mirrors the server-side gate in api/_lib/plans.js (planForUser): the
+  // email here comes from Firebase Auth, and every paid API call re-verifies
+  // it server-side from the ID token — flipping this flag in devtools unlocks
+  // nothing that the server doesn't independently grant.
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  const plan = isAdmin ? PRO_PLAN : planForSubscription(subscription)
   const isPro = plan.id === 'pro'
 
   // Sends the user to our own embedded checkout page (/checkout) instead of a
@@ -130,7 +137,7 @@ export function SubscriptionProvider({ children }) {
 
   return (
     <SubscriptionContext.Provider value={{
-      subscription, plan, isPro, loading,
+      subscription, plan, isPro, isAdmin, loading,
       checkout, createCheckoutSession, getCheckoutStatus, openPortal,
     }}>
       {children}

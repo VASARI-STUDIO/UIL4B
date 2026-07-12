@@ -38,6 +38,24 @@ export function planForSubscription(subscription) {
   return PLANS.pro
 }
 
+// Founder/admin accounts get Pro entitlements without a Stripe subscription so
+// the team can dog-food paid features. The email is read from a verified
+// Firebase ID token on the server, so a non-admin can't spoof their way in.
+// Keep this list in sync with src/utils/constants.js (ADMIN_EMAILS).
+export const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
+
+export function isAdminEmail(email) {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase())
+}
+
+// Resolve the effective plan for a request: admins are always Pro; everyone
+// else falls back to their real subscription. Prefer this over
+// planForSubscription in any authenticated endpoint that gates on plan.
+export function planForUser({ subscription, email } = {}) {
+  if (isAdminEmail(email)) return PLANS.pro
+  return planForSubscription(subscription)
+}
+
 export function dailyLimitFor(plan, toolId) {
   return plan.limits[toolId] ?? plan.limits['ai-default'] ?? 40
 }
