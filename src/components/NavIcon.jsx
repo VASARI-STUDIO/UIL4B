@@ -46,6 +46,86 @@ const ICONS = {
       <path d="M8.5 14.5c.9 1.1 2.1 1.7 3.5 1.7s2.6-.6 3.5-1.7" />
     </>
   ),
+  // ── Create · per-tool menu glyphs ──
+  palette: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  gradient: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="2.5" />
+      <path d="M4 20 20 4" />
+    </>
+  ),
+  contrast: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // Reuses the brand droplet — tint/shades share that visual language.
+  tint: <path d="M12 3.5s5.5 5.8 5.5 9.5A5.5 5.5 0 0 1 6.5 13c0-3.7 5.5-9.5 5.5-9.5z" />,
+  semantic: (
+    <>
+      <rect x="4" y="5" width="16" height="4.2" rx="2.1" />
+      <rect x="4" y="10.4" width="16" height="4.2" rx="2.1" />
+      <rect x="4" y="15.8" width="10" height="4.2" rx="2.1" />
+    </>
+  ),
+  'ui-colour': (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+      <path d="M3.5 9h17" />
+      <rect x="6" y="12" width="5" height="4.5" rx="1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  'font-pair': (
+    <>
+      <path d="M3 17 7 7l4 10" />
+      <path d="M4.4 13.5h5.2" />
+      <path d="M13 17 17 7l4 10" />
+      <path d="M14.4 13.5h5.2" />
+    </>
+  ),
+  'box-shadow': (
+    <>
+      <rect x="4" y="4" width="12" height="12" rx="2" />
+      <path d="M8 20h10a2 2 0 0 0 2-2V8" />
+    </>
+  ),
+  auto: (
+    <>
+      <rect x="4" y="8" width="12" height="12" rx="2" />
+      <path d="M18.5 3l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // Reuses the icons smiley — emoji shares that face motif.
+  emoji: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M9 10.5h.01" />
+      <path d="M15 10.5h.01" />
+      <path d="M8.5 14.5c.9 1.1 2.1 1.7 3.5 1.7s2.6-.6 3.5-1.7" />
+    </>
+  ),
+  ratio: (
+    <>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <rect x="7" y="9.5" width="7" height="5" rx="1" />
+    </>
+  ),
+  'alt-text': (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+      <circle cx="8" cy="9.5" r="1.4" />
+      <path d="M4 16l4-3.5 3 2.5" />
+      <path d="M13.5 9.5h5M16 9.5v6" />
+    </>
+  ),
   // ── Discover ──
   inspiration: (
     <>

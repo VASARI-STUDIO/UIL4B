@@ -121,46 +121,98 @@ export const LEARN_GROUPS = [
   { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn', soon: true, accent: true },
 ]
 
-// Desktop mega-menu column groupings. The flat `groups` list still drives the
-// router and the mobile sheet; on desktop those same group objects are dealt into
-// 2–3 labelled columns so related tools sit under a short, scannable eyebrow. Each
-// spec entry names the column and the group ids (in order) that fall under it —
-// resolved to shared group references so the menu can never drift from the tree.
-function toColumns(groups, spec) {
+// ── Menu-only column model ──────────────────────────────────────────────────
+// The mega-menu renders one flat icon+label row per tool, grouped under a short
+// eyebrow. This model drives ONLY the menu presentation — it deliberately does
+// NOT share references with CREATE_GROUPS above, which still owns the router,
+// route resolution and the in-tool rail. A menu tweak can therefore never break
+// routing. Each column: { label, tools: [{ id, label, route, icon, hue, soon }] }.
+//
+// NOTE: the six Colour rows deep-link into the merged /color page's sub-sections
+// via `?tool=<id>` (see ColorStudio's TOOL_TO_SECTION handler). All six still
+// resolve to /color for the router, so createRoutes() is unaffected.
+const CREATE_MENU = [
+  {
+    label: 'Colour',
+    tools: [
+      { id: 'palette', label: 'Palette', route: '/color?tool=palette', icon: 'palette', hue: 'colour', soon: false },
+      { id: 'gradient', label: 'Gradient', route: '/color?tool=gradient', icon: 'gradient', hue: 'colour', soon: false },
+      { id: 'contrast', label: 'Contrast Checker', route: '/color?tool=contrast', icon: 'contrast', hue: 'colour', soon: false },
+      { id: 'tint', label: 'Tint', route: '/color?tool=tint', icon: 'tint', hue: 'colour', soon: false },
+      { id: 'semantic', label: 'Semantic Colour', route: '/color?tool=semantic', icon: 'semantic', hue: 'colour', soon: false },
+      { id: 'ui-colour', label: 'UI Colour', route: '/color?tool=ui-colour', icon: 'ui-colour', hue: 'colour', soon: false },
+    ],
+  },
+  {
+    label: 'Type & UI',
+    tools: [
+      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', icon: 'type', hue: 'type', soon: false },
+      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', icon: 'font-pair', hue: 'type', soon: false },
+      { id: 'type-scale', label: 'Type Scale', route: '/typescale', icon: 'typography', hue: 'type', soon: false },
+      { id: 'component-designer', label: 'Component Designer', route: '/ui-builder', icon: 'component', hue: 'component', soon: false },
+      { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', icon: 'box-shadow', hue: 'component', soon: false },
+      { id: 'auto-builder', label: 'Auto-Builder', route: '/auto-builder', icon: 'auto', hue: 'component', soon: true },
+    ],
+  },
+  {
+    label: 'Assets & AI',
+    tools: [
+      { id: 'icons', label: 'Icon Library', route: '/icons', icon: 'icons', hue: 'icons', soon: false },
+      { id: 'emoji', label: 'Emoji Library', route: '/emoji', icon: 'emoji', hue: 'icons', soon: false },
+      { id: 'file-converter', label: 'File Converter', route: '/file-converter', icon: 'imagery', hue: 'imagery', soon: false },
+      { id: 'ratio', label: 'Aspect Ratio', route: '/ratio', icon: 'ratio', hue: 'imagery', soon: false },
+      { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: false },
+      { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: false },
+      { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
+      { id: 'prompts', label: 'Prompt Library', route: '/prompts', icon: 'community-prompts', hue: 'ai', soon: false },
+    ],
+  },
+]
+
+// Discover / Learn have flat groups with no sub-tools; deal them into the same
+// { label, tools } column shape so the menu renderer is uniform. Each group maps
+// to one row: icon = the group id (NavIcon carries a glyph per id) and hue falls
+// back to accent (these surfaces carry no category hue), with the conversion-
+// adjacent Help row flagged `accent`.
+function groupsToMenu(groups, spec) {
   const seen = new Set()
-  const cols = spec.map(({ label, ids }) => {
-    const items = ids
+  const toRow = (g) => ({
+    id: g.id,
+    label: g.label,
+    route: g.route,
+    icon: g.id,
+    hue: g.accent ? 'accent' : undefined,
+    soon: !!g.soon,
+  })
+  const cols = spec.map(({ label, ids }) => ({
+    label,
+    tools: ids
       .map((id) => groups.find((g) => g.id === id))
       .filter((g) => g && !seen.has(g.id) && seen.add(g.id))
-    return { label, groups: items }
-  })
+      .map(toRow),
+  }))
   // Safety net: any group the spec forgot lands in a trailing "More" column, so a
-  // newly-added tool is never silently dropped from the menu.
+  // newly-added entry is never silently dropped from the menu.
   const rest = groups.filter((g) => !seen.has(g.id))
-  if (rest.length) cols.push({ label: 'More', groups: rest })
-  return cols.filter((c) => c.groups.length)
+  if (rest.length) cols.push({ label: 'More', tools: rest.map(toRow) })
+  return cols.filter((c) => c.tools.length)
 }
 
-const CREATE_COLUMNS = toColumns(CREATE_GROUPS, [
-  { label: 'Foundations', ids: ['colour', 'type'] },
-  { label: 'Components & Icons', ids: ['component', 'icons'] },
-  { label: 'Media & AI', ids: ['imagery', 'ai'] },
-])
-
-const DISCOVER_COLUMNS = toColumns(DISCOVER_GROUPS, [
+const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
   { label: 'Community', ids: ['inspiration', 'community-fonts', 'community-prompts'] },
   { label: 'Your library', ids: ['curated', 'collections'] },
 ])
 
-const LEARN_COLUMNS = toColumns(LEARN_GROUPS, [
+const LEARN_MENU = groupsToMenu(LEARN_GROUPS, [
   { label: 'Foundations', ids: ['principles', 'themes', 'brand', 'typography'] },
   { label: 'Growth & help', ids: ['seo', 'marketing', 'ai-assistants', 'help'] },
 ])
 
 // Top-level nav model consumed by PillNav. Each section carries its flat `groups`
-// (router + mobile sheet), `columns` (the labelled desktop mega-menu layout), and
-// the copy for its promo card (the right-hand feature panel): an eyebrow, a
-// heading, a short blurb and a CTA that links to the relevant surface landing.
+// (still used by the router hand-off), the menu `columns` (the flat icon+label
+// mega-menu layout), a `viewAllHref` (the "View all …" link at the foot of the
+// columns) and the copy for its promo card: an eyebrow, heading, blurb and TWO
+// CTAs — `href` ("Learn more", the surface landing) and `docsHref` ("View docs").
 // `width` is a legacy hint — the panel's real width is set per `data-menu` in
 // global.css.
 //
@@ -168,33 +220,33 @@ const LEARN_COLUMNS = toColumns(LEARN_GROUPS, [
 // it's honest and on-brand, but it hasn't been through a copy pass. Flag for review.
 export const NAV_SECTIONS = [
   {
-    id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_COLUMNS, width: 960,
+    id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_MENU, viewAllHref: '/sitemap', width: 960,
     promo: {
       eyebrow: 'Create',
       title: 'Your whole UI system, one workspace',
       blurb: 'Build colour, type, components and icons that stay in sync — then export production-ready code.',
-      cta: 'See how it works',
       href: '/home',
+      docsHref: '/learn',
     },
   },
   {
-    id: 'discover', label: 'Discover', groups: DISCOVER_GROUPS, columns: DISCOVER_COLUMNS, width: 640,
+    id: 'discover', label: 'Discover', groups: DISCOVER_GROUPS, columns: DISCOVER_MENU, viewAllHref: '/discover', width: 640,
     promo: {
       eyebrow: 'Discover',
       title: 'Inspiration worth the tab',
       blurb: 'Community UI systems, font pairings and prompts — curated, never scraped.',
-      cta: 'Browse Discover',
       href: '/discover',
+      docsHref: '/learn',
     },
   },
   {
-    id: 'learn', label: 'Learn', groups: LEARN_GROUPS, columns: LEARN_COLUMNS, width: 800,
+    id: 'learn', label: 'Learn', groups: LEARN_GROUPS, columns: LEARN_MENU, viewAllHref: '/learn', width: 800,
     promo: {
       eyebrow: 'Learn',
       title: 'Understand the why',
       blurb: 'Principles, theme systems and guides that make your interfaces hold up.',
-      cta: 'Start learning',
       href: '/learn',
+      docsHref: '/help',
     },
   },
 ]
