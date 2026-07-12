@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { getLenis } from '../hooks/useSmoothScroll'
 import UIKitGuide from '../components/UIKitGuide'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
@@ -306,6 +307,11 @@ function recentPayload(icon) {
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
 function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
   const navigate = useNavigate()
+  const { theme } = useTheme()
+  // The stage follows the site theme: in light mode an un-tinted icon previews
+  // dark-on-light, in dark mode white-on-dark — so what you see matches where
+  // you'll paste it. An explicit colour choice always overrides this.
+  const themeInk = theme === 'light' ? '#18181B' : '#F4F4F5'
   const panelRef = useRef(null)
   const stageRef = useRef(null)
   const hostRef = useRef(null)
@@ -330,7 +336,6 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
   const [rotate, setRotate] = useState(0)
   const [flipH, setFlipH] = useState(false)
   const [flipV, setFlipV] = useState(false)
-  const [tab, setTab] = useState('svg')
   const [copied, setCopied] = useState('')
   const [savedState, setSavedState] = useState(() => (icon?.custom ? 'saved' : 'idle'))
 
@@ -388,13 +393,13 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
     if (!stage) return
     stage.style.setProperty('--ig-size', `${size}px`)
     stage.style.setProperty('--ig-stroke', String(stroke))
-    stage.style.setProperty('--ig-color', color || '#F4F4F5')
+    stage.style.setProperty('--ig-color', color || themeInk)
     const tf = []
     if (rotate) tf.push(`rotate(${rotate}deg)`)
     if (flipH) tf.push('scaleX(-1)')
     if (flipV) tf.push('scaleY(-1)')
     stage.style.setProperty('--ig-transform', tf.length ? tf.join(' ') : 'none')
-  }, [size, stroke, color, rotate, flipH, flipV])
+  }, [size, stroke, color, rotate, flipH, flipV, themeInk])
 
   // Lock body scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
@@ -433,38 +438,18 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
     [baseSvgText, size, color, stroke, isStroke, absStroke, rotate, flipH, flipV],
   )
 
-  const cssCode = useMemo(() => {
-    const lines = [`width: ${size}px;`, `height: ${size}px;`]
-    if (color) lines.push(`color: ${color};`)
-    const tf = []
-    if (rotate) tf.push(`rotate(${rotate}deg)`)
-    if (flipH) tf.push('scaleX(-1)')
-    if (flipV) tf.push('scaleY(-1)')
-    if (tf.length) lines.push(`transform: ${tf.join(' ')};`)
-    return `.icon {\n  ${lines.join('\n  ')}\n}`
-  }, [size, color, rotate, flipH, flipV])
-
-  const urlCode = useMemo(() => {
-    if (!activeIcon?.cdn || activeIcon.custom) return ''
-    const p = { size }
-    if (color && !isColoredPack) p.color = color
-    if (rotate) p.rotate = rotate
-    if (flipH) p.flipH = true
-    if (flipV) p.flipV = true
-    return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
-  }, [activeIcon, size, color, isColoredPack, rotate, flipH, flipV])
-
   const stageImgUrl = useMemo(() => {
     if (!activeIcon?.cdn) return ''
     const p = { size }
-    if (color && !isColoredPack) p.color = color
+    const imgColor = isColoredPack ? '' : (color || themeInk)
+    if (imgColor) p.color = imgColor
     if (rotate) p.rotate = rotate
     if (flipH) p.flipH = true
     if (flipV) p.flipV = true
     return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
-  }, [activeIcon, size, color, isColoredPack, rotate, flipH, flipV])
+  }, [activeIcon, size, color, isColoredPack, themeInk, rotate, flipH, flipV])
 
-  const effectiveColor = rendersInline ? (color || '#F4F4F5') : (color || '#000000')
+  const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
   const stageIsLight = !isColoredPack && relativeLuminance(effectiveColor) < 0.35
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
@@ -486,8 +471,7 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
   }
 
   const handleCopyCode = async () => {
-    const text = tab === 'svg' ? serializedOutput : tab === 'css' ? cssCode : urlCode
-    const ok = await writeClipboard(text)
+    const ok = await writeClipboard(serializedOutput)
     if (!ok) return
     setCopied('code')
     setTimeout(() => setCopied(''), 2000)
@@ -646,14 +630,10 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
             </div>
 
             <div className="icust-code">
-              <div className="icust-code-tabs">
-                <button type="button" className={tab === 'svg' ? 'active' : ''} onClick={() => setTab('svg')}>SVG</button>
-                <button type="button" className={tab === 'css' ? 'active' : ''} onClick={() => setTab('css')}>CSS</button>
-                {activeIcon.cdn && !activeIcon.custom && <button type="button" className={tab === 'url' ? 'active' : ''} onClick={() => setTab('url')}>URL</button>}
-              </div>
+              <div className="icust-code-label">SVG</div>
               <button type="button" className="icust-code-box" onClick={handleCopyCode}>
                 <span className="icust-code-hint">{copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
-                <code>{tab === 'svg' ? serializedOutput : tab === 'css' ? cssCode : urlCode}</code>
+                <code>{serializedOutput}</code>
               </button>
             </div>
 
@@ -682,12 +662,6 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
               )}
 
               <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleDownload}>Download</button>
-
-              {activeIcon.cdn && !activeIcon.custom && !activeIcon.pasted && (
-                <a className="ui-pill ui-pill-ghost ui-pill-md" href={`https://icon-sets.iconify.design/${activeIcon.pack}/${activeIcon.name}/`} target="_blank" rel="noopener noreferrer">
-                  View on Iconify
-                </a>
-              )}
             </div>
           </>
         )}
