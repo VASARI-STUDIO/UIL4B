@@ -323,7 +323,7 @@ const JOIN_OPTS = [
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
-function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
+function IconCustomizer({ icon, addMode, isPro, onClose, onCopy, onPick }) {
   const navigate = useNavigate()
   const { theme } = useTheme()
   // The stage follows the site theme: in light mode an un-tinted icon previews
@@ -395,7 +395,38 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
     return () => { cancelled = true }
   }, [activeIcon])
 
+  // Similar icons — same pack, same name-root (e.g. arrow-left surfaces
+  // arrow-right / arrow-up). A foot-of-popup retention nudge: keep users building
+  // a consistent set inside the customizer instead of bouncing back to the grid.
+  // Only for plain CDN icons (custom/pasted have no pack sibling to mine).
+  // Keyed by icon identity (like `fetched`) so a stale pack response can never
+  // paint the wrong siblings, and so we never reset state synchronously in-render.
+  const [similar, setSimilar] = useState({ id: null, list: [] })
+  useEffect(() => {
+    if (!activeIcon?.cdn || activeIcon.custom || activeIcon.pasted) return
+    const { pack, name } = activeIcon
+    if (!pack || !name) return
+    const id = activeIcon.id || `${pack}:${name}`
+    const root = name.split(/[-_]/)[0]
+    if (!root) return
+    let cancelled = false
+    getCollectionNames(pack)
+      .then(({ names }) => {
+        if (cancelled) return
+        setSimilar({
+          id,
+          list: names
+            .filter(n => n !== name && n.split(/[-_]/)[0] === root)
+            .slice(0, 6)
+            .map(n => ({ id: `${pack}:${n}`, pack, name: n, cdn: true })),
+        })
+      })
+      .catch(() => { /* non-fatal — just hide the row */ })
+    return () => { cancelled = true }
+  }, [activeIcon])
+
   const currentId = activeIcon ? (activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`) : null
+  const similarList = similar.id === currentId ? similar.list : []
   const fetchedBase = fetched.id === currentId ? fetched.svg : null
   const loadErr = fetched.id === currentId ? fetched.err : false
   const baseSvgText = localBase || fetchedBase
@@ -716,6 +747,32 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
 
               <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleDownload}>Download</button>
             </div>
+
+            {similarList.length > 0 && (
+              <div className="icust-similar">
+                <div className="icust-similar-label">Similar in this pack</div>
+                <div className="icust-similar-row">
+                  {similarList.map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="icust-similar-btn"
+                      title={s.name}
+                      aria-label={`Open ${s.name}`}
+                      onClick={() => onPick?.(s)}
+                    >
+                      <img
+                        src={buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                        width="24"
+                        height="24"
+                        alt=""
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -1366,6 +1423,7 @@ export default function IconLibrary({ onCopy, embedded }) {
           isPro={isPro}
           onClose={handleCloseCustomizer}
           onCopy={onCopy}
+          onPick={handleIconClick}
         />
       )}
     </div>
