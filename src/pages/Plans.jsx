@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice } from '../hooks/usePrices'
+import { FREE_SAVE_LIMITS } from '../contexts/SubscriptionContext'
 
 function Check() {
   return (
@@ -93,7 +94,7 @@ export default function Plans() {
           <ul className="sub-tier-list">
             <li><Check /> Every tool, fully usable</li>
             <li><Check /> 40 AI generations/day · standard models</li>
-            <li><Check /> Local saves — up to 25</li>
+            <li><Check /> Save up to {FREE_SAVE_LIMITS.projects} projects &amp; {FREE_SAVE_LIMITS.customIcons} custom icons</li>
             <li><Check /> Basic export: CSS tokens (small UIL4B credit)</li>
             <li><Check /> Community support</li>
           </ul>
@@ -187,7 +188,7 @@ export default function Plans() {
             </tr>
             <tr>
               <td>Saves &amp; collections</td>
-              <td>Local, up to 25</td>
+              <td>{FREE_SAVE_LIMITS.projects} projects · {FREE_SAVE_LIMITS.customIcons} icons</td>
               <td className="pct-pro">Cloud-synced, unlimited</td>
             </tr>
             <tr>
