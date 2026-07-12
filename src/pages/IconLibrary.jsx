@@ -48,6 +48,20 @@ const STROKE_PACKS = new Set(ICON_GROUPS.outlined.packs)
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
 const CUSTOM_KEY = 'vs-custom-icons'
 
+// Sticky stroke width — the last width the user set persists so the next icon
+// they open starts at the same weight, making it easy to build a consistent set.
+// A re-opened custom icon still wins with its own saved stroke.
+const STROKE_KEY = 'vs-icon-stroke'
+function readStickyStroke() {
+  try {
+    const v = Number(localStorage.getItem(STROKE_KEY))
+    return v >= 1 && v <= 3 ? v : 2
+  } catch { return 2 }
+}
+function writeStickyStroke(v) {
+  try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
+}
+
 // ── Style coherence ──────────────────────────────────────────────────────────
 // Several Iconify prefixes ship MULTIPLE styles under one prefix, so a raw
 // /collection dump mixes stroked and filled glyphs. That is why "Outlined" was
@@ -310,7 +324,8 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
   // Seed controls from a re-opened custom's saved values.
   const [size, setSize] = useState(() => (icon?.custom && icon.size) || 48)
   const [color, setColor] = useState(() => (icon?.custom && icon.color) || '')
-  const [stroke, setStroke] = useState(() => (icon?.custom && icon.stroke) || 2)
+  // A saved custom keeps its own stroke; anything else opens at the sticky width.
+  const [stroke, setStroke] = useState(() => (icon?.custom && icon.stroke) || readStickyStroke())
   const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke))
   const [rotate, setRotate] = useState(0)
   const [flipH, setFlipH] = useState(false)
@@ -529,6 +544,7 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
         aria-labelledby="icust-title"
         ref={panelRef}
         tabIndex={-1}
+        data-lenis-prevent
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="icust-head">
@@ -605,7 +621,7 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
               {isStroke && (
                 <div className="icust-row">
                   <label htmlFor="icust-stroke">Stroke</label>
-                  <input id="icust-stroke" type="range" min="1" max="3" step="0.25" value={stroke} onChange={(e) => { setStroke(+e.target.value); markDirty() }} />
+                  <input id="icust-stroke" type="range" min="1" max="3" step="0.25" value={stroke} onChange={(e) => { const v = +e.target.value; setStroke(v); writeStickyStroke(v); markDirty() }} />
                   <span className="icust-value">{stroke}</span>
                   <button type="button" className={`icust-abs${absStroke ? ' active' : ''}`} aria-pressed={absStroke} onClick={() => { setAbsStroke(a => !a); markDirty() }}>Absolute</button>
                 </div>
