@@ -96,7 +96,7 @@ export default function App() {
   const { user: authUser, loading: authLoading } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   useSmoothScroll()
-  const { message, visible, toast } = useToast()
+  const { message, visible, type, toast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
 
@@ -318,7 +318,7 @@ export default function App() {
       </main>
 
       <AppFooter />
-      <Toast message={message} visible={visible} />
+      <Toast message={message} visible={visible} type={type} />
       <FeedbackButton />
       <GoogleOneTap />
     </div>

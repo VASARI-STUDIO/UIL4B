@@ -750,8 +750,14 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .fp:hover{border-color:var(--accent)}
 
 /* ─── Toast ─── */
-.toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--t0);padding:12px 22px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);box-shadow:var(--warm-shadow-lg);transform:translateY(60px) scale(.96);opacity:0;transition:all .3s cubic-bezier(.16,1,.3,1);z-index:9999;pointer-events:none}
+.toast{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--ring),var(--warm-shadow-lg);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius-l);font-family:var(--font);transform:translateY(16px) scale(.97);opacity:0;transition:transform .34s cubic-bezier(.16,1,.3,1),opacity .28s cubic-bezier(.16,1,.3,1);z-index:9999;pointer-events:none}
 .toast.show{transform:translateY(0) scale(1);opacity:1}
+.toast-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
+.toast-ico svg{width:15px;height:15px}
+.toast-msg{font-size:13px;font-weight:500;line-height:1.35;color:var(--t0);letter-spacing:-.005em}
+.toast-success .toast-ico{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.toast-error .toast-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
+.toast-info .toast-ico{background:var(--accent-bg);color:var(--accent)}
 
 /* ─── Dashboard (Bento) ─── */
 .dash{padding:20px 0 24px;display:flex;flex-direction:column;gap:16px;min-height:100%;box-sizing:border-box}
@@ -1536,7 +1542,7 @@ img,svg,video{max-width:100%;height:auto}
   .seg-cell{min-width:100px}
 
   /* Toast */
-  .toast{left:12px;right:12px;bottom:12px;text-align:center}
+  .toast{left:12px;right:12px;bottom:12px;max-width:none}
 
   /* Hide tab labels in admin filters */
   .admin-tabs{flex-wrap:wrap}
