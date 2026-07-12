@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -26,6 +26,11 @@ const ExportPanel = lazy(() => import('./ExportPanel'))
 // State is set exclusively from user events (click / hover / scroll / key), never
 // synchronously inside an effect, so we stay clear of the `set-state-in-effect`
 // advisory. Effects only attach/detach listeners.
+
+// Marketing / conversion routes where there's nothing to export — the resting
+// bar drops the Export shell and leads with the "Get Pro" conversion pill
+// instead (matches the sales-page nav reference).
+const SALES_PATHS = new Set(['/', '/home', '/plans', '/pricing'])
 
 // Small inline chevron so the nav has zero asset dependencies.
 function Chevron() {
@@ -191,6 +196,10 @@ export default function PillNav() {
   const { user, userProfile, logout } = useAuth()
   const { isPro } = useSubscription()
   const { theme, setTheme } = useTheme()
+  const location = useLocation()
+  // On marketing/sales routes there's nothing to export, so the bar leads with
+  // the conversion pill instead of the Export shell.
+  const isSalesPage = SALES_PATHS.has((location.pathname || '/').replace(/\/+$/, '') || '/')
   const [open, setOpen] = useState(null) // active mega-menu section id, or null
   const [menu, setMenu] = useState(null) // 'account' | null (merged profile + settings popover)
   const [sheet, setSheet] = useState(false) // mobile sheet open
@@ -308,26 +317,37 @@ export default function PillNav() {
 
           <div className="pnav-actions">
             {/* Export — collapsed at rest, revealed with the pill on hover /
-                focus / pinned-open, sitting on the RIGHT ahead of Upgrade. */}
-            <button
-              type="button"
-              className="pnav-export"
-              aria-haspopup="dialog"
-              aria-expanded={exportOpen}
-              onClick={openExport}
-            >
-              <ExportIcon />
-              <span>Export</span>
-            </button>
+                focus / pinned-open, sitting on the RIGHT ahead of Upgrade. On
+                marketing/sales routes there's nothing to export, so we drop the
+                shell and lead with the "Get Pro" conversion pill instead. */}
+            {!isSalesPage && (
+              <button
+                type="button"
+                className="pnav-export"
+                aria-haspopup="dialog"
+                aria-expanded={exportOpen}
+                onClick={openExport}
+              >
+                <ExportIcon />
+                <span>Export</span>
+              </button>
+            )}
 
-            {/* Conversion + auth CTAs — hidden at rest, revealed with the pill on
-                hover / focus / pinned-open (so the resting bar stays minimal). The
-                Upgrade path also lives inside the account popover for signed-in
-                users, so hiding it at rest never orphans it. */}
+            {/* Conversion + auth CTAs. On sales pages the upgrade path is the
+                primary action, so it's always visible as a solid "Get Pro" pill;
+                elsewhere it stays collapsed until the bar expands on hover /
+                focus (the Upgrade path also lives in the account popover, so
+                hiding it at rest never orphans it). */}
             {user && !isPro && (
-              <Link className="ui-pill ui-pill-accent ui-pill-sm pnav-cta-reveal" to="/plans" onClick={closeAll}>
-                Upgrade
-              </Link>
+              isSalesPage ? (
+                <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/plans" onClick={closeAll}>
+                  Get Pro
+                </Link>
+              ) : (
+                <Link className="ui-pill ui-pill-accent ui-pill-sm pnav-cta-reveal" to="/plans" onClick={closeAll}>
+                  Upgrade
+                </Link>
+              )
             )}
 
             {!user && (

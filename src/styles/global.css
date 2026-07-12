@@ -1377,7 +1377,8 @@ html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
 .nav-switch-item:hover{background:var(--hvr)}
 .nav-switch-item.is-current{background:var(--accent-bg)}
 .nav-switch-item.is-current:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
-.nav-switch-item-icon{width:18px;height:18px;flex-shrink:0;color:var(--brand);margin-top:1px;align-self:flex-start}
+.nav-switch-item-icon{width:18px;height:18px;flex-shrink:0;color:var(--t0);align-self:center}
+.nav-switch-item.is-current .nav-switch-item-icon{color:var(--accent)}
 .nav-switch-item-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 .nav-switch-item-label{font-size:13px;font-weight:600;color:var(--t0);line-height:1.2}
 .nav-switch-desc{font-size:11px;font-weight:400;color:var(--t1);line-height:1.35}
@@ -1385,7 +1386,7 @@ html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
 .nav-switch-divider{height:1px;background:var(--border);margin:6px 4px}
 .nav-switch-link{display:flex;align-items:center;gap:var(--s-3);width:100%;padding:9px 10px;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;color:var(--t0);border-radius:var(--radius-s);transition:background var(--t);text-align:left}
 .nav-switch-link:hover{background:var(--hvr)}
-.nav-switch-link-icon{width:16px;height:16px;flex-shrink:0;color:var(--t2)}
+.nav-switch-link-icon{width:16px;height:16px;flex-shrink:0;color:var(--t1)}
 
 /* ═══════════════════════════════════════
    RESPONSIVE — clean cascade, mobile parity
