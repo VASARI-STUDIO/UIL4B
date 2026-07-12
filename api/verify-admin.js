@@ -18,7 +18,9 @@ export default async function handler(req, res) {
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     const email = decoded.email?.toLowerCase()
-    const isAdmin = !!email && ADMIN_EMAILS.includes(email)
+    // Require a Firebase-verified email — an unverified signup could
+    // otherwise register the admin address and pass the allowlist check.
+    const isAdmin = !!email && !!decoded.email_verified && ADMIN_EMAILS.includes(email)
     return res.status(200).json({ isAdmin, uid: decoded.uid, email })
   } catch {
     return res.status(401).json({ error: credentialProblem() || 'Invalid token', isAdmin: false })
