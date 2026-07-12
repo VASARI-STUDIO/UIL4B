@@ -105,7 +105,11 @@ save it in Stripe.
 2. Admin Stripe panel → edit the AUD (and any international) amount → **Save**.
    Stripe prices are immutable, so this **creates a fresh price, moves the lookup
    key onto it, and archives the old one** — checkout keeps working and each
-   customer sees their local currency automatically.
+   customer sees their local currency automatically. *(New: the panel now
+   auto-fills — edit one price and every other currency, both intervals,
+   recalculates to the nearest `.99` off the default ratios. Untick the
+   auto-fill box to fine-tune currencies individually — e.g. to enter the exact
+   ladder above rather than the computed values.)*
 3. Update **both** fallbacks so a Stripe outage can't show a stale figure:
    the server anchor `api/_lib/pricing.js → DEFAULT_PRICES` (today AUD monthly
    7.99 / yearly 79.99 → set 4.99 / 41.99, and mirror any international change),
@@ -181,6 +185,11 @@ Why this: it's the standard win-back — meaningful but time-boxed (Pro monthly 
 1. Firebase Console → **Firestore Database → Rules** → paste the contents of **`firestore.rules`** (repo root) → **Publish**.
 2. The analytics read is gated to **`dylanjacob1100@gmail.com`** — confirm that's your Firebase login email (the rule is in `firestore.rules`; tell me if it should change).
 
+*(The new admin **Users tab** does NOT depend on these rules — it reads
+cross-user data through the server's Admin SDK via an admin-gated
+`/api/verify-admin` flag, so it works as soon as the branch deploys. Only the
+aggregate-analytics panel waits on the rules publish.)*
+
 ---
 
 ## 🟡 5. Create the social-share image (`og-image.png`)
@@ -206,6 +215,14 @@ The app is a client-rendered SPA, so Google sees deferred/partial content and **
   `SubscriptionContext`, consumed by `ProjectContext`, `IconLibrary` and the `/plans`
   copy). ⚠ *Founder check:* confirm those two numbers are the caps you want — changing
   them is a one-line edit in `FREE_SAVE_LIMITS` and every surface updates.
+- **On the feature branch (`claude/nav-redesign-pricing-wwdu8j`, awaiting your
+  review + PR merge):** admin dashboard rebuild (categorised overview, upgraded
+  submissions, Stripe price auto-fill, full Users tab with masked emails /
+  country flags / sorting / filters / CSV export), device-level multi-account
+  switching, founder accounts auto-Pro without Stripe, login + `/plans` polish,
+  Mobbin-style nav, colour tools as separate pages. Two slices are auth/Stripe
+  HVZs — see [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md) item 1 for the merge
+  checklist.
 
 ---
 
