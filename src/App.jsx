@@ -1,5 +1,6 @@
 import { Component, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
 import AppFooter from './components/AppFooter'
@@ -225,7 +226,7 @@ export default function App() {
     return <Navigate to="/home" replace />
   }
   if (location.pathname === '/home') {
-    return <><Home /><GoogleOneTap /></>
+    return <><Home /><GoogleOneTap /><Analytics /></>
   }
   if (location.pathname === '/onboarding') {
     return <Onboarding />
@@ -239,7 +240,7 @@ export default function App() {
       const onboarded = (() => { try { return localStorage.getItem('vs-onboarded') === '1' } catch { return true } })()
       return <Navigate to={onboarded ? '/home' : '/onboarding'} replace />
     }
-    return <><Home /><GoogleOneTap /></>
+    return <><Home /><GoogleOneTap /><Analytics /></>
   }
 
   // Create tool shells + the Discover / Learn landings render full-screen with the
@@ -254,6 +255,7 @@ export default function App() {
       <>
         {surface ? <SurfaceLanding key={surface} surface={surface} /> : <CreateTool />}
         <GoogleOneTap />
+        <Analytics />
       </>
     )
   }
@@ -321,6 +323,7 @@ export default function App() {
       <Toast message={message} visible={visible} type={type} />
       <FeedbackButton />
       <GoogleOneTap />
+      <Analytics />
     </div>
   )
 }
