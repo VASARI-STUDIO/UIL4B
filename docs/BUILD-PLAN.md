@@ -77,6 +77,7 @@ out by surface, Create/Discover/Learn derived from `toolTree.js` so it can't dri
 | [`build-plan/tool-tree.md`](build-plan/tool-tree.md) | building/placing a tool or touching nav — the CREATE/DISCOVER/LEARN tree, site structure, reusable-code inventory, the 12-function cap |
 | [`build-plan/roadmap.md`](build-plan/roadmap.md) | needing history/what's-next — rebuild detail, phases, the cluster A–G log, known bugs, deferred backlog |
 | [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md) | anything the founder must do (Stripe prices, keys, infra) |
+| [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md) | founder-gated calls I reached but stopped before executing (free-tier number, typeface, auth/Stripe HVZ) — one-line answers unblock each |
 
 **How work ships:** `research → design → engineer → code-review + security-review →
 secret-scan → qa → ship`. One PR per slice → squash-merge to `main` → realign the
