@@ -56,8 +56,12 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .search-empty{padding:24px;text-align:center;font-size:12px;color:var(--t2)}
 .search-footer{display:flex;gap:14px;padding:8px 14px;background:var(--bg-1);border-top:1px solid var(--border);font-size:10px;color:var(--t3)}
 .search-footer kbd{font-family:var(--mono);background:var(--bg-3);padding:1px 5px;border-radius:4px;border:1px solid var(--border);margin-right:4px}
-.topbar-btn-export{display:inline-flex;align-items:center;gap:6px;padding:7px 18px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);transition:all var(--t);white-space:nowrap}
+/* Export is an icon-only pill at rest; the label reveals on hover / keyboard
+   focus / while its dropdown is open, so the resting bar stays compact. */
+.topbar-btn-export{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);transition:all var(--t);white-space:nowrap}
 .topbar-btn-export:hover{background:var(--brand);border-color:var(--brand);color:#fff}
+.topbar-btn-export-label{max-width:0;opacity:0;overflow:hidden;margin-left:-6px;transition:max-width .32s cubic-bezier(.16,1,.3,1),opacity .22s ease,margin-left .32s cubic-bezier(.16,1,.3,1)}
+.topbar-btn-export:hover .topbar-btn-export-label,.topbar-btn-export:focus-visible .topbar-btn-export-label,.topbar-btn-export[aria-expanded="true"] .topbar-btn-export-label{max-width:64px;opacity:1;margin-left:0}
 .export-dropdown{position:absolute;top:calc(100% + 6px);right:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:200;min-width:280px;padding:6px;animation:cp-rise .15s cubic-bezier(.2,0,0,1)}
 .export-dropdown-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:500;color:var(--t0);border-radius:var(--radius-s);transition:background var(--t);text-align:left;position:relative}
 .export-dropdown-item:hover{background:var(--hvr)}
@@ -92,12 +96,16 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .profile-menu-sep{height:1px;background:var(--border);margin:4px 0}
 .profile-menu-head{position:relative}
 .profile-menu-probadge{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--accent-fg);background:var(--accent);padding:2px 7px;border-radius:100px;align-self:flex-start;flex-shrink:0}
-.profile-menu-upgrade{font-weight:600;color:var(--accent);background:var(--accent-bg);margin-bottom:4px}
-.profile-menu-upgrade svg{color:var(--accent)}
-.profile-menu-upgrade:hover{background:color-mix(in srgb,var(--accent) 16%,transparent)}
-.profile-menu-upgrade.is-pro{color:var(--t0);background:none}
+/* Primary CTA — the upgrade prompt is intentionally the loudest row in the
+   popup now that the navbar no longer carries an Upgrade button (#9). */
+.profile-menu-upgrade{justify-content:center;font-weight:700;color:var(--accent-fg);background:var(--accent);margin:2px 0 6px;padding:11px 12px;box-shadow:0 4px 14px -6px var(--accent-glow);transition:background var(--t),box-shadow var(--t),transform var(--dur-1) var(--ease-out)}
+.profile-menu-upgrade svg{color:var(--accent-fg)}
+.profile-menu-upgrade:hover{background:var(--accent-strong);box-shadow:0 6px 18px -6px var(--accent-glow);transform:translateY(-1px)}
+.profile-menu-upgrade:active{transform:translateY(0)}
+/* Pro members see a quiet, left-aligned "Manage subscription" row instead. */
+.profile-menu-upgrade.is-pro{justify-content:flex-start;font-weight:500;color:var(--t0);background:none;margin:0;padding:9px 12px;box-shadow:none}
 .profile-menu-upgrade.is-pro svg{color:var(--t2)}
-.profile-menu-upgrade.is-pro:hover{background:var(--hvr)}
+.profile-menu-upgrade.is-pro:hover{background:var(--hvr);box-shadow:none;transform:none}
 
 /* ─── Sidebar ─── */
 .sidebar{width:var(--sw);flex-shrink:0;background:var(--bg-1);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
@@ -4298,7 +4306,10 @@ html.lenis,html.lenis body{height:auto}
 .soon-badge-accent{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
 
 /* ══ Pill nav ══ */
-.pnav{position:fixed;top:var(--nav-top);left:50%;transform:translateX(-50%);width:fit-content;max-width:calc(100vw - 32px);height:var(--nav-h);z-index:120;border-radius:var(--radius-pill);background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);border:1px solid var(--border);box-shadow:var(--shadow-nav);transition:height var(--dur-3) var(--ease-inout),background var(--dur-3) var(--ease-inout),box-shadow var(--dur-3) var(--ease-inout)}
+/* --dur-3 is deliberately lengthened *within the nav subtree only* so every
+   morph transition below (bar grow, whitespace, search/export/CTA reveal) runs
+   slower and reads smoother — without touching the global 280ms token. */
+.pnav{--dur-3:380ms;position:fixed;top:var(--nav-top);left:50%;transform:translateX(-50%);width:fit-content;max-width:calc(100vw - 32px);height:var(--nav-h);z-index:120;border-radius:var(--radius-pill);background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);border:1px solid var(--border);box-shadow:var(--shadow-nav);transition:height var(--dur-3) var(--ease-inout),background var(--dur-3) var(--ease-inout),box-shadow var(--dur-3) var(--ease-inout)}
 .pnav.is-scrolled{height:52px;background:rgba(255,255,255,.92);box-shadow:var(--shadow-m)}
 /* Dark mode: the base pill hardcodes a light glass fill (rgba white) and pulls
    --shadow-nav, which is only defined in the light block. Override both here so
@@ -4406,8 +4417,8 @@ html.lenis,html.lenis body{height:auto}
 .pnav-pop-id-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Mega-menu panel — one shared node, morphs width per section */
-.pnav-menu{position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;width:1040px;max-width:calc(100vw - 32px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-3) var(--ease-inout);animation:pnav-menu-in var(--dur-3) var(--ease-out)}
-@keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-6px) scale(.98)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+.pnav-menu{--dur-3:380ms;position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;width:1040px;max-width:calc(100vw - 32px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-3) var(--ease-inout);animation:pnav-menu-in var(--dur-4) var(--ease-out)}
+@keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-10px) scale(.975)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 .pnav-menu[data-menu="create"]{width:1200px}
 .pnav-menu[data-menu="discover"]{width:940px}
 .pnav-menu[data-menu="learn"]{width:1020px}
