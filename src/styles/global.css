@@ -3023,11 +3023,21 @@ img,svg,video{max-width:100%;height:auto}
 }
 
 /* ─── File Converter (fc-) ─── */
-.fc-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
-.fc-tab{position:relative;display:inline-flex;align-items:center;gap:6px}
+/* Mode tabs — a segmented switch (matches the Aspect Ratio tool's .rc-tabs). */
+.fc-tabs{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);margin-bottom:24px}
+.fc-tab{position:relative;display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
+.fc-tab:hover{color:var(--t0)}
+.fc-tab.on{background:var(--card);color:var(--t0);box-shadow:var(--ring)}
 .fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t3)}
-.fc-drop{cursor:pointer;transition:all var(--t)}
-.fc-drop-on{border-color:var(--brand)!important;background:var(--brand-bg)!important}
+/* Alpha badge — token-driven accent pill (no hardcoded colours). */
+.fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
+.fc-drop{cursor:pointer;transition:border-color var(--t),background var(--t),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
+.fc-drop:hover{transform:translateY(-2px);box-shadow:var(--warm-shadow-lg)}
+.fc-drop-ico{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;margin-bottom:12px;border-radius:var(--radius);background:var(--accent-bg);color:var(--accent)}
+.fc-drop-ico svg{width:22px;height:22px}
+.fc-drop-hint{font-size:14px;font-weight:600;color:var(--t0);margin-bottom:4px}
+.fc-drop-sub{font-size:11px;color:var(--t2)}
+.fc-drop-on{border-color:var(--brand)!important;background:var(--brand-bg)!important;transform:translateY(-2px);box-shadow:var(--warm-shadow-lg)}
 .fc-card{display:flex;flex-direction:column;gap:8px;padding:12px;position:relative;align-items:stretch}
 .fc-remove{position:absolute;top:8px;right:8px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:none;border-radius:50%;background:var(--bg-3);color:var(--t1);font-size:16px;line-height:1;cursor:pointer;transition:all var(--t);z-index:2}
 .fc-remove:hover{background:var(--err);color:#fff}
