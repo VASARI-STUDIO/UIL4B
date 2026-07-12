@@ -246,6 +246,15 @@ export default function PillNav() {
     }
     const onKey = (e) => {
       if (e.key === 'Escape') { setOpen(null); setSheet(false); setMenu(null) }
+      // "/" opens search — but never while the visitor is typing in a field.
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const el = e.target
+        const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+        if (!typing) {
+          e.preventDefault()
+          setOpen(null); setMenu(null); setSheet(false); setSearchOpen(true)
+        }
+      }
     }
     document.addEventListener('pointerdown', onPointer)
     document.addEventListener('keydown', onKey)
@@ -291,39 +300,40 @@ export default function PillNav() {
               <span className="pnav-word">UIL4B</span>
             </Link>
 
-            {/* Search — revealed on pill hover / focus / when a menu is pinned
-                open, sitting to the LEFT of the three triggers. Export now lives
-                on the RIGHT, in the actions cluster. */}
-            <div className="pnav-search">
-              <button
-                type="button"
-                className="pnav-search-field"
-                aria-haspopup="dialog"
-                aria-expanded={searchOpen}
-                aria-label="Search UIL4B"
-                onClick={openSearch}
-              >
-                <SearchIcon />
-                <span className="pnav-search-ph">Search</span>
-              </button>
+            <div className="pnav-items">
+              {NAV_SECTIONS.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  className="pnav-trigger"
+                  aria-expanded={open === section.id}
+                  aria-haspopup="true"
+                  onClick={() => toggle(section.id)}
+                  onMouseEnter={() => hoverOpen(section.id)}
+                >
+                  {section.label}
+                  <Chevron />
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="pnav-items">
-            {NAV_SECTIONS.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                className="pnav-trigger"
-                aria-expanded={open === section.id}
-                aria-haspopup="true"
-                onClick={() => toggle(section.id)}
-                onMouseEnter={() => hoverOpen(section.id)}
-              >
-                {section.label}
-                <Chevron />
-              </button>
-            ))}
+          {/* Search — prominent, always-visible field centred in the bar (Mobbin
+              reference). Clicking it opens the full command palette, which reuses
+              the same search index. */}
+          <div className="pnav-search">
+            <button
+              type="button"
+              className="pnav-search-field"
+              aria-haspopup="dialog"
+              aria-expanded={searchOpen}
+              aria-label="Search UIL4B"
+              onClick={openSearch}
+            >
+              <SearchIcon />
+              <span className="pnav-search-ph">Search tools&hellip;</span>
+              <kbd className="pnav-search-kbd" aria-hidden="true">/</kbd>
+            </button>
           </div>
 
           <div className="pnav-actions">
