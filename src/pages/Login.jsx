@@ -15,8 +15,12 @@ function GoogleIcon() {
 }
 
 export default function Login({ toast }) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [isSignup, setIsSignup] = useState(false)
-  const [email, setEmail] = useState('')
+  // The account switcher lands here with the target email when it can't
+  // re-auth silently (password accounts, or a dismissed Google popup).
+  const [email, setEmail] = useState(() => location.state?.email || '')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [resetMode, setResetMode] = useState(false)
@@ -24,8 +28,6 @@ export default function Login({ toast }) {
   const [loading, setLoading] = useState(false)
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
-  const navigate = useNavigate()
-  const location = useLocation()
   // Return the user to the page that sent them here (RequireAuth / Checkout set
   // location.state.from), falling back to home.
   const from = location.state?.from || null

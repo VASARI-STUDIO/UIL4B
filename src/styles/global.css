@@ -4460,6 +4460,13 @@ html.lenis,html.lenis body{height:auto}
 .pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:0 6px}
 .pnav-pop-id-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Account-switcher rows — compact avatar + name/email stack per known account */
+.pnav-pop-acct{min-height:46px;padding:5px 10px}
+.pnav-pop-acct-avatar{width:26px;height:26px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:10px;font-weight:600;color:#fff}
+.pnav-pop-acct-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pnav-pop-acct-name{font-size:var(--fs-body-s);font-weight:560;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav-pop-acct:hover .pnav-pop-acct-name{color:var(--t0)}
+.pnav-pop-acct-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Mega-menu panel — one shared node, morphs width per section */
 .pnav-menu{--dur-3:380ms;position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;width:1040px;max-width:calc(100vw - 32px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-3) var(--ease-inout);animation:pnav-menu-in var(--dur-4) var(--ease-out)}

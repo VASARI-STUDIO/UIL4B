@@ -194,7 +194,7 @@ function PromoMock({ section }) {
 }
 
 export default function PillNav() {
-  const { user, userProfile, logout } = useAuth()
+  const { user, userProfile, logout, knownAccounts, switchAccount } = useAuth()
   const { isPro } = useSubscription()
   const { theme, setTheme } = useTheme()
   const location = useLocation()
@@ -281,6 +281,19 @@ export default function PillNav() {
   const openSearch = () => { closeAll(); setSearchOpen(true) }
   const openExport = () => { closeAll(); setExportOpen(true) }
   const onSignOut = () => { setMenu(null); logout() }
+
+  // Other accounts previously signed in on this device (display data only —
+  // switching re-authenticates through Firebase, see AuthContext).
+  const otherAccounts = (knownAccounts || []).filter((a) => a.uid !== user?.uid)
+  const onSwitchAccount = async (acct) => {
+    closeAll()
+    const res = await switchAccount(acct)
+    if (res?.needsLogin) {
+      // Password account, or the Google popup was dismissed — finish on /login
+      // with the email prefilled and return the user here afterwards.
+      navigate('/login', { state: { email: res.email, from: location.pathname } })
+    }
+  }
 
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
   // Mobile sheet promo = the currently-expanded accordion's promo (or none).
@@ -438,6 +451,25 @@ export default function PillNav() {
                         <Link className="pnav-pop-item" role="menuitem" to="/admin" onClick={closeAll}>
                           Admin dashboard
                         </Link>
+                      )}
+                      {otherAccounts.length > 0 && (
+                        <>
+                          <div className="pnav-pop-sep" />
+                          <p className="pnav-pop-head">Switch account</p>
+                          {otherAccounts.map((acct) => (
+                            <button key={acct.uid} type="button" className="pnav-pop-item pnav-pop-acct" role="menuitem" onClick={() => onSwitchAccount(acct)}>
+                              {acct.photoURL ? (
+                                <img className="pnav-pop-acct-avatar" src={acct.photoURL} alt="" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span className="pnav-pop-acct-avatar" aria-hidden="true">{initials(acct, acct)}</span>
+                              )}
+                              <span className="pnav-pop-acct-text">
+                                <span className="pnav-pop-acct-name">{acct.displayName || acct.email.split('@')[0] || 'Account'}</span>
+                                {acct.email && <span className="pnav-pop-acct-email">{acct.email}</span>}
+                              </span>
+                            </button>
+                          ))}
+                        </>
                       )}
                       <div className="pnav-pop-sep" />
                       <button type="button" className="pnav-pop-item pnav-pop-item--danger" role="menuitem" onClick={onSignOut}>
