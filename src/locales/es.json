@@ -302,6 +302,9 @@
   },
   "iconLibrary": {
     "title": "Biblioteca de iconos",
+    "eyebrow": "BIBLIOTECA DE ICONOS",
+    "heading": "Encuentra, personaliza y copia cualquier icono.",
+    "subtitle": "Busca más de 200.000 iconos de código abierto: Lucide, Tabler, Phosphor, Material y más. Cambia el color, el tamaño y el estilo de cualquier icono (ajusta el trazo, define el color) y luego copia un SVG limpio o expórtalo con un clic. Gratis para explorar y copiar: hazte Pro para guardar tus iconos personalizados.",
     "searchPlaceholder": "Buscar iconos…",
     "allPacks": "Todos los paquetes",
     "mode": "Modo",
@@ -313,6 +316,11 @@
     "copyJsx": "Copiar JSX",
     "noIcons": "Busca iconos arriba",
     "loadingPacks": "Cargando paquetes de iconos…"
+  },
+  "emojiLibrary": {
+    "eyebrow": "BIBLIOTECA DE EMOJIS",
+    "heading": "Copia cualquier emoji, en cualquier tono de piel.",
+    "subtitle": "Explora todos los emojis por categoría, cambia el tono de piel de todo el conjunto y haz clic para copiar. Gratis, siempre."
   },
   "imageConverter": {
     "title": "Convertidor de imágenes",

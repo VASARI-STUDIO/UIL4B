@@ -302,6 +302,9 @@
   },
   "iconLibrary": {
     "title": "Icon-Bibliothek",
+    "eyebrow": "ICON-BIBLIOTHEK",
+    "heading": "Jedes Icon finden, anpassen und kopieren.",
+    "subtitle": "Durchsuche über 200.000 Open-Source-Icons — Lucide, Tabler, Phosphor, Material und mehr. Färbe, skaliere und gestalte jedes Icon neu (Linienstärke anpassen, Farbe setzen), kopiere dann sauberes SVG oder exportiere mit einem Klick. Kostenlos zum Durchsuchen und Kopieren — mit Pro speicherst du deine eigenen Icons.",
     "searchPlaceholder": "Icons suchen…",
     "allPacks": "Alle Pakete",
     "mode": "Modus",
@@ -313,6 +316,11 @@
     "copyJsx": "JSX kopieren",
     "noIcons": "Suchen Sie oben nach Icons",
     "loadingPacks": "Icon-Pakete werden geladen…"
+  },
+  "emojiLibrary": {
+    "eyebrow": "EMOJI-BIBLIOTHEK",
+    "heading": "Kopiere jedes Emoji in jedem Hautton.",
+    "subtitle": "Durchsuche alle Emojis nach Kategorie, ändere den Hautton für den gesamten Satz und klicke zum Kopieren. Kostenlos, für immer."
   },
   "imageConverter": {
     "title": "Bildkonverter",
