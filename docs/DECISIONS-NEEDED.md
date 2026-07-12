@@ -12,14 +12,22 @@ fast.
 
 ## Open decisions
 
-## 1. Merge the feature branch (`claude/nav-redesign-pricing-wwdu8j`)
+## 1. Confirm the free-tier cap numbers
 
-Everything in the "shipped this pass" list below lives on that one branch,
-**unmerged**. Two of the slices are auth/Stripe Human Validation Zones
-(multi-account switching; admin Pro entitlement), so per our rules the branch
-needs **your review + a PR** before it reaches `main`. Click through the admin
-dashboard and account switcher on the preview deploy, then merge via PR.
-**Reply `open pr` when you want the pull request created.**
+The Free plan now **enforces** 3 saved projects / 8 custom icons (single source
+of truth: `FREE_SAVE_LIMITS` in `SubscriptionContext`; `/plans` copy reads the
+same values). Those numbers came from your earlier note — **confirm they're the
+caps you want**. Changing them is a one-line edit and every surface updates.
+**One-word reply:** `keep` · or `caps <projects>/<icons>`.
+
+---
+
+## ✅ Resolved this pass (previously listed here — no decision left)
+
+0. **Merge the feature branch** — resolved 2026-07-12: on your instruction
+   ("push all changes to main") the branch was fast-forwarded onto `main`
+   (`b2c07b1` → `e5f75d1`). The HVZ security review below was completed before
+   the merge, all clear.
 
 **HVZ security review (done 2026-07-12, all clear):**
 - *Admin Pro entitlement* — the grant only derives from a server-verified
@@ -47,18 +55,6 @@ dashboard and account switcher on the preview deploy, then merge via PR.
   it cross-origin automatically — noted for completeness, not introduced by
   this branch.
 
-## 2. Confirm the free-tier cap numbers
-
-The Free plan now **enforces** 3 saved projects / 8 custom icons (single source
-of truth: `FREE_SAVE_LIMITS` in `SubscriptionContext`; `/plans` copy reads the
-same values). Those numbers came from your earlier note — **confirm they're the
-caps you want**. Changing them is a one-line edit and every surface updates.
-**One-word reply:** `keep` · or `caps <projects>/<icons>`.
-
----
-
-## ✅ Resolved this pass (previously listed here — no decision left)
-
 1. **Free-tier "saves" copy vs. product** — resolved by *enforcing* a real cap
    (3 projects / 8 icons) and aligning the `/plans` copy — `6faabc5`. Only the
    number-confirmation above remains.
@@ -67,11 +63,11 @@ caps you want**. Changing them is a one-line edit and every surface updates.
    the font-browser intentionally excepted). Nothing further to decide.
 3. **Multi-account switching (#7)** — approved, designed, and shipped:
    device-level account switcher with silent re-auth where possible, Login
-   hand-off otherwise — `e3f5f30`. HVZ — review before merge (item 1).
+   hand-off otherwise — `e3f5f30`. HVZ — security review passed, merged.
 4. **Admin premium + checkout bypass (#10)** — approved and shipped: allowlisted
    founder accounts resolve to Pro without Stripe, server-verified
    (`email_verified` required) so it cannot mint Pro for non-admins — `8cc2b99`.
-   HVZ — review before merge (item 1).
+   HVZ — security review passed, merged.
 5. **Admin dashboard rebuild (#12/#13)** — approved and shipped — `eaca7bd`:
    - **Overview** regrouped into four visually separated categories (Traffic &
      Engagement / Audience / Feedback & Community / Setup).

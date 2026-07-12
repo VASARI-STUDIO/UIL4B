@@ -215,14 +215,13 @@ The app is a client-rendered SPA, so Google sees deferred/partial content and **
   `SubscriptionContext`, consumed by `ProjectContext`, `IconLibrary` and the `/plans`
   copy). ⚠ *Founder check:* confirm those two numbers are the caps you want — changing
   them is a one-line edit in `FREE_SAVE_LIMITS` and every surface updates.
-- **On the feature branch (`claude/nav-redesign-pricing-wwdu8j`, awaiting your
-  review + PR merge):** admin dashboard rebuild (categorised overview, upgraded
-  submissions, Stripe price auto-fill, full Users tab with masked emails /
-  country flags / sorting / filters / CSV export), device-level multi-account
-  switching, founder accounts auto-Pro without Stripe, login + `/plans` polish,
-  Mobbin-style nav, colour tools as separate pages. Two slices are auth/Stripe
-  HVZs — see [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md) item 1 for the merge
-  checklist.
+- **Merged to `main` (2026-07-12, on your instruction):** admin dashboard
+  rebuild (categorised overview, upgraded submissions, Stripe price auto-fill,
+  full Users tab with masked emails / country flags / sorting / filters / CSV
+  export), device-level multi-account switching, founder accounts auto-Pro
+  without Stripe, login + `/plans` polish, Mobbin-style nav, colour tools as
+  separate pages. The two auth/Stripe HVZ slices passed the security review
+  before merge — see [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md).
 
 ---
 
