@@ -402,7 +402,14 @@ input[type="text"],input[type="number"],input[type="email"],input[type="password
 input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 input[type="number"]{-moz-appearance:textfield}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
-input[type="color"]{width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--border);background:none;cursor:pointer}
+input[type="color"]{width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
+input[type="color"]:hover{border-color:var(--bh)}
+/* Strip the native swatch chrome so the colour well reads as one clean, rounded
+   chip on every picker in the app (Colour Studio, Box-Shadow, UI Builder, …), not
+   just the icon editor — a single, consistent colour control everywhere. */
+input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+input[type="color"]::-webkit-color-swatch{border:none;border-radius:var(--radius-xs)}
+input[type="color"]::-moz-color-swatch{border:none;border-radius:var(--radius-xs)}
 input[type="range"]{-webkit-appearance:none;width:100%;height:32px;border-radius:2px;background:transparent;outline:none;cursor:pointer;padding:0;border:none}
 input[type="range"]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--bg-4)}
 input[type="range"]::-moz-range-track{height:4px;border-radius:2px;background:var(--bg-4)}
