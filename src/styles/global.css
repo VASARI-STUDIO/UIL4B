@@ -3088,9 +3088,20 @@ img,svg,video{max-width:100%;height:auto}
 /* Aspect Ratio Calculator */
 .rc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .rc-panel{padding:20px}
-.rc-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+/* Preset category tabs — a compact segmented switch above the chip grid. */
+.rc-tabs{display:inline-flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);margin-bottom:14px}
+.rc-tab{padding:6px 14px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
+.rc-tab:hover{color:var(--t0)}
+.rc-tab.on{background:var(--card);color:var(--t0);box-shadow:var(--ring)}
+.rc-presets{display:flex;flex-wrap:wrap;gap:6px}
+.rc-field{margin-top:18px}
+.rc-known{display:flex;flex-direction:column;gap:8px}
+.rc-known input{width:100%}
 .rc-ratio-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .rc-ratio-row input{width:88px}
+.rc-flip{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
+.rc-flip svg{width:15px;height:15px}
+.rc-flip:hover{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
 .rc-colon{font-weight:700;color:var(--t2)}
 .rc-simplified{font-family:var(--mono);font-size:13px;color:var(--accent);margin-left:6px}
 .rc-simplified-btn{background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:var(--radius-s)}
@@ -3102,11 +3113,15 @@ img,svg,video{max-width:100%;height:auto}
 .rc-dim small{font-size:11px;color:var(--t3);font-weight:500}
 .rc-times{color:var(--t3);font-size:18px}
 .rc-vis-panel{display:flex;flex-direction:column}
+.rc-vis-head{display:flex;align-items:center;justify-content:space-between}
+.rc-vis-tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);padding:2px 8px;border-radius:var(--radius-pill)}
 .rc-vis-stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:280px;padding:20px}
-.rc-vis-box{display:flex;align-items:center;justify-content:center;border:2px solid var(--accent);background:var(--accent-bg);border-radius:var(--radius-s);transition:width .25s ease,height .25s ease}
-.rc-vis-box span{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent)}
+.rc-vis-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px solid var(--accent);background:var(--accent-bg);border-radius:var(--radius-s);transition:width var(--dur-3) var(--ease-out),height var(--dur-3) var(--ease-out)}
+.rc-vis-ratio{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)}
+.rc-vis-dims{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--accent);opacity:.7}
 .rc-vis-empty{color:var(--t3);font-size:13px}
-@media(max-width:760px){.rc-grid{grid-template-columns:1fr}.rc-vis-stage{min-height:200px}}
+.rc-reverse{margin-top:16px}
+@media(max-width:760px){.rc-grid{grid-template-columns:1fr}.rc-vis-stage{min-height:200px}.rc-tabs{display:flex}}
 
 /* Future Plans — admin roadmap board */
 .fp-wrap{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
