@@ -241,7 +241,7 @@ function transformAttr(rotate, flipH, flipV, cx, cy) {
 // #2794 workaround — never fall back to defaults).
 function serializeCustomizedSvg(rawSvg, opts = {}) {
   if (!rawSvg) return ''
-  const { size = 48, color, stroke, isStroke, absStroke, rotate = 0, flipH = false, flipV = false } = opts
+  const { size = 48, color, stroke, isStroke, absStroke, cap, join, rotate = 0, flipH = false, flipV = false } = opts
   let doc
   try { doc = new DOMParser().parseFromString(rawSvg, 'image/svg+xml') } catch { return rawSvg }
   const svg = doc.querySelector('svg')
@@ -259,6 +259,10 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
   if (isStroke && stroke != null) {
     svg.setAttribute('stroke-width', String(stroke))
     if (absStroke) svg.setAttribute('vector-effect', 'non-scaling-stroke')
+  }
+  if (isStroke) {
+    if (cap) svg.setAttribute('stroke-linecap', cap)
+    if (join) svg.setAttribute('stroke-linejoin', join)
   }
   const vb = (svg.getAttribute('viewBox') || '0 0 24 24').split(/\s+/).map(Number)
   const cx = (vb[0] || 0) + (vb[2] || 24) / 2
@@ -301,6 +305,20 @@ function recentPayload(icon) {
   return null
 }
 
+// Pro-gated line-style options. Each button previews its OWN effect: a thick
+// stub whose ends / corner render in the exact cap or join it sets, so the
+// choice is visual, not a word.
+const CAP_OPTS = [
+  { v: 'round', label: 'Round ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="round" /></svg> },
+  { v: 'butt', label: 'Flat ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="butt" /></svg> },
+  { v: 'square', label: 'Square ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="square" /></svg> },
+]
+const JOIN_OPTS = [
+  { v: 'round', label: 'Round corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="round" /></svg> },
+  { v: 'miter', label: 'Sharp corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="miter" /></svg> },
+  { v: 'bevel', label: 'Bevel corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="bevel" /></svg> },
+]
+
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
@@ -333,6 +351,8 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
   // A saved custom keeps its own stroke; anything else opens at the sticky width.
   const [stroke, setStroke] = useState(() => (icon?.custom && icon.stroke) || readStickyStroke())
   const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke))
+  const [cap, setCap] = useState(() => (icon?.custom && icon.cap) || 'round')
+  const [join, setJoin] = useState(() => (icon?.custom && icon.join) || 'round')
   const [rotate, setRotate] = useState(0)
   const [flipH, setFlipH] = useState(false)
   const [flipV, setFlipV] = useState(false)
@@ -394,12 +414,14 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
     stage.style.setProperty('--ig-size', `${size}px`)
     stage.style.setProperty('--ig-stroke', String(stroke))
     stage.style.setProperty('--ig-color', color || themeInk)
+    stage.style.setProperty('--ig-cap', cap)
+    stage.style.setProperty('--ig-join', join)
     const tf = []
     if (rotate) tf.push(`rotate(${rotate}deg)`)
     if (flipH) tf.push('scaleX(-1)')
     if (flipV) tf.push('scaleY(-1)')
     stage.style.setProperty('--ig-transform', tf.length ? tf.join(' ') : 'none')
-  }, [size, stroke, color, rotate, flipH, flipV, themeInk])
+  }, [size, stroke, color, cap, join, rotate, flipH, flipV, themeInk])
 
   // Lock body scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
@@ -434,8 +456,8 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
   }, [onClose])
 
   const serializedOutput = useMemo(
-    () => serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, rotate, flipH, flipV }),
-    [baseSvgText, size, color, stroke, isStroke, absStroke, rotate, flipH, flipV],
+    () => serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
+    [baseSvgText, size, color, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
   )
 
   const stageImgUrl = useMemo(() => {
@@ -501,12 +523,12 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
     const base = activeIcon.custom ? activeIcon.base : (activeIcon.cdn || activeIcon.d ? activeIcon.name : 'icon')
     const { iteration, name } = nextCustomName(base, existing)
     const colored = isColoredPack || !!color || (activeIcon.pasted === true && !isStroke)
-    const svg = serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, rotate, flipH, flipV })
+    const svg = serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV })
     const record = {
       key: `${CUSTOM_KEY}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
       base, iteration, name,
       pack: activeIcon.pack || null, cdn: !!activeIcon.cdn,
-      svg, color: color || '', size, stroke, absStroke, isStroke, colored, ts: Date.now(),
+      svg, color: color || '', size, stroke, absStroke, cap, join, isStroke, colored, ts: Date.now(),
     }
     if (!writeCustomIcons([record, ...existing])) { setSavedState('error'); return }
     addRecentIcon(recentPayload(activeIcon), 'edit')
@@ -608,6 +630,37 @@ function IconCustomizer({ icon, addMode, isPro, onClose, onCopy }) {
                   <input id="icust-stroke" type="range" min="1" max="3" step="0.25" value={stroke} onChange={(e) => { const v = +e.target.value; setStroke(v); writeStickyStroke(v); markDirty() }} />
                   <span className="icust-value">{stroke}</span>
                   <button type="button" className={`icust-abs${absStroke ? ' active' : ''}`} aria-pressed={absStroke} onClick={() => { setAbsStroke(a => !a); markDirty() }}>Absolute</button>
+                </div>
+              )}
+
+              {isStroke && (
+                <div className={`icust-pro${isPro ? '' : ' is-locked'}`}>
+                  <div className="icust-pro-head">
+                    <span>Line style</span>
+                    {!isPro && <span className="pnav-pop-tag">Pro</span>}
+                  </div>
+                  <div className="icust-row">
+                    <label>Ends</label>
+                    <div className="icust-seg icust-seg--icon">
+                      {CAP_OPTS.map(o => (
+                        <button key={o.v} type="button" className={cap === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={cap === o.v}
+                          onClick={() => { if (!isPro) { navigate('/checkout'); return } setCap(o.v); markDirty() }}>
+                          {o.icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="icust-row">
+                    <label>Corners</label>
+                    <div className="icust-seg icust-seg--icon">
+                      {JOIN_OPTS.map(o => (
+                        <button key={o.v} type="button" className={join === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={join === o.v}
+                          onClick={() => { if (!isPro) { navigate('/checkout'); return } setJoin(o.v); markDirty() }}>
+                          {o.icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
