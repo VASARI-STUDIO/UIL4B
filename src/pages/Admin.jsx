@@ -529,6 +529,10 @@ function ModuleBoard() {
   )
 }
 
+// Nearest psychological price ending in .99 (e.g. 7.40 → 7.99, 7.30 → 6.99),
+// never below 0.99.
+const round99 = (x) => Math.max(0.99, Math.round(x - 0.99) + 0.99)
+
 function StripeSetupPanel({ toast }) {
   const [config, setConfig] = useState(null)
   const [draft, setDraft] = useState(null)
@@ -536,6 +540,7 @@ function StripeSetupPanel({ toast }) {
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const [autoFill, setAutoFill] = useState(true)
 
   const authedFetch = useCallback(async (opts = {}) => {
     const { auth: fbAuth } = await import('../utils/firebase')
@@ -578,6 +583,27 @@ function StripeSetupPanel({ toast }) {
     })()
     return () => { cancelled = true }
   }, [authedFetch, buildDraft])
+
+  // #12 auto-fill: editing one cell scales every other currency (both
+  // intervals) off its default ratio, snapped to the nearest .99. The edited
+  // cell keeps the raw string so typing isn't fought mid-keystroke.
+  const handlePriceEdit = (interval, code, raw) => {
+    setDraft(d => {
+      const next = { monthly: { ...d.monthly }, yearly: { ...d.yearly } }
+      next[interval][code] = raw
+      const base = config?.defaults?.[interval]?.[code]
+      const n = Number(raw)
+      if (!autoFill || !raw || !isFinite(n) || n <= 0 || !base) return next
+      const scale = n / base
+      for (const iv of ['monthly', 'yearly']) {
+        for (const c of config.currencies) {
+          if (iv === interval && c.code === code) continue
+          next[iv][c.code] = round99(config.defaults[iv][c.code] * scale).toFixed(2)
+        }
+      }
+      return next
+    })
+  }
 
   const save = async () => {
     setSaving(true); setError(''); setResult(null)
@@ -643,7 +669,7 @@ function StripeSetupPanel({ toast }) {
                           <td key={interval}>
                             <div className="adm-stripe-input">
                               <span>{c.symbol}</span>
-                              <input type="number" min="0" step="0.01" value={draft[interval][c.code]} onChange={e => setDraft(d => ({ ...d, [interval]: { ...d[interval], [c.code]: e.target.value } }))} />
+                              <input type="number" min="0" step="0.01" value={draft[interval][c.code]} onChange={e => handlePriceEdit(interval, c.code, e.target.value)} />
                             </div>
                           </td>
                         ))}
@@ -652,6 +678,10 @@ function StripeSetupPanel({ toast }) {
                   </tbody>
                 </table>
               </div>
+              <label className="adm-stripe-autofill">
+                <input type="checkbox" checked={autoFill} onChange={e => setAutoFill(e.target.checked)} />
+                Auto-fill other currencies — edit one price and every currency (monthly &amp; yearly) recalculates to the nearest .99
+              </label>
               <div className="adm-stripe-actions">
                 <button className="btn btn-accent" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save Prices to Stripe'}</button>
                 <button className="btn btn-s" onClick={() => setDraft(buildDraft({ ...config, prices: {} }))} disabled={saving}>Reset to defaults</button>
@@ -699,6 +729,331 @@ function StripeSetupPanel({ toast }) {
   )
 }
 
+// ── Users panel (#13) ───────────────────────────────────────
+
+// Free-text profile locations ("Sydney, Australia") mapped to ISO-3166 alpha-2.
+// Lowercased common names + aliases; extend as real user data shows gaps.
+const COUNTRY_CODES = {
+  'united states': 'US', 'united states of america': 'US', usa: 'US', 'u.s.': 'US', 'u.s.a.': 'US', america: 'US',
+  'united kingdom': 'GB', uk: 'GB', england: 'GB', scotland: 'GB', wales: 'GB', 'northern ireland': 'GB', 'great britain': 'GB',
+  australia: 'AU', 'new zealand': 'NZ', canada: 'CA', ireland: 'IE',
+  germany: 'DE', france: 'FR', spain: 'ES', italy: 'IT', portugal: 'PT', netherlands: 'NL', 'the netherlands': 'NL',
+  belgium: 'BE', switzerland: 'CH', austria: 'AT', sweden: 'SE', norway: 'NO', denmark: 'DK', finland: 'FI', iceland: 'IS',
+  poland: 'PL', czechia: 'CZ', 'czech republic': 'CZ', slovakia: 'SK', hungary: 'HU', romania: 'RO', bulgaria: 'BG',
+  greece: 'GR', croatia: 'HR', serbia: 'RS', ukraine: 'UA', russia: 'RU', turkey: 'TR', 'türkiye': 'TR',
+  estonia: 'EE', latvia: 'LV', lithuania: 'LT', luxembourg: 'LU', malta: 'MT', cyprus: 'CY',
+  india: 'IN', pakistan: 'PK', bangladesh: 'BD', 'sri lanka': 'LK', nepal: 'NP',
+  china: 'CN', japan: 'JP', 'south korea': 'KR', korea: 'KR', taiwan: 'TW', 'hong kong': 'HK', mongolia: 'MN',
+  singapore: 'SG', malaysia: 'MY', indonesia: 'ID', philippines: 'PH', thailand: 'TH', vietnam: 'VN', cambodia: 'KH',
+  israel: 'IL', 'united arab emirates': 'AE', uae: 'AE', dubai: 'AE', 'saudi arabia': 'SA', qatar: 'QA', kuwait: 'KW',
+  jordan: 'JO', lebanon: 'LB', iraq: 'IQ', iran: 'IR',
+  egypt: 'EG', nigeria: 'NG', kenya: 'KE', ghana: 'GH', ethiopia: 'ET', tanzania: 'TZ', uganda: 'UG',
+  morocco: 'MA', algeria: 'DZ', tunisia: 'TN', 'south africa': 'ZA', zimbabwe: 'ZW',
+  brazil: 'BR', argentina: 'AR', chile: 'CL', colombia: 'CO', peru: 'PE', venezuela: 'VE', ecuador: 'EC',
+  bolivia: 'BO', paraguay: 'PY', uruguay: 'UY', mexico: 'MX', 'costa rica': 'CR', panama: 'PA',
+  cuba: 'CU', jamaica: 'JM', 'dominican republic': 'DO', guatemala: 'GT',
+  fiji: 'FJ', 'papua new guinea': 'PG',
+}
+const ISO2_SET = new Set(Object.values(COUNTRY_CODES))
+const regionNames = typeof Intl !== 'undefined' && Intl.DisplayNames ? new Intl.DisplayNames(['en'], { type: 'region' }) : null
+
+// "Sydney, Australia" → 'AU'. Scans segments right-to-left because the country
+// conventionally comes last; also accepts a bare ISO2 code like "AU".
+function countryFromLocation(location) {
+  if (!location) return null
+  const segs = String(location).split(/[,/·|]/).map(s => s.trim().toLowerCase()).filter(Boolean)
+  for (let i = segs.length - 1; i >= 0; i--) {
+    if (COUNTRY_CODES[segs[i]]) return COUNTRY_CODES[segs[i]]
+    const up = segs[i].toUpperCase()
+    if (up.length === 2 && ISO2_SET.has(up)) return up
+  }
+  return null
+}
+
+const flagEmoji = (iso2) => iso2.replace(/./g, ch => String.fromCodePoint(0x1F1A5 + ch.charCodeAt(0)))
+const countryName = (iso2) => { try { return regionNames?.of(iso2) || iso2 } catch { return iso2 } }
+
+function EyeIcon({ off }) {
+  return off ? (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" /><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" /><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" /><line x1="2" y1="2" x2="22" y2="22" />
+    </svg>
+  ) : (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+// Email hidden behind an eye toggle — first few characters visible, the rest
+// blurred, so the founder can screen-share the dashboard without leaking PII.
+function MaskedEmail({ email, revealed, onToggle }) {
+  if (!email) return <span style={{ color: 'var(--t3)' }}>—</span>
+  const cut = Math.min(3, email.indexOf('@') > 0 ? email.indexOf('@') : 3)
+  return (
+    <span className="adm-mask">
+      <span className="mono adm-mask-text">
+        {revealed ? email : (<>{email.slice(0, cut)}<span className="adm-mask-blur" aria-hidden="true">{email.slice(cut)}</span></>)}
+      </span>
+      <button type="button" className="adm-eye-btn" onClick={onToggle} title={revealed ? 'Hide email' : 'Reveal email'} aria-label={revealed ? 'Hide email' : 'Reveal email'}>
+        <EyeIcon off={revealed} />
+      </button>
+    </span>
+  )
+}
+
+const USER_SORTS = {
+  email: (u) => (u.email || '').toLowerCase(),
+  plan: (u) => (u.plan === 'pro' ? 0 : 1),
+  role: (u) => u.onboarding?.role || '￿',
+  use: (u) => u.onboarding?.use || '￿',
+  country: (u) => (u.country ? countryName(u.country) : '￿'),
+  createdAt: (u) => u.joinedTs || 0,
+  lastLoginAt: (u) => (u.lastLoginAt ? new Date(u.lastLoginAt).getTime() : 0),
+}
+
+function UsersPanel({ localUsers, toast }) {
+  const [users, setUsers] = useState(null) // null = loading
+  const [source, setSource] = useState('server')
+  const [error, setError] = useState('')
+  const [revealed, setRevealed] = useState(() => new Set())
+  const [search, setSearch] = useState('')
+  const [planFilter, setPlanFilter] = useState('all')
+  const [countryFilter, setCountryFilter] = useState('all')
+  const [sortKey, setSortKey] = useState('createdAt')
+  const [sortDir, setSortDir] = useState('desc')
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { auth: fbAuth } = await import('../utils/firebase')
+        const token = await fbAuth.currentUser?.getIdToken()
+        if (!token) throw new Error('Not authenticated')
+        const res = await fetch('/api/verify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ includeUsers: true }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!Array.isArray(data.users)) throw new Error(data.usersError || data.error || `Server returned ${res.status}`)
+        setUsers(data.users)
+      } catch (err) {
+        if (cancelled) return
+        // Fall back to this browser's profile cache — fewer users, fewer fields,
+        // but the tab stays useful offline / before the API deploys.
+        setError(err.message)
+        setSource('local')
+        setUsers((localUsers || []).map(u => ({
+          uid: u.uid, email: u.email || '', displayName: u.displayName || '', provider: u.provider || 'email',
+          emailVerified: null, createdAt: u.createdAt || null, lastLoginAt: null,
+          subscription: { status: null, interval: null }, onboarding: { role: null, use: null }, location: '', company: '',
+        })))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [localUsers])
+
+  const rows = useMemo(() => (users || []).map(u => {
+    const status = u.subscription?.status
+    return {
+      ...u,
+      plan: status === 'active' || status === 'trialing' ? 'pro' : 'free',
+      country: countryFromLocation(u.location),
+      joinedTs: u.createdAt ? new Date(u.createdAt).getTime() : 0,
+    }
+  }), [users])
+
+  const countryCounts = useMemo(() => {
+    const counts = {}
+    rows.forEach(r => { const k = r.country || 'unknown'; counts[k] = (counts[k] || 0) + 1 })
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])
+  }, [rows])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const out = rows.filter(r => {
+      if (planFilter !== 'all' && r.plan !== planFilter) return false
+      if (countryFilter !== 'all' && (r.country || 'unknown') !== countryFilter) return false
+      if (q && ![r.email, r.displayName, r.location, r.company, r.onboarding?.role, r.onboarding?.use]
+        .some(v => v && String(v).toLowerCase().includes(q))) return false
+      return true
+    })
+    const key = USER_SORTS[sortKey] || USER_SORTS.createdAt
+    out.sort((a, b) => {
+      const ka = key(a), kb = key(b)
+      const cmp = ka < kb ? -1 : ka > kb ? 1 : 0
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return out
+  }, [rows, search, planFilter, countryFilter, sortKey, sortDir])
+
+  const toggleSort = (key) => {
+    if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir(key === 'createdAt' || key === 'lastLoginAt' ? 'desc' : 'asc') }
+  }
+
+  const toggleReveal = (uid) => setRevealed(prev => {
+    const next = new Set(prev)
+    if (next.has(uid)) next.delete(uid); else next.add(uid)
+    return next
+  })
+  const allRevealed = rows.length > 0 && revealed.size >= rows.length
+
+  const exportUsersCSV = () => {
+    const cols = ['email', 'displayName', 'provider', 'emailVerified', 'plan', 'role', 'use', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const csv = [cols.join(','), ...filtered.map(r => cols.map(c =>
+      c === 'role' || c === 'use' ? esc(r.onboarding?.[c]) : c === 'country' ? esc(r.country ? countryName(r.country) : '') : esc(r[c])
+    ).join(','))].join('\n')
+    const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `uil4b-users-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast?.(`Exported ${filtered.length} users`)
+  }
+
+  const proCount = rows.filter(r => r.plan === 'pro').length
+  const SortTh = ({ k, children, ...rest }) => (
+    <th {...rest}>
+      <button type="button" className={`adm-th-sort${sortKey === k ? ' active' : ''}`} onClick={() => toggleSort(k)}>
+        {children}
+        <span className="adm-th-arrow">{sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
+      </button>
+    </th>
+  )
+
+  return (
+    <div className="adm-section">
+      <div className="adm-section-h">
+        <div className="adm-section-title"><span className="adm-section-bar" />Registered Users ({rows.length})</div>
+        <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+          {users === null ? 'Loading…' : source === 'server' ? 'All accounts · server data' : 'This browser only · profile cache'}
+        </span>
+      </div>
+
+      {source === 'local' && users !== null && (
+        <div className="adm-card adm-verify-error" style={{ marginBottom: 12 }}>
+          <div className="adm-card-body" style={{ fontSize: 12, color: 'var(--t1)' }}>
+            Couldn&apos;t load the full user list from the server ({error}). Showing accounts cached in this browser instead.
+          </div>
+        </div>
+      )}
+
+      {users === null ? (
+        <div className="adm-card"><div className="adm-empty">Loading users…</div></div>
+      ) : (
+        <>
+          <div className="adm-stats" style={{ marginBottom: 16 }}>
+            <div className="adm-stat">
+              <div className="adm-stat-value">{rows.length}</div>
+              <div className="adm-stat-label">Total Users</div>
+              <div className="adm-stat-sub">{source === 'server' ? 'All accounts' : 'Cached locally'}</div>
+            </div>
+            <div className="adm-stat">
+              <div className="adm-stat-value">{proCount}</div>
+              <div className="adm-stat-label">Pro Subscribers</div>
+              <div className="adm-stat-sub">{rows.length ? Math.round((proCount / rows.length) * 100) : 0}% of users</div>
+            </div>
+            <div className="adm-stat">
+              <div className="adm-stat-value">{countryCounts.filter(([k]) => k !== 'unknown').length}</div>
+              <div className="adm-stat-label">Countries</div>
+              <div className="adm-stat-sub">From profile locations</div>
+            </div>
+            <div className="adm-stat">
+              <div className="adm-stat-value">{rows.filter(r => r.provider === 'google').length}</div>
+              <div className="adm-stat-label">Google Sign-ins</div>
+              <div className="adm-stat-sub">{rows.filter(r => r.provider !== 'google').length} email/password</div>
+            </div>
+          </div>
+
+          {countryCounts.length > 0 && (
+            <div className="adm-country-chips">
+              <button type="button" className={`adm-country-chip${countryFilter === 'all' ? ' active' : ''}`} onClick={() => setCountryFilter('all')}>
+                All <span>{rows.length}</span>
+              </button>
+              {countryCounts.map(([code, count]) => (
+                <button key={code} type="button" className={`adm-country-chip${countryFilter === code ? ' active' : ''}`}
+                  onClick={() => setCountryFilter(countryFilter === code ? 'all' : code)}
+                  title={code === 'unknown' ? 'No location on profile' : countryName(code)}>
+                  {code === 'unknown' ? 'No location' : <><span className="adm-flag">{flagEmoji(code)}</span>{countryName(code)}</>}
+                  <span>{count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="adm-users-toolbar">
+            <input type="search" className="adm-search" placeholder="Search email, name, role, location…" value={search} onChange={e => setSearch(e.target.value)} />
+            <div className="adm-time-filter">
+              {['all', 'pro', 'free'].map(p => (
+                <button key={p} className={`adm-time-btn${planFilter === p ? ' active' : ''}`} onClick={() => setPlanFilter(p)} style={{ textTransform: 'capitalize' }}>{p}</button>
+              ))}
+            </div>
+            <button className="btn btn-s" onClick={() => setRevealed(allRevealed ? new Set() : new Set(rows.map(r => r.uid)))}>
+              {allRevealed ? 'Hide all emails' : 'Reveal all emails'}
+            </button>
+            <button className="btn btn-s" onClick={exportUsersCSV}>Export CSV</button>
+          </div>
+
+          <div className="adm-card">
+            <div className="adm-table-wrap">
+              <table className="adm-table adm-users-table">
+                <thead>
+                  <tr>
+                    <SortTh k="email">User</SortTh>
+                    <SortTh k="plan">Plan</SortTh>
+                    <SortTh k="role">Role</SortTh>
+                    <SortTh k="use">Category</SortTh>
+                    <SortTh k="country">Country</SortTh>
+                    <SortTh k="createdAt">Joined</SortTh>
+                    <SortTh k="lastLoginAt">Last Login</SortTh>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(u => (
+                    <tr key={u.uid}>
+                      <td>
+                        <MaskedEmail email={u.email} revealed={revealed.has(u.uid)} onToggle={() => toggleReveal(u.uid)} />
+                        <div className="adm-user-sub">
+                          {u.displayName || '—'} · {u.provider}{u.emailVerified === false ? ' · unverified' : ''}
+                          {u.company ? ` · ${u.company}` : ''}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`adm-badge adm-plan-${u.plan}`}>{u.plan === 'pro' ? `Pro${u.subscription?.interval ? ` · ${u.subscription.interval}` : ''}` : 'Free'}</span>
+                      </td>
+                      <td>{u.onboarding?.role || <span style={{ color: 'var(--t3)' }}>—</span>}</td>
+                      <td>{u.onboarding?.use || <span style={{ color: 'var(--t3)' }}>—</span>}</td>
+                      <td>
+                        {u.country
+                          ? <span className="adm-flag-cell" title={u.location ? `${u.location} — ${countryName(u.country)}` : countryName(u.country)}>
+                              <span className="adm-flag">{flagEmoji(u.country)}</span>{u.country}
+                            </span>
+                          : u.location
+                            ? <span title={u.location} style={{ color: 'var(--t2)' }}>{u.location}</span>
+                            : <span style={{ color: 'var(--t3)' }}>—</span>}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{u.createdAt ? fmtDate(u.createdAt) : '—'}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{u.lastLoginAt ? fmtDate(u.lastLoginAt) : '—'}</td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && (
+                    <tr><td colSpan={7}><div className="adm-empty">{rows.length === 0 ? 'No users yet' : 'No users match the current filters'}</div></td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── Main Component ──────────────────────────────────────────
 
 export default function Admin({ toast }) {
@@ -712,6 +1067,8 @@ export default function Admin({ toast }) {
   const [feedback, setFeedback] = useState([])
   const [filterType, setFilterType] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [subSearch, setSubSearch] = useState('')
+  const [subSort, setSubSort] = useState('newest')
   const [expandedId, setExpandedId] = useState(null)
   const [pendingPrompts, setPendingPrompts] = useState([])
   const [promptFilter, setPromptFilter] = useState('pending')
@@ -857,13 +1214,31 @@ export default function Admin({ toast }) {
   const newCount = feedback.filter(f => f.status === 'new').length
   const inProgressCount = feedback.filter(f => f.status === 'in-progress').length
 
-  const filteredFeedback = useMemo(() =>
-    [...feedback].reverse().filter(item => {
+  const filteredFeedback = useMemo(() => {
+    const q = subSearch.trim().toLowerCase()
+    const out = feedback.filter(item => {
       if (filterType !== 'all' && item.type !== filterType) return false
       if (filterStatus !== 'all' && item.status !== filterStatus) return false
+      if (q && ![item.subject, item.message, item.email, item.adminNotes]
+        .some(v => v && String(v).toLowerCase().includes(q))) return false
       return true
-    }),
-  [feedback, filterType, filterStatus])
+    })
+    out.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+    if (subSort === 'newest') out.reverse()
+    return out
+  }, [feedback, filterType, filterStatus, subSearch, subSort])
+
+  const typeCounts = useMemo(() => {
+    const counts = { all: feedback.length }
+    feedback.forEach(f => { counts[f.type] = (counts[f.type] || 0) + 1 })
+    return counts
+  }, [feedback])
+
+  const statusCounts = useMemo(() => {
+    const counts = { all: feedback.length }
+    feedback.forEach(f => { counts[f.status] = (counts[f.status] || 0) + 1 })
+    return counts
+  }, [feedback])
 
   const feedbackDonut = useMemo(() => {
     const types = ['bug', 'feature', 'general', 'help']
@@ -996,11 +1371,11 @@ export default function Admin({ toast }) {
       {/* ═══════ OVERVIEW TAB ═══════ */}
       {tab === 'overview' && (
         <>
-          {/* Stat cards — derived from THIS browser's localStorage only */}
-          <div className="adm-section">
-            <div className="adm-section-h">
-              <div className="adm-section-title"><span className="adm-section-bar" />This device · local analytics</div>
-              <span style={{ fontSize: 11, color: 'var(--t3)' }}>Tracked in this browser&apos;s localStorage</span>
+          {/* Category — traffic & engagement (this device only) */}
+          <div className="adm-cat">
+            <div className="adm-cat-head">
+              <div className="adm-cat-title"><span className="adm-section-bar" />Traffic &amp; Engagement</div>
+              <span className="adm-cat-desc">This device · tracked in this browser&apos;s localStorage</span>
             </div>
             <div className="adm-stats">
               <div className="adm-stat">
@@ -1037,13 +1412,47 @@ export default function Admin({ toast }) {
                 </div>
               </div>
             </div>
+
+            <div className="adm-grid-2">
+              <div className="adm-card">
+                <div className="adm-card-header">
+                  <span className="adm-card-title">Page Views</span>
+                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{filteredViews.length} total</span>
+                </div>
+                <div className="adm-card-body">
+                  <AreaChart data={viewsChartData} />
+                </div>
+              </div>
+
+              <div className="adm-card">
+                <div className="adm-card-header">
+                  <span className="adm-card-title">Top Pages</span>
+                </div>
+                <div className="adm-card-body">
+                  {topPagesFiltered.length > 0 ? (
+                    <div className="adm-bar">
+                      {(() => {
+                        const max = topPagesFiltered[0]?.[1] || 1
+                        return topPagesFiltered.slice(0, 8).map(([page, count]) => (
+                          <div key={page} className="adm-bar-row">
+                            <span className="adm-bar-label">{page.replace(/^\//, '') || '/'}</span>
+                            <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                            <span className="adm-bar-value">{count}</span>
+                          </div>
+                        ))
+                      })()}
+                    </div>
+                  ) : <div className="adm-empty">No page data yet</div>}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* All users · aggregate — read from Firestore (cross-device) */}
-          <div className="adm-section">
-            <div className="adm-section-h">
-              <div className="adm-section-title"><span className="adm-section-bar" />All users · aggregate</div>
-              <span style={{ fontSize: 11, color: 'var(--t3)' }}>Server totals · last 30 days · all signed-in users</span>
+          {/* Category — audience (all users, server aggregate) */}
+          <div className="adm-cat">
+            <div className="adm-cat-head">
+              <div className="adm-cat-title"><span className="adm-section-bar" />Audience</div>
+              <span className="adm-cat-desc">All users · server totals · last 30 days</span>
             </div>
             {!aggregateLoaded ? (
               <div className="adm-card"><div className="adm-empty">Loading aggregate analytics…</div></div>
@@ -1131,53 +1540,23 @@ export default function Admin({ toast }) {
             )}
           </div>
 
-          {/* Charts row — local (this device) */}
-          <div className="adm-grid-2" style={{ marginBottom: 32 }}>
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Page Views</span>
-                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{filteredViews.length} total</span>
-              </div>
-              <div className="adm-card-body">
-                <AreaChart data={viewsChartData} />
-              </div>
+          {/* Category — feedback & community */}
+          <div className="adm-cat">
+            <div className="adm-cat-head">
+              <div className="adm-cat-title"><span className="adm-section-bar" />Feedback &amp; Community</div>
+              <span className="adm-cat-desc">Submissions across all devices</span>
             </div>
-
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Submissions by Type</span>
+            <div className="adm-grid-3">
+              <div className="adm-card">
+                <div className="adm-card-header">
+                  <span className="adm-card-title">Submissions by Type</span>
+                </div>
+                <div className="adm-card-body">
+                  {feedbackDonut.length > 0
+                    ? <DonutChart segments={feedbackDonut} />
+                    : <div className="adm-empty">No submissions yet</div>}
+                </div>
               </div>
-              <div className="adm-card-body">
-                {feedbackDonut.length > 0
-                  ? <DonutChart segments={feedbackDonut} />
-                  : <div className="adm-empty">No submissions yet</div>}
-              </div>
-            </div>
-          </div>
-
-          {/* Top pages + insights */}
-          <div className="adm-grid-3" style={{ marginBottom: 32 }}>
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Top Pages</span>
-              </div>
-              <div className="adm-card-body">
-                {topPagesFiltered.length > 0 ? (
-                  <div className="adm-bar">
-                    {(() => {
-                      const max = topPagesFiltered[0]?.[1] || 1
-                      return topPagesFiltered.slice(0, 8).map(([page, count]) => (
-                        <div key={page} className="adm-bar-row">
-                          <span className="adm-bar-label">{page.replace(/^\//, '') || '/'}</span>
-                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-                          <span className="adm-bar-value">{count}</span>
-                        </div>
-                      ))
-                    })()}
-                  </div>
-                ) : <div className="adm-empty">No page data yet</div>}
-              </div>
-            </div>
 
             <div className="adm-card">
               <div className="adm-card-header">
@@ -1226,10 +1605,13 @@ export default function Admin({ toast }) {
             </div>
           </div>
 
-          {/* Setup checklist */}
-          <div className="adm-section">
-            <div className="adm-section-h">
-              <div className="adm-section-title"><span className="adm-section-bar" />Setup Checklist</div>
+          </div>
+
+          {/* Category — setup */}
+          <div className="adm-cat">
+            <div className="adm-cat-head">
+              <div className="adm-cat-title"><span className="adm-section-bar" />Setup</div>
+              <span className="adm-cat-desc">Infrastructure checklist</span>
             </div>
             <div className="adm-card">
               <div className="adm-card-body">
@@ -1384,19 +1766,31 @@ export default function Admin({ toast }) {
       {tab === 'submissions' && (
         <div className="adm-section">
           <div className="adm-section-h">
-            <div className="adm-section-title"><span className="adm-section-bar" />Submissions ({filteredFeedback.length})</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div className="adm-section-title"><span className="adm-section-bar" />Submissions ({filteredFeedback.length}{filteredFeedback.length !== feedback.length ? ` of ${feedback.length}` : ''})</div>
+            <div className="adm-sub-summary">
+              <span style={{ color: 'var(--warn)' }}>{newCount} new</span>
+              <span style={{ color: 'var(--accent)' }}>{inProgressCount} in progress</span>
+              <span style={{ color: 'var(--ok)' }}>{statusCounts.done || 0} done</span>
+            </div>
+          </div>
+          <div className="adm-sub-toolbar">
+            <input type="search" className="adm-search" placeholder="Search subject, message, email…" value={subSearch} onChange={e => setSubSearch(e.target.value)} />
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               {['all', 'bug', 'feature', 'general', 'help'].map(t => (
                 <button key={t} className={`adm-time-btn${filterType === t ? ' active' : ''}`} onClick={() => setFilterType(t)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                  {t === 'all' ? 'All Types' : t}
+                  {t === 'all' ? 'All Types' : t}{typeCounts[t] ? ` · ${typeCounts[t]}` : ''}
                 </button>
               ))}
-              <span style={{ width: 1, background: 'var(--border)', margin: '0 4px' }} />
+              <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', margin: '0 4px' }} />
               {['all', ...STATUSES].map(s => (
                 <button key={s} className={`adm-time-btn${filterStatus === s ? ' active' : ''}`} onClick={() => setFilterStatus(s)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                  {s === 'all' ? 'All' : STATUS_LABELS[s]}
+                  {s === 'all' ? 'All' : STATUS_LABELS[s]}{statusCounts[s] ? ` · ${statusCounts[s]}` : ''}
                 </button>
               ))}
+              <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', margin: '0 4px' }} />
+              <button className="adm-time-btn" onClick={() => setSubSort(s => (s === 'newest' ? 'oldest' : 'newest'))} title="Toggle sort order">
+                {subSort === 'newest' ? 'Newest ↓' : 'Oldest ↑'}
+              </button>
             </div>
           </div>
           {filteredFeedback.length === 0 && <div className="adm-card"><div className="adm-empty">{feedback.length === 0 ? 'No submissions yet.' : 'No submissions match filters.'}</div></div>}
@@ -1501,29 +1895,7 @@ export default function Admin({ toast }) {
       )}
 
       {/* ═══════ USERS TAB ═══════ */}
-      {tab === 'users' && (
-        <div className="adm-section">
-          <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Registered Users ({data.users.length})</div></div>
-          <div className="adm-card">
-            <div className="adm-table-wrap">
-              <table className="adm-table">
-                <thead><tr><th>Email</th><th>Name</th><th>Provider</th><th>Joined</th></tr></thead>
-                <tbody>
-                  {data.users.map(u => (
-                    <tr key={u.uid}>
-                      <td className="mono bold">{u.email}</td>
-                      <td>{u.displayName || '—'}</td>
-                      <td>{u.provider || 'email'}</td>
-                      <td>{fmtDate(u.createdAt)}</td>
-                    </tr>
-                  ))}
-                  {data.users.length === 0 && <tr><td colSpan={4}><div className="adm-empty">No users yet</div></td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {tab === 'users' && <UsersPanel localUsers={data.users} toast={toast} />}
 
       {/* ═══════ BOARD TAB ═══════ */}
       {tab === 'board' && <ModuleBoard />}
