@@ -302,6 +302,9 @@
   },
   "iconLibrary": {
     "title": "图标库",
+    "eyebrow": "图标库",
+    "heading": "查找、自定义并复制任意图标。",
+    "subtitle": "搜索超过 200,000 个开源图标 — Lucide、Tabler、Phosphor、Material 等。可对任意图标重新着色、调整大小和样式（调整描边、设置颜色），然后复制干净的 SVG 或一键导出。浏览和复制免费 — 升级 Pro 即可保存你的自定义图标。",
     "searchPlaceholder": "搜索图标…",
     "allPacks": "所有图标包",
     "mode": "模式",
@@ -313,6 +316,11 @@
     "copyJsx": "复制 JSX",
     "noIcons": "在上方搜索图标",
     "loadingPacks": "正在加载图标包…"
+  },
+  "emojiLibrary": {
+    "eyebrow": "表情库",
+    "heading": "以任意肤色复制任意表情符号。",
+    "subtitle": "按类别浏览所有表情符号，为整组切换肤色，点击即可复制。始终免费。"
   },
   "imageConverter": {
     "title": "图像转换器",
