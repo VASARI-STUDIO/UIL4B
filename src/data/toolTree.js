@@ -222,10 +222,14 @@ export const NAV_SECTIONS = [
   {
     id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_MENU, viewAllHref: '/sitemap', width: 960,
     promo: {
-      eyebrow: 'Create',
-      title: 'Your whole UI system, one workspace',
-      blurb: 'Build colour, type, components and icons that stay in sync — then export production-ready code.',
-      href: '/home',
+      eyebrow: 'Brand kit',
+      title: 'Build your brand kit, step by step',
+      blurb: 'A guided flow through colour, fonts, type scale and icons — everything saved as you go, then exported as one system.',
+      // `guide: true` tells the nav to launch the guided UI-kit builder
+      // (colour → fonts → type → icons) instead of following plain links.
+      guide: true,
+      cta: 'Build a brand kit',
+      href: '/learn',
       docsHref: '/learn',
     },
   },
