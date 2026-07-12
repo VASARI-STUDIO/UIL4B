@@ -4368,13 +4368,13 @@ html.lenis,html.lenis body{height:auto}
    opens up its internal whitespace (wider group gaps + roomier side padding) so
    the fuller row feels calm and uncramped, not just longer. */
 .pnav:hover .pnav-inner,.pnav:focus-within .pnav-inner,.pnav.is-expanded .pnav-inner{gap:34px;padding:0 26px 0 30px}
-.pnav:hover .pnav-items,.pnav:focus-within .pnav-items,.pnav.is-expanded .pnav-items{gap:8px;margin-left:0}
+.pnav:hover .pnav-items,.pnav:focus-within .pnav-items,.pnav.is-expanded .pnav-items{gap:8px}
 .pnav:hover .pnav-actions,.pnav:focus-within .pnav-actions,.pnav.is-expanded .pnav-actions{gap:14px}
-.pnav-lead{display:flex;align-items:center;gap:0;min-width:0}
+.pnav-lead{display:flex;align-items:center;gap:22px;min-width:0}
 .pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
 .pnav-word{font-size:var(--fs-h5);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
-.pnav-items{display:flex;align-items:center;gap:2px;margin-left:26px;transition:gap var(--dur-3) var(--ease-inout),margin-left var(--dur-3) var(--ease-inout)}
+.pnav-items{display:flex;align-items:center;gap:2px;transition:gap var(--dur-3) var(--ease-inout)}
 .pnav-trigger{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border:none;background:none;font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-trigger:hover,.pnav-trigger[aria-expanded="true"]{background:var(--hvr);color:var(--t0)}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
@@ -4384,16 +4384,16 @@ html.lenis,html.lenis body{height:auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
 
-/* Left reveal — search + Export sit fully collapsed at rest (to the LEFT of the
-   three triggers) and expand together when the whole pill is hovered, focused, or
-   pinned open (a menu is active). The parent handles the collapse so the field
-   and Export render their full form once revealed. */
-.pnav-search{display:flex;align-items:center;gap:8px;max-width:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-width var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),margin-left var(--dur-3) var(--ease-inout)}
-.pnav:hover .pnav-search,.pnav:focus-within .pnav-search,.pnav.is-expanded .pnav-search{max-width:360px;opacity:1;overflow:visible;pointer-events:auto;margin-left:12px}
-.pnav-search-field{display:flex;align-items:center;justify-content:flex-start;gap:8px;width:260px;height:40px;padding:0 16px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+/* Centre search — always visible, prominent, sitting between the nav triggers
+   and the right-hand actions cluster (Mobbin reference). The pill shrink-wraps
+   its content, so the fixed-width field naturally centres the bar. */
+.pnav-search{display:flex;align-items:center;justify-content:center;flex:0 1 auto}
+.pnav-search-field{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:300px;height:40px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-search-field:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.pnav-search-field .pnav-search-ico{flex:0 0 auto}
-.pnav-search-ph{white-space:nowrap}
+.pnav-search-field .pnav-search-ico{flex:0 0 auto;color:var(--t2)}
+.pnav-search-field:hover .pnav-search-ico{color:var(--t1)}
+.pnav-search-ph{white-space:nowrap;flex:1 1 auto;text-align:left}
+.pnav-search-kbd{flex:0 0 auto;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:11px;font-weight:600;line-height:1}
 /* Export lives in the RIGHT actions cluster now: collapsed at rest, revealed
    with the pill on hover / focus / pinned-open, ahead of the Upgrade pill. */
 .pnav-export{display:inline-flex;align-items:center;gap:7px;height:40px;max-width:0;padding:0;white-space:nowrap;border:none;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;opacity:0;overflow:hidden;pointer-events:none;cursor:pointer;transition:max-width var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
@@ -5124,7 +5124,7 @@ a.prev-btn{text-decoration:none}
      away (still reachable via the command palette on desktop). */
   .pnav-search{max-width:none;opacity:1;overflow:visible;pointer-events:auto;margin-left:0}
   .pnav-search-field{width:40px;padding:0;justify-content:center}
-  .pnav-search-ph{display:none}
+  .pnav-search-ph,.pnav-search-kbd{display:none}
   .pnav-export{display:none}
   /* Touch: the hamburger sheet IS the menu, so the resting 3-dots (a desktop
      hover-state affordance) is redundant — drop it. Signed-in users keep the
