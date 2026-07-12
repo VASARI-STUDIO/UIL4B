@@ -251,7 +251,7 @@ function NavIcon({ id }) {
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
-  const { isPro, subscription, checkout, openPortal, loading: subLoading } = useSubscription()
+  const { isPro, isAdmin, subscription, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -377,20 +377,28 @@ export default function Settings({ toast }) {
                   <div className="sub-active-info">
                     <div className="sub-active-title">UIL4B Pro is active</div>
                     <div className="sub-active-meta">
-                      {subscription?.interval === 'year' ? 'Billed yearly' : 'Billed monthly'}
-                      {subscription?.cancelAtPeriodEnd && ' · cancels at period end'}
-                      {subscription?.currentPeriodEnd && (
-                        <> · {subscription.cancelAtPeriodEnd ? 'access until' : 'renews'} {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</>
+                      {isAdmin && !subscription ? 'Founder account — Pro included, no billing' : (
+                        <>
+                          {subscription?.interval === 'year' ? 'Billed yearly' : 'Billed monthly'}
+                          {subscription?.cancelAtPeriodEnd && ' · cancels at period end'}
+                          {subscription?.currentPeriodEnd && (
+                            <> · {subscription.cancelAtPeriodEnd ? 'access until' : 'renews'} {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn" onClick={() => openPortal()}>Manage billing</button>
-                  {!subscription?.cancelAtPeriodEnd && (
-                    <button className="btn btn-ghost" style={{ fontSize: 12, color: 'var(--t2)' }} onClick={() => openPortal({ flow: 'cancel' })}>Cancel plan</button>
-                  )}
-                </div>
+                {/* Admins without a real Stripe subscription have no billing
+                    portal to open — hide the buttons instead of 500ing. */}
+                {!(isAdmin && !subscription) && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn" onClick={() => openPortal()}>Manage billing</button>
+                    {!subscription?.cancelAtPeriodEnd && (
+                      <button className="btn btn-ghost" style={{ fontSize: 12, color: 'var(--t2)' }} onClick={() => openPortal({ flow: 'cancel' })}>Cancel plan</button>
+                    )}
+                  </div>
+                )}
               </div>
               </>
             ) : (

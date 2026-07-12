@@ -1,5 +1,5 @@
 import { adminDb, adminAuth, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
-import { planForSubscription, dailyLimitFor } from './_lib/plans.js'
+import { planForUser, dailyLimitFor } from './_lib/plans.js'
 import { cleanKey } from './_lib/env.js'
 
 export const config = {
@@ -133,10 +133,13 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Authentication required' })
   }
 
-  let uid
+  let uid, email
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
+    // Only trust the email for entitlements when Firebase has verified it —
+    // an unverified signup could otherwise claim someone else's address.
+    email = decoded.email_verified ? decoded.email : null
   } catch {
     const cp = credentialProblem()
     if (cp) return res.status(500).json({ error: cp })
@@ -150,7 +153,7 @@ export default async function handler(req, res) {
   let plan, limit, used
   try {
     const userSnap = await fireDb.doc(`users/${uid}`).get()
-    plan = planForSubscription(userSnap.data()?.subscription || null)
+    plan = planForUser({ subscription: userSnap.data()?.subscription || null, email })
     limit = dailyLimitFor(plan, toolId)
     const usageSnap = await usageRef.get()
     used = usageSnap.data()?.[toolId] || 0
