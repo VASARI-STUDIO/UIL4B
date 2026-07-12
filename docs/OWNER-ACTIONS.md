@@ -1,7 +1,7 @@
 # UIL4B — Owner Action List
 
 Things only **you** can do (credentials, dashboards, infra) to fully activate the
-work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-09.
+work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-12.
 
 > **⚠ Status is uncertain — verify before you fix.** As of 2026-06-30 you weren't
 > sure which of these you'd already done, and the agent environment **cannot reach
@@ -129,9 +129,9 @@ buyers pay and get nothing. (Tracked as an engineering slice.)
 `/api/get-prices` via the shared `src/hooks/usePrices.js` hook, so **no displayed
 price can diverge from what Stripe charges** — when you flip the ladder in step 2
 the whole UI updates with zero code change, and the "Save N%" badge is computed
-from the same two live numbers so it can't contradict them. Optional,
-founder-gated design follow-up (not a safety requirement): a dedicated **Plans**
-page and trimming the pricing block out of Settings (Settings would keep *Manage
+from the same two live numbers so it can't contradict them. ✅ The dedicated
+**`/plans`** page now exists and reads the same live amounts. Remaining optional
+follow-up: trim the pricing block out of Settings (Settings would keep *Manage
 billing* + *Cancel* only).
 
 ### 2b. Retention coupon — exact codes & amounts
@@ -201,6 +201,11 @@ The app is a client-rendered SPA, so Google sees deferred/partial content and **
 - Commit signing is working (you authorised it).
 - Converters consolidated into File Converter; `/imgconvert` + `/video-frames` redirect.
 - Auth return-path, feedback failure handling, accessibility pass, Color Studio undo, etc. — all merged.
+- **Free-tier save cap is now enforced in code** — Free = **3 saved projects / 8 custom
+  icons**, Pro = unlimited (single source of truth: `FREE_SAVE_LIMITS` in
+  `SubscriptionContext`, consumed by `ProjectContext`, `IconLibrary` and the `/plans`
+  copy). ⚠ *Founder check:* confirm those two numbers are the caps you want — changing
+  them is a one-line edit in `FREE_SAVE_LIMITS` and every surface updates.
 
 ---
 
