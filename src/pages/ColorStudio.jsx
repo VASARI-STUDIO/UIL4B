@@ -1875,6 +1875,36 @@ export default function ColorStudio({ onCopy, toast }) {
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams, toast])
 
+  // ── Nav deep-link: ?tool=<id> ──
+  // The mega-menu's six Colour rows land here so each reads as its own tool.
+  // ColorStudio is a single scroll page (not a view-switcher), so we expand +
+  // smooth-scroll to the mapped section anchor, then strip the param. One-shot,
+  // with its own ref so it never fights the preset/tab handler above. contrast +
+  // tint live in per-swatch popovers → they fall back to the palette section.
+  const toolAppliedRef = useRef(false)
+  useEffect(() => {
+    if (toolAppliedRef.current) return
+    const tool = searchParams.get('tool')
+    if (!tool) return
+    toolAppliedRef.current = true
+    const TOOL_TO_SECTION = {
+      palette: 'palette',
+      gradient: 'gradients',
+      semantic: 'states',
+      'ui-colour': 'systems',
+      contrast: 'palette',
+      tint: 'palette',
+    }
+    const sectionId = TOOL_TO_SECTION[tool] || 'palette'
+    setCollapsed(prev => ({ ...prev, [sectionId]: false }))
+    requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    const next = new URLSearchParams(searchParams)
+    next.delete('tool')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
+
   useEffect(() => {
     const els = SECTIONS.map(s => document.getElementById(s.id)).filter(Boolean)
     if (!els.length) return
