@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
+import { UIKIT_GUIDE_KEY } from './UIKitGuide'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -197,6 +198,16 @@ export default function PillNav() {
   const { isPro } = useSubscription()
   const { theme, setTheme } = useTheme()
   const location = useLocation()
+  const navigate = useNavigate()
+
+  // Launch the guided brand-kit builder (colour → fonts → type → icons) from the
+  // Create mega-menu promo card. Mirrors the dashboard's "Build a UI Kit" action:
+  // set the session flag, then enter at the colour step.
+  const launchBrandKit = () => {
+    closeAll()
+    try { sessionStorage.setItem(UIKIT_GUIDE_KEY, '1') } catch { /* ignore */ }
+    navigate('/color')
+  }
   // On marketing/sales routes there's nothing to export, so the bar leads with
   // the conversion pill instead of the Export shell.
   const isSalesPage = SALES_PATHS.has((location.pathname || '/').replace(/\/+$/, '') || '/')
@@ -527,8 +538,19 @@ export default function PillNav() {
                   <p className="pnav-promo-title">{activeSection.promo.title}</p>
                   <p className="pnav-promo-blurb">{activeSection.promo.blurb}</p>
                   <div className="pnav-promo-actions">
-                    <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={activeSection.promo.href} onClick={closeAll}>Learn more</Link>
-                    <Link className="ui-pill ui-pill-accent ui-pill-sm" to={activeSection.promo.docsHref} onClick={closeAll}>View docs</Link>
+                    {activeSection.promo.guide ? (
+                      <>
+                        <button type="button" className="ui-pill ui-pill-accent ui-pill-sm" onClick={launchBrandKit}>
+                          {activeSection.promo.cta || 'Start building'}
+                        </button>
+                        <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={activeSection.promo.href} onClick={closeAll}>Learn more</Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={activeSection.promo.href} onClick={closeAll}>Learn more</Link>
+                        <Link className="ui-pill ui-pill-accent ui-pill-sm" to={activeSection.promo.docsHref} onClick={closeAll}>View docs</Link>
+                      </>
+                    )}
                   </div>
                 </aside>
               )}
@@ -594,8 +616,19 @@ export default function PillNav() {
               <p className="pnav-promo-title">{sheetPromo.title}</p>
               <p className="pnav-promo-blurb">{sheetPromo.blurb}</p>
               <div className="pnav-promo-actions">
-                <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={sheetPromo.href} onClick={closeAll}>Learn more</Link>
-                <Link className="ui-pill ui-pill-accent ui-pill-sm" to={sheetPromo.docsHref} onClick={closeAll}>View docs</Link>
+                {sheetPromo.guide ? (
+                  <>
+                    <button type="button" className="ui-pill ui-pill-accent ui-pill-sm" onClick={launchBrandKit}>
+                      {sheetPromo.cta || 'Start building'}
+                    </button>
+                    <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={sheetPromo.href} onClick={closeAll}>Learn more</Link>
+                  </>
+                ) : (
+                  <>
+                    <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={sheetPromo.href} onClick={closeAll}>Learn more</Link>
+                    <Link className="ui-pill ui-pill-accent ui-pill-sm" to={sheetPromo.docsHref} onClick={closeAll}>View docs</Link>
+                  </>
+                )}
               </div>
             </div>
           )}
