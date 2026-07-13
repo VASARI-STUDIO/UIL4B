@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { processAvatarImage } from '../utils/imageProcessing'
@@ -34,7 +34,32 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value || '')
   const [error, setError] = useState('')
-  const listId = useId()
+  const [suggestOpen, setSuggestOpen] = useState(false)
+  const [hi, setHi] = useState(-1)
+
+  // Suggestions only exist while the user is typing: the list opens on input,
+  // never on focus, and an exact match (i.e. a just-picked option) yields none.
+  const q = val.trim().toLowerCase()
+  const matches = (options && suggestOpen && q)
+    ? options.filter(o => o.toLowerCase().includes(q) && o.toLowerCase() !== q).slice(0, 8)
+    : []
+
+  const pick = (o) => { setVal(o); setSuggestOpen(false); setHi(-1) }
+
+  const onSuggestKey = (e) => {
+    if (!matches.length) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHi(h => (h + 1) % matches.length) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi(h => (h <= 0 ? matches.length - 1 : h - 1)) }
+    else if (e.key === 'Enter' && hi >= 0 && matches[hi]) { e.preventDefault(); pick(matches[hi]) }
+    else if (e.key === 'Escape') { setSuggestOpen(false); setHi(-1) }
+  }
+
+  // Bold the part of the suggestion the user has already typed.
+  const markMatch = (text) => {
+    const i = text.toLowerCase().indexOf(q)
+    if (i < 0) return text
+    return <>{text.slice(0, i)}<strong>{text.slice(i, i + q.length)}</strong>{text.slice(i + q.length)}</>
+  }
 
   const handleSave = () => {
     try {
@@ -62,20 +87,40 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
     <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
       <div className="settings-row-label" style={{ marginBottom: 8 }}>{label}</div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <input
-          type={type}
-          value={val}
-          onChange={e => setVal(e.target.value)}
-          placeholder={placeholder}
-          style={{ flex: 1 }}
-          autoFocus
-          list={options ? listId : undefined}
-        />
-        {options && (
-          <datalist id={listId}>
-            {options.map(o => <option key={o} value={o} />)}
-          </datalist>
-        )}
+        <div className="settings-suggest-wrap">
+          <input
+            type={type}
+            value={val}
+            onChange={e => { setVal(e.target.value); setSuggestOpen(true); setHi(-1) }}
+            onKeyDown={options ? onSuggestKey : undefined}
+            onBlur={options ? () => { setSuggestOpen(false); setHi(-1) } : undefined}
+            placeholder={placeholder}
+            autoFocus
+            role={options ? 'combobox' : undefined}
+            aria-expanded={options ? matches.length > 0 : undefined}
+            aria-autocomplete={options ? 'list' : undefined}
+          />
+          {matches.length > 0 && (
+            <ul className="settings-suggest" role="listbox">
+              {matches.map((o, i) => (
+                <li key={o}>
+                  {/* mousedown (not click) so picking wins over the input's blur */}
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={i === hi}
+                    className={`settings-suggest-item${i === hi ? ' on' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); pick(o) }}
+                    onMouseEnter={() => setHi(i)}
+                    tabIndex={-1}
+                  >
+                    {markMatch(o)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button className="btn btn-accent btn-s" onClick={handleSave}>Save</button>
         <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
       </div>
