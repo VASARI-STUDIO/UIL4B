@@ -4510,7 +4510,7 @@ html.lenis,html.lenis body{height:auto}
 /* Mega-menu panel — one shared node, morphs width per section */
 .pnav-menu{--dur-3:380ms;position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;width:1040px;max-width:calc(100vw - 32px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-3) var(--ease-inout);animation:pnav-menu-in var(--dur-4) var(--ease-out)}
 @keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-10px) scale(.975)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
-.pnav-menu[data-menu="create"]{width:1200px}
+.pnav-menu[data-menu="create"]{width:1260px}
 .pnav-menu[data-menu="discover"]{width:940px}
 .pnav-menu[data-menu="learn"]{width:1020px}
 .pnav-menu-body{padding:40px 48px;animation:fx-fade var(--dur-2) var(--ease-out)}
@@ -4519,14 +4519,17 @@ html.lenis,html.lenis body{height:auto}
 .pnav-grid{display:grid;column-gap:56px;row-gap:0}
 .pnav-menu[data-menu="create"] .pnav-grid{grid-template-columns:repeat(3,1fr)}
 .pnav-menu[data-menu="discover"] .pnav-grid,.pnav-menu[data-menu="learn"] .pnav-grid{grid-template-columns:repeat(2,1fr)}
-/* Each column is a labelled stack: a small uppercase eyebrow with a hairline
-   rule (Velt-style) captions a group of related tools sitting beneath it. */
+/* Each grid column is a stack of one or more captioned groups; a group = a
+   small uppercase eyebrow with a hairline rule (Velt-style) captioning the
+   related tools beneath it. Stacking lets a tiny subcategory (Icons) sit above
+   a larger one (Media & AI) inside the same column. */
+.pnav-colstack{position:relative;display:flex;flex-direction:column;gap:30px;min-width:0}
 .pnav-col{position:relative;display:flex;flex-direction:column;min-width:0}
 .pnav-col-label{display:flex;align-items:center;gap:9px;margin:0 0 22px;padding-bottom:12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-caption);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t1)}
 .pnav-col-label::before{content:'';flex:0 0 auto;width:16px;height:2px;border-radius:1px;background:var(--accent)}
-/* Hairline divider between adjacent columns so the regrouped layout reads as
-   distinct, captioned sections rather than one undifferentiated grid. */
-.pnav-menu .pnav-col + .pnav-col::before{content:'';position:absolute;top:3px;bottom:2px;left:-28px;width:1px;background:var(--border)}
+/* Hairline divider between adjacent grid columns so the regrouped layout reads
+   as distinct, captioned sections rather than one undifferentiated grid. */
+.pnav-menu .pnav-colstack + .pnav-colstack::before{content:'';position:absolute;top:3px;bottom:2px;left:-28px;width:1px;background:var(--border)}
 .pnav-col-groups{display:flex;flex-direction:column;gap:30px;min-width:0}
 .pnav-menu[data-menu="discover"] .pnav-col-groups,.pnav-menu[data-menu="learn"] .pnav-col-groups{gap:10px}
 .pnav-group{min-width:0}
