@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "setup:stripe": "node scripts/setup-stripe.js"
+    "setup:stripe": "node scripts/setup-stripe.js",
+    "test:users": "playwright test",
+    "test:users:report": "node tests/user-sim/summarize.js"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.6.0",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.61.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
