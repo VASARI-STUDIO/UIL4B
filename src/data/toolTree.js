@@ -126,13 +126,19 @@ export const LEARN_GROUPS = [
 // eyebrow. This model drives ONLY the menu presentation — it deliberately does
 // NOT share references with CREATE_GROUPS above, which still owns the router,
 // route resolution and the in-tool rail. A menu tweak can therefore never break
-// routing. Each column: { label, tools: [{ id, label, route, icon, hue, soon }] }.
+// routing.
+//
+// Shape: `columns` is an array of STACKS; a stack is an array of captioned
+// groups `{ label, tools }` that render top-to-bottom inside one grid column.
+// Most stacks hold a single group; Create's third column stacks the small
+// "Icons" group above "Media & AI" so icons/emoji get their own eyebrow without
+// forcing a fourth (cramped) grid column.
 //
 // NOTE: the six Colour rows deep-link into the merged /color page's sub-sections
 // via `?tool=<id>` (see ColorStudio's TOOL_TO_SECTION handler). All six still
 // resolve to /color for the router, so createRoutes() is unaffected.
 const CREATE_MENU = [
-  {
+  [{
     label: 'Colour',
     tools: [
       { id: 'palette', label: 'Palette', route: '/color?tool=palette', icon: 'palette', hue: 'colour', soon: false },
@@ -142,8 +148,8 @@ const CREATE_MENU = [
       { id: 'semantic', label: 'Semantic Colour', route: '/color?tool=semantic', icon: 'semantic', hue: 'colour', soon: false },
       { id: 'ui-colour', label: 'UI Colour', route: '/color?tool=ui-colour', icon: 'ui-colour', hue: 'colour', soon: false },
     ],
-  },
-  {
+  }],
+  [{
     label: 'Type & UI',
     tools: [
       { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', icon: 'type', hue: 'type', soon: false },
@@ -153,20 +159,27 @@ const CREATE_MENU = [
       { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', icon: 'box-shadow', hue: 'component', soon: false },
       { id: 'auto-builder', label: 'Auto-Builder', route: '/auto-builder', icon: 'auto', hue: 'component', soon: true },
     ],
-  },
-  {
-    label: 'Assets & AI',
-    tools: [
-      { id: 'icons', label: 'Icon Library', route: '/icons', icon: 'icons', hue: 'icons', soon: false },
-      { id: 'emoji', label: 'Emoji Library', route: '/emoji', icon: 'emoji', hue: 'icons', soon: false },
-      { id: 'file-converter', label: 'File Converter', route: '/file-converter', icon: 'imagery', hue: 'imagery', soon: false },
-      { id: 'ratio', label: 'Aspect Ratio', route: '/ratio', icon: 'ratio', hue: 'imagery', soon: false },
-      { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: false },
-      { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: false },
-      { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
-      { id: 'prompts', label: 'Prompt Library', route: '/prompts', icon: 'community-prompts', hue: 'ai', soon: false },
-    ],
-  },
+  }],
+  [
+    {
+      label: 'Icons',
+      tools: [
+        { id: 'icons', label: 'Icon Library', route: '/icons', icon: 'icons', hue: 'icons', soon: false },
+        { id: 'emoji', label: 'Emoji Library', route: '/emoji', icon: 'emoji', hue: 'icons', soon: false },
+      ],
+    },
+    {
+      label: 'Media & AI',
+      tools: [
+        { id: 'file-converter', label: 'File Converter', route: '/file-converter', icon: 'imagery', hue: 'imagery', soon: false },
+        { id: 'ratio', label: 'Aspect Ratio', route: '/ratio', icon: 'ratio', hue: 'imagery', soon: false },
+        { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: false },
+        { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: false },
+        { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
+        { id: 'prompts', label: 'Prompt Library', route: '/prompts', icon: 'community-prompts', hue: 'ai', soon: false },
+      ],
+    },
+  ],
 ]
 
 // Discover / Learn have flat groups with no sub-tools; deal them into the same
@@ -195,7 +208,9 @@ function groupsToMenu(groups, spec) {
   // newly-added entry is never silently dropped from the menu.
   const rest = groups.filter((g) => !seen.has(g.id))
   if (rest.length) cols.push({ label: 'More', tools: rest.map(toRow) })
-  return cols.filter((c) => c.tools.length)
+  // One group per stack — Discover/Learn never stack, but the menu renderer
+  // consumes the same stacks-of-groups shape everywhere.
+  return cols.filter((c) => c.tools.length).map((c) => [c])
 }
 
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
