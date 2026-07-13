@@ -4783,6 +4783,13 @@ html.lenis,html.lenis body{height:auto}
 .icust-pro.is-locked .icust-seg--icon button{cursor:pointer}
 .icust-pro.is-locked .icust-seg--icon svg{opacity:.55}
 .icust-pro.is-locked .icust-seg--icon button.active svg{opacity:1}
+/* Free-user hover veil: blur + darken the locked line-style panel and surface
+   a single Upgrade CTA that routes to /plans. Revealed on hover OR keyboard
+   focus inside the panel, so it's reachable without a mouse. */
+.icust-pro{position:relative}
+.icust-pro-veil{position:absolute;inset:0;z-index:2;display:grid;place-items:center;border-radius:inherit;background:var(--scrim);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);opacity:0;visibility:hidden;transition:opacity var(--dur-2) var(--ease-out),visibility var(--dur-2) var(--ease-out)}
+.icust-pro.is-locked:hover .icust-pro-veil,
+.icust-pro.is-locked:focus-within .icust-pro-veil{opacity:1;visibility:visible}
 /* Signed-out upgrade gate — a small alert dialog floated over the customizer
    when a visitor taps a Pro-locked line-style control. (The overlay's
    backdrop-filter makes it the containing block for this fixed backdrop.) */
