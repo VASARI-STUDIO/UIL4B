@@ -120,6 +120,12 @@ export default function App() {
       '/home': 'UI L4B | Design Toolkit',
       '/dashboard': 'UI L4B | Dashboard',
       '/color': 'UI L4B | Colour Studio',
+      '/color/palette': 'UI L4B | Palette Generator',
+      '/color/semantic': 'UI L4B | Semantic Colour Generator',
+      '/color/tint': 'UI L4B | Tint Scale Generator',
+      '/color/ui': 'UI L4B | UI Colour System',
+      '/color/gradient': 'UI L4B | Gradient Generator',
+      '/color/contrast': 'UI L4B | Colour Contrast Checker',
       '/typography': 'UI L4B | Typography',
       '/typescale': 'UI L4B | Type Scale',
       '/fontpairs': 'UI L4B | Font Pairs',
@@ -167,6 +173,12 @@ export default function App() {
       '/home': DEFAULT_DESCRIPTION,
       '/dashboard': 'Your UI L4B dashboard. Access all design tools, recent projects, and saved palettes in one place.',
       '/color': 'Build professional colour systems with palette generation, tint scales, gradient builder, and named colour libraries. Export CSS, Tailwind, PNG and SVG.',
+      '/color/palette': 'Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps, accessibility checks, and production-ready CSS exports.',
+      '/color/semantic': 'Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.',
+      '/color/tint': 'Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.',
+      '/color/ui': 'Build a complete UI colour system — surfaces, text, borders, and interactive states — derived from your palette for light and dark themes.',
+      '/color/gradient': 'Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.',
+      '/color/contrast': 'Free WCAG colour contrast checker. Test text and background pairs against AA and AAA, preview the pair live, and get one-click fixes that pass.',
       '/typography': 'Typography tools for designers and developers. Pair fonts, build type scales, and browse the Google Fonts catalogue.',
       '/typescale': 'Create modular type scales for consistent typography. Preview sizes and export CSS custom properties.',
       '/fontpairs': 'Discover harmonious font combinations for your designs. Preview heading and body pairs with live typography samples.',
@@ -270,10 +282,10 @@ export default function App() {
                   caught by the early return above once redirected). */}
               <Route path="/dashboard" element={<Navigate to="/home" replace />} />
               <Route path="/color-studio" element={<Navigate to="/color" replace />} />
-              <Route path="/palette" element={<Navigate to="/color?tool=palette" replace />} />
-              <Route path="/tints" element={<Navigate to="/color?tool=tint" replace />} />
-              <Route path="/gradients" element={<Navigate to="/color?tool=gradient" replace />} />
-              <Route path="/contrast" element={<Navigate to="/color?tool=contrast" replace />} />
+              <Route path="/palette" element={<Navigate to="/color/palette" replace />} />
+              <Route path="/tints" element={<Navigate to="/color/tint" replace />} />
+              <Route path="/gradients" element={<Navigate to="/color/gradient" replace />} />
+              <Route path="/contrast" element={<Navigate to="/color/contrast" replace />} />
               <Route path="/export" element={<Navigate to="/color" replace />} />
               <Route path="/imgconvert" element={<Navigate to="/file-converter" replace />} />
               <Route path="/video-frames" element={<Navigate to="/file-converter" replace />} />
