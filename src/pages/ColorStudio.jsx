@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { NavLink, useSearchParams } from 'react-router-dom'
+import { NavLink, useLocation, useSearchParams } from 'react-router-dom'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, mixHex, describeColor, T_LABELS, autoTonalPalette, tonalRamp, applyAdjust, hexToHct, simCvd, fixForeground, derivePreviewRoles, roleHueArcs, semanticRamp } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -1750,16 +1750,17 @@ function PreviewUpsell({ onUpgrade }) {
   )
 }
 
-// The six colour tools, each a focused view of a /color section. The footer at
-// the bottom of every tool links across to the others (see focusSection). Order
-// mirrors the mega-menu; contrast + tint live in the palette section's popovers.
+// The six colour tools, each its own routed page under /color/<tool>. The
+// section tools re-enter the studio focused on their section (via the pathname
+// effect below); tint + contrast are standalone pages. The footer at the bottom
+// links across to all of them. Order mirrors the mega-menu.
 const COLOUR_TOOLS = [
-  { id: 'palette', label: 'Palette', section: 'palette', desc: 'Build the core ramp' },
-  { id: 'semantic', label: 'Semantic Colour', section: 'states', desc: 'Success, warning, error' },
-  { id: 'ui-colour', label: 'UI Colour', section: 'systems', desc: 'Surfaces, text, borders' },
-  { id: 'gradient', label: 'Gradient', section: 'gradients', desc: 'Blend across your palette' },
-  { id: 'tint', label: 'Tint', section: 'palette', desc: 'Scale any swatch' },
-  { id: 'contrast', label: 'Contrast Checker', section: 'palette', desc: 'Verify AA / AAA' },
+  { id: 'palette', label: 'Palette', route: '/color/palette', desc: 'Build the core ramp' },
+  { id: 'semantic', label: 'Semantic Colour', route: '/color/semantic', desc: 'Success, warning, error' },
+  { id: 'ui-colour', label: 'UI Colour', route: '/color/ui', desc: 'Surfaces, text, borders' },
+  { id: 'gradient', label: 'Gradient', route: '/color/gradient', desc: 'Blend across your palette' },
+  { id: 'tint', label: 'Tint', route: '/color/tint', desc: 'Scale any swatch' },
+  { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', desc: 'Verify AA / AAA' },
 ]
 
 export default function ColorStudio({ onCopy, toast }) {
@@ -1899,12 +1900,32 @@ export default function ColorStudio({ onCopy, toast }) {
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams, toast])
 
-  // ── Nav deep-link: ?tool=<id> ──
-  // The mega-menu's six Colour rows land here so each reads as its own tool.
-  // ColorStudio is a single scroll page (not a view-switcher), so we expand +
-  // smooth-scroll to the mapped section anchor, then strip the param. One-shot,
-  // with its own ref so it never fights the preset/tab handler above. contrast +
-  // tint live in per-swatch popovers → they fall back to the palette section.
+  // ── Route focus: /color/<tool> ──
+  // The section tools (palette / semantic / ui / gradient) are real routes that
+  // mount THIS studio focused on their section: expand it, collapse the rest,
+  // scroll to it. Tracked by segment (not one-shot) — the dispatcher renders the
+  // same element type for every /color route, so switching tools in the nav
+  // re-runs this without remounting, and plain /color restores the full page.
+  const { pathname } = useLocation()
+  const pathToolRef = useRef(null)
+  useEffect(() => {
+    const seg = /^\/color\/([a-z-]+)/i.exec(pathname)?.[1]?.toLowerCase() || null
+    if (!seg) {
+      // Back on /color proper: reopen everything so the merged studio is whole.
+      if (pathToolRef.current) { pathToolRef.current = null; setCollapsed({}) }
+      return
+    }
+    if (seg === pathToolRef.current) return
+    pathToolRef.current = seg
+    const PATH_TO_SECTION = { palette: 'palette', semantic: 'states', ui: 'systems', gradient: 'gradients' }
+    focusSection(PATH_TO_SECTION[seg] || 'palette')
+  }, [pathname, focusSection])
+
+  // ── Nav deep-link: ?tool=<id> (legacy) ──
+  // Old external links still arrive as /color?tool=<id>; keep honouring them.
+  // Same focus behaviour, then strip the param. One-shot, with its own ref so it
+  // never fights the preset/tab handler above. contrast + tint now live on their
+  // own pages → their legacy ids fall back to the palette section.
   const toolAppliedRef = useRef(false)
   useEffect(() => {
     if (toolAppliedRef.current) return
@@ -3642,22 +3663,22 @@ ${stateVars}
         )}
       </section>
 
-      {/* ── More colour tools — cross-links to every sibling tool ──
-          Each opens that tool as its own focused view (expand it, collapse the
-          rest, scroll to it). The combined page stays whole underneath. */}
+      {/* ── More colour tools — links to every sibling tool's own page ──
+          Section tools re-enter this studio focused on their section (the
+          pathname effect handles it, no remount); tint + contrast navigate to
+          their standalone pages. */}
       <nav className="cs-tools-footer" aria-label="More colour tools">
         <h2 className="cs-tools-footer-title">More colour tools</h2>
         <div className="cs-tools-footer-grid">
           {COLOUR_TOOLS.map(tool => (
-            <button
+            <NavLink
               key={tool.id}
-              type="button"
+              to={tool.route}
               className="cs-tools-footer-link"
-              onClick={() => focusSection(tool.section)}
             >
               <strong>{tool.label}</strong>
               <span>{tool.desc}</span>
-            </button>
+            </NavLink>
           ))}
         </div>
       </nav>

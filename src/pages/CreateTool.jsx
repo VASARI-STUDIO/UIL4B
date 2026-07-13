@@ -25,9 +25,12 @@ import { useClipboard } from '../hooks/useClipboard'
 // and flips between the two libraries via a large segmented pill title.
 const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 
-// Colour System Generator — one merged client tool; every sub-generator
-// (palette / semantic / tint / UI colour / gradient / contrast) lives on /color.
+// Colour — /color is the merged full studio; palette/semantic/ui/gradient are
+// the SAME studio focused on their section (ColorStudio reads the pathname),
+// while tint + contrast are light standalone pages built on the same colour maths.
 const ColorStudio = lazy(() => import('./ColorStudio'))
+const TintTool = lazy(() => import('./TintTool'))
+const ContrastChecker = lazy(() => import('./ContrastChecker'))
 
 // Imagery & Media — client-side asset tools. FileConverter bundles image
 // convert/compress + video→GIF/frames (ffmpeg.wasm, loaded on demand);
@@ -40,6 +43,12 @@ const RatioCalculator = lazy(() => import('./RatioCalculator'))
 // fallback that can never mount a half-finished screen.
 const LIVE_TOOLS = {
   '/color': ColorStudio,
+  '/color/palette': ColorStudio,
+  '/color/semantic': ColorStudio,
+  '/color/ui': ColorStudio,
+  '/color/gradient': ColorStudio,
+  '/color/tint': TintTool,
+  '/color/contrast': ContrastChecker,
   '/icons': IconEmojiLibrary,
   '/emoji': IconEmojiLibrary,
   '/file-converter': FileConverter,
@@ -94,10 +103,12 @@ export default function CreateTool() {
 
   // A live group's category home has no screen of its own — send it to the first
   // real tool (e.g. /icons-emoji → /icons) so visitors never land on an empty home.
-  // Skip when the first tool IS the category home (Colour lives entirely on
-  // /color) — redirecting a route to itself would loop.
+  // Skip when the home IS a live screen (/color is the full merged studio, with
+  // its tools as sub-routes) or when the first tool is the home itself —
+  // redirecting either would lose a real page or loop.
   const firstTool = group.tools?.[0]
-  if (isHome && !group.soon && firstTool && normPath(firstTool.route) !== normPath(group.home)) {
+  const homeIsLive = !!LIVE_TOOLS[normPath(group.home)]
+  if (isHome && !group.soon && !homeIsLive && firstTool && normPath(firstTool.route) !== normPath(group.home)) {
     return <Navigate to={firstTool.route} replace />
   }
 
