@@ -766,6 +766,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       ))}
                     </div>
                   </div>
+                  {/* Free-user veil: hovering (or tabbing into) the locked panel
+                      blurs + darkens it and offers ONE action — the plans page,
+                      so the pitch comes before any sign-in ask. */}
+                  {!isPro && (
+                    <div className="icust-pro-veil">
+                      <Link className="ui-pill ui-pill-accent ui-pill-md" to="/plans">Upgrade to Pro</Link>
+                    </div>
+                  )}
                 </div>
               )}
 
