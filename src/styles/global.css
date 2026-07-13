@@ -4289,7 +4289,7 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --fs-h3:1.5rem;--fs-h4:1.25rem;--fs-h5:1.0625rem;
   --fs-lede:clamp(1.0625rem,calc(0.96rem + 0.45vw),1.3125rem);
   --fs-body:1rem;--fs-body-s:0.875rem;--fs-caption:0.8125rem;--fs-micro:0.6875rem;
-  --nav-h:60px;--nav-top:16px;--nav-clear:calc(var(--nav-top) + var(--nav-h) + 8px)
+  --nav-h:60px;--nav-top:0px;--nav-clear:calc(var(--nav-top) + var(--nav-h) + 8px)
 }
 
 /* ── Foundry light values (overrides the earlier [data-theme="light"] block;
@@ -4425,28 +4425,19 @@ html.lenis,html.lenis body{height:auto}
 .soon-badge{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);border:1px solid var(--border);color:var(--t2);background:var(--bg-2);line-height:1;flex:0 0 auto}
 .soon-badge-accent{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
 
-/* ══ Pill nav ══ */
-/* --dur-3 is deliberately lengthened *within the nav subtree only* so every
-   morph transition below (bar grow, whitespace, search/export/CTA reveal) runs
-   slower and reads smoother — without touching the global 280ms token. */
-.pnav{--dur-3:380ms;position:fixed;top:var(--nav-top);left:50%;transform:translateX(-50%);width:fit-content;max-width:calc(100vw - 32px);height:var(--nav-h);z-index:120;border-radius:var(--radius-pill);background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);border:1px solid var(--border);box-shadow:var(--shadow-nav);transition:height var(--dur-3) var(--ease-inout),background var(--dur-3) var(--ease-inout),box-shadow var(--dur-3) var(--ease-inout)}
-.pnav.is-scrolled{height:52px;background:rgba(255,255,255,.92);box-shadow:var(--shadow-m)}
-/* Dark mode: the base pill hardcodes a light glass fill (rgba white) and pulls
-   --shadow-nav, which is only defined in the light block. Override both here so
-   the nav reads as dark frosted glass with a shadow that actually shows on a
-   dark canvas (specificity 0,1,1 beats the base 0,1,0 regardless of order). */
-[data-theme="dark"] .pnav{background:rgba(22,24,28,.72);border-color:var(--bh);box-shadow:0 1px 2px rgba(0,0,0,.5),0 16px 40px -14px rgba(0,0,0,.72)}
-[data-theme="dark"] .pnav.is-scrolled{background:rgba(22,24,28,.9);box-shadow:0 2px 10px rgba(0,0,0,.55),0 20px 48px -16px rgba(0,0,0,.8)}
-/* Flex row: [lead (logo + collapsible search)] [triggers] [actions]. The pill
-   shrink-wraps its content (width:fit-content), so revealing the search on the
-   left and the utility cluster on the right visibly grows the bar on hover. */
-.pnav-inner{display:flex;align-items:center;gap:16px;height:100%;padding:0 16px 0 22px;transition:gap var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout)}
-/* Expanded pill breathes: as the bar grows on hover/focus/pinned-open it also
-   opens up its internal whitespace (wider group gaps + roomier side padding) so
-   the fuller row feels calm and uncramped, not just longer. */
-.pnav:hover .pnav-inner,.pnav:focus-within .pnav-inner,.pnav.is-expanded .pnav-inner{gap:34px;padding:0 26px 0 30px}
-.pnav:hover .pnav-items,.pnav:focus-within .pnav-items,.pnav.is-expanded .pnav-items{gap:8px}
-.pnav:hover .pnav-actions,.pnav:focus-within .pnav-actions,.pnav.is-expanded .pnav-actions{gap:14px}
+/* ══ Top nav — fixed, full-width standard-SaaS bar ══
+   Logo + section triggers on the left, the search field flexing in the centre,
+   actions/avatar on the right, hairline border-bottom. No hover morphing — the
+   bar is always fully revealed; scrolling only firms up the glass + shadow. */
+.pnav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:120;background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);border-bottom:1px solid var(--border);transition:background var(--dur-3) var(--ease-inout),box-shadow var(--dur-3) var(--ease-inout)}
+.pnav.is-scrolled{background:rgba(255,255,255,.92);box-shadow:var(--shadow-s)}
+/* Dark mode: the base bar hardcodes a light glass fill (rgba white), so re-fill
+   it as dark frosted glass (specificity 0,1,1 beats the base 0,1,0). */
+[data-theme="dark"] .pnav{background:rgba(22,24,28,.72);border-bottom-color:var(--bh)}
+[data-theme="dark"] .pnav.is-scrolled{background:rgba(22,24,28,.9);box-shadow:0 2px 10px rgba(0,0,0,.55)}
+/* Flex row: [logo + triggers] [search, flexing to centre] [actions]. Content is
+   width-capped and centred so ultra-wide screens don't fling the clusters apart. */
+.pnav-inner{display:flex;align-items:center;gap:16px;height:100%;max-width:1440px;margin:0 auto;padding:0 20px}
 .pnav-lead{display:flex;align-items:center;gap:22px;min-width:0}
 .pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
@@ -4461,20 +4452,19 @@ html.lenis,html.lenis body{height:auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
 
-/* Centre search — always visible, prominent, sitting between the nav triggers
-   and the right-hand actions cluster (Mobbin reference). The pill shrink-wraps
-   its content, so the fixed-width field naturally centres the bar. */
-.pnav-search{display:flex;align-items:center;justify-content:center;flex:0 1 auto}
+/* Centre search — sits between the nav triggers and the right-hand actions
+   cluster; it takes the bar's spare width (flex:1) so the fixed-width field
+   stays visually centred and the actions stay pinned right. */
+.pnav-search{display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0}
 .pnav-search-field{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:300px;height:40px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-search-field:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .pnav-search-field .pnav-search-ico{flex:0 0 auto;color:var(--t2)}
 .pnav-search-field:hover .pnav-search-ico{color:var(--t1)}
 .pnav-search-ph{white-space:nowrap;flex:1 1 auto;text-align:left}
 .pnav-search-kbd{flex:0 0 auto;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:11px;font-weight:600;line-height:1}
-/* Sales routes: the search bar hides at rest and reveals as the pill expands
-   (hover / keyboard focus / pinned-open menu). App routes keep it always on. */
-.pnav--sales .pnav-search{max-width:0;opacity:0;overflow:hidden;pointer-events:none;margin-left:-16px;transition:max-width var(--dur-3) var(--ease-inout),margin-left var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out)}
-.pnav--sales:hover .pnav-search,.pnav--sales:focus-within .pnav-search,.pnav--sales.is-expanded .pnav-search{max-width:320px;margin-left:0;opacity:1;overflow:visible;pointer-events:auto}
+/* Sales/marketing routes drop the search field (the / shortcut still opens the
+   palette); the empty .pnav-search keeps flexing so the clusters stay put. */
+.pnav--sales .pnav-search-field{display:none}
 /* Always-visible icon buttons in the RIGHT actions cluster (Mobbin reference):
    saved projects (bookmark) + export. 40px circles like .pnav-more. */
 .pnav-iconbtn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;text-decoration:none;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
@@ -4483,21 +4473,11 @@ html.lenis,html.lenis body{height:auto}
 .pnav-export{border-color:transparent;background:var(--accent-bg);color:var(--accent)}
 .pnav-export:hover,.pnav-export[aria-expanded="true"]{border-color:transparent;background:color-mix(in srgb,var(--accent) 18%,var(--bg-2));color:var(--accent)}
 
-/* Upgrade / auth pills collapse at rest and reveal with the pill (same pattern as
-   Export). For signed-in users Upgrade also lives in the account popover, so the
-   resting bar loses nothing by hiding it. */
-.pnav-cta-reveal{max-width:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-width var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),margin var(--dur-3) var(--ease-inout)}
-.pnav:hover .pnav-cta-reveal,.pnav:focus-within .pnav-cta-reveal,.pnav.is-expanded .pnav-cta-reveal{max-width:180px;opacity:1;overflow:visible;pointer-events:auto}
-
-/* Compact "more" (3-dot) button — the single control on the resting pill, in place
-   of the old always-on Upgrade. Styled like the icon buttons; it collapses away as
-   the pill expands (the avatar takes over for signed-in users) — but stays put while
-   its own popover is pinned open (the signed-out theme + auth menu). */
-.pnav-more-wrap{flex:0 0 auto;max-width:44px;transition:max-width var(--dur-3) var(--ease-inout),margin var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out)}
+/* Compact "more" (3-dot) button — the signed-out theme + auth menu. Always
+   visible on the fixed bar, styled like the other 40px icon buttons. */
+.pnav-more-wrap{flex:0 0 auto}
 .pnav-more{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-more:hover,.pnav-more[aria-expanded="true"]{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.pnav:hover .pnav-more-wrap,.pnav:focus-within .pnav-more-wrap,.pnav.is-expanded .pnav-more-wrap{max-width:0;margin-left:-14px;opacity:0;overflow:hidden;pointer-events:none}
-.pnav.is-expanded .pnav-more-wrap:has(.pnav-more[aria-expanded="true"]){max-width:44px;margin-left:0;opacity:1;overflow:visible;pointer-events:auto}
 
 /* Avatar hover — darken + soften the photo and float a settings cog over it, so it
    reads as "account AND preferences" now that both live behind this one control. */
@@ -4600,9 +4580,9 @@ html.lenis,html.lenis body{height:auto}
 .pnav-sublink:hover .pnav-sub-dot{transform:scale(1.2)}
 /* Coming-soon tool: muted label + hollow ring dot — the router sends every tool
    under a soon-flagged category to the 🤫 state, so the nav says so honestly. */
-.pnav-sublink[data-soon]{color:var(--t3)}
+.pnav-sublink[data-soon]{color:var(--t3);opacity:.55}
 .pnav-sublink[data-soon] .pnav-sub-dot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--t3)}
-.pnav-sublink[data-soon]:hover{color:var(--t2)}
+.pnav-sublink[data-soon]:hover{color:var(--t2);opacity:.8}
 .pnav-sublink[data-soon]:hover .pnav-sub-dot{transform:none;box-shadow:inset 0 0 0 1.5px var(--t2)}
 /* Card variant: Discover/Learn groups have no sub-tools, so the whole tile is the link */
 .pnav-group--card .pnav-group-head{padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-0);transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
@@ -4618,9 +4598,15 @@ html.lenis,html.lenis body{height:auto}
 .pnav-tool-ico svg{width:16px;height:16px}
 .pnav-tool-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-body-s);font-weight:560}
 .pnav-tool .soon-badge{margin-left:auto}
+/* Workshop ("soon") tools read as disabled at a glance: the whole row dims and
+   the hue tile goes grey. Hover lifts them just enough to stay legible — they
+   remain clickable on purpose (the route lands on the honest 🤫 state). */
+.pnav-tool[data-soon]{opacity:.45}
 .pnav-tool[data-soon] .pnav-tool-label{color:var(--t3)}
-.pnav-tool[data-soon] .pnav-tool-ico{opacity:.6}
+.pnav-tool[data-soon] .pnav-tool-ico{opacity:.6;filter:grayscale(1)}
+.pnav-tool[data-soon]:hover{opacity:.75}
 .pnav-tool[data-soon]:hover .pnav-tool-label{color:var(--t2)}
+.pnav-tool[data-soon]:hover .pnav-tool-ico{transform:none}
 .pnav-tool:focus-visible{outline-offset:-2px}
 /* Subtle staggered reveal on menu open (row-by-row). Reduced-motion is handled
    globally (animation-duration clamped), so no per-rule guard is needed. */
@@ -4667,8 +4653,9 @@ html.lenis,html.lenis body{height:auto}
 .pnav-acc-col + .pnav-acc-col{margin-top:4px}
 .pnav-acc-colhead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:14px 0 6px}
 .pnav-acc-link .soon-badge{margin-left:auto}
+.pnav-acc-link[data-soon]{opacity:.45}
 .pnav-acc-link[data-soon] .pnav-acc-label{color:var(--t3)}
-.pnav-acc-link[data-soon] .pnav-acc-ico{opacity:.6}
+.pnav-acc-link[data-soon] .pnav-acc-ico{opacity:.6;filter:grayscale(1)}
 /* Section-matched promo, rendered above the sheet CTA (title + blurb + 2 CTAs,
    no SVG mock on mobile). */
 .pnav-sheet-promo{margin-top:20px;padding:16px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 8%,var(--bg-0));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border))}
@@ -5246,15 +5233,12 @@ a.prev-btn{text-decoration:none}
 @media(max-width:768px){
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
   .pnav-mobile{display:inline-flex}
-  /* Touch has no hover — give the pill a fixed width and reveal both flanks
-     unconditionally so search + account are always reachable without hover. */
-  .pnav{width:min(560px,calc(100vw - 24px))}
-  .pnav-inner{display:flex;align-items:center;justify-content:space-between;padding:0 12px}
-  .pnav-util .pnav-pop-wrap{max-width:none;margin-left:0;opacity:1;transform:none;overflow:visible;pointer-events:auto}
-  /* Search stays revealed but collapses to an icon-only tap target (hover doesn't
-     exist on touch, so the sales-route resting collapse is overridden too); the
-     bookmark / export icon buttons fold away — both live in the sheet. */
-  .pnav-search,.pnav--sales .pnav-search{max-width:none;opacity:1;overflow:visible;pointer-events:auto;margin-left:0}
+  .pnav-inner{padding:0 12px}
+  /* Search collapses to an icon-only tap target hugging the actions cluster;
+     sales routes get it back too — on mobile it's the only way into the
+     palette. The bookmark / export icon buttons fold away into the sheet. */
+  .pnav-search{justify-content:flex-end}
+  .pnav--sales .pnav-search-field{display:flex}
   .pnav-search-field{width:40px;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
   .pnav-iconbtn{display:none}
@@ -5273,10 +5257,10 @@ a.prev-btn{text-decoration:none}
   .home-hero{padding-top:calc(var(--nav-top) + var(--nav-h) + var(--s-8))}
 }
 @media(max-width:480px){
-  .pnav{top:12px;height:52px}
-  .pnav-menu,.pnav-sheet{top:calc(12px + 52px + 8px)}
-  .pnav-sheet{padding-top:calc(12px + 52px + 16px)}
-  /* Phone: drop the gear + inline action pills — those live in the sheet — so the
+  /* Phone: a shorter bar. Every offset (menu, sheet, hero padding, .pnav-clear)
+     derives from the token, so one override re-seats them all. */
+  :root{--nav-h:52px}
+  /* Drop the gear + inline action pills — those live in the sheet — so the
      bar stays to logo · search · avatar · menu. */
   .pnav-icon-btn{display:none}
   .pnav-actions .ui-pill{display:none}
