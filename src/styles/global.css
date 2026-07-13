@@ -1799,6 +1799,13 @@ img,svg,video{max-width:100%;height:auto}
 .settings-profile{display:flex;align-items:center;gap:18px;padding:24px;background:linear-gradient(135deg,var(--accent-bg),transparent);border-bottom:1px solid var(--border)}
 .settings-profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--avatar-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;font-weight:500;border:2px solid var(--border);overflow:hidden;flex-shrink:0}
 .settings-profile-avatar img{width:100%;height:100%;object-fit:cover}
+/* The avatar doubles as the photo-upload button: a camera glyph sweeps in on
+   hover/focus over the picture. The hidden <input type=file> does the picking. */
+.settings-avatar-btn{position:relative;padding:0;cursor:pointer}
+.settings-avatar-edit{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(0,0,0,.48);color:#fff;opacity:0;transition:opacity var(--dur-2) var(--ease-out)}
+.settings-avatar-btn:hover .settings-avatar-edit,.settings-avatar-btn:focus-visible .settings-avatar-edit{opacity:1}
+.settings-avatar-remove{display:inline-block;margin-top:4px;padding:0;border:0;background:none;font-family:var(--font);font-size:12px;color:var(--t3);cursor:pointer;text-decoration:underline;text-underline-offset:2px;transition:color var(--dur-2) var(--ease-out)}
+.settings-avatar-remove:hover{color:var(--t1)}
 .settings-profile-info{flex:1;min-width:0}
 .settings-profile-name{font-family:var(--serif);font-size:22px;font-weight:500;letter-spacing:-.015em;color:var(--t0);line-height:1.35}
 .settings-profile-email{font-size:13px;color:var(--t2);margin-top:2px}
