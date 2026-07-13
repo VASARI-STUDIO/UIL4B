@@ -230,6 +230,12 @@ export default function PillNav() {
   const navRef = useRef(null)
   const menuRef = useRef(null)
   const closeTimer = useRef(null)
+  // Opening/closing the menu can resize the bar (the sales pill expands), which
+  // slides the section triggers under a stationary cursor. Chrome re-fires
+  // mouseenter for whichever trigger lands there, flipping the menu the user
+  // never pointed at. Arm this lock on any open/close layout shift and ignore
+  // hover-opens until a real mousemove proves the cursor actually travelled.
+  const hoverLock = useRef(false)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
   const avatarUrl = userProfile?.photoURL || ''
@@ -265,11 +271,15 @@ export default function PillNav() {
         }
       }
     }
+    // Any genuine cursor movement releases the hover lock (see hoverLock above).
+    const onMove = () => { hoverLock.current = false }
     document.addEventListener('pointerdown', onPointer)
     document.addEventListener('keydown', onKey)
+    document.addEventListener('mousemove', onMove, { passive: true })
     return () => {
       document.removeEventListener('pointerdown', onPointer)
       document.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousemove', onMove)
     }
   }, [])
 
@@ -282,9 +292,19 @@ export default function PillNav() {
   }, [sheet])
 
   const clearClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null } }
-  const hoverOpen = (id) => { clearClose(); setMenu(null); setOpen(id) }
+  const hoverOpen = (id) => {
+    clearClose()
+    if (hoverLock.current) return
+    if (open === null) hoverLock.current = true
+    setMenu(null)
+    setOpen(id)
+  }
   const hoverLeave = () => { clearClose(); closeTimer.current = setTimeout(() => setOpen(null), 120) }
-  const toggle = (id) => { setMenu(null); setOpen((cur) => (cur === id ? null : id)) }
+  const toggle = (id) => {
+    hoverLock.current = true
+    setMenu(null)
+    setOpen((cur) => (cur === id ? null : id))
+  }
   const toggleMenu = (which) => { setOpen(null); setMenu((cur) => (cur === which ? null : which)) }
   const closeAll = () => { setOpen(null); setSheet(false); setMenu(null) }
   const openSearch = () => { closeAll(); setSearchOpen(true) }
@@ -571,27 +591,35 @@ export default function PillNav() {
           <div className="pnav-menu-body">
             <div className="pnav-menu-cols">
               <div className="pnav-grid">
-                {activeSection.columns.map((col) => (
-                  <div className="pnav-col" key={col.label}>
-                    <p className="pnav-col-label">{col.label}</p>
-                    <ul className="pnav-toollist">
-                      {col.tools.map((t) => (
-                        <li key={t.id}>
-                          <Link
-                            className="pnav-tool"
-                            to={t.route}
-                            data-hue={t.hue}
-                            data-soon={t.soon ? 'true' : undefined}
-                            aria-label={t.soon ? `${t.label} — coming soon` : undefined}
-                            onClick={closeAll}
-                          >
-                            <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                            <span className="pnav-tool-label">{t.label}</span>
-                            {t.soon && <span className="soon-badge">Soon</span>}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                {/* Each stack = one grid column; a stack can hold several
+                    captioned groups top-to-bottom (Create: Icons above
+                    Media & AI) so a small subcategory never forces an extra
+                    cramped grid column. */}
+                {activeSection.columns.map((stack) => (
+                  <div className="pnav-colstack" key={stack[0].label}>
+                    {stack.map((col) => (
+                      <div className="pnav-col" key={col.label}>
+                        <p className="pnav-col-label">{col.label}</p>
+                        <ul className="pnav-toollist">
+                          {col.tools.map((t) => (
+                            <li key={t.id}>
+                              <Link
+                                className="pnav-tool"
+                                to={t.route}
+                                data-hue={t.hue}
+                                data-soon={t.soon ? 'true' : undefined}
+                                aria-label={t.soon ? `${t.label} — coming soon` : undefined}
+                                onClick={closeAll}
+                              >
+                                <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
+                                <span className="pnav-tool-label">{t.label}</span>
+                                {t.soon && <span className="soon-badge">Soon</span>}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
                 ))}
                 <Link className="pnav-viewall" to={activeSection.viewAllHref} onClick={closeAll}>
@@ -650,7 +678,7 @@ export default function PillNav() {
                 </button>
                 {expanded && (
                   <div className="pnav-acc-panel">
-                    {section.columns.map((col) => (
+                    {section.columns.flat().map((col) => (
                       <div className="pnav-acc-col" key={col.label}>
                         <p className="pnav-acc-colhead">{col.label}</p>
                         {col.tools.map((t) => (
