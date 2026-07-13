@@ -130,9 +130,9 @@ export const LEARN_GROUPS = [
 //
 // Shape: `columns` is an array of STACKS; a stack is an array of captioned
 // groups `{ label, tools }` that render top-to-bottom inside one grid column.
-// Most stacks hold a single group; Create's third column stacks the small
-// "Icons" group above "Media & AI" so icons/emoji get their own eyebrow without
-// forcing a fourth (cramped) grid column.
+// Most stacks hold a single group; Create's third column stacks three small
+// groups — "Icons", "Media" (converter + aspect calculator) and "AI" — so each
+// gets its own eyebrow without forcing a fourth (cramped) grid column.
 //
 // NOTE: the six Colour rows deep-link into the merged /color page's sub-sections
 // via `?tool=<id>` (see ColorStudio's TOOL_TO_SECTION handler). All six still
@@ -169,10 +169,15 @@ const CREATE_MENU = [
       ],
     },
     {
-      label: 'Media & AI',
+      label: 'Media',
       tools: [
         { id: 'file-converter', label: 'File Converter', route: '/file-converter', icon: 'imagery', hue: 'imagery', soon: false },
         { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', icon: 'ratio', hue: 'imagery', soon: false },
+      ],
+    },
+    {
+      label: 'AI',
+      tools: [
         { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: false },
         { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: false },
         { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
