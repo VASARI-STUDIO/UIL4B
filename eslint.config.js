@@ -38,9 +38,10 @@ export default defineConfig([
     },
   },
   {
-    // Node-runtime code (Vercel serverless functions + build/maintenance scripts).
+    // Node-runtime code (Vercel serverless functions, build/maintenance scripts,
+    // Playwright config + user-simulation acceptance tests).
     // These use process, Buffer, etc. — not browser globals.
-    files: ['api/**/*.js', 'scripts/**/*.js'],
+    files: ['api/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'playwright.config.js'],
     languageOptions: {
       globals: {
         ...globals.node,
