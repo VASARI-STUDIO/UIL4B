@@ -236,6 +236,9 @@ export default function PillNav() {
   // never pointed at. Arm this lock on any open/close layout shift and ignore
   // hover-opens until a real mousemove proves the cursor actually travelled.
   const hoverLock = useRef(false)
+  // How the current mega-menu got opened ('hover' | 'click') — a click on a
+  // hover-opened trigger must pin the menu, not toggle it shut (see toggle()).
+  const openedBy = useRef(null)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
   const avatarUrl = userProfile?.photoURL || ''
@@ -296,6 +299,7 @@ export default function PillNav() {
     clearClose()
     if (hoverLock.current) return
     if (open === null) hoverLock.current = true
+    openedBy.current = 'hover'
     setMenu(null)
     setOpen(id)
   }
@@ -303,7 +307,17 @@ export default function PillNav() {
   const toggle = (id) => {
     hoverLock.current = true
     setMenu(null)
-    setOpen((cur) => (cur === id ? null : id))
+    setOpen((cur) => {
+      // Hover already opened this menu, so the user's click means "open it" —
+      // closing here makes the menu flash shut under the click. Pin it open
+      // instead; the NEXT click (now 'click'-owned) toggles it closed.
+      if (cur === id && openedBy.current === 'hover') {
+        openedBy.current = 'click'
+        return cur
+      }
+      openedBy.current = 'click'
+      return cur === id ? null : id
+    })
   }
   const toggleMenu = (which) => { setOpen(null); setMenu((cur) => (cur === which ? null : which)) }
   const closeAll = () => { setOpen(null); setSheet(false); setMenu(null) }
