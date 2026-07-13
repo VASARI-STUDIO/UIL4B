@@ -1,5 +1,5 @@
 import { db, auth } from './firebase'
-import { doc, setDoc, collection, getDocs, query, orderBy, limit, increment } from 'firebase/firestore'
+import { doc, setDoc, collection, getDocs, query, orderBy, limit, increment, deleteField } from 'firebase/firestore'
 
 const ANALYTICS_KEY = 'vs-analytics'
 const SESSIONS_KEY = 'vs-sessions'
@@ -99,13 +99,16 @@ function recordAggregateTool(id) {
 // Read the last `days` daily docs and sum them into a dashboard-friendly shape.
 // Returns a safe empty shape on any failure (offline, rules, no docs yet).
 export async function getAggregateAnalytics(days = 30) {
-  const empty = { totalViews: 0, byPath: [], byTool: [], days: [] }
+  const empty = { totalViews: 0, byPath: [], byTool: [], byIcon: [], byPack: [], iconCopies: 0, days: [] }
   try {
     const q = query(collection(db, AGGREGATE_COLLECTION), orderBy('day', 'desc'), limit(days))
     const snap = await getDocs(q)
     let totalViews = 0
+    let iconCopies = 0
     const pathCounts = {}
     const toolCounts = {}
+    const iconCounts = {}
+    const packCounts = {}
     const dayViews = []
     snap.docs.forEach(docSnap => {
       const data = docSnap.data() || {}
@@ -115,16 +118,21 @@ export async function getAggregateAnalytics(days = 30) {
         if (field === 'day') continue
         const count = typeof value === 'number' ? value : 0
         if (field === 'views') { totalViews += count; viewsForDay = count }
+        else if (field === 'icon-copies') iconCopies += count
         else if (field.startsWith('view__')) pathCounts[field.slice(6)] = (pathCounts[field.slice(6)] || 0) + count
         else if (field.startsWith('tool__')) toolCounts[field.slice(6)] = (toolCounts[field.slice(6)] || 0) + count
+        else if (field.startsWith('icon__')) iconCounts[field.slice(6)] = (iconCounts[field.slice(6)] || 0) + count
+        else if (field.startsWith('ipack__')) packCounts[field.slice(7)] = (packCounts[field.slice(7)] || 0) + count
       }
       dayViews.push({ day: dayId, views: viewsForDay })
     })
     const byPath = Object.entries(pathCounts).sort((a, b) => b[1] - a[1])
     const byTool = Object.entries(toolCounts).sort((a, b) => b[1] - a[1])
+    const byIcon = Object.entries(iconCounts).sort((a, b) => b[1] - a[1])
+    const byPack = Object.entries(packCounts).sort((a, b) => b[1] - a[1])
     // docs came back newest-first; present the timeline oldest→newest.
     const daysAsc = dayViews.reverse()
-    return { totalViews, byPath, byTool, days: daysAsc }
+    return { totalViews, byPath, byTool, byIcon, byPack, iconCopies, days: daysAsc }
   } catch {
     return empty
   }
@@ -267,8 +275,59 @@ export function trackToolAction(toolId) {
   recordAggregateTool(toolId)
 }
 
+// Icon copies — most-copied icons and packs. Locally in the design-analytics
+// blob; cross-user via per-icon / per-pack fields on the daily aggregate doc.
+export function trackIconCopy(pack, name) {
+  if (!name) return
+  const data = loadDesignAnalytics()
+  if (!data.iconCopies) data.iconCopies = {}
+  if (!data.packCopies) data.packCopies = {}
+  const iconKey = pack ? `${pack}:${name}` : name
+  data.iconCopies[iconKey] = (data.iconCopies[iconKey] || 0) + 1
+  if (pack) data.packCopies[pack] = (data.packCopies[pack] || 0) + 1
+  saveDesignAnalytics(data)
+  bumpAggregate('icon-copies', 1)
+  bumpAggregate(`icon__${sanitizeKey(iconKey)}`, 1)
+  if (pack) bumpAggregate(`ipack__${sanitizeKey(pack)}`, 1)
+}
+
 export function getDesignAnalytics() {
   return loadDesignAnalytics()
+}
+
+// ── Admin resets ─────────────────────────────────────────────
+// Founder-invoked from the Admin dashboard. Clearing this browser's blobs is
+// instant; the Firestore aggregate is scrubbed field-by-field (merge writes
+// with deleteField) so tool counters survive a page-analytics reset.
+
+export function resetColourPicks() {
+  const data = loadDesignAnalytics()
+  data.colourPicks = {}
+  saveDesignAnalytics(data)
+}
+
+export async function resetPageAnalytics() {
+  // Local layer: drop raw views + sessions (this browser).
+  try { localStorage.removeItem(ANALYTICS_KEY) } catch { /* ignore */ }
+  try { localStorage.removeItem(SESSIONS_KEY) } catch { /* ignore */ }
+  // Aggregate layer: remove `views` + every `view__<path>` field from each
+  // daily doc — retired routes vanish from the dashboard for every admin.
+  try {
+    const q = query(collection(db, AGGREGATE_COLLECTION), orderBy('day', 'desc'), limit(400))
+    const snap = await getDocs(q)
+    await Promise.all(snap.docs.map(docSnap => {
+      const data = docSnap.data() || {}
+      const payload = {}
+      for (const field of Object.keys(data)) {
+        if (field === 'views' || field.startsWith('view__')) payload[field] = deleteField()
+      }
+      if (!Object.keys(payload).length) return null
+      return setDoc(doc(db, AGGREGATE_COLLECTION, docSnap.id), payload, { merge: true }).catch(() => {})
+    }))
+    return true
+  } catch {
+    return false
+  }
 }
 
 // Analytics data retrieval

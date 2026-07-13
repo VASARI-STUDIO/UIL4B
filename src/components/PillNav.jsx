@@ -62,6 +62,15 @@ function ExportIcon() {
   )
 }
 
+function BookmarkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+         strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
 function MeatballIcon() {
   // Horizontal 3-dot "more" affordance — the resting utility button. Reads as
   // "additional options" and stays crisp at nav size.
@@ -303,7 +312,7 @@ export default function PillNav() {
     <>
       <nav
         ref={navRef}
-        className={'pnav' + (scrolled ? ' is-scrolled' : '') + (open || menu ? ' is-expanded' : '')}
+        className={'pnav' + (scrolled ? ' is-scrolled' : '') + (open || menu ? ' is-expanded' : '') + (isSalesPage ? ' pnav--sales' : '')}
         aria-label="Primary"
         onMouseLeave={hoverLeave}
       >
@@ -331,9 +340,10 @@ export default function PillNav() {
             </div>
           </div>
 
-          {/* Search — prominent, always-visible field centred in the bar (Mobbin
-              reference). Clicking it opens the full command palette, which reuses
-              the same search index. */}
+          {/* Search — prominent field centred in the bar (Mobbin reference).
+              Clicking it opens the full command palette, which reuses the same
+              search index. On sales routes it hides at rest (the resting pill
+              leads with the three menus + Get Pro) and reveals with the bar. */}
           <div className="pnav-search">
             <button
               type="button"
@@ -350,20 +360,33 @@ export default function PillNav() {
           </div>
 
           <div className="pnav-actions">
-            {/* Export — collapsed at rest, revealed with the pill on hover /
-                focus / pinned-open, sitting on the RIGHT ahead of Upgrade. On
-                marketing/sales routes there's nothing to export, so we drop the
-                shell and lead with the "Get Pro" conversion pill instead. */}
+            {/* Right cluster (Mobbin reference): always-visible icon-only
+                buttons — Saved projects (bookmark), then Export — ahead of the
+                conversion pill and the avatar. On marketing/sales routes
+                there's nothing to export, so the Export shell is dropped and
+                the bar leads with "Get Pro" instead. */}
+            {user && (
+              <Link
+                className="pnav-iconbtn"
+                to="/projects"
+                aria-label="Saved projects"
+                title="Saved projects"
+                onClick={closeAll}
+              >
+                <BookmarkIcon />
+              </Link>
+            )}
             {!isSalesPage && (
               <button
                 type="button"
-                className="pnav-export"
+                className="pnav-iconbtn pnav-export"
                 aria-haspopup="dialog"
                 aria-expanded={exportOpen}
+                aria-label="Export"
+                title="Export"
                 onClick={openExport}
               >
                 <ExportIcon />
-                <span>Export</span>
               </button>
             )}
 
@@ -481,36 +504,38 @@ export default function PillNav() {
               </div>
             )}
 
-            {/* Compact "more" affordance — the single control on the resting pill,
-                replacing the old always-on Upgrade button. It collapses away once
-                the pill expands (the avatar takes over for signed-in users), except
-                while its own popover is open. For signed-out visitors it carries the
-                theme toggle + auth links so preferences stay reachable. */}
-            <div className="pnav-pop-wrap pnav-more-wrap">
-              <button
-                type="button"
-                className="pnav-more"
-                aria-haspopup="true"
-                aria-expanded={!user && menu === 'account'}
-                aria-label={user ? 'Account and settings' : 'Menu'}
-                onClick={() => toggleMenu('account')}
-              >
-                <MeatballIcon />
-              </button>
-              {!user && menu === 'account' && (
-                <div className="pnav-pop" aria-label="Menu">
-                  <p className="pnav-pop-head">Appearance</p>
-                  <ThemeSeg theme={theme} setTheme={setTheme} />
-                  <div className="pnav-pop-sep" />
-                  <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
-                    Log in
-                  </Link>
-                  <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
-                    Get started
-                  </Link>
-                </div>
-              )}
-            </div>
+            {/* Compact "more" affordance — signed-out only. Signed-in users get the
+                always-visible avatar instead (Mobbin pattern), so the meatball here
+                carries the theme toggle + auth links so preferences stay reachable
+                for visitors. It collapses away once the pill expands, except while
+                its own popover is open. */}
+            {!user && (
+              <div className="pnav-pop-wrap pnav-more-wrap">
+                <button
+                  type="button"
+                  className="pnav-more"
+                  aria-haspopup="true"
+                  aria-expanded={menu === 'account'}
+                  aria-label="Menu"
+                  onClick={() => toggleMenu('account')}
+                >
+                  <MeatballIcon />
+                </button>
+                {menu === 'account' && (
+                  <div className="pnav-pop" aria-label="Menu">
+                    <p className="pnav-pop-head">Appearance</p>
+                    <ThemeSeg theme={theme} setTheme={setTheme} />
+                    <div className="pnav-pop-sep" />
+                    <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
+                      Log in
+                    </Link>
+                    <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
+                      Get started
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
 
             <button
               type="button"
