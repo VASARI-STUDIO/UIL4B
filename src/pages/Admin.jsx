@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics, getAggregateAnalytics } from '../utils/analytics'
+import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics, getAggregateAnalytics, resetColourPicks, resetPageAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
@@ -50,6 +50,37 @@ function fmtDate(iso) {
 function fmtDateTime(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+// Older feedback docs predate the current schema: createdAt may be a Firestore
+// Timestamp, a numeric epoch, or missing entirely. Normalise to an ISO string
+// so sorting/display never silently drop items (orderBy on the query would).
+function toIso(raw) {
+  if (!raw) return ''
+  if (typeof raw === 'string') return raw
+  if (typeof raw === 'number') return new Date(raw).toISOString()
+  if (typeof raw?.toDate === 'function') return raw.toDate().toISOString()
+  if (typeof raw?.seconds === 'number') return new Date(raw.seconds * 1000).toISOString()
+  return ''
+}
+
+// Tiny glyphs for the Submissions filter chips.
+function FilterGlyph({ id }) {
+  const paths = {
+    all: <path d="M3 5h18l-7 8v6l-4 2v-8L3 5z" />,
+    bug: <><rect x="8" y="7" width="8" height="13" rx="4" /><path d="M9 4l1.5 2.5M15 4l-1.5 2.5M4 11h4M16 11h4M5 19l3.5-2.5M19 19l-3.5-2.5M12 20v-9" /></>,
+    feature: <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />,
+    general: <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20l1.2-5.1A8.5 8.5 0 1 1 21 11.5z" />,
+    help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2.2-2.4 3.7" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
+    new: <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />,
+    'in-progress': <><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></>,
+    done: <polyline points="4 12.5 10 18.5 20 6.5" />,
+  }
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      {paths[id] || paths.all}
+    </svg>
+  )
 }
 
 function fmtNum(n) {
@@ -1078,6 +1109,9 @@ export default function Admin({ toast }) {
   // Cross-user aggregate (server-read). null = loading, object = loaded.
   const [aggregate, setAggregate] = useState(null)
   const [aggregateLoaded, setAggregateLoaded] = useState(false)
+  const [confirmColourReset, setConfirmColourReset] = useState(false)
+  const [confirmPageReset, setConfirmPageReset] = useState(false)
+  const [resettingPages, setResettingPages] = useState(false)
 
   const refresh = useCallback(async () => {
     setData(getAnalyticsSummary())
@@ -1094,9 +1128,20 @@ export default function Admin({ toast }) {
     const localFeedback = getFeedback()
     let merged = [...localFeedback]
     try {
-      const q2 = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'))
-      const snap = await getDocs(q2)
-      const fsFeedback = snap.docs.map(d => ({ ...d.data(), id: d.id, _fs: true, source: d.data().source || 'firestore' }))
+      // No orderBy here on purpose: Firestore drops docs missing the ordered
+      // field, which hid older submissions written before createdAt existed.
+      const snap = await getDocs(collection(db, 'feedback'))
+      const fsFeedback = snap.docs.map(d => {
+        const raw = d.data()
+        return {
+          ...raw,
+          id: d.id,
+          _fs: true,
+          source: raw.source || 'firestore',
+          createdAt: toIso(raw.createdAt ?? raw.ts ?? raw.timestamp),
+          updatedAt: toIso(raw.updatedAt),
+        }
+      })
       const localIds = new Set(localFeedback.map(f => f.id))
       fsFeedback.forEach(f => { if (!localIds.has(f.id)) merged.push(f) })
     } catch { /* firestore unavailable */ }
@@ -1215,12 +1260,17 @@ export default function Admin({ toast }) {
   const inProgressCount = feedback.filter(f => f.status === 'in-progress').length
 
   const filteredFeedback = useMemo(() => {
-    const q = subSearch.trim().toLowerCase()
+    // Every whitespace-separated token must match somewhere, so multi-word
+    // queries like "export bug" narrow instead of failing outright.
+    const tokens = subSearch.trim().toLowerCase().split(/\s+/).filter(Boolean)
     const out = feedback.filter(item => {
       if (filterType !== 'all' && item.type !== filterType) return false
       if (filterStatus !== 'all' && item.status !== filterStatus) return false
-      if (q && ![item.subject, item.message, item.email, item.adminNotes]
-        .some(v => v && String(v).toLowerCase().includes(q))) return false
+      if (tokens.length) {
+        const hay = [item.subject, item.message, item.email, item.adminNotes, item.type, item.status, item.source]
+          .filter(Boolean).join(' ').toLowerCase()
+        if (!tokens.every(t => hay.includes(t))) return false
+      }
       return true
     })
     out.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
@@ -1301,6 +1351,22 @@ export default function Admin({ toast }) {
     a.click()
     URL.revokeObjectURL(url)
     toast(`Exported ${rows.length} submissions`)
+  }
+
+  const handleResetColours = () => {
+    resetColourPicks()
+    setDesignData(getDesignAnalytics())
+    setConfirmColourReset(false)
+    toast('Colour pick data reset')
+  }
+
+  const handleResetPages = async () => {
+    setResettingPages(true)
+    const ok = await resetPageAnalytics()
+    setResettingPages(false)
+    setConfirmPageReset(false)
+    toast(ok ? 'Page analytics reset' : 'Local data cleared — server reset failed')
+    refresh()
   }
 
   // ── Lock screen ──
@@ -1452,7 +1518,18 @@ export default function Admin({ toast }) {
           <div className="adm-cat">
             <div className="adm-cat-head">
               <div className="adm-cat-title"><span className="adm-section-bar" />Audience</div>
-              <span className="adm-cat-desc">All users · server totals · last 30 days</span>
+              <span className="adm-cat-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                All users · server totals · last 30 days
+                {confirmPageReset ? (
+                  <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, color: 'var(--err)', fontWeight: 600 }}>Wipe page views?</span>
+                    <button className="btn btn-s" disabled={resettingPages} onClick={handleResetPages} style={{ fontSize: 10, color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>{resettingPages ? 'Resetting…' : 'Yes'}</button>
+                    <button className="btn btn-s" disabled={resettingPages} onClick={() => setConfirmPageReset(false)} style={{ fontSize: 10 }}>No</button>
+                  </span>
+                ) : (
+                  <button className="btn btn-s" onClick={() => setConfirmPageReset(true)} style={{ fontSize: 10 }}>Reset page analytics</button>
+                )}
+              </span>
             </div>
             {!aggregateLoaded ? (
               <div className="adm-card"><div className="adm-empty">Loading aggregate analytics…</div></div>
@@ -1690,6 +1767,15 @@ export default function Admin({ toast }) {
             <div className="adm-card">
               <div className="adm-card-header">
                 <span className="adm-card-title">Most Picked Colours</span>
+                {confirmColourReset ? (
+                  <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, color: 'var(--err)', fontWeight: 600 }}>Reset?</span>
+                    <button className="btn btn-s" onClick={handleResetColours} style={{ fontSize: 10, color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>Yes</button>
+                    <button className="btn btn-s" onClick={() => setConfirmColourReset(false)} style={{ fontSize: 10 }}>No</button>
+                  </span>
+                ) : (
+                  <button className="btn btn-s" onClick={() => setConfirmColourReset(true)} style={{ fontSize: 10 }}>Reset</button>
+                )}
               </div>
               <div className="adm-card-body">
                 {(() => {
@@ -1726,6 +1812,64 @@ export default function Admin({ toast }) {
                           width: Math.max(24, Math.min(48, count * 6)),
                           height: Math.max(24, Math.min(48, count * 6)),
                         }} />
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+
+          <div className="adm-grid-2" style={{ marginBottom: 32 }}>
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Most Copied Icons</span>
+                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{aggregate?.byIcon?.length ? 'all users · 30 days' : 'this device'}</span>
+              </div>
+              <div className="adm-card-body">
+                {(() => {
+                  const agg = aggregate?.byIcon || []
+                  const entries = agg.length
+                    ? agg.slice(0, 10)
+                    : Object.entries(designData.iconCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
+                  if (!entries.length) return <div className="adm-empty">No icon copy data yet</div>
+                  const max = entries[0][1]
+                  return (
+                    <div className="adm-bar">
+                      {entries.map(([key, count]) => (
+                        <div key={key} className="adm-bar-row">
+                          <span className="adm-bar-label">{key}</span>
+                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                          <span className="adm-bar-value">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            <div className="adm-card">
+              <div className="adm-card-header">
+                <span className="adm-card-title">Most Copied Icon Packs</span>
+                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{aggregate?.byPack?.length ? 'all users · 30 days' : 'this device'}</span>
+              </div>
+              <div className="adm-card-body">
+                {(() => {
+                  const agg = aggregate?.byPack || []
+                  const entries = agg.length
+                    ? agg.slice(0, 10)
+                    : Object.entries(designData.packCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
+                  if (!entries.length) return <div className="adm-empty">No pack copy data yet</div>
+                  const max = entries[0][1]
+                  return (
+                    <div className="adm-bar">
+                      {entries.map(([pack, count]) => (
+                        <div key={pack} className="adm-bar-row">
+                          <span className="adm-bar-label">{pack}</span>
+                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                          <span className="adm-bar-value">{count}</span>
+                        </div>
                       ))}
                     </div>
                   )
@@ -1777,13 +1921,27 @@ export default function Admin({ toast }) {
             <input type="search" className="adm-search" placeholder="Search subject, message, email…" value={subSearch} onChange={e => setSubSearch(e.target.value)} />
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               {['all', 'bug', 'feature', 'general', 'help'].map(t => (
-                <button key={t} className={`adm-time-btn${filterType === t ? ' active' : ''}`} onClick={() => setFilterType(t)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                <button
+                  key={t}
+                  className={`adm-time-btn${filterType === t ? ' active' : ''}`}
+                  onClick={() => setFilterType(prev => (prev === t ? 'all' : t))}
+                  title={filterType === t && t !== 'all' ? 'Click again to clear' : undefined}
+                  style={{ textTransform: 'uppercase', letterSpacing: '.04em', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                >
+                  <FilterGlyph id={t} />
                   {t === 'all' ? 'All Types' : t}{typeCounts[t] ? ` · ${typeCounts[t]}` : ''}
                 </button>
               ))}
               <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', margin: '0 4px' }} />
               {['all', ...STATUSES].map(s => (
-                <button key={s} className={`adm-time-btn${filterStatus === s ? ' active' : ''}`} onClick={() => setFilterStatus(s)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                <button
+                  key={s}
+                  className={`adm-time-btn${filterStatus === s ? ' active' : ''}`}
+                  onClick={() => setFilterStatus(prev => (prev === s ? 'all' : s))}
+                  title={filterStatus === s && s !== 'all' ? 'Click again to clear' : undefined}
+                  style={{ textTransform: 'uppercase', letterSpacing: '.04em', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                >
+                  <FilterGlyph id={s} />
                   {s === 'all' ? 'All' : STATUS_LABELS[s]}{statusCounts[s] ? ` · ${statusCounts[s]}` : ''}
                 </button>
               ))}

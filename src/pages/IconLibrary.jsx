@@ -1,10 +1,14 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useProject } from '../contexts/ProjectContext'
 import { getLenis } from '../hooks/useSmoothScroll'
+import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
+import ColorPickerPop from '../components/ColorPickerPop'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 
 const API_LIMIT = 999
@@ -48,6 +52,30 @@ const ALL_INITIAL_PER_PACK = 250
 const STROKE_PACKS = new Set(ICON_GROUPS.outlined.packs)
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
 const CUSTOM_KEY = 'vs-custom-icons'
+
+// ── Free-tier daily copy allowance ────────────────────────────────────────────
+// Non-Pro users get FREE_COPIES_PER_DAY icon copies per LOCAL day, tracked as
+// { date: 'YYYY-MM-DD', count } in localStorage. A new day resets the count.
+const COPY_DAY_KEY = 'vs-icon-copy-day'
+const FREE_COPIES_PER_DAY = 10
+
+function localDay() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function readCopyCount() {
+  try {
+    const o = JSON.parse(localStorage.getItem(COPY_DAY_KEY) || 'null')
+    return o && o.date === localDay() ? (Number(o.count) || 0) : 0
+  } catch { return 0 }
+}
+
+function bumpCopyCount() {
+  try {
+    localStorage.setItem(COPY_DAY_KEY, JSON.stringify({ date: localDay(), count: readCopyCount() + 1 }))
+  } catch { /* quota */ }
+}
 
 // Sticky stroke width — the last width the user set persists so the next icon
 // they open starts at the same weight, making it easy to build a consistent set.
@@ -152,6 +180,13 @@ function readCustomIcons() {
 function writeCustomIcons(list) {
   try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); return true }
   catch { return false }
+}
+
+function newCustomIconStamp() {
+  return {
+    key: `${CUSTOM_KEY}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
+    ts: Date.now(),
+  }
 }
 
 // Custom (base N) naming: count existing saves of the same base, then N = count+1.
@@ -325,6 +360,8 @@ const JOIN_OPTS = [
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
 function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, onCopy, onPick }) {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { projects } = useProject()
   const { theme } = useTheme()
   // The stage follows the site theme: in light mode an un-tinted icon previews
   // dark-on-light, in dark mode white-on-dark — so what you see matches where
@@ -357,11 +394,24 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [flipH, setFlipH] = useState(false)
   const [flipV, setFlipV] = useState(false)
   const [copied, setCopied] = useState('')
+  // In-panel upgrade prompt. 'line' = signed-out tap on a Pro line-style
+  // control, 'copies' = non-Pro daily copy cap, 'save' = signed-out save
+  // attempt (projects are account-scoped, so saving needs a sign-in first).
+  const [gate, setGate] = useState(null)
   const [savedState, setSavedState] = useState(() => (icon?.custom ? 'saved' : 'idle'))
-  // How many custom icons are already saved — drives the free-tier cap in the
-  // footer. Read once on mount; bumped after a successful save.
-  const [savedCount, setSavedCount] = useState(() => readCustomIcons().length)
-  const atSaveCap = !isPro && savedCount >= saveLimit
+  // Save-to-project picker: saving is a two-step flow — choose a project, then
+  // write — so the free per-PROJECT icon cap can be enforced at pick time.
+  const [savePickerOpen, setSavePickerOpen] = useState(false)
+  // Per-project custom-icon counts, read fresh each time the picker opens so
+  // the "n/limit" badges reflect the live store.
+  const projectCounts = useMemo(() => {
+    if (!savePickerOpen) return {}
+    const counts = {}
+    for (const r of readCustomIcons()) {
+      if (r.projectId) counts[r.projectId] = (counts[r.projectId] || 0) + 1
+    }
+    return counts
+  }, [savePickerOpen])
 
   const isColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
   const isStroke = useMemo(() => {
@@ -518,9 +568,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     setPasted({ svg: clean, isStroke: detectPastedStroke(clean) })
   }
 
+  // Free-tier daily cap: gate BEFORE the clipboard write, so a capped copy is a
+  // pure no-op that opens the upgrade prompt — nothing lands on the clipboard.
   const handleCopySvg = async () => {
+    if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { setGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
+    if (!isPro) bumpCopyCount()
+    trackIconCopy(activeIcon?.pack || null, activeIcon?.name || 'icon')
     setCopied('svg')
     setTimeout(() => setCopied(''), 2000)
     if (onCopy) onCopy(serializedOutput)
@@ -528,8 +583,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   const handleCopyCode = async () => {
+    if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { setGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
+    if (!isPro) bumpCopyCount()
+    trackIconCopy(activeIcon?.pack || null, activeIcon?.name || 'icon')
     setCopied('code')
     setTimeout(() => setCopied(''), 2000)
   }
@@ -549,26 +607,36 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     } catch { /* ignore */ }
   }
 
-  // ANTI-TAMPER: non-Pro is a no-op that routes to checkout BEFORE any compute —
-  // no record is built, and the Custom store is never read or written.
+  // Saving is a two-step flow: pick a project, then write. Signed-out users are
+  // gated to login first — projects are account-scoped, so the per-project save
+  // cap can't be enforced without one.
   const handleSave = () => {
     if (!activeIcon || !baseSvgText) return
+    if (!user) { setGate('save'); return }
+    setSavePickerOpen(true)
+  }
+
+  // ANTI-TAMPER: the per-project cap is enforced BEFORE any compute — an
+  // over-cap non-Pro save routes to checkout with no record built and the
+  // Custom store never written.
+  const handleSaveToProject = (projectId) => {
+    if (!activeIcon || !baseSvgText) return
     const existing = readCustomIcons()
-    // Free-tier cap: route to checkout only once the allowance is used up.
-    if (!isPro && existing.length >= saveLimit) { navigate('/checkout'); return }
+    const used = existing.filter(r => r.projectId === projectId).length
+    if (!isPro && used >= saveLimit) { setSavePickerOpen(false); navigate('/checkout'); return }
     const base = activeIcon.custom ? activeIcon.base : (activeIcon.cdn || activeIcon.d ? activeIcon.name : 'icon')
     const { iteration, name } = nextCustomName(base, existing)
     const colored = isColoredPack || !!color || (activeIcon.pasted === true && !isStroke)
     const svg = serializeCustomizedSvg(baseSvgText, { size, color: color || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV })
     const record = {
-      key: `${CUSTOM_KEY}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
-      base, iteration, name,
+      ...newCustomIconStamp(),
+      base, iteration, name, projectId,
       pack: activeIcon.pack || null, cdn: !!activeIcon.cdn,
-      svg, color: color || '', size, stroke, absStroke, cap, join, isStroke, colored, ts: Date.now(),
+      svg, color: color || '', size, stroke, absStroke, cap, join, isStroke, colored,
     }
+    setSavePickerOpen(false)
     if (!writeCustomIcons([record, ...existing])) { setSavedState('error'); return }
     addRecentIcon(recentPayload(activeIcon), 'edit')
-    setSavedCount(existing.length + 1)
     setSavedState('saved')
   }
 
@@ -656,7 +724,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       <button type="button" className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); markDirty() }}>Black</button>
                       <button type="button" className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); markDirty() }}>White</button>
                     </div>
-                    <input type="color" className="icust-color" aria-label="Custom colour" value={color || '#000000'} onChange={(e) => { setColor(e.target.value); markDirty() }} />
+                    <ColorPickerPop value={color || themeInk} onChange={(v) => { setColor(v); markDirty() }} />
                   </>
                 )}
               </div>
@@ -681,7 +749,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <div className="icust-seg icust-seg--icon">
                       {CAP_OPTS.map(o => (
                         <button key={o.v} type="button" className={cap === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={cap === o.v}
-                          onClick={() => { if (!isPro) { navigate('/checkout'); return } setCap(o.v); markDirty() }}>
+                          onClick={() => { if (!isPro) { if (!user) { setGate('line'); return } navigate('/checkout'); return } setCap(o.v); markDirty() }}>
                           {o.icon}
                         </button>
                       ))}
@@ -692,7 +760,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <div className="icust-seg icust-seg--icon">
                       {JOIN_OPTS.map(o => (
                         <button key={o.v} type="button" className={join === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={join === o.v}
-                          onClick={() => { if (!isPro) { navigate('/checkout'); return } setJoin(o.v); markDirty() }}>
+                          onClick={() => { if (!isPro) { if (!user) { setGate('line'); return } navigate('/checkout'); return } setJoin(o.v); markDirty() }}>
                           {o.icon}
                         </button>
                       ))}
@@ -732,24 +800,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
               </button>
 
-              {!atSaveCap ? (
-                <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleSave} disabled={savedState === 'saved'} aria-disabled={savedState === 'saved'}>
-                  {saveLabel}
-                </button>
-              ) : (
-                <div className="icust-save-lock">
-                  <button type="button" className="ui-pill ui-pill-out ui-pill-md icust-save--locked" aria-disabled="true" title={`Free plan saves up to ${saveLimit} custom icons.`} onClick={() => navigate('/checkout')}>
-                    <span className="icust-lock-glyph" aria-hidden="true">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                    </span>
-                    {saveLimit} of {saveLimit} saved
-                    <span className="pnav-pop-tag">Pro</span>
-                  </button>
-                  <Link className="icust-upgrade" to="/plans">Upgrade for unlimited →</Link>
-                </div>
-              )}
+              <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleSave} disabled={savedState === 'saved'} aria-disabled={savedState === 'saved'}>
+                {saveLabel}
+              </button>
 
               <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleDownload}>Download</button>
             </div>
@@ -780,6 +833,84 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
             )}
           </>
+        )}
+
+        {gate && (
+          <div className="icust-gate-backdrop" onMouseDown={() => setGate(null)}>
+            <div
+              className="icust-gate"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="icust-gate-title"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {gate !== 'save' && <span className="pnav-pop-tag">Pro</span>}
+              <h3 className="icust-gate-title" id="icust-gate-title">
+                {gate === 'line' ? 'Line styles are a Pro tool'
+                  : gate === 'copies' ? 'Daily copy limit reached'
+                    : 'Sign in to save icons'}
+              </h3>
+              <p className="icust-gate-copy">
+                {gate === 'line' ? 'Fine-tune stroke ends and corners with Pro. Create a free account to save your work, or see what Pro unlocks.'
+                  : gate === 'copies' ? `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day — the counter resets tomorrow. Go Pro for unlimited copies.`
+                    : 'Saved icons live inside one of your projects. Create a free account to start saving.'}
+              </p>
+              <div className="icust-gate-actions">
+                {user
+                  ? <Link className="ui-pill ui-pill-accent ui-pill-md" to="/checkout">Upgrade to Pro</Link>
+                  : <Link className="ui-pill ui-pill-accent ui-pill-md" to="/login">Get started free</Link>}
+                <Link className="ui-pill ui-pill-out ui-pill-md" to="/plans">See plans</Link>
+              </div>
+              <button type="button" className="icust-gate-dismiss" onClick={() => setGate(null)}>Not now</button>
+            </div>
+          </div>
+        )}
+
+        {savePickerOpen && (
+          <div className="icust-gate-backdrop" onMouseDown={() => setSavePickerOpen(false)}>
+            <div
+              className="icust-gate"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="icust-pick-title"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <h3 className="icust-gate-title" id="icust-pick-title">Save to a project</h3>
+              <p className="icust-gate-copy">
+                {Number.isFinite(saveLimit)
+                  ? `Pick where this icon lives — the free plan saves up to ${saveLimit} icons per project.`
+                  : 'Pick where this icon lives.'}
+              </p>
+              {projects.length === 0 ? (
+                <p className="icust-gate-copy">No projects yet — save a project from the Create tools first.</p>
+              ) : (
+                <div className="icust-proj-list">
+                  {projects.map((p) => {
+                    const used = projectCounts[p.id] || 0
+                    const full = !isPro && used >= saveLimit
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="icust-proj-btn"
+                        disabled={full}
+                        title={full ? `This project is at the free limit of ${saveLimit} icons.` : undefined}
+                        onClick={() => handleSaveToProject(p.id)}
+                      >
+                        <span className="icust-proj-name">{p.name}</span>
+                        <span className="icust-proj-count">
+                          {Number.isFinite(saveLimit) ? `${used}/${saveLimit}` : `${used} saved`}
+                          {full && <span className="pnav-pop-tag">Full</span>}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              {!isPro && <Link className="icust-upgrade" to="/plans">Upgrade for unlimited →</Link>}
+              <button type="button" className="icust-gate-dismiss" onClick={() => setSavePickerOpen(false)}>Cancel</button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -1348,7 +1479,7 @@ export default function IconLibrary({ onCopy, embedded }) {
               )}
               {!isPro && (
                 <p className="ig-custom-hint">
-                  {Math.min(icons.length, customIconLimit)} of {customIconLimit} free saves used ·{' '}
+                  Free plan saves up to {customIconLimit} icons per project ·{' '}
                   <button type="button" className="ig-custom-hint-link" onClick={() => navigate('/checkout')}>Go Pro for unlimited</button>
                 </p>
               )}

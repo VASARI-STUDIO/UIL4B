@@ -4431,11 +4431,17 @@ html.lenis,html.lenis body{height:auto}
 .pnav-search-field:hover .pnav-search-ico{color:var(--t1)}
 .pnav-search-ph{white-space:nowrap;flex:1 1 auto;text-align:left}
 .pnav-search-kbd{flex:0 0 auto;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:11px;font-weight:600;line-height:1}
-/* Export lives in the RIGHT actions cluster now: collapsed at rest, revealed
-   with the pill on hover / focus / pinned-open, ahead of the Upgrade pill. */
-.pnav-export{display:inline-flex;align-items:center;gap:7px;height:40px;max-width:0;padding:0;white-space:nowrap;border:none;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;opacity:0;overflow:hidden;pointer-events:none;cursor:pointer;transition:max-width var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
-.pnav:hover .pnav-export,.pnav:focus-within .pnav-export,.pnav.is-expanded .pnav-export{max-width:160px;padding:0 14px;opacity:1;overflow:visible;pointer-events:auto}
-.pnav-export:hover{background:color-mix(in srgb,var(--accent) 18%,var(--bg-2))}
+/* Sales routes: the search bar hides at rest and reveals as the pill expands
+   (hover / keyboard focus / pinned-open menu). App routes keep it always on. */
+.pnav--sales .pnav-search{max-width:0;opacity:0;overflow:hidden;pointer-events:none;margin-left:-16px;transition:max-width var(--dur-3) var(--ease-inout),margin-left var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out)}
+.pnav--sales:hover .pnav-search,.pnav--sales:focus-within .pnav-search,.pnav--sales.is-expanded .pnav-search{max-width:320px;margin-left:0;opacity:1;overflow:visible;pointer-events:auto}
+/* Always-visible icon buttons in the RIGHT actions cluster (Mobbin reference):
+   saved projects (bookmark) + export. 40px circles like .pnav-more. */
+.pnav-iconbtn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;text-decoration:none;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-iconbtn:hover,.pnav-iconbtn[aria-expanded="true"]{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+/* Export keeps its accent tint so it still reads as the primary action. */
+.pnav-export{border-color:transparent;background:var(--accent-bg);color:var(--accent)}
+.pnav-export:hover,.pnav-export[aria-expanded="true"]{border-color:transparent;background:color-mix(in srgb,var(--accent) 18%,var(--bg-2));color:var(--accent)}
 
 /* Upgrade / auth pills collapse at rest and reveal with the pill (same pattern as
    Export). For signed-in users Upgrade also lives in the account popover, so the
@@ -4468,12 +4474,10 @@ html.lenis,html.lenis body{height:auto}
 .pnav-avatar-btn .pnav-avatar{width:100%;height:100%}
 .pnav-pop-wrap{position:relative;flex:0 0 auto}
 
-/* Right reveal — settings (gear) + account (avatar) sit fully collapsed at rest
-   and expand together as the whole pill grows on hover, keyboard focus, or when a
-   menu is pinned open (.is-expanded), keeping the resting bar minimal. */
-.pnav-util{display:flex;align-items:center}
-.pnav-util .pnav-pop-wrap{max-width:0;opacity:0;transform:scale(.86);overflow:hidden;pointer-events:none;transition:max-width var(--dur-3) var(--ease-inout),margin-left var(--dur-3) var(--ease-inout),opacity var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
-.pnav:hover .pnav-util .pnav-pop-wrap,.pnav:focus-within .pnav-util .pnav-pop-wrap,.pnav.is-expanded .pnav-util .pnav-pop-wrap{max-width:44px;margin-left:8px;opacity:1;transform:none;overflow:visible;pointer-events:auto}
+/* Right cluster — the avatar stays always visible (Mobbin reference), so the
+   resting pill reads: bookmark · export · avatar for signed-in users. */
+.pnav-util{display:flex;align-items:center;gap:8px}
+.pnav-util .pnav-pop-wrap{flex:0 0 auto}
 .pnav-pop{position:absolute;top:calc(100% + 10px);right:0;z-index:130;width:260px;max-width:calc(100vw - 24px);padding:8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
 .pnav-pop-head{padding:8px 10px 4px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .pnav-pop-row{display:flex;flex-direction:column;gap:8px;padding:6px 10px 10px}
@@ -4702,10 +4706,27 @@ html.lenis,html.lenis body{height:auto}
 .icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .icust-seg button:hover{color:var(--t0)}
 .icust-seg button.active{background:var(--bg-0);color:var(--t0);box-shadow:var(--shadow-xs)}
-.icust-color{flex:0 0 auto;width:34px;height:34px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer}
-.icust-color::-webkit-color-swatch-wrapper{padding:0}
-.icust-color::-webkit-color-swatch{border:none;border-radius:var(--radius-xs)}
-.icust-color::-moz-color-swatch{border:none;border-radius:var(--radius-xs)}
+/* cpk — token-styled colour-picker popover (replaces the OS-native colour
+   dialog in the icon customizer; reusable anywhere via ColorPickerPop). */
+.cpk-wrap{position:relative;flex:0 0 auto}
+.cpk-trigger{display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out)}
+.cpk-trigger:hover,.cpk-trigger[aria-expanded="true"]{border-color:var(--bh)}
+.cpk-trigger-chip{width:22px;height:22px;border-radius:var(--radius-xs);border:1px solid var(--border)}
+.cpk-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:40;display:flex;flex-direction:column;gap:10px;width:232px;padding:12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
+.cpk-pad{position:relative;width:100%;height:130px;border-radius:var(--radius-s);border:1px solid var(--border);background-image:linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,rgba(255,255,255,0));cursor:crosshair;touch-action:none}
+.cpk-pad:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cpk-pad-thumb{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
+.cpk-hue{-webkit-appearance:none;appearance:none;width:100%;height:12px;margin:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);cursor:pointer}
+.cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-xs);cursor:grab}
+.cpk-hue::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-xs);cursor:grab}
+.cpk-row{display:flex;align-items:center;gap:8px}
+.cpk-chip{flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-xs);border:1px solid var(--border)}
+.cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
+.cpk-hex:focus{outline:none;border-color:var(--accent)}
+.cpk-swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cpk-swatch{aspect-ratio:1;padding:0;border-radius:var(--radius-xs);border:1px solid var(--border);cursor:pointer;transition:transform var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
+.cpk-swatch:hover{transform:scale(1.08)}
+.cpk-swatch.is-active{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
 .icust-abs{flex:0 0 auto;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .icust-abs:hover{border-color:var(--bh);color:var(--t0)}
 .icust-abs.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
@@ -4719,6 +4740,23 @@ html.lenis,html.lenis body{height:auto}
 .icust-pro.is-locked .icust-seg--icon button{cursor:pointer}
 .icust-pro.is-locked .icust-seg--icon svg{opacity:.55}
 .icust-pro.is-locked .icust-seg--icon button.active svg{opacity:1}
+/* Signed-out upgrade gate — a small alert dialog floated over the customizer
+   when a visitor taps a Pro-locked line-style control. (The overlay's
+   backdrop-filter makes it the containing block for this fixed backdrop.) */
+.icust-gate-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:var(--scrim);animation:cp-fade .14s ease}
+.icust-gate{display:flex;flex-direction:column;align-items:flex-start;gap:10px;width:min(380px,100%);padding:22px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
+.icust-gate-title{margin:0;font-size:var(--fs-h5);font-weight:640;color:var(--t0)}
+.icust-gate-copy{margin:0;font-size:var(--fs-body-s);line-height:1.55;color:var(--t1)}
+.icust-gate-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.icust-gate-dismiss{align-self:center;margin-top:2px;padding:6px 12px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
+.icust-gate-dismiss:hover{color:var(--t0);background:var(--hvr)}
+/* Save-to-project picker (shares the gate dialog shell) */
+.icust-proj-list{display:flex;flex-direction:column;gap:6px;width:100%;max-height:240px;overflow-y:auto;margin-top:2px}
+.icust-proj-btn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:10px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t0);cursor:pointer;text-align:left;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
+.icust-proj-btn:hover:not(:disabled){border-color:var(--accent);background:var(--hvr)}
+.icust-proj-btn:disabled{opacity:.55;cursor:not-allowed}
+.icust-proj-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icust-proj-count{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;font-size:var(--fs-caption);font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums}
 /* Code readout */
 .icust-code{margin:12px 24px 0}
 .icust-code-label{margin-bottom:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
@@ -5163,13 +5201,13 @@ a.prev-btn{text-decoration:none}
   .pnav{width:min(560px,calc(100vw - 24px))}
   .pnav-inner{display:flex;align-items:center;justify-content:space-between;padding:0 12px}
   .pnav-util .pnav-pop-wrap{max-width:none;margin-left:0;opacity:1;transform:none;overflow:visible;pointer-events:auto}
-  .pnav-util .pnav-pop-wrap + .pnav-pop-wrap{margin-left:8px}
-  /* Search stays revealed but collapses to an icon-only tap target; Export folds
-     away (still reachable via the command palette on desktop). */
-  .pnav-search{max-width:none;opacity:1;overflow:visible;pointer-events:auto;margin-left:0}
+  /* Search stays revealed but collapses to an icon-only tap target (hover doesn't
+     exist on touch, so the sales-route resting collapse is overridden too); the
+     bookmark / export icon buttons fold away — both live in the sheet. */
+  .pnav-search,.pnav--sales .pnav-search{max-width:none;opacity:1;overflow:visible;pointer-events:auto;margin-left:0}
   .pnav-search-field{width:40px;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
-  .pnav-export{display:none}
+  .pnav-iconbtn{display:none}
   /* Touch: the hamburger sheet IS the menu, so the resting 3-dots (a desktop
      hover-state affordance) is redundant — drop it. Signed-in users keep the
      avatar; theme + auth live in the sheet / Settings. */
