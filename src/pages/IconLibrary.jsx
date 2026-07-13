@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -10,6 +10,7 @@ import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
+import { openInNewTab } from '../utils/newTab'
 
 const API_LIMIT = 999
 
@@ -359,7 +360,6 @@ const JOIN_OPTS = [
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
 function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, onCopy, onPick }) {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { projects } = useProject()
   const { theme } = useTheme()
@@ -397,11 +397,17 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // In-panel upgrade prompt. 'line' = signed-out tap on a Pro line-style
   // control, 'copies' = non-Pro daily copy cap, 'save' = signed-out save
   // attempt (projects are account-scoped, so saving needs a sign-in first).
-  const [gate, setGate] = useState(null)
+  const [gateReq, setGate] = useState(null)
   const [savedState, setSavedState] = useState(() => (icon?.custom ? 'saved' : 'idle'))
   // Save-to-project picker: saving is a two-step flow — choose a project, then
   // write — so the free per-PROJECT icon cap can be enforced at pick time.
   const [savePickerOpen, setSavePickerOpen] = useState(false)
+
+  // Gate prompts open in a NEW tab so the edit in progress here survives.
+  // Firebase auth and the user-doc subscription snapshot both sync across
+  // tabs, so validity is DERIVED: once the user signs in over there, the
+  // 'save'/'line' asks are answered; going Pro answers them all.
+  const gate = isPro ? null : (user && (gateReq === 'save' || gateReq === 'line')) ? null : gateReq
   // Per-project custom-icon counts, read fresh each time the picker opens so
   // the "n/limit" badges reflect the live store.
   const projectCounts = useMemo(() => {
@@ -623,7 +629,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (!activeIcon || !baseSvgText) return
     const existing = readCustomIcons()
     const used = existing.filter(r => r.projectId === projectId).length
-    if (!isPro && used >= saveLimit) { setSavePickerOpen(false); navigate('/checkout'); return }
+    if (!isPro && used >= saveLimit) { setSavePickerOpen(false); openInNewTab('/checkout'); return }
     const base = activeIcon.custom ? activeIcon.base : (activeIcon.cdn || activeIcon.d ? activeIcon.name : 'icon')
     const { iteration, name } = nextCustomName(base, existing)
     const colored = isColoredPack || !!color || (activeIcon.pasted === true && !isStroke)
@@ -749,7 +755,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <div className="icust-seg icust-seg--icon">
                       {CAP_OPTS.map(o => (
                         <button key={o.v} type="button" className={cap === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={cap === o.v}
-                          onClick={() => { if (!isPro) { if (!user) { setGate('line'); return } navigate('/checkout'); return } setCap(o.v); markDirty() }}>
+                          onClick={() => { if (!isPro) { if (!user) { setGate('line'); return } openInNewTab('/checkout'); return } setCap(o.v); markDirty() }}>
                           {o.icon}
                         </button>
                       ))}
@@ -760,7 +766,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <div className="icust-seg icust-seg--icon">
                       {JOIN_OPTS.map(o => (
                         <button key={o.v} type="button" className={join === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={join === o.v}
-                          onClick={() => { if (!isPro) { if (!user) { setGate('line'); return } navigate('/checkout'); return } setJoin(o.v); markDirty() }}>
+                          onClick={() => { if (!isPro) { if (!user) { setGate('line'); return } openInNewTab('/checkout'); return } setJoin(o.v); markDirty() }}>
                           {o.icon}
                         </button>
                       ))}
@@ -771,7 +777,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       so the pitch comes before any sign-in ask. */}
                   {!isPro && (
                     <div className="icust-pro-veil">
-                      <Link className="ui-pill ui-pill-accent ui-pill-md" to="/plans">Upgrade to Pro</Link>
+                      <Link className="ui-pill ui-pill-accent ui-pill-md" to="/plans" target="_blank" rel="noopener">Upgrade to Pro</Link>
                     </div>
                   )}
                 </div>
@@ -865,9 +871,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </p>
               <div className="icust-gate-actions">
                 {user
-                  ? <Link className="ui-pill ui-pill-accent ui-pill-md" to="/checkout">Upgrade to Pro</Link>
-                  : <Link className="ui-pill ui-pill-accent ui-pill-md" to="/login">Get started free</Link>}
-                <Link className="ui-pill ui-pill-out ui-pill-md" to="/plans">See plans</Link>
+                  ? <Link className="ui-pill ui-pill-accent ui-pill-md" to="/checkout" target="_blank" rel="noopener">Upgrade to Pro</Link>
+                  : <Link className="ui-pill ui-pill-accent ui-pill-md" to="/login" target="_blank" rel="noopener">Get started free</Link>}
+                <Link className="ui-pill ui-pill-out ui-pill-md" to="/plans" target="_blank" rel="noopener">See plans</Link>
               </div>
               <button type="button" className="icust-gate-dismiss" onClick={() => setGate(null)}>Not now</button>
             </div>
@@ -915,7 +921,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   })}
                 </div>
               )}
-              {!isPro && <Link className="icust-upgrade" to="/plans">Upgrade for unlimited →</Link>}
+              {!isPro && <Link className="icust-upgrade" to="/plans" target="_blank" rel="noopener">Upgrade for unlimited →</Link>}
               <button type="button" className="icust-gate-dismiss" onClick={() => setSavePickerOpen(false)}>Cancel</button>
             </div>
           </div>
@@ -963,7 +969,6 @@ export default function IconLibrary({ onCopy, embedded }) {
   const { isPro, plan } = useSubscription()
   // Free-tier custom-icon allowance (Pro → Infinity). Single source: the plan.
   const customIconLimit = plan?.limits?.['custom-icons'] ?? Infinity
-  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [icons, setIcons] = useState([])      // full result set (browse or search)
   const [visible, setVisible] = useState(PAGE_SIZE)
@@ -1488,7 +1493,7 @@ export default function IconLibrary({ onCopy, embedded }) {
               {!isPro && (
                 <p className="ig-custom-hint">
                   Free plan saves up to {customIconLimit} icons per project ·{' '}
-                  <button type="button" className="ig-custom-hint-link" onClick={() => navigate('/checkout')}>Go Pro for unlimited</button>
+                  <button type="button" className="ig-custom-hint-link" onClick={() => openInNewTab('/checkout')}>Go Pro for unlimited</button>
                 </p>
               )}
             </section>
