@@ -74,3 +74,40 @@ export async function processImageForUpload(file, opts = {}) {
   const bytes = Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75)
   return { dataUrl, type: 'image/webp', width: w, height: h, bytes, converted: true }
 }
+
+/**
+ * Process an image File into a small square avatar: centre cover-crop, then
+ * downscale to `size` px. Returns a compact data URL small enough to live on
+ * the Firestore profile doc (a few KB) — no Firebase Storage involved.
+ * SVGs are rasterised here on purpose: avatars render in tiny circles, and a
+ * fixed raster keeps the stored payload predictable.
+ */
+export async function processAvatarImage(file, size = 128) {
+  if (!file || !file.type.startsWith('image/')) {
+    throw new Error('Please choose an image file')
+  }
+  if (file.size > DEFAULTS.maxSourceBytes) {
+    throw new Error(`Image is too large (max ${Math.round(DEFAULTS.maxSourceBytes / 1024 / 1024)} MB)`)
+  }
+  const img = await loadImage(await readAsDataURL(file))
+  const side = Math.min(img.width, img.height)
+  if (!side) throw new Error('Could not decode image')
+  const sx = (img.width - side) / 2
+  const sy = (img.height - side) / 2
+
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size)
+
+  let dataUrl = canvas.toDataURL('image/webp', 0.85)
+  if (!dataUrl.startsWith('data:image/webp')) {
+    // JPEG fallback can't do alpha — flatten transparency onto white first.
+    ctx.globalCompositeOperation = 'destination-over'
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, size, size)
+    dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+  }
+  return dataUrl
+}

@@ -1,6 +1,7 @@
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { processAvatarImage } from '../utils/imageProcessing'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -290,6 +291,31 @@ export default function Settings({ toast }) {
     }
   }
 
+  // Custom profile photo: any user can override their avatar. The picked file
+  // is centre-cropped + downscaled client-side to a few-KB data URL and saved
+  // through the existing updateProfile path (Firestore doc, cached, synced).
+  const avatarInputRef = useRef(null)
+  const providerPhoto = user?.providerData?.[0]?.photoURL || ''
+  const hasCustomPhoto = !!userProfile?.photoURL && userProfile.photoURL !== providerPhoto
+  const onAvatarFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // let the same file be re-picked later
+    if (!file) return
+    try {
+      const dataUrl = await processAvatarImage(file)
+      updateProfile({ photoURL: dataUrl })
+      toast('Profile photo updated')
+    } catch (err) {
+      toast(err?.message || 'Could not use that image')
+    }
+  }
+  // "Remove" restores the sign-in provider's photo (Google etc.), or the
+  // initial-letter avatar for email accounts.
+  const removeAvatar = () => {
+    updateProfile({ photoURL: providerPhoto })
+    toast(providerPhoto ? 'Photo reset to your account image' : 'Profile photo removed')
+  }
+
   // Jump to a section when navigated from the profile quick-menu.
   useEffect(() => {
     const section = location.state?.section
@@ -549,16 +575,32 @@ export default function Settings({ toast }) {
               </div>
               <div className="settings-card">
                 <div className="settings-profile">
-                  <div className="settings-profile-avatar">
+                  <button
+                    type="button"
+                    className="settings-profile-avatar settings-avatar-btn"
+                    onClick={() => avatarInputRef.current?.click()}
+                    aria-label="Change profile photo"
+                    title="Change profile photo"
+                  >
                     {userProfile?.photoURL ? (
                       <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
                     ) : (
                       <span>{(userProfile?.displayName || user.email || 'U')[0].toUpperCase()}</span>
                     )}
-                  </div>
+                    <span className="settings-avatar-edit" aria-hidden="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                        <circle cx="12" cy="13" r="3" />
+                      </svg>
+                    </span>
+                  </button>
+                  <input ref={avatarInputRef} type="file" accept="image/*" onChange={onAvatarFile} hidden />
                   <div className="settings-profile-info">
                     <div className="settings-profile-name">{userProfile?.displayName || 'Welcome'}</div>
                     <div className="settings-profile-email">{user.email}</div>
+                    {hasCustomPhoto && (
+                      <button type="button" className="settings-avatar-remove" onClick={removeAvatar}>Remove photo</button>
+                    )}
                   </div>
                   <button className="btn btn-s" onClick={logout}>Sign out</button>
                 </div>
