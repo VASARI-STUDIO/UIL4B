@@ -56,7 +56,7 @@ const QUICK_ACTIONS = {
     { label: 'Compress for web', desc: 'Reduce JPG/PNG file size', to: '/file-converter' },
     { label: 'Convert to WebP', desc: 'Modern format, smaller files', to: '/file-converter' },
     { label: 'Extract video frames', desc: 'Pull stills from MP4/MOV', to: '/file-converter' },
-    { label: 'Aspect ratio calculator', desc: 'Solve dimensions for any ratio', to: '/ratio' },
+    { label: 'Aspect & resolution calculator', desc: 'Devices, ratios, PPI & diagonals', to: '/ratio' },
   ],
   'icons-emoji': [
     { label: 'Search outline icons', desc: 'Iconify-powered, copy as SVG', to: '/icons' },
