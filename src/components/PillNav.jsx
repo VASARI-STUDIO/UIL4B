@@ -14,15 +14,15 @@ import NavIcon from './NavIcon'
 const CommandPalette = lazy(() => import('./CommandPalette'))
 const ExportPanel = lazy(() => import('./ExportPanel'))
 
-// The rebuilt marketing / app nav: a floating pill bar with three mega-menus
-// (Create / Discover / Learn) driven entirely by src/data/toolTree.js, so the
-// menu can never drift from the router. One shared panel morphs width per
+// The marketing / app nav: a fixed, full-width standard-SaaS top bar with three
+// mega-menus (Create / Discover / Learn) driven entirely by src/data/toolTree.js,
+// so the menu can never drift from the router. One shared panel morphs width per
 // section (Coolors-footer homage) and carries a right-hand promo card; on mobile
-// it becomes a full-screen sheet with accordions. The right cluster holds a
-// hover-expand search (reusing the CommandPalette index), an Export shell, a Gear
-// quick-preferences popover (day/night + link to full Settings) and an Avatar
-// account popover. Auth + subscription are read ONLY — to decide account vs.
-// upgrade CTA and to gate the admin link's *visibility* — never written here.
+// it becomes a full-screen sheet with accordions. The centre holds the search
+// field (reusing the CommandPalette index); the right cluster holds the Export
+// shell, the auth/upgrade CTAs and the Avatar account popover. Auth +
+// subscription are read ONLY — to decide account vs. upgrade CTA and to gate the
+// admin link's *visibility* — never written here.
 //
 // State is set exclusively from user events (click / hover / scroll / key), never
 // synchronously inside an effect, so we stay clear of the `set-state-in-effect`
@@ -230,10 +230,9 @@ export default function PillNav() {
   const navRef = useRef(null)
   const menuRef = useRef(null)
   const closeTimer = useRef(null)
-  // Opening/closing the menu can resize the bar (the sales pill expands), which
-  // slides the section triggers under a stationary cursor. Chrome re-fires
-  // mouseenter for whichever trigger lands there, flipping the menu the user
-  // never pointed at. Arm this lock on any open/close layout shift and ignore
+  // If opening/closing the menu ever shifts layout under a stationary cursor,
+  // Chrome re-fires mouseenter for whichever trigger lands there, flipping the
+  // menu the user never pointed at. Arm this lock on any open/close and ignore
   // hover-opens until a real mousemove proves the cursor actually travelled.
   const hoverLock = useRef(false)
   // How the current mega-menu got opened ('hover' | 'click') — a click on a
@@ -246,7 +245,8 @@ export default function PillNav() {
   const accountEmail = userProfile?.email || user?.email || ''
   const initialsStr = initials(userProfile, user)
 
-  // Shrink the bar once the page scrolls; listener only, no state-in-effect.
+  // Firm up the bar (opaque glass + shadow) once the page scrolls; listener
+  // only, no state-in-effect.
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
     onScroll()
@@ -376,8 +376,8 @@ export default function PillNav() {
 
           {/* Search — prominent field centred in the bar (Mobbin reference).
               Clicking it opens the full command palette, which reuses the same
-              search index. On sales routes it hides at rest (the resting pill
-              leads with the three menus + Get Pro) and reveals with the bar. */}
+              search index. On sales routes the field hides on desktop (the bar
+              leads with the three menus + Get Pro); the / shortcut still works. */}
           <div className="pnav-search">
             <button
               type="button"
@@ -424,18 +424,16 @@ export default function PillNav() {
               </button>
             )}
 
-            {/* Conversion + auth CTAs. On sales pages the upgrade path is the
-                primary action, so it's always visible as a solid "Get Pro" pill;
-                elsewhere it stays collapsed until the bar expands on hover /
-                focus (the Upgrade path also lives in the account popover, so
-                hiding it at rest never orphans it). */}
+            {/* Conversion + auth CTAs — always visible on the fixed bar. Sales
+                pages label the upgrade path "Get Pro" (the primary action there);
+                app routes call it "Upgrade". */}
             {user && !isPro && (
               isSalesPage ? (
                 <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/plans" onClick={closeAll}>
                   Get Pro
                 </Link>
               ) : (
-                <Link className="ui-pill ui-pill-accent ui-pill-sm pnav-cta-reveal" to="/plans" onClick={closeAll}>
+                <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/plans" onClick={closeAll}>
                   Upgrade
                 </Link>
               )
@@ -443,20 +441,18 @@ export default function PillNav() {
 
             {!user && (
               <>
-                <Link className="ui-pill ui-pill-ghost ui-pill-sm pnav-cta-reveal" to="/login" onClick={closeAll}>
+                <Link className="ui-pill ui-pill-ghost ui-pill-sm" to="/login" onClick={closeAll}>
                   Log in
                 </Link>
-                <Link className="ui-pill ui-pill-accent ui-pill-sm pnav-cta-reveal" to="/login" onClick={closeAll}>
+                <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/login" onClick={closeAll}>
                   Get started
                 </Link>
               </>
             )}
 
-            {/* Profile — the avatar sits hidden at rest and reveals as the whole
-                pill expands on hover / focus (or when the menu is pinned open).
-                Hovering it darkens/blurs the photo and overlays a settings cog to
-                signal that account AND preferences now live behind it. It opens the
-                merged account+settings popover. */}
+            {/* Profile — hovering the avatar darkens/blurs the photo and overlays
+                a settings cog to signal that account AND preferences live behind
+                it. It opens the merged account+settings popover. */}
             {user && (
               <div className="pnav-util">
                 <div className="pnav-pop-wrap">
@@ -541,8 +537,7 @@ export default function PillNav() {
             {/* Compact "more" affordance — signed-out only. Signed-in users get the
                 always-visible avatar instead (Mobbin pattern), so the meatball here
                 carries the theme toggle + auth links so preferences stay reachable
-                for visitors. It collapses away once the pill expands, except while
-                its own popover is open. */}
+                for visitors. */}
             {!user && (
               <div className="pnav-pop-wrap pnav-more-wrap">
                 <button
