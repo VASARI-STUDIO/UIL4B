@@ -79,7 +79,7 @@ export const CREATE_GROUPS = [
     soon: false,
     tools: [
       { id: 'file-converter', label: 'File Converter', route: '/file-converter', soon: false },
-      { id: 'ratio', label: 'Aspect Ratio', route: '/ratio', soon: false },
+      { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', soon: false },
     ],
   },
   {
@@ -172,7 +172,7 @@ const CREATE_MENU = [
       label: 'Media & AI',
       tools: [
         { id: 'file-converter', label: 'File Converter', route: '/file-converter', icon: 'imagery', hue: 'imagery', soon: false },
-        { id: 'ratio', label: 'Aspect Ratio', route: '/ratio', icon: 'ratio', hue: 'imagery', soon: false },
+        { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', icon: 'ratio', hue: 'imagery', soon: false },
         { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: false },
         { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: false },
         { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
