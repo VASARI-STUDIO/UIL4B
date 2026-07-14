@@ -25,10 +25,12 @@ import { useClipboard } from '../hooks/useClipboard'
 // and flips between the two libraries via a large segmented pill title.
 const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 
-// Colour — /color is the merged full studio; palette/semantic/ui/gradient are
-// the SAME studio focused on their section (ColorStudio reads the pathname),
-// while tint + contrast are light standalone pages built on the same colour maths.
+// Colour — /color is the merged full studio; semantic/ui/gradient are the SAME
+// studio focused on their section (ColorStudio reads the pathname). Palette is
+// its own full-bleed workbench, and tint + contrast are light standalone pages —
+// all built on the same colour maths.
 const ColorStudio = lazy(() => import('./ColorStudio'))
+const PaletteBuilder = lazy(() => import('./PaletteBuilder'))
 const TintTool = lazy(() => import('./TintTool'))
 const ContrastChecker = lazy(() => import('./ContrastChecker'))
 
@@ -43,7 +45,7 @@ const RatioCalculator = lazy(() => import('./RatioCalculator'))
 // fallback that can never mount a half-finished screen.
 const LIVE_TOOLS = {
   '/color': ColorStudio,
-  '/color/palette': ColorStudio,
+  '/color/palette': PaletteBuilder,
   '/color/semantic': ColorStudio,
   '/color/ui': ColorStudio,
   '/color/gradient': ColorStudio,
