@@ -4461,9 +4461,12 @@ html.lenis,html.lenis body{height:auto}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
 .pnav-actions{display:flex;align-items:center;gap:8px;transition:gap var(--dur-3) var(--ease-inout)}
 /* Sales-page "Start for Free" pill — hidden until the visitor scrolls to
-   section 2 (#create); PillNav toggles .is-waiting from the scroll listener. */
-.pnav-cta{transition:opacity var(--dur-3) var(--ease-out),transform var(--dur-3) var(--ease-out),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.pnav-cta.is-waiting{opacity:0;transform:translateY(-6px);pointer-events:none}
+   section 2 (#create); PillNav toggles .is-waiting from the scroll listener.
+   While waiting the pill also collapses its width (max-width + padding, and
+   margin-left eats the flex gap) so "Log in" nests flush against the right
+   cluster, then slides left as the pill expands in on scroll. */
+.pnav-cta{max-width:150px;overflow:hidden;transition:opacity var(--dur-3) var(--ease-out),transform var(--dur-3) var(--ease-out),max-width var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),margin var(--dur-3) var(--ease-inout),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-cta.is-waiting{opacity:0;transform:translateY(-6px);max-width:0;padding-left:0;padding-right:0;margin-left:-8px;pointer-events:none}
 .pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
@@ -4526,6 +4529,10 @@ html.lenis,html.lenis body{height:auto}
 .pnav-pop-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .pnav-pop-item svg{flex:0 0 auto;color:var(--t2)}
+.pnav-pop-kbd{margin-left:auto}
+.pnav-pop-item--accent{color:var(--accent);font-weight:600}
+.pnav-pop-item--accent svg{color:var(--accent)}
+.pnav-pop-item--accent:hover{background:color-mix(in srgb,var(--accent) 12%,var(--bg-1));color:var(--accent)}
 .pnav-pop-item--danger{color:var(--danger,#dc2626)}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--danger,#dc2626) 12%,var(--bg-1));color:var(--danger,#dc2626)}
 .pnav-pop--account{width:280px}

@@ -105,6 +105,22 @@
     "documentation": {
       "label": "Documentation",
       "description": "Design principles, marketing references, and external resources."
+    },
+    "iconsEmoji": {
+      "label": "Icons & Emoji",
+      "description": "Search thousands of icons and browse emoji to copy instantly."
+    },
+    "uiBuilder": {
+      "label": "UI Builder",
+      "description": "Design dashboard components with live previews and CSS export."
+    },
+    "ai": {
+      "label": "AI Tools",
+      "description": "AI-powered generators for images, alt text, and more."
+    },
+    "resources": {
+      "label": "Resources",
+      "description": "Curated external tools, fonts, colours, and inspiration."
     }
   },
   "tools": {
