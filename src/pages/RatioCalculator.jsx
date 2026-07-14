@@ -13,6 +13,15 @@ function gcd(a, b) { return b === 0 ? a : gcd(b, Math.abs(a % b)) }
 function round(n) { return Math.round(n * 100) / 100 }
 function round1(n) { return Math.round(n * 10) / 10 }
 
+// GCD-reduced ratios whose conventional name is the unreduced form — designers
+// say "16:10" and "21:9", never "8:5" or "7:3".
+const CANONICAL = { '8:5': '16:10', '5:8': '10:16', '7:3': '21:9', '3:7': '9:21' }
+function ratioLabel(w, h) {
+  const g = gcd(w, h) || 1
+  const r = `${w / g}:${h / g}`
+  return CANONICAL[r] || r
+}
+
 // ── Preset data ─────────────────────────────────────────────────────────────
 // Devices: physical pixel resolution + manufacturer PPI (diagonal is derived,
 // so it always agrees with the numbers shown).
@@ -107,17 +116,15 @@ const DEVICE_OPTIONS = DEVICES.map(d => ({
   meta: `${d.w} × ${d.h} · ${d.ppi} PPI · ${round1(Math.hypot(d.w, d.h) / d.ppi)}″`,
 }))
 const SCREEN_OPTIONS = SCREENS.map(s => {
-  const g = gcd(s.w, s.h) || 1
   const ppi = Math.round(Math.hypot(s.w, s.h) / s.diag)
-  return { ...s, ppi, meta: `${s.w} × ${s.h} · ${s.w / g}:${s.h / g} · ${ppi} PPI @ ${s.diag}″` }
+  return { ...s, ppi, meta: `${s.w} × ${s.h} · ${ratioLabel(s.w, s.h)} · ${ppi} PPI @ ${s.diag}″` }
 })
-const SOCIAL_OPTIONS = SOCIAL.map(s => {
-  const g = gcd(s.w, s.h) || 1
-  return { ...s, ppi: 72, meta: `${s.w} × ${s.h} · ${s.w / g}:${s.h / g} · 72 PPI export` }
-})
+const SOCIAL_OPTIONS = SOCIAL.map(s => (
+  { ...s, ppi: 72, meta: `${s.w} × ${s.h} · ${ratioLabel(s.w, s.h)} · 72 PPI export` }
+))
 const RATIO_OPTIONS = RATIOS.map(r => ({ ...r, meta: r.use }))
 
-const TABS = ['Devices', 'Screens', 'Social', 'Ratios']
+const TABS = ['Ratios', 'Devices', 'Screens', 'Social']
 
 // A tiny box drawn at the option's true aspect ratio — the visual cue that
 // makes the dropdowns scannable without reading a single number.
@@ -200,28 +207,29 @@ export default function RatioCalculator({ onCopy }) {
   // Aspect ratio (W:H) + one known dimension → everything else.
   const [rw, setRw] = useState('1920')
   const [rh, setRh] = useState('1080')
-  const [side, setSide] = useState('width') // which dimension the user is entering
+  const [side, setSide] = useState('width') // 'width' | 'height' | 'both' — what the user knows
   const [known, setKnown] = useState('1920')
   const [ppi, setPpi] = useState('92') // Full HD @ 24″ default, editable/clearable
-  const [tab, setTab] = useState('Devices')
+  const [tab, setTab] = useState('Ratios')
 
   const ratioW = Number(rw) || 0
   const ratioH = Number(rh) || 0
   const validRatio = ratioW > 0 && ratioH > 0
 
+  // In 'both' mode the ratio inputs hold the full pixel size and `known` tracks
+  // the width, so the width branch below returns the typed size unchanged.
   const out = useMemo(() => {
     const k = Number(known) || 0
     if (!validRatio || k <= 0) return null
-    return side === 'width'
-      ? { width: k, height: round(k * ratioH / ratioW) }
-      : { width: round(k * ratioW / ratioH), height: k }
+    return side === 'height'
+      ? { width: round(k * ratioW / ratioH), height: k }
+      : { width: k, height: round(k * ratioH / ratioW) }
   }, [known, side, ratioW, ratioH, validRatio])
 
   const simplified = useMemo(() => {
     if (!validRatio) return null
     if (!Number.isInteger(ratioW) || !Number.isInteger(ratioH)) return `${round(ratioW / ratioH)}:1`
-    const g = gcd(ratioW, ratioH) || 1
-    return `${ratioW / g}:${ratioH / g}`
+    return ratioLabel(ratioW, ratioH)
   }, [ratioW, ratioH, validRatio])
 
   // "131:284" is exact but unhelpful — always offer the nearest standard too.
@@ -252,16 +260,21 @@ export default function RatioCalculator({ onCopy }) {
     if (out && d > 0) setPpi(String(Math.round(Math.hypot(out.width, out.height) / d)))
   }
 
-  // Reverse: from a known W × H, derive the exact + nearest-standard ratio.
-  const [pw, setPw] = useState('')
-  const [ph, setPh] = useState('')
-  const fromDims = useMemo(() => {
-    const a = Math.round(Number(pw) || 0)
-    const b = Math.round(Number(ph) || 0)
-    if (a <= 0 || b <= 0) return null
-    const g = gcd(a, b) || 1
-    return { ratio: `${a / g}:${b / g}`, decimal: round(a / b), near: nearestCommon(a, b) }
-  }, [pw, ph])
+  // Switching to "Width × height" (the old reverse finder) seeds the size
+  // inputs from the current result so the numbers carry over, and keeps the
+  // known-width invariant (rw === known) that makes `out` echo the typed size.
+  const pickSide = (s) => {
+    if (s === 'both') {
+      if (out) {
+        setRw(String(out.width))
+        setRh(String(out.height))
+        setKnown(String(out.width))
+      } else {
+        setKnown(rw)
+      }
+    }
+    setSide(s)
+  }
 
   // Visualiser box — constrained so extreme ratios still fit the panel.
   const vis = useMemo(() => {
@@ -276,16 +289,28 @@ export default function RatioCalculator({ onCopy }) {
   const applyPixel = (p) => {
     setRw(String(p.w))
     setRh(String(p.h))
-    setSide('width')
+    setSide(s => (s === 'both' ? s : 'width')) // both-mode already shows the full size
     setKnown(String(p.w))
     if (p.ppi) setPpi(String(p.ppi))
   }
   const applyRatio = (r) => {
+    if (side === 'both' && out) {
+      // The user typed a size — keep their width and re-derive the height.
+      const h = Math.max(1, Math.round(out.width * r.h / r.w))
+      setRw(String(out.width))
+      setRh(String(h))
+      setKnown(String(out.width))
+      return
+    }
     setRw(String(r.w))
     setRh(String(r.h))
   }
 
-  const flip = () => { setRw(rh); setRh(rw) }
+  const flip = () => {
+    setRw(rh)
+    setRh(rw)
+    if (side === 'both') setKnown(rh)
+  }
   const copy = (v) => onCopy?.(v)
 
   // Dropdown selections are DERIVED from the live values, so hand-editing the
@@ -374,38 +399,66 @@ export default function RatioCalculator({ onCopy }) {
             </div>
           )}
 
-          <div className="rc-field">
-            <div className="seg-label">Aspect ratio</div>
-            <div className="rc-ratio-row">
-              <input type="number" min="0" value={rw} onChange={e => setRw(e.target.value)} aria-label="Ratio width" />
-              <button type="button" className="rc-flip" onClick={flip} title="Swap width and height" aria-label="Swap width and height">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M8 3 4 7l4 4" /><path d="M4 7h16" /><path d="m16 21 4-4-4-4" /><path d="M20 17H4" />
-                </svg>
-              </button>
-              <input type="number" min="0" value={rh} onChange={e => setRh(e.target.value)} aria-label="Ratio height" />
-              {simplified && (
-                <span className="rc-simplified">
-                  = {simplified}
-                  {nearest && nearest.label !== simplified && nearest.off < 2 && (
-                    <small> ≈ {nearest.label}</small>
-                  )}
-                </span>
-              )}
+          {side !== 'both' && (
+            <div className="rc-field">
+              <div className="seg-label">Aspect ratio</div>
+              <div className="rc-ratio-row">
+                <input type="number" min="0" value={rw} onChange={e => setRw(e.target.value)} aria-label="Ratio width" />
+                <button type="button" className="rc-flip" onClick={flip} title="Swap width and height" aria-label="Swap width and height">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M8 3 4 7l4 4" /><path d="M4 7h16" /><path d="m16 21 4-4-4-4" /><path d="M20 17H4" />
+                  </svg>
+                </button>
+                <input type="number" min="0" value={rh} onChange={e => setRh(e.target.value)} aria-label="Ratio height" />
+                {simplified && (
+                  <span className="rc-simplified">
+                    = {simplified}
+                    {nearest && nearest.label !== simplified && nearest.off < 2 && (
+                      <small> ≈ {nearest.label}</small>
+                    )}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="rc-field">
             <div className="seg-label">I know the…</div>
             <div className="rc-known">
               <div className="row" style={{ gap: 6 }}>
-                <button type="button" className={`pt-t${side === 'width' ? ' on' : ''}`} onClick={() => setSide('width')}>Width</button>
-                <button type="button" className={`pt-t${side === 'height' ? ' on' : ''}`} onClick={() => setSide('height')}>Height</button>
+                <button type="button" className={`pt-t${side === 'width' ? ' on' : ''}`} onClick={() => pickSide('width')}>Width</button>
+                <button type="button" className={`pt-t${side === 'height' ? ' on' : ''}`} onClick={() => pickSide('height')}>Height</button>
+                <button type="button" className={`pt-t${side === 'both' ? ' on' : ''}`} onClick={() => pickSide('both')}>Width × height</button>
               </div>
-              <input
-                type="number" min="0" value={known} onChange={e => setKnown(e.target.value)}
-                aria-label={`Known ${side} in pixels`} placeholder={`${side} in px`}
-              />
+              {side === 'both'
+                ? (
+                  <div className="rc-ratio-row">
+                    <input
+                      type="number" min="0" value={rw}
+                      onChange={e => { setRw(e.target.value); setKnown(e.target.value) }}
+                      placeholder="width" aria-label="Width in pixels"
+                    />
+                    <span className="rc-colon">×</span>
+                    <input
+                      type="number" min="0" value={rh} onChange={e => setRh(e.target.value)}
+                      placeholder="height" aria-label="Height in pixels"
+                    />
+                    {simplified && (
+                      <span className="rc-simplified">
+                        = {simplified}
+                        {nearest && nearest.label !== simplified && nearest.off < 2 && (
+                          <small> ≈ {nearest.label}</small>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )
+                : (
+                  <input
+                    type="number" min="0" value={known} onChange={e => setKnown(e.target.value)}
+                    aria-label={`Known ${side} in pixels`} placeholder={`${side} in px`}
+                  />
+                )}
             </div>
           </div>
 
@@ -429,39 +482,52 @@ export default function RatioCalculator({ onCopy }) {
             </div>
           </div>
 
-          {out && (
-            <div className="rc-result">
-              <div className="rc-result-dims">
-                <button className="rc-dim" onClick={() => copy(String(out.width))} title="Copy width">{out.width}<small>W</small></button>
-                <span className="rc-times">×</span>
-                <button className="rc-dim" onClick={() => copy(String(out.height))} title="Copy height">{out.height}<small>H</small></button>
-              </div>
-              <button className="btn btn-s" onClick={() => copy(`${out.width} × ${out.height}`)}>Copy size</button>
-            </div>
-          )}
-
           {out && diag && (
-            <div className="arc-stats">
-              <button className="arc-stat" onClick={() => copy(simplified || '')} title="Copy ratio">
-                <span className="arc-stat-k">Ratio</span>
-                <span className="arc-stat-v">{simplified}</span>
-              </button>
-              <button className="arc-stat" onClick={() => copy(`${diag.px}px`)} title="Copy diagonal in pixels">
-                <span className="arc-stat-k">Diagonal</span>
-                <span className="arc-stat-v">{diag.px.toLocaleString()} px</span>
-              </button>
-              {diag.inches !== null && (
-                <button className="arc-stat" onClick={() => copy(`${diag.inches}"`)} title="Copy diagonal in inches">
-                  <span className="arc-stat-k">Diagonal ″</span>
-                  <span className="arc-stat-v">{diag.inches}″</span>
+            <div className="rc-out">
+              <div className="seg-label">Result</div>
+              <div className="rc-out-size">
+                <div className="rc-result-dims">
+                  <button className="rc-dim" onClick={() => copy(String(out.width))} title="Copy width">{out.width}<small>W</small></button>
+                  <span className="rc-times">×</span>
+                  <button className="rc-dim" onClick={() => copy(String(out.height))} title="Copy height">{out.height}<small>H</small></button>
+                </div>
+                <button className="btn btn-s" onClick={() => copy(`${out.width} × ${out.height}`)}>Copy size</button>
+              </div>
+              <div className="arc-stats">
+                <button className="arc-stat" onClick={() => copy(simplified || '')} title="Copy ratio">
+                  <span className="arc-stat-k">Ratio</span>
+                  <span className="arc-stat-v">{simplified}</span>
+                  {nearest && nearest.label !== simplified && nearest.off < 2 && (
+                    <span className="arc-stat-sub">≈ {nearest.label}{nearest.off >= 0.05 ? ` · ${round(nearest.off)}% off` : ''}</span>
+                  )}
                 </button>
-              )}
-              {diag.physW !== null && (
-                <button className="arc-stat" onClick={() => copy(`${diag.physW}" × ${diag.physH}"`)} title="Copy physical size">
-                  <span className="arc-stat-k">Physical</span>
-                  <span className="arc-stat-v">{diag.physW}″ × {diag.physH}″</span>
+                <button className="arc-stat" onClick={() => copy(String(round(ratioW / ratioH)))} title="Copy decimal ratio">
+                  <span className="arc-stat-k">Decimal</span>
+                  <span className="arc-stat-v">{round(ratioW / ratioH)}</span>
                 </button>
-              )}
+                {orientation && (
+                  <button className="arc-stat" onClick={() => copy(orientation)} title="Copy orientation">
+                    <span className="arc-stat-k">Orientation</span>
+                    <span className="arc-stat-v">{orientation}</span>
+                  </button>
+                )}
+                <button className="arc-stat" onClick={() => copy(`${diag.px}px`)} title="Copy diagonal in pixels">
+                  <span className="arc-stat-k">Diagonal</span>
+                  <span className="arc-stat-v">{diag.px.toLocaleString()} px</span>
+                </button>
+                {diag.inches !== null && (
+                  <button className="arc-stat" onClick={() => copy(`${diag.inches}"`)} title="Copy diagonal in inches">
+                    <span className="arc-stat-k">Diagonal ″</span>
+                    <span className="arc-stat-v">{diag.inches}″</span>
+                  </button>
+                )}
+                {diag.physW !== null && (
+                  <button className="arc-stat" onClick={() => copy(`${diag.physW}" × ${diag.physH}"`)} title="Copy physical size">
+                    <span className="arc-stat-k">Physical</span>
+                    <span className="arc-stat-v">{diag.physW}″ × {diag.physH}″</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -486,27 +552,6 @@ export default function RatioCalculator({ onCopy }) {
               )
               : <div className="rc-vis-empty">Enter a valid ratio</div>}
           </div>
-        </div>
-      </div>
-
-      {/* Reverse */}
-      <div className="card rc-panel rc-reverse">
-        <div className="seg-label">Find the ratio from a size</div>
-        <div className="rc-ratio-row">
-          <input type="number" min="0" value={pw} onChange={e => setPw(e.target.value)} placeholder="width" aria-label="Width in pixels" />
-          <span className="rc-colon">×</span>
-          <input type="number" min="0" value={ph} onChange={e => setPh(e.target.value)} placeholder="height" aria-label="Height in pixels" />
-          {fromDims && (
-            <button className="rc-simplified rc-simplified-btn" onClick={() => copy(fromDims.ratio)} title="Copy ratio">
-              = {fromDims.ratio} <small>({fromDims.decimal})</small>
-            </button>
-          )}
-          {fromDims?.near && fromDims.near.label !== fromDims.ratio && (
-            <span className="arc-near">
-              closest standard <strong>{fromDims.near.label}</strong>
-              {fromDims.near.off >= 0.05 && <small> · {round(fromDims.near.off)}% off</small>}
-            </span>
-          )}
         </div>
       </div>
     </div>
