@@ -94,6 +94,51 @@ function GearIcon() {
   )
 }
 
+function TagIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12.6 2.6 21 11a2 2 0 0 1 0 2.8L13.8 21a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6Z" />
+      <circle cx="7.5" cy="7.5" r="1.25" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function HelpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.8-2.7 2.3-2.7 3.8" />
+      <circle cx="12" cy="17.3" r=".5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function FeedbackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
+function LoginArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <path d="m10 17 5-5-5-5" />
+      <path d="M15 12H3" />
+    </svg>
+  )
+}
+
+function SparkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
+    </svg>
+  )
+}
+
 function SunIcon() {
   return (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
@@ -512,7 +557,16 @@ export default function PillNav() {
                         <span>Account &amp; settings</span>
                       </Link>
                       <Link className="pnav-pop-item" role="menuitem" to={isPro ? '/settings' : '/plans'} state={isPro ? { section: 'support' } : undefined} onClick={closeAll}>
-                        {isPro ? 'Manage plan' : 'Plans & upgrade'}
+                        <TagIcon />
+                        <span>{isPro ? 'Manage plan' : 'Plans & upgrade'}</span>
+                      </Link>
+                      <Link className="pnav-pop-item" role="menuitem" to="/help" onClick={closeAll}>
+                        <HelpIcon />
+                        <span>Help centre</span>
+                      </Link>
+                      <Link className="pnav-pop-item" role="menuitem" to="/feedback" onClick={closeAll}>
+                        <FeedbackIcon />
+                        <span>Send feedback</span>
                       </Link>
                       {isAdmin && (
                         <Link className="pnav-pop-item" role="menuitem" to="/admin" onClick={closeAll}>
@@ -569,11 +623,31 @@ export default function PillNav() {
                     <p className="pnav-pop-head">Appearance</p>
                     <ThemeSeg theme={theme} setTheme={setTheme} />
                     <div className="pnav-pop-sep" />
-                    <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
-                      Log in
+                    <button type="button" className="pnav-pop-item" onClick={openSearch}>
+                      <SearchIcon />
+                      <span>Search tools</span>
+                      <kbd className="pnav-search-kbd pnav-pop-kbd" aria-hidden="true">/</kbd>
+                    </button>
+                    <Link className="pnav-pop-item" to="/plans" onClick={closeAll}>
+                      <TagIcon />
+                      <span>Pricing &amp; plans</span>
                     </Link>
+                    <Link className="pnav-pop-item" to="/help" onClick={closeAll}>
+                      <HelpIcon />
+                      <span>Help centre</span>
+                    </Link>
+                    <Link className="pnav-pop-item" to="/feedback" onClick={closeAll}>
+                      <FeedbackIcon />
+                      <span>Send feedback</span>
+                    </Link>
+                    <div className="pnav-pop-sep" />
                     <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
-                      Start for Free
+                      <LoginArrowIcon />
+                      <span>Log in</span>
+                    </Link>
+                    <Link className="pnav-pop-item pnav-pop-item--accent" to="/login" onClick={closeAll}>
+                      <SparkIcon />
+                      <span>Start for Free</span>
                     </Link>
                   </div>
                 )}
