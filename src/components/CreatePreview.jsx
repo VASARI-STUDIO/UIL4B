@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import SnapSlider from './SnapSlider'
 
 // Live, working micro-tools for the homepage Create section. Each CREATE system
 // (colour, type, component, imagery, ai, icons) gets a genuinely interactive
@@ -219,14 +220,16 @@ function ComponentTool() {
       </div>
       <div className="prev-controls cm-controls">
         <label className="cm-slider">
-          <span className="prev-hint">Radius {radius}px</span>
-          <input
-            type="range"
-            min="0"
-            max="24"
+          <span className="prev-hint">Radius</span>
+          <SnapSlider
+            min={0}
+            max={24}
             value={radius}
-            aria-label="Corner radius"
-            onChange={(e) => setRadius(Number(e.target.value))}
+            defaultValue={12}
+            snaps={[0, 6, 12, 18, 24]}
+            unit="px"
+            ariaLabel="Corner radius"
+            onChange={setRadius}
           />
         </label>
         <div className="cm-swatches" role="group" aria-label="Accent colour">

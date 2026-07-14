@@ -10,6 +10,7 @@ import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
+import SnapSlider from '../components/SnapSlider'
 import { extractColorPointsFromImage } from '../utils/extractColors'
 import { COLOR_LIBRARIES, findClosestNamedColor } from '../data/namedColors'
 
@@ -216,10 +217,6 @@ function TintSwatch({ color, label, onCopy }) {
       )}
     </div>
   )
-}
-
-function snap(value, target, threshold = 3) {
-  return Math.abs(value - target) <= threshold ? target : value
 }
 
 // ── Slice 2 surfaces ──────────────────────────────────────────────────────
@@ -1763,6 +1760,10 @@ const COLOUR_TOOLS = [
   { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', desc: 'Verify AA / AAA' },
 ]
 
+// /color/<tool> route → the single studio section that route renders (#39).
+const PATH_TO_SECTION = { palette: 'palette', semantic: 'states', ui: 'systems', gradient: 'gradients' }
+const SOLO_TITLES = { palette: 'Palette Builder', states: 'UI State Colours', systems: 'Design Systems', gradients: 'Gradient Tool' }
+
 export default function ColorStudio({ onCopy, toast }) {
   const { t } = useI18n()
   const { theme } = useTheme()
@@ -1902,24 +1903,26 @@ export default function ColorStudio({ onCopy, toast }) {
 
   // ── Route focus: /color/<tool> ──
   // The section tools (palette / semantic / ui / gradient) are real routes that
-  // mount THIS studio focused on their section: expand it, collapse the rest,
-  // scroll to it. Tracked by segment (not one-shot) — the dispatcher renders the
-  // same element type for every /color route, so switching tools in the nav
-  // re-runs this without remounting, and plain /color restores the full page.
+  // mount THIS studio as a true standalone page: ONLY their section renders
+  // (soloSection), the pill nav is hidden, and the page title becomes the
+  // tool's own. Plain /color keeps the full merged studio. Tracked by segment
+  // (not one-shot) — the dispatcher renders the same element type for every
+  // /color route, so switching tools in the nav re-runs this without
+  // remounting.
   const { pathname } = useLocation()
+  const pathSeg = /^\/color\/([a-z-]+)/i.exec(pathname)?.[1]?.toLowerCase() || null
+  const soloSection = pathSeg ? (PATH_TO_SECTION[pathSeg] || 'palette') : null
   const pathToolRef = useRef(null)
   useEffect(() => {
-    const seg = /^\/color\/([a-z-]+)/i.exec(pathname)?.[1]?.toLowerCase() || null
-    if (!seg) {
+    if (!pathSeg) {
       // Back on /color proper: reopen everything so the merged studio is whole.
       if (pathToolRef.current) { pathToolRef.current = null; setCollapsed({}) }
       return
     }
-    if (seg === pathToolRef.current) return
-    pathToolRef.current = seg
-    const PATH_TO_SECTION = { palette: 'palette', semantic: 'states', ui: 'systems', gradient: 'gradients' }
-    focusSection(PATH_TO_SECTION[seg] || 'palette')
-  }, [pathname, focusSection])
+    if (pathSeg === pathToolRef.current) return
+    pathToolRef.current = pathSeg
+    focusSection(PATH_TO_SECTION[pathSeg] || 'palette')
+  }, [pathSeg, focusSection])
 
   // ── Nav deep-link: ?tool=<id> (legacy) ──
   // Old external links still arrive as /color?tool=<id>; keep honouring them.
@@ -2159,6 +2162,9 @@ export default function ColorStudio({ onCopy, toast }) {
   }, [])
 
   useEffect(() => {
+    // Spacebar randomise belongs to the Palette Builder — don't fire it on a
+    // standalone tool page where that section isn't even rendered (#39).
+    if (soloSection && soloSection !== 'palette') return
     const onKey = (e) => {
       if (e.code !== 'Space') return
       const tag = e.target.tagName
@@ -2168,7 +2174,7 @@ export default function ColorStudio({ onCopy, toast }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [randomize])
+  }, [randomize, soloSection])
 
   const activeColor = allColors[activeColorIdx] || allColors[0]
 
@@ -2903,7 +2909,7 @@ ${stateVars}
     <div className="sec">
       <div className="sec-h">
         <div className="sec-h-eyebrow">Colour</div>
-        <h1>{t('color.title')}</h1>
+        <h1>{soloSection ? SOLO_TITLES[soloSection] : t('color.title')}</h1>
         <p>{t('tools.colorStudio.description')}</p>
         {canSaveProjects && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'sticky', bottom: 16, zIndex: 20, background: 'var(--card)', padding: '10px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--warm-shadow-lg)' }}>
@@ -2950,20 +2956,25 @@ ${stateVars}
         )}
       </div>
 
-      <nav className="cs-pillnav" aria-label="Colour Studio sections" ref={navRef}>
-        <span className="cs-pillnav-thumb" aria-hidden="true" ref={thumbRef} />
-        {SECTIONS.map(s => (
-          <button
-            key={s.id}
-            ref={el => { itemRefs.current[s.id] = el }}
-            className={`cs-pillnav-item${activeSection === s.id ? ' active' : ''}`}
-            aria-current={activeSection === s.id ? 'true' : undefined}
-            onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          >{s.label}</button>
-        ))}
-      </nav>
+      {/* Section pill-nav only exists on the merged /color studio — a
+          standalone tool page has exactly one section, nothing to jump to. */}
+      {!soloSection && (
+        <nav className="cs-pillnav" aria-label="Colour Studio sections" ref={navRef}>
+          <span className="cs-pillnav-thumb" aria-hidden="true" ref={thumbRef} />
+          {SECTIONS.map(s => (
+            <button
+              key={s.id}
+              ref={el => { itemRefs.current[s.id] = el }}
+              className={`cs-pillnav-item${activeSection === s.id ? ' active' : ''}`}
+              aria-current={activeSection === s.id ? 'true' : undefined}
+              onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            >{s.label}</button>
+          ))}
+        </nav>
+      )}
 
       {/* ═══ SECTION 1: PALETTE BUILDER ═══ */}
+      {(!soloSection || soloSection === 'palette') && (
       <section id="palette" className="cs-pb-section">
         <div className="cs-section-header cs-pb-header" onClick={() => toggleCollapse('palette')}>
           <svg className={`cs-chevron${collapsed.palette ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -3234,12 +3245,11 @@ ${stateVars}
             <div className="cs-pb-adjust-field" key={f.key}>
               <span className="cs-pb-adjust-label">
                 <span>{f.label}</span>
-                <span className="cs-pb-adjust-val">{globalAdjust[f.key] > 0 ? '+' : ''}{globalAdjust[f.key]}{f.unit}</span>
               </span>
-              <input type="range" min={f.min} max={f.max} value={globalAdjust[f.key]}
-                aria-label={f.label}
-                aria-valuetext={`${f.label} ${globalAdjust[f.key] > 0 ? '+' : ''}${globalAdjust[f.key]}${f.unit}`}
-                onChange={e => updateAdjust(f.key, +e.target.value)} />
+              <SnapSlider min={f.min} max={f.max} value={globalAdjust[f.key]}
+                defaultValue={0} snaps={[0]} unit={f.unit}
+                ariaLabel={f.label}
+                onChange={v => updateAdjust(f.key, v)} />
             </div>
           ))}
           <button className="cs-pb-adjust-reset"
@@ -3270,8 +3280,10 @@ ${stateVars}
         </div>
         </>}
       </section>
+      )}
 
       {/* ═══ SECTION 2: UI STATE COLORS ═══ */}
+      {(!soloSection || soloSection === 'states') && (
       <section id="states" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
         <div className="cs-section-header" onClick={() => toggleCollapse('states')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: collapsed.states ? 0 : 14, flexWrap: 'wrap', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -3353,8 +3365,10 @@ ${stateVars}
         })}
         </>}
       </section>
+      )}
 
       {/* ═══ SECTION 3: DESIGN SYSTEMS ═══ */}
+      {(!soloSection || soloSection === 'systems') && (
       <section id="systems" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
         <div className="cs-section-header" onClick={() => toggleCollapse('systems')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.systems ? 0 : 14 }}>
           <svg className={`cs-chevron${collapsed.systems ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -3436,8 +3450,10 @@ ${stateVars}
         })()}
         </>}
       </section>
+      )}
 
       {/* ═══ SECTION 4: GRADIENT TOOL ═══ */}
+      {(!soloSection || soloSection === 'gradients') && (
       <section id="gradients" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
         <div className="cs-section-header" onClick={() => toggleCollapse('gradients')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.gradients ? 0 : 14 }}>
           <svg className={`cs-chevron${collapsed.gradients ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -3547,9 +3563,11 @@ ${stateVars}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <div className="seg-label" style={{ marginBottom: 0 }}>Angle</div>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t1)' }}>{gradAngle}&deg;</span>
             </div>
-            <input type="range" min="0" max="360" value={gradAngle} onChange={e => setGradAngle(snap(+e.target.value, 135, 5))} />
+            <SnapSlider min={0} max={360} value={gradAngle} defaultValue={135}
+              snaps={[0, 45, 90, 135, 180, 225, 270, 315, 360]} unit="°"
+              ariaLabel="Gradient angle"
+              onChange={setGradAngle} />
 
             {/* CSS Export */}
             <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
@@ -3639,9 +3657,11 @@ ${stateVars}
         </div>
         </>}
       </section>
+      )}
 
 
       {/* ═══ SECTION 5: SEE IT SHIPPED — PREVIEWS (Slice 4) ═══ */}
+      {!soloSection && (
       <section id="visualizer" className="cs-pv">
         <div className={`cs-section-header cs-pv-header${collapsed.visualizer ? ' is-collapsed' : ''}`} onClick={() => toggleCollapse('visualizer')}>
           <svg className={`cs-chevron${collapsed.visualizer ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -3662,6 +3682,7 @@ ${stateVars}
           </div>
         )}
       </section>
+      )}
 
       {/* ── More colour tools — links to every sibling tool's own page ──
           Section tools re-enter this studio focused on their section (the
