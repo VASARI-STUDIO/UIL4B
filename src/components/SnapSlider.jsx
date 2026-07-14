@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from 'react'
  * and a click-to-edit value readout for custom values beyond the snaps.
  *
  * - Dragging snaps to the nearest value in `snaps` when within `snapRadius`
- *   of it (radius defaults to 6% of the track range). Values between snaps
+ *   of it (radius defaults to 6% of the track range; pass `snapRadius` in
+ *   track units to override — wide ranges like ±180° need a small absolute
+ *   radius or values near a snap become unreachable). Values between snaps
  *   stay free, so custom values are still reachable by dragging.
  * - Double-click the track resets to `defaultValue`.
  * - Clicking the value text swaps it for a number input clamped to
@@ -20,6 +22,7 @@ export default function SnapSlider({
   value,
   defaultValue,
   snaps = [],
+  snapRadius,
   unit = '',
   inputMin,
   inputMax,
@@ -44,7 +47,7 @@ export default function SnapSlider({
 
   const snapValue = raw => {
     if (!snaps.length) return raw
-    const radius = (max - min) * 0.06
+    const radius = snapRadius ?? (max - min) * 0.06
     let best = null
     for (const s of snaps) {
       const d = Math.abs(raw - s)
