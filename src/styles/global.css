@@ -3185,9 +3185,8 @@ img,svg,video{max-width:100%;height:auto}
 .rc-flip:hover{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
 .rc-colon{font-weight:700;color:var(--t2)}
 .rc-simplified{font-family:var(--mono);font-size:13px;color:var(--accent);margin-left:6px}
-.rc-simplified-btn{background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:var(--radius-s)}
-.rc-simplified-btn:hover{background:var(--accent-bg)}
-.rc-result{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.rc-out{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.rc-out-size{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;flex-wrap:wrap}
 .rc-result-dims{display:flex;align-items:center;gap:10px}
 .rc-dim{display:inline-flex;align-items:baseline;gap:3px;font-family:var(--mono);font-size:22px;font-weight:700;color:var(--t0);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:var(--radius-s)}
 .rc-dim:hover{background:var(--accent-bg);color:var(--accent)}
@@ -3203,7 +3202,6 @@ img,svg,video{max-width:100%;height:auto}
 .rc-vis-ratio{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)}
 .rc-vis-dims{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--accent);opacity:.7}
 .rc-vis-empty{color:var(--t3);font-size:13px}
-.rc-reverse{margin-top:16px}
 
 /* Aspect & Resolution Calculator — preset dropdowns, stats, ratio grid */
 .arc-select{position:relative}
@@ -3239,9 +3237,7 @@ img,svg,video{max-width:100%;height:auto}
 .arc-stat:hover{border-color:var(--accent)}
 .arc-stat-k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .arc-stat-v{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--t0)}
-.arc-near{font-size:11.5px;color:var(--t2)}
-.arc-near strong{font-family:var(--mono);color:var(--accent);font-weight:700}
-.arc-near small{color:var(--t3)}
+.arc-stat-sub{font-family:var(--mono);font-size:10px;color:var(--accent)}
 @media(max-width:760px){.rc-grid{grid-template-columns:1fr}.rc-vis-stage{min-height:200px}.rc-tabs{display:flex;flex-wrap:wrap}}
 
 /* Future Plans — admin roadmap board */
