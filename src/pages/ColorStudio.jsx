@@ -1754,7 +1754,7 @@ function PreviewUpsell({ onUpgrade }) {
 const COLOUR_TOOLS = [
   { id: 'palette', label: 'Palette', route: '/color/palette', desc: 'Build the core ramp' },
   { id: 'semantic', label: 'Semantic Colour', route: '/color/semantic', desc: 'Success, warning, error' },
-  { id: 'ui-colour', label: 'UI Colour', route: '/color/ui', desc: 'Surfaces, text, borders' },
+  { id: 'ui-colour', label: 'UI Colour', route: '/color/ui', desc: 'Systems, brands, libraries' },
   { id: 'gradient', label: 'Gradient', route: '/color/gradient', desc: 'Blend across your palette' },
   { id: 'tint', label: 'Tint', route: '/color/tint', desc: 'Scale any swatch' },
   { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', desc: 'Verify AA / AAA' },
@@ -1762,7 +1762,17 @@ const COLOUR_TOOLS = [
 
 // /color/<tool> route → the single studio section that route renders (#39).
 const PATH_TO_SECTION = { palette: 'palette', semantic: 'states', ui: 'systems', gradient: 'gradients' }
-const SOLO_TITLES = { palette: 'Palette Builder', states: 'UI State Colours', systems: 'Design Systems', gradients: 'Gradient Tool' }
+const SOLO_TITLES = { palette: 'Palette Builder', states: 'UI State Colours', systems: 'UI Colour Systems', gradients: 'Gradient Tool' }
+
+// Tool-specific hero copy for the standalone pages (#50). The merged studio
+// keeps the generic i18n description; each solo page says what IT does — the
+// same standard the Tint and Contrast pages set.
+const SOLO_DESC = {
+  palette: 'Build your core palette from one seed colour. Pick a harmony, fine-tune every swatch, and get tonal ramps with accessibility checks built in.',
+  states: 'Dial in success, warning, error and info colours. Start from a preset bundle or tune each state’s hue — every state gets a full 50–900 ramp.',
+  systems: 'Start your UI colours from a proven foundation — load a design-system palette, borrow a brand’s colours, or pull named swatches from the classic libraries.',
+  gradients: 'Blend gradients across your palette. Add and reposition stops, switch between linear, radial and conic, then copy the CSS in one click.',
+}
 
 export default function ColorStudio({ onCopy, toast }) {
   const { t } = useI18n()
@@ -1921,8 +1931,12 @@ export default function ColorStudio({ onCopy, toast }) {
     }
     if (pathSeg === pathToolRef.current) return
     pathToolRef.current = pathSeg
-    focusSection(PATH_TO_SECTION[pathSeg] || 'palette')
-  }, [pathSeg, focusSection])
+    // Solo routes render ONLY their section — no siblings to collapse, and the
+    // hero IS the top of the page, so the merged-studio collapse-and-scroll
+    // (focusSection) would only scroll the fresh hero out of view. Clear any
+    // collapse state and let the router's scroll-to-top handle position.
+    setCollapsed({})
+  }, [pathSeg])
 
   // ── Nav deep-link: ?tool=<id> (legacy) ──
   // Old external links still arrive as /color?tool=<id>; keep honouring them.
@@ -2910,7 +2924,7 @@ ${stateVars}
       <div className="sec-h">
         <div className="sec-h-eyebrow">Colour</div>
         <h1>{soloSection ? SOLO_TITLES[soloSection] : t('color.title')}</h1>
-        <p>{t('tools.colorStudio.description')}</p>
+        <p>{soloSection ? SOLO_DESC[soloSection] : t('tools.colorStudio.description')}</p>
         {canSaveProjects && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'sticky', bottom: 16, zIndex: 20, background: 'var(--card)', padding: '10px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--warm-shadow-lg)' }}>
             <button className="btn btn-accent btn-s" onClick={() => setSaveMenuOpen(!saveMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -2976,9 +2990,11 @@ ${stateVars}
       {/* ═══ SECTION 1: PALETTE BUILDER ═══ */}
       {(!soloSection || soloSection === 'palette') && (
       <section id="palette" className="cs-pb-section">
-        <div className="cs-section-header cs-pb-header" onClick={() => toggleCollapse('palette')}>
-          <svg className={`cs-chevron${collapsed.palette ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          <h2 className="cs-pb-title">Palette Builder</h2>
+        <div className={soloSection ? 'cs-section-header cs-pb-header cs-solo-toolbar' : 'cs-section-header cs-pb-header'} onClick={soloSection ? undefined : () => toggleCollapse('palette')}>
+          {!soloSection && <>
+            <svg className={`cs-chevron${collapsed.palette ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <h2 className="cs-pb-title">Palette Builder</h2>
+          </>}
           <button className="btn btn-accent btn-s cs-pb-randomize" onClick={(e) => { e.stopPropagation(); randomize() }} title="Random palette (or press Spacebar)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10" /><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14" />
@@ -3006,7 +3022,7 @@ ${stateVars}
           </button>
         </div>
 
-        {!collapsed.palette && <>
+        {(soloSection === 'palette' || !collapsed.palette) && <>
         {/* a11y: announce randomise / insert / lock / move to screen readers. */}
         <p className="cs-pb-live" aria-live="polite" role="status">{liveMsg}</p>
 
@@ -3285,11 +3301,13 @@ ${stateVars}
       {/* ═══ SECTION 2: UI STATE COLORS ═══ */}
       {(!soloSection || soloSection === 'states') && (
       <section id="states" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className="cs-section-header" onClick={() => toggleCollapse('states')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: collapsed.states ? 0 : 14, flexWrap: 'wrap', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <svg className={`cs-chevron${collapsed.states ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colours</h2>
-          </div>
+        <div className="cs-section-header" onClick={soloSection ? undefined : () => toggleCollapse('states')} style={{ cursor: soloSection ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: soloSection ? 'flex-end' : 'space-between', marginBottom: collapsed.states && !soloSection ? 0 : 14, flexWrap: 'wrap', gap: 8 }}>
+          {!soloSection && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <svg className={`cs-chevron${collapsed.states ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colours</h2>
+            </div>
+          )}
           <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Preset</span>
             {STATE_BUNDLES.map(b => (
@@ -3301,7 +3319,7 @@ ${stateVars}
             ))}
           </div>
         </div>
-        {!collapsed.states && <>
+        {(soloSection === 'states' || !collapsed.states) && <>
         {Object.entries(STATE_PRESETS).map(([state, presets]) => {
           const sel = stateColors[state]
           // NB: coerce to a real boolean. `sel` is 0 for the default preset of
@@ -3370,11 +3388,15 @@ ${stateVars}
       {/* ═══ SECTION 3: DESIGN SYSTEMS ═══ */}
       {(!soloSection || soloSection === 'systems') && (
       <section id="systems" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className="cs-section-header" onClick={() => toggleCollapse('systems')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.systems ? 0 : 14 }}>
-          <svg className={`cs-chevron${collapsed.systems ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Design Systems</h2>
-        </div>
-        {!collapsed.systems && <>
+        {/* Solo /color/ui: the hero already names the page, and this header holds
+            no actions — drop it entirely instead of leaving an empty toolbar. */}
+        {!soloSection && (
+          <div className="cs-section-header" onClick={() => toggleCollapse('systems')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.systems ? 0 : 14 }}>
+            <svg className={`cs-chevron${collapsed.systems ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Design Systems</h2>
+          </div>
+        )}
+        {(soloSection === 'systems' || !collapsed.systems) && <>
         <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16, lineHeight: 1.6 }}>
           Click a system to load its palette. Or start from a brand below.
         </p>
@@ -3455,16 +3477,18 @@ ${stateVars}
       {/* ═══ SECTION 4: GRADIENT TOOL ═══ */}
       {(!soloSection || soloSection === 'gradients') && (
       <section id="gradients" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className="cs-section-header" onClick={() => toggleCollapse('gradients')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.gradients ? 0 : 14 }}>
-          <svg className={`cs-chevron${collapsed.gradients ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
+        <div className="cs-section-header" onClick={soloSection ? undefined : () => toggleCollapse('gradients')} style={{ cursor: soloSection ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: collapsed.gradients && !soloSection ? 0 : 14 }}>
+          {!soloSection && <>
+            <svg className={`cs-chevron${collapsed.gradients ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
+          </>}
           <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
             <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
           </div>
         </div>
 
-        {!collapsed.gradients && <>
+        {(soloSection === 'gradients' || !collapsed.gradients) && <>
         <div className="grad-big" style={{ background: gradCSS, borderRadius: 'var(--radius)' }}>
           <div className="grad-tags">
             <span className="grad-tag">{gradFn.toUpperCase()}</span>
@@ -3691,7 +3715,8 @@ ${stateVars}
       <nav className="cs-tools-footer" aria-label="More colour tools">
         <h2 className="cs-tools-footer-title">More colour tools</h2>
         <div className="cs-tools-footer-grid">
-          {COLOUR_TOOLS.map(tool => (
+          {/* Never link a page to itself — filter the tool you're already on. */}
+          {COLOUR_TOOLS.filter(tool => tool.route !== pathname).map(tool => (
             <NavLink
               key={tool.id}
               to={tool.route}

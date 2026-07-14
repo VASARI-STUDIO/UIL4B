@@ -252,6 +252,8 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .cs-section-header{user-select:none;position:relative;z-index:10}
 .cs-section-header>h2{transition:color .15s}
 .cs-section-header:hover>h2{color:var(--t1)}
+/* Solo tool pages (#50): the header is a plain action toolbar — no collapse. */
+.cs-section-header.cs-solo-toolbar{cursor:default}
 
 /* ─── Palette Builder core (CS#3.1/3.3–3.6/3.8/3.10/3.15/3.16) ─── */
 .cs-pb-section{margin-bottom:48px;scroll-margin-top:100px}
