@@ -16,14 +16,17 @@ const OUTPUT_FORMATS = [
   { id: 'image/jpeg', label: 'JPEG', ext: 'jpg', lossy: true },
   { id: 'image/webp', label: 'WebP', ext: 'webp', lossy: true },
   { id: 'image/avif', label: 'AVIF', ext: 'avif', lossy: true },
+  // ICO is assembled by hand (multi-size favicon of embedded PNGs), not by
+  // canvas.toBlob — see encodeIco. Sizing/scale settings don't apply to it.
+  { id: 'ico', label: 'ICO (favicon)', ext: 'ico', lossy: false, ico: true },
 ]
 
 // Formats supported by the canvas frame encoder (Video → Frames). AVIF is
 // excluded here because canvas.toBlob('image/avif') support is too inconsistent
-// to offer for batch frame extraction.
-const FRAME_FORMATS = OUTPUT_FORMATS.filter(f => f.id !== 'image/avif')
+// to offer for batch frame extraction; ICO only makes sense for still images.
+const FRAME_FORMATS = OUTPUT_FORMATS.filter(f => f.id !== 'image/avif' && !f.ico)
 
-const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif'
+const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/bmp,image/avif,image/x-icon,image/vnd.microsoft.icon,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.avif,.ico'
 const ACCEPT_VIDEO = 'video/*,.mp4,.webm,.mov,.avi,.gif,.webp'
 
 const LARGE_FILE_BYTES = 50 * 1024 * 1024 // 50 MB warning threshold
@@ -85,6 +88,48 @@ function loadImage(src) {
   })
 }
 
+// Assembles a multi-size Windows ICO (favicon) from the source image: each
+// entry is a PNG (valid in ICO since Vista), contain-fit on a transparent
+// square so non-square sources aren't distorted.
+const ICO_SIZES = [16, 32, 48]
+
+async function encodeIco(img, iw, ih) {
+  const pngs = []
+  for (const s of ICO_SIZES) {
+    const c = document.createElement('canvas')
+    c.width = s
+    c.height = s
+    const ctx = c.getContext('2d')
+    ctx.imageSmoothingQuality = 'high'
+    const r = Math.min(s / iw, s / ih)
+    const w = Math.max(1, Math.round(iw * r))
+    const h = Math.max(1, Math.round(ih * r))
+    ctx.drawImage(img, Math.round((s - w) / 2), Math.round((s - h) / 2), w, h)
+    const blob = await new Promise((resolve, reject) => {
+      c.toBlob(b => (b ? resolve(b) : reject(new Error('ICO export failed to encode'))), 'image/png')
+    })
+    pngs.push({ size: s, buf: new Uint8Array(await blob.arrayBuffer()) })
+  }
+  const headerSize = 6 + 16 * pngs.length
+  const out = new Uint8Array(headerSize + pngs.reduce((sum, p) => sum + p.buf.length, 0))
+  const dv = new DataView(out.buffer)
+  dv.setUint16(2, 1, true) // type: icon
+  dv.setUint16(4, pngs.length, true)
+  let offset = headerSize
+  pngs.forEach((p, i) => {
+    const e = 6 + i * 16
+    out[e] = p.size // width (0 would mean 256)
+    out[e + 1] = p.size // height
+    dv.setUint16(e + 4, 1, true) // colour planes
+    dv.setUint16(e + 6, 32, true) // bits per pixel
+    dv.setUint32(e + 8, p.buf.length, true)
+    dv.setUint32(e + 12, offset, true)
+    out.set(p.buf, offset)
+    offset += p.buf.length
+  })
+  return new Blob([out], { type: 'image/x-icon' })
+}
+
 function triggerDownload(blobOrUrl, filename) {
   const url = typeof blobOrUrl === 'string' ? blobOrUrl : URL.createObjectURL(blobOrUrl)
   const a = document.createElement('a')
@@ -114,9 +159,9 @@ export default function FileConverter({ toast }) {
           <span className="fc-alpha">Alpha</span>
         </h1>
         <p>
-          Convert images, turn short videos into GIFs, or extract video frames — all in
-          your browser. Image conversion is fully offline; video tools load a converter
-          engine on demand.
+          Convert images between PNG, JPEG, WebP, AVIF and favicon ICO, turn short
+          videos into GIFs, or extract video frames — all in your browser. Image
+          conversion is fully offline; video tools load a converter engine on demand.
         </p>
       </div>
 
@@ -190,22 +235,26 @@ function ImageConvert({ toast, initialFiles }) {
   const [quality, setQuality] = useState(QUALITY_DEFAULT)
   const [maxDim, setMaxDim] = useState(0) // 0 = keep original size
   const [renderScale, setRenderScale] = useState(1) // @1x / @2x export
+  const [jpegBg, setJpegBg] = useState('#ffffff') // fill behind transparency (JPEG has no alpha)
   const [busy, setBusy] = useState(false)
   const [zipping, setZipping] = useState(false)
 
-  // Revoke all object URLs on unmount.
+  // Revoke all object URLs on unmount. Read the latest items through a ref —
+  // an empty-deps cleanup would close over the first render's empty array,
+  // and live deps would revoke URLs that are still in use mid-session.
+  const itemsRef = useRef(items)
+  useEffect(() => { itemsRef.current = items })
   useEffect(() => () => {
-    items.forEach(it => {
+    itemsRef.current.forEach(it => {
       if (it.srcUrl) URL.revokeObjectURL(it.srcUrl)
       if (it.out?.url) URL.revokeObjectURL(it.out.url)
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const addFiles = useCallback((files) => {
     const arr = Array.from(files)
-    const imgs = arr.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(f.name))
-    if (!imgs.length) { toast('Please choose PNG, JPEG, WebP or GIF images'); return }
+    const imgs = arr.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp|avif|ico)$/i.test(f.name))
+    if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images'); return }
     const big = imgs.find(f => f.size > LARGE_FILE_BYTES)
     if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`)
     const next = imgs.map(f => ({
@@ -246,10 +295,17 @@ function ImageConvert({ toast, initialFiles }) {
 
   const convertOne = useCallback(async (item) => {
     const img = await loadImage(item.srcUrl)
-    const longest = Math.max(img.width, img.height)
+    // SVGs without an intrinsic size can report 0×0 — rasterise those at 1024.
+    const iw = img.naturalWidth || img.width || 1024
+    const ih = img.naturalHeight || img.height || 1024
+    if (format === 'ico') {
+      const blob = await encodeIco(img, iw, ih)
+      return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w: 48, h: 48, note: `favicon • ${ICO_SIZES.join(' + ')} px`, noPreview: true }
+    }
+    const longest = Math.max(iw, ih)
     const scale = (maxDim > 0 && longest > maxDim ? maxDim / longest : 1) * renderScale
-    const w = Math.max(1, Math.round(img.width * scale))
-    const h = Math.max(1, Math.round(img.height * scale))
+    const w = Math.max(1, Math.round(iw * scale))
+    const h = Math.max(1, Math.round(ih * scale))
     if (Math.max(w, h) > MAX_CANVAS_DIM) {
       throw new Error(`Too large to export at @${renderScale}x — reduce Max Dimension`)
     }
@@ -257,7 +313,7 @@ function ImageConvert({ toast, initialFiles }) {
     canvas.width = w
     canvas.height = h
     const ctx = canvas.getContext('2d')
-    if (format === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h) }
+    if (format === 'image/jpeg') { ctx.fillStyle = jpegBg; ctx.fillRect(0, 0, w, h) }
     ctx.drawImage(img, 0, 0, w, h)
     const q = format === 'image/png' ? undefined : quality / 100
     // canvas.toBlob yields null when the browser can't encode the requested
@@ -274,7 +330,7 @@ function ImageConvert({ toast, initialFiles }) {
       }, format, q)
     })
     return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w, h }
-  }, [format, quality, maxDim, renderScale])
+  }, [format, quality, maxDim, renderScale, jpegBg])
 
   const [convertProgress, setConvertProgress] = useState({ done: 0, total: 0 })
 
@@ -346,21 +402,36 @@ function ImageConvert({ toast, initialFiles }) {
           multiple
           onFiles={addFiles}
           hint="Drop images here or click to browse"
-          sub="PNG, JPEG, WebP, static GIF — batch supported"
+          sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
         />
       </div>
 
       {items.length > 0 && (
         <div className="sub">
           <div className="sl">Output Settings</div>
-          <div className="row" style={{ gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
+          <div className="fc-settings">
             <div>
               <div className="seg-label">Output Format</div>
-              <select value={format} onChange={e => setFormat(e.target.value)} disabled={busy} style={{ maxWidth: 130 }}>
+              <select value={format} onChange={e => setFormat(e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
                 {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </select>
+              {fmt.ico && <div className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</div>}
             </div>
-            <div style={{ flex: 1, minWidth: 200 }}>
+            {format === 'image/jpeg' && (
+              <div>
+                <div className="seg-label">Background</div>
+                <input
+                  type="color"
+                  value={jpegBg}
+                  onChange={e => setJpegBg(e.target.value)}
+                  disabled={busy}
+                  className="fc-bg-pick"
+                  aria-label="JPEG background colour"
+                />
+                <div className="fc-note">fills transparency — JPEG has no alpha</div>
+              </div>
+            )}
+            <div className="fc-field-grow">
               <div className="seg-label">Quality</div>
               <div className="row">
                 <SnapSlider
@@ -371,27 +442,31 @@ function ImageConvert({ toast, initialFiles }) {
                   ariaLabel="Output quality"
                 />
               </div>
-              {!fmt.lossy && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>PNG is always lossless — quality doesn&apos;t apply</div>}
+              {!fmt.lossy && <div className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</div>}
             </div>
-            <div>
-              <div className="seg-label">Max Dimension</div>
-              <select value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
-                <option value={0}>Keep original</option>
-                <option value={3840}>3840 px</option>
-                <option value={1920}>1920 px</option>
-                <option value={1200}>1200 px</option>
-                <option value={800}>800 px</option>
-              </select>
-            </div>
-            <div>
-              <div className="seg-label">Export Scale</div>
-              <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} style={{ maxWidth: 100 }} aria-label="Export render scale">
-                {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </select>
-            </div>
+            {!fmt.ico && (
+              <div>
+                <div className="seg-label">Max Dimension</div>
+                <select value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
+                  <option value={0}>Keep original</option>
+                  <option value={3840}>3840 px</option>
+                  <option value={1920}>1920 px</option>
+                  <option value={1200}>1200 px</option>
+                  <option value={800}>800 px</option>
+                </select>
+              </div>
+            )}
+            {!fmt.ico && (
+              <div>
+                <div className="seg-label">Export Scale</div>
+                <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} style={{ maxWidth: 100 }} aria-label="Export render scale">
+                  {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
-          <div className="row" style={{ marginTop: 14, gap: 8, flexWrap: 'wrap' }}>
+          <div className="fc-actions">
             <button className="btn btn-accent" onClick={convertAll} disabled={busy}>
               {busy ? 'Converting…' : `Convert ${items.length} image${items.length > 1 ? 's' : ''}`}
             </button>
@@ -423,7 +498,7 @@ function ImageConvert({ toast, initialFiles }) {
               <div key={it.id} className="card fc-card">
                 <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>×</button>
                 <div className="fc-thumb">
-                  <img src={it.out?.url || it.srcUrl} alt={it.name} />
+                  <img src={(it.out && !it.out.noPreview && it.out.url) || it.srcUrl} alt={it.name} />
                 </div>
                 <div className="fc-name" title={it.name}>{it.name}</div>
                 {it.error ? (
@@ -431,7 +506,7 @@ function ImageConvert({ toast, initialFiles }) {
                 ) : it.out ? (
                   <>
                     <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {it.out.w}×{it.out.h}
+                      {it.out.note || `${it.out.w}×${it.out.h}`}
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--t2)' }}>
                       {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
@@ -495,15 +570,23 @@ function VideoToGif({ toast }) {
   const [fps, setFps] = useState(10)
   const [width, setWidth] = useState(480)
   const [quality, setQuality] = useState('medium')
+  const [duration, setDuration] = useState(0)
+  const [trimStart, setTrimStart] = useState(0)
+  const [trimEnd, setTrimEnd] = useState(null) // null = to the end
   const [engineState, setEngineState] = useState('idle') // idle|loading|ready|error
   const [working, setWorking] = useState(false)
   const [progress, setProgress] = useState('')
   const [result, setResult] = useState(null) // { url, bytes }
 
+  // Unmount-only URL cleanup via a ref — with [srcUrl, result] deps the
+  // cleanup re-ran on every state change and revoked URLs still in use.
+  const urlsRef = useRef({})
+  useEffect(() => { urlsRef.current = { srcUrl, resultUrl: result?.url } })
   useEffect(() => () => {
-    if (srcUrl) URL.revokeObjectURL(srcUrl)
-    if (result?.url) URL.revokeObjectURL(result.url)
-  }, [srcUrl, result])
+    const u = urlsRef.current
+    if (u.srcUrl) URL.revokeObjectURL(u.srcUrl)
+    if (u.resultUrl) URL.revokeObjectURL(u.resultUrl)
+  }, [])
 
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
@@ -516,10 +599,17 @@ function VideoToGif({ toast }) {
     setFile(f)
     setSrcUrl(URL.createObjectURL(f))
     setResult(null)
+    setDuration(0)
+    setTrimStart(0)
+    setTrimEnd(null)
   }, [srcUrl, result, toast])
 
   const convert = useCallback(async () => {
     if (!file || working) return
+    if (duration > 0 && (trimEnd == null ? duration : trimEnd) <= trimStart) {
+      toast('Trim end must be after trim start')
+      return
+    }
     if (!navigator.onLine && !ffmpegInstance) {
       toast('You appear to be offline — the converter engine needs a connection to load')
       return
@@ -548,7 +638,16 @@ function VideoToGif({ toast }) {
       const fpsVal = Math.max(1, Math.min(50, fps | 0))
       const dither = quality === 'high' ? 'sierra2_4a' : quality === 'low' ? 'none' : 'bayer:bayer_scale=2'
       const vf = `fps=${fpsVal},scale=${w}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse=dither=${dither}`
-      await ffmpeg.exec(['-i', inName, '-vf', vf, '-loop', '0', outName])
+      // Optional trim: -ss before -i seeks fast; -t caps the clip length.
+      const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
+      const end = trimEnd == null ? duration : Math.min(trimEnd, duration || trimEnd)
+      const clipLen = duration && end > start ? end - start : 0
+      const args = []
+      if (start > 0) args.push('-ss', String(start))
+      args.push('-i', inName)
+      if (clipLen > 0 && (start > 0 || end < duration)) args.push('-t', String(clipLen))
+      args.push('-vf', vf, '-loop', '0', outName)
+      await ffmpeg.exec(args)
       const data = await ffmpeg.readFile(outName)
       const blob = new Blob([data.buffer], { type: 'image/gif' })
       try { await ffmpeg.deleteFile(inName); await ffmpeg.deleteFile(outName) } catch { /* ignore cleanup */ }
@@ -560,7 +659,7 @@ function VideoToGif({ toast }) {
       toast('Conversion failed: ' + (err?.message || 'unknown error'))
     }
     setWorking(false)
-  }, [file, working, width, fps, quality, toast])
+  }, [file, working, width, fps, quality, duration, trimStart, trimEnd, toast])
 
   return (
     <>
@@ -575,13 +674,15 @@ function VideoToGif({ toast }) {
         ) : (
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <div style={{ flex: '1 1 min(360px,100%)', minWidth: 0 }}>
-              <video src={srcUrl} controls muted className="fc-video" aria-label="Video preview" />
+              <video src={srcUrl} controls muted className="fc-video" aria-label="Video preview"
+                onLoadedMetadata={e => setDuration(e.target.duration || 0)} />
             </div>
             <div className="card" style={{ flex: '1 1 200px', minWidth: 0, padding: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--t0)' }}>Source</div>
               <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.9 }}>
                 <div><strong>File:</strong> {file?.name}</div>
                 <div><strong>Size:</strong> {formatBytes(file?.size)}</div>
+                {duration > 0 && <div><strong>Duration:</strong> {formatTime(duration)}</div>}
               </div>
               <button className="btn" style={{ marginTop: 12 }} onClick={() => { setFile(null); if (srcUrl) URL.revokeObjectURL(srcUrl); setSrcUrl(null); setResult(null) }} disabled={working}>
                 Choose different file
@@ -594,7 +695,7 @@ function VideoToGif({ toast }) {
       {srcUrl && (
         <div className="sub">
           <div className="sl">GIF Settings</div>
-          <div className="row" style={{ gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
+          <div className="fc-settings">
             <div>
               <div className="seg-label">Frame Rate (FPS)</div>
               <input type="number" min="1" max="50" value={fps} disabled={working}
@@ -604,7 +705,7 @@ function VideoToGif({ toast }) {
               <div className="seg-label">Width (px)</div>
               <input type="number" min="16" max="2000" value={width} disabled={working}
                 onChange={e => setWidth(Math.max(16, Math.min(2000, +e.target.value || 480)))} style={{ width: 100, textAlign: 'center' }} />
-              <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>height auto</div>
+              <div className="fc-note">height auto</div>
             </div>
             <div>
               <div className="seg-label">Quality</div>
@@ -614,9 +715,27 @@ function VideoToGif({ toast }) {
                 <option value="high">High (best dither)</option>
               </select>
             </div>
+            {duration > 0 && (
+              <div>
+                <div className="seg-label">Trim (seconds)</div>
+                <div className="row" style={{ gap: 6 }}>
+                  <input type="number" min="0" max={duration} step="0.1" value={trimStart} disabled={working}
+                    onChange={e => setTrimStart(Math.max(0, Math.min(duration, +e.target.value || 0)))}
+                    style={{ width: 80, textAlign: 'center' }} aria-label="Trim start (seconds)" />
+                  <span style={{ color: 'var(--t2)' }}>→</span>
+                  <input type="number" min="0" max={duration} step="0.1"
+                    value={trimEnd == null ? +duration.toFixed(1) : trimEnd} disabled={working}
+                    onChange={e => setTrimEnd(Math.max(0, Math.min(duration, +e.target.value || 0)))}
+                    style={{ width: 80, textAlign: 'center' }} aria-label="Trim end (seconds)" />
+                </div>
+                <div className="fc-note">
+                  clip: {formatTime(Math.max(0, (trimEnd == null ? duration : trimEnd) - trimStart))} of {formatTime(duration)}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="row" style={{ marginTop: 14, gap: 8 }}>
+          <div className="fc-actions">
             <button className="btn btn-accent" onClick={convert} disabled={working}>
               {working ? (engineState === 'loading' ? 'Loading engine…' : 'Converting…') : 'Convert to GIF'}
             </button>
@@ -669,16 +788,24 @@ function VideoFrames({ toast }) {
   const [scale, setScale] = useState(1)
   const [format, setFormat] = useState('image/png')
   const [quality, setQuality] = useState(QUALITY_DEFAULT)
+  const [rangeStart, setRangeStart] = useState(0)
+  const [rangeEnd, setRangeEnd] = useState(null) // null = to the end
   const [extracting, setExtracting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [frames, setFrames] = useState([])
   const [zipping, setZipping] = useState(false)
   const videoRef = useRef(null)
 
+  // Unmount-only URL cleanup via a ref — with [srcUrl, frames] deps the
+  // cleanup re-ran when extract() reset frames and revoked the source URL
+  // mid-extraction ("Could not load video").
+  const urlsRef = useRef({ frames: [] })
+  useEffect(() => { urlsRef.current = { srcUrl, frames } })
   useEffect(() => () => {
-    if (srcUrl) URL.revokeObjectURL(srcUrl)
-    frames.forEach(f => URL.revokeObjectURL(f.url))
-  }, [srcUrl, frames])
+    const u = urlsRef.current
+    if (u.srcUrl) URL.revokeObjectURL(u.srcUrl)
+    u.frames.forEach(f => URL.revokeObjectURL(f.url))
+  }, [])
 
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
@@ -695,6 +822,8 @@ function VideoFrames({ toast }) {
     setMeta(null)
     setFrames([])
     setProgress(0)
+    setRangeStart(0)
+    setRangeEnd(null)
   }, [srcUrl, frames, toast])
 
   const onLoadedMeta = useCallback(() => {
@@ -734,13 +863,15 @@ function VideoFrames({ toast }) {
     const q = fmt.lossy ? quality / 100 : undefined
 
     const step = 1 / Math.max(0.1, Math.min(30, fps))
-    const total = Math.max(1, Math.floor(meta.duration / step))
+    const from = Math.max(0, Math.min(rangeStart || 0, meta.duration))
+    const to = rangeEnd == null ? meta.duration : Math.max(from, Math.min(rangeEnd, meta.duration))
+    const total = Math.max(1, Math.floor((to - from) / step))
     const out = []
-    let t = 0, idx = 0
+    let t = from, idx = 0
     let unsupported = false
 
     try {
-      while (t < meta.duration && idx < total + 1) {
+      while (t < to && idx < total + 1) {
         video.currentTime = t
         await new Promise((resolve, reject) => {
           const to = setTimeout(() => reject(new Error('Seek timed out')), 8000)
@@ -772,7 +903,7 @@ function VideoFrames({ toast }) {
     setExtracting(false)
     setProgress(100)
     if (out.length) toast(`Extracted ${out.length} frames`)
-  }, [srcUrl, meta, fps, scale, format, quality, extracting, toast])
+  }, [srcUrl, meta, fps, scale, format, quality, rangeStart, rangeEnd, extracting, toast])
 
   const downloadAll = useCallback(async () => {
     if (!frames.length) return
@@ -789,7 +920,9 @@ function VideoFrames({ toast }) {
     setZipping(false)
   }, [frames, file, toast])
 
-  const est = meta ? Math.max(1, Math.floor(meta.duration / (1 / Math.max(0.1, Math.min(30, fps))))) : 0
+  const estFrom = meta ? Math.max(0, Math.min(rangeStart || 0, meta.duration)) : 0
+  const estTo = meta ? (rangeEnd == null ? meta.duration : Math.max(estFrom, Math.min(rangeEnd, meta.duration))) : 0
+  const est = meta ? Math.max(1, Math.floor((estTo - estFrom) * Math.max(0.1, Math.min(30, fps)))) : 0
   const fmt = FRAME_FORMATS.find(f => f.id === format) || FRAME_FORMATS[0]
 
   return (
@@ -822,7 +955,7 @@ function VideoFrames({ toast }) {
       {srcUrl && meta && (
         <div className="sub">
           <div className="sl">Extraction Settings</div>
-          <div className="row" style={{ gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
+          <div className="fc-settings">
             <div>
               <div className="seg-label">Frames per second</div>
               <input type="number" min="0.1" max="30" step="0.1" value={fps} disabled={extracting}
@@ -843,7 +976,23 @@ function VideoFrames({ toast }) {
                 {FRAME_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </select>
             </div>
-            <div style={{ flex: 1, minWidth: 200 }}>
+            <div>
+              <div className="seg-label">Range (seconds)</div>
+              <div className="row" style={{ gap: 6 }}>
+                <input type="number" min="0" max={meta.duration} step="0.1" value={rangeStart} disabled={extracting}
+                  onChange={e => setRangeStart(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
+                  style={{ width: 80, textAlign: 'center' }} aria-label="Range start (seconds)" />
+                <span style={{ color: 'var(--t2)' }}>→</span>
+                <input type="number" min="0" max={meta.duration} step="0.1"
+                  value={rangeEnd == null ? +meta.duration.toFixed(1) : rangeEnd} disabled={extracting}
+                  onChange={e => setRangeEnd(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
+                  style={{ width: 80, textAlign: 'center' }} aria-label="Range end (seconds)" />
+              </div>
+              <div className="fc-note">
+                {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} • ~{est.toLocaleString()} frames
+              </div>
+            </div>
+            <div className="fc-field-grow">
               <div className="seg-label">Quality</div>
               <div className="row">
                 <SnapSlider
@@ -854,10 +1003,10 @@ function VideoFrames({ toast }) {
                   ariaLabel="Frame quality"
                 />
               </div>
-              {!fmt.lossy && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>PNG is always lossless — quality doesn&apos;t apply</div>}
+              {!fmt.lossy && <div className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</div>}
             </div>
           </div>
-          <div className="row" style={{ marginTop: 14, gap: 8 }}>
+          <div className="fc-actions">
             <button className="btn btn-accent" onClick={extract} disabled={extracting}>
               {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
             </button>
