@@ -4456,8 +4456,10 @@ html.lenis,html.lenis body{height:auto}
 [data-theme="dark"] .pnav.is-scrolled{background:rgba(22,24,28,.9);box-shadow:0 2px 10px rgba(0,0,0,.55)}
 /* Flex row: [logo + triggers] [search, flexing to centre] [actions]. Content is
    width-capped and centred so ultra-wide screens don't fling the clusters apart. */
-.pnav-inner{display:flex;align-items:center;gap:16px;height:100%;max-width:1440px;margin:0 auto;padding:0 20px}
-.pnav-lead{display:flex;align-items:center;gap:22px;min-width:0}
+/* 1fr auto 1fr keeps the three section menus dead-centre in the bar; the
+   logo+search and actions clusters flex within the equal side columns. */
+.pnav-inner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;height:100%;max-width:1440px;margin:0 auto;padding:0 20px}
+.pnav-lead{display:flex;align-items:center;gap:18px;min-width:0;justify-self:start}
 .pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
 .pnav-word{font-size:var(--fs-h5);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
@@ -4466,7 +4468,7 @@ html.lenis,html.lenis body{height:auto}
 .pnav-trigger:hover,.pnav-trigger[aria-expanded="true"]{background:var(--hvr);color:var(--t0)}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
-.pnav-actions{display:flex;align-items:center;gap:8px;transition:gap var(--dur-3) var(--ease-inout)}
+.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end;transition:gap var(--dur-3) var(--ease-inout)}
 /* Sales-page "Start for Free" pill — hidden until the visitor scrolls to
    section 2 (#create); PillNav toggles .is-waiting from the scroll listener.
    While waiting the pill also collapses its width (max-width + padding, and
@@ -4481,15 +4483,15 @@ html.lenis,html.lenis body{height:auto}
 /* Centre search — sits between the nav triggers and the right-hand actions
    cluster; it takes the bar's spare width (flex:1) so the fixed-width field
    stays visually centred and the actions stay pinned right. */
-.pnav-search{display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0}
-.pnav-search-field{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:300px;height:40px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-search{display:flex;align-items:center;justify-content:flex-start;flex:0 1 300px;min-width:0}
+.pnav-search-field{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:100%;min-width:40px;height:40px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-search-field:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .pnav-search-field .pnav-search-ico{flex:0 0 auto;color:var(--t2)}
 .pnav-search-field:hover .pnav-search-ico{color:var(--t1)}
 .pnav-search-ph{white-space:nowrap;flex:1 1 auto;text-align:left}
 .pnav-search-kbd{flex:0 0 auto;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:11px;font-weight:600;line-height:1}
 /* Sales/marketing routes drop the search field (the / shortcut still opens the
-   palette); the empty .pnav-search keeps flexing so the clusters stay put. */
+   palette); the grid's middle column keeps the three menus centred regardless. */
 .pnav--sales .pnav-search-field{display:none}
 /* Always-visible icon buttons in the RIGHT actions cluster (Mobbin reference):
    saved projects (bookmark) + export. 40px circles like .pnav-more. */
@@ -5277,6 +5279,13 @@ a.prev-btn{text-decoration:none}
 .home-foot-copy{font-size:var(--fs-caption);color:var(--t2)}
 
 /* ══ Foundry responsive ══ */
+@media(max-width:1180px){
+  /* Tight middle ground: the centred menus stay put; the search gives up its
+     placeholder and shrinks to the icon so the side columns never clip. */
+  .pnav-search{flex:0 0 auto}
+  .pnav-search-field{width:40px;padding:0;justify-content:center}
+  .pnav-search-ph,.pnav-search-kbd{display:none}
+}
 @media(max-width:1024px){
   .pnav-menu-cols{grid-template-columns:1fr}
   .pnav-promo{display:none}
@@ -5287,13 +5296,16 @@ a.prev-btn{text-decoration:none}
 @media(max-width:768px){
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
   .pnav-mobile{display:inline-flex}
-  .pnav-inner{padding:0 12px}
+  /* The centred menus are gone (hamburger sheet takes over), so the grid
+     falls back to a simple flex row. */
+  .pnav-inner{display:flex;padding:0 12px}
+  .pnav-lead{flex:1 1 auto}
   /* Search collapses to an icon-only tap target hugging the actions cluster;
      sales routes get it back too — on mobile it's the only way into the
      palette. The bookmark / export icon buttons fold away into the sheet. */
-  .pnav-search{justify-content:flex-end}
+  .pnav-search{flex:0 0 auto;margin-left:auto}
   .pnav--sales .pnav-search-field{display:flex}
-  .pnav-search-field{width:40px;padding:0;justify-content:center}
+  .pnav-search-field{width:40px;min-width:0;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
   .pnav-iconbtn{display:none}
   /* Touch: the hamburger sheet IS the menu, so the resting 3-dots (a desktop

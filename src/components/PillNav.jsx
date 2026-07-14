@@ -409,41 +409,43 @@ export default function PillNav() {
               <span className="pnav-word">UIL4B</span>
             </Link>
 
-            <div className="pnav-items">
-              {NAV_SECTIONS.map((section) => (
-                <button
-                  key={section.id}
-                  type="button"
-                  className="pnav-trigger"
-                  aria-expanded={open === section.id}
-                  aria-haspopup="true"
-                  onClick={() => toggle(section.id)}
-                  onMouseEnter={() => hoverOpen(section.id)}
-                >
-                  {section.label}
-                  <Chevron />
-                </button>
-              ))}
+            {/* Search — lives beside the logo so the three section menus can sit
+                dead-centre in the bar. Clicking it opens the full command
+                palette, which reuses the same search index. On sales routes the
+                field hides on desktop (the bar leads with the three menus +
+                Get Pro); the / shortcut still works. */}
+            <div className="pnav-search">
+              <button
+                type="button"
+                className="pnav-search-field"
+                aria-haspopup="dialog"
+                aria-expanded={searchOpen}
+                aria-label="Search UIL4B"
+                onClick={openSearch}
+              >
+                <SearchIcon />
+                <span className="pnav-search-ph">Search tools&hellip;</span>
+                <kbd className="pnav-search-kbd" aria-hidden="true">/</kbd>
+              </button>
             </div>
           </div>
 
-          {/* Search — prominent field centred in the bar (Mobbin reference).
-              Clicking it opens the full command palette, which reuses the same
-              search index. On sales routes the field hides on desktop (the bar
-              leads with the three menus + Get Pro); the / shortcut still works. */}
-          <div className="pnav-search">
-            <button
-              type="button"
-              className="pnav-search-field"
-              aria-haspopup="dialog"
-              aria-expanded={searchOpen}
-              aria-label="Search UIL4B"
-              onClick={openSearch}
-            >
-              <SearchIcon />
-              <span className="pnav-search-ph">Search tools&hellip;</span>
-              <kbd className="pnav-search-kbd" aria-hidden="true">/</kbd>
-            </button>
+          {/* The three section menus — centred in the bar (grid middle column). */}
+          <div className="pnav-items">
+            {NAV_SECTIONS.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                className="pnav-trigger"
+                aria-expanded={open === section.id}
+                aria-haspopup="true"
+                onClick={() => toggle(section.id)}
+                onMouseEnter={() => hoverOpen(section.id)}
+              >
+                {section.label}
+                <Chevron />
+              </button>
+            ))}
           </div>
 
           <div className="pnav-actions">
