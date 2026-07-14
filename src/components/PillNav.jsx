@@ -225,6 +225,10 @@ export default function PillNav() {
   const [sheet, setSheet] = useState(false) // mobile sheet open
   const [sheetSection, setSheetSection] = useState('create') // expanded accordion
   const [scrolled, setScrolled] = useState(false)
+  // Sales pages hide the signed-out "Start for Free" pill until the visitor has
+  // scrolled down to section 2 (#create); routes without that section show it
+  // straight away.
+  const [ctaReady, setCtaReady] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const navRef = useRef(null)
@@ -248,11 +252,15 @@ export default function PillNav() {
   // Firm up the bar (opaque glass + shadow) once the page scrolls; listener
   // only, no state-in-effect.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12)
+    const onScroll = () => {
+      setScrolled(window.scrollY > 12)
+      const sec = document.getElementById('create')
+      setCtaReady(!sec || window.scrollY + window.innerHeight * 0.6 >= sec.offsetTop)
+    }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [location.pathname])
 
   // Close the desktop mega-menu and the gear/avatar popovers on outside pointer
   // or Escape. The popovers live inside the nav, so an inside pointer is ignored.
@@ -444,8 +452,14 @@ export default function PillNav() {
                 <Link className="ui-pill ui-pill-ghost ui-pill-sm" to="/login" onClick={closeAll}>
                   Log in
                 </Link>
-                <Link className="ui-pill ui-pill-accent ui-pill-sm" to="/login" onClick={closeAll}>
-                  Get started
+                <Link
+                  className={'ui-pill ui-pill-accent ui-pill-sm pnav-cta' + (ctaReady ? '' : ' is-waiting')}
+                  to="/login"
+                  onClick={closeAll}
+                  tabIndex={ctaReady ? undefined : -1}
+                  aria-hidden={ctaReady ? undefined : 'true'}
+                >
+                  Start for Free
                 </Link>
               </>
             )}
@@ -559,7 +573,7 @@ export default function PillNav() {
                       Log in
                     </Link>
                     <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
-                      Get started
+                      Start for Free
                     </Link>
                   </div>
                 )}
@@ -744,7 +758,7 @@ export default function PillNav() {
             ) : (
               <>
                 <Link className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" to="/login" onClick={closeAll}>
-                  Get started
+                  Start for Free
                 </Link>
                 <Link className="ui-pill ui-pill-out ui-pill-lg ui-pill-block" to="/login" onClick={closeAll}>
                   Log in

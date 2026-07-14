@@ -53,10 +53,13 @@ export const CREATE_GROUPS = [
     home: '/typography',
     desc: 'Pair fonts and build scales that hold up.',
     soon: true,
+    // ⚠️ A tool is only `soon: false` when its route is in CreateTool's
+    // LIVE_TOOLS map — otherwise the route renders the 🤫 workshop state and
+    // the nav must dim it. Keep the two in sync.
     tools: [
-      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', soon: false },
-      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', soon: false },
-      { id: 'type-scale', label: 'Type Scale', route: '/typescale', soon: false },
+      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', soon: true },
+      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', soon: true },
+      { id: 'type-scale', label: 'Type Scale', route: '/typescale', soon: true },
     ],
   },
   {
@@ -67,9 +70,9 @@ export const CREATE_GROUPS = [
     desc: 'Design components with live preview and CSS out.',
     soon: true,
     tools: [
-      { id: 'component-designer', label: 'Component Designer', route: '/ui-builder', soon: false },
-      { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', soon: false },
-      { id: 'auto-builder', label: 'Auto-Builder', route: '/auto-builder', soon: false },
+      { id: 'component-designer', label: 'Component Designer', route: '/ui-builder', soon: true },
+      { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', soon: true },
+      { id: 'auto-builder', label: 'Auto-Builder', route: '/auto-builder', soon: true },
     ],
   },
   {
@@ -92,10 +95,10 @@ export const CREATE_GROUPS = [
     desc: 'Generators for prompts, pages and alt text.',
     soon: true,
     tools: [
-      { id: 'ai-prompt', label: 'Image Prompt', route: '/ai-prompt', soon: false },
-      { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', soon: false },
-      { id: 'alt-text', label: 'Alt Text', route: '/alt-text', soon: false },
-      { id: 'prompts', label: 'Prompt Library', route: '/prompts', soon: false },
+      { id: 'ai-prompt', label: 'Image Prompt', route: '/ai-prompt', soon: true },
+      { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', soon: true },
+      { id: 'alt-text', label: 'Alt Text', route: '/alt-text', soon: true },
+      { id: 'prompts', label: 'Prompt Library', route: '/prompts', soon: true },
     ],
   },
 ]
@@ -153,11 +156,11 @@ const CREATE_MENU = [
   [{
     label: 'Type & UI',
     tools: [
-      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', icon: 'type', hue: 'type', soon: false },
-      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', icon: 'font-pair', hue: 'type', soon: false },
-      { id: 'type-scale', label: 'Type Scale', route: '/typescale', icon: 'typography', hue: 'type', soon: false },
-      { id: 'component-designer', label: 'Component Designer', route: '/ui-builder', icon: 'component', hue: 'component', soon: false },
-      { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', icon: 'box-shadow', hue: 'component', soon: false },
+      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', icon: 'type', hue: 'type', soon: true },
+      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', icon: 'font-pair', hue: 'type', soon: true },
+      { id: 'type-scale', label: 'Type Scale', route: '/typescale', icon: 'typography', hue: 'type', soon: true },
+      { id: 'component-designer', label: 'Component Designer', route: '/ui-builder', icon: 'component', hue: 'component', soon: true },
+      { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', icon: 'box-shadow', hue: 'component', soon: true },
       { id: 'auto-builder', label: 'Auto-Builder', route: '/auto-builder', icon: 'auto', hue: 'component', soon: true },
     ],
   }],
@@ -179,10 +182,10 @@ const CREATE_MENU = [
     {
       label: 'AI',
       tools: [
-        { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: false },
-        { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: false },
-        { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
-        { id: 'prompts', label: 'Prompt Library', route: '/prompts', icon: 'community-prompts', hue: 'ai', soon: false },
+        { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: true },
+        { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: true },
+        { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: true },
+        { id: 'prompts', label: 'Prompt Library', route: '/prompts', icon: 'community-prompts', hue: 'ai', soon: true },
       ],
     },
   ],

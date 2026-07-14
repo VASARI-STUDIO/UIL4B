@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import SnapSlider from './SnapSlider'
 
 // Small, fully-functional mini-tools embedded at the top of a category
 // dashboard so visitors get instant value before opening the full tool.
@@ -88,10 +89,10 @@ function ShadowMini({ onCopy, toast }) {
   }
 
   const sliders = [
-    { label: 'Y', value: y, set: setY, min: 0, max: 48 },
-    { label: 'Blur', value: blur, set: setBlur, min: 0, max: 80 },
-    { label: 'Spread', value: spread, set: setSpread, min: -24, max: 24 },
-    { label: 'Alpha', value: alpha, set: setAlpha, min: 0, max: 100 },
+    { label: 'Y', value: y, set: setY, min: 0, max: 48, def: 12, snaps: [0, 12, 24, 36, 48], unit: 'px' },
+    { label: 'Blur', value: blur, set: setBlur, min: 0, max: 80, def: 28, snaps: [0, 20, 28, 40, 60, 80], unit: 'px' },
+    { label: 'Spread', value: spread, set: setSpread, min: -24, max: 24, def: -6, snaps: [-12, -6, 0, 6, 12], unit: 'px' },
+    { label: 'Alpha', value: alpha, set: setAlpha, min: 0, max: 100, def: 45, snaps: [25, 45, 50, 75, 100], unit: '%' },
   ]
 
   return (
@@ -108,7 +109,9 @@ function ShadowMini({ onCopy, toast }) {
           {sliders.map(s => (
             <label key={s.label} className="cmt-slider">
               <span>{s.label}</span>
-              <input type="range" min={s.min} max={s.max} value={s.value} onChange={e => s.set(+e.target.value)} />
+              <SnapSlider min={s.min} max={s.max} value={s.value} defaultValue={s.def}
+                snaps={s.snaps} unit={s.unit} ariaLabel={`Shadow ${s.label}`}
+                onChange={s.set} />
             </label>
           ))}
           <button type="button" className="cmt-action cmt-action-full" onClick={copy}>
