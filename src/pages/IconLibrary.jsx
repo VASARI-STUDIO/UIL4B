@@ -9,6 +9,7 @@ import { getLenis } from '../hooks/useSmoothScroll'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
+import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 
@@ -361,7 +362,7 @@ const JOIN_OPTS = [
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
 function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, onCopy, onPick }) {
   const { user } = useAuth()
-  const { projects } = useProject()
+  const { projects, saveProject, projectLimit } = useProject()
   const { theme } = useTheme()
   // The stage follows the site theme: in light mode an un-tinted icon previews
   // dark-on-light, in dark mode white-on-dark — so what you see matches where
@@ -402,11 +403,24 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Save-to-project picker: saving is a two-step flow — choose a project, then
   // write — so the free per-PROJECT icon cap can be enforced at pick time.
   const [savePickerOpen, setSavePickerOpen] = useState(false)
+  // Which project the current edit landed in — drives the "Saved to X" button
+  // label. Seeded from a re-opened custom's stored projectId.
+  const [savedProjectId, setSavedProjectId] = useState(() => (icon?.custom && icon.projectId) || null)
+  // Hovering a saved button re-arms it ("Save to another project").
+  const [saveHover, setSaveHover] = useState(false)
+  // Inline new-project creation inside the picker: naming is REQUIRED before
+  // an icon can be assigned to a fresh project.
+  const [newProjOpen, setNewProjOpen] = useState(false)
+  const [newProjName, setNewProjName] = useState('')
+  // Export render scale — @1x serialises at the chosen size, @2x doubles it.
+  const [exportScale, setExportScale] = useState(1)
 
   // Gate prompts open in a NEW tab so the edit in progress here survives.
   // Firebase auth and the user-doc subscription snapshot both sync across
   // tabs, so validity is DERIVED: once the user signs in over there, the
   // 'save'/'line' asks are answered; going Pro answers them all.
+  // 'projects' (free project-count cap) deliberately stays visible for
+  // signed-in non-Pro users — it's an upgrade ask, not a sign-in ask.
   const gate = isPro ? null : (user && (gateReq === 'save' || gateReq === 'line')) ? null : gateReq
   // Per-project custom-icon counts, read fresh each time the picker opens so
   // the "n/limit" badges reflect the live store.
@@ -551,6 +565,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     [baseSvgText, size, color, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
   )
 
+  // Download honours the render scale: @2x doubles the rendered dimensions
+  // (capped at 2048) while the on-page copy stays at the chosen size.
+  const downloadOutput = useMemo(() => {
+    if (exportScale === 1) return serializedOutput
+    return serializeCustomizedSvg(baseSvgText, { size: Math.min(2048, size * exportScale), color: color || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV })
+  }, [serializedOutput, exportScale, baseSvgText, size, color, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
+
   const stageImgUrl = useMemo(() => {
     if (!activeIcon?.cdn) return ''
     const p = { size }
@@ -599,13 +620,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   const handleDownload = () => {
-    if (!serializedOutput) return
+    if (!downloadOutput) return
     try {
-      const blob = new Blob([serializedOutput], { type: 'image/svg+xml' })
+      const blob = new Blob([downloadOutput], { type: 'image/svg+xml' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${(activeIcon?.name || 'icon').replace(/[^\w.-]+/g, '-')}.svg`
+      a.download = `${(activeIcon?.name || 'icon').replace(/[^\w.-]+/g, '-')}${exportScale > 1 ? `@${exportScale}x` : ''}.svg`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -641,12 +662,75 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       svg, color: color || '', size, stroke, absStroke, cap, join, isStroke, colored,
     }
     setSavePickerOpen(false)
+    setNewProjOpen(false)
+    setNewProjName('')
     if (!writeCustomIcons([record, ...existing])) { setSavedState('error'); return }
     addRecentIcon(recentPayload(activeIcon), 'edit')
+    setSavedProjectId(projectId)
     setSavedState('saved')
+    setSaveHover(false)
   }
 
-  const saveLabel = savedState === 'saved' ? 'Saved to Custom Icons'
+  // "New" in the picker: a 4th free project is the upgrade moment — close the
+  // picker and surface the projects gate instead of a dead-end error.
+  const handleNewProject = () => {
+    if (!isPro && projects.length >= projectLimit) {
+      setSavePickerOpen(false)
+      setGate('projects')
+      return
+    }
+    setNewProjOpen(true)
+  }
+
+  const handleCreateAndSave = () => {
+    const name = newProjName.trim()
+    if (!name) return
+    try {
+      const id = saveProject(name, { blank: true })
+      handleSaveToProject(id)
+    } catch {
+      setSavePickerOpen(false)
+      setGate('projects')
+    }
+  }
+
+  // Reset every control to its opening default (a fresh, un-edited icon).
+  const handleReset = () => {
+    setSize(48)
+    setColor('')
+    setStroke(2)
+    writeStickyStroke(2)
+    setAbsStroke(false)
+    setCap('round')
+    setJoin('round')
+    setRotate(0)
+    setFlipH(false)
+    setFlipV(false)
+    markDirty()
+  }
+
+  const savedProjectName = useMemo(() => {
+    if (!savedProjectId) return null
+    return projects.find(p => p.id === savedProjectId)?.name || null
+  }, [savedProjectId, projects])
+
+  // Projects that already hold a saved copy of THIS base icon — surfaced at the
+  // foot of the popup so opening the original still tells you where your edited
+  // versions live.
+  const savedInProjects = useMemo(() => {
+    if (!activeIcon || activeIcon.custom || activeIcon.pasted) return []
+    const names = new Set()
+    for (const r of readCustomIcons()) {
+      if (r.base !== activeIcon.name || (r.pack || null) !== (activeIcon.pack || null) || !r.projectId) continue
+      const p = projects.find(x => x.id === r.projectId)
+      if (p) names.add(p.name)
+    }
+    return [...names]
+    // savedState: re-check after each save so the note appears immediately.
+  }, [activeIcon, projects, savedState]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveLabel = savedState === 'saved'
+    ? (saveHover ? 'Save to another project' : (savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons'))
     : savedState === 'error' ? 'Couldn’t save — retry'
       : activeIcon?.custom ? 'Save as new' : 'Save to project'
 
@@ -715,8 +799,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             <div className="icust-controls">
               <div className="icust-row">
                 <label htmlFor="icust-size">Size</label>
-                <input id="icust-size" type="range" min="12" max="128" value={size} onChange={(e) => { setSize(+e.target.value); markDirty() }} />
-                <span className="icust-value">{size}px</span>
+                <SnapSlider
+                  id="icust-size"
+                  min={12}
+                  max={128}
+                  value={size}
+                  defaultValue={48}
+                  snaps={[12, 16, 24, 32, 48, 64, 96, 128]}
+                  unit="px"
+                  inputMax={1024}
+                  ariaLabel="Icon size"
+                  onChange={(v) => { setSize(v); markDirty() }}
+                />
               </div>
 
               <div className="icust-row">
@@ -738,8 +832,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               {isStroke && (
                 <div className="icust-row">
                   <label htmlFor="icust-stroke">Stroke</label>
-                  <input id="icust-stroke" type="range" min="1" max="3" step="0.25" value={stroke} onChange={(e) => { const v = +e.target.value; setStroke(v); writeStickyStroke(v); markDirty() }} />
-                  <span className="icust-value">{stroke}</span>
+                  <SnapSlider
+                    id="icust-stroke"
+                    min={1}
+                    max={3}
+                    step={0.25}
+                    value={stroke}
+                    defaultValue={2}
+                    snaps={[1, 1.5, 2, 2.5, 3]}
+                    decimals={2}
+                    ariaLabel="Stroke width"
+                    onChange={(v) => { setStroke(v); writeStickyStroke(v); markDirty() }}
+                  />
                   <button type="button" className={`icust-abs${absStroke ? ' active' : ''}`} aria-pressed={absStroke} onClick={() => { setAbsStroke(a => !a); markDirty() }}>Absolute</button>
                 </div>
               )}
@@ -814,12 +918,34 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
               </button>
 
-              <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleSave} disabled={savedState === 'saved'} aria-disabled={savedState === 'saved'}>
+              <button
+                type="button"
+                className="ui-pill ui-pill-out ui-pill-md"
+                onClick={handleSave}
+                onMouseEnter={() => setSaveHover(true)}
+                onMouseLeave={() => setSaveHover(false)}
+                onFocus={() => setSaveHover(true)}
+                onBlur={() => setSaveHover(false)}
+              >
                 {saveLabel}
               </button>
 
               <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleDownload}>Download</button>
+
+              <div className="icust-seg icust-seg--scale" role="group" aria-label="Export render scale">
+                {[1, 2].map(s => (
+                  <button key={s} type="button" className={exportScale === s ? 'active' : ''} aria-pressed={exportScale === s} title={`Export at ${size * s}px`} onClick={() => setExportScale(s)}>@{s}x</button>
+                ))}
+              </div>
+
+              <button type="button" className="ui-pill ui-pill-out ui-pill-md icust-reset" onClick={handleReset}>Reset to default</button>
             </div>
+
+            {savedInProjects.length > 0 && (
+              <p className="icust-savedin">
+                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
+              </p>
+            )}
 
             {similarList.length > 0 && (
               <div className="icust-similar">
@@ -862,12 +988,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <h3 className="icust-gate-title" id="icust-gate-title">
                 {gate === 'line' ? 'Line styles are a Pro tool'
                   : gate === 'copies' ? 'Daily copy limit reached'
-                    : 'Sign in to save icons'}
+                    : gate === 'projects' ? 'You’re at the free project limit'
+                      : 'Sign in to save icons'}
               </h3>
               <p className="icust-gate-copy">
                 {gate === 'line' ? 'Fine-tune stroke ends and corners with Pro. Create a free account to save your work, or see what Pro unlocks.'
                   : gate === 'copies' ? `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day — the counter resets tomorrow. Go Pro for unlimited copies.`
-                    : 'Saved icons live inside one of your projects. Create a free account to start saving.'}
+                    : gate === 'projects' ? `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : 3} projects. Go Pro for unlimited projects — or save this icon into one you already have.`
+                      : 'Saved icons live inside one of your projects. Create a free account to start saving.'}
               </p>
               <div className="icust-gate-actions">
                 {user
@@ -895,9 +1023,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   ? `Pick where this icon lives — the free plan saves up to ${saveLimit} icons per project.`
                   : 'Pick where this icon lives.'}
               </p>
-              {projects.length === 0 ? (
-                <p className="icust-gate-copy">No projects yet — save a project from the Create tools first.</p>
-              ) : (
+              {projects.length > 0 && (
                 <div className="icust-proj-list">
                   {projects.map((p) => {
                     const used = projectCounts[p.id] || 0
@@ -921,8 +1047,41 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   })}
                 </div>
               )}
+              {/* New-project path: naming is required — the create button stays
+                  disabled until a name is typed. A 4th free project routes to
+                  the upgrade gate instead (handleNewProject). */}
+              {newProjOpen ? (
+                <div className="icust-newproj">
+                  <input
+                    className="icust-newproj-input"
+                    type="text"
+                    value={newProjName}
+                    onChange={(e) => setNewProjName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndSave() }}
+                    placeholder="Project name (required)"
+                    aria-label="New project name"
+                    maxLength={60}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="ui-pill ui-pill-accent ui-pill-md"
+                    disabled={!newProjName.trim()}
+                    onClick={handleCreateAndSave}
+                  >
+                    Create &amp; save
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="icust-proj-btn icust-proj-btn--new" onClick={handleNewProject}>
+                  <span className="icust-proj-name">+ New project</span>
+                  {!isPro && Number.isFinite(projectLimit) && (
+                    <span className="icust-proj-count">{projects.length}/{projectLimit}</span>
+                  )}
+                </button>
+              )}
               {!isPro && <Link className="icust-upgrade" to="/plans" target="_blank" rel="noopener">Upgrade for unlimited →</Link>}
-              <button type="button" className="icust-gate-dismiss" onClick={() => setSavePickerOpen(false)}>Cancel</button>
+              <button type="button" className="icust-gate-dismiss" onClick={() => { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') }}>Cancel</button>
             </div>
           </div>
         )}

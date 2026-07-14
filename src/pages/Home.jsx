@@ -112,21 +112,21 @@ export default function Home() {
       {/* ── Hero ── */}
       <header className="home-hero">
         <h1 className="home-hero-h1">
-          <span className="home-hero-line"><span className="home-hero-line-in">Preview your design system</span></span>
-          <span className="home-hero-line"><span className="home-hero-line-in">before you ship it.</span></span>
+          <span className="home-hero-line"><span className="home-hero-line-in">No more tab hoarding.</span></span>
+          <span className="home-hero-line"><span className="home-hero-line-in">Every design tool, one workspace.</span></span>
         </h1>
         <p className="home-hero-sub">
-          Build colour, type, components and icons in one workspace — see them live, catch
-          what breaks, and export production-ready code.
+          Colour, type, components and icons — built, checked and exported from one
+          place instead of seventeen tabs.
         </p>
         <div className="home-hero-cta">
-          <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/color">
-            Start building
+          <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
+            Start for Free
             <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
           </Link>
-          <a className="ui-pill ui-pill-out ui-pill-lg" href="#create">
-            See how it works
-          </a>
+          <Link className="ui-pill ui-pill-out ui-pill-lg" to="/plans">
+            See our plans
+          </Link>
         </div>
         <p className="home-hero-hint">Free to start · No credit card · Runs in your browser</p>
       </header>
@@ -314,13 +314,13 @@ export default function Home() {
           <span className="home-eyebrow">Start free</span>
           <h2 className="home-h2">Build your first system today.</h2>
           <div className="home-hero-cta">
-            <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/color">
-              Start building
+            <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
+              Start for Free
               <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
             </Link>
-            <a className="ui-pill ui-pill-out ui-pill-lg" href="#create">
-              Explore the tools
-            </a>
+            <Link className="ui-pill ui-pill-out ui-pill-lg" to="/plans">
+              See our plans
+            </Link>
           </div>
           <p className="home-cta-hint">No credit card · Upgrade only when you're ready</p>
         </div>
@@ -373,7 +373,7 @@ export default function Home() {
               <p className="home-foot-colhead">Product</p>
               <Link className="home-foot-link" to="/home">Home</Link>
               <Link className="home-foot-link" to="/login">Log in</Link>
-              <Link className="home-foot-link" to="/login">Get started</Link>
+              <Link className="home-foot-link" to="/login">Start for Free</Link>
             </div>
           </div>
 

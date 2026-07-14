@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
+import SnapSlider from '../components/SnapSlider'
 import { takePendingImages } from '../utils/imageHandoff'
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -26,6 +27,24 @@ const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,
 const ACCEPT_VIDEO = 'video/*,.mp4,.webm,.mov,.avi,.gif,.webp'
 
 const LARGE_FILE_BYTES = 50 * 1024 * 1024 // 50 MB warning threshold
+
+const QUALITY_SNAPS = [25, 50, 75, 90]
+const QUALITY_DEFAULT = 90
+
+// Render scales for image export (@1x keeps source size, @2x doubles it).
+const EXPORT_SCALES = [
+  { id: 1, label: '@1x' },
+  { id: 2, label: '@2x' },
+]
+
+// Longest canvas side we will attempt — beyond this most browsers fail or
+// silently produce an empty bitmap.
+const MAX_CANVAS_DIM = 16384
+
+// canvas.toBlob never settling (seen with some format/browser combos) would
+// leave the converter stuck in its busy state, disabling every control. Fail
+// the item instead so the batch — and the UI — always finishes.
+const ENCODE_TIMEOUT_MS = 30000
 
 // ffmpeg.wasm CDN URLs (single-threaded core; works without cross-origin isolation)
 const FFMPEG_PKG = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'
@@ -168,8 +187,9 @@ function DropZone({ accept, multiple, onFiles, hint, sub }) {
 function ImageConvert({ toast, initialFiles }) {
   const [items, setItems] = useState([]) // { id, name, srcUrl, file, out:{blob,url,bytes,w,h} }
   const [format, setFormat] = useState('image/webp')
-  const [quality, setQuality] = useState(90)
+  const [quality, setQuality] = useState(QUALITY_DEFAULT)
   const [maxDim, setMaxDim] = useState(0) // 0 = keep original size
+  const [renderScale, setRenderScale] = useState(1) // @1x / @2x export
   const [busy, setBusy] = useState(false)
   const [zipping, setZipping] = useState(false)
 
@@ -227,9 +247,12 @@ function ImageConvert({ toast, initialFiles }) {
   const convertOne = useCallback(async (item) => {
     const img = await loadImage(item.srcUrl)
     const longest = Math.max(img.width, img.height)
-    const scale = maxDim > 0 && longest > maxDim ? maxDim / longest : 1
+    const scale = (maxDim > 0 && longest > maxDim ? maxDim / longest : 1) * renderScale
     const w = Math.max(1, Math.round(img.width * scale))
     const h = Math.max(1, Math.round(img.height * scale))
+    if (Math.max(w, h) > MAX_CANVAS_DIM) {
+      throw new Error(`Too large to export at @${renderScale}x — reduce Max Dimension`)
+    }
     const canvas = document.createElement('canvas')
     canvas.width = w
     canvas.height = h
@@ -238,14 +261,20 @@ function ImageConvert({ toast, initialFiles }) {
     ctx.drawImage(img, 0, 0, w, h)
     const q = format === 'image/png' ? undefined : quality / 100
     // canvas.toBlob yields null when the browser can't encode the requested
-    // format (notably AVIF in some browsers). Guard it so the batch records a
-    // clear per-item error and keeps going instead of crashing.
+    // format (notably AVIF in some browsers) — and a callback that never fires
+    // would wedge the whole batch in its busy state. Guard both so each item
+    // records a clear error and the batch keeps going.
     const label = OUTPUT_FORMATS.find(f => f.id === format)?.label || format
     const blob = await new Promise((resolve, reject) => {
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error(`${label} export not supported by this browser`)), format, q)
+      const to = setTimeout(() => reject(new Error(`${label} export timed out`)), ENCODE_TIMEOUT_MS)
+      canvas.toBlob(b => {
+        clearTimeout(to)
+        if (b) resolve(b)
+        else reject(new Error(`${label} export not supported by this browser`))
+      }, format, q)
     })
     return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w, h }
-  }, [format, quality, maxDim])
+  }, [format, quality, maxDim, renderScale])
 
   const [convertProgress, setConvertProgress] = useState({ done: 0, total: 0 })
 
@@ -334,14 +363,15 @@ function ImageConvert({ toast, initialFiles }) {
             <div style={{ flex: 1, minWidth: 200 }}>
               <div className="seg-label">Quality</div>
               <div className="row">
-                <input
-                  type="range" min="1" max="100" value={quality} style={{ flex: 1 }}
-                  onChange={e => setQuality(+e.target.value)}
+                <SnapSlider
+                  min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
+                  snaps={QUALITY_SNAPS} unit="%"
+                  onChange={setQuality}
                   disabled={busy || !fmt.lossy}
+                  ariaLabel="Output quality"
                 />
-                <span style={{ fontSize: 12, color: 'var(--t1)', width: 38, textAlign: 'right' }}>{quality}%</span>
               </div>
-              {!fmt.lossy && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>PNG is always lossless</div>}
+              {!fmt.lossy && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>PNG is always lossless — quality doesn&apos;t apply</div>}
             </div>
             <div>
               <div className="seg-label">Max Dimension</div>
@@ -351,6 +381,12 @@ function ImageConvert({ toast, initialFiles }) {
                 <option value={1920}>1920 px</option>
                 <option value={1200}>1200 px</option>
                 <option value={800}>800 px</option>
+              </select>
+            </div>
+            <div>
+              <div className="seg-label">Export Scale</div>
+              <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} style={{ maxWidth: 100 }} aria-label="Export render scale">
+                {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </div>
           </div>
@@ -632,7 +668,7 @@ function VideoFrames({ toast }) {
   const [fps, setFps] = useState(2)
   const [scale, setScale] = useState(1)
   const [format, setFormat] = useState('image/png')
-  const [quality, setQuality] = useState(90)
+  const [quality, setQuality] = useState(QUALITY_DEFAULT)
   const [extracting, setExtracting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [frames, setFrames] = useState([])
@@ -810,14 +846,15 @@ function VideoFrames({ toast }) {
             <div style={{ flex: 1, minWidth: 200 }}>
               <div className="seg-label">Quality</div>
               <div className="row">
-                <input
-                  type="range" min="1" max="100" value={quality} style={{ flex: 1 }}
-                  onChange={e => setQuality(+e.target.value)}
+                <SnapSlider
+                  min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
+                  snaps={QUALITY_SNAPS} unit="%"
+                  onChange={setQuality}
                   disabled={extracting || !fmt.lossy}
+                  ariaLabel="Frame quality"
                 />
-                <span style={{ fontSize: 12, color: 'var(--t1)', width: 38, textAlign: 'right' }}>{quality}%</span>
               </div>
-              {!fmt.lossy && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>PNG is always lossless</div>}
+              {!fmt.lossy && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 2 }}>PNG is always lossless — quality doesn&apos;t apply</div>}
             </div>
           </div>
           <div className="row" style={{ marginTop: 14, gap: 8 }}>

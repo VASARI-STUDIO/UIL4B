@@ -1,6 +1,6 @@
 /* UIL4B v10 — Editorial, Premium, Refined */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--font:'Outfit',system-ui,-apple-system,sans-serif;--serif:'Outfit',system-ui,-apple-system,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;--t:.2s cubic-bezier(.16,1,.3,1);--sw:248px;--top-h:56px;--radius-xs:6px;--radius-s:8px;--radius:10px;--radius-l:14px;--radius-xl:20px;--radius-2xl:28px;--radius-pill:999px;--accent-fg:#ffffff;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;--s-9:96px;--s-10:128px;--t-fast:.12s cubic-bezier(.2,0,0,1);--fl-reveal:.42s cubic-bezier(.16,1,.3,1);--fl-stagger:55ms;--fl-shimmer-dur:1.4s}
+:root{--font:'Outfit',system-ui,-apple-system,sans-serif;--serif:'Outfit',system-ui,-apple-system,sans-serif;--mono:'Outfit',system-ui,-apple-system,sans-serif;--t:.2s cubic-bezier(.16,1,.3,1);--sw:248px;--top-h:56px;--radius-xs:6px;--radius-s:8px;--radius:10px;--radius-l:14px;--radius-xl:20px;--radius-2xl:28px;--radius-pill:999px;--accent-fg:#ffffff;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;--s-9:96px;--s-10:128px;--t-fast:.12s cubic-bezier(.2,0,0,1);--fl-reveal:.42s cubic-bezier(.16,1,.3,1);--fl-stagger:55ms;--fl-shimmer-dur:1.4s}
 [data-theme="dark"]{--bg-0:#0A0B0D;--bg-1:#0F1012;--bg-2:#16181C;--bg-3:#1E2126;--bg-4:#272B31;--border:rgba(255,255,255,.07);--bh:rgba(255,255,255,.13);--t0:#F2F3F5;--t1:#B6BAC2;--t2:#888D97;--t3:#5C616B;--cbg:#0F1012;--hvr:rgba(255,255,255,.04);--card:#16181C;--card-grad:#16181C;--inp:#16181C;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--accent:#3B82F6;--accent-strong:#2563EB;--accent-soft:#60A5FA;--accent-bg:rgba(59,130,246,.12);--accent-glow:rgba(59,130,246,.20);--icon-inv:invert(1);--brand:#3B82F6;--brand-soft:#60A5FA;--brand-bg:rgba(59,130,246,.12);--brand-glow:rgba(59,130,246,.18);--info:#3B82F6;--info-bg:rgba(59,130,246,.12);--scrim:rgba(8,9,11,.62);--glass-bg:color-mix(in srgb,var(--bg-1) 72%,transparent);--glass-border:var(--bh);--glass-shadow:0 8px 32px -12px rgba(0,0,0,.6)}
 [data-theme="light"]{--bg-0:#fff;--bg-1:#FCFCFD;--bg-2:#f7f7f7;--bg-3:#ebebeb;--bg-4:#d4d4d4;--border:rgba(0,0,0,.08);--bh:rgba(0,0,0,.12);--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#171717;--t1:#525252;--t2:#737373;--t3:#a3a3a3;--cbg:#f5f5f5;--hvr:rgba(0,0,0,.03);--card:#fff;--card-grad:#fff;--inp:#fff;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#2563EB;--accent-strong:#1D4ED8;--accent-soft:#3B82F6;--accent-bg:rgba(37,99,235,.08);--accent-glow:rgba(37,99,235,.14);--icon-inv:none;--brand:#2563EB;--brand-soft:#3B82F6;--brand-bg:rgba(37,99,235,.08);--brand-glow:rgba(37,99,235,.12);--info:#2563EB;--info-bg:rgba(37,99,235,.08);--scrim:rgba(23,23,23,.32);--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
 html{scroll-behavior:smooth}
@@ -2357,7 +2357,7 @@ img,svg,video{max-width:100%;height:auto}
 }
 
 /* ─── Landing / welcome page ─── */
-.landing{--landing-serif:'Fraunces',Georgia,serif;--ease-out:cubic-bezier(.16,1,.3,1);--ease-soft:cubic-bezier(.4,0,.2,1);min-height:100dvh;background:radial-gradient(ellipse 90% 55% at 50% -10%,color-mix(in srgb,var(--accent) 6%,transparent),transparent 60%),var(--bg-0);color:var(--t0);display:flex;flex-direction:column}
+.landing{--landing-serif:'Outfit',system-ui,sans-serif;--ease-out:cubic-bezier(.16,1,.3,1);--ease-soft:cubic-bezier(.4,0,.2,1);min-height:100dvh;background:radial-gradient(ellipse 90% 55% at 50% -10%,color-mix(in srgb,var(--accent) 6%,transparent),transparent 60%),var(--bg-0);color:var(--t0);display:flex;flex-direction:column}
 .landing-nav{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,5vw,64px);position:sticky;top:0;background:transparent;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:50;border-bottom:1px solid transparent;transition:transform .35s cubic-bezier(.16,1,.3,1),background .3s,border-color .3s}
 .landing-nav-hidden{transform:translateY(-100%)}
 .landing-nav-solid{background:color-mix(in srgb,var(--bg-0) 92%,transparent);border-bottom-color:var(--border)}
@@ -4464,6 +4464,10 @@ html.lenis,html.lenis body{height:auto}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
 .pnav-actions{display:flex;align-items:center;gap:8px;transition:gap var(--dur-3) var(--ease-inout)}
+/* Sales-page "Start for Free" pill — hidden until the visitor scrolls to
+   section 2 (#create); PillNav toggles .is-waiting from the scroll listener. */
+.pnav-cta{transition:opacity var(--dur-3) var(--ease-out),transform var(--dur-3) var(--ease-out),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-cta.is-waiting{opacity:0;transform:translateY(-6px);pointer-events:none}
 .pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto}
 .pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
 .pnav-mobile:hover{background:var(--hvr)}
@@ -4609,8 +4613,8 @@ html.lenis,html.lenis body{height:auto}
 .pnav-toollist{list-style:none;display:flex;flex-direction:column;gap:2px;margin:0;padding:0}
 .pnav-tool{display:flex;align-items:center;gap:12px;min-height:40px;padding:7px 10px;border-radius:var(--radius-s);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
-.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent));transition:background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
-.pnav-tool:hover .pnav-tool-ico{background:color-mix(in srgb,var(--hue,var(--accent)) 20%,var(--bg-2));transform:translateY(-1px)}
+.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;color:var(--hue,var(--accent));transition:transform var(--dur-2) var(--ease-out)}
+.pnav-tool:hover .pnav-tool-ico{transform:translateY(-1px)}
 .pnav-tool-ico svg{width:16px;height:16px}
 .pnav-tool-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-body-s);font-weight:560}
 .pnav-tool .soon-badge{margin-left:auto}
@@ -4748,6 +4752,15 @@ html.lenis,html.lenis body{height:auto}
 .icust-row input[type="range"]{flex:1;min-width:0;accent-color:var(--accent)}
 .icust-value{flex:0 0 auto;min-width:42px;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1)}
 .icust-note{flex:1;font-size:var(--fs-caption);color:var(--t2);font-style:italic}
+/* SnapSlider — shared range control: snap points, double-click reset, and a
+   click-to-edit value readout for custom values beyond the track range. */
+.snapv{display:flex;flex:1 1 auto;align-items:center;gap:12px;min-width:0}
+.snapv input[type="range"]{flex:1;min-width:0;accent-color:var(--accent)}
+.snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.snapv-value:hover{border-color:var(--border);color:var(--t0)}
+.snapv-value:disabled{cursor:not-allowed;opacity:.6}
+.snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
+.snapv-input::-webkit-outer-spin-button,.snapv-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
 .icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .icust-seg button:hover{color:var(--t0)}
@@ -4790,9 +4803,12 @@ html.lenis,html.lenis body{height:auto}
    a single Upgrade CTA that routes to /plans. Revealed on hover OR keyboard
    focus inside the panel, so it's reachable without a mouse. */
 .icust-pro{position:relative}
-.icust-pro-veil{position:absolute;inset:0;z-index:2;display:grid;place-items:center;border-radius:inherit;background:var(--scrim);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);opacity:0;visibility:hidden;transition:opacity var(--dur-2) var(--ease-out),visibility var(--dur-2) var(--ease-out)}
+.icust-pro-veil{position:absolute;inset:0;z-index:2;display:grid;place-items:center;border-radius:inherit;background:var(--scrim);-webkit-backdrop-filter:blur(0px);backdrop-filter:blur(0px);opacity:0;visibility:hidden;transition:opacity var(--dur-4) var(--ease-out),visibility var(--dur-4) var(--ease-out),-webkit-backdrop-filter var(--dur-4) var(--ease-out);transition:opacity var(--dur-4) var(--ease-out),visibility var(--dur-4) var(--ease-out),backdrop-filter var(--dur-4) var(--ease-out)}
+.icust-pro-veil>.ui-pill{transform:translateY(6px) scale(.96);transition:transform var(--dur-4) var(--ease-out)}
 .icust-pro.is-locked:hover .icust-pro-veil,
-.icust-pro.is-locked:focus-within .icust-pro-veil{opacity:1;visibility:visible}
+.icust-pro.is-locked:focus-within .icust-pro-veil{opacity:1;visibility:visible;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.icust-pro.is-locked:hover .icust-pro-veil>.ui-pill,
+.icust-pro.is-locked:focus-within .icust-pro-veil>.ui-pill{transform:none}
 /* Signed-out upgrade gate — a small alert dialog floated over the customizer
    when a visitor taps a Pro-locked line-style control. (The overlay's
    backdrop-filter makes it the containing block for this fixed backdrop.) */
@@ -4810,6 +4826,18 @@ html.lenis,html.lenis body{height:auto}
 .icust-proj-btn:disabled{opacity:.55;cursor:not-allowed}
 .icust-proj-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .icust-proj-count{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;font-size:var(--fs-caption);font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums}
+.icust-proj-btn--new{background:none;border-style:dashed;color:var(--t1);width:100%}
+.icust-proj-btn--new:hover{color:var(--t0)}
+/* Inline new-project creation: name first, then the icon is assigned */
+.icust-newproj{display:flex;gap:8px;width:100%;margin-top:2px}
+.icust-newproj-input{flex:1;min-width:0;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
+.icust-newproj-input:focus{outline:none;border-color:var(--accent)}
+.icust-newproj-input::placeholder{color:var(--t3)}
+/* Footer extras: export render-scale seg + saved-in note */
+.icust-seg--scale{flex:0 0 auto;margin-left:auto}
+.icust-seg--scale button{flex:0 0 auto;min-width:44px}
+.icust-savedin{margin:0;padding:10px 24px 20px;font-size:var(--fs-caption);color:var(--t2)}
+.icust-savedin strong{font-weight:600;color:var(--t1)}
 /* Code readout */
 .icust-code{margin:12px 24px 0}
 .icust-code-label{margin-bottom:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}

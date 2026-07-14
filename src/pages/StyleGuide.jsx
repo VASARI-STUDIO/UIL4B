@@ -29,7 +29,7 @@ const TOKENS = {
     families: [
       { var: '--font', label: 'Primary (UI)', value: 'Outfit' },
       { var: '--serif', label: 'Serif (Display)', value: 'Outfit' },
-      { var: '--mono', label: 'Monospace', value: 'IBM Plex Mono' },
+      { var: '--mono', label: 'Technical (tokens)', value: 'Outfit' },
     ],
     scale: [
       { size: 40, weight: 800, label: 'Display', tracking: '-.04em' },
@@ -170,7 +170,7 @@ export default function StyleGuide({ toast }) {
                 <li><strong>Headings:</strong> 800 weight, negative letter-spacing (-.03em to -.04em)</li>
                 <li><strong>Body:</strong> 200 weight, default tracking, 1.65 line-height</li>
                 <li><strong>Eyebrow / labels:</strong> 10px, 700 weight, uppercase, .08em tracking</li>
-                <li><strong>Mono code:</strong> IBM Plex Mono for tokens, numbers, and technical values</li>
+                <li><strong>Tokens &amp; code:</strong> Outfit everywhere — one family across UI, tokens, numbers, and technical values</li>
                 <li><strong>Subtitles:</strong> 14px, 600 weight for section headings in cards</li>
               </ul>
             </div>
