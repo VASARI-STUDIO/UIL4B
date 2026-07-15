@@ -5497,6 +5497,11 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-role{font-size:10px;font-weight:700;letter-spacing:.14em;opacity:.75}
 .plb-badge{margin-top:4px;padding:3px 9px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;border-radius:999px;background:color-mix(in srgb,var(--plb-ink) 12%,transparent)}
 .plb-badge--low{outline:1px dashed color-mix(in srgb,var(--plb-ink) 55%,transparent)}
+.plb-badges{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap;justify-content:center}
+.plb-badges .plb-badge{margin-top:0;display:inline-flex;align-items:center}
+.plb-badge-ink{display:inline-block;width:8px;height:8px;border-radius:999px;margin-right:5px;border:1px solid color-mix(in srgb,var(--plb-ink) 30%,transparent)}
+.plb-badge-ink--w{background:#fff}
+.plb-badge-ink--b{background:#000}
 
 /* Board interactions: insert-grow animation, drag-reorder states, gap inserts */
 @keyframes plb-in{from{flex-grow:.02;opacity:.2}to{flex-grow:1;opacity:1}}

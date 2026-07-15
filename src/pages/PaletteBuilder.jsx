@@ -10,6 +10,7 @@ import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/palet
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useProModal } from '../contexts/ProModalContext'
 
 // Palette Builder — the standalone /color/palette workbench. A Coolors-style
 // full-bleed board: a toolbar (seed + harmony + brands/variations/preview +
@@ -142,13 +143,17 @@ function extractImageColors(file, count) {
   })
 }
 
-// Legible-ink contrast of a swatch → the AA badge. textColorForBg picks the ink,
-// so the badge reports the contrast a label ON this colour actually gets.
-function badgeFor(hex) {
-  const ink = textColorForBg(hex) === 'rgba(0,0,0,.85)' ? '#000000' : '#FFFFFF'
-  const ratio = contrastRatio(hex, ink)
-  const level = ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA18' : 'LOW'
-  return { level, ratio }
+// WCAG level for a raw ratio (AAA ≥7, AA ≥4.5, AA18 large-text ≥3, else LOW).
+function wcagLevel(ratio) {
+  return ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA18' : 'LOW'
+}
+
+// Contrast of a swatch against WHITE ink and against BLACK ink — the two
+// results the Pro contrast view shows side by side, so you can see at a glance
+// whether a colour carries light text, dark text, or both.
+function contrastPair(hex) {
+  const rate = (ink) => { const ratio = contrastRatio(hex, ink); return { level: wcagLevel(ratio), ratio } }
+  return { light: rate('#FFFFFF'), dark: rate('#000000') }
 }
 
 // Column colour + legible ink through CSS custom properties — the
@@ -383,6 +388,7 @@ function PreviewScene({ colors, mode, title }) {
 export default function PaletteBuilder({ onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { isPro } = useSubscription()
+  const { openProModal } = useProModal()
 
   // Colours are the source of truth (positional: index 0–4 = the five ROLES,
   // beyond = ALTERNATIVE n). Seed + harmony act as a generator over the
@@ -487,7 +493,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
   }
 
   const pickHarmony = (h) => {
-    if (!h.free && !isPro) { toast?.('Harmony systems are a Pro feature — upgrade to unlock'); return }
+    if (!h.free && !isPro) {
+      openProModal({ eyebrow: 'Pro colour tools', title: 'Unlock every colour system', subtitle: 'Analogous, complementary, triadic, tetradic and custom harmonies build richer palettes than the free Auto and Monochromatic systems.' })
+      return
+    }
     setHarmony(h.id)
     setHarmOpen(false)
     regen(seed, h.id)
@@ -617,7 +626,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // the caps, shifts locks right, and flags the slot for the grow-in animation.
   const insertAt = (idx, hex) => {
     if (colors.length >= HARD_MAX) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return }
-    if (!isPro && colors.length >= PRO_MAX) { toast?.(`Palettes beyond ${PRO_MAX} colours are a Pro feature — upgrade to unlock`); return }
+    if (!isPro && colors.length >= PRO_MAX) {
+      openProModal({ eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+      return
+    }
     setColors(prev => { const n = [...prev]; n.splice(idx, 0, hex); return n })
     setLocked(prev => {
       const next = new Set()
@@ -637,6 +649,17 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const setColorAt = (i, hex) => {
     setColors(prev => prev.map((c, k) => (k === i ? hex : c)))
     if (i === 0) { setSeed(hex); setSeedInput(hex) }
+  }
+
+  // Per-colour HCT editing is a Pro tool — free users get the upgrade modal
+  // instead of the picker; Pro users toggle the picker open on that column.
+  const openHctPicker = (i) => {
+    setCtxMenu(null)
+    if (!isPro) {
+      openProModal({ eyebrow: 'Pro colour tools', title: 'Fine-tune any colour in HCT', subtitle: 'Edit hue, chroma and tone on each colour individually with the HCT picker — perceptual control the free tier keeps read-only.' })
+      return
+    }
+    setTintsIdx(null); setPickerIdx(p => (p === i ? null : i))
   }
 
   const onImageFile = async (e) => {
@@ -670,7 +693,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
   }
 
   const pickVariation = (v, idx) => {
-    if (!isPro && idx >= FREE_VARIATIONS) { toast?.('More variations are a Pro feature — upgrade to unlock'); return }
+    if (!isPro && idx >= FREE_VARIATIONS) {
+      openProModal({ eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
+      return
+    }
     // Preserve the frozen list across this apply so reopening the menu shows the
     // same variations with this one ticked, instead of rotating to a fresh set.
     skipVarInvalidate.current = true
@@ -679,8 +705,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setVarsOpen(false)
   }
   const compareVariation = (v, idx) => {
-    if (!isPro) { toast?.('Comparing palettes side-by-side is a Pro feature'); return }
-    if (idx >= FREE_VARIATIONS && !isPro) return
+    // Free users can compare the free variations; the Pro-only rows stay gated.
+    if (!isPro && idx >= FREE_VARIATIONS) {
+      openProModal({ eyebrow: 'Pro colour tools', title: 'Compare every variation', subtitle: 'Line palettes up side by side to compare them. Free covers the first set of variations; Pro unlocks the full range.' })
+      return
+    }
     setVarsOpen(false)
     setPreview({ mode: 'light', compare: v })
   }
@@ -721,6 +750,21 @@ export default function PaletteBuilder({ onCopy, toast }) {
         g.textAlign = 'center'
         g.fillText(c, i * cw + cw / 2, h - 42)
       })
+      // Free exports carry a small brand watermark; Pro exports stay clean.
+      if (!isPro) {
+        const label = 'Made with UIL4B'
+        g.font = '700 22px Outfit, system-ui, sans-serif'
+        const tw = g.measureText(label).width
+        const padX = 14, bh = 34, margin = 22, bw = tw + padX * 2
+        const bx = w - margin - bw, by = margin
+        g.fillStyle = 'rgba(0,0,0,.5)'
+        if (g.roundRect) { g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.fill() }
+        else g.fillRect(bx, by, bw, bh)
+        g.fillStyle = '#FFFFFF'
+        g.textAlign = 'left'
+        g.textBaseline = 'middle'
+        g.fillText(label, bx + padX, by + bh / 2 + 1)
+      }
       canvas.toBlob((blob) => {
         if (!blob) { toast?.('Couldn’t render the image'); return }
         const url = URL.createObjectURL(blob)
@@ -923,7 +967,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                           <button
                             type="button"
                             className="plb-varrow-cmp"
-                            title={isPro ? 'Compare with the current palette' : 'Comparing is a Pro feature'}
+                            title="Compare with the current palette"
                             aria-label={`Compare ${v.label} with the current palette`}
                             onClick={() => compareVariation(v, idx)}
                           >
@@ -946,10 +990,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
             type="button"
             className={showContrast ? 'btn btn-s plb-tgl plb-tgl--on' : 'btn btn-s plb-tgl'}
             aria-pressed={showContrast}
-            title="Show WCAG contrast badges on every colour"
-            onClick={() => setShowContrast(v => !v)}
+            title={isPro ? 'Show WCAG contrast on every colour — light and dark text' : 'Pro — WCAG contrast on every colour, light and dark text'}
+            onClick={() => {
+              if (!isPro) { openProModal({ eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' }); return }
+              setShowContrast(v => !v)
+            }}
           >
-            <IcoContrast /> Contrast
+            <IcoContrast /> Contrast{!isPro && <IcoLock open={false} size={12} />}
           </button>
           <div className="plb-menuwrap">
             <button
@@ -1073,7 +1120,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
       <div className="plb-board">
         {view.map((c, i) => {
           const ink = textColorForBg(c)
-          const { level, ratio } = badgeFor(adjusted[i])
+          const contrast = contrastPair(adjusted[i])
           const ramp = tonalRamp(c)
           const role = i < ROLES.length ? ROLES[i] : `ALTERNATIVE ${i - ROLES.length + 1}`
           const isLocked = locked.has(i)
@@ -1139,9 +1186,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 <button
                   type="button"
                   className="plb-tool"
-                  title="Edit in HCT"
+                  title={isPro ? 'Edit in HCT' : 'Edit in HCT — Pro'}
                   aria-label={`Edit ${role} in HCT`}
-                  onClick={() => { setTintsIdx(null); setCtxMenu(null); setPickerIdx(p => (p === i ? null : i)) }}
+                  onClick={() => openHctPicker(i)}
                 >
                   <IcoSliders />
                 </button>
@@ -1176,7 +1223,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
               <button type="button" className="plb-hex" title="Copy hex" onClick={() => onCopy?.(adjusted[i])}>{adjusted[i]}</button>
               <div className="plb-role">{role}</div>
               {showContrast && (
-                <span className={`plb-badge plb-badge--${level.toLowerCase()}`}>{level} {ratio.toFixed(1)}</span>
+                <span className="plb-badges" role="group" aria-label={`Contrast of ${adjusted[i]} — white text ${contrast.light.ratio.toFixed(1)} to 1, black text ${contrast.dark.ratio.toFixed(1)} to 1`}>
+                  <span className={`plb-badge plb-badge--${contrast.light.level.toLowerCase()}`} title={`With white text — ${contrast.light.ratio.toFixed(2)}:1`}>
+                    <span className="plb-badge-ink plb-badge-ink--w" aria-hidden="true" />{contrast.light.level} {contrast.light.ratio.toFixed(1)}
+                  </span>
+                  <span className={`plb-badge plb-badge--${contrast.dark.level.toLowerCase()}`} title={`With black text — ${contrast.dark.ratio.toFixed(2)}:1`}>
+                    <span className="plb-badge-ink plb-badge-ink--b" aria-hidden="true" />{contrast.dark.level} {contrast.dark.ratio.toFixed(1)}
+                  </span>
+                </span>
               )}
 
               {tintsIdx === i && (
@@ -1232,7 +1286,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
         <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxPosRef(ctxMenu.x, ctxMenu.y)}>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoCopy /> Copy hex</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoShuffle /> Use as seed</button>
-          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setPickerIdx(ctxMenu.i); setCtxMenu(null) }}><IcoSliders /> Edit in HCT</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setTintsIdx(ctxMenu.i); setCtxMenu(null) }}><IcoEye /> View tints</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); setCtxMenu(null) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
