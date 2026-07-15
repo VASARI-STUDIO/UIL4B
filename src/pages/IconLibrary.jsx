@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useProject } from '../contexts/ProjectContext'
+import { useProModal } from '../contexts/ProModalContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
@@ -363,6 +365,8 @@ const JOIN_OPTS = [
 function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, onCopy, onPick }) {
   const { user } = useAuth()
   const { projects, saveProject, projectLimit } = useProject()
+  const { openProModal } = useProModal()
+  const { requireLogin } = useLoginPrompt()
   const { theme } = useTheme()
   // The stage follows the site theme: in light mode an un-tinted icon previews
   // dark-on-light, in dark mode white-on-dark — so what you see matches where
@@ -395,10 +399,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [flipH, setFlipH] = useState(false)
   const [flipV, setFlipV] = useState(false)
   const [copied, setCopied] = useState('')
-  // In-panel upgrade prompt. 'line' = signed-out tap on a Pro line-style
-  // control, 'copies' = non-Pro daily copy cap, 'save' = signed-out save
-  // attempt (projects are account-scoped, so saving needs a sign-in first).
-  const [gateReq, setGate] = useState(null)
   const [savedState, setSavedState] = useState(() => (icon?.custom ? 'saved' : 'idle'))
   // Save-to-project picker: saving is a two-step flow — choose a project, then
   // write — so the free per-PROJECT icon cap can be enforced at pick time.
@@ -415,13 +415,34 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Export render scale — @1x serialises at the chosen size, @2x doubles it.
   const [exportScale, setExportScale] = useState(1)
 
-  // Gate prompts open in a NEW tab so the edit in progress here survives.
-  // Firebase auth and the user-doc subscription snapshot both sync across
-  // tabs, so validity is DERIVED: once the user signs in over there, the
-  // 'save'/'line' asks are answered; going Pro answers them all.
-  // 'projects' (free project-count cap) deliberately stays visible for
-  // signed-in non-Pro users — it's an upgrade ask, not a sign-in ask.
-  const gate = isPro ? null : (user && (gateReq === 'save' || gateReq === 'line')) ? null : gateReq
+  // Pro asks (daily copy cap, project cap, line styles) all open the canonical
+  // Wave-1 Pro modal — one upgrade surface, no per-page variants. The edit in
+  // progress here stays untouched behind the overlay, so nothing is lost.
+  const showProGate = (kind) => {
+    const presets = {
+      copies: {
+        title: 'You’ve hit today’s free copy limit',
+        subtitle: `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day — the counter resets tomorrow. Go Pro for unlimited copies.`,
+      },
+      projects: {
+        title: 'You’re at the free project limit',
+        subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : 3} projects. Go Pro for unlimited projects and icon saves.`,
+      },
+      line: {
+        title: 'Line styles are a Pro tool',
+        subtitle: 'Fine-tune stroke ends and corners — and unlock every other Pro colour and icon tool.',
+      },
+    }
+    openProModal(presets[kind] || {})
+  }
+
+  // Saving is FREE — it just needs an account (projects are account-scoped).
+  // Open the single-click login popup over this page; on success resume the
+  // save-picker in place so the edit continues without a tab hop.
+  const promptSaveLogin = async () => {
+    const u = await requireLogin('save icons')
+    if (u) setSavePickerOpen(true)
+  }
   // Per-project custom-icon counts, read fresh each time the picker opens so
   // the "n/limit" badges reflect the live store.
   const projectCounts = useMemo(() => {
@@ -598,7 +619,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Free-tier daily cap: gate BEFORE the clipboard write, so a capped copy is a
   // pure no-op that opens the upgrade prompt — nothing lands on the clipboard.
   const handleCopySvg = async () => {
-    if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { setGate('copies'); return }
+    if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
     if (!isPro) bumpCopyCount()
@@ -610,7 +631,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   const handleCopyCode = async () => {
-    if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { setGate('copies'); return }
+    if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
     if (!isPro) bumpCopyCount()
@@ -639,7 +660,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // cap can't be enforced without one.
   const handleSave = () => {
     if (!activeIcon || !baseSvgText) return
-    if (!user) { setGate('save'); return }
+    if (!user) { promptSaveLogin(); return }
     setSavePickerOpen(true)
   }
 
@@ -676,7 +697,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const handleNewProject = () => {
     if (!isPro && projects.length >= projectLimit) {
       setSavePickerOpen(false)
-      setGate('projects')
+      showProGate('projects')
       return
     }
     setNewProjOpen(true)
@@ -690,7 +711,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       handleSaveToProject(id)
     } catch {
       setSavePickerOpen(false)
-      setGate('projects')
+      showProGate('projects')
     }
   }
 
@@ -859,7 +880,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <div className="icust-seg icust-seg--icon">
                       {CAP_OPTS.map(o => (
                         <button key={o.v} type="button" className={cap === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={cap === o.v}
-                          onClick={() => { if (!isPro) { if (!user) { setGate('line'); return } openInNewTab('/checkout'); return } setCap(o.v); markDirty() }}>
+                          onClick={() => { if (!isPro) { showProGate('line'); return } setCap(o.v); markDirty() }}>
                           {o.icon}
                         </button>
                       ))}
@@ -870,7 +891,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <div className="icust-seg icust-seg--icon">
                       {JOIN_OPTS.map(o => (
                         <button key={o.v} type="button" className={join === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={join === o.v}
-                          onClick={() => { if (!isPro) { if (!user) { setGate('line'); return } openInNewTab('/checkout'); return } setJoin(o.v); markDirty() }}>
+                          onClick={() => { if (!isPro) { showProGate('line'); return } setJoin(o.v); markDirty() }}>
                           {o.icon}
                         </button>
                       ))}
@@ -973,39 +994,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
             )}
           </>
-        )}
-
-        {gate && (
-          <div className="icust-gate-backdrop" onMouseDown={() => setGate(null)}>
-            <div
-              className="icust-gate"
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="icust-gate-title"
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              {gate !== 'save' && <span className="pnav-pop-tag">Pro</span>}
-              <h3 className="icust-gate-title" id="icust-gate-title">
-                {gate === 'line' ? 'Line styles are a Pro tool'
-                  : gate === 'copies' ? 'Daily copy limit reached'
-                    : gate === 'projects' ? 'You’re at the free project limit'
-                      : 'Sign in to save icons'}
-              </h3>
-              <p className="icust-gate-copy">
-                {gate === 'line' ? 'Fine-tune stroke ends and corners with Pro. Create a free account to save your work, or see what Pro unlocks.'
-                  : gate === 'copies' ? `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day — the counter resets tomorrow. Go Pro for unlimited copies.`
-                    : gate === 'projects' ? `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : 3} projects. Go Pro for unlimited projects — or save this icon into one you already have.`
-                      : 'Saved icons live inside one of your projects. Create a free account to start saving.'}
-              </p>
-              <div className="icust-gate-actions">
-                {user
-                  ? <Link className="ui-pill ui-pill-accent ui-pill-md" to="/checkout" target="_blank" rel="noopener">Upgrade to Pro</Link>
-                  : <Link className="ui-pill ui-pill-accent ui-pill-md" to="/login" target="_blank" rel="noopener">Get started free</Link>}
-                <Link className="ui-pill ui-pill-out ui-pill-md" to="/plans" target="_blank" rel="noopener">See plans</Link>
-              </div>
-              <button type="button" className="icust-gate-dismiss" onClick={() => setGate(null)}>Not now</button>
-            </div>
-          </div>
         )}
 
         {savePickerOpen && (

@@ -10,6 +10,8 @@ import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { useAuth } from './contexts/AuthContext'
+import { LoginPromptProvider } from './contexts/LoginPromptContext'
+import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { createRoutes } from './data/toolTree'
 
@@ -92,7 +94,7 @@ function RequireAuth({ children }) {
   return children
 }
 
-export default function App() {
+function AppInner() {
   const { user: authUser, loading: authLoading } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   useSmoothScroll()
@@ -334,5 +336,20 @@ export default function App() {
       <FeedbackButton />
       <GoogleOneTap />
     </div>
+  )
+}
+
+// Wrap the whole app in the two app-wide overlay providers so every route —
+// including the chromeless early-return surfaces above — can open the login
+// popup and the Pro-upgrade modal over the current page. LoginPromptProvider is
+// the outer of the two so the Pro modal's CTA can call requireLogin. Both sit
+// inside AuthProvider (main.jsx), which LoginPromptProvider depends on.
+export default function App() {
+  return (
+    <LoginPromptProvider>
+      <ProModalProvider>
+        <AppInner />
+      </ProModalProvider>
+    </LoginPromptProvider>
   )
 }
