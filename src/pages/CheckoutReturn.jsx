@@ -59,6 +59,12 @@ export default function CheckoutReturn() {
               {email ? <>A confirmation has been sent to <strong>{email}</strong>. </> : null}
               Your Pro features are now unlocked across the toolkit.
             </p>
+            {sessionId && (
+              <p className="checkout-return-ref">
+                <span className="checkout-return-ref-label">Confirmation reference</span>
+                <code className="checkout-return-ref-code">{sessionId}</code>
+              </p>
+            )}
             <div className="checkout-return-actions">
               <NavLink to="/dashboard" className="btn btn-accent">Go to dashboard</NavLink>
               <NavLink to="/settings" className="btn">Manage subscription</NavLink>
