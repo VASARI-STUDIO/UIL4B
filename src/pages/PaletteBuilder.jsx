@@ -638,7 +638,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
     return `:root {\n${lines.join('\n')}\n}`
   }, [adjusted])
 
-  const shareLink = () => `${window.location.origin}/color/palette?c=${adjusted.map(c => c.slice(1)).join(',')}`
+  // Short share URL — /p/:code hits /api/share (vercel.json rewrite), which
+  // serves social-preview OG meta + a palette-card image, then redirects
+  // humans on to /color/palette?c=... where the ?c= parser picks it up.
+  const shareLink = () => `${window.location.origin}/p/${adjusted.map(c => c.slice(1)).join(',')}`
 
   // Social-card PNG (1200×630) of the palette — the shareable mini version,
   // rendered client-side so it needs no serverless function.

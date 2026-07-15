@@ -84,13 +84,19 @@ and `seo/` subfolders.
 
 ## API routes (`/api`) — 12-function limit
 
-Vercel's plan caps serverless functions at **12**. Current routes:
+Vercel's plan caps serverless functions at **12**. Current routes (11 of 12 —
+one slot spare):
 
 ```
-alt-text.js         checkout-status.js   create-checkout.js   create-portal.js
-fonts.js            generate-prompt.js   get-prices.js        scan-photo.js
-setup-stripe.js     stripe-webhook.js    support.js           verify-admin.js
+ai.js               share.js             checkout-status.js   create-checkout.js
+create-portal.js    fonts.js             get-prices.js        setup-stripe.js
+stripe-webhook.js   support.js           verify-admin.js
 ```
+
+`ai.js` is a task dispatcher — POST `{ task: 'alt-text' | 'scan-photo' |
+'generate-prompt', ...taskBody }` — that consolidated the former `alt-text.js`,
+`scan-photo.js`, and `generate-prompt.js` routes. `share.js` serves social/OG
+previews (+ palette-card PNG) for `/p/:code` short links (vercel.json rewrite).
 
 Shared server helpers (NOT counted as functions) live in `api/_lib/`:
 `env.js`, `firebase-admin.js`, `plans.js`, `pricing.js`, `stripe.js`.
