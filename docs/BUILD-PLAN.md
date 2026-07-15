@@ -65,6 +65,10 @@ out by surface, Create/Discover/Learn derived from `toolTree.js` so it can't dri
 - **Google-profile default avatar** (overridable) — touches `GoogleOneTap.jsx` /
   `AuthContext.jsx` (HVZ), needs founder sign-off.
 
+**Active work order (2026-07-15):** founder brief for Palette v3 + site-wide
+design-system consistency is parsed and sequenced into 7 waves →
+[`build-plan/palette-v3-plan.md`](build-plan/palette-v3-plan.md). **Start there.**
+
 **Known bugs & deferred backlog** → [`build-plan/roadmap.md`](build-plan/roadmap.md).
 
 ---
