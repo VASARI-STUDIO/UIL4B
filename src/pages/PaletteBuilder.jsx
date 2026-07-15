@@ -11,6 +11,7 @@ import { BRAND_PALETTES } from '../data/brandPalettes'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 
 // Palette Builder — the standalone /color/palette workbench. A Coolors-style
 // full-bleed board: a toolbar (seed + harmony + brands/variations/preview +
@@ -70,6 +71,86 @@ const TINT_TONES = [95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
 const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i
 const SUBMISSIONS_KEY = 'vs-community-submissions' // same store Community.jsx reads
+const HANDLE_KEY = 'vs-community-handle'            // the user's chosen social name
+
+// ── Random themed palette-name generator (Wave 5 item 21) ────────────────────
+// Pure client-side, no API. We bucket the palette by its dominant HCT hue
+// (weighted by chroma so near-greys barely vote) plus overall chroma, then
+// stitch an adjective + noun from a themed wordlist — greens → nature, warm
+// hues → sunset, blues → ocean, greys → mono/tech, and so on.
+const NAME_THEMES = {
+  sunset: { adj: ['Golden', 'Blazing', 'Amber', 'Coral', 'Dusk', 'Molten', 'Warm', 'Radiant'], noun: ['Sunset', 'Ember', 'Horizon', 'Afterglow', 'Flare', 'Dawn', 'Blaze', 'Mirage'] },
+  nature: { adj: ['Wild', 'Verdant', 'Mossy', 'Forest', 'Earthen', 'Fresh', 'Sage', 'Rooted'], noun: ['Grove', 'Fern', 'Meadow', 'Canopy', 'Thicket', 'Woodland', 'Willow', 'Terra'] },
+  ocean: { adj: ['Deep', 'Tidal', 'Coastal', 'Azure', 'Marine', 'Cool', 'Glacial', 'Frosted'], noun: ['Tide', 'Lagoon', 'Current', 'Reef', 'Fjord', 'Harbour', 'Cove', 'Drift'] },
+  cosmic: { adj: ['Cosmic', 'Velvet', 'Mystic', 'Nebular', 'Twilight', 'Regal', 'Lucid', 'Astral'], noun: ['Nebula', 'Orbit', 'Aurora', 'Eclipse', 'Prism', 'Halo', 'Void', 'Comet'] },
+  candy: { adj: ['Sweet', 'Bubbly', 'Playful', 'Bright', 'Poppy', 'Vivid', 'Sugary', 'Bold'], noun: ['Pop', 'Candy', 'Bloom', 'Splash', 'Fizz', 'Sorbet', 'Bonbon', 'Punch'] },
+  tech: { adj: ['Digital', 'Neon', 'Circuit', 'Signal', 'Cyber', 'Quantum', 'Vector', 'Sonic'], noun: ['Grid', 'Pulse', 'Node', 'Matrix', 'Circuit', 'Core', 'Beam', 'Relay'] },
+  mono: { adj: ['Minimal', 'Slate', 'Mono', 'Graphite', 'Pure', 'Studio', 'Neutral', 'Muted'], noun: ['Canvas', 'Frame', 'Grid', 'Paper', 'Concrete', 'Marble', 'Ash', 'Stone'] },
+}
+
+function paletteTheme(colors) {
+  if (!colors?.length) return 'mono'
+  let sumC = 0, hasAccent = false
+  const hueBins = {}
+  for (const hex of colors) {
+    let h, c
+    try { [h, c] = hexToHct(hex) } catch { continue }
+    sumC += c
+    if (c > 25) hasAccent = true
+    const key = (Math.round(h / 30) * 30) % 360   // 12 coarse hue bins
+    hueBins[key] = (hueBins[key] || 0) + c        // vote weighted by chroma
+  }
+  const avgC = sumC / colors.length
+  if (avgC < 12) return hasAccent ? 'tech' : 'mono' // mostly greys
+  const domHue = Number(Object.entries(hueBins).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0)
+  if (domHue < 15 || domHue >= 330) return avgC > 55 ? 'candy' : 'sunset' // red / pink
+  if (domHue < 45) return avgC > 45 ? 'sunset' : 'nature'                 // orange
+  if (domHue < 90) return 'sunset'                                        // yellow-amber
+  if (domHue < 165) return 'nature'                                       // green
+  if (domHue < 255) return 'ocean'                                        // cyan-blue
+  if (domHue < 300) return 'cosmic'                                       // purple
+  return 'candy'                                                          // magenta
+}
+
+const pickOne = (arr) => arr[Math.floor(Math.random() * arr.length)]
+
+function randomPaletteName(colors) {
+  const theme = NAME_THEMES[paletteTheme(colors)] || NAME_THEMES.mono
+  return `${pickOne(theme.adj)} ${pickOne(theme.noun)}`
+}
+
+// ── Community handle: profanity filter that also catches evasion (item 22) ───
+// Normalise before matching so leetspeak (sh1t), separators (f_u_c_k) and
+// repeated-char padding (shiiit) all collapse to the same stem we test against
+// the blocklist. Numbers/underscores stay legal in the handle itself.
+function normaliseForFilter(raw) {
+  return String(raw).toLowerCase()
+    .replace(/[!|1]/g, 'i')
+    .replace(/3/g, 'e')
+    .replace(/[4@]/g, 'a')
+    .replace(/0/g, 'o')
+    .replace(/[$5]/g, 's')
+    .replace(/7/g, 't')
+    .replace(/[^a-z]/g, '')     // drop separators, remaining digits, symbols
+    .replace(/(.)\1+/g, '$1')   // collapse repeated-char padding
+}
+
+const HANDLE_BLOCK = [
+  'fuck', 'shit', 'cunt', 'bitch', 'asshole', 'nigger', 'nigga', 'faggot', 'fag',
+  'retard', 'rape', 'slut', 'whore', 'dick', 'cock', 'pussy', 'bastard', 'wanker',
+  'twat', 'bollocks', 'spic', 'chink', 'kike', 'tranny', 'nazi', 'porn', 'anal', 'cum',
+]
+
+// Returns a human message if the handle is invalid/blocked, else null.
+function handleProblem(raw) {
+  const h = String(raw).trim()
+  if (h.length < 3) return 'Handle must be at least 3 characters.'
+  if (h.length > 20) return 'Handle must be 20 characters or fewer.'
+  if (!/^[a-zA-Z0-9_]+$/.test(h)) return 'Use only letters, numbers and underscores.'
+  const norm = normaliseForFilter(h)
+  if (HANDLE_BLOCK.some(w => norm.includes(w))) return 'Please choose a different handle.'
+  return null
+}
 
 // '#Abc' / 'aabbcc' → canonical '#AABBCC'; null when the string isn't a hex.
 function normaliseHex(raw) {
@@ -276,6 +357,9 @@ const IcoDownload = () => (
 const IcoUsers = () => (
   <Ico size={13}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.9" /><path d="M16 3.1a4 4 0 0 1 0 7.8" /></Ico>
 )
+const IcoDice = () => (
+  <Ico size={14}><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.1" /><circle cx="15.5" cy="8.5" r="1.1" /><circle cx="12" cy="12" r="1.1" /><circle cx="8.5" cy="15.5" r="1.1" /><circle cx="15.5" cy="15.5" r="1.1" /></Ico>
+)
 // Harmony-wheel glyph for the Colour System button (Image 2 "system" graphic).
 const IcoSystem = ({ size = 13 }) => (
   <Ico size={size}><circle cx="12" cy="12" r="3" /><circle cx="12" cy="4" r="1.5" /><circle cx="19" cy="8.5" r="1.5" /><circle cx="19" cy="15.5" r="1.5" /><circle cx="12" cy="20" r="1.5" /><circle cx="5" cy="15.5" r="1.5" /><circle cx="5" cy="8.5" r="1.5" /></Ico>
@@ -417,6 +501,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
+  const { requireLogin } = useLoginPrompt()
 
   // A free user can only ever run a free system through the generator. Paid
   // harmonies and brand systems collapse to 'auto' for them, so editing from a
@@ -478,6 +563,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [preview, setPreview] = useState(null)     // { mode, compare } modal
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
+  // Community submit popup (Wave 5 items 20–22): a proper modal with a palette
+  // preview, a name field + dice generator, and a one-time handle gate.
+  const [submitOpen, setSubmitOpen] = useState(false)
+  const [submitErr, setSubmitErr] = useState('')
+  const [handle, setHandle] = useState(() => {
+    try { return localStorage.getItem(HANDLE_KEY) || '' } catch { return '' }
+  })
+  const [handleInput, setHandleInput] = useState('')
+  const [handleErr, setHandleErr] = useState('')
   const fileRef = useRef(null)
 
   // Drag-reorder plumbing + the grow-in animation slot for inserted colours.
@@ -909,17 +1003,42 @@ export default function PaletteBuilder({ onCopy, toast }) {
     }
   }
 
+  // Open the submit popup. Community actions require a login (Wave-1 "still
+  // free" popup) — on success we prefill a themed name to nudge the user, then
+  // the popup handles the handle gate + final submit.
+  const openSubmit = async () => {
+    const user = await requireLogin('submit this palette to the community', { free: true })
+    if (!user) return
+    setShareOpen(false)
+    setSubmitErr('')
+    setSubmitName(n => n.trim() || randomPaletteName(adjusted))
+    setSubmitOpen(true)
+  }
+
+  // Save the one-time community handle after the profanity/evasion filter.
+  // NOTE: uniqueness is only checked against handles seen on THIS device — the
+  // community store is localStorage today. Server-side (Firestore) uniqueness
+  // is deferred to the founder (flagged: needs a Firestore rule/transaction).
+  const saveHandle = () => {
+    const problem = handleProblem(handleInput)
+    if (problem) { setHandleErr(problem); return }
+    const clean = handleInput.trim()
+    try { localStorage.setItem(HANDLE_KEY, clean) } catch { /* private mode */ }
+    setHandle(clean); setHandleInput(''); setHandleErr('')
+  }
+
   // Community submission — same localStorage store + shape Community.jsx
   // renders, with the palette link as the URL so the card opens this board.
   const submitToCommunity = () => {
     const name = submitName.trim()
-    if (!name) { toast?.('Give the palette a name first'); return }
+    if (!name) { setSubmitErr('Give the palette a name first.'); return }
+    if (!handle) { setSubmitErr('Set your community handle first.'); return }
     try {
       const list = JSON.parse(localStorage.getItem(SUBMISSIONS_KEY) || '[]')
       list.push({
         id: 'u' + Date.now(),
         name,
-        author: 'You',
+        author: '@' + handle,
         category: 'Branding',
         url: shareLink(),
         c1: adjusted[0],
@@ -930,10 +1049,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
       })
       localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(list))
       setSubmitName('')
-      setShareOpen(false)
+      setSubmitOpen(false)
       toast?.('Submitted to the community — thanks!')
     } catch {
-      toast?.('Couldn’t submit right now')
+      setSubmitErr('Couldn’t submit right now.')
     }
   }
 
@@ -1237,12 +1356,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
               type="button"
               className="btn btn-s"
               aria-expanded={saveOpen}
-              onClick={() => {
-                if (!canSaveProjects) { toast?.('Sign in to save projects'); return }
+              onClick={async () => {
+                if (!canSaveProjects) {
+                  const user = await requireLogin('save this palette', { free: true })
+                  if (!user) return
+                }
                 setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setShareOpen(false); setVisionOpen(false); setSaveOpen(o => !o)
               }}
             >
-              Save
+              <IcoBookmark /> Save
             </button>
             {saveOpen && (
               <div className="plb-menu" role="dialog" aria-label="Save palette to a project">
@@ -1294,18 +1416,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 <button type="button" className="plb-menu-item" role="menuitem" onClick={() => { onCopy?.(cssExport); setShareOpen(false) }}>Copy CSS variables</button>
                 <button type="button" className="plb-menu-item" role="menuitem" onClick={() => { onCopy?.(adjusted.join(', ')); setShareOpen(false) }}>Copy hex values</button>
                 <button type="button" className="plb-menu-item" role="menuitem" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
-                <div className="plb-menu-sub"><IcoUsers /> Submit to the community</div>
-                <div className="plb-menu-row">
-                  <input
-                    type="text"
-                    value={submitName}
-                    onChange={(e) => setSubmitName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') submitToCommunity() }}
-                    placeholder="Palette name…"
-                    aria-label="Palette name for the community"
-                  />
-                  <button type="button" className="btn btn-s btn-accent" onClick={submitToCommunity}>Submit</button>
-                </div>
+                <button type="button" className="plb-menu-item" role="menuitem" onClick={openSubmit}><IcoUsers /> Submit to the community…</button>
               </div>
             )}
           </div>
@@ -1547,6 +1658,84 @@ export default function PaletteBuilder({ onCopy, toast }) {
                   Use {preview.compare.label}
                 </button>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Submit-to-community popup (Wave 5 items 20–22) ── */}
+      {submitOpen && (
+        <div
+          className="plb-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Submit palette to the community"
+          onPointerDown={(e) => { if (e.target === e.currentTarget) setSubmitOpen(false) }}
+        >
+          <div className="plb-modal-card plb-submitcard">
+            <div className="plb-modal-head">
+              <span className="plb-pop-title">Submit to the community</span>
+              <button type="button" className="plb-pop-x" aria-label="Close" onClick={() => setSubmitOpen(false)}><IcoX /></button>
+            </div>
+
+            {/* Palette preview */}
+            <div className="plb-submit-strip" aria-hidden="true">
+              {adjusted.map((c, i) => (
+                <span key={i} className="plb-submit-sw" style={{ background: c }} />
+              ))}
+            </div>
+
+            {!handle ? (
+              <>
+                <div className="plb-menu-sub">Choose your community handle</div>
+                <p className="plb-submit-hint">This is the name shown on everything you post. Letters, numbers and underscores — pick it once.</p>
+                <div className="plb-menu-row">
+                  <input
+                    type="text"
+                    value={handleInput}
+                    onChange={(e) => { setHandleInput(e.target.value); setHandleErr('') }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveHandle() }}
+                    placeholder="yourhandle"
+                    aria-label="Community handle"
+                    maxLength={20}
+                    spellCheck="false"
+                    autoComplete="off"
+                  />
+                  <button type="button" className="btn btn-s btn-accent" onClick={saveHandle}>Set handle</button>
+                </div>
+                {handleErr && <p className="plb-submit-err" role="alert">{handleErr}</p>}
+              </>
+            ) : (
+              <>
+                <div className="plb-submit-as">
+                  Posting as <strong>@{handle}</strong>
+                  <button type="button" className="plb-linkbtn" onClick={() => { setHandle(''); setHandleErr('') }}>change</button>
+                </div>
+                <div className="plb-menu-sub">Palette name</div>
+                <div className="plb-menu-row">
+                  <input
+                    type="text"
+                    value={submitName}
+                    onChange={(e) => { setSubmitName(e.target.value); setSubmitErr('') }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') submitToCommunity() }}
+                    placeholder="Palette name…"
+                    aria-label="Palette name for the community"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-s plb-dice"
+                    onClick={() => { setSubmitName(randomPaletteName(adjusted)); setSubmitErr('') }}
+                    title="Generate a themed name"
+                    aria-label="Generate a themed name"
+                  >
+                    <IcoDice />
+                  </button>
+                </div>
+                {submitErr && <p className="plb-submit-err" role="alert">{submitErr}</p>}
+                <div className="plb-modal-actions">
+                  <button type="button" className="btn btn-s btn-accent" onClick={submitToCommunity}>Submit palette</button>
+                </div>
+              </>
             )}
           </div>
         </div>

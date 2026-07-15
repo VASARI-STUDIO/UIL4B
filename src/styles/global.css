@@ -5588,6 +5588,17 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-modal-body{display:grid;grid-template-columns:1fr;gap:14px}
 .plb-modal-body--split{grid-template-columns:1fr 1fr}
 .plb-modal-actions{display:flex;justify-content:flex-end}
+/* Submit-to-community popup (Wave 5) */
+.plb-submitcard{width:min(440px,100%)}
+.plb-submit-strip{display:flex;height:56px;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
+.plb-submit-sw{flex:1;min-width:0}
+.plb-submit-hint{font-size:12px;line-height:1.45;color:var(--t2);margin:-4px 2px 0}
+.plb-submit-err{font-size:12px;font-weight:600;color:var(--danger,#D64545);margin:2px 2px 0}
+.plb-submit-as{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2)}
+.plb-submit-as strong{color:var(--t0);font-weight:700}
+.plb-linkbtn{font-size:12px;font-weight:600;color:var(--brand);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.plb-linkbtn:hover{opacity:.8}
+.plb-dice{flex-shrink:0;padding-left:10px;padding-right:10px}
 .plb-pvwrap{display:flex;flex-direction:column;gap:8px;min-width:0}
 .plb-pv-name{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--t1)}
 .plb-pv{display:flex;min-height:300px;background:var(--pv-bg);border:1px solid var(--pv-border);border-radius:14px;overflow:hidden}
