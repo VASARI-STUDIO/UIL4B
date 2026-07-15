@@ -5774,3 +5774,44 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .ui-pro-art{display:none}
   .ui-pro-main{padding:24px 22px}
 }
+
+/* --- User identity: name + owner crown + flair tag (UserName component) --- */
+.uname{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+.uname-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uname--bold .uname-text{font-weight:700;letter-spacing:-.01em}
+.uname-owner{position:relative;display:inline-flex;align-items:center;gap:4px;min-width:0;border-radius:var(--radius-s);outline:none}
+.uname-owner:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.uname-crown{font-size:.85em;line-height:1;filter:saturate(1.1)}
+/* Owner tooltip — hidden until the name is hovered or keyboard-focused. */
+.uname-tip{position:absolute;bottom:calc(100% + 7px);left:0;z-index:60;padding:4px 9px;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-1);font-size:11px;font-weight:600;letter-spacing:.01em;white-space:nowrap;box-shadow:var(--shadow-m);opacity:0;transform:translateY(3px);pointer-events:none;transition:opacity var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
+.uname-tip::after{content:"";position:absolute;top:100%;left:14px;border:5px solid transparent;border-top-color:var(--t0)}
+.uname-owner:hover .uname-tip,.uname-owner:focus-visible .uname-tip{opacity:1;transform:translateY(0)}
+
+/* Flair pill — --flair-c set per tone; soft-tinted so it reads as a tag. */
+.flair{--flair-c:var(--accent);display:inline-flex;align-items:center;flex:none;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.01em;line-height:1.5;white-space:nowrap;color:var(--flair-c);background:color-mix(in srgb,var(--flair-c) 12%,transparent);border:1px solid color-mix(in srgb,var(--flair-c) 30%,transparent)}
+.flair--accent{--flair-c:var(--accent)}
+.flair--blue{--flair-c:#2563EB}
+.flair--violet{--flair-c:#7C3AED}
+.flair--rose{--flair-c:#E11D48}
+.flair--amber{--flair-c:#D97706}
+.flair--green{--flair-c:#15803D}
+.flair--slate{--flair-c:#64748B}
+/* Earned badges get a warmer, higher-signal gold treatment. */
+.flair--gold{--flair-c:#B7791F;background:linear-gradient(135deg,color-mix(in srgb,#D69E2E 20%,transparent),color-mix(in srgb,#B7791F 14%,transparent));border-color:color-mix(in srgb,#B7791F 42%,transparent)}
+[data-theme="light"] .flair--slate{--flair-c:#475569}
+
+/* Flair picker (Settings › Account) --- */
+.flairpick-hint{margin:0 0 10px;font-size:12px;color:var(--t3);line-height:1.5}
+.flairpick-preview{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
+.flairpick-preview-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.flairpick-group-label{margin:12px 0 8px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
+.flairpick-group-label:first-of-type{margin-top:0}
+.flairpick-grid{display:flex;flex-wrap:wrap;gap:7px}
+/* Chips reuse the .flair pill look but as tappable targets; muted until picked. */
+.flairpick-chip{padding:4px 11px;font-size:11.5px;cursor:pointer;opacity:.62;transition:opacity var(--dur-2,.14s) var(--ease-out,ease),box-shadow var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
+.flairpick-chip:hover{opacity:.92}
+.flairpick-chip.is-on{opacity:1;color:#fff;background:var(--flair-c);border-color:var(--flair-c);box-shadow:0 1px 4px color-mix(in srgb,var(--flair-c) 34%,transparent)}
+.flairpick-chip.is-on:hover{opacity:1}
+.flairpick-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.flairpick-chip.is-locked{cursor:default;opacity:.5}
+.flairpick-chip.is-locked:hover{opacity:.5}

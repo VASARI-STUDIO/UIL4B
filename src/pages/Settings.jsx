@@ -7,6 +7,8 @@ import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice } from '../hooks/usePrices'
 import { LOCATIONS } from '../data/locations'
+import { FLAIRS, getFlair } from '../utils/constants'
+import UserName from '../components/UserName'
 
 const STORAGE_DISCLOSURE = [
   { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
@@ -125,6 +127,96 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
         <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
       </div>
       {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 6 }}>{error}</div>}
+    </div>
+  )
+}
+
+// Picks the single flair shown next to the user's name. Only role + community
+// flairs are selectable here; `earned` badges are awarded by the system and
+// surfaced read-only so people know they exist.
+function FlairPicker({ value, displayName, email, onSave }) {
+  const [open, setOpen] = useState(false)
+  const current = getFlair(value)
+  const roles = FLAIRS.filter((f) => f.group === 'role')
+  const community = FLAIRS.filter((f) => f.group === 'community')
+  const earned = FLAIRS.filter((f) => f.group === 'earned')
+
+  const choose = (id) => onSave(id === value ? '' : id)
+
+  if (!open) {
+    return (
+      <div className="settings-row">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="settings-row-label">Flair</div>
+          <div className="settings-row-value">
+            {current
+              ? <span className={`flair flair--${current.tone}`}>{current.label}</span>
+              : <span style={{ color: 'var(--t3)' }}>No flair set</span>}
+          </div>
+        </div>
+        <button className="btn btn-s" onClick={() => setOpen(true)}>
+          {current ? 'Change' : 'Add'}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+      <div className="settings-row-label" style={{ marginBottom: 8 }}>Flair</div>
+      <p className="flairpick-hint">A small tag shown next to your name across the community.</p>
+
+      <div className="flairpick-preview">
+        <span className="flairpick-preview-label">Preview</span>
+        <UserName name={displayName} email={email} flair={value} bold />
+      </div>
+
+      <div className="flairpick-group-label">Role</div>
+      <div className="flairpick-grid">
+        {roles.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            className={`flair flair--${f.tone} flairpick-chip${f.id === value ? ' is-on' : ''}`}
+            aria-pressed={f.id === value}
+            onClick={() => choose(f.id)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flairpick-group-label">Community</div>
+      <div className="flairpick-grid">
+        {community.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            className={`flair flair--${f.tone} flairpick-chip${f.id === value ? ' is-on' : ''}`}
+            aria-pressed={f.id === value}
+            onClick={() => choose(f.id)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flairpick-group-label">Earned</div>
+      <p className="flairpick-hint">Awarded automatically for how you show up here — not selectable.</p>
+      <div className="flairpick-grid">
+        {earned.map((f) => (
+          <span key={f.id} className={`flair flair--${f.tone} flairpick-chip is-locked`} aria-disabled="true">
+            {f.label}
+          </span>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <button className="btn btn-accent btn-s" onClick={() => setOpen(false)}>Done</button>
+        {value && (
+          <button className="btn btn-s" onClick={() => onSave('')}>Clear flair</button>
+        )}
+      </div>
     </div>
   )
 }
@@ -656,6 +748,7 @@ export default function Settings({ toast }) {
                   <EditField label="Company / studio" value={userProfile?.company} onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }} placeholder="e.g. Acme Design" />
                   <EditField label="Website" value={userProfile?.website} type="url" onSave={(v) => { updateProfile({ website: v }); toast('Website updated') }} placeholder="https://yoursite.com" />
                   <EditField label="Bio" value={userProfile?.bio} onSave={(v) => { updateProfile({ bio: v }); toast('Bio updated') }} placeholder="A short bio about yourself" />
+                  <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={(id) => { updateProfile({ flair: id }); toast(id ? 'Flair updated' : 'Flair cleared') }} />
                   <PasswordChange onSave={(current, next) => updatePassword(current, next)} />
 
                   <div className="danger-zone">
