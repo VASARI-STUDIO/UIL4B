@@ -1820,7 +1820,31 @@ export default function ColorStudio({ onCopy, toast }) {
   const [mode] = useState(() => design?.palette?.mode || 'auto')
   const [globalAdjust, setGlobalAdjust] = useState(() => design?.palette?.globalAdjust || { h: 0, s: 0, b: 0, temp: 0 })
   const [extraColors, setExtraColors] = useState(() => design?.palette?.extraColors || [])
-  const [overrides, setOverrides] = useState(() => design?.palette?.overrides || {})
+  // Reconcile the incoming palette against this studio's base+harmony model.
+  // The Palette Builder (and project loads / brand + variation picks) persist the
+  // full, authoritative palette in `colors`, but describe the five roles ONLY
+  // there — not via base+harmony, which can't reproduce a brand or hand-authored
+  // palette. Without this, a handed-off Apple/variation palette would be rebuilt
+  // from just its first colour + analogous (and then written back, corrupting the
+  // shared state). Pin any role the harmony generator wouldn't regenerate as an
+  // override so the palette survives the tool switch. Skipped when a global-adjust
+  // lens is baked into `colors` (the studio's own base+harmony+adjust round-trip
+  // is already faithful, and pinning the adjusted colours would double-apply it).
+  const [overrides, setOverrides] = useState(() => {
+    const p = design?.palette || {}
+    const stored = p.overrides || {}
+    const full = Array.isArray(p.colors) ? p.colors : null
+    const adj = p.globalAdjust
+    const zeroAdj = !adj || (!adj.h && !adj.s && !adj.b && !adj.temp)
+    if (!full || full.length < 2 || !zeroAdj) return stored
+    const gen = generateHarmony(p.base || '#2563EB', p.harmony || 'analogous')
+    const merged = { ...stored }
+    for (let i = 0; i < gen.length; i++) {
+      const c = full[i]
+      if (c && gen[i] && !merged[i] && c.toUpperCase() !== gen[i].toUpperCase()) merged[i] = c
+    }
+    return merged
+  })
   const [stateColors, setStateColors] = useState(() => design?.states || { success: 1, warning: 0, error: 0, info: 0 })
   const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
