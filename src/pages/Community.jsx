@@ -50,39 +50,41 @@ function SubmitModal({ onClose, onSubmit }) {
   }
 
   return (
-    <div className="ch-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ch-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design">
-        <div className="ch-modal-head">
-          <h2>Submit a design</h2>
-          <button className="ch-modal-close" onClick={onClose} aria-label="Close">
+    <div className="ui-modal-overlay" onClick={onClose} role="presentation">
+      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design">
+        <div className="ui-modal-head">
+          <h2 className="ui-modal-title">Submit a design</h2>
+          <button className="ui-modal-x" onClick={onClose} aria-label="Close">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>
-        <div className="ch-modal-body">
-          <label className="ch-field">
-            <span>Name</span>
-            <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Aurora Analytics" maxLength={60} />
-          </label>
-          <label className="ch-field">
-            <span>Author</span>
-            <input type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Your name (optional)" maxLength={40} />
-          </label>
-          <label className="ch-field">
-            <span>Link</span>
-            <input type="text" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://… (optional)" />
-          </label>
-          <label className="ch-field">
-            <span>Category</span>
-            <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-              {COMMUNITY_CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </label>
-          {error && <div className="ch-error">{error}</div>}
-          <p className="ch-modal-note">Submissions are saved to this browser for now. Shared community publishing is coming soon.</p>
-        </div>
-        <div className="ch-modal-foot">
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btn-accent" onClick={submit}>Submit design</button>
+        <div className="ui-modal-body">
+          <div className="ui-form">
+            <label className="ui-field">
+              <span>Name</span>
+              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Aurora Analytics" maxLength={60} />
+            </label>
+            <label className="ui-field">
+              <span>Author</span>
+              <input type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Your name (optional)" maxLength={40} />
+            </label>
+            <label className="ui-field">
+              <span>Link</span>
+              <input type="text" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://… (optional)" />
+            </label>
+            <label className="ui-field">
+              <span>Category</span>
+              <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {COMMUNITY_CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            {error && <div className="ui-modal-err">{error}</div>}
+            <p className="ui-modal-note">Submissions are saved to this browser for now. Shared community publishing is coming soon.</p>
+          </div>
+          <div className="ui-modal-actions ui-modal-actions--row">
+            <button className="btn" onClick={onClose}>Cancel</button>
+            <button className="btn btn-accent" onClick={submit}>Submit design</button>
+          </div>
         </div>
       </div>
     </div>
