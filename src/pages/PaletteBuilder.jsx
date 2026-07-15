@@ -231,6 +231,9 @@ const IcoContrast = () => (
 const IcoSpark = () => (
   <Ico size={13}><path d="m12 3 2.1 6.4L21 12l-6.9 2.6L12 21l-2.1-6.4L3 12l6.9-2.6L12 3Z" /></Ico>
 )
+const IcoCheck = ({ size = 13 }) => (
+  <Ico size={size}><path d="m20 6-11 11-5-5" /></Ico>
+)
 const IcoBookmark = () => (
   <Ico size={13}><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" /></Ico>
 )
@@ -407,6 +410,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [varsOpen, setVarsOpen] = useState(false)
   const [brandsOpen, setBrandsOpen] = useState(false)
   const [visionOpen, setVisionOpen] = useState(false)
+  // Variation persistence: `varBase` is the frozen palette snapshot the current
+  // variation list is derived from, `activeVar` the id of the one the user picked.
+  // Picking a variation preserves the base (via the skip guard) so reopening the
+  // menu shows the same list with the active row ticked; any real edit to the
+  // palette clears both so the list regenerates off the new colours.
+  const [varBase, setVarBase] = useState(null)
+  const [activeVar, setActiveVar] = useState(null)
+  const skipVarInvalidate = useRef(false)
   const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const [ctxMenu, setCtxMenu] = useState(null)     // { i, x, y } right-click menu
@@ -434,7 +445,22 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const adjusted = useMemo(() => applyAdjust(colors, adjust), [colors, adjust])
   const view = useMemo(() => adjusted.map(c => simCvd(c, vision)), [adjusted, vision])
   const paletteScore = useMemo(() => scorePalette(adjusted), [adjusted])
-  const variations = useMemo(() => (varsOpen ? paletteVariations(adjusted) : []), [varsOpen, adjusted])
+  const variations = useMemo(() => (varBase ? paletteVariations(varBase) : []), [varBase])
+
+  // Any genuine change to the palette (manual edit, randomise, harmony change,
+  // brand pick) invalidates the frozen variation snapshot so the list rebuilds.
+  // Picking a variation sets the skip guard first, so applying one does NOT
+  // rotate the list — the active row just gets ticked.
+  useEffect(() => {
+    if (skipVarInvalidate.current) { skipVarInvalidate.current = false; return }
+    setVarBase(null)
+    setActiveVar(null)
+  }, [colors, adjust])
+
+  // Freeze a snapshot the first time the menu opens (or after invalidation).
+  useEffect(() => {
+    if (varsOpen && !varBase) setVarBase(applyAdjust(colors, adjust))
+  }, [varsOpen, varBase, colors, adjust])
 
   // Keep ProjectContext in sync so Save/overwrite capture the live palette and
   // the merged studio picks it up (same persisted shape as the studio writes).
@@ -641,6 +667,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   const pickVariation = (v, idx) => {
     if (!isPro && idx >= FREE_VARIATIONS) { toast?.('More variations are a Pro feature — upgrade to unlock'); return }
+    // Preserve the frozen list across this apply so reopening the menu shows the
+    // same variations with this one ticked, instead of rotating to a fresh set.
+    skipVarInvalidate.current = true
+    setActiveVar(v.id)
     applyPalette(v.colors, `Applied variation: ${v.label}`)
     setVarsOpen(false)
   }
@@ -873,13 +903,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 <div className="plb-scrolllist">
                   {variations.map((v, idx) => {
                     const gated = !isPro && idx >= FREE_VARIATIONS
+                    const active = activeVar === v.id
                     return (
-                      <div key={v.id} className={gated ? 'plb-varrow plb-varrow--locked' : 'plb-varrow'}>
-                        <button type="button" className="plb-varrow-main" onClick={() => pickVariation(v, idx)}>
+                      <div key={v.id} className={`plb-varrow${gated ? ' plb-varrow--locked' : ''}${active ? ' plb-varrow--active' : ''}`}>
+                        <button type="button" className="plb-varrow-main" onClick={() => pickVariation(v, idx)} aria-pressed={active}>
                           <span className="plb-strip" aria-hidden="true">
                             {v.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
                           </span>
                           <span className="plb-varrow-name">{v.label}<small>{v.desc}</small></span>
+                          {active && <span className="plb-varrow-tick" aria-label="Active variation"><IcoCheck size={13} /></span>}
                           <span className="plb-score">{v.score}</span>
                           {gated && <span className="plb-tab-lock"><IcoLock size={11} /></span>}
                         </button>
