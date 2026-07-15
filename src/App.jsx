@@ -21,6 +21,7 @@ import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import CreateTool from './pages/CreateTool'
 import SurfaceLanding from './pages/SurfaceLanding'
+import ColorLanding from './pages/ColorLanding'
 
 // Lazy imports — the account, billing, legal and system pages (code-split),
 // rendered inside the PillNav app-shell. The Create tool pages, Discover and
@@ -121,7 +122,7 @@ function AppInner() {
       '/': 'UI L4B | Design Toolkit',
       '/home': 'UI L4B | Design Toolkit',
       '/dashboard': 'UI L4B | Dashboard',
-      '/color': 'UI L4B | Colour Studio',
+      '/color': 'UI L4B | Colour System Generator',
       '/color/palette': 'UI L4B | Palette Generator',
       '/color/semantic': 'UI L4B | Semantic Colour Generator',
       '/color/tint': 'UI L4B | Tint Scale Generator',
@@ -263,10 +264,15 @@ function AppInner() {
   // observer re-scans when switching between them (they share one component).
   const bare = location.pathname.toLowerCase().replace(/\/+$/, '') || '/'
   if (CHROMELESS_PATHS.has(bare)) {
+    // /color is the colour sales page (the old merged studio is being reworked
+    // into the Design System Builder walkthrough); /discover and /learn are the
+    // surface landings; everything else is a live Create tool shell.
     const surface = bare === '/discover' ? 'discover' : bare === '/learn' ? 'learn' : null
     return (
       <>
-        {surface ? <SurfaceLanding key={surface} surface={surface} /> : <CreateTool />}
+        {bare === '/color'
+          ? <ColorLanding />
+          : surface ? <SurfaceLanding key={surface} surface={surface} /> : <CreateTool />}
         <GoogleOneTap />
       </>
     )

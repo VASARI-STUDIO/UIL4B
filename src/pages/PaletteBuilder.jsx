@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import {
   applyAdjust, autoTonalPalette, contrastRatio, derivePreviewRoles,
@@ -572,6 +571,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
   })
   const [handleInput, setHandleInput] = useState('')
   const [handleErr, setHandleErr] = useState('')
+  // Design System Builder (Wave 6 item 23): replaces the old "Studio" link with a
+  // coming-soon popup — long-term this becomes the guided walkthrough across the
+  // individual colour tools.
+  const [dsbOpen, setDsbOpen] = useState(false)
   const fileRef = useRef(null)
 
   // Drag-reorder plumbing + the grow-in animation slot for inserted colours.
@@ -1346,7 +1349,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               </div>
             )}
           </div>
-          <NavLink to="/color" className="btn btn-s" title="Open the full Colour Studio">Studio</NavLink>
+          <button type="button" className="btn btn-s" onClick={() => setDsbOpen(true)} title="Design System Builder — coming soon">Design System Builder</button>
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
@@ -1737,6 +1740,34 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {dsbOpen && (
+        <div
+          className="plb-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Design System Builder"
+          onPointerDown={(e) => { if (e.target === e.currentTarget) setDsbOpen(false) }}
+        >
+          <div className="plb-modal-card plb-dsbcard">
+            <div className="plb-modal-head">
+              <span className="plb-pop-title">Design System Builder</span>
+              <button type="button" className="plb-pop-x" aria-label="Close" onClick={() => setDsbOpen(false)}><IcoX /></button>
+            </div>
+            <div className="plb-dsb-body">
+              <div className="plb-dsb-emoji" aria-hidden="true">🤫</div>
+              <p className="plb-dsb-lede">
+                A guided walkthrough that carries you across every colour tool — palette,
+                semantic, tints, UI colour and gradients — into one finished system.
+              </p>
+              <p className="plb-dsb-sub">It&rsquo;s on the way. For now, jump straight into any tool from the menu above.</p>
+            </div>
+            <div className="plb-modal-actions">
+              <button type="button" className="btn btn-s btn-accent" onClick={() => setDsbOpen(false)}>Got it</button>
+            </div>
           </div>
         </div>
       )}
