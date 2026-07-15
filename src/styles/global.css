@@ -4661,11 +4661,15 @@ html.lenis,html.lenis body{height:auto}
 .pnav-sheet{position:fixed;inset:0;z-index:110;background:var(--bg-1);padding:calc(var(--nav-top) + var(--nav-h) + 16px) 20px 20px;overflow-y:auto;overscroll-behavior:contain;animation:pnav-sheet-in var(--dur-3) var(--ease-out)}
 @keyframes pnav-sheet-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .pnav-acc{border-top:1px solid var(--border)}
-.pnav-acc-trigger{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:56px;background:none;border:none;font-family:var(--font);font-size:var(--fs-h3);font-weight:600;color:var(--t0);cursor:pointer}
-.pnav-acc-trigger .pnav-chev{width:16px;height:16px}
-.pnav-acc-panel{padding:0 0 12px}
-.pnav-acc-link{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px;font-size:var(--fs-body);color:var(--t1);text-decoration:none}
-.pnav-acc-link:hover{color:var(--t0);text-decoration:none}
+.pnav-acc:first-child{border-top:none}
+.pnav-acc-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:60px;padding:0 4px;background:none;border:none;font-family:var(--font);font-size:var(--fs-h3);font-weight:650;color:var(--t0);cursor:pointer;transition:color var(--dur-2) var(--ease-out)}
+.pnav-acc-trigger[aria-expanded="true"]{color:var(--accent)}
+.pnav-acc-trigger .pnav-chev{width:16px;height:16px;flex:0 0 auto;color:var(--t2);transition:transform var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-acc-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg);color:var(--accent)}
+.pnav-acc-panel{padding:0 0 12px;animation:pnav-acc-in var(--dur-2) var(--ease-out)}
+@keyframes pnav-acc-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.pnav-acc-link{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px;border-radius:var(--radius-s);font-size:var(--fs-body);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.pnav-acc-link:hover,.pnav-acc-link:active{color:var(--t0);background:var(--hvr);text-decoration:none}
 .pnav-acc-ico{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent))}
 .pnav-acc-label{font-weight:560}
 /* Column eyebrow inside an expanded accordion, plus soon-badge push + dimming. */
@@ -4715,9 +4719,14 @@ html.lenis,html.lenis body{height:auto}
    not tokens) that swaps to a light canvas so dark icons stay visible. Live values
    arrive on .icust-stage as --ig-size/--ig-stroke/--ig-color/--ig-transform and are
    consumed by the inline SVG below via currentColor. ══ */
-.icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px) 16px 32px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow-y:auto;animation:cp-fade .14s ease}
-.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - 32px));max-height:min(88vh,880px);overflow-y:auto;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
-.icust-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
+.icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px) 16px 32px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;animation:cp-fade .14s ease}
+/* Panel clips to its rounded corners; the header is fixed and a single inner
+   .icust-body owns the scroll — so the scrollbar lives INSIDE the panel, never
+   in the scrim. Height caps to the padded overlay box so the overlay itself
+   never needs a second scrollbar. */
+.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - 32px));max-height:min(880px,calc(100dvh - max(6vh,48px) - 32px));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-out)}
+.icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+.icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
 .icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
 .icust-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
@@ -4919,6 +4928,7 @@ html.lenis,html.lenis body{height:auto}
 
 @media(max-width:560px){
   .icust-overlay{padding:24px 12px 32px}
+  .icust-panel{max-height:min(880px,calc(100dvh - 56px))}
   .icust-head{padding:20px 16px 12px}
   .icust-paste{padding:8px 16px 20px}
   .icust-stage{margin:4px 16px 0;padding:20px}
@@ -5659,7 +5669,27 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-adjust-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);flex-shrink:0}
 .plb-copycss{margin-left:auto;white-space:nowrap}
 @media(max-width:768px){
-  .plb-toolbar{position:static}
+  /* Toolbar stacks: an identity row (seed/hex/system) above a horizontally
+     swipeable tool ribbon, so all 11 v3 controls stay one tap away instead
+     of piling into a tall wrap. */
+  .plb-toolbar{position:static;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:10px;padding:10px 12px}
+  .plb-toolbar-group{width:100%}
+  .plb-toolbar-group:first-child{flex-wrap:wrap;gap:8px}
+  .plb-toolbar-group:first-child .plb-menuwrap{flex:1 1 auto}
+  .plb-toolbar-group:first-child .plb-harm{width:100%;justify-content:flex-start}
+  .plb-hexfield{flex:1 1 90px}
+  .plb-toolbar-group:last-child{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:6px;margin:0 -12px;padding:2px 12px;scroll-snap-type:x proximity}
+  .plb-toolbar-group:last-child::-webkit-scrollbar{display:none}
+  .plb-toolbar-group:last-child>*{flex:0 0 auto;scroll-snap-align:start}
+  .plb-random{order:-1}
+  .plb-kbd{display:none}
+  .plb-toolbar-sep{display:none}
+  /* Every toolbar dropdown becomes a bottom sheet: full-width, big targets,
+     slides up. Stays inside .plb-menuwrap so the outside-tap dismiss layer
+     still closes it; position:fixed escapes the ribbon's scroll clip. */
+  .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up .22s cubic-bezier(.2,0,0,1)}
+  .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
+  .plb-scrolllist{max-height:min(52dvh,420px)}
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
   .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}
@@ -5673,10 +5703,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-add{flex-direction:row;flex-basis:52px;border-left:none;border-top:1px dashed var(--border)}
   .plb-add:hover{flex-basis:52px}
   .plb-modal-body--split{grid-template-columns:1fr}
-  .plb-menu{max-width:calc(100vw - 24px)}
   .plb-tintpop,.plb-picker{left:12px;right:12px;width:auto;transform:none;bottom:auto;top:calc(100% + 4px);z-index:46}
   .plb-copycss{margin-left:0;width:100%}
 }
+@keyframes plb-sheet-up{from{transform:translateY(100%)}to{transform:none}}
 
 /* ============================================================
    Canonical modal system — the ONE popup/upgrade/login shell,
