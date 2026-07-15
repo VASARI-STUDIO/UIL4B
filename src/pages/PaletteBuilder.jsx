@@ -23,6 +23,7 @@ const DEFAULT_SEED = '#4338E0'
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 const PRO_MAX = 8   // free ceiling on TOTAL columns — free palettes can hold up to 8
 const HARD_MAX = 10 // absolute ceiling so the board never becomes slivers
+const IMG_MAX_MB = 4 // uploaded-image size cap for the free image picker
 
 // Harmony options for the Colour System dropdown. `free` mirrors the studio's
 // CSYS_HARMS split, plus the tonal Auto system which is always free.
@@ -105,48 +106,69 @@ function colorsFromQuery() {
   }
 }
 
-// "From image" — downsample to a small canvas, histogram 12-bit RGB buckets,
-// then keep the most-common buckets that are visually distinct. A lightweight
-// dominant-colour pull (no k-means) — plenty for seeding a palette board.
-function extractImageColors(file, count) {
+const rgbToHex = (r, g, b) =>
+  '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase()
+
+// "From image" — draw the upload onto a canvas capped for cheap sampling and
+// hand back its pixel data (plus the source object URL for the preview). The
+// caller keeps the ImageData so picker points can re-sample it live on drag.
+function loadImageData(file, maxSize = 320) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
-      URL.revokeObjectURL(url)
       try {
-        const size = 72
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
+        const w = Math.max(1, Math.round(img.width * scale))
+        const h = Math.max(1, Math.round(img.height * scale))
         const canvas = document.createElement('canvas')
-        canvas.width = size
-        canvas.height = size
+        canvas.width = w; canvas.height = h
         const ctx = canvas.getContext('2d', { willReadFrequently: true })
-        ctx.drawImage(img, 0, 0, size, size)
-        const { data } = ctx.getImageData(0, 0, size, size)
-        const buckets = new Map()
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i + 3] < 128) continue
-          const key = ((data[i] >> 4) << 8) | ((data[i + 1] >> 4) << 4) | (data[i + 2] >> 4)
-          const b = buckets.get(key) || { r: 0, g: 0, b: 0, n: 0 }
-          b.r += data[i]; b.g += data[i + 1]; b.b += data[i + 2]; b.n++
-          buckets.set(key, b)
-        }
-        const ranked = [...buckets.values()].sort((a, b) => b.n - a.n)
-        const picks = []
-        for (const b of ranked) {
-          const rgb = [Math.round(b.r / b.n), Math.round(b.g / b.n), Math.round(b.b / b.n)]
-          const dupe = picks.some(p => Math.hypot(p.rgb[0] - rgb[0], p.rgb[1] - rgb[1], p.rgb[2] - rgb[2]) < 48)
-          if (dupe) continue
-          picks.push({ rgb, hex: '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase() })
-          if (picks.length >= count) break
-        }
-        resolve(picks.map(p => p.hex))
-      } catch (err) {
-        reject(err)
-      }
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve({ data: ctx.getImageData(0, 0, w, h), url })
+      } catch (err) { URL.revokeObjectURL(url); reject(err) }
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Couldn’t read that image')) }
     img.src = url
   })
+}
+
+// Histogram 12-bit RGB buckets and keep the most-common, visually distinct
+// ones (no k-means — plenty for seeding a board). Each swatch also carries a
+// normalised centroid position so we can drop a draggable picker point on the
+// image exactly where that colour lives.
+function dominantSwatches(imageData, count) {
+  const { data, width, height } = imageData
+  const buckets = new Map()
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue
+    const p = i / 4
+    const key = ((data[i] >> 4) << 8) | ((data[i + 1] >> 4) << 4) | (data[i + 2] >> 4)
+    const b = buckets.get(key) || { r: 0, g: 0, b: 0, x: 0, y: 0, n: 0 }
+    b.r += data[i]; b.g += data[i + 1]; b.b += data[i + 2]
+    b.x += p % width; b.y += Math.floor(p / width); b.n++
+    buckets.set(key, b)
+  }
+  const ranked = [...buckets.values()].sort((a, b) => b.n - a.n)
+  const picks = []
+  for (const b of ranked) {
+    const rgb = [b.r / b.n, b.g / b.n, b.b / b.n]
+    const dupe = picks.some(p => Math.hypot(p.rgb[0] - rgb[0], p.rgb[1] - rgb[1], p.rgb[2] - rgb[2]) < 48)
+    if (dupe) continue
+    picks.push({ rgb, hex: rgbToHex(rgb[0], rgb[1], rgb[2]), x: (b.x / b.n) / width, y: (b.y / b.n) / height })
+    if (picks.length >= count) break
+  }
+  return picks.map(p => ({ hex: p.hex, x: p.x, y: p.y }))
+}
+
+// Colour of the pixel under a normalised (0–1) point — used while dragging a
+// picker point across the previewed image.
+function sampleImageData(imageData, nx, ny) {
+  const { data, width, height } = imageData
+  const px = Math.min(width - 1, Math.max(0, Math.round(nx * width)))
+  const py = Math.min(height - 1, Math.max(0, Math.round(ny * height)))
+  const i = (py * width + px) * 4
+  return rgbToHex(data[i], data[i + 1], data[i + 2])
 }
 
 // WCAG level for a raw ratio (AAA ≥7, AA ≥4.5, AA18 large-text ≥3, else LOW).
@@ -430,6 +452,18 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [varsOpen, setVarsOpen] = useState(false)
   const [brandsOpen, setBrandsOpen] = useState(false)
   const [visionOpen, setVisionOpen] = useState(false)
+
+  // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
+  // it stays nested in the menu with draggable picker points sampling its
+  // pixels live, plus a +/− count and a reset/auto re-extract.
+  const [imgOpen, setImgOpen] = useState(false)
+  const [imgSrc, setImgSrc] = useState('')      // object URL for the preview
+  const [imgPoints, setImgPoints] = useState([]) // [{ x, y, hex }] normalised
+  const [imgError, setImgError] = useState('')
+  const [imgDragOver, setImgDragOver] = useState(false)
+  const imgDataRef = useRef(null)               // ImageData kept for live sampling
+  const imgDragIdx = useRef(null)               // point index being dragged
+  const imgStageRef = useRef(null)              // the preview stage element
   // Variation persistence: `varBase` is the frozen palette snapshot the current
   // variation list is derived from, `activeVar` the id of the one the user picked.
   // Picking a variation preserves the base (via the skip guard) so reopening the
@@ -573,11 +607,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // One dismiss layer for every popover: outside pointerdown or Escape closes
   // toolbar menus (anything not inside a .plb-menuwrap) and board popovers
   // (anything not inside a .plb-pop). Escape also closes the preview modal.
-  const anyPopover = saveOpen || shareOpen || harmOpen || varsOpen || brandsOpen || visionOpen
+  const anyPopover = saveOpen || shareOpen || harmOpen || varsOpen || brandsOpen || visionOpen || imgOpen
     || tintsIdx != null || pickerIdx != null || ctxMenu != null || preview != null
   useEffect(() => {
     if (!anyPopover) return
-    const closeMenus = () => { setSaveOpen(false); setShareOpen(false); setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setVisionOpen(false) }
+    const closeMenus = () => { setSaveOpen(false); setShareOpen(false); setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setVisionOpen(false); setImgOpen(false) }
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
     const onDown = (e) => {
       if (!e.target.closest('.plb-menuwrap')) closeMenus()
@@ -684,20 +718,85 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setTintsIdx(null); setPickerIdx(p => (p === i ? null : i))
   }
 
-  const onImageFile = async (e) => {
+  // Load a file into the picker: validate type + 4 MB cap, keep its ImageData
+  // for live sampling, and auto-extract a first set of picker points.
+  const loadImageFile = async (file) => {
+    if (!file) return
+    setImgError('')
+    if (!file.type.startsWith('image/')) { setImgError('That file isn’t an image.'); return }
+    if (file.size > IMG_MAX_MB * 1024 * 1024) {
+      setImgError(`That image is over ${IMG_MAX_MB} MB — pick a smaller one.`); return
+    }
+    try {
+      const { data, url } = await loadImageData(file)
+      imgDataRef.current = data
+      setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+      setImgPoints(dominantSwatches(data, Math.min(colors.length, PRO_MAX)))
+    } catch (err) {
+      setImgError(err?.message || 'Couldn’t read that image')
+    }
+  }
+
+  const onImageFile = (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
-    try {
-      const picks = await extractImageColors(file, colors.length)
-      if (!picks.length) throw new Error('No colours found in that image')
-      setColors(prev => prev.map((c, i) => (!locked.has(i) && picks[i] ? picks[i] : c)))
-      if (!locked.has(0) && picks[0]) { setSeed(picks[0]); setSeedInput(picks[0]) }
-      setLiveMsg('Palette pulled from the image')
-      toast?.('Palette pulled from the image')
-    } catch (err) {
-      toast?.(err?.message || 'Couldn’t read that image')
-    }
+    loadImageFile(file)
+  }
+
+  const onImageDrop = (e) => {
+    e.preventDefault(); setImgDragOver(false)
+    loadImageFile(e.dataTransfer.files?.[0])
+  }
+
+  // Re-run automatic extraction over the current image (reset / auto).
+  const autoExtractImage = () => {
+    if (!imgDataRef.current) return
+    setImgPoints(dominantSwatches(imgDataRef.current, Math.min(imgPoints.length || colors.length, PRO_MAX)))
+  }
+
+  const clearImage = () => {
+    setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return '' })
+    imgDataRef.current = null
+    setImgPoints([]); setImgError('')
+  }
+
+  const addImagePoint = () => {
+    if (!imgDataRef.current || imgPoints.length >= PRO_MAX) return
+    setImgPoints(prev => [...prev, { x: 0.5, y: 0.5, hex: sampleImageData(imgDataRef.current, 0.5, 0.5) }])
+  }
+  const removeImagePoint = () => {
+    setImgPoints(prev => (prev.length > 2 ? prev.slice(0, -1) : prev))
+  }
+
+  // Drag a picker point across the image; re-sample the pixel under it live.
+  const moveImagePoint = (clientX, clientY) => {
+    const idx = imgDragIdx.current
+    const stage = imgStageRef.current
+    if (idx == null || !stage || !imgDataRef.current) return
+    const r = stage.getBoundingClientRect()
+    const x = Math.min(1, Math.max(0, (clientX - r.left) / r.width))
+    const y = Math.min(1, Math.max(0, (clientY - r.top) / r.height))
+    const hex = sampleImageData(imgDataRef.current, x, y)
+    setImgPoints(prev => prev.map((p, i) => (i === idx ? { x, y, hex } : p)))
+  }
+  useEffect(() => {
+    if (!imgSrc) return
+    const onMove = (e) => { if (imgDragIdx.current != null) { e.preventDefault(); moveImagePoint(e.clientX, e.clientY) } }
+    const onUp = () => { imgDragIdx.current = null }
+    window.addEventListener('pointermove', onMove, { passive: false })
+    window.addEventListener('pointerup', onUp)
+    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp) }
+  }, [imgSrc])
+  // Release the preview object URL when the picker unmounts.
+  useEffect(() => () => { if (imgSrc) URL.revokeObjectURL(imgSrc) }, [imgSrc])
+
+  // Apply the picked colours to the board — free, no login (saving is gated
+  // elsewhere). Locked slots survive; the board grows to fit up to PRO_MAX.
+  const applyImagePalette = () => {
+    const picks = imgPoints.map(p => p.hex)
+    if (!picks.length) return
+    applyPalette(picks, 'Palette pulled from the image')
+    setImgOpen(false)
   }
 
   // Apply a whole ready-made palette (variation or brand). Resets the adjust
@@ -922,10 +1021,77 @@ export default function PaletteBuilder({ onCopy, toast }) {
         </div>
 
         <div className="plb-toolbar-group">
-          <button type="button" className="btn btn-s" onClick={() => fileRef.current?.click()}>
-            <IcoImage /> Image
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="plb-file" onChange={onImageFile} aria-hidden="true" tabIndex={-1} />
+          <div className="plb-menuwrap">
+            <button
+              type="button"
+              className="btn btn-s"
+              aria-expanded={imgOpen}
+              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setBrandsOpen(false); setImgOpen(o => !o) }}
+            >
+              <IcoImage /> Image
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="plb-file" onChange={onImageFile} aria-hidden="true" tabIndex={-1} />
+            {imgOpen && (
+              <div className="plb-menu plb-menu--left plb-imgmenu" role="menu" aria-label="Pull colours from an image">
+                <div className="plb-menu-title">From image</div>
+                {!imgSrc ? (
+                  <>
+                    <div
+                      className={imgDragOver ? 'plb-imgdrop plb-imgdrop--over' : 'plb-imgdrop'}
+                      onClick={() => fileRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); setImgDragOver(true) }}
+                      onDragLeave={() => setImgDragOver(false)}
+                      onDrop={onImageDrop}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileRef.current?.click() } }}
+                    >
+                      <IcoImage />
+                      <div className="plb-imgdrop-t">Drag an image here</div>
+                      <div className="plb-imgdrop-s">or click to browse · PNG, JPG, up to {IMG_MAX_MB} MB</div>
+                    </div>
+                    {imgError && <div className="plb-imgerr" role="alert">{imgError}</div>}
+                  </>
+                ) : (
+                  <>
+                    <div className="plb-imgstage" ref={imgStageRef}>
+                      <img src={imgSrc} alt="Uploaded reference" className="plb-imgstage-img" draggable={false} />
+                      {imgPoints.map((p, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          className="plb-imgpoint"
+                          style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, background: p.hex }}
+                          onPointerDown={(e) => { e.preventDefault(); imgDragIdx.current = i }}
+                          aria-label={`Picker point ${i + 1}: ${p.hex}`}
+                          title={p.hex}
+                        />
+                      ))}
+                    </div>
+                    <div className="plb-imgstrip">
+                      {imgPoints.map((p, i) => (
+                        <div key={i} className="plb-imgswatch" style={{ background: p.hex }} title={p.hex} />
+                      ))}
+                    </div>
+                    <div className="plb-imgcount">
+                      <span className="plb-imgcount-l">Colours</span>
+                      <div className="plb-imgcount-ctl">
+                        <button type="button" className="plb-imgcount-btn" onClick={removeImagePoint} disabled={imgPoints.length <= 2} aria-label="Fewer colours">−</button>
+                        <span className="plb-imgcount-n">{imgPoints.length}</span>
+                        <button type="button" className="plb-imgcount-btn" onClick={addImagePoint} disabled={imgPoints.length >= PRO_MAX} aria-label="More colours">+</button>
+                      </div>
+                    </div>
+                    <div className="plb-imgactions">
+                      <button type="button" className="btn btn-s btn-ghost" onClick={autoExtractImage}>Reset / auto</button>
+                      <button type="button" className="btn btn-s btn-ghost" onClick={() => fileRef.current?.click()}>Replace</button>
+                      <button type="button" className="btn btn-s" onClick={applyImagePalette}>Apply</button>
+                    </div>
+                    <button type="button" className="plb-imgclear" onClick={clearImage}>Remove image</button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="plb-menuwrap">
             <button

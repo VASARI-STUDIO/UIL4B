@@ -5480,6 +5480,33 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-strip{display:inline-flex;gap:2px;flex-shrink:0}
 .plb-strip-c{width:12px;height:20px;border-radius:4px;background:var(--plb-rc)}
 .plb-score{flex-shrink:0;padding:2px 8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--t1);background:var(--bg-2);border-radius:999px}
+
+/* Image picker (Wave 4) — drag-drop dropzone, nested preview with draggable
+   picker points, a picked-palette strip and a +/- colour count. Free to use. */
+.plb-imgmenu{min-width:300px}
+.plb-imgdrop{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px;text-align:center;color:var(--t2);background:var(--bg-1);border:1.5px dashed var(--border);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
+.plb-imgdrop:hover,.plb-imgdrop--over{border-color:var(--brand);background:var(--bg-2);color:var(--t1)}
+.plb-imgdrop>svg{color:var(--t2)}
+.plb-imgdrop-t{font-size:13px;font-weight:600;color:var(--t0)}
+.plb-imgdrop-s{font-size:11px;font-weight:500;color:var(--t2)}
+.plb-imgerr{margin-top:8px;padding:7px 10px;font-size:11.5px;font-weight:600;color:#B91C1C;background:color-mix(in srgb,#EF4444 12%,transparent);border-radius:var(--radius-s)}
+.plb-imgstage{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;border-radius:var(--radius-s);background:var(--bg-2);touch-action:none;user-select:none}
+.plb-imgstage-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.plb-imgpoint{position:absolute;width:20px;height:20px;transform:translate(-50%,-50%);border-radius:999px;border:2.5px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.4),0 1px 4px rgba(0,0,0,.35);cursor:grab;padding:0}
+.plb-imgpoint:active{cursor:grabbing}
+.plb-imgstrip{display:flex;gap:3px;margin-top:8px}
+.plb-imgswatch{flex:1;height:22px;border-radius:5px;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
+.plb-imgcount{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.plb-imgcount-l{font-size:12px;font-weight:600;color:var(--t1)}
+.plb-imgcount-ctl{display:flex;align-items:center;gap:4px}
+.plb-imgcount-btn{display:flex;align-items:center;justify-content:center;width:26px;height:26px;font-size:16px;font-weight:600;line-height:1;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all var(--t)}
+.plb-imgcount-btn:hover:not(:disabled){background:var(--bg-1);color:var(--t0);border-color:var(--t0)}
+.plb-imgcount-btn:disabled{opacity:.4;cursor:not-allowed}
+.plb-imgcount-n{min-width:20px;text-align:center;font-size:13px;font-weight:700;color:var(--t0);font-variant-numeric:tabular-nums}
+.plb-imgactions{display:flex;gap:6px;margin-top:12px}
+.plb-imgactions .btn{flex:1}
+.plb-imgclear{display:block;width:100%;margin-top:8px;padding:6px;font-size:11.5px;font-weight:600;color:var(--t2);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
+.plb-imgclear:hover{color:#B91C1C;background:var(--bg-2)}
 .plb-tgl--on{color:var(--brand);border-color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,transparent)}
 /* ── The board ── */
 .plb-board{display:flex;flex:1;min-height:420px}
