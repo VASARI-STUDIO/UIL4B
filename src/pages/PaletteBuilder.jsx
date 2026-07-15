@@ -503,7 +503,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
       if (harmony === 'auto' || harmony === 'monochromatic') {
         fresh = autoTonalPalette()
       } else {
-        const seedHex = hctToHex(Math.random() * 360, 40 + Math.random() * 28, 38 + Math.random() * 18)
+        // Seed in confident brand territory, not muddy mid-tones: request high
+        // chroma (48–92 — the HCT solver gamut-clamps per hue, so pale hues like
+        // yellow settle lower automatically) at tone 46–60, the band where a
+        // primary reads well on both light and dark surfaces.
+        const seedHex = hctToHex(Math.random() * 360, 48 + Math.random() * 44, 46 + Math.random() * 14)
         fresh = generateHarmony(seedHex, harmony)
       }
       fresh = fresh.map(c => normaliseHex(c)).filter(Boolean)
