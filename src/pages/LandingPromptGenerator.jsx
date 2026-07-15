@@ -59,10 +59,10 @@ export default function LandingPromptGenerator({ toast }) {
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Sign in to use AI features')
-      const r = await fetch('/api/generate-prompt', {
+      const r = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ description: promptText, platform: 'website builder (v0, Lovable, Bolt, Claude)' }),
+        body: JSON.stringify({ task: 'generate-prompt', description: promptText, platform: 'website builder (v0, Lovable, Bolt, Claude)' }),
       })
       const data = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)

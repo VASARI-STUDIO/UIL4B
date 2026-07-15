@@ -16,7 +16,7 @@ work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-12.
 ## 🔴 1. Make the AI features work again (CRITICAL)
 
 **▶ Check first (30 sec):** open
-`https://uil4b.com/api/generate-prompt?diag=uil4b-dev-2026` in your browser (or
+`https://uil4b.com/api/ai?diag=uil4b-dev-2026` in your browser (or
 `curl` it). You want to see `firebaseCredential: "ok"` and both `GEMINI_API_KEY`
 and `OPENROUTER_API_KEY` reported as `set (… chars)`. If all three are healthy,
 **this item is done — skip the fix.** (Even quicker: sign in and open the Alt Text
