@@ -5468,6 +5468,9 @@ a.prev-btn{text-decoration:none}
 button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 button.plb-varrow:hover{background:var(--bg-2)}
 .plb-varrow--locked{opacity:.55}
+.plb-varrow--active{background:var(--brand-weak,var(--bg-2))}
+.plb-varrow--active .plb-varrow-name{color:var(--brand)}
+.plb-varrow-tick{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--brand)}
 .plb-varrow-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:7px 8px;background:none;border:none;border-radius:var(--radius-s);text-align:left;cursor:pointer;transition:background var(--t)}
 .plb-varrow-main:hover{background:var(--bg-2)}
 .plb-varrow-name{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;font-size:12.5px;font-weight:600;color:var(--t0)}
