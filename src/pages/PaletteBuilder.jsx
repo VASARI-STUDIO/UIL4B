@@ -1085,6 +1085,17 @@ export default function PaletteBuilder({ onCopy, toast }) {
               className={colClass}
               ref={colRef(c, ink)}
               aria-label={`${role} ${adjusted[i]}`}
+              // Whole-swatch drag: grab anywhere on the column to reorder (the
+              // grip glyph stays as a visual affordance). Disabled while a tints
+              // or HCT popover is open on this column so slider drags aren't
+              // hijacked by the native element drag.
+              draggable={pickerIdx !== i && tintsIdx !== i}
+              onDragStart={(e) => {
+                dragFrom.current = i
+                e.dataTransfer.effectAllowed = 'move'
+                try { e.dataTransfer.setData('text/plain', String(i)) } catch { /* older engines */ }
+              }}
+              onDragEnd={() => { dragFrom.current = null; setOverIdx(null) }}
               onContextMenu={(e) => {
                 e.preventDefault()
                 setTintsIdx(null); setPickerIdx(null)
@@ -1104,21 +1115,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
               }}
             >
               <div className="plb-col-tools">
-                <button
-                  type="button"
+                <span
                   className="plb-tool plb-tool--grip"
-                  title="Drag to reorder"
-                  aria-label={`Drag to move ${role}`}
-                  draggable
-                  onDragStart={(e) => {
-                    dragFrom.current = i
-                    e.dataTransfer.effectAllowed = 'move'
-                    try { e.dataTransfer.setData('text/plain', String(i)) } catch { /* older engines */ }
-                  }}
-                  onDragEnd={() => { dragFrom.current = null; setOverIdx(null) }}
+                  title="Drag anywhere on this colour to reorder"
+                  aria-hidden="true"
                 >
                   <IcoGrip />
-                </button>
+                </span>
                 <button
                   type="button"
                   className={isLocked ? 'plb-tool plb-tool--on' : 'plb-tool'}
