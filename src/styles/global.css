@@ -5606,3 +5606,61 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-tintpop,.plb-picker{left:12px;right:12px;width:auto;transform:none;bottom:auto;top:calc(100% + 4px);z-index:46}
   .plb-copycss{margin-left:0;width:100%}
 }
+
+/* ============================================================
+   Canonical modal system — the ONE popup/upgrade/login shell,
+   reused app-wide (Image-2 card, Image-3 Pro modal, single-click
+   login). Build once here; every gate/login flow inherits it.
+   ============================================================ */
+.ui-modal-overlay{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);backdrop-filter:blur(6px);animation:cp-fade .16s ease}
+.ui-modal{position:relative;width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise .22s cubic-bezier(.2,0,0,1);max-height:calc(100dvh - 32px);overflow:hidden auto}
+.ui-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 0}
+.ui-modal-x{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--radius-pill);border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
+.ui-modal-x:hover{background:var(--hvr);color:var(--t0)}
+.ui-modal-body{padding:14px 22px 22px}
+.ui-modal-title{font-size:19px;font-weight:640;letter-spacing:-.01em;color:var(--t0);margin:0}
+.ui-modal-sub{margin:7px 0 0;font-size:13.5px;line-height:1.5;color:var(--t2)}
+.ui-modal-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.ui-modal-actions .btn{width:100%;justify-content:center}
+.ui-modal-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:transparent;border:none;color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:500;cursor:pointer;text-decoration:none;transition:color var(--t)}
+.ui-modal-link:hover{color:var(--t0)}
+
+/* --- Pro-upgrade modal (Image 3): two columns, gradient art panel --- */
+.ui-pro{max-width:760px}
+.ui-pro-grid{display:grid;grid-template-columns:1.1fr .9fr}
+.ui-pro-main{padding:28px 30px}
+.ui-pro-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:640;letter-spacing:.04em;text-transform:uppercase;color:var(--brand);margin-bottom:12px}
+.ui-pro-title{font-size:25px;font-weight:660;line-height:1.15;letter-spacing:-.02em;color:var(--t0);margin:0}
+.ui-pro-sub{margin:9px 0 0;font-size:14px;line-height:1.5;color:var(--t2)}
+.ui-pro-list{list-style:none;margin:20px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
+.ui-pro-li{display:flex;gap:11px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--t1)}
+.ui-pro-tick{flex:none;width:20px;height:20px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--brand-bg);color:var(--brand)}
+.ui-pro-price{margin:22px 0 0;display:flex;align-items:baseline;gap:8px}
+.ui-pro-amount{font-size:26px;font-weight:680;letter-spacing:-.02em;color:var(--t0)}
+.ui-pro-per{font-size:13px;color:var(--t2)}
+.ui-pro-save{font-size:11.5px;font-weight:600;color:var(--brand);background:var(--brand-bg);border-radius:var(--radius-pill);padding:3px 9px}
+.ui-pro-cta{margin-top:16px}
+.ui-pro-cta .btn{width:100%;justify-content:center}
+.ui-pro-note{margin:12px 0 0;font-size:11.5px;color:var(--t2);text-align:center}
+.ui-pro-note button{background:none;border:none;color:var(--t2);font:inherit;text-decoration:underline;cursor:pointer;padding:0}
+.ui-pro-note button:hover{color:var(--t0)}
+.ui-pro-art{position:relative;overflow:hidden;background:linear-gradient(140deg,var(--brand),#8B5CF6 55%,#EC4899);display:flex;flex-direction:column;justify-content:flex-end;padding:26px}
+.ui-pro-art::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 15% 10%,rgba(255,255,255,.28),transparent 55%);pointer-events:none}
+.ui-pro-art-glyphs{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.9}
+.ui-pro-proof{position:relative;color:#fff}
+.ui-pro-proof-stars{display:flex;gap:2px;margin-bottom:6px;color:#fff}
+.ui-pro-proof-txt{font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.92)}
+
+/* --- Single-click login popup (reuses .auth-* form styles) --- */
+.ui-login .ui-modal-body{padding-top:8px}
+.ui-login-note{display:flex;gap:9px;align-items:flex-start;margin:0 0 16px;padding:11px 13px;background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 26%,transparent);border-radius:var(--radius);font-size:12.5px;line-height:1.45;color:var(--t1)}
+.ui-login-note svg{flex:none;margin-top:1px;color:var(--brand)}
+.ui-login-err{margin:0 0 12px;padding:9px 12px;background:color-mix(in srgb,var(--err) 12%,transparent);border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius);font-size:12.5px;color:var(--err)}
+.ui-login .auth-links{margin-top:14px}
+
+@media(max-width:600px){
+  .ui-pro{max-width:440px}
+  .ui-pro-grid{grid-template-columns:1fr}
+  .ui-pro-art{display:none}
+  .ui-pro-main{padding:24px 22px}
+}
