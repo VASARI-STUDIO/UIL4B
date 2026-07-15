@@ -5437,13 +5437,12 @@ a.prev-btn{text-decoration:none}
 .plb-hexfield{width:96px;padding:8px 10px;font-family:var(--mono);font-size:13px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);transition:border-color var(--t)}
 .plb-hexfield:focus{outline:none;border-color:var(--brand)}
 .plb-hexfield--bad{border-color:#D64545}
-.plb-harm{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t);white-space:nowrap}
-.plb-harm:hover{border-color:color-mix(in srgb,var(--t0) 25%,var(--border))}
+/* System + Vision toolbar triggers ride on .btn btn-s; these only add the
+   eyebrow label + no-wrap so every toolbar control shares one button system. */
+.plb-harm{white-space:nowrap}
 .plb-harm-k{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .plb-tab-lock{display:inline-flex;opacity:.55}
 .plb-file{display:none}
-.plb-vision{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--t1)}
-.plb-vision select{padding:7px 8px;font-size:12px;font-weight:600;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer}
 .plb-random{white-space:nowrap}
 .plb-kbd{padding:1px 6px;font-family:var(--mono);font-size:10px;font-weight:600;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:4px;opacity:.85}
 .plb-dark{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
@@ -5463,6 +5462,17 @@ a.prev-btn{text-decoration:none}
 .plb-harm-opt{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all var(--t);white-space:nowrap}
 .plb-harm-opt:hover{background:var(--bg-2);color:var(--t0)}
 .plb-harm-opt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
+.plb-harm-opt>svg{flex-shrink:0;color:var(--t2)}
+.plb-harm-opt--on>svg{color:var(--brand)}
+.plb-harm-opt-l{flex:1;text-align:left}
+/* Colour-vision preview menu — same option chrome as the harmony grid. */
+.plb-vismenu{min-width:220px}
+.plb-visopt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;font-size:13px;font-weight:600;text-align:left;color:var(--t1);background:none;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:all var(--t)}
+.plb-visopt>svg{flex-shrink:0;color:var(--t2)}
+.plb-visopt:hover{background:var(--bg-2);color:var(--t0)}
+.plb-visopt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
+.plb-visopt--on>svg{color:var(--brand)}
+.plb-visopt-l{flex:1}
 .plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#16A34A;background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
 .plb-brandmenu,.plb-varmenu{min-width:296px}
 .plb-varmenu .plb-menu-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
