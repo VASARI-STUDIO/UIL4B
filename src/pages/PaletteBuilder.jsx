@@ -240,6 +240,31 @@ const IcoDownload = () => (
 const IcoUsers = () => (
   <Ico size={13}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.9" /><path d="M16 3.1a4 4 0 0 1 0 7.8" /></Ico>
 )
+// Harmony-wheel glyph for the Colour System button (Image 2 "system" graphic).
+const IcoSystem = ({ size = 13 }) => (
+  <Ico size={size}><circle cx="12" cy="12" r="3" /><circle cx="12" cy="4" r="1.5" /><circle cx="19" cy="8.5" r="1.5" /><circle cx="19" cy="15.5" r="1.5" /><circle cx="12" cy="20" r="1.5" /><circle cx="5" cy="15.5" r="1.5" /><circle cx="5" cy="8.5" r="1.5" /></Ico>
+)
+// A distinct little wheel glyph per harmony type, echoing Image 2's option pills.
+const HARM_GLYPHS = {
+  auto: <><circle cx="12" cy="12" r="2.2" /><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3" /></>,
+  monochromatic: <><circle cx="6" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="18" cy="12" r="1.5" /></>,
+  analogous: <><circle cx="7" cy="15" r="1.5" /><circle cx="12" cy="9" r="1.5" /><circle cx="17" cy="15" r="1.5" /></>,
+  complement: <><circle cx="6" cy="12" r="1.7" /><circle cx="18" cy="12" r="1.7" /><path d="M8 12h8" /></>,
+  triadic: <><circle cx="12" cy="5" r="1.6" /><circle cx="6" cy="17" r="1.6" /><circle cx="18" cy="17" r="1.6" /></>,
+  split: <><circle cx="12" cy="5" r="1.5" /><circle cx="6" cy="16" r="1.5" /><circle cx="18" cy="16" r="1.5" /><path d="M12 6.5v4M12 10.5 7.5 14.5M12 10.5l4.5 4" /></>,
+  tetradic: <><circle cx="7" cy="7" r="1.5" /><circle cx="17" cy="7" r="1.5" /><circle cx="7" cy="17" r="1.5" /><circle cx="17" cy="17" r="1.5" /></>,
+  custom: <><path d="M4 20h16" /><path d="M6 15.5 14 7.5l2.5 2.5-8 8H6z" /></>,
+}
+const HarmonyGlyph = ({ id, size = 14 }) => <Ico size={size}>{HARM_GLYPHS[id] || HARM_GLYPHS.auto}</Ico>
+// One icon per colour-vision mode for the Vision dropdown.
+const VISION_GLYPHS = {
+  normal: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></>,
+  protanopia: <><path d="M12 3s6 6.7 6 10.5a6 6 0 0 1-12 0C6 9.7 12 3 12 3Z" /></>,
+  deuteranopia: <><path d="M12 3s6 6.7 6 10.5a6 6 0 0 1-12 0C6 9.7 12 3 12 3Z" /><path d="M9.5 13.5h5" /></>,
+  tritanopia: <><path d="M12 3s6 6.7 6 10.5a6 6 0 0 1-12 0C6 9.7 12 3 12 3Z" /><path d="M12 9v7" /></>,
+  achromatopsia: <><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none" /></>,
+}
+const VisionGlyph = ({ id, size = 14 }) => <Ico size={size}>{VISION_GLYPHS[id] || VISION_GLYPHS.normal}</Ico>
 
 // ── HctPicker — per-column Hue·Chroma·Tone editor (the M3 space the whole
 // engine runs in), plus a hex field. Edits the RAW colour; the global adjust
@@ -381,6 +406,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [harmOpen, setHarmOpen] = useState(false)
   const [varsOpen, setVarsOpen] = useState(false)
   const [brandsOpen, setBrandsOpen] = useState(false)
+  const [visionOpen, setVisionOpen] = useState(false)
   const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const [ctxMenu, setCtxMenu] = useState(null)     // { i, x, y } right-click menu
@@ -486,11 +512,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // One dismiss layer for every popover: outside pointerdown or Escape closes
   // toolbar menus (anything not inside a .plb-menuwrap) and board popovers
   // (anything not inside a .plb-pop). Escape also closes the preview modal.
-  const anyPopover = saveOpen || shareOpen || harmOpen || varsOpen || brandsOpen
+  const anyPopover = saveOpen || shareOpen || harmOpen || varsOpen || brandsOpen || visionOpen
     || tintsIdx != null || pickerIdx != null || ctxMenu != null || preview != null
   useEffect(() => {
     if (!anyPopover) return
-    const closeMenus = () => { setSaveOpen(false); setShareOpen(false); setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false) }
+    const closeMenus = () => { setSaveOpen(false); setShareOpen(false); setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setVisionOpen(false) }
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
     const onDown = (e) => {
       if (!e.target.closest('.plb-menuwrap')) closeMenus()
@@ -718,6 +744,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   const adjustDirty = ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
   const activeHarmony = HARMONIES.find(h => h.id === harmony) || HARMONIES[0]
+  const activeVision = VISION_MODES.find(([id]) => id === vision) || VISION_MODES[0]
 
   return (
     <div className="plb">
@@ -750,11 +777,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <div className="plb-menuwrap">
             <button
               type="button"
-              className="plb-harm"
+              className="btn btn-s plb-harm"
               aria-expanded={harmOpen}
               aria-haspopup="menu"
-              onClick={() => { setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setHarmOpen(o => !o) }}
+              onClick={() => { setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setHarmOpen(o => !o) }}
             >
+              <IcoSystem />
               <span className="plb-harm-k">System</span>
               {activeHarmony.label}
               <IcoChevron />
@@ -772,7 +800,8 @@ export default function PaletteBuilder({ onCopy, toast }) {
                       className={harmony === h.id ? 'plb-harm-opt plb-harm-opt--on' : 'plb-harm-opt'}
                       onClick={() => pickHarmony(h)}
                     >
-                      {h.label}
+                      <HarmonyGlyph id={h.id} size={15} />
+                      <span className="plb-harm-opt-l">{h.label}</span>
                       {h.free
                         ? <span className="plb-free">Free</span>
                         : (!isPro && <span className="plb-tab-lock"><IcoLock size={10} /></span>)}
@@ -795,7 +824,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               type="button"
               className="btn btn-s"
               aria-expanded={brandsOpen}
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setBrandsOpen(o => !o) }}
+              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setBrandsOpen(o => !o) }}
             >
               <IcoBookmark /> Brands
             </button>
@@ -831,7 +860,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               type="button"
               className="btn btn-s"
               aria-expanded={varsOpen}
-              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVarsOpen(o => !o) }}
+              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setVarsOpen(o => !o) }}
             >
               <IcoSpark /> Variations
             </button>
@@ -886,12 +915,39 @@ export default function PaletteBuilder({ onCopy, toast }) {
           >
             <IcoContrast /> Contrast
           </button>
-          <label className="plb-vision">
-            <span>Vision</span>
-            <select value={vision} onChange={(e) => setVision(e.target.value)} aria-label="Colour-vision preview">
-              {VISION_MODES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-            </select>
-          </label>
+          <div className="plb-menuwrap">
+            <button
+              type="button"
+              className="btn btn-s"
+              aria-expanded={visionOpen}
+              aria-haspopup="menu"
+              title="Preview the palette through colour-vision deficiencies"
+              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(o => !o) }}
+            >
+              <VisionGlyph id={vision} size={13} />
+              <span className="plb-harm-k">Vision</span>
+              {activeVision[1]}
+              <IcoChevron />
+            </button>
+            {visionOpen && (
+              <div className="plb-menu plb-menu--left plb-vismenu" role="menu" aria-label="Colour-vision preview">
+                <div className="plb-menu-title">Colour-vision preview</div>
+                {VISION_MODES.map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={vision === id}
+                    className={vision === id ? 'plb-visopt plb-visopt--on' : 'plb-visopt'}
+                    onClick={() => { setVision(id); setVisionOpen(false) }}
+                  >
+                    <VisionGlyph id={id} size={15} />
+                    <span className="plb-visopt-l">{label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <NavLink to="/color" className="btn btn-s" title="Open the full Colour Studio">Studio</NavLink>
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
@@ -904,7 +960,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               aria-expanded={saveOpen}
               onClick={() => {
                 if (!canSaveProjects) { toast?.('Sign in to save projects'); return }
-                setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setShareOpen(false); setSaveOpen(o => !o)
+                setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setShareOpen(false); setVisionOpen(false); setSaveOpen(o => !o)
               }}
             >
               Save
@@ -949,7 +1005,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               type="button"
               className="btn btn-s plb-dark"
               aria-expanded={shareOpen}
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(o => !o) }}
+              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setVisionOpen(false); setShareOpen(o => !o) }}
             >
               Share <IcoChevron />
             </button>
