@@ -12,6 +12,7 @@ import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import UIPreviewModal from './UIPreviewModal'
+import UserName from './UserName'
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 // The drawer sidebar appears at ≤860px (see global.css responsive cascade);
@@ -448,7 +449,9 @@ function ProfileMenu() {
                   )}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div className="profile-menu-name">{userProfile?.displayName || user.email?.split('@')[0]}</div>
+                  <div className="profile-menu-name">
+                    <UserName name={userProfile?.displayName} email={user.email} flair={userProfile?.flair} bold />
+                  </div>
                   <div className="profile-menu-email">{user.email}</div>
                 </div>
                 {isPro && <span className="profile-menu-probadge">PRO</span>}

@@ -32,6 +32,7 @@ const DEFAULT_PROFILE = {
   website: '',
   bio: '',
   company: '',
+  flair: '',
 }
 
 function getCachedProfile(uid) {
@@ -161,6 +162,7 @@ export function AuthProvider({ children }) {
     website: profile.website || '',
     bio: profile.bio || '',
     company: profile.company || '',
+    flair: profile.flair || '',
   } : null
 
   const login = useCallback(async (email, password) => {

@@ -802,6 +802,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const setColorAt = (i, hex) => {
     setColors(prev => prev.map((c, k) => (k === i ? hex : c)))
     if (i === 0) { setSeed(hex); setSeedInput(hex) }
+    // Hand-editing a value diverges from any active paid/brand system. For free
+    // users, snap the visible System back to a free default so a brand's paid
+    // system can't linger as a backdoor into the paid engine on the next regen.
+    const sys = resolveSystem(harmony)
+    if (sys !== harmony) setHarmony(sys)
   }
 
   // Per-colour HCT editing is a Pro tool — free users get the upgrade modal
