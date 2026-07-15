@@ -86,6 +86,9 @@ Read the relevant one before working in that area.
   design tokens, class prefixes, breakpoints.
 - **[Git Workflow](docs/reference/git-workflow.md)** — branch, commit, push,
   PR-only merge to `main`.
+- **[Growth & Persuasion](docs/reference/growth-persuasion.md)** — ethical
+  activation, belonging, and social-proof playbook (read before onboarding /
+  upgrade / empty-state / marketing copy).
 
 **State & planning (two living areas):** [`BUILD-PLAN.md`](docs/BUILD-PLAN.md)
 (hub: direction + live status; sub-files in [`docs/build-plan/`](docs/build-plan)
