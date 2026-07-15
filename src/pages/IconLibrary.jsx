@@ -781,6 +781,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </button>
         </div>
 
+        <div className="icust-body">
         {!activeIcon ? (
           <div className="icust-paste">
             <p className="icust-paste-help">Paste SVG markup or the full <code>&lt;svg&gt;…&lt;/svg&gt;</code>. Tune it on the stage, then copy — or save it to Custom Icons with Pro.</p>
@@ -995,6 +996,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             )}
           </>
         )}
+        </div>
 
         {savePickerOpen && (
           <div className="icust-gate-backdrop" onMouseDown={() => setSavePickerOpen(false)}>
