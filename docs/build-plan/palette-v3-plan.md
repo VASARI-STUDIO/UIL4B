@@ -77,8 +77,11 @@ implementation on Sonnet subagents; keep judgment calls in the main thread.
 
 ## Wave 3 — Free/Pro gating
 
-12. **Contrast = premium** (was free) — and improve it: show **light AND dark
-    contrast** results, not one. Gate opens the Wave-1 Pro modal.
+12. **Contrast (palette-builder view) = premium** — and improve it: show **light
+    AND dark contrast** results, not one. Gate opens the Wave-1 Pro modal.
+    Founder ruling 2026-07-15: the standalone `/color/contrast` page
+    (`ContrastChecker.jsx`) **stays free** — only the palette-builder contrast
+    view is gated.
 13. **Compare = free for free palettes.** Free users can compare the free
     palettes; premium palettes/features still gated.
 14. **HCT editing of individual colours = paid.** Clicking into per-colour HCT
@@ -98,9 +101,9 @@ implementation on Sonnet subagents; keep judgment calls in the main thread.
     - once uploaded the image stays nested inside the menu, with draggable
       picker points over it and a picked-palette strip with +/− colour count;
     - a **reset / auto** action re-runs automatic extraction;
-    - free tool, but requires login (open the Wave-1 login popup). ← founder's
-      sentence trailed off ("users have to…"); login-required is the assumed
-      ending — **confirm with founder**.
+    - founder ruling 2026-07-15: the image picker is a **loss-leader — fully
+      free to USE with no login**. Login (Wave-1 popup) is required only to
+      **save** the resulting palette/system.
 
 ## Wave 5 — Save / Export / Community
 
@@ -149,12 +152,12 @@ implementation on Sonnet subagents; keep judgment calls in the main thread.
 
 ## Open questions for the founder (don't block Wave 1–3 on these)
 
-- Wave 4: confirm the image picker's trailing requirement is "users have to
-  **log in**" (assumed).
 - Wave 5: where can a palette be saved to — projects only, or also a new
   "collections" concept?
-- Wave 3: does Contrast-as-premium also gate the standalone `/color/contrast`
-  page (`ContrastChecker.jsx`), or only the palette-builder contrast view?
+
+_(Resolved 2026-07-15: image picker = loss leader, free to use, login only to
+save · standalone `/color/contrast` page stays free, only the palette-builder
+contrast view is premium.)_
 
 ## Known constraints
 

@@ -1,7 +1,7 @@
 # UIL4B — Owner Action List
 
 Things only **you** can do (credentials, dashboards, infra) to fully activate the
-work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-12.
+work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-15.
 
 > **⚠ Status is uncertain — verify before you fix.** As of 2026-06-30 you weren't
 > sure which of these you'd already done, and the agent environment **cannot reach
@@ -195,6 +195,8 @@ aggregate-analytics panel waits on the rules publish.)*
 ## 🟡 5. Create the social-share image (`og-image.png`)
 
 `index.html` references `https://www.uil4b.com/previews/og-image.png` for link previews, but the file doesn't exist — so every shared link currently shows a broken/blank card. Drop a **1200×630 PNG** at `public/previews/og-image.png` (a branded card: wordmark + tagline on the dark theme). If you'd rather, give me the wording/look and I'll generate it.
+
+*Update 2026-07-15: palette share links (`/p/:code`) are now covered — `/api/share` generates a dynamic OG card + palette-stripe PNG per link. The static `og-image.png` is still needed for every **generic** page (home, tools, docs).*
 
 ---
 
