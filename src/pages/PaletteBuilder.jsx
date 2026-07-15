@@ -37,6 +37,12 @@ const HARMONIES = [
   { id: 'custom', label: 'Custom', free: false },
 ]
 
+// The colour systems a free user is allowed to run through the generator. Any
+// other system (paid harmonies, a brand's 'custom' system) collapses to 'auto'
+// the moment a free user edits from it — otherwise it becomes a backdoor into
+// the paid harmony engine.
+const FREE_SYSTEMS = ['auto', 'monochromatic']
+
 // Colour-vision preview modes — same ids simCvd understands.
 const VISION_MODES = [
   ['normal', 'Normal'],
@@ -390,6 +396,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
 
+  // A free user can only ever run a free system through the generator. Paid
+  // harmonies and brand systems collapse to 'auto' for them, so editing from a
+  // paid/brand state can't ride the paid engine (Pro users keep whatever's set).
+  const resolveSystem = useCallback(
+    (type) => (isPro || FREE_SYSTEMS.includes(type) ? type : 'auto'),
+    [isPro]
+  )
+
   // Colours are the source of truth (positional: index 0–4 = the five ROLES,
   // beyond = ALTERNATIVE n). Seed + harmony act as a generator over the
   // unlocked slots; a shared ?c= link or a carried-in project wins first paint.
@@ -477,9 +491,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   // Regenerate the current system over the UNLOCKED role slots; extras stay.
   const regen = (fromSeed, type) => {
+    // Free users can't regenerate through a paid/brand system — collapse to a
+    // free default and snap the visible system back so the UI matches the engine.
+    const sys = resolveSystem(type)
+    if (sys !== harmony) setHarmony(sys)
     let gen
     try {
-      gen = type === 'auto' ? autoTonalPalette(hexToHsl(fromSeed)[0]) : generateHarmony(fromSeed, type)
+      gen = sys === 'auto' ? autoTonalPalette(hexToHsl(fromSeed)[0]) : generateHarmony(fromSeed, sys)
     } catch {
       gen = generateHarmony(fromSeed, 'analogous')
     }
@@ -507,9 +525,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // randomise explores the system you chose instead of discarding it. Locked
   // colours always survive; HSL fallback if the HCT solver ever throws.
   const randomize = useCallback(() => {
+    // Same free-system guard as regen: a free user randomising from a paid/brand
+    // system gets a free system instead, and the UI snaps to match.
+    const sys = resolveSystem(harmony)
+    if (sys !== harmony) setHarmony(sys)
     let fresh
     try {
-      if (harmony === 'auto' || harmony === 'monochromatic') {
+      if (sys === 'auto' || sys === 'monochromatic') {
         fresh = autoTonalPalette()
       } else {
         // Seed in confident brand territory, not muddy mid-tones: request high
@@ -517,7 +539,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
         // yellow settle lower automatically) at tone 46–60, the band where a
         // primary reads well on both light and dark surfaces.
         const seedHex = hctToHex(Math.random() * 360, 48 + Math.random() * 44, 46 + Math.random() * 14)
-        fresh = generateHarmony(seedHex, harmony)
+        fresh = generateHarmony(seedHex, sys)
       }
       fresh = fresh.map(c => normaliseHex(c)).filter(Boolean)
       if (fresh.length < ROLES.length) throw new Error('palette invalid')
@@ -532,7 +554,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     }))
     if (!locked.has(0)) { setSeed(fresh[0]); setSeedInput(fresh[0]) }
     setLiveMsg('Palette randomised')
-  }, [harmony, locked, toast])
+  }, [harmony, locked, toast, resolveSystem])
 
   // Spacebar = randomise (never while typing in a field or with a modal open).
   useEffect(() => {
@@ -714,7 +736,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setPreview({ mode: 'light', compare: v })
   }
   const pickBrand = (b) => {
-    if (!b.free && !isPro) { toast?.('More brand palettes are a Pro feature — upgrade to unlock'); return }
+    if (!b.free && !isPro) {
+      openProModal({ eyebrow: 'Pro colour tools', title: 'Load any brand system', subtitle: 'Free covers a handful of starter brands; Pro unlocks the full set — each one applies the brand’s whole colour system, not just its swatches.' })
+      return
+    }
+    // Selecting a brand applies its WHOLE system. Pro users keep the brand's
+    // system; free users get the exact colours on the free default so the brand
+    // can't smuggle in the paid harmony engine when they start editing.
+    const sys = resolveSystem(b.system || 'custom')
+    setHarmony(sys)
     applyPalette(b.colors, `Loaded the ${b.name} palette`)
     setBrandsOpen(false)
   }
