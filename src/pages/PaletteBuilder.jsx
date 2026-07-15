@@ -77,15 +77,51 @@ const HANDLE_KEY = 'vs-community-handle'            // the user's chosen social 
 // (weighted by chroma so near-greys barely vote) plus overall chroma, then
 // stitch an adjective + noun from a themed wordlist — greens → nature, warm
 // hues → sunset, blues → ocean, greys → mono/tech, and so on.
+// Each theme carries three banks: `adj` (editorial modifiers), `noun` (material /
+// pigment names that can also stand alone), and `solo` (evocative single words
+// that need no adjective). Vocabulary leans on architecture, pigment and
+// interiors language so the output reads like a magazine colour story.
 const NAME_THEMES = {
-  sunset: { adj: ['Golden', 'Blazing', 'Amber', 'Coral', 'Dusk', 'Molten', 'Warm', 'Radiant'], noun: ['Sunset', 'Ember', 'Horizon', 'Afterglow', 'Flare', 'Dawn', 'Blaze', 'Mirage'] },
-  nature: { adj: ['Wild', 'Verdant', 'Mossy', 'Forest', 'Earthen', 'Fresh', 'Sage', 'Rooted'], noun: ['Grove', 'Fern', 'Meadow', 'Canopy', 'Thicket', 'Woodland', 'Willow', 'Terra'] },
-  ocean: { adj: ['Deep', 'Tidal', 'Coastal', 'Azure', 'Marine', 'Cool', 'Glacial', 'Frosted'], noun: ['Tide', 'Lagoon', 'Current', 'Reef', 'Fjord', 'Harbour', 'Cove', 'Drift'] },
-  cosmic: { adj: ['Cosmic', 'Velvet', 'Mystic', 'Nebular', 'Twilight', 'Regal', 'Lucid', 'Astral'], noun: ['Nebula', 'Orbit', 'Aurora', 'Eclipse', 'Prism', 'Halo', 'Void', 'Comet'] },
-  candy: { adj: ['Sweet', 'Bubbly', 'Playful', 'Bright', 'Poppy', 'Vivid', 'Sugary', 'Bold'], noun: ['Pop', 'Candy', 'Bloom', 'Splash', 'Fizz', 'Sorbet', 'Bonbon', 'Punch'] },
-  tech: { adj: ['Digital', 'Neon', 'Circuit', 'Signal', 'Cyber', 'Quantum', 'Vector', 'Sonic'], noun: ['Grid', 'Pulse', 'Node', 'Matrix', 'Circuit', 'Core', 'Beam', 'Relay'] },
-  mono: { adj: ['Minimal', 'Slate', 'Mono', 'Graphite', 'Pure', 'Studio', 'Neutral', 'Muted'], noun: ['Canvas', 'Frame', 'Grid', 'Paper', 'Concrete', 'Marble', 'Ash', 'Stone'] },
+  sunset: {
+    adj: ['Burnished', 'Sun-Baked', 'Molten', 'Faded', 'Antique', 'Scorched', 'Aged', 'Raw'],
+    noun: ['Terracotta', 'Sienna', 'Ochre', 'Oxblood', 'Corten', 'Ember', 'Saffron', 'Cinnabar', 'Marmalade', 'Rust', 'Amber', 'Vermilion'],
+    solo: ['Sfumato', 'Kiln', 'Adobe', 'Harvest', 'Firebrick', 'Persimmon'],
+  },
+  nature: {
+    adj: ['Weathered', 'Dusty', 'Muted', 'Deep', 'Pale', 'Wild', 'Soft', 'Sun-Bleached'],
+    noun: ['Sage', 'Moss', 'Olive', 'Verdigris', 'Celadon', 'Fern', 'Eucalyptus', 'Malachite', 'Laurel', 'Thyme', 'Pistachio', 'Patina'],
+    solo: ['Conservatory', 'Botanica', 'Foliage', 'Wintergreen', 'Bracken', 'Undergrowth'],
+  },
+  ocean: {
+    adj: ['Deep', 'Glacial', 'Faded', 'Cold', 'Washed', 'Nordic', 'Muted', 'Antique'],
+    noun: ['Indigo', 'Cobalt', 'Prussian', 'Cerulean', 'Slate', 'Teal', 'Delft', 'Denim', 'Marine', 'Glacier', 'Azure', 'Petrol'],
+    solo: ['Nocturne', 'Fathom', 'Meridian', 'Bathhouse', 'Cyanotype', 'Deepwater'],
+  },
+  cosmic: {
+    adj: ['Velvet', 'Regal', 'Dusky', 'Smoked', 'Deep', 'Faded', 'Antique', 'Muted'],
+    noun: ['Aubergine', 'Plum', 'Amethyst', 'Damson', 'Orchid', 'Iris', 'Mulberry', 'Byzantine', 'Tyrian', 'Mauve', 'Wine', 'Heather'],
+    solo: ['Twilight', 'Vespers', 'Nightfall', 'Obscura', 'Penumbra', 'Aster'],
+  },
+  candy: {
+    adj: ['Soft', 'Faded', 'Sun-Washed', 'Bright', 'Powdered', 'Dusty', 'Vivid', 'Antique'],
+    noun: ['Rose', 'Blush', 'Coral', 'Peony', 'Fuchsia', 'Raspberry', 'Flamingo', 'Sorbet', 'Guava', 'Watermelon', 'Bubblegum', 'Punch'],
+    solo: ['Confetti', 'Aperitif', 'Camellia', 'Pomelo', 'Gelato', 'Rosewater'],
+  },
+  tech: {
+    adj: ['Brushed', 'Signal', 'Cold', 'Anodised', 'Electric', 'Muted', 'Matte', 'Charged'],
+    noun: ['Titanium', 'Chrome', 'Cobalt', 'Graphite', 'Pewter', 'Gunmetal', 'Steel', 'Neon', 'Circuit', 'Alloy', 'Carbon', 'Signal'],
+    solo: ['Monolith', 'Wireframe', 'Datum', 'Hologram', 'Blueprint', 'Interface'],
+  },
+  mono: {
+    adj: ['Raw', 'Aged', 'Bare', 'Soft', 'Weathered', 'Matte', 'Pale', 'Warm'],
+    noun: ['Alabaster', 'Travertine', 'Basalt', 'Graphite', 'Pewter', 'Greige', 'Oatmeal', 'Bone', 'Concrete', 'Plaster', 'Limestone', 'Chalk'],
+    solo: ['Brutalist', 'Terrazzo', 'Vellum', 'Parchment', 'Gesso', 'Monochrome'],
+  },
 }
+
+// Art-movement / atelier prefixes that pair with any theme noun for a
+// gallery-label feel ("Bauhaus Ochre", "Atelier Sienna").
+const NAME_MOVEMENTS = ['Bauhaus', 'Atelier', 'Modernist', 'Nordic', 'Studio', 'Salon', 'Deco', 'Archive']
 
 function paletteTheme(colors) {
   if (!colors?.length) return 'mono'
@@ -113,9 +149,30 @@ function paletteTheme(colors) {
 
 const pickOne = (arr) => arr[Math.floor(Math.random() * arr.length)]
 
+// Compose a name from one of several editorial patterns so repeated rolls feel
+// curated, not templated: "Burnished Sienna", "Travertine", "Corten & Ash",
+// "Bauhaus Ochre", "Nocturne No. 4", "Sienna Study".
 function randomPaletteName(colors) {
   const theme = NAME_THEMES[paletteTheme(colors)] || NAME_THEMES.mono
-  return `${pickOne(theme.adj)} ${pickOne(theme.noun)}`
+  const adj = () => pickOne(theme.adj)
+  const noun = () => pickOne(theme.noun)
+  const patterns = [
+    () => `${adj()} ${noun()}`,
+    () => `${adj()} ${noun()}`,        // weight the classic pair a little heavier
+    () => pickOne(theme.solo),
+    () => `${pickOne(NAME_MOVEMENTS)} ${noun()}`,
+    () => `${noun()} Study`,
+    () => `${pickOne(theme.solo)} No. ${2 + Math.floor(Math.random() * 8)}`,
+    () => {
+      // "A & B" — two distinct nouns from the theme.
+      const a = noun()
+      let b = noun()
+      let guard = 0
+      while (b === a && guard++ < 5) b = noun()
+      return b === a ? `${adj()} ${a}` : `${a} & ${b}`
+    },
+  ]
+  return pickOne(patterns)()
 }
 
 // ── Community handle: profanity filter that also catches evasion (item 22) ───
