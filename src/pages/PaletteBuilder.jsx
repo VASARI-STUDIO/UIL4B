@@ -20,7 +20,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 
 const DEFAULT_SEED = '#4338E0'
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
-const PRO_MAX = 6   // free ceiling on TOTAL columns — mirrors the studio's cap
+const PRO_MAX = 8   // free ceiling on TOTAL columns — free palettes can hold up to 8
 const HARD_MAX = 10 // absolute ceiling so the board never becomes slivers
 
 // Harmony options for the Colour System dropdown. `free` mirrors the studio's
@@ -587,7 +587,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // the caps, shifts locks right, and flags the slot for the grow-in animation.
   const insertAt = (idx, hex) => {
     if (colors.length >= HARD_MAX) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return }
-    if (!isPro && colors.length >= PRO_MAX) { toast?.('Palettes beyond 6 colours are a Pro feature — upgrade to unlock'); return }
+    if (!isPro && colors.length >= PRO_MAX) { toast?.(`Palettes beyond ${PRO_MAX} colours are a Pro feature — upgrade to unlock`); return }
     setColors(prev => { const n = [...prev]; n.splice(idx, 0, hex); return n })
     setLocked(prev => {
       const next = new Set()
