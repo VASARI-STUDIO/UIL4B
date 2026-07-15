@@ -1466,7 +1466,7 @@ function CsysBrands({ freeSlotsLeft, onAddBrand, onAddBrandSwatch }) {
         <button className="cs-csys-add" disabled={!selBrand} onClick={() => selBrand && onAddBrand(selBrand)}>
           {selBrand ? `Add ${selBrand.n} palette` : 'Select a brand'}
         </button>
-        {!freeSlotsLeft() && <span className="cs-csys-foot-note">Free palettes hold up to 6 colours</span>}
+        {!freeSlotsLeft() && <span className="cs-csys-foot-note">Free palettes hold up to 8 colours</span>}
       </div>
     </div>
   )
@@ -1793,7 +1793,7 @@ export default function ColorStudio({ onCopy, toast }) {
   const onProGate = useCallback((feature) => {
     const labels = {
       harmonies: 'Harmony systems are a Pro feature — upgrade to unlock',
-      'extra-colours': 'Palettes beyond 6 colours are a Pro feature — upgrade to unlock',
+      'extra-colours': 'Palettes beyond 8 colours are a Pro feature — upgrade to unlock',
       previews: 'Premium UI previews are a Pro feature — upgrade to unlock',
     }
     toast?.(labels[feature] || 'This is a Pro feature')
@@ -2091,7 +2091,7 @@ export default function ColorStudio({ onCopy, toast }) {
   // brand-palette merge) funnels through these two helpers so the cap is enforced
   // in the reducer logic, not just the UI — it holds against a console caller, not
   // only a button click. PRO_MAX is the free ceiling on TOTAL swatches.
-  const PRO_MAX = 6
+  const PRO_MAX = 8
   // Returns true if `n` swatches can be added now. When a non-Pro user would
   // exceed the cap, fires the Pro gate and returns false (caller adds nothing).
   const checkCanAdd = useCallback((n = 1) => {
