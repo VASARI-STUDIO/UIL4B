@@ -282,8 +282,8 @@ export default function AutoBuilder({ toast }) {
     setGenerating(true)
 
     // Generated client-side (HSL mood profiles + curated font pairs). A future
-    // AI-backed mode can route through /api/generate-prompt to stay within the
-    // Vercel serverless function budget rather than adding a new endpoint.
+    // AI-backed mode can route through /api/ai (task: generate-prompt) to stay
+    // within the Vercel serverless function budget rather than adding a new endpoint.
     await new Promise(r => setTimeout(r, 800))
 
     const palette = generatePalette(mood, description)

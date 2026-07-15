@@ -118,13 +118,13 @@ export default function AltTextGenerator({ toast }) {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Not signed in')
 
-      const r = await fetch('/api/alt-text', {
+      const r = await fetch('/api/ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined, tone }),
+        body: JSON.stringify({ task: 'alt-text', image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined, tone }),
       })
       const data = await r.json().catch(() => ({}))
       if (r.status === 429 && data.retryAfter && retries > 0) {

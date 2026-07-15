@@ -75,10 +75,10 @@ export default function AiPromptGenerator({ toast }) {
         r.readAsDataURL(f)
       })
       const base64 = await toBase64(refImage)
-      const r = await fetch('/api/scan-photo', {
+      const r = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ image: base64, mimeType: refImage.type }),
+        body: JSON.stringify({ task: 'scan-photo', image: base64, mimeType: refImage.type }),
       })
       const data = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
@@ -143,13 +143,14 @@ export default function AiPromptGenerator({ toast }) {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Sign in to use AI features')
 
-      const r = await fetch('/api/generate-prompt', {
+      const r = await fetch('/api/ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          task: 'generate-prompt',
           description: brief,
           style: style || undefined,
           platform: platform !== 'general' ? platform : undefined,
