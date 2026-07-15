@@ -4,9 +4,9 @@ import { categoryLabel } from '../../data/discoverCategories'
 import { monogram, buildToolHandoffUrl, isToolAvailable } from './discoverUtils'
 import CategoryGlyph from './CategoryGlyph'
 
-// Detail view for a single resource OR a collection. Reuses the shared
-// `.ch-modal*` shell (overlay, head, body, foot) so it matches the Community
-// modal exactly. Focus is trapped inside the dialog and Escape closes it.
+// Detail view for a single resource OR a collection. Uses the canonical
+// `.ui-modal*` shell (overlay, head, body, actions) so it matches every other
+// modal site-wide. Focus is trapped inside the dialog and Escape closes it.
 //
 // Two shapes via `item`:
 //   resource  → { id, title, host, url, ... }  (single resource)
@@ -69,15 +69,15 @@ export default function DiscoverModal({ item, kind, offline, onClose, onOpenReso
   if (kind === 'collection') {
     const members = item._members || []
     return (
-      <div className="ch-modal-overlay" onClick={onClose} role="presentation">
-        <div className="ch-modal dsc-modal" ref={dialogRef} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Collection: ${item.title}`}>
-          <div className="ch-modal-head">
-            <h2>{item.title}</h2>
-            <button className="ch-modal-close" onClick={onClose} aria-label="Close">
+      <div className="ui-modal-overlay" onClick={onClose} role="presentation">
+        <div className="ui-modal ui-modal--wide" ref={dialogRef} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Collection: ${item.title}`}>
+          <div className="ui-modal-head">
+            <h2 className="ui-modal-title">{item.title}</h2>
+            <button className="ui-modal-x" onClick={onClose} aria-label="Close">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           </div>
-          <div className="ch-modal-body">
+          <div className="ui-modal-body">
             <p className="dsc-modal-blurb">{item.blurb}</p>
             <ul className="dsc-modal-members">
               {members.map(r => (
@@ -96,9 +96,9 @@ export default function DiscoverModal({ item, kind, offline, onClose, onOpenReso
                 </li>
               ))}
             </ul>
-          </div>
-          <div className="ch-modal-foot">
-            <button className="btn" onClick={onClose}>Close</button>
+            <div className="ui-modal-actions ui-modal-actions--row">
+              <button className="btn" onClick={onClose}>Close</button>
+            </div>
           </div>
         </div>
       </div>
@@ -112,15 +112,15 @@ export default function DiscoverModal({ item, kind, offline, onClose, onOpenReso
   // remain (see `tools.length > 0` below).
   const tools = (r.relatedTools || []).filter(isToolAvailable)
   return (
-    <div className="ch-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ch-modal dsc-modal" ref={dialogRef} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${r.title} details`}>
-        <div className="ch-modal-head">
-          <h2>{r.title}</h2>
-          <button className="ch-modal-close" onClick={onClose} aria-label="Close">
+    <div className="ui-modal-overlay" onClick={onClose} role="presentation">
+      <div className="ui-modal ui-modal--wide" ref={dialogRef} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${r.title} details`}>
+        <div className="ui-modal-head">
+          <h2 className="ui-modal-title">{r.title}</h2>
+          <button className="ui-modal-x" onClick={onClose} aria-label="Close">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>
-        <div className="ch-modal-body">
+        <div className="ui-modal-body">
           <div className="dsc-modal-top">
             <span className="dsc-modal-face" data-cat={r.category} aria-hidden="true">
               <span className="dsc-face-mono">{monogram(r.title, r.category)}</span>
@@ -171,21 +171,21 @@ export default function DiscoverModal({ item, kind, offline, onClose, onOpenReso
               </div>
             </div>
           )}
-        </div>
-        <div className="ch-modal-foot">
-          <button className="btn" onClick={onClose}>Close</button>
-          <a
-            className={`btn btn-accent${offline ? ' is-disabled' : ''}`}
-            href={offline ? undefined : r.url}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            aria-disabled={offline || undefined}
-            tabIndex={offline ? -1 : undefined}
-            title={offline ? 'You are offline — reconnect to open external links' : `Visit ${r.host} (opens in a new tab)`}
-            onClick={(e) => { if (offline) e.preventDefault() }}
-          >
-            Visit site <ExternalGlyph />
-          </a>
+          <div className="ui-modal-actions ui-modal-actions--row">
+            <button className="btn" onClick={onClose}>Close</button>
+            <a
+              className={`btn btn-accent${offline ? ' is-disabled' : ''}`}
+              href={offline ? undefined : r.url}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              aria-disabled={offline || undefined}
+              tabIndex={offline ? -1 : undefined}
+              title={offline ? 'You are offline — reconnect to open external links' : `Visit ${r.host} (opens in a new tab)`}
+              onClick={(e) => { if (offline) e.preventDefault() }}
+            >
+              Visit site <ExternalGlyph />
+            </a>
+          </div>
         </div>
       </div>
     </div>
