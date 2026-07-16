@@ -167,23 +167,15 @@ function LockGlyph({ size = 11 }) {
 }
 
 function StateShade({ shade, label, onCopy }) {
-  const [hover, setHover] = useState(false)
   const fg = textColorForBg(shade)
-  const rgb = hover ? hexToRgb(shade) : null
   return (
-    <div onClick={() => onCopy(shade)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+    <div onClick={() => onCopy(shade)}
       role="button" tabIndex={0} aria-label={`Copy ${shade.toUpperCase()}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCopy(shade) } }}
-      style={{ flex: 1, padding: '16px 0 6px', textAlign: 'center', background: shade, cursor: 'pointer', minHeight: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', transition: 'filter .15s', filter: hover ? 'brightness(1.05)' : 'none' }}
+      className="stc-cell" style={{ background: shade, color: fg }}
     >
-      <span style={{ fontSize: 9, fontFamily: 'var(--mono)', fontWeight: 700, color: fg, opacity: hover ? 1 : .6, transition: 'opacity .15s' }}>
-        {hover ? shade.toUpperCase().replace('#', '') : label}
-      </span>
-      {hover && rgb && (
-        <span style={{ fontSize: 7, fontFamily: 'var(--mono)', color: fg, opacity: .5, marginTop: 1 }}>
-          {rgb[0]},{rgb[1]},{rgb[2]}
-        </span>
-      )}
+      <span className="stc-cell-tone">{label}</span>
+      <span className="stc-cell-hex">{shade.replace('#', '').toLowerCase()}</span>
     </div>
   )
 }
@@ -2924,6 +2916,7 @@ ${stateVars}
     setCustomHue(state, Math.max(arc.lo, Math.min(arc.hi, h)))
     return true
   }
+  const copyStateTokens = () => onCopy(`:root {\n${stateCSS}\n}`)
   const fullCSS = `:root {\n${allColors.map((x, i) => `  --color-${i + 1}: ${x};`).join('\n')}\n\n${stateCSS}\n}`
 
   const resolveStop = (s, i) => s.color || allColors[i] || allColors[0]
@@ -3325,15 +3318,15 @@ ${stateVars}
       {/* ═══ SECTION 2: UI STATE COLORS ═══ */}
       {(!soloSection || soloSection === 'states') && (
       <section id="states" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className="cs-section-header" onClick={soloSection ? undefined : () => toggleCollapse('states')} style={{ cursor: soloSection ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: soloSection ? 'flex-end' : 'space-between', marginBottom: collapsed.states && !soloSection ? 0 : 14, flexWrap: 'wrap', gap: 8 }}>
+        <div className={`cs-section-header stc-head${soloSection ? ' solo' : ''}`} onClick={soloSection ? undefined : () => toggleCollapse('states')} style={{ marginBottom: collapsed.states && !soloSection ? 0 : 14 }}>
           {!soloSection && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="stc-head-title">
               <svg className={`cs-chevron${collapsed.states ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colours</h2>
             </div>
           )}
-          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Preset</span>
+          <div className="stc-toolbar" onClick={e => e.stopPropagation()}>
+            <span className="stc-kicker">Bundle</span>
             {STATE_BUNDLES.map(b => (
               <button key={b.name}
                 className={`pt-t${JSON.stringify(stateColors) === JSON.stringify(b.config) ? ' on' : ''}`}
@@ -3341,6 +3334,7 @@ ${stateVars}
                 style={{ padding: '4px 10px', fontSize: 10 }}
               >{b.name}</button>
             ))}
+            <button className="stc-copy-btn" onClick={copyStateTokens}>Copy tokens</button>
           </div>
         </div>
         {(soloSection === 'states' || !collapsed.states) && <>
@@ -3353,26 +3347,21 @@ ${stateVars}
           const shades = resolveStateShades(state, sel)
           const arc = ROLE_ARCS[state]
           return (
-            <div key={state} style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 3, background: shades[5] }} />
-                <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'capitalize' }}>{state}</span>
-                <div style={{ display: 'flex', gap: 3, marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <div key={state} className="stc-role">
+              <div className="stc-role-head">
+                <div className="stc-dot" style={{ background: shades[5] }} />
+                <span className="stc-role-name">{state}</span>
+                <div className="stc-role-presets">
                   {presets.map((p, pi) => (
                     <button key={p.name} onClick={() => setStateColors({ ...stateColors, [state]: pi })}
-                      className={`pt-t${!isCustom && pi === sel ? ' on' : ''}`} style={{ padding: '3px 8px', fontSize: 9 }}
+                      className={`pt-t${!isCustom && pi === sel ? ' on' : ''}`}
                     ><span className="state-preset-full">{p.name}</span><span className="state-preset-short">{p.name === 'Tailwind' ? 'TW' : p.name}</span></button>
                   ))}
                   <button
                     onClick={() => (isCustom ? setStateColors({ ...stateColors, [state]: STATE_BUNDLES[0].config[state] }) : setCustomHue(state, arc.canonical))}
-                    className={`pt-t${isCustom ? ' on' : ''}`} style={{ padding: '3px 8px', fontSize: 9 }} aria-pressed={isCustom}
+                    className={`pt-t${isCustom ? ' on' : ''}`} aria-pressed={isCustom}
                   >Custom</button>
                 </div>
-              </div>
-              <div style={{ display: 'flex', borderRadius: 'var(--radius-s)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                {shades.map((shade, si) => (
-                  <StateShade key={si} shade={shade} label={STATE_LABELS[si]} onCopy={onCopy} />
-                ))}
               </div>
               {isCustom && (() => {
                 const [, refS, refL] = hexToHsl(STATE_REF_HEX[state])
@@ -3381,16 +3370,16 @@ ${stateVars}
                 const grad = `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1].map(t => at(arc.lo + t * (arc.hi - arc.lo))).join(', ')})`
                 const curName = describeColor(at(sel.custom))
                 return (
-                  <div className="cs-hue" style={{ '--arc-grad': grad }}>
-                    <div className="cs-hue-top">
-                      <span className="cs-hue-name">{curName}</span>
-                      <span className="cs-hue-val">{norm(sel.custom)}°</span>
+                  <div className="cs-hue stc-hue" style={{ '--arc-grad': grad }}>
+                    <div className="stc-hue-row">
+                      <span className="stc-kicker">Hue</span>
+                      <input type="range" className="cs-hue-slider"
+                        min={Math.round(arc.lo)} max={Math.round(arc.hi)} step="1" value={sel.custom}
+                        aria-label={`${state} custom hue`} aria-valuetext={curName}
+                        onChange={e => setCustomHue(state, Number(e.target.value))}
+                      />
+                      <span className="stc-hue-val">{norm(sel.custom)}°</span>
                     </div>
-                    <input type="range" className="cs-hue-slider"
-                      min={Math.round(arc.lo)} max={Math.round(arc.hi)} step="1" value={sel.custom}
-                      aria-label={`${state} custom hue`} aria-valuetext={curName}
-                      onChange={e => setCustomHue(state, Number(e.target.value))}
-                    />
                     <div className="cs-hue-ends">
                       <span>{describeColor(at(arc.lo))}</span>
                       <input type="text" className="cs-hue-hex" placeholder="Paste hex" maxLength={7}
@@ -3402,6 +3391,11 @@ ${stateVars}
                   </div>
                 )
               })()}
+              <div className="stc-ramp">
+                {shades.map((shade, si) => (
+                  <StateShade key={si} shade={shade} label={STATE_LABELS[si]} onCopy={onCopy} />
+                ))}
+              </div>
             </div>
           )
         })}
