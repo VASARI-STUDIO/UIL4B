@@ -526,6 +526,29 @@ export function autoTonalPalette(seedHue = Math.random() * 360) {
   ]
 }
 
+// Deterministic Auto system for an explicitly chosen seed colour: the pick IS
+// PRIMARY (kept verbatim), the other four roles are M3 tone roles derived from
+// its hue/chroma. autoTonalPalette stays the exploratory engine for Randomise —
+// this one must return the same palette for the same seed every time, so
+// choosing a custom colour behaves predictably instead of re-rolling.
+export function autoTonalFromSeed(hex) {
+  let h, c
+  try { const hct = hexToHct(hex); h = hct[0]; c = hct[1] }
+  catch { const [hh, ss] = hexToHsl(hex); h = hh; c = ss * 0.6 }
+  const chroma = Math.max(10, Math.min(64, c))
+  const sibling = (h + 30) % 360
+  const safe = (hue, ch, tone, fallback) => {
+    try { return hctToHex(hue, ch, tone) } catch { return fallback }
+  }
+  return [
+    hex,                                                       // PRIMARY — the exact pick
+    safe(sibling, chroma * 0.92, 60, hslToHex(sibling, 40, 60)), // SECONDARY (sibling hue)
+    safe(h, Math.min(100, chroma + 14), 70, hslToHex(h, 55, 70)), // ACCENT
+    safe(h, 8, 90, hslToHex(h, 12, 90)),                       // SUBTLE
+    safe(h, chroma * 0.7, 20, hslToHex(h, 35, 20)),            // DEEP
+  ]
+}
+
 // Non-destructive global adjust lens. Hue rotate / chroma scale / tone shift /
 // temperature bias over a base palette -> new array. Identity (returns input)
 // when every field is 0, so exports stay untouched until a slider moves.
