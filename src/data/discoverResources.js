@@ -37,7 +37,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'A fast way to find a tasteful gradient without fiddling with stops. Browse, then bring a starting point straight into the Gradient Generator to fine-tune the angle, stops and export the CSS.',
     relatedTools: [
-      { label: 'Gradient Generator', route: '/color', preset: 'sunset', tab: 'gradient' },
+      { label: 'Gradient Generator', route: '/color/gradient', preset: 'sunset', tab: 'gradient' },
       { label: 'Colour System Builder', route: '/color' },
     ],
     added: '2026-06-20',
@@ -55,7 +55,7 @@ export const DISCOVER_RESOURCES = [
     useCase: 'Quick two-tone backgrounds',
     whyUseful: 'Great when you want a clean two-stop gradient fast. Pick one you like and rebuild it in the Gradient Generator to adjust direction and add stops.',
     relatedTools: [
-      { label: 'Gradient Generator', route: '/color', preset: 'malibu', tab: 'gradient' },
+      { label: 'Gradient Generator', route: '/color/gradient', preset: 'malibu', tab: 'gradient' },
     ],
     added: '2026-06-12',
   },
@@ -72,7 +72,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Intermediate',
     whyUseful: 'For when a plain linear gradient is too flat. Use it for inspiration, then recreate the radial or conic type in the Gradient Generator.',
     relatedTools: [
-      { label: 'Gradient Generator', route: '/color', preset: 'aurora-conic', tab: 'gradient' },
+      { label: 'Gradient Generator', route: '/color/gradient', preset: 'aurora-conic', tab: 'gradient' },
     ],
     added: '2026-06-08',
   },
@@ -93,6 +93,9 @@ export const DISCOVER_RESOURCES = [
     relatedTools: [
       { label: 'Colour System Builder', route: '/color' },
     ],
+    // Representative sample palette (static, local — rendered as real swatches
+    // on the Discover card face instead of the generated monogram).
+    palette: ['#222831', '#393E46', '#00ADB5', '#EEEEEE'],
     added: '2026-06-18',
     featured: true,
   },
@@ -110,6 +113,7 @@ export const DISCOVER_RESOURCES = [
     relatedTools: [
       { label: 'Colour System Builder', route: '/color' },
     ],
+    palette: ['#264653', '#2A9D8F', '#E9C46A', '#F4A261', '#E76F51'],
     added: '2026-06-05',
   },
   {
@@ -127,6 +131,7 @@ export const DISCOVER_RESOURCES = [
     relatedTools: [
       { label: 'Colour System Builder', route: '/color' },
     ],
+    palette: ['#16161A', '#7F5AF0', '#2CB67D', '#FFFFFE'],
     added: '2026-05-28',
   },
 

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
+import AppFooter from '../components/AppFooter'
 
 const IconLibrary = lazy(() => import('./IconLibrary'))
 const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
@@ -35,6 +36,7 @@ export default function IconEmojiLibrary({ onCopy }) {
   const fallback = <div className="page-loading"><div className="fg-loader" /></div>
 
   return (
+    <>
     <div className="sec">
       <div className="sec-h lib-head">
         <div className="lib-switch" role="tablist" aria-label="Library">
@@ -93,5 +95,9 @@ export default function IconEmojiLibrary({ onCopy }) {
         )}
       </div>
     </div>
+    {/* Chromeless Create surface — mount the shared system footer here so the
+        icon/emoji library closes with the same footer as the rest of the app. */}
+    <AppFooter />
+    </>
   )
 }

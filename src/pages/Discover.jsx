@@ -10,6 +10,8 @@ import BrowseTiles from '../components/discover/BrowseTiles'
 import CollectionsBand from '../components/discover/CollectionsBand'
 import DiscoverEmpty from '../components/discover/DiscoverEmpty'
 import DiscoverModal from '../components/discover/DiscoverModal'
+import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
+import { GALLERY_PALETTES } from '../data/paletteGallery'
 
 // Discover (Slice 2a) — a read-only surface over the static seed in
 // src/data/discoverResources.js. Everything here is client-side: search,
@@ -259,8 +261,20 @@ export default function Discover({ toast, forcedType = null }) {
     return 'no-results'
   }, [visible.length, sort, query, filter, counts])
 
+  // ─── Curated palette gallery (palettes filter only) ───────────────────────
+  // A colorhunt-style browse grid of ready-made palettes, shown above the
+  // external palette resources when the Palettes chip is active. Static + local
+  // (src/data/paletteGallery.js) so it joins search by name/hex for free.
+  const galleryVisible = useMemo(() => {
+    if (focused || filter !== 'palettes') return []
+    if (!query) return GALLERY_PALETTES
+    return GALLERY_PALETTES.filter(p =>
+      `${p.name} ${p.colors.join(' ')}`.toLowerCase().includes(query))
+  }, [focused, filter, query])
+
   const headingId = 'dsc-grid-heading'
   const communityHeadingId = 'dsc-community-heading'
+  const galleryHeadingId = 'dsc-gallery-heading'
   // When the Community chip is the active filter on the full surface, community
   // is the focus: the external grid is hidden and the community band stands alone.
   const communityActive = !focused && filter === 'community'
@@ -409,6 +423,21 @@ export default function Discover({ toast, forcedType = null }) {
                   No community designs yet — <Link to="/community">submit one on the Community Hub</Link>.
                 </div>
               )}
+            </section>
+          )}
+
+          {/* Curated palette gallery — colorhunt-style browse grid, shown above
+              the external palette resources when the Palettes chip is active.
+              Joins search (name/hex); hides itself rather than render empty. */}
+          {galleryVisible.length > 0 && (
+            <section className="dsc-grid-band" aria-labelledby={galleryHeadingId}>
+              <div className="section-h">
+                <h2 id={galleryHeadingId}>Browse colour palettes</h2>
+                <span className="meta" aria-live="polite">
+                  {galleryVisible.length} {galleryVisible.length === 1 ? 'palette' : 'palettes'}
+                </span>
+              </div>
+              <PaletteGalleryGrid toast={toast} palettes={galleryVisible} />
             </section>
           )}
 
