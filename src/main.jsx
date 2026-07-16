@@ -13,6 +13,19 @@ import { SubscriptionProvider } from './contexts/SubscriptionContext'
 import { I18nProvider } from './contexts/I18nContext'
 import './styles/global.css'
 
+// After a redeploy, a cached index.html can request lazy chunks whose hashed
+// filenames no longer exist; Vite fires vite:preloadError when that import
+// fails. One hard reload fetches the fresh index.html and the new chunk set.
+// sessionStorage guards against a reload loop if the error persists.
+window.addEventListener('vite:preloadError', (event) => {
+  const key = 'vs-chunk-reload'
+  const last = Number(sessionStorage.getItem(key) || 0)
+  if (Date.now() - last < 30000) return
+  sessionStorage.setItem(key, String(Date.now()))
+  event.preventDefault()
+  window.location.reload()
+})
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>

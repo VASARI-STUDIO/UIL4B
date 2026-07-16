@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
+import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  applyAdjust, autoTonalPalette, contrastRatio, derivePreviewRoles,
+  applyAdjust, autoTonalFromSeed, autoTonalPalette, contrastRatio, derivePreviewRoles,
   generateHarmony, hctToHex, hexToHct, hexToHsl, hslToHex, mixHex, simCvd,
   textColorForBg, tonalRamp,
 } from '../utils/colors'
@@ -718,7 +719,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     if (sys !== harmony) setHarmony(sys)
     let gen
     try {
-      gen = sys === 'auto' ? autoTonalPalette(hexToHsl(fromSeed)[0]) : generateHarmony(fromSeed, sys)
+      gen = sys === 'auto' ? autoTonalFromSeed(fromSeed) : generateHarmony(fromSeed, sys)
     } catch {
       gen = generateHarmony(fromSeed, 'analogous')
     }
@@ -1194,12 +1195,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
       <header className="plb-toolbar">
         <div className="plb-toolbar-group">
           <h1 className="plb-title">Palette Builder</h1>
-          <div className="plb-seed" ref={colRef(view[0] || seed, 'transparent')}>
-            <input
-              type="color"
+          <div className="plb-seedpick">
+            <ColorPickerPop
               value={seed}
-              onChange={(e) => setFromSeedInput(e.target.value.toUpperCase())}
-              aria-label="Pick seed colour"
+              onChange={(hex) => setFromSeedInput(hex.toUpperCase())}
+              ariaLabel="Pick seed colour"
             />
           </div>
           <input
