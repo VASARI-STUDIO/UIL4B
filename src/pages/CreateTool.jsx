@@ -26,10 +26,12 @@ import { useClipboard } from '../hooks/useClipboard'
 const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 
 // Colour — /color is the colour SALES page (handled upstream in App.jsx, never
-// reaches this shell). semantic/ui/gradient are the same ColorStudio focused on
-// their section (it reads the pathname). Palette is its own full-bleed workbench,
-// and tint + contrast are light standalone pages — all on the same colour maths.
+// reaches this shell). semantic/ui are the same ColorStudio focused on their
+// section (it reads the pathname); gradient is its own dark "Gradient Cockpit"
+// surface. Palette is its own full-bleed workbench, and tint + contrast are light
+// standalone pages — all on the same colour maths.
 const ColorStudio = lazy(() => import('./ColorStudio'))
+const GradientGenerator = lazy(() => import('./GradientGenerator'))
 const PaletteBuilder = lazy(() => import('./PaletteBuilder'))
 const TintTool = lazy(() => import('./TintTool'))
 const ContrastChecker = lazy(() => import('./ContrastChecker'))
@@ -47,7 +49,7 @@ const LIVE_TOOLS = {
   '/color/palette': PaletteBuilder,
   '/color/semantic': ColorStudio,
   '/color/ui': ColorStudio,
-  '/color/gradient': ColorStudio,
+  '/color/gradient': GradientGenerator,
   '/color/tint': TintTool,
   '/color/contrast': ContrastChecker,
   '/icons': IconEmojiLibrary,

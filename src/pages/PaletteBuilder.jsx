@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import {
   applyAdjust, autoTonalPalette, contrastRatio, derivePreviewRoles,
@@ -7,6 +8,7 @@ import {
 } from '../utils/colors'
 import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
 import { BRAND_PALETTES } from '../data/brandPalettes'
+import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
@@ -71,6 +73,25 @@ const TINT_TONES = [95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i
 const SUBMISSIONS_KEY = 'vs-community-submissions' // same store Community.jsx reads
 const HANDLE_KEY = 'vs-community-handle'            // the user's chosen social name
+
+// Palette history (toolbar History menu): a rolling local log of the boards the
+// user has worked through, so an accidental randomise is never destructive.
+const HISTORY_KEY = 'vs-palette-history'
+const HISTORY_MAX = 30
+function loadHistory() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    return Array.isArray(raw) ? raw.filter(h => h && Array.isArray(h.colors) && h.colors.length >= 2).slice(0, HISTORY_MAX) : []
+  } catch { return [] }
+}
+// Compact relative time for the history rows — "Just now", "5m ago", "2h ago".
+function timeAgo(ts) {
+  const s = Math.round((Date.now() - ts) / 1000)
+  if (s < 45) return 'Just now'
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))}m ago`
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`
+  return `${Math.round(s / 86400)}d ago`
+}
 
 // ── Random themed palette-name generator (Wave 5 item 21) ────────────────────
 // Pure client-side, no API. We bucket the palette by its dominant HCT hue
@@ -416,6 +437,12 @@ const IcoUsers = () => (
 const IcoDice = () => (
   <Ico size={14}><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.1" /><circle cx="15.5" cy="8.5" r="1.1" /><circle cx="12" cy="12" r="1.1" /><circle cx="8.5" cy="15.5" r="1.1" /><circle cx="15.5" cy="15.5" r="1.1" /></Ico>
 )
+const IcoHistory = () => (
+  <Ico size={13}><path d="M3 12a9 9 0 1 0 2.8-6.5" /><path d="M3 4v5h5" /><path d="M12 8v4l3 2" /></Ico>
+)
+const IcoGallery = () => (
+  <Ico size={13}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></Ico>
+)
 // Harmony-wheel glyph for the Colour System button (Image 2 "system" graphic).
 const IcoSystem = ({ size = 13 }) => (
   <Ico size={size}><circle cx="12" cy="12" r="3" /><circle cx="12" cy="4" r="1.5" /><circle cx="19" cy="8.5" r="1.5" /><circle cx="19" cy="15.5" r="1.5" /><circle cx="12" cy="20" r="1.5" /><circle cx="5" cy="15.5" r="1.5" /><circle cx="5" cy="8.5" r="1.5" /></Ico>
@@ -632,6 +659,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // coming-soon popup — long-term this becomes the guided walkthrough across the
   // individual colour tools.
   const [dsbOpen, setDsbOpen] = useState(false)
+  // Colour gallery popup (Discover hand-in): the shared PaletteGalleryGrid
+  // nested in a toolbar menu, applying a pick straight onto the board.
+  const [galleryOpen, setGalleryOpen] = useState(false)
+  // Palette history: rolling localStorage log (see HISTORY_KEY above).
+  const [histOpen, setHistOpen] = useState(false)
+  const [history, setHistory] = useState(loadHistory)
   const fileRef = useRef(null)
 
   // Drag-reorder plumbing + the grow-in animation slot for inserted colours.
@@ -762,10 +795,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // toolbar menus (anything not inside a .plb-menuwrap) and board popovers
   // (anything not inside a .plb-pop). Escape also closes the preview modal.
   const anyPopover = saveOpen || shareOpen || harmOpen || varsOpen || brandsOpen || visionOpen || imgOpen
+    || galleryOpen || histOpen
     || tintsIdx != null || pickerIdx != null || ctxMenu != null || preview != null
   useEffect(() => {
     if (!anyPopover) return
-    const closeMenus = () => { setSaveOpen(false); setShareOpen(false); setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setVisionOpen(false); setImgOpen(false) }
+    const closeMenus = () => { setSaveOpen(false); setShareOpen(false); setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false) }
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
     const onDown = (e) => {
       if (!e.target.closest('.plb-menuwrap')) closeMenus()
@@ -779,6 +813,21 @@ export default function PaletteBuilder({ onCopy, toast }) {
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
   }, [anyPopover])
+
+  // Record the board into palette history. Debounced so slider scrubs and
+  // rapid randomises collapse into one entry; identical heads are skipped.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setHistory(prev => {
+        const key = colors.join(',')
+        if (prev[0] && prev[0].colors.join(',') === key) return prev
+        const next = [{ colors: [...colors], at: Date.now() }, ...prev].slice(0, HISTORY_MAX)
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)) } catch { /* quota / disabled */ }
+        return next
+      })
+    }, 900)
+    return () => clearTimeout(t)
+  }, [colors])
 
   const toggleLock = (i) => {
     setLocked(prev => {
@@ -1171,7 +1220,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               className="btn btn-s plb-harm"
               aria-expanded={harmOpen}
               aria-haspopup="menu"
-              onClick={() => { setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setHarmOpen(o => !o) }}
+              onClick={() => { setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setHarmOpen(o => !o) }}
             >
               <IcoSystem />
               <span className="plb-harm-k">System</span>
@@ -1210,7 +1259,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               type="button"
               className="btn btn-s"
               aria-expanded={imgOpen}
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setBrandsOpen(false); setImgOpen(o => !o) }}
+              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setBrandsOpen(false); setGalleryOpen(false); setHistOpen(false); setImgOpen(o => !o) }}
             >
               <IcoImage /> Image
             </button>
@@ -1282,7 +1331,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               type="button"
               className="btn btn-s"
               aria-expanded={brandsOpen}
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setBrandsOpen(o => !o) }}
+              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setBrandsOpen(o => !o) }}
             >
               <IcoBookmark /> Brands
             </button>
@@ -1317,8 +1366,33 @@ export default function PaletteBuilder({ onCopy, toast }) {
             <button
               type="button"
               className="btn btn-s"
+              aria-expanded={galleryOpen}
+              aria-haspopup="dialog"
+              title="Browse the colour gallery — curated palettes from Discover"
+              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setImgOpen(false); setHistOpen(false); setGalleryOpen(o => !o) }}
+            >
+              <IcoGallery /> Gallery
+            </button>
+            {galleryOpen && (
+              <div className="plb-menu plb-menu--left plb-galmenu" role="dialog" aria-label="Colour gallery">
+                <div className="plb-menu-title">Colour gallery</div>
+                <div className="plb-galmenu-scroll">
+                  <PaletteGalleryGrid
+                    toast={toast}
+                    onPick={(cols, name) => { applyPalette(cols, `Loaded ${name}`); setGalleryOpen(false) }}
+                  />
+                </div>
+                <div className="plb-menu-sub">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
+              </div>
+            )}
+          </div>
+
+          <div className="plb-menuwrap">
+            <button
+              type="button"
+              className="btn btn-s"
               aria-expanded={varsOpen}
-              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setVarsOpen(o => !o) }}
+              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setVarsOpen(o => !o) }}
             >
               <IcoSpark /> Variations
             </button>
@@ -1385,7 +1459,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               aria-expanded={visionOpen}
               aria-haspopup="menu"
               title="Preview the palette through colour-vision deficiencies"
-              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(o => !o) }}
+              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setGalleryOpen(false); setHistOpen(false); setVisionOpen(o => !o) }}
             >
               <VisionGlyph id={vision} size={13} />
               <span className="plb-harm-k">Vision</span>
@@ -1415,6 +1489,52 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
+          <div className="plb-menuwrap">
+            <button
+              type="button"
+              className="btn btn-s"
+              aria-expanded={histOpen}
+              aria-haspopup="menu"
+              title="Palette history — jump back to any board you've had"
+              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(o => !o) }}
+            >
+              <IcoHistory /> History
+            </button>
+            {histOpen && (
+              <div className="plb-menu plb-histmenu" role="menu" aria-label="Palette history">
+                <div className="plb-menu-title">History</div>
+                {history.length === 0 ? (
+                  <div className="plb-menu-sub">No history yet — every palette you build lands here automatically</div>
+                ) : (
+                  <>
+                    <div className="plb-scrolllist">
+                      {history.map((h, i) => (
+                        <button
+                          key={`${h.at}-${i}`}
+                          type="button"
+                          role="menuitem"
+                          className="plb-varrow"
+                          onClick={() => { applyPalette(h.colors, 'Palette restored from history'); setHistOpen(false) }}
+                        >
+                          <span className="plb-strip" aria-hidden="true">
+                            {h.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
+                          </span>
+                          <span className="plb-varrow-name">{h.colors.length} colours<small>{timeAgo(h.at)}</small></span>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="plb-menu-item plb-histclear"
+                      onClick={() => { setHistory([]); try { localStorage.removeItem(HISTORY_KEY) } catch { /* disabled */ } }}
+                    >
+                      Clear history
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           <span className="plb-toolbar-sep" aria-hidden="true" />
           <div className="plb-menuwrap">
             <button
@@ -1426,7 +1546,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                   const user = await requireLogin('save this palette', { free: true })
                   if (!user) return
                 }
-                setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setShareOpen(false); setVisionOpen(false); setSaveOpen(o => !o)
+                setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setShareOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setSaveOpen(o => !o)
               }}
             >
               <IcoBookmark /> Save
@@ -1471,7 +1591,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               type="button"
               className="btn btn-s plb-dark"
               aria-expanded={shareOpen}
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setVisionOpen(false); setShareOpen(o => !o) }}
+              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setShareOpen(o => !o) }}
             >
               Share <IcoChevron />
             </button>
@@ -1825,7 +1945,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 A guided walkthrough that carries you across every colour tool — palette,
                 semantic, tints, UI colour and gradients — into one finished system.
               </p>
-              <p className="plb-dsb-sub">It&rsquo;s on the way. For now, jump straight into any tool from the menu above.</p>
+              <p className="plb-dsb-sub">It&rsquo;s on the way. For now, jump straight into any of the tools it will connect:</p>
+              <nav className="plb-dsb-links" aria-label="Colour tools">
+                <Link className="plb-dsb-link" to="/color/palette" onClick={() => setDsbOpen(false)}>Palette</Link>
+                <Link className="plb-dsb-link" to="/color/semantic" onClick={() => setDsbOpen(false)}>Semantic Colour</Link>
+                <Link className="plb-dsb-link" to="/color/tint" onClick={() => setDsbOpen(false)}>Tint</Link>
+                <Link className="plb-dsb-link" to="/color/ui" onClick={() => setDsbOpen(false)}>UI Colour</Link>
+                <Link className="plb-dsb-link" to="/color/gradient" onClick={() => setDsbOpen(false)}>Gradient</Link>
+                <Link className="plb-dsb-link" to="/color/contrast" onClick={() => setDsbOpen(false)}>Contrast Checker</Link>
+              </nav>
             </div>
             <div className="plb-modal-actions">
               <button type="button" className="btn btn-s btn-accent" onClick={() => setDsbOpen(false)}>Got it</button>
