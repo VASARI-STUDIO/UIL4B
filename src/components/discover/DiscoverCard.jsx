@@ -24,6 +24,41 @@ function ExternalGlyph({ size = 13 }) {
   )
 }
 
+// Palette face — the resource's real sample swatches as full-height columns
+// (data is static + local in discoverResources.js; nothing is ever fetched).
+function PaletteFace({ resource }) {
+  return (
+    <div className="dsc-face dsc-face-swatches" data-cat={resource.category} aria-hidden="true">
+      {resource.palette.map((hex) => (
+        <span key={hex} className="dsc-swatch" style={{ background: hex }} />
+      ))}
+      <span className="dsc-face-glyph"><CategoryGlyph category={resource.category} size={20} /></span>
+    </div>
+  )
+}
+
+// Mini UI preview face — a tiny generated mock interface (window chrome, text
+// skeleton, buttons) for component / design-system resources. Pure local CSS,
+// tinted by the category colour; never a remote screenshot.
+function UiPreviewFace({ category }) {
+  return (
+    <div className="dsc-face dsc-face-ui" data-cat={category} aria-hidden="true">
+      <div className="dsc-ui-window">
+        <div className="dsc-ui-bar"><span /><span /><span /></div>
+        <div className="dsc-ui-body">
+          <span className="dsc-ui-line dsc-ui-line-w60" />
+          <span className="dsc-ui-line dsc-ui-line-w40" />
+          <div className="dsc-ui-btns">
+            <span className="dsc-ui-btn is-primary" />
+            <span className="dsc-ui-btn" />
+          </div>
+        </div>
+      </div>
+      <span className="dsc-face-glyph"><CategoryGlyph category={category} size={20} /></span>
+    </div>
+  )
+}
+
 function BookmarkGlyph({ filled }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor"
@@ -69,11 +104,19 @@ export default function DiscoverCard({ resource, saved, broken, offline, onToggl
 
   return (
     <article className="dsc-card" data-cat={resource.category}>
-      {/* Generated face — local, never fetched */}
-      <div className="dsc-face" data-cat={resource.category}>
-        <span className="dsc-face-mono">{monogram(resource.title, resource.category)}</span>
-        <span className="dsc-face-glyph"><CategoryGlyph category={resource.category} size={20} /></span>
-      </div>
+      {/* Generated face — local, never fetched. Palette resources show their
+          real sample swatches, component/design-system resources show a mini
+          UI preview, everything else keeps the type-coded monogram. */}
+      {Array.isArray(resource.palette) && resource.palette.length > 0 ? (
+        <PaletteFace resource={resource} />
+      ) : resource.category === 'components' ? (
+        <UiPreviewFace category={resource.category} />
+      ) : (
+        <div className="dsc-face" data-cat={resource.category}>
+          <span className="dsc-face-mono">{monogram(resource.title, resource.category)}</span>
+          <span className="dsc-face-glyph"><CategoryGlyph category={resource.category} size={20} /></span>
+        </div>
+      )}
 
       <button
         className={`dsc-save${saved ? ' is-saved' : ''}`}

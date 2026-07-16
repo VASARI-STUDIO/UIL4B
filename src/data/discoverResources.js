@@ -93,6 +93,9 @@ export const DISCOVER_RESOURCES = [
     relatedTools: [
       { label: 'Colour System Builder', route: '/color' },
     ],
+    // Representative sample palette (static, local — rendered as real swatches
+    // on the Discover card face instead of the generated monogram).
+    palette: ['#222831', '#393E46', '#00ADB5', '#EEEEEE'],
     added: '2026-06-18',
     featured: true,
   },
@@ -110,6 +113,7 @@ export const DISCOVER_RESOURCES = [
     relatedTools: [
       { label: 'Colour System Builder', route: '/color' },
     ],
+    palette: ['#264653', '#2A9D8F', '#E9C46A', '#F4A261', '#E76F51'],
     added: '2026-06-05',
   },
   {
@@ -127,6 +131,7 @@ export const DISCOVER_RESOURCES = [
     relatedTools: [
       { label: 'Colour System Builder', route: '/color' },
     ],
+    palette: ['#16161A', '#7F5AF0', '#2CB67D', '#FFFFFE'],
     added: '2026-05-28',
   },
 

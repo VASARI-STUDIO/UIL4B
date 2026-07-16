@@ -4172,6 +4172,47 @@ img,svg,video{max-width:100%;height:auto}
 .dsc-face{position:relative;display:flex;align-items:center;justify-content:center;height:104px;background:linear-gradient(135deg,color-mix(in srgb,var(--dsc-c) 22%,var(--bg-2)),color-mix(in srgb,var(--dsc-c) 6%,var(--bg-2)));color:var(--dsc-c)}
 .dsc-face-mono{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:.02em;color:color-mix(in srgb,var(--dsc-c) 86%,var(--t0))}
 .dsc-face-glyph{position:absolute;top:10px;left:12px;opacity:.55}
+
+/* Palette face — the resource's real swatches as full-height columns; the
+   category glyph sits on a dark chip so it stays legible over any colour */
+.dsc-face-swatches{align-items:stretch;justify-content:stretch;padding:0;background:var(--bg-2)}
+.dsc-swatch{flex:1;min-width:0;transition:flex .25s cubic-bezier(.2,0,0,1)}
+.dsc-card:hover .dsc-swatch:hover{flex:1.8}
+.dsc-face-swatches .dsc-face-glyph{display:inline-flex;align-items:center;justify-content:center;padding:4px;border-radius:var(--radius-s);background:rgba(10,10,14,.42);color:#fff;opacity:.92;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+
+/* Mini UI preview face — a tiny generated mock interface for component /
+   design-system resources (local CSS only, tinted by the category colour) */
+.dsc-face-ui{align-items:flex-end;justify-content:center;padding:14px 22px 0;overflow:hidden}
+.dsc-ui-window{width:100%;max-width:190px;background:var(--bg-1);border:1px solid color-mix(in srgb,var(--dsc-c) 30%,var(--border));border-bottom:none;border-radius:var(--radius-s) var(--radius-s) 0 0;box-shadow:0 -4px 18px color-mix(in srgb,var(--dsc-c) 14%,transparent)}
+.dsc-ui-bar{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--border)}
+.dsc-ui-bar span{width:5px;height:5px;border-radius:50%;background:color-mix(in srgb,var(--dsc-c) 45%,var(--bg-3))}
+.dsc-ui-body{display:flex;flex-direction:column;gap:5px;padding:9px 10px 12px}
+.dsc-ui-line{height:5px;border-radius:3px;background:color-mix(in srgb,var(--dsc-c) 22%,var(--bg-3))}
+.dsc-ui-line-w60{width:60%}
+.dsc-ui-line-w40{width:40%}
+.dsc-ui-btns{display:flex;gap:5px;margin-top:3px}
+.dsc-ui-btn{width:34px;height:11px;border-radius:var(--radius-pill);border:1px solid color-mix(in srgb,var(--dsc-c) 35%,var(--border));background:transparent}
+.dsc-ui-btn.is-primary{background:color-mix(in srgb,var(--dsc-c) 65%,var(--bg-2));border-color:transparent}
+
+/* ── Palette gallery (colorhunt-style) — shared by Discover's palettes view
+      and the Palette Builder's colour-gallery popup. A card is a rounded stack
+      of colour stripes (hero on top) with a light foot: like + name + use. ── */
+.pgal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:22px 18px}
+.pgal-card{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pgal-stripes{display:flex;flex-direction:column;height:196px;border-radius:var(--radius-l);overflow:hidden;border:1px solid var(--border);transition:transform .18s cubic-bezier(.2,0,0,1),box-shadow .18s}
+.pgal-card:hover .pgal-stripes{transform:translateY(-2px);box-shadow:var(--warm-shadow)}
+.pgal-stripe{position:relative;flex:1;min-height:0;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end}
+.pgal-stripe:first-child{flex:2.4}
+.pgal-hex{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:rgba(10,10,14,.5);padding:2px 7px;border-radius:var(--radius-pill);margin-right:8px;opacity:0;transition:opacity .15s;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);pointer-events:none}
+.pgal-stripe:hover .pgal-hex,.pgal-stripe:focus-visible .pgal-hex{opacity:1}
+.pgal-stripe:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.pgal-foot{display:flex;align-items:center;gap:8px;min-width:0;padding:0 2px}
+.pgal-like{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color .15s,border-color .15s}
+.pgal-like:hover{color:var(--t0);border-color:var(--bh)}
+.pgal-like.is-liked{color:#fb7185;border-color:color-mix(in srgb,#fb7185 40%,transparent)}
+.pgal-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgal-use{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-family:var(--font);font-size:11.5px;font-weight:700;color:var(--t2);background:none;border:none;padding:4px 2px;cursor:pointer;text-decoration:none;transition:color .15s}
+.pgal-use:hover{color:var(--brand)}
 .dsc-save{position:absolute;top:10px;right:10px;z-index:3;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:var(--radius-pill);border:1px solid var(--border);cursor:pointer;background:color-mix(in srgb,var(--bg-1) 78%,transparent);color:var(--t2);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:color .15s,background .15s,border-color .15s}
 .dsc-save:hover{color:var(--t0);border-color:var(--bh)}
 .dsc-save.is-saved{color:#fb7185;border-color:color-mix(in srgb,#fb7185 40%,transparent)}
@@ -5455,7 +5496,9 @@ a.prev-btn{text-decoration:none}
    edge-to-edge under the pill nav. Column/ramp colours arrive as custom
    props (--plb-c / --plb-ink / --plb-rc) set via callback refs. */
 .plb{display:flex;flex-direction:column;min-height:calc(100vh - var(--nav-clear));margin:-24px calc(-1*clamp(20px,4vw,48px)) calc(-1*var(--s-9))}
-.plb-toolbar{position:sticky;top:var(--nav-clear);z-index:30;display:flex;align-items:center;justify-content:space-between;gap:10px 18px;flex-wrap:wrap;padding:10px clamp(16px,3vw,28px);background:var(--bg-0);border-bottom:1px solid var(--border)}
+/* Horizontal padding mirrors .pnav-inner (20px gutter, 1440px centred cap) so
+   the toolbar's content edge lines up with the pill nav's at every width. */
+.plb-toolbar{position:sticky;top:var(--nav-clear);z-index:30;display:flex;align-items:center;justify-content:space-between;gap:10px 18px;flex-wrap:wrap;padding:10px max(20px,calc((100% - 1440px)/2 + 20px));background:var(--bg-0);border-bottom:1px solid var(--border)}
 .plb-toolbar-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative}
 .plb-toolbar-sep{width:1px;height:22px;background:var(--border)}
 .plb-title{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--t0);margin:0 6px 0 0}
@@ -5644,6 +5687,22 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-dsb-emoji{font-size:34px;line-height:1;margin-bottom:12px}
 .plb-dsb-lede{font-size:15px;line-height:1.5;color:var(--t0);margin:0 0 8px}
 .plb-dsb-sub{font-size:13px;line-height:1.5;color:var(--t2);margin:0}
+/* DSB coming-soon popup — quick links into the tools the walkthrough will connect */
+.plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
+.plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color .15s ease,color .15s ease,background .15s ease}
+.plb-dsb-link:hover{border-color:var(--brand);color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)}
+/* Colour-gallery popup — the shared pgal grid nested inside a toolbar menu */
+.plb-galmenu{width:min(600px,calc(100vw - 32px))}
+.plb-galmenu-scroll{max-height:min(56vh,460px);overflow-y:auto;margin-top:4px;padding-right:4px}
+.plb-galmenu .pgal-grid{grid-template-columns:repeat(2,1fr);gap:14px 12px}
+.plb-galmenu .pgal-stripes{height:110px}
+.plb-galmenu .plb-menu-sub a{color:var(--brand);text-decoration:none}
+.plb-galmenu .plb-menu-sub a:hover{text-decoration:underline}
+/* Palette-history menu — plb-varrow rows with a mini strip + relative time */
+.plb-histmenu{min-width:280px}
+.plb-histmenu .plb-varrow-name small{display:block;font-size:11px;font-weight:500;color:var(--t2)}
+.plb-histclear{margin-top:6px;color:var(--t2);font-size:12px}
+.plb-histclear:hover{color:var(--warn)}
 .plb-pvwrap{display:flex;flex-direction:column;gap:8px;min-width:0}
 .plb-pv-name{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--t1)}
 .plb-pv{display:flex;min-height:300px;background:var(--pv-bg);border:1px solid var(--pv-border);border-radius:14px;overflow:hidden}
