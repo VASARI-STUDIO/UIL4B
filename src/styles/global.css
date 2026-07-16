@@ -525,12 +525,14 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 
 /* ─── Icons ─── */
 .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(88px,calc(100%/3)),1fr));gap:4px}
-.ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;transition:all var(--t)}
+.ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:all var(--t)}
 .ic:hover{background:var(--bg-2);border-color:var(--border)}
 .ic:active{transform:scale(.95)}
 .ic svg,.ic img{width:24px;height:24px;flex-shrink:0}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
-.ic span{font-size:8.5px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.2}
+/* Long icon names must stay inside the cell — otherwise they paint past the
+   hover background and look clipped against neighbouring cells. */
+.ic span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8.5px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.2}
 
 /* ─── Icon Detail popup ─── */
 .il-detail{position:relative;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);max-width:560px;width:100%;padding:40px;box-shadow:var(--warm-shadow-lg);animation:fg-rise .3s cubic-bezier(.16,1,.3,1)}
@@ -4882,16 +4884,9 @@ html.lenis,html.lenis body{height:auto}
 .icust-pro.is-locked .icust-seg--icon button{cursor:pointer}
 .icust-pro.is-locked .icust-seg--icon svg{opacity:.55}
 .icust-pro.is-locked .icust-seg--icon button.active svg{opacity:1}
-/* Free-user hover veil: blur + darken the locked line-style panel and surface
-   a single Upgrade CTA that routes to /plans. Revealed on hover OR keyboard
-   focus inside the panel, so it's reachable without a mouse. */
-.icust-pro{position:relative}
-.icust-pro-veil{position:absolute;inset:0;z-index:2;display:grid;place-items:center;border-radius:inherit;background:var(--scrim);-webkit-backdrop-filter:blur(0px);backdrop-filter:blur(0px);opacity:0;visibility:hidden;transition:opacity var(--dur-4) var(--ease-out),visibility var(--dur-4) var(--ease-out),-webkit-backdrop-filter var(--dur-4) var(--ease-out);transition:opacity var(--dur-4) var(--ease-out),visibility var(--dur-4) var(--ease-out),backdrop-filter var(--dur-4) var(--ease-out)}
-.icust-pro-veil>.ui-pill{transform:translateY(6px) scale(.96);transition:transform var(--dur-4) var(--ease-out)}
-.icust-pro.is-locked:hover .icust-pro-veil,
-.icust-pro.is-locked:focus-within .icust-pro-veil{opacity:1;visibility:visible;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
-.icust-pro.is-locked:hover .icust-pro-veil>.ui-pill,
-.icust-pro.is-locked:focus-within .icust-pro-veil>.ui-pill{transform:none}
+/* Locked panel is fully clickable — any click opens the Pro upgrade modal
+   (no hover veil; less disruptive to the flow). */
+.icust-pro.is-locked{cursor:pointer}
 /* Signed-out upgrade gate — a small alert dialog floated over the customizer
    when a visitor taps a Pro-locked line-style control. (The overlay's
    backdrop-filter makes it the containing block for this fixed backdrop.) */
@@ -4916,9 +4911,7 @@ html.lenis,html.lenis body{height:auto}
 .icust-newproj-input{flex:1;min-width:0;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
 .icust-newproj-input:focus{outline:none;border-color:var(--accent)}
 .icust-newproj-input::placeholder{color:var(--t3)}
-/* Footer extras: export render-scale seg + saved-in note */
-.icust-seg--scale{flex:0 0 auto;margin-left:auto}
-.icust-seg--scale button{flex:0 0 auto;min-width:44px}
+/* Footer extras: saved-in note */
 .icust-savedin{margin:0;padding:10px 24px 20px;font-size:var(--fs-caption);color:var(--t2)}
 .icust-savedin strong{font-weight:600;color:var(--t1)}
 /* Code readout */
@@ -4931,8 +4924,10 @@ html.lenis,html.lenis body{height:auto}
 /* Copy-only snippet: the text is not selectable, so the Copy button is the one
    way out — keeps the workflow inside UIL4B. */
 .icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
-/* Footer + Pro save-lock */
-.icust-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
+/* Footer + Pro save-lock — buttons stay on one line */
+.icust-foot{display:flex;flex-wrap:nowrap;align-items:center;gap:10px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
+.icust-foot .ui-pill{white-space:nowrap}
+.icust-reset{margin-left:auto}
 .icust-save-lock{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
 .icust-save--locked{cursor:pointer;opacity:.85}
 .icust-save--locked:hover{opacity:1}
