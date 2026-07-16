@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
+import ColorPickerPop from '../components/ColorPickerPop'
 import { hexToRgb } from '../utils/colors'
 
 // ── Gradient Cockpit ──
-// The standalone /color/gradient tool: a dense, dark control surface where every
-// stop, dial and output lives on one screen. It still reads + writes the shared
-// design.gradient (ProjectContext) so a gradient authored here survives a jump to
-// any other colour tool, but presents its own purpose-built cockpit chrome rather
-// than the light merged-studio section.
+// The standalone /color/gradient tool: a dense control surface where every stop,
+// dial and output lives on one screen, styled with the app design tokens so it
+// follows the active theme. It reads + writes the shared design.gradient
+// (ProjectContext) so a gradient authored here survives a jump to any other
+// colour tool.
 
 const GRAD_TYPES = ['Linear', 'Radial', 'Conic']
 const GRAD_FN = { Linear: 'linear-gradient', Radial: 'radial-gradient', Conic: 'conic-gradient' }
@@ -47,6 +48,26 @@ function midHex(a, b) {
 }
 
 const DEFAULT_STOPS = () => PRESETS[0].stops.map(s => ({ ...s }))
+
+// Hex text field with a local draft, so partially-typed values aren't wiped by
+// the controlled stop colour on every keystroke. Commits when the text is a
+// valid #rrggbb; reverts to the stop's colour on blur if left invalid.
+function StopHexInput({ color, label, onCommit }) {
+  const [draft, setDraft] = useState(color.toUpperCase())
+  useEffect(() => { setDraft(color.toUpperCase()) }, [color])
+  return (
+    <input
+      type="text" className="gcx-stop-hex" value={draft}
+      onChange={(e) => {
+        const v = e.target.value
+        setDraft(v)
+        if (/^#[0-9a-f]{6}$/i.test(v)) onCommit(v.toUpperCase())
+      }}
+      onBlur={() => setDraft(color.toUpperCase())}
+      aria-label={label}
+    />
+  )
+}
 
 export default function GradientGenerator({ onCopy, toast }) {
   const { design, setGradient } = useProject()
@@ -287,13 +308,17 @@ export default function GradientGenerator({ onCopy, toast }) {
         <div className="gcx-stops">
           {stops.map((s, i) => (
             <div key={i} className={`gcx-stop${activeStop === i ? ' is-active' : ''}`} onClick={() => setActiveStop(i)}>
-              <label className="gcx-stop-swatch" style={{ background: s.color }}>
-                <input type="color" value={s.color} onChange={(e) => updateStop(i, { color: e.target.value })} aria-label={`Stop ${i + 1} colour`} />
-              </label>
-              <input
-                type="text" className="gcx-stop-hex" value={s.color.toUpperCase()}
-                onChange={(e) => { const v = e.target.value; if (/^#[0-9a-f]{6}$/i.test(v)) updateStop(i, { color: v }) }}
-                aria-label={`Stop ${i + 1} hex`}
+              <div className="gcx-stop-swatch">
+                <ColorPickerPop
+                  value={s.color}
+                  onChange={(hex) => updateStop(i, { color: hex.toUpperCase() })}
+                  ariaLabel={`Stop ${i + 1} colour`}
+                />
+              </div>
+              <StopHexInput
+                color={s.color}
+                label={`Stop ${i + 1} hex`}
+                onCommit={(v) => updateStop(i, { color: v })}
               />
               <div className="gcx-stop-pos">
                 <input
