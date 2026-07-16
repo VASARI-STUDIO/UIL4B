@@ -57,6 +57,52 @@ const STROKE_PACKS = new Set(ICON_GROUPS.outlined.packs)
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
 const CUSTOM_KEY = 'vs-custom-icons'
 
+// ── Logo.dev brand logos ──────────────────────────────────────────────────────
+// The Iconify brand packs only cover logos that ship in those icon sets. Logo.dev
+// serves virtually every company's real logo by name or domain, so it's the
+// "any brand" pack. The token is PUBLISHABLE (safe client-side, like the Firebase
+// web key) — VITE_-prefixed so it reaches the browser, with the public key as a
+// fallback. There's no "list every logo" endpoint, so this pack browses a curated
+// set of popular brands and lets search resolve any company by name. A missing
+// logo comes back as a monogram (200 OK). Free-tier commercial use requires a
+// visible attribution link back to logo.dev (rendered under the grid).
+const LOGODEV_TOKEN = import.meta.env.VITE_LOGODEV_KEY || 'pk_L_3nxFHHQrOLmFuS16PsFQ'
+// Build a logo image URL. `ref` is a domain (stripe.com) or a plain brand name;
+// names are resolved through the /name/ path. Retina PNG so it stays crisp.
+const logodevUrl = (ref, size = 128) => {
+  const clean = String(ref || '').trim()
+  const path = clean.includes('.') ? encodeURIComponent(clean) : `name/${encodeURIComponent(clean)}`
+  return `https://img.logo.dev/${path}?token=${LOGODEV_TOKEN}&size=${size}&format=png&retina=true`
+}
+// Curated popular brands for the browse grid — domains give the most reliable
+// match. Grouped loosely (tech · dev · social · finance · commerce · media).
+const LOGODEV_BRANDS = [
+  { name: 'Google', domain: 'google.com' }, { name: 'Apple', domain: 'apple.com' },
+  { name: 'Microsoft', domain: 'microsoft.com' }, { name: 'Amazon', domain: 'amazon.com' },
+  { name: 'Meta', domain: 'meta.com' }, { name: 'Netflix', domain: 'netflix.com' },
+  { name: 'Spotify', domain: 'spotify.com' }, { name: 'YouTube', domain: 'youtube.com' },
+  { name: 'X', domain: 'x.com' }, { name: 'Instagram', domain: 'instagram.com' },
+  { name: 'LinkedIn', domain: 'linkedin.com' }, { name: 'TikTok', domain: 'tiktok.com' },
+  { name: 'Discord', domain: 'discord.com' }, { name: 'Slack', domain: 'slack.com' },
+  { name: 'Reddit', domain: 'reddit.com' }, { name: 'Pinterest', domain: 'pinterest.com' },
+  { name: 'Twitch', domain: 'twitch.tv' }, { name: 'WhatsApp', domain: 'whatsapp.com' },
+  { name: 'GitHub', domain: 'github.com' }, { name: 'GitLab', domain: 'gitlab.com' },
+  { name: 'Figma', domain: 'figma.com' }, { name: 'Notion', domain: 'notion.so' },
+  { name: 'Vercel', domain: 'vercel.com' }, { name: 'Stripe', domain: 'stripe.com' },
+  { name: 'OpenAI', domain: 'openai.com' }, { name: 'Anthropic', domain: 'anthropic.com' },
+  { name: 'Cloudflare', domain: 'cloudflare.com' }, { name: 'Adobe', domain: 'adobe.com' },
+  { name: 'Dropbox', domain: 'dropbox.com' }, { name: 'Airbnb', domain: 'airbnb.com' },
+  { name: 'Uber', domain: 'uber.com' }, { name: 'PayPal', domain: 'paypal.com' },
+  { name: 'Visa', domain: 'visa.com' }, { name: 'Mastercard', domain: 'mastercard.com' },
+  { name: 'Shopify', domain: 'shopify.com' }, { name: 'Salesforce', domain: 'salesforce.com' },
+  { name: 'Nvidia', domain: 'nvidia.com' }, { name: 'Intel', domain: 'intel.com' },
+  { name: 'Tesla', domain: 'tesla.com' }, { name: 'Samsung', domain: 'samsung.com' },
+  { name: 'Sony', domain: 'sony.com' }, { name: 'Nike', domain: 'nike.com' },
+  { name: 'Coca-Cola', domain: 'coca-cola.com' }, { name: 'McDonald’s', domain: 'mcdonalds.com' },
+  { name: 'Disney', domain: 'disney.com' }, { name: 'Airtable', domain: 'airtable.com' },
+  { name: 'Zoom', domain: 'zoom.us' }, { name: 'Canva', domain: 'canva.com' },
+]
+
 // ── Free-tier daily copy allowance ────────────────────────────────────────────
 // Non-Pro users get FREE_COPIES_PER_DAY icon copies per LOCAL day, tracked as
 // { date: 'YYYY-MM-DD', count } in localStorage. A new day resets the count.
@@ -288,6 +334,12 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
   svg.setAttribute('width', String(size))
   svg.setAttribute('height', String(size))
   if (color) {
+    // The Stage resolves `currentColor` via the CSS `color` property, so setting
+    // it on the root makes EVERY currentColor child (fill or stroke) resolve to
+    // the chosen colour in the exported file too — without this the standalone
+    // SVG falls back to black and the colour edit is silently dropped. The
+    // explicit fill/stroke below still covers icons that bake literal colours.
+    svg.setAttribute('color', color)
     if (isStroke) {
       svg.setAttribute('stroke', color)
       if (svg.getAttribute('fill') && svg.getAttribute('fill') !== 'none') svg.setAttribute('fill', color)
@@ -295,13 +347,17 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
       svg.setAttribute('fill', color)
     }
   }
-  if (isStroke && stroke != null) {
-    svg.setAttribute('stroke-width', String(stroke))
-    if (absStroke) svg.setAttribute('vector-effect', 'non-scaling-stroke')
-  }
+  // The Stage forces stroke width/cap/join on the svg AND every descendant
+  // (CSS `svg, svg *`). Mirror that here so icons whose child shapes carry their
+  // own stroke attributes export with the edits applied, not the originals.
   if (isStroke) {
-    if (cap) svg.setAttribute('stroke-linecap', cap)
-    if (join) svg.setAttribute('stroke-linejoin', join)
+    const shapes = [svg, ...svg.querySelectorAll('*')]
+    for (const el of shapes) {
+      if (stroke != null) el.setAttribute('stroke-width', String(stroke))
+      if (absStroke) el.setAttribute('vector-effect', 'non-scaling-stroke')
+      if (cap) el.setAttribute('stroke-linecap', cap)
+      if (join) el.setAttribute('stroke-linejoin', join)
+    }
   }
   const vb = (svg.getAttribute('viewBox') || '0 0 24 24').split(/\s+/).map(Number)
   const cx = (vb[0] || 0) + (vb[2] || 24) / 2
@@ -1224,9 +1280,45 @@ export default function IconLibrary({ onCopy, embedded }) {
     })
   }, [renderLocal])
 
+  // Logo.dev pack — a curated grid of popular brands. No network: the logos are
+  // <img> URLs resolved lazily by the browser as cells scroll into view.
+  const browseLogos = useCallback(() => {
+    reqId.current++            // cancel any in-flight browse
+    retryRef.current = browseLogos
+    setSource('pack'); setGroup(null); setPack('logodev')
+    setLoadError(false)
+    setIcons(LOGODEV_BRANDS.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true })))
+    setVisible(PAGE_SIZE)
+    setMode(`Brand logos · ${LOGODEV_BRANDS.length} popular brands`)
+    setLoading(false)
+  }, [])
+
+  // Logo.dev search — Logo.dev's image API resolves ANY company by name, so a
+  // query returns curated matches first plus a direct lookup for the raw term
+  // (deduped), meaning even brands not in the curated list still resolve.
+  const searchLogos = useCallback((q) => {
+    reqId.current++
+    setSource('pack'); setGroup(null); setPack('logodev')
+    setLoadError(false)
+    const term = (q || '').trim()
+    if (term.length < 2) { browseLogos(); return }
+    const lower = term.toLowerCase()
+    const hits = LOGODEV_BRANDS.filter(b => b.name.toLowerCase().includes(lower) || b.domain.includes(lower))
+    const results = hits.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true }))
+    const directRef = term.includes('.') ? lower : term
+    if (!results.some(r => r.ref.toLowerCase() === directRef.toLowerCase())) {
+      results.unshift({ id: `logodev:${directRef}`, pack: 'logodev', name: term, ref: directRef, logo: true })
+    }
+    setIcons(results)
+    setVisible(PAGE_SIZE)
+    setMode(`Brand logos · ${results.length} for “${term}”`)
+    setLoading(false)
+  }, [browseLogos])
+
   // Browse an entire icon set via the /collection endpoint.
   const browsePack = useCallback((packFilter) => {
     setSource('pack'); setGroup(null)
+    if (packFilter === 'logodev') { browseLogos(); return }
     if (!packFilter) { browseAll(); return }
     const rid = ++reqId.current
     retryRef.current = () => browsePack(packFilter)
@@ -1248,7 +1340,7 @@ export default function IconLibrary({ onCopy, embedded }) {
         setLoadError(true)
         renderLocal('', packFilter)
       })
-  }, [renderLocal, browseAll])
+  }, [renderLocal, browseAll, browseLogos])
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
@@ -1302,6 +1394,9 @@ export default function IconLibrary({ onCopy, embedded }) {
   const doSearch = useCallback((q, scope = {}) => {
     q = (q || '').trim()
     const { pack: packFilter = '', group: groupKey = null } = scope
+    // Brand logos resolve locally (curated list + name/domain lookup) — never
+    // hit the Iconify /search endpoint for the Logo.dev pack.
+    if (packFilter === 'logodev') { searchLogos(q); return }
     if (!q || q.length < 2) {
       if (groupKey) browseGroup(groupKey)
       else if (packFilter) browsePack(packFilter)
@@ -1337,7 +1432,7 @@ export default function IconLibrary({ onCopy, embedded }) {
         if (!items.length) { renderLocal(q, groupKey ? '' : packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
-        const scopeLabel = groupKey ? ICON_GROUPS[groupKey].label : 'Iconify'
+        const scopeLabel = groupKey ? ICON_GROUPS[groupKey].label : 'All packs'
         setMode(`${items.length.toLocaleString()} matches${d.total > items.length ? '+' : ''} · ${scopeLabel}`)
         setLoading(false)
       })
@@ -1347,7 +1442,7 @@ export default function IconLibrary({ onCopy, embedded }) {
         setLoadError(true)
         renderLocal(q, groupKey ? '' : packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup, browseAll])
+  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos])
 
   // Initial load: all packs, so the grid shows catalogue breadth on first paint.
   useEffect(() => {
@@ -1423,6 +1518,13 @@ export default function IconLibrary({ onCopy, embedded }) {
   }
 
   const handleIconClick = (icon) => {
+    // Brand logos are raster (PNG/WebP) from Logo.dev, so they can't be edited in
+    // the SVG customizer — clicking copies the high-res image URL instead.
+    if (icon.logo) {
+      trackIconCopy('logodev', icon.name)
+      onCopy?.(logodevUrl(icon.ref, 512))
+      return
+    }
     setAddMode(false)
     setSelected(icon)
   }
@@ -1465,6 +1567,9 @@ export default function IconLibrary({ onCopy, embedded }) {
     if (icon.custom) {
       return <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
     }
+    if (icon.logo) {
+      return <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
+    }
     if (icon.cdn) {
       return <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} />
     }
@@ -1481,13 +1586,15 @@ export default function IconLibrary({ onCopy, embedded }) {
       className="ic"
       role="button"
       tabIndex={0}
-      aria-label={`Customise ${icon.name}`}
+      aria-label={icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`}
       onClick={() => handleIconClick(icon)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIconClick(icon) } }}
     >
       {iconGlyph(icon)}
       <span>{icon.name}</span>
-      {!icon.custom && icon.pack && <span className="ic-pack">{icon.pack}</span>}
+      {icon.logo
+        ? <span className="ic-pack">logo.dev</span>
+        : !icon.custom && icon.pack && <span className="ic-pack">{icon.pack}</span>}
     </div>
   )
 
@@ -1584,6 +1691,7 @@ export default function IconLibrary({ onCopy, embedded }) {
               <option value="bxs">BoxIcons</option>
             </optgroup>
             <optgroup label="Brand logos (coloured)">
+              <option value="logodev">Real brand logos (Logo.dev)</option>
               <option value="simple-icons">Simple Icons</option>
               <option value="logos">Logos (colour)</option>
               <option value="devicon">Devicon</option>
@@ -1704,6 +1812,14 @@ export default function IconLibrary({ onCopy, embedded }) {
             {!loading && icons.length > 0 && (
               <p className="ig-status">
                 Showing {shown.length.toLocaleString()} of {icons.length.toLocaleString()} · {mode}
+              </p>
+            )}
+
+            {pack === 'logodev' && (
+              <p className="ig-attrib">
+                Search any brand by name or domain (e.g. <code>notion.so</code>) — click a logo to copy its
+                high-res image URL. Brand logos provided by{' '}
+                <a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logo.dev</a>.
               </p>
             )}
           </>

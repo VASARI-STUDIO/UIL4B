@@ -85,10 +85,14 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
     const onKey = (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
     }
-    document.addEventListener('mousedown', onDown)
+    // Capture phase: an ancestor (e.g. the icon customizer panel) stops mousedown
+    // propagation to guard its own overlay, so a bubble-phase document listener
+    // never sees clicks landing elsewhere inside that panel. Capturing runs before
+    // any stopPropagation, so clicking off always closes the popover.
+    document.addEventListener('mousedown', onDown, true)
     document.addEventListener('keydown', onKey, true)
     return () => {
-      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('mousedown', onDown, true)
       document.removeEventListener('keydown', onKey, true)
     }
   }, [open])
