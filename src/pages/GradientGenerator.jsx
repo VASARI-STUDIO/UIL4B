@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import ColorPickerPop from '../components/ColorPickerPop'
 import { hexToRgb } from '../utils/colors'
+import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 
 // ── Gradient Cockpit ──
 // The standalone /color/gradient tool: a dense control surface where every stop,
@@ -12,7 +13,6 @@ import { hexToRgb } from '../utils/colors'
 // colour tool.
 
 const GRAD_TYPES = ['Linear', 'Radial', 'Conic']
-const GRAD_FN = { Linear: 'linear-gradient', Radial: 'radial-gradient', Conic: 'conic-gradient' }
 
 // Cockpit presets (the mockup's 4×2 grid). Explicit hex so the preview is vivid
 // regardless of the user's current palette.
@@ -28,18 +28,6 @@ const PRESETS = [
 ]
 
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-
-// Compose the production CSS value for a gradient. Stops are sorted so a
-// dragged-past handle still reads left→right.
-function gradientCss(type, angle, stops) {
-  const fn = GRAD_FN[type] || 'linear-gradient'
-  const prefix = type === 'Linear' ? `${angle}deg, ` : type === 'Conic' ? `from ${angle}deg at 50% 50%, ` : ''
-  const parts = [...stops]
-    .sort((a, b) => a.position - b.position)
-    .map(s => `${s.color.toUpperCase()} ${Math.round(s.position)}%`)
-    .join(', ')
-  return `${fn}(${prefix}${parts})`
-}
 
 // Midpoint colour between two hex values — used when inserting a stop.
 function midHex(a, b) {
@@ -70,7 +58,7 @@ function StopHexInput({ color, label, onCommit }) {
 }
 
 export default function GradientGenerator({ onCopy, toast }) {
-  const { design, setGradient } = useProject()
+  const { design, setGradient, projects } = useProject()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Seed from the saved gradient. Null stop colours (the untouched default,
@@ -100,15 +88,24 @@ export default function GradientGenerator({ onCopy, toast }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stops, angle, type])
 
-  // ── Discover hand-off (?preset=<slug>&tab=gradient) ──
+  // ── Hand-offs: gallery (?gs=…&gt=…&ga=…) and Discover (?preset=&tab=) ──
   useEffect(() => {
+    const incoming = decodeGradientParams(searchParams)
     const presetSlug = searchParams.get('preset')
-    if (!presetSlug && searchParams.get('tab') !== 'gradient') return
-    const preset = presetSlug ? PRESETS.find(p => slugify(p.n) === presetSlug) : null
-    if (preset) applyPreset(preset)
-    toast?.(preset ? `Loaded ${preset.n}` : 'Opened in Gradient Generator')
+    if (!incoming && !presetSlug && searchParams.get('tab') !== 'gradient') return
+    if (incoming) {
+      setStops(incoming.stops.map(s => ({ ...s })))
+      setType(incoming.type)
+      setAngle(incoming.angle)
+      setActiveStop(0)
+      toast?.(`Loaded ${incoming.name || 'gradient'}`)
+    } else {
+      const preset = presetSlug ? PRESETS.find(p => slugify(p.n) === presetSlug) : null
+      if (preset) applyPreset(preset)
+      toast?.(preset ? `Loaded ${preset.n}` : 'Opened in Gradient Generator')
+    }
     const next = new URLSearchParams(searchParams)
-    next.delete('preset'); next.delete('tab')
+    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn'].forEach(k => next.delete(k))
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -156,6 +153,34 @@ export default function GradientGenerator({ onCopy, toast }) {
   }, [])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
+
+  // ── Import colours: the live Palette Builder palette + saved projects ──
+  // A source needs 2+ real hex colours to make a gradient; capped at 5 stops so
+  // an imported ramp stays readable.
+  const importSources = useMemo(() => {
+    const isHex = (c) => /^#[0-9a-f]{6}$/i.test(c || '')
+    const list = []
+    const current = (design?.palette?.colors || []).filter(isHex)
+    if (current.length >= 2) {
+      list.push({ key: 'palette', name: 'Current palette', meta: 'Palette Builder', colors: current.slice(0, 5) })
+    }
+    for (const p of projects || []) {
+      const colors = (p?.design?.palette?.colors || []).filter(isHex)
+      if (colors.length >= 2) {
+        list.push({ key: `proj-${p.id}`, name: p.name || 'Untitled project', meta: 'Saved project', colors: colors.slice(0, 5) })
+      }
+    }
+    return list
+  }, [design?.palette?.colors, projects])
+
+  const importColors = useCallback((src) => {
+    setStops(src.colors.map((color, i) => ({
+      color: color.toUpperCase(),
+      position: Math.round((i / (src.colors.length - 1)) * 100),
+    })))
+    setActiveStop(0)
+    toast?.(`Imported ${src.name}`)
+  }, [toast])
 
   const copyCss = useCallback(() => {
     onCopy?.(cssValue)
@@ -334,10 +359,39 @@ export default function GradientGenerator({ onCopy, toast }) {
         </div>
       </section>
 
+      {/* Import colours — from the Palette Builder or a saved project */}
+      <section className="gcx-block">
+        <div className="gcx-block-head">
+          <span className="gcx-label">Import colours</span>
+        </div>
+        {importSources.length > 0 ? (
+          <div className="gcx-imports">
+            {importSources.map(src => (
+              <button key={src.key} type="button" className="gcx-import" onClick={() => importColors(src)}>
+                <span className="gcx-import-stripes" aria-hidden="true">
+                  {src.colors.map((c, i) => <span key={i} style={{ background: c }} />)}
+                </span>
+                <span className="gcx-import-id">
+                  <span className="gcx-import-name">{src.name}</span>
+                  <span className="gcx-import-meta">{src.meta} · {src.colors.length} colours</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="gcx-import-empty">
+            Nothing to import yet — build a palette in the <Link to="/color/palette">Palette Builder</Link> and its colours will appear here as gradient stops.
+          </p>
+        )}
+      </section>
+
       {/* Presets */}
       <section className="gcx-block">
         <div className="gcx-block-head">
           <span className="gcx-label">Presets</span>
+          <Link className="gcx-gal-link" to="/discover/gradients">
+            Browse the gradient gallery <span aria-hidden="true">→</span>
+          </Link>
         </div>
         <div className="gcx-presets">
           {PRESETS.map(p => (

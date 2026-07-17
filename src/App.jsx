@@ -42,6 +42,7 @@ const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
 const InfoCentre = lazy(() => import('./pages/InfoCentre'))
 const SeoInspector = lazy(() => import('./pages/SeoInspector'))
+const GradientGallery = lazy(() => import('./pages/GradientGallery'))
 
 // Create tool routes come straight from the single tool-tree source, so adding a
 // tool never needs a hand-edited <Route>. These paths — plus /discover and
@@ -307,7 +308,10 @@ function AppInner() {
               <Route path="/docs-ai" element={<Navigate to="/learn" replace />} />
               <Route path="/design-reference" element={<Navigate to="/learn" replace />} />
               <Route path="/resources" element={<Navigate to="/discover" replace />} />
-              <Route path="/discover/gradients" element={<Navigate to="/discover" replace />} />
+
+              {/* Curated gradient gallery — copy CSS or hand a gradient to the
+                  Gradient Cockpit (?gs= scheme). Renders inside the app-shell. */}
+              <Route path="/discover/gradients" element={<GradientGallery toast={toast} />} />
 
               {/* Account, billing, legal and system pages — rendered inside the
                   PillNav app-shell (the wrapper return below). */}
