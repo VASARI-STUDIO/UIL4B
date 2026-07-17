@@ -468,8 +468,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // an icon can be assigned to a fresh project.
   const [newProjOpen, setNewProjOpen] = useState(false)
   const [newProjName, setNewProjName] = useState('')
-  // Export render scale — @1x serialises at the chosen size, @2x doubles it.
-  const [exportScale, setExportScale] = useState(1)
 
   // Pro asks (daily copy cap, project cap, line styles) all open the canonical
   // Wave-1 Pro modal — one upgrade surface, no per-page variants. The edit in
@@ -485,8 +483,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : 3} projects. Go Pro for unlimited projects and icon saves.`,
       },
       line: {
-        title: 'Line styles are a Pro tool',
-        subtitle: 'Fine-tune stroke ends and corners — and unlock every other Pro colour and icon tool.',
+        title: 'Upgrade to Pro to use this feature',
+        subtitle: 'Line styles let you fine-tune stroke ends and corners — and Pro unlocks every other colour and icon tool too.',
       },
     }
     openProModal(presets[kind] || {})
@@ -642,13 +640,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     [baseSvgText, size, color, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
   )
 
-  // Download honours the render scale: @2x doubles the rendered dimensions
-  // (capped at 2048) while the on-page copy stays at the chosen size.
-  const downloadOutput = useMemo(() => {
-    if (exportScale === 1) return serializedOutput
-    return serializeCustomizedSvg(baseSvgText, { size: Math.min(2048, size * exportScale), color: color || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV })
-  }, [serializedOutput, exportScale, baseSvgText, size, color, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
-
   const stageImgUrl = useMemo(() => {
     if (!activeIcon?.cdn) return ''
     const p = { size }
@@ -697,13 +688,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   const handleDownload = () => {
-    if (!downloadOutput) return
+    if (!serializedOutput) return
     try {
-      const blob = new Blob([downloadOutput], { type: 'image/svg+xml' })
+      const blob = new Blob([serializedOutput], { type: 'image/svg+xml' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${(activeIcon?.name || 'icon').replace(/[^\w.-]+/g, '-')}${exportScale > 1 ? `@${exportScale}x` : ''}.svg`
+      a.download = `${(activeIcon?.name || 'icon').replace(/[^\w.-]+/g, '-')}.svg`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -927,7 +918,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               )}
 
               {isStroke && (
-                <div className={`icust-pro${isPro ? '' : ' is-locked'}`}>
+                <div
+                  className={`icust-pro${isPro ? '' : ' is-locked'}`}
+                  onClick={!isPro ? () => showProGate('line') : undefined}
+                >
                   <div className="icust-pro-head">
                     <span>Line style</span>
                     {!isPro && <span className="pnav-pop-tag">Pro</span>}
@@ -937,7 +931,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <div className="icust-seg icust-seg--icon">
                       {CAP_OPTS.map(o => (
                         <button key={o.v} type="button" className={cap === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={cap === o.v}
-                          onClick={() => { if (!isPro) { showProGate('line'); return } setCap(o.v); markDirty() }}>
+                          onClick={() => { if (!isPro) return; setCap(o.v); markDirty() }}>
                           {o.icon}
                         </button>
                       ))}
@@ -948,20 +942,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <div className="icust-seg icust-seg--icon">
                       {JOIN_OPTS.map(o => (
                         <button key={o.v} type="button" className={join === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={join === o.v}
-                          onClick={() => { if (!isPro) { showProGate('line'); return } setJoin(o.v); markDirty() }}>
+                          onClick={() => { if (!isPro) return; setJoin(o.v); markDirty() }}>
                           {o.icon}
                         </button>
                       ))}
                     </div>
                   </div>
-                  {/* Free-user veil: hovering (or tabbing into) the locked panel
-                      blurs + darkens it and offers ONE action — the plans page,
-                      so the pitch comes before any sign-in ask. */}
-                  {!isPro && (
-                    <div className="icust-pro-veil">
-                      <Link className="ui-pill ui-pill-accent ui-pill-md" to="/plans" target="_blank" rel="noopener">Upgrade to Pro</Link>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -1009,12 +995,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </button>
 
               <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleDownload}>Download</button>
-
-              <div className="icust-seg icust-seg--scale" role="group" aria-label="Export render scale">
-                {[1, 2].map(s => (
-                  <button key={s} type="button" className={exportScale === s ? 'active' : ''} aria-pressed={exportScale === s} title={`Export at ${size * s}px`} onClick={() => setExportScale(s)}>@{s}x</button>
-                ))}
-              </div>
 
               <button type="button" className="ui-pill ui-pill-out ui-pill-md icust-reset" onClick={handleReset}>Reset to default</button>
             </div>
@@ -1316,22 +1296,24 @@ export default function IconLibrary({ onCopy, embedded }) {
   }, [browseLogos])
 
   // Browse an entire icon set via the /collection endpoint.
-  const browsePack = useCallback((packFilter) => {
-    setSource('pack'); setGroup(null)
+  // Browse one pack, optionally narrowed by an active collection chip — pack
+  // and chip are independent filters that compose (chip = style within pack).
+  const browsePack = useCallback((packFilter, groupKey = null) => {
+    setSource('pack'); setGroup(groupKey || null)
     if (packFilter === 'logodev') { browseLogos(); return }
     if (!packFilter) { browseAll(); return }
     const rid = ++reqId.current
-    retryRef.current = () => browsePack(packFilter)
+    retryRef.current = () => browsePack(packFilter, groupKey)
     setLoading(true); setLoadError(false)
     getCollectionNames(packFilter)
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
-        const names = keepStyle(packFilter, raw, PACK_STYLE[packFilter])
+        const names = keepStyle(packFilter, raw, groupKey || PACK_STYLE[packFilter])
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
-        setMode(`${title} · ${names.length.toLocaleString()} icons`)
+        setMode(`${title}${groupKey ? ` · ${ICON_GROUPS[groupKey].label}` : ''} · ${names.length.toLocaleString()} icons`)
         setLoading(false)
       })
       .catch(() => {
@@ -1398,22 +1380,25 @@ export default function IconLibrary({ onCopy, embedded }) {
     // hit the Iconify /search endpoint for the Logo.dev pack.
     if (packFilter === 'logodev') { searchLogos(q); return }
     if (!q || q.length < 2) {
-      if (groupKey) browseGroup(groupKey)
-      else if (packFilter) browsePack(packFilter)
+      if (packFilter) browsePack(packFilter, groupKey)
+      else if (groupKey) browseGroup(groupKey)
       else browseAll()
       return
     }
     if (cdnOk.current === false) {
-      renderLocal(q, groupKey ? '' : packFilter)
+      renderLocal(q, packFilter)
       return
     }
     const rid = ++reqId.current
     retryRef.current = () => doSearch(q, scope)
     setSource('search')
     setLoading(true); setLoadError(false)
+    // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
+    // the STYLE of the results (matchesStyle below); chip alone fans out to the
+    // whole collection's packs.
     const params = new URLSearchParams()
-    if (groupKey) params.set('prefixes', ICON_GROUPS[groupKey].packs.join(','))
-    else if (packFilter) params.set('prefix', packFilter)
+    if (packFilter) params.set('prefix', packFilter)
+    else if (groupKey) params.set('prefixes', ICON_GROUPS[groupKey].packs.join(','))
     params.set('query', q)
     params.set('limit', String(API_LIMIT))
     fetchWithFallback(`/search?${params.toString()}`)
@@ -1422,17 +1407,17 @@ export default function IconLibrary({ onCopy, embedded }) {
         if (rid !== reqId.current) return
         cdnOk.current = true
         if (!d.icons || !d.icons.length) {
-          renderLocal(q, groupKey ? '' : packFilter)
+          renderLocal(q, packFilter)
           return
         }
         const style = groupKey || PACK_STYLE[packFilter]
         const items = d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => matchesStyle(ic.pack, ic.name, style))
-        if (!items.length) { renderLocal(q, groupKey ? '' : packFilter); return }
+        if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
-        const scopeLabel = groupKey ? ICON_GROUPS[groupKey].label : 'All packs'
+        const scopeLabel = [packFilter, groupKey ? ICON_GROUPS[groupKey].label : ''].filter(Boolean).join(' · ') || 'All packs'
         setMode(`${items.length.toLocaleString()} matches${d.total > items.length ? '+' : ''} · ${scopeLabel}`)
         setLoading(false)
       })
@@ -1440,7 +1425,7 @@ export default function IconLibrary({ onCopy, embedded }) {
         if (rid !== reqId.current) return
         cdnOk.current = false
         setLoadError(true)
-        renderLocal(q, groupKey ? '' : packFilter)
+        renderLocal(q, packFilter)
       })
   }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos])
 
@@ -1479,42 +1464,38 @@ export default function IconLibrary({ onCopy, embedded }) {
   const handleClearSearch = () => {
     setQuery('')
     clearTimeout(timer.current)
-    if (group) browseGroup(group)
-    else if (source === 'custom') browseCustom()
-    else if (pack) browsePack(pack)
+    if (source === 'custom') browseCustom()
+    else if (pack) browsePack(pack, group)
+    else if (group) browseGroup(group)
     else browseAll()
   }
 
+  // Search text, pack and collection chip are three independent filters that
+  // compose — changing one never clears the others (My Icons excepted: it's a
+  // local store, not a CDN scope).
   const handlePackChange = (e) => {
     const p = e.target.value
-    if (p.startsWith('group:')) return   // synthetic active-collection label
     clearTimeout(timer.current)
-    if (p === 'all') { setQuery(''); browseAll() }
-    else if (p === 'custom') { setQuery(''); browseCustom() }
-    else {
-      setPack(p); setGroup(null); setSource('pack')
-      if (query.trim().length >= 2) doSearch(query, { pack: p, group: null })
-      else browsePack(p)
-    }
+    if (p === 'custom') { setQuery(''); browseCustom(); return }
+    const nextPack = p === 'all' ? '' : p
+    setPack(nextPack)
+    if (query.trim().length >= 2) doSearch(query, { pack: nextPack, group })
+    else if (nextPack) browsePack(nextPack, group)
+    else if (group) browseGroup(group)
+    else browseAll()
   }
 
-  // Toggle a cross-pack collection chip. Keep any active search text and AND the
-  // group into the query instead of clearing it; only browse the group when the
-  // search box is empty.
+  // Toggle a cross-pack collection chip. Keeps the active search text AND the
+  // selected pack — the chip narrows style within whatever scope is set.
   const handleGroupToggle = (key) => {
     clearTimeout(timer.current)
     const q = query.trim()
     const nextGroup = group === key ? null : key
     setGroup(nextGroup)
-    setPack('')
-    if (q.length >= 2) {
-      setSource('search')
-      doSearch(query, { pack: '', group: nextGroup })
-    } else if (nextGroup) {
-      browseGroup(nextGroup)
-    } else {
-      browseAll()
-    }
+    if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
+    else if (pack) browsePack(pack, nextGroup)
+    else if (nextGroup) browseGroup(nextGroup)
+    else browseAll()
   }
 
   const handleIconClick = (icon) => {
@@ -1554,7 +1535,9 @@ export default function IconLibrary({ onCopy, embedded }) {
     setRecents([])
   }, [])
 
-  const selectValue = group ? `group:${group}` : source === 'custom' ? 'custom' : source === 'all' ? 'all' : pack
+  // The dropdown reflects the PACK filter only — an active chip leaves it on
+  // "All packs" so the two filters read as independent.
+  const selectValue = source === 'custom' ? 'custom' : (pack || 'all')
 
   const shown = icons.slice(0, visible)
   const hasMore = visible < icons.length
@@ -1671,7 +1654,6 @@ export default function IconLibrary({ onCopy, embedded }) {
           </div>
 
           <select className="pl-select" value={selectValue} onChange={handlePackChange} aria-label="Icon pack">
-            {group && <option value={`group:${group}`}>◆ {ICON_GROUPS[group].label} collection</option>}
             <option value="all">All packs</option>
             <optgroup label="Yours">
               <option value="custom">My Icons</option>
