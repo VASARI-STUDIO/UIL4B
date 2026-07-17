@@ -58,9 +58,11 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     navigate('/checkout')
   }
 
-  // price.monthly is already a formatted string (e.g. "A$4.99"); the hook falls
-  // back to the AUD anchor on its own, so never re-format it here.
-  const amount = price.monthly
+  // Strings from useProPrice are already formatted (e.g. "A$3.33"); the hook
+  // falls back to the AUD anchor on its own, so never re-format them here.
+  // The headline rate is the YEARLY plan's monthly equivalent — the cheapest
+  // honest "per month" number we charge.
+  const amount = price.yearlyPerMonth
 
   return (
     <div className="ui-modal-overlay" onMouseDown={onClose}>
@@ -91,9 +93,9 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
             </ul>
             <div className="ui-pro-price">
               <span className="ui-pro-amount">{amount}</span>
-              <span className="ui-pro-per">/ month</span>
-              {price.loaded && price.savingsPct > 0 && (
-                <span className="ui-pro-save">Save {price.savingsPct}% yearly</span>
+              <span className="ui-pro-per">/ month — {price.yearlyTotal} billed yearly</span>
+              {price.savingsPct > 0 && (
+                <span className="ui-pro-save">Save {price.savingsPct}% vs monthly</span>
               )}
             </div>
             <div className="ui-pro-cta">
