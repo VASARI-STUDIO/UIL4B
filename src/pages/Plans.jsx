@@ -13,6 +13,15 @@ function Check() {
   )
 }
 
+// Small tier glyphs — a light visual anchor in each card head, matching the
+// app's stroked-icon style.
+function TierIcon({ kind }) {
+  const p = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
+  if (kind === 'pro') return <svg {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+  if (kind === 'plus') return <svg {...p}><path d="M3 8l4 3 5-7 5 7 4-3-2 12H5L3 8Z" /></svg>
+  return <svg {...p}><path d="M12 2 3 7l9 5 9-5-9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 17 9 5 9-5" /></svg>
+}
+
 const PRICE_COMPARISONS = [
   { emoji: '☕', text: 'less than 2 coffees a month' },
   { emoji: '🥤', text: 'less than one smoothie a month' },
@@ -88,7 +97,7 @@ export default function Plans() {
         {/* Free */}
         <div className="sub-tier">
           <div className="sub-tier-head">
-            <div className="sub-tier-name">Free</div>
+            <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon kind="free" /></span><div className="sub-tier-name">Free</div></div>
             <div className="sub-tier-price"><span className="sub-tier-amount">$0</span><span className="sub-tier-per">forever</span></div>
           </div>
           <ul className="sub-tier-list">
@@ -110,7 +119,7 @@ export default function Plans() {
         <div className="sub-tier sub-tier-pro">
           <span className="sub-tier-flag">Most popular</span>
           <div className="sub-tier-head">
-            <div className="sub-tier-name">Pro</div>
+            <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon kind="pro" /></span><div className="sub-tier-name">Pro</div></div>
             <div className="sub-tier-price">
               <span className="sub-tier-amount">{billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly}</span>
               <span className="sub-tier-per">{billing === 'yearly' ? 'per year' : 'per month'}</span>
@@ -148,7 +157,7 @@ export default function Plans() {
         <div className="sub-tier plans-tier-soon">
           <span className="sub-tier-flag plans-flag-soon">Coming Soon</span>
           <div className="sub-tier-head">
-            <div className="sub-tier-name">Premium Plus</div>
+            <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon kind="plus" /></span><div className="sub-tier-name">Premium Plus</div></div>
             <div className="sub-tier-price"><span className="sub-tier-amount">—</span><span className="sub-tier-per">TBA</span></div>
           </div>
           <ul className="sub-tier-list">

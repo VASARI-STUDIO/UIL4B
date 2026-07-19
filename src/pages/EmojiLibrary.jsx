@@ -1,8 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 
-const PAGE_SIZE = 400
-
 const CATEGORY_KEYWORDS = {
   Smileys: ['smile', 'happy', 'sad', 'angry', 'face', 'laugh', 'cry', 'love', 'think', 'sick', 'cool', 'wink', 'tongue', 'skull', 'ghost', 'robot', 'devil', 'poop', 'scared', 'nervous', 'silly', 'party', 'nerd', 'sleepy', 'disguise', 'vomit', 'hot', 'cold', 'dizzy', 'explode', 'cowboy', 'clown', 'alien', 'demon', 'kiss', 'cat'],
   Hands: ['hand', 'wave', 'point', 'thumb', 'fist', 'clap', 'finger', 'muscle', 'pray', 'shake', 'peace', 'ok', 'punch', 'pinch', 'rock', 'call', 'nail', 'selfie', 'write', 'ear', 'nose', 'brain', 'eye', 'tooth', 'bone', 'leg', 'foot', 'lip', 'tongue'],
@@ -79,8 +77,25 @@ const PARSED_EMOJI_DATA = EMOJI_DATA.map(g => ({
 }))
 const TOTAL_COUNT = PARSED_EMOJI_DATA.reduce((sum, g) => sum + g.items.length, 0)
 
+const TONES = ['', '\u{1F3FB}', '\u{1F3FC}', '\u{1F3FD}', '\u{1F3FE}', '\u{1F3FF}']
+const CAT_ICONS = {
+  Smileys: '😀', Hands: '👋', People: '🧑', Animals: '🐻', Food: '🍔', Activities: '⚽',
+  Travel: '✈️', Objects: '💡', Symbols: '❤️', Flags: '🚩', Nature: '🌿',
+}
+
+// ─── Virtualiser geometry ───
+// Emoji are native Unicode glyphs (font characters, not images), so "lazy
+// loading" here means only MOUNTING the cells near the viewport. Rows are laid
+// out mathematically (fixed square cells) and only the on-screen window ±
+// overscan is rendered; everything else is two spacer regions of pure height.
+const CELL_MIN = 42       // matches the old grid's minmax(42px, 1fr)
+const CELL_GAP = 4
+const HEAD_H = 42         // section header row (text + bottom breathing room)
+const SECTION_GAP = 24    // extra space above each section after the first
+const OVERSCAN_PX = 500   // render this much beyond the viewport each way
+
 // One memoised cell so a copy (which flips `copied` on the parent) re-renders
-// only the two affected cells, not the entire ~1800-cell grid. Props are compared
+// only the two affected cells, not the whole visible window. Props are compared
 // by value, so `shown` only changes when the skin tone actually changes.
 const EmojiCell = memo(function EmojiCell({ emoji, shown, isCopied, onCopy }) {
   return (
@@ -100,8 +115,11 @@ export default function EmojiLibrary({ onCopy, embedded }) {
   const [activeCat, setActiveCat] = useState(null)
   const [copied, setCopied] = useState(null)
   const [skinTone, setSkinTone] = useState('')
-  const [visible, setVisible] = useState(PAGE_SIZE)
-  const sentinelRef = useRef(null)
+  const [toneOpen, setToneOpen] = useState(false)
+  const [gridW, setGridW] = useState(0)
+  const [range, setRange] = useState({ start: 0, end: 0 })
+  const virtRef = useRef(null)
+  const toneRef = useRef(null)
 
   const allCategories = EMOJI_DATA.map(d => d.cat)
 
@@ -120,37 +138,85 @@ export default function EmojiLibrary({ onCopy, embedded }) {
     [filteredGroups]
   )
 
-  // Window the render: only emit up to `visible` emoji, truncating the section
-  // that straddles the boundary. Drives the infinite-scroll sentinel below.
-  const shownGroups = useMemo(() => {
-    const out = []
-    let budget = visible
+  // Column count + square cell size from the measured container width — the
+  // same result the old CSS grid produced with repeat(auto-fill, minmax(42px,1fr)).
+  const { cols, cellW } = useMemo(() => {
+    if (!gridW) return { cols: 0, cellW: CELL_MIN }
+    const c = Math.max(1, Math.floor((gridW + CELL_GAP) / (CELL_MIN + CELL_GAP)))
+    return { cols: c, cellW: (gridW - (c - 1) * CELL_GAP) / c }
+  }, [gridW])
+
+  // Full vertical layout: a flat list of rows (section headers + emoji rows),
+  // each with a precomputed top offset, plus the total scroll height.
+  const layout = useMemo(() => {
+    if (!cols) return { rows: [], height: 0 }
+    const rows = []
+    let y = 0
     for (const g of filteredGroups) {
-      if (budget <= 0) break
-      const slice = g.items.slice(0, budget)
-      out.push({ cat: g.cat, total: g.items.length, items: slice })
-      budget -= slice.length
+      if (!g.items.length) continue
+      if (y > 0) y += SECTION_GAP
+      rows.push({ type: 'head', key: `h:${g.cat}`, cat: g.cat, count: g.items.length, top: y, h: HEAD_H })
+      y += HEAD_H
+      for (let i = 0; i < g.items.length; i += cols) {
+        rows.push({ type: 'cells', key: `${g.cat}:${i}`, items: g.items.slice(i, i + cols), top: y, h: cellW })
+        y += cellW + CELL_GAP
+      }
+      y -= CELL_GAP
     }
-    return out
-  }, [filteredGroups, visible])
+    return { rows, height: y }
+  }, [filteredGroups, cols, cellW])
 
-  const hasMore = visible < filteredCount
-
-  // Reset the window whenever the filter (search or category) changes. Handled
-  // in the change handlers below so it stays out of an effect.
-  const setSearchReset = useCallback((val) => { setSearch(val); setVisible(PAGE_SIZE) }, [])
-  const setCatReset = useCallback((cat) => { setActiveCat(cat); setVisible(PAGE_SIZE) }, [])
-
-  // Infinite scroll — reveal another page as the sentinel comes into view.
+  // Track the container width (also fires when the keep-alive tab un-hides).
   useEffect(() => {
-    const el = sentinelRef.current
+    const el = virtRef.current
     if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) setVisible(v => Math.min(v + PAGE_SIZE, filteredCount))
-    }, { rootMargin: '600px' })
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [filteredCount, visible])
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width
+      setGridW(prev => (Math.abs(prev - w) > 0.5 ? w : prev))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Window the rows against the page scroll position (rAF-throttled).
+  useEffect(() => {
+    const el = virtRef.current
+    if (!el || !layout.rows.length) return
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const rect = el.getBoundingClientRect()
+      const minY = -rect.top - OVERSCAN_PX
+      const maxY = -rect.top + window.innerHeight + OVERSCAN_PX
+      const rows = layout.rows
+      let start = 0
+      while (start < rows.length && rows[start].top + rows[start].h < minY) start++
+      let end = start
+      while (end < rows.length && rows[end].top < maxY) end++
+      // Functional update keeps the identity stable when the window hasn't moved,
+      // so scroll ticks that land in the same row range never re-render.
+      setRange(cur => (cur.start === start && cur.end === end ? cur : { start, end }))
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [layout])
+
+  // Close the skin-tone popover on any press outside it.
+  useEffect(() => {
+    if (!toneOpen) return
+    const onDown = (e) => {
+      if (toneRef.current && !toneRef.current.contains(e.target)) setToneOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [toneOpen])
 
   const handleCopy = useCallback((emoji) => {
     const text = supportsSkinTone(emoji) ? toneOf(emoji, skinTone) : emoji
@@ -180,66 +246,94 @@ export default function EmojiLibrary({ onCopy, embedded }) {
             className="pl-search"
             placeholder="Search emojis..."
             value={search}
-            onChange={e => setSearchReset(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
           />
           {search && (
-            <button className="pl-search-clear" onClick={() => setSearchReset('')}>
+            <button className="pl-search-clear" onClick={() => setSearch('')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           )}
         </div>
 
-        <div className="emoji-skin-tones">
-          {['', '\u{1F3FB}', '\u{1F3FC}', '\u{1F3FD}', '\u{1F3FE}', '\u{1F3FF}'].map((tone, i) => (
-            <button
-              key={i}
-              className={`emoji-skin-btn${skinTone === tone ? ' active' : ''}`}
-              onClick={() => setSkinTone(tone)}
-              title={i === 0 ? 'Default' : `Skin tone ${i}`}
-              aria-label={i === 0 ? 'Default skin tone' : `Skin tone ${i}`}
-            >
-              {i === 0 ? '👋' : `👋${tone}`}
-            </button>
-          ))}
+        {/* Skin tone lives in a compact popover instead of six inline buttons —
+            one control in the toolbar, the choices on demand. */}
+        <div className="emoji-tone-wrap" ref={toneRef}>
+          <button
+            type="button"
+            className={`emoji-tone-btn${toneOpen ? ' open' : ''}`}
+            onClick={() => setToneOpen(o => !o)}
+            aria-haspopup="true"
+            aria-expanded={toneOpen}
+            title="Skin tone"
+            aria-label="Choose skin tone"
+          >
+            <span className="emoji-tone-current">{skinTone ? `👋${skinTone}` : '👋'}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          {toneOpen && (
+            <div className="emoji-tone-pop" role="menu" aria-label="Skin tone">
+              {TONES.map((tone, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={skinTone === tone}
+                  className={`emoji-skin-btn${skinTone === tone ? ' active' : ''}`}
+                  onClick={() => { setSkinTone(tone); setToneOpen(false) }}
+                  title={i === 0 ? 'Default' : `Skin tone ${i}`}
+                  aria-label={i === 0 ? 'Default skin tone' : `Skin tone ${i}`}
+                >
+                  {i === 0 ? '👋' : `👋${tone}`}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="pl-chips">
-          <button className={`pl-chip${!activeCat ? ' active' : ''}`} onClick={() => setCatReset(null)}>
-            All ({TOTAL_COUNT})
+          <button className={`pl-chip${!activeCat ? ' active' : ''}`} onClick={() => setActiveCat(null)}>
+            All <span className="emoji-chip-count">{TOTAL_COUNT}</span>
           </button>
           {allCategories.map(cat => (
             <button
               key={cat}
-              className={`pl-chip${activeCat === cat ? ' active' : ''}`}
-              onClick={() => setCatReset(activeCat === cat ? null : cat)}
-            >{cat}</button>
+              className={`pl-chip emoji-chip${activeCat === cat ? ' active' : ''}`}
+              onClick={() => setActiveCat(activeCat === cat ? null : cat)}
+            >
+              <span className="emoji-chip-ic" aria-hidden="true">{CAT_ICONS[cat]}</span>
+              {cat}
+            </button>
           ))}
         </div>
       </div>
 
-      <div className="emoji-sections">
-        {shownGroups.map(group => {
-          if (!group.items.length) return null
-          return (
-            <section key={group.cat} className="emoji-section">
-              <div className="emoji-section-head">
-                <h3>{group.cat}</h3>
-                <span className="emoji-section-count">{group.total}</span>
-              </div>
-              <div className="emoji-grid">
-                {group.items.map((item, i) => (
-                  <EmojiCell
-                    key={i}
-                    emoji={item.char}
-                    shown={item.tone && skinTone ? toneOf(item.char, skinTone) : item.char}
-                    isCopied={copied === item.char}
-                    onCopy={handleCopy}
-                  />
-                ))}
-              </div>
-            </section>
+      {/* Windowed list: a relative container at full scroll height; only rows
+          inside the viewport (± overscan) are mounted, absolutely positioned. */}
+      <div
+        className="emoji-virt"
+        ref={virtRef}
+        style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
+      >
+        {layout.rows.slice(range.start, range.end).map(row =>
+          row.type === 'head' ? (
+            <div key={row.key} className="emoji-vhead" style={{ top: row.top, height: row.h }}>
+              <h3>{row.cat}</h3>
+              <span className="emoji-section-count">{row.count}</span>
+            </div>
+          ) : (
+            <div key={row.key} className="emoji-vrow" style={{ top: row.top }}>
+              {row.items.map((item, i) => (
+                <EmojiCell
+                  key={i}
+                  emoji={item.char}
+                  shown={item.tone && skinTone ? toneOf(item.char, skinTone) : item.char}
+                  isCopied={copied === item.char}
+                  onCopy={handleCopy}
+                />
+              ))}
+            </div>
           )
-        })}
+        )}
       </div>
 
       {search.trim() && filteredCount === 0 && (
@@ -250,8 +344,6 @@ export default function EmojiLibrary({ onCopy, embedded }) {
           <p>No emoji found for &ldquo;{search.trim()}&rdquo;</p>
         </div>
       )}
-
-      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
     </div>
   )
 }

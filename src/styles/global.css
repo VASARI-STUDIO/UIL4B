@@ -676,24 +676,36 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-empty svg{opacity:.25}
 .pl-empty p{font-size:14px;margin:0}
 
-/* ─── Emoji Library ─── */
-.emoji-skin-tones{display:flex;gap:4px;flex-shrink:0}
+/* ─── Emoji Library ───
+   Windowed list: .emoji-virt is a relative container sized to the full layout
+   height; only rows near the viewport are mounted, each absolutely positioned
+   at a precomputed top. No content-visibility here — its paint containment was
+   what clipped the scale(1.2) hover — off-screen work is avoided by simply not
+   mounting those rows at all. */
+.emoji-virt{position:relative}
+.emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
+.emoji-vhead h3{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
+.emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
+.emoji-section-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+.emoji-cell{display:flex;align-items:center;justify-content:center;width:var(--emoji-cell,42px);height:var(--emoji-cell,42px);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background .15s,border-color .15s,transform .15s;position:relative}
+.emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2);z-index:2}
+.emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent);z-index:2}
+.emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;font-family:var(--font)}
+/* Skin-tone popover — one compact toolbar button opens the six tone swatches */
+.emoji-tone-wrap{position:relative;flex-shrink:0}
+.emoji-tone-btn{display:flex;align-items:center;gap:7px;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t2);font-size:18px;line-height:1;cursor:pointer;font-family:var(--font);transition:border-color var(--t),background var(--t),color var(--t)}
+.emoji-tone-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.emoji-tone-btn.open{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
+.emoji-tone-btn svg{color:currentColor}
+.emoji-tone-pop{position:absolute;top:calc(100% + 6px);left:0;display:flex;gap:4px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:40;animation:fg-fade .15s ease}
 .emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:all .15s}
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
-.emoji-sections{display:flex;flex-direction:column;gap:32px}
-/* Skip layout+paint for off-screen sections so the browser never rasterises
-   hundreds of colour-emoji glyphs up front. `auto` remembers each section's real
-   height after its first render; 480px is only the pre-measure placeholder. */
-.emoji-section{content-visibility:auto;contain-intrinsic-size:auto 480px}
-.emoji-section-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.emoji-section-head h3{font-size:14px;font-weight:700;letter-spacing:-.01em}
-.emoji-section-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
-.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px}
-.emoji-cell{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background .15s,border-color .15s,transform .15s;position:relative}
-.emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2)}
-.emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent)}
-.emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;font-family:var(--font)}
+/* Category chips — glyph icon + label, count badge on the All chip */
+.emoji-chip{display:inline-flex;align-items:center;gap:6px}
+.emoji-chip-ic{font-size:13px;line-height:1}
+.emoji-chip-count{font-size:9px;font-weight:700;font-family:var(--mono);background:var(--bg-3);color:var(--t3);padding:1px 6px;border-radius:8px}
+.pl-chip.active .emoji-chip-count{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
 
 /* ─── Box Shadow Generator ─── */
 .bsg-layout{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start}
@@ -1731,6 +1743,8 @@ img,svg,video{max-width:100%;height:auto}
 .sub-tier-pro{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));box-shadow:0 16px 36px -18px color-mix(in srgb,var(--accent) 45%,transparent)}
 .sub-tier-flag{position:absolute;top:-10px;right:20px;padding:4px 10px;border-radius:999px;background:var(--accent);color:var(--accent-fg);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
 .sub-tier-head{display:flex;flex-direction:column;gap:4px}
+.sub-tier-top{display:flex;align-items:center;gap:9px}
+.sub-tier-icon{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--bg-2);color:var(--t2);flex-shrink:0}
 .sub-tier-name{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
 .sub-tier-price{display:flex;align-items:baseline;gap:7px}
 .sub-tier-amount{font-size:32px;font-weight:800;letter-spacing:-.03em;color:var(--t0);line-height:1}
@@ -1757,6 +1771,7 @@ img,svg,video{max-width:100%;height:auto}
    plans page so the Settings sub-tier cards keep their flat treatment. */
 .plans-tiers .sub-tier-pro{transform:translateY(-10px) scale(1.025);z-index:2;border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:color-mix(in srgb,var(--accent) 6%,var(--card));box-shadow:0 24px 48px -20px color-mix(in srgb,var(--accent) 55%,transparent),var(--ring)}
 .plans-tiers .sub-tier-pro .sub-tier-flag{background:var(--accent);color:var(--accent-fg)}
+.plans-tiers .sub-tier-pro .sub-tier-icon{background:var(--accent);color:var(--accent-fg)}
 .plans-tiers .sub-tier-pro .sub-tier-btn{box-shadow:var(--shadow-glow)}
 .plans-tier-soon{opacity:.6}
 .plans-tier-soon .sub-tier-btn{pointer-events:none}
@@ -4246,6 +4261,8 @@ img,svg,video{max-width:100%;height:auto}
 .pgal-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pgal-use{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-family:var(--font);font-size:11.5px;font-weight:700;color:var(--t2);background:none;border:none;padding:4px 2px;cursor:pointer;text-decoration:none;transition:color .15s}
 .pgal-use:hover{color:var(--brand)}
+.pgal-cmp{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color .15s,border-color .15s}
+.pgal-cmp:hover{color:var(--brand);border-color:var(--bh)}
 .dsc-save{position:absolute;top:10px;right:10px;z-index:3;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:var(--radius-pill);border:1px solid var(--border);cursor:pointer;background:color-mix(in srgb,var(--bg-1) 78%,transparent);color:var(--t2);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:color .15s,background .15s,border-color .15s}
 .dsc-save:hover{color:var(--t0);border-color:var(--bh)}
 .dsc-save.is-saved{color:#fb7185;border-color:color-mix(in srgb,#fb7185 40%,transparent)}
@@ -4994,9 +5011,17 @@ html.lenis,html.lenis body{height:auto}
 .ig-sentinel{width:100%;height:1px}
 .ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
 .ig-inv{filter:var(--icon-inv)}
+/* Brand-glyph contrast chip — colored/brand artwork can't be tinted for contrast,
+   so it sits on a miniature of the customizer Stage: the light radial gradient by
+   default, flipped to the dark Stage gradient (.ig-chip--dark) when pixel sampling
+   finds the artwork itself is near-white. */
+.ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
+.ig-chip--dark{background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.ig-chip img{width:24px;height:24px;display:block}
 /* Logo.dev brand marks are raster and already coloured — size a touch larger
    than glyph icons, keep their own colours (no invert), and round the corners. */
 .ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
+.ig-chip img.ig-logo{width:28px;height:28px}
 .ig-attrib{padding:6px 0 20px;text-align:center;font-size:var(--fs-caption);color:var(--t3);line-height:1.5}
 .ig-attrib code{font-family:var(--mono);font-size:.92em;color:var(--t2)}
 .ig-attrib a{color:var(--brand);text-decoration:none;font-weight:600}
@@ -5012,7 +5037,7 @@ html.lenis,html.lenis body{height:auto}
   .icust-meta{padding:12px 16px 0}
   .icust-controls{padding:16px 16px 4px}
   .icust-code{margin:12px 16px 0}
-  .icust-foot{padding:16px 16px 20px}
+  .icust-foot{padding:16px 16px 20px;flex-wrap:wrap}
   .icust-row{flex-wrap:wrap}
   .icust-row>label{flex-basis:100%}
 }
@@ -5546,7 +5571,10 @@ a.prev-btn{text-decoration:none}
 .plb-dark{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
 .plb-dark:hover{background:var(--t0);color:var(--bg-0);opacity:.88}
 .plb-menuwrap{position:relative}
-.plb-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;min-width:240px;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+/* max-height + overflow on the menu itself means a mousewheel over ANY part of
+   an open popover scrolls its content (not the page behind it); overscroll
+   containment stops the scroll from chaining out once the list ends. */
+.plb-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;min-width:240px;max-height:min(72vh,600px);overflow-y:auto;overscroll-behavior:contain;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
 .plb-menu-title{font-size:12px;font-weight:700;color:var(--t0);margin:2px 2px 10px}
 .plb-menu-row{display:flex;gap:8px}
 .plb-menu-row input{flex:1;min-width:0;padding:8px 10px;font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
@@ -5572,8 +5600,6 @@ a.prev-btn{text-decoration:none}
 .plb-visopt--on>svg{color:var(--brand)}
 .plb-visopt-l{flex:1}
 .plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#16A34A;background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
-.plb-brandmenu,.plb-varmenu{min-width:296px}
-.plb-varmenu .plb-menu-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .plb-scrolllist{display:flex;flex-direction:column;gap:2px;max-height:min(50vh,380px);overflow-y:auto;overscroll-behavior:contain}
 .plb-varrow{display:flex;align-items:center;gap:8px;width:100%;padding:0;background:none;border:none;border-radius:var(--radius-s);text-align:left}
 button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
@@ -5719,13 +5745,41 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
 .plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color .15s ease,color .15s ease,background .15s ease}
 .plb-dsb-link:hover{border-color:var(--brand);color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)}
-/* Colour-gallery popup — the shared pgal grid nested inside a toolbar menu */
-.plb-galmenu{width:min(600px,calc(100vw - 32px))}
-.plb-galmenu-scroll{max-height:min(56vh,460px);overflow-y:auto;margin-top:4px;padding-right:4px}
-.plb-galmenu .pgal-grid{grid-template-columns:repeat(2,1fr);gap:14px 12px}
-.plb-galmenu .pgal-stripes{height:110px}
-.plb-galmenu .plb-menu-sub a{color:var(--brand);text-decoration:none}
-.plb-galmenu .plb-menu-sub a:hover{text-decoration:underline}
+/* ── Icon toolbar buttons that slide open to reveal their label on hover/focus.
+   The label is a max-width:0 span that expands on hover, focus-within, or when
+   the button's menu is open (aria-expanded). On touch there's no hover, so the
+   mobile block below pins every label open. Reduced-motion users get the label
+   without the slide. */
+.plb-icobtn{gap:0}
+.plb-icobtn .plb-lbl{display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;margin-left:0;transition:max-width .26s cubic-bezier(.22,.8,.3,1),opacity .2s ease,margin-left .26s cubic-bezier(.22,.8,.3,1)}
+.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl,.plb-menuwrap:focus-within .plb-icobtn .plb-lbl{max-width:160px;opacity:1;margin-left:7px}
+@media(prefers-reduced-motion:reduce){.plb-icobtn .plb-lbl{transition:none}}
+
+/* Thin separator between a menu's stacked sections (Save vs. Share & export). */
+.plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
+/* Merged Save & share menu — a touch wider to fit the export action list. */
+.plb-savemenu{min-width:264px}
+
+/* Colour-gallery popup — one large tabbed panel that hosts the community grid,
+   the variations list and the brand palettes. Overrides the base .plb-menu
+   padding/scroll: the head + tabs stay fixed and only .plb-galpopup-body
+   scrolls (its own overscroll-contained region), so a mousewheel anywhere in
+   the panel scrolls the gallery, never the page behind it. */
+.plb-galpopup{width:min(620px,calc(100vw - 32px));max-height:min(78vh,640px);padding:0;overflow:hidden;display:flex;flex-direction:column}
+.plb-galpopup-head{flex:0 0 auto;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+.plb-galpopup-head .plb-menu-title{margin:0;margin-right:auto}
+.plb-galtabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-galtab{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:6px;cursor:pointer;transition:all var(--t);white-space:nowrap}
+.plb-galtab>svg{flex-shrink:0;opacity:.75}
+.plb-galtab:hover{color:var(--t0)}
+.plb-galtab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
+.plb-galtab--on>svg{opacity:1;color:var(--brand)}
+.plb-galpopup-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 16px}
+.plb-galpopup-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font-size:12px;font-weight:600;color:var(--t2)}
+.plb-galpopup-body .pgal-grid{grid-template-columns:repeat(2,1fr);gap:14px 12px}
+.plb-galpopup-body .pgal-stripes{height:110px}
+.plb-galpopup-body .plb-menu-sub a{color:var(--brand);text-decoration:none}
+.plb-galpopup-body .plb-menu-sub a:hover{text-decoration:underline}
 /* Palette-history menu — plb-varrow rows with a mini strip + relative time */
 .plb-histmenu{min-width:280px}
 .plb-histmenu .plb-varrow-name small{display:block;font-size:11px;font-weight:500;color:var(--t2)}
@@ -5754,6 +5808,49 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-pv-bar--4{height:88%}
 .plb-pv-bar--5{height:34%}
 .plb-pv-cta{align-self:flex-start;padding:8px 16px;font-size:12px;font-weight:700;color:var(--pv-onprimary);background:var(--pv-primary);border:1px solid var(--pv-pborder);border-radius:9px}
+/* Brand + Graphic preview scenes stack vertically rather than the UI split */
+.plb-pv--brand,.plb-pv--graphic{flex-direction:column}
+/* ── Brand scene — a marketing landing hero ── */
+.plb-pvb{display:flex;flex-direction:column;flex:1;min-height:0}
+.plb-pvb-nav{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--pv-border)}
+.plb-pvb-mark{width:26px;height:26px;border-radius:8px;background:var(--pv-primary)}
+.plb-pvb-navlinks{display:flex;gap:10px;margin-right:auto}
+.plb-pvb-navlink{width:36px;height:7px;border-radius:999px;background:var(--pv-muted);opacity:.55}
+.plb-pvb-navcta{padding:6px 13px;font-size:11px;font-weight:700;color:var(--pv-onprimary);background:var(--pv-primary);border:1px solid var(--pv-pborder);border-radius:8px}
+.plb-pvb-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px 22px;text-align:center}
+.plb-pvb-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--pv-accent)}
+.plb-pvb-head{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.02em;color:var(--pv-text)}
+.plb-pvb-sub{max-width:340px;font-size:12.5px;line-height:1.5;color:var(--pv-muted)}
+.plb-pvb-btns{display:flex;gap:10px;margin-top:2px}
+.plb-pvb-btn{padding:9px 18px;font-size:12px;font-weight:700;border-radius:9px}
+.plb-pvb-btn--primary{color:var(--pv-onprimary);background:var(--pv-primary);border:1px solid var(--pv-pborder)}
+.plb-pvb-btn--ghost{color:var(--pv-text);background:transparent;border:1px solid var(--pv-border)}
+.plb-pvb-chips{display:flex;gap:8px;margin-top:8px}
+.plb-pvb-chip{width:26px;height:26px;border-radius:999px;background:var(--plb-rc);border:1px solid var(--pv-border)}
+/* ── Graphic Design scene — an editorial poster ── */
+.plb-pvg{position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:16px;padding:22px;overflow:hidden}
+.plb-pvg-shapes{position:absolute;inset:0;pointer-events:none}
+.plb-pvg-circle{position:absolute;top:-26px;right:-20px;width:130px;height:130px;border-radius:999px;background:var(--plb-rc);opacity:.9}
+.plb-pvg-square{position:absolute;bottom:64px;right:34px;width:70px;height:70px;border-radius:12px;background:var(--plb-rc);transform:rotate(12deg)}
+.plb-pvg-tri{position:absolute;top:96px;left:18px;width:0;height:0;border-left:34px solid transparent;border-right:34px solid transparent;border-bottom:58px solid var(--plb-rc);opacity:.85}
+.plb-pvg-body{position:relative;z-index:1;margin-top:auto}
+.plb-pvg-kicker{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--pv-accent)}
+.plb-pvg-title{margin-top:6px;font-size:46px;font-weight:900;line-height:.92;letter-spacing:-.03em;color:var(--pv-text)}
+.plb-pvg-lead{margin-top:10px;max-width:280px;font-size:12px;line-height:1.5;color:var(--pv-muted)}
+.plb-pvg-swatches{position:relative;z-index:1;display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--pv-border)}
+.plb-pvg-sw{flex:1;background:var(--plb-rc)}
+/* Preview-context tabs in the modal head (UI / Brand / Graphic Design) */
+.plb-modal-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-modal-tab{padding:5px 12px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:6px;cursor:pointer;transition:all var(--t);white-space:nowrap}
+.plb-modal-tab:hover{color:var(--t0)}
+.plb-modal-tab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
+/* ── Split-screen colour-vision check (community import) ── */
+.plb-cvd-row{display:flex;flex-direction:column;gap:8px}
+.plb-cvd-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--t1)}
+.plb-cvd-label>svg{opacity:.7}
+.plb-cvd-strip{display:flex;height:72px;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
+.plb-cvd-sw{flex:1;min-width:0;background:var(--plb-rc)}
+.plb-cvd-note{margin:2px 0 0;font-size:12px;line-height:1.5;color:var(--t2)}
 
 .plb-add{flex:0 0 92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t1);background:var(--card);border:none;border-left:1px dashed var(--border);cursor:pointer;transition:flex-basis .3s cubic-bezier(.22,.8,.3,1),color var(--t),background var(--t)}
 .plb-add:hover{flex-basis:116px;color:var(--t0);background:var(--bg-2)}
@@ -5787,6 +5884,18 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up .22s cubic-bezier(.2,0,0,1)}
   .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .plb-scrolllist{max-height:min(52dvh,420px)}
+  /* Touch has no hover, so pin every toolbar-icon label open — the ribbon is
+     horizontally swipeable, so labels always showing is fine here. */
+  .plb-icobtn .plb-lbl{max-width:160px;opacity:1;margin-left:7px}
+  /* The gallery popup keeps its fixed-head / scroll-body split as a bottom
+     sheet: re-assert padding:0 + flex column (the generic .plb-menu mobile rule
+     above would otherwise pad it and break the internal scroll region). The
+     grab handle (.plb-menu::before) becomes the first flex child above the
+     head; margin-top keeps it clear of the sheet's rounded top. */
+  .plb-galpopup{padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:min(82dvh,640px)}
+  .plb-galpopup::before{margin:10px auto 2px}
+  .plb-galpopup-head{padding:8px 16px 12px}
+  .plb-galpopup-body .pgal-grid{grid-template-columns:1fr}
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
   .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}
@@ -5800,6 +5909,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-add{flex-direction:row;flex-basis:52px;border-left:none;border-top:1px dashed var(--border)}
   .plb-add:hover{flex-basis:52px}
   .plb-modal-body--split{grid-template-columns:1fr}
+  .plb-modal-head{flex-wrap:wrap}
+  .plb-modal-head .plb-pop-title{flex:1 1 auto}
+  .plb-modal-tabs{order:3;flex:1 1 100%;justify-content:center}
+  .plb-modal-tab{flex:1;text-align:center}
+  .plb-pvb-head{font-size:24px}
+  .plb-pvg-title{font-size:36px}
   .plb-tintpop,.plb-picker{left:12px;right:12px;width:auto;transform:none;bottom:auto;top:calc(100% + 4px);z-index:46}
   .plb-copycss{margin-left:0;width:100%}
 }
@@ -5810,7 +5925,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
    reused app-wide (Image-2 card, Image-3 Pro modal, single-click
    login). Build once here; every gate/login flow inherits it.
    ============================================================ */
-.ui-modal-overlay{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);backdrop-filter:blur(6px);animation:cp-fade .16s ease}
+/* Topmost interactive layer — canonical modals (incl. the login prompt) must sit
+   above every tool overlay (.icust-overlay/.cp-overlay are 9998), or e.g. the
+   "log in to continue" popup opened from the icon customizer stacks underneath. */
+.ui-modal-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);backdrop-filter:blur(6px);animation:cp-fade .16s ease}
 .ui-modal{position:relative;width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise .22s cubic-bezier(.2,0,0,1);max-height:calc(100dvh - 32px);overflow:hidden auto}
 .ui-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 0}
 .ui-modal-x{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--radius-pill);border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
