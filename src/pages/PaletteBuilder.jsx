@@ -781,8 +781,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   // Keep ProjectContext in sync so Save/overwrite capture the live palette and
   // the merged studio picks it up (same persisted shape as the studio writes).
+  // Debounced: each ProjectContext write auto-persists the whole design to
+  // localStorage, so writing on every tick would make slider scrubs janky —
+  // rapid changes collapse into one write ~200ms after the user settles.
   useEffect(() => {
-    setPalette({ base: seed, harmony, colors: adjusted, extraColors: adjusted.slice(ROLES.length), globalAdjust: adjust, locked: [...locked], activeIdx: 0 })
+    const t = setTimeout(() => {
+      setPalette({ base: seed, harmony, colors: adjusted, extraColors: adjusted.slice(ROLES.length), globalAdjust: adjust, locked: [...locked], activeIdx: 0 })
+    }, 200)
+    return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed, harmony, adjusted.join(','), JSON.stringify(adjust), locked])
 
