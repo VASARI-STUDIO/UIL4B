@@ -630,10 +630,6 @@ export default function PillNav() {
                       <span>Search tools</span>
                       <kbd className="pnav-search-kbd pnav-pop-kbd" aria-hidden="true">/</kbd>
                     </button>
-                    <Link className="pnav-pop-item" to="/plans" onClick={closeAll}>
-                      <TagIcon />
-                      <span>Pricing &amp; plans</span>
-                    </Link>
                     <Link className="pnav-pop-item" to="/help" onClick={closeAll}>
                       <HelpIcon />
                       <span>Help centre</span>
@@ -643,6 +639,10 @@ export default function PillNav() {
                       <span>Send feedback</span>
                     </Link>
                     <div className="pnav-pop-sep" />
+                    <Link className="pnav-pop-item" to="/plans" onClick={closeAll}>
+                      <TagIcon />
+                      <span>Pricing &amp; plans</span>
+                    </Link>
                     <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
                       <LoginArrowIcon />
                       <span>Log in</span>

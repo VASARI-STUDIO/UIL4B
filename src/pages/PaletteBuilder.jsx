@@ -615,11 +615,8 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   // Toolbar popovers + board popovers (one open at a time, dismiss on
   // outside pointerdown or Escape — handled by the shared effect below).
-  const [saveOpen, setSaveOpen] = useState(false)
-  const [shareOpen, setShareOpen] = useState(false)
+  const [saveOpen, setSaveOpen] = useState(false)  // merged Save & share menu
   const [harmOpen, setHarmOpen] = useState(false)
-  const [varsOpen, setVarsOpen] = useState(false)
-  const [brandsOpen, setBrandsOpen] = useState(false)
   const [visionOpen, setVisionOpen] = useState(false)
 
   // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
@@ -660,9 +657,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // coming-soon popup — long-term this becomes the guided walkthrough across the
   // individual colour tools.
   const [dsbOpen, setDsbOpen] = useState(false)
-  // Colour gallery popup (Discover hand-in): the shared PaletteGalleryGrid
-  // nested in a toolbar menu, applying a pick straight onto the board.
+  // Combined community-gallery popup (Discover hand-in): one large popup with
+  // Community / Variations / Brands tabs, applying a pick straight onto the board.
   const [galleryOpen, setGalleryOpen] = useState(false)
+  const [galleryTab, setGalleryTab] = useState('community') // community | variations | brands
   // Palette history: rolling localStorage log (see HISTORY_KEY above).
   const [histOpen, setHistOpen] = useState(false)
   const [history, setHistory] = useState(loadHistory)
@@ -699,10 +697,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setActiveVar(null)
   }, [colors, adjust])
 
-  // Freeze a snapshot the first time the menu opens (or after invalidation).
+  // Freeze a snapshot the first time the variations tab is viewed (or after
+  // invalidation). The variations grid now lives inside the combined Gallery
+  // popup, so the snapshot freezes when that popup is open on the variations tab.
   useEffect(() => {
-    if (varsOpen && !varBase) setVarBase(applyAdjust(colors, adjust))
-  }, [varsOpen, varBase, colors, adjust])
+    if (galleryOpen && galleryTab === 'variations' && !varBase) setVarBase(applyAdjust(colors, adjust))
+  }, [galleryOpen, galleryTab, varBase, colors, adjust])
 
   // Keep ProjectContext in sync so Save/overwrite capture the live palette and
   // the merged studio picks it up (same persisted shape as the studio writes).
@@ -795,25 +795,29 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // One dismiss layer for every popover: outside pointerdown or Escape closes
   // toolbar menus (anything not inside a .plb-menuwrap) and board popovers
   // (anything not inside a .plb-pop). Escape also closes the preview modal.
-  const anyPopover = saveOpen || shareOpen || harmOpen || varsOpen || brandsOpen || visionOpen || imgOpen
+  // Close every toolbar menu in one call — used by the dismiss layer and by each
+  // toolbar button (so opening one always closes the rest). Setters are stable.
+  const closeAllMenus = useCallback(() => {
+    setSaveOpen(false); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+  }, [])
+  const anyPopover = saveOpen || harmOpen || visionOpen || imgOpen
     || galleryOpen || histOpen
     || tintsIdx != null || pickerIdx != null || ctxMenu != null || preview != null
   useEffect(() => {
     if (!anyPopover) return
-    const closeMenus = () => { setSaveOpen(false); setShareOpen(false); setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false) }
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
     const onDown = (e) => {
-      if (!e.target.closest('.plb-menuwrap')) closeMenus()
+      if (!e.target.closest('.plb-menuwrap')) closeAllMenus()
       if (!e.target.closest('.plb-pop')) closePops()
     }
     const onEsc = (e) => {
       if (e.key !== 'Escape') return
-      closeMenus(); closePops(); setPreview(null)
+      closeAllMenus(); closePops(); setPreview(null)
     }
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
-  }, [anyPopover])
+  }, [anyPopover, closeAllMenus])
 
   // Record the board into palette history. Debounced so slider scrubs and
   // rapid randomises collapse into one entry; identical heads are skipped.
@@ -1032,7 +1036,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     skipVarInvalidate.current = true
     setActiveVar(v.id)
     applyPalette(v.colors, `Applied variation: ${v.label}`)
-    setVarsOpen(false)
+    setGalleryOpen(false)
   }
   const compareVariation = (v, idx) => {
     // Free users can compare the free variations; the Pro-only rows stay gated.
@@ -1040,7 +1044,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
       openProModal({ eyebrow: 'Pro colour tools', title: 'Compare every variation', subtitle: 'Line palettes up side by side to compare them. Free covers the first set of variations; Pro unlocks the full range.' })
       return
     }
-    setVarsOpen(false)
+    setGalleryOpen(false)
     setPreview({ mode: 'light', compare: v })
   }
   const pickBrand = (b) => {
@@ -1054,7 +1058,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     const sys = resolveSystem(b.system || 'custom')
     setHarmony(sys)
     applyPalette(b.colors, `Loaded the ${b.name} palette`)
-    setBrandsOpen(false)
+    setGalleryOpen(false)
   }
 
   const cssExport = useMemo(() => {
@@ -1112,7 +1116,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
         a.click()
         setTimeout(() => URL.revokeObjectURL(url), 4000)
       })
-      setShareOpen(false)
+      setSaveOpen(false)
     } catch {
       toast?.('Couldn’t render the image')
     }
@@ -1124,7 +1128,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const openSubmit = async () => {
     const user = await requireLogin('submit this palette to the community', { free: true })
     if (!user) return
-    setShareOpen(false)
+    setSaveOpen(false)
     setSubmitErr('')
     setSubmitName(n => n.trim() || randomPaletteName(adjusted))
     setSubmitOpen(true)
@@ -1220,7 +1224,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               className="btn btn-s plb-harm"
               aria-expanded={harmOpen}
               aria-haspopup="menu"
-              onClick={() => { setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setHarmOpen(o => !o) }}
+              onClick={() => { const n = !harmOpen; closeAllMenus(); setHarmOpen(n) }}
             >
               <IcoSystem />
               <span className="plb-harm-k">System</span>
@@ -1257,11 +1261,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <div className="plb-menuwrap">
             <button
               type="button"
-              className="btn btn-s"
+              className="btn btn-s plb-icobtn"
               aria-expanded={imgOpen}
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setBrandsOpen(false); setGalleryOpen(false); setHistOpen(false); setImgOpen(o => !o) }}
+              title="Pull colours from an image"
+              onClick={() => { const n = !imgOpen; closeAllMenus(); setImgOpen(n) }}
             >
-              <IcoImage /> Image
+              <IcoImage /><span className="plb-lbl">Image</span>
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="plb-file" onChange={onImageFile} aria-hidden="true" tabIndex={-1} />
             {imgOpen && (
@@ -1326,123 +1331,110 @@ export default function PaletteBuilder({ onCopy, toast }) {
             )}
           </div>
 
+          {/* One gallery button → a large community-gallery popup with three
+              nested tabs: browse Community palettes, this palette's Variations,
+              and curated Brand systems. */}
           <div className="plb-menuwrap">
             <button
               type="button"
-              className="btn btn-s"
-              aria-expanded={brandsOpen}
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setBrandsOpen(o => !o) }}
-            >
-              <IcoBookmark /> Brands
-            </button>
-            {brandsOpen && (
-              <div className="plb-menu plb-menu--left plb-brandmenu" role="menu" aria-label="Brand palettes">
-                <div className="plb-menu-title">Brand palettes</div>
-                <div className="plb-scrolllist">
-                  {BRAND_PALETTES.map(b => {
-                    const gated = !b.free && !isPro
-                    return (
-                      <button
-                        key={b.id}
-                        type="button"
-                        role="menuitem"
-                        className={gated ? 'plb-varrow plb-varrow--locked' : 'plb-varrow'}
-                        onClick={() => pickBrand(b)}
-                      >
-                        <span className="plb-strip" aria-hidden="true">
-                          {b.colors.map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
-                        </span>
-                        <span className="plb-varrow-name">{b.name}</span>
-                        {gated && <span className="plb-tab-lock"><IcoLock size={11} /></span>}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="plb-menuwrap">
-            <button
-              type="button"
-              className="btn btn-s"
+              className="btn btn-s plb-icobtn"
               aria-expanded={galleryOpen}
               aria-haspopup="dialog"
-              title="Browse the colour gallery — curated palettes from Discover"
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setImgOpen(false); setHistOpen(false); setGalleryOpen(o => !o) }}
+              title="Community gallery — palettes, variations and brand systems"
+              onClick={() => { const n = !galleryOpen; closeAllMenus(); setGalleryOpen(n) }}
             >
-              <IcoGallery /> Gallery
+              <IcoGallery /><span className="plb-lbl">Gallery</span>
             </button>
             {galleryOpen && (
-              <div className="plb-menu plb-menu--left plb-galmenu" role="dialog" aria-label="Colour gallery">
-                <div className="plb-menu-title">Colour gallery</div>
-                <div className="plb-galmenu-scroll">
-                  <PaletteGalleryGrid
-                    toast={toast}
-                    onPick={(cols, name) => { applyPalette(cols, `Loaded ${name}`); setGalleryOpen(false) }}
-                  />
+              <div className="plb-menu plb-menu--left plb-galpopup" role="dialog" aria-label="Colour gallery">
+                <div className="plb-galpopup-head">
+                  <div className="plb-menu-title">{galleryTab === 'community' ? 'Community gallery' : galleryTab === 'variations' ? 'Variations' : 'Brand systems'}</div>
+                  <div className="plb-galtabs" role="tablist" aria-label="Gallery sections">
+                    <button type="button" role="tab" aria-selected={galleryTab === 'community'} className={galleryTab === 'community' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('community')}><IcoGallery /> Community</button>
+                    <button type="button" role="tab" aria-selected={galleryTab === 'variations'} className={galleryTab === 'variations' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('variations')}><IcoSpark /> Variations</button>
+                    <button type="button" role="tab" aria-selected={galleryTab === 'brands'} className={galleryTab === 'brands' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('brands')}><IcoBookmark /> Brands</button>
+                  </div>
                 </div>
-                <div className="plb-menu-sub">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
-              </div>
-            )}
-          </div>
 
-          <div className="plb-menuwrap">
-            <button
-              type="button"
-              className="btn btn-s"
-              aria-expanded={varsOpen}
-              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setVarsOpen(o => !o) }}
-            >
-              <IcoSpark /> Variations
-            </button>
-            {varsOpen && (
-              <div className="plb-menu plb-menu--left plb-varmenu" role="menu" aria-label="Palette variations">
-                <div className="plb-menu-title">
-                  Variations
-                  <span className="plb-score" title="Palette quality score — tone range, evenness, chroma profile and distinctness">Current {paletteScore}</span>
-                </div>
-                <div className="plb-scrolllist">
-                  {variations.map((v, idx) => {
-                    const gated = !isPro && idx >= FREE_VARIATIONS
-                    const active = activeVar === v.id
-                    return (
-                      <div key={v.id} className={`plb-varrow${gated ? ' plb-varrow--locked' : ''}${active ? ' plb-varrow--active' : ''}`}>
-                        <button type="button" className="plb-varrow-main" onClick={() => pickVariation(v, idx)} aria-pressed={active}>
+                {galleryTab === 'community' && (
+                  <div className="plb-galpopup-body">
+                    <PaletteGalleryGrid
+                      toast={toast}
+                      onPick={(cols, name) => { applyPalette(cols, `Loaded ${name}`); setGalleryOpen(false) }}
+                    />
+                    <div className="plb-menu-sub">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
+                  </div>
+                )}
+
+                {galleryTab === 'variations' && (
+                  <div className="plb-galpopup-body">
+                    <div className="plb-galpopup-note">
+                      <span>Generated from your current palette</span>
+                      <span className="plb-score" title="Palette quality score — tone range, evenness, chroma profile and distinctness">Current {paletteScore}</span>
+                    </div>
+                    {variations.map((v, idx) => {
+                      const gated = !isPro && idx >= FREE_VARIATIONS
+                      const active = activeVar === v.id
+                      return (
+                        <div key={v.id} className={`plb-varrow${gated ? ' plb-varrow--locked' : ''}${active ? ' plb-varrow--active' : ''}`}>
+                          <button type="button" className="plb-varrow-main" onClick={() => pickVariation(v, idx)} aria-pressed={active}>
+                            <span className="plb-strip" aria-hidden="true">
+                              {v.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
+                            </span>
+                            <span className="plb-varrow-name">{v.label}<small>{v.desc}</small></span>
+                            {active && <span className="plb-varrow-tick" aria-label="Active variation"><IcoCheck size={13} /></span>}
+                            <span className="plb-score">{v.score}</span>
+                            {gated && <span className="plb-tab-lock"><IcoLock size={11} /></span>}
+                          </button>
+                          {!gated && (
+                            <button
+                              type="button"
+                              className="plb-varrow-cmp"
+                              title="Compare with the current palette"
+                              aria-label={`Compare ${v.label} with the current palette`}
+                              onClick={() => compareVariation(v, idx)}
+                            >
+                              <IcoEye />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {variations.length === 0 && <div className="plb-menu-sub">No distinct variations for this palette</div>}
+                  </div>
+                )}
+
+                {galleryTab === 'brands' && (
+                  <div className="plb-galpopup-body">
+                    {BRAND_PALETTES.map(b => {
+                      const gated = !b.free && !isPro
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          className={gated ? 'plb-varrow plb-varrow--locked' : 'plb-varrow'}
+                          onClick={() => pickBrand(b)}
+                        >
                           <span className="plb-strip" aria-hidden="true">
-                            {v.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
+                            {b.colors.map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
                           </span>
-                          <span className="plb-varrow-name">{v.label}<small>{v.desc}</small></span>
-                          {active && <span className="plb-varrow-tick" aria-label="Active variation"><IcoCheck size={13} /></span>}
-                          <span className="plb-score">{v.score}</span>
+                          <span className="plb-varrow-name">{b.name}</span>
                           {gated && <span className="plb-tab-lock"><IcoLock size={11} /></span>}
                         </button>
-                        {!gated && (
-                          <button
-                            type="button"
-                            className="plb-varrow-cmp"
-                            title="Compare with the current palette"
-                            aria-label={`Compare ${v.label} with the current palette`}
-                            onClick={() => compareVariation(v, idx)}
-                          >
-                            <IcoEye />
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                  {variations.length === 0 && <div className="plb-menu-sub">No distinct variations for this palette</div>}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          <button type="button" className="btn btn-s" onClick={() => setPreview({ mode: 'light', compare: null })}>
-            <IcoEye /> Preview
+          <button type="button" className="btn btn-s plb-icobtn" title="Preview the palette on a UI mockup" onClick={() => setPreview({ mode: 'light', compare: null })}>
+            <IcoEye /><span className="plb-lbl">Preview</span>
           </button>
           <button
             type="button"
-            className={showContrast ? 'btn btn-s plb-tgl plb-tgl--on' : 'btn btn-s plb-tgl'}
+            className={showContrast ? 'btn btn-s plb-icobtn plb-tgl plb-tgl--on' : 'btn btn-s plb-icobtn plb-tgl'}
             aria-pressed={showContrast}
             title={isPro ? 'Show WCAG contrast on every colour — light and dark text' : 'Pro — WCAG contrast on every colour, light and dark text'}
             onClick={() => {
@@ -1450,7 +1442,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               setShowContrast(v => !v)
             }}
           >
-            <IcoContrast /> Contrast{!isPro && <IcoLock open={false} size={12} />}
+            <IcoContrast /><span className="plb-lbl">Contrast</span>{!isPro && <IcoLock open={false} size={12} />}
           </button>
           <div className="plb-menuwrap">
             <button
@@ -1459,7 +1451,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               aria-expanded={visionOpen}
               aria-haspopup="menu"
               title="Preview the palette through colour-vision deficiencies"
-              onClick={() => { setHarmOpen(false); setBrandsOpen(false); setVarsOpen(false); setSaveOpen(false); setShareOpen(false); setGalleryOpen(false); setHistOpen(false); setVisionOpen(o => !o) }}
+              onClick={() => { const n = !visionOpen; closeAllMenus(); setVisionOpen(n) }}
             >
               <VisionGlyph id={vision} size={13} />
               <span className="plb-harm-k">Vision</span>
@@ -1485,20 +1477,20 @@ export default function PaletteBuilder({ onCopy, toast }) {
               </div>
             )}
           </div>
-          <button type="button" className="btn btn-s" onClick={() => setDsbOpen(true)} title="Design System Builder — coming soon">Design System Builder</button>
+          <button type="button" className="btn btn-s" onClick={() => setDsbOpen(true)} title="Design System Builder — coming soon"><IcoSliders /> Design System Builder</button>
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
           <div className="plb-menuwrap">
             <button
               type="button"
-              className="btn btn-s"
+              className="btn btn-s plb-icobtn"
               aria-expanded={histOpen}
               aria-haspopup="menu"
               title="Palette history — jump back to any board you've had"
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setShareOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(o => !o) }}
+              onClick={() => { const n = !histOpen; closeAllMenus(); setHistOpen(n) }}
             >
-              <IcoHistory /> History
+              <IcoHistory /><span className="plb-lbl">History</span>
             </button>
             {histOpen && (
               <div className="plb-menu plb-histmenu" role="menu" aria-label="Palette history">
@@ -1539,21 +1531,23 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <div className="plb-menuwrap">
             <button
               type="button"
-              className="btn btn-s"
+              className="btn btn-s btn-accent plb-icobtn"
               aria-expanded={saveOpen}
+              aria-haspopup="dialog"
+              title="Save this palette to a project, or share &amp; export it"
               onClick={async () => {
                 if (!canSaveProjects) {
                   const user = await requireLogin('save this palette', { free: true })
                   if (!user) return
                 }
-                setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setShareOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setSaveOpen(o => !o)
+                const n = !saveOpen; closeAllMenus(); setSaveOpen(n)
               }}
             >
-              <IcoBookmark /> Save
+              <IcoBookmark /><span className="plb-lbl">Save &amp; share</span>
             </button>
             {saveOpen && (
-              <div className="plb-menu" role="dialog" aria-label="Save palette to a project">
-                <div className="plb-menu-title">Save palette to a project</div>
+              <div className="plb-menu plb-menu--left plb-savemenu" role="dialog" aria-label="Save, share and export this palette">
+                <div className="plb-menu-title">Save to a project</div>
                 <div className="plb-menu-row">
                   <input
                     type="text"
@@ -1568,40 +1562,30 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 {projects.length > 0 && (
                   <>
                     <div className="plb-menu-sub">Overwrite existing</div>
-                    {projects.slice(-5).map(p => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className="plb-menu-item"
-                        onClick={() => {
-                          try { overwriteProject(p.id); setSaveOpen(false); toast?.('Updated: ' + p.name) }
-                          catch (err) { toast?.(err?.message || 'Couldn’t save') }
-                        }}
-                      >
-                        {p.name}
-                      </button>
-                    ))}
+                    <div className="plb-scrolllist">
+                      {projects.slice(-5).map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className="plb-menu-item"
+                          onClick={() => {
+                            try { overwriteProject(p.id); setSaveOpen(false); toast?.('Updated: ' + p.name) }
+                            catch (err) { toast?.(err?.message || 'Couldn’t save') }
+                          }}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
                   </>
                 )}
-              </div>
-            )}
-          </div>
-          <div className="plb-menuwrap">
-            <button
-              type="button"
-              className="btn btn-s plb-dark"
-              aria-expanded={shareOpen}
-              onClick={() => { setHarmOpen(false); setVarsOpen(false); setBrandsOpen(false); setSaveOpen(false); setVisionOpen(false); setGalleryOpen(false); setHistOpen(false); setShareOpen(o => !o) }}
-            >
-              Share <IcoChevron />
-            </button>
-            {shareOpen && (
-              <div className="plb-menu" role="menu" aria-label="Share palette">
-                <button type="button" className="plb-menu-item" role="menuitem" onClick={() => { onCopy?.(shareLink()); setShareOpen(false) }}>Copy link to this palette</button>
-                <button type="button" className="plb-menu-item" role="menuitem" onClick={() => { onCopy?.(cssExport); setShareOpen(false) }}>Copy CSS variables</button>
-                <button type="button" className="plb-menu-item" role="menuitem" onClick={() => { onCopy?.(adjusted.join(', ')); setShareOpen(false) }}>Copy hex values</button>
-                <button type="button" className="plb-menu-item" role="menuitem" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
-                <button type="button" className="plb-menu-item" role="menuitem" onClick={openSubmit}><IcoUsers /> Submit to the community…</button>
+                <div className="plb-menu-div" role="separator" />
+                <div className="plb-menu-sub">Share &amp; export</div>
+                <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(shareLink()); setSaveOpen(false) }}><IcoCopy /> Copy link to this palette</button>
+                <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(cssExport); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
+                <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
+                <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
+                <button type="button" className="plb-menu-item" onClick={openSubmit}><IcoUsers /> Submit to the community…</button>
               </div>
             )}
           </div>
