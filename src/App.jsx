@@ -1,5 +1,5 @@
-import { Component, useEffect, lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Component, useEffect, useRef, lazy, Suspense } from 'react'
+import { Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
 import AppFooter from './components/AppFooter'
@@ -10,14 +10,13 @@ import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { useAuth } from './contexts/AuthContext'
-import { LoginPromptProvider } from './contexts/LoginPromptContext'
+import { LoginPromptProvider, useLoginPrompt } from './contexts/LoginPromptContext'
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { createRoutes } from './data/toolTree'
 
 // Static imports — small or always-visited pages (instant load)
 import Home from './pages/Home'
-import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import CreateTool from './pages/CreateTool'
 import SurfaceLanding from './pages/SurfaceLanding'
@@ -94,6 +93,43 @@ function RequireAuth({ children }) {
   }
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
   return children
+}
+
+// The login "page" is now just a launcher for the app-wide LoginPopup (topmost
+// z-index), so every existing `<Link to="/login">` / `navigate('/login')` opens
+// the popup over the app instead of a full page. On success we send the user to
+// where they were headed (RequireAuth / Checkout set location.state.from); on
+// dismiss we return them there too so the URL never gets stuck on /login. The
+// legacy new-window gate (`/login?gate=1`) still closes its window on success.
+function LoginRoute() {
+  const { openLogin } = useLoginPrompt()
+  const { user, loading } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const gate = params.get('gate') === '1'
+  const from = location.state?.from || '/home'
+  const started = useRef(false)
+
+  useEffect(() => {
+    if (loading || started.current) return
+    started.current = true
+    if (user) {
+      if (gate) window.close()
+      else navigate(from, { replace: true })
+      return
+    }
+    openLogin({ reason: '', from }).then((u) => {
+      if (gate && u) { window.close(); return }
+      navigate(from, { replace: true })
+    })
+  }, [loading, user, gate, from, navigate, openLogin])
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+      <div className="fg-loader" />
+    </div>
+  )
 }
 
 function AppInner() {
@@ -315,7 +351,7 @@ function AppInner() {
 
               {/* Account, billing, legal and system pages — rendered inside the
                   PillNav app-shell (the wrapper return below). */}
-              <Route path="/login" element={<Login toast={toast} />} />
+              <Route path="/login" element={<LoginRoute />} />
               <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
               <Route path="/plans" element={<Plans />} />
               <Route path="/pricing" element={<Navigate to="/plans" replace />} />

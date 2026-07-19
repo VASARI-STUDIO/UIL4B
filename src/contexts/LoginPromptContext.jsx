@@ -38,8 +38,12 @@ export function LoginPromptProvider({ children }) {
     })
   }, [])
 
+  // Imperative, reason-less variant for plain "Log in" / "Sign in" affordances
+  // (nav links, the /login route). Same promise contract as requireLogin.
+  const openLogin = useCallback((opts = {}) => requireLogin(opts.reason || '', opts), [requireLogin])
+
   return (
-    <LoginPromptContext.Provider value={{ requireLogin }}>
+    <LoginPromptContext.Provider value={{ requireLogin, openLogin }}>
       {children}
       {prompt && (
         <LoginPopup
