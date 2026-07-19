@@ -676,24 +676,36 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-empty svg{opacity:.25}
 .pl-empty p{font-size:14px;margin:0}
 
-/* ─── Emoji Library ─── */
-.emoji-skin-tones{display:flex;gap:4px;flex-shrink:0}
+/* ─── Emoji Library ───
+   Windowed list: .emoji-virt is a relative container sized to the full layout
+   height; only rows near the viewport are mounted, each absolutely positioned
+   at a precomputed top. No content-visibility here — its paint containment was
+   what clipped the scale(1.2) hover — off-screen work is avoided by simply not
+   mounting those rows at all. */
+.emoji-virt{position:relative}
+.emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
+.emoji-vhead h3{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
+.emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
+.emoji-section-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+.emoji-cell{display:flex;align-items:center;justify-content:center;width:var(--emoji-cell,42px);height:var(--emoji-cell,42px);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background .15s,border-color .15s,transform .15s;position:relative}
+.emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2);z-index:2}
+.emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent);z-index:2}
+.emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;font-family:var(--font)}
+/* Skin-tone popover — one compact toolbar button opens the six tone swatches */
+.emoji-tone-wrap{position:relative;flex-shrink:0}
+.emoji-tone-btn{display:flex;align-items:center;gap:7px;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t2);font-size:18px;line-height:1;cursor:pointer;font-family:var(--font);transition:border-color var(--t),background var(--t),color var(--t)}
+.emoji-tone-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.emoji-tone-btn.open{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
+.emoji-tone-btn svg{color:currentColor}
+.emoji-tone-pop{position:absolute;top:calc(100% + 6px);left:0;display:flex;gap:4px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:40;animation:fg-fade .15s ease}
 .emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:all .15s}
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
-.emoji-sections{display:flex;flex-direction:column;gap:32px}
-/* Skip layout+paint for off-screen sections so the browser never rasterises
-   hundreds of colour-emoji glyphs up front. `auto` remembers each section's real
-   height after its first render; 480px is only the pre-measure placeholder. */
-.emoji-section{content-visibility:auto;contain-intrinsic-size:auto 480px}
-.emoji-section-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.emoji-section-head h3{font-size:14px;font-weight:700;letter-spacing:-.01em}
-.emoji-section-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
-.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px}
-.emoji-cell{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background .15s,border-color .15s,transform .15s;position:relative}
-.emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2)}
-.emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent)}
-.emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;font-family:var(--font)}
+/* Category chips — glyph icon + label, count badge on the All chip */
+.emoji-chip{display:inline-flex;align-items:center;gap:6px}
+.emoji-chip-ic{font-size:13px;line-height:1}
+.emoji-chip-count{font-size:9px;font-weight:700;font-family:var(--mono);background:var(--bg-3);color:var(--t3);padding:1px 6px;border-radius:8px}
+.pl-chip.active .emoji-chip-count{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
 
 /* ─── Box Shadow Generator ─── */
 .bsg-layout{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start}
@@ -4994,9 +5006,17 @@ html.lenis,html.lenis body{height:auto}
 .ig-sentinel{width:100%;height:1px}
 .ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
 .ig-inv{filter:var(--icon-inv)}
+/* Brand-glyph contrast chip — colored/brand artwork can't be tinted for contrast,
+   so it sits on a miniature of the customizer Stage: the light radial gradient by
+   default, flipped to the dark Stage gradient (.ig-chip--dark) when pixel sampling
+   finds the artwork itself is near-white. */
+.ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
+.ig-chip--dark{background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.ig-chip img{width:24px;height:24px;display:block}
 /* Logo.dev brand marks are raster and already coloured — size a touch larger
    than glyph icons, keep their own colours (no invert), and round the corners. */
 .ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
+.ig-chip img.ig-logo{width:28px;height:28px}
 .ig-attrib{padding:6px 0 20px;text-align:center;font-size:var(--fs-caption);color:var(--t3);line-height:1.5}
 .ig-attrib code{font-family:var(--mono);font-size:.92em;color:var(--t2)}
 .ig-attrib a{color:var(--brand);text-decoration:none;font-weight:600}
@@ -5012,7 +5032,7 @@ html.lenis,html.lenis body{height:auto}
   .icust-meta{padding:12px 16px 0}
   .icust-controls{padding:16px 16px 4px}
   .icust-code{margin:12px 16px 0}
-  .icust-foot{padding:16px 16px 20px}
+  .icust-foot{padding:16px 16px 20px;flex-wrap:wrap}
   .icust-row{flex-wrap:wrap}
   .icust-row>label{flex-basis:100%}
 }
@@ -5810,7 +5830,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
    reused app-wide (Image-2 card, Image-3 Pro modal, single-click
    login). Build once here; every gate/login flow inherits it.
    ============================================================ */
-.ui-modal-overlay{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);backdrop-filter:blur(6px);animation:cp-fade .16s ease}
+/* Topmost interactive layer — canonical modals (incl. the login prompt) must sit
+   above every tool overlay (.icust-overlay/.cp-overlay are 9998), or e.g. the
+   "log in to continue" popup opened from the icon customizer stacks underneath. */
+.ui-modal-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);backdrop-filter:blur(6px);animation:cp-fade .16s ease}
 .ui-modal{position:relative;width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise .22s cubic-bezier(.2,0,0,1);max-height:calc(100dvh - 32px);overflow:hidden auto}
 .ui-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 0}
 .ui-modal-x{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--radius-pill);border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
