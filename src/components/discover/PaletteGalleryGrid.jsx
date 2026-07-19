@@ -24,7 +24,17 @@ function HeartGlyph({ filled }) {
   )
 }
 
-export default function PaletteGalleryGrid({ toast, onPick, palettes = GALLERY_PALETTES }) {
+function EyeGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+export default function PaletteGalleryGrid({ toast, onPick, onCompare, palettes = GALLERY_PALETTES }) {
   const [likes, setLikes] = useState(loadLikes)
 
   const toggleLike = useCallback((id) => {
@@ -78,6 +88,17 @@ export default function PaletteGalleryGrid({ toast, onPick, palettes = GALLERY_P
               <HeartGlyph filled={likes.has(p.id)} />
             </button>
             <span className="pgal-name">{p.name}</span>
+            {onCompare && (
+              <button
+                type="button"
+                className="pgal-cmp"
+                onClick={() => onCompare(p.colors, p.name)}
+                aria-label={`Compare ${p.name} with the current palette`}
+                title="Compare with the current palette"
+              >
+                <EyeGlyph />
+              </button>
+            )}
             {onPick ? (
               <button
                 type="button"

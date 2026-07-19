@@ -196,15 +196,104 @@ async function fetchWithFallback(path, timeout = 4000) {
   throw new Error('All API hosts failed')
 }
 
-async function fetchSvgText(pack, name, params = {}) {
-  for (const host of API_HOSTS) {
-    try {
-      const url = buildSvgUrl(host, pack, name, params)
-      const r = await fetch(url, { signal: AbortSignal.timeout(3000) })
-      if (r.ok) return await r.text()
-    } catch { /* try next host */ }
+// Base SVG markup cache. Only the parameterless variant is cached — it's the
+// only one the customizer requests, and params would fragment the cache for no
+// benefit. `svgTextCache` holds the in-flight promise (concurrent callers
+// dedupe); `svgTextReady` holds resolved text for synchronous reads, so the
+// customizer can seed its stage on first paint with no "Loading…" flash.
+const svgTextCache = new Map()
+const svgTextReady = new Map()
+const svgKey = (pack, name) => `${pack}:${name}`
+
+function fetchSvgText(pack, name, params = {}) {
+  const cacheable = !params || Object.keys(params).length === 0
+  const key = svgKey(pack, name)
+  if (cacheable && svgTextCache.has(key)) return svgTextCache.get(key)
+  const p = (async () => {
+    for (const host of API_HOSTS) {
+      try {
+        const url = buildSvgUrl(host, pack, name, params)
+        const r = await fetch(url, { signal: AbortSignal.timeout(3000) })
+        if (r.ok) return await r.text()
+      } catch { /* try next host */ }
+    }
+    throw new Error('Failed to fetch icon SVG')
+  })()
+  if (cacheable) {
+    svgTextCache.set(key, p)
+    // Failures aren't cached — a flaky network shouldn't poison the icon forever.
+    p.then(txt => svgTextReady.set(key, txt)).catch(() => svgTextCache.delete(key))
   }
-  throw new Error('Failed to fetch icon SVG')
+  return p
+}
+
+// Fire-and-forget warm-up on grid hover/focus, so by the time the click lands
+// the customizer's base markup is usually already resolved.
+const prefetchIconSvg = (icon) => {
+  if (icon?.cdn && !icon.custom && !icon.logo) fetchSvgText(icon.pack, icon.name).catch(() => {})
+}
+
+// ── Brand-glyph contrast chips ───────────────────────────────────────────────
+// Colored/brand artwork keeps its own colours, so the grid can't tint it for
+// contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
+// on a chip using the Stage's light gradient by default; if the artwork itself
+// is near-white (Apple, OpenAI, GitHub-in-dark…) we sample its pixels once and
+// flip that icon's chip to the dark Stage gradient. Tone is remembered per icon
+// so scrolling or reopening never re-samples.
+const toneCache = new Map() // 'pack:name' → 'light' | 'dark' (chip background tone)
+
+// Average relative luminance of the glyph's opaque pixels via a tiny canvas.
+// Near-white artwork (avg > .82) needs the dark chip; anything else reads fine
+// on the light one. Any failure (CORS taint, decode error) falls back to light.
+function sampleGlyphTone(img) {
+  try {
+    const S = 24
+    const canvas = document.createElement('canvas')
+    canvas.width = S
+    canvas.height = S
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(img, 0, 0, S, S)
+    const { data } = ctx.getImageData(0, 0, S, S)
+    const toLin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+    let sum = 0
+    let n = 0
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 64) continue
+      sum += 0.2126 * toLin(data[i]) + 0.7152 * toLin(data[i + 1]) + 0.0722 * toLin(data[i + 2])
+      n++
+    }
+    return n > 0 && sum / n > 0.82 ? 'dark' : 'light'
+  } catch { return 'light' }
+}
+
+// Iconify-served brand glyph on a tone-aware chip. crossOrigin is safe here —
+// the same API already answers CORS fetches in fetchSvgText — but logo.dev
+// images must NOT use this component (unknown CORS policy; a crossOrigin
+// failure would blank the image entirely), so they get a plain light chip.
+function BrandGlyph({ pack, name }) {
+  const key = svgKey(pack, name)
+  const [tone, setTone] = useState(() => toneCache.get(key) || 'light')
+  const cached = toneCache.get(key)
+  if (cached && cached !== tone) setTone(cached)
+  const onLoad = (e) => {
+    if (toneCache.has(key)) return
+    const t = sampleGlyphTone(e.currentTarget)
+    toneCache.set(key, t)
+    setTone(t)
+  }
+  return (
+    <span className={`ig-chip${tone === 'dark' ? ' ig-chip--dark' : ''}`}>
+      <img
+        src={`https://api.iconify.design/${pack}/${name}.svg?width=24&height=24`}
+        width="24"
+        height="24"
+        crossOrigin="anonymous"
+        loading="lazy"
+        alt={name}
+        onLoad={onLoad}
+      />
+    </span>
+  )
 }
 
 // ── Pure helpers (module scope — reused by the customizer + browse fns) ───────
@@ -578,7 +667,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const similarList = similar.id === currentId ? similar.list : []
   const fetchedBase = fetched.id === currentId ? fetched.svg : null
   const loadErr = fetched.id === currentId ? fetched.err : false
-  const baseSvgText = localBase || fetchedBase
+  // Synchronous seed from the module cache — an icon whose markup was already
+  // resolved (grid hover prefetch, or opened before) paints on the very first
+  // frame instead of flashing "Loading…" while the effect round-trips.
+  const cachedCdnBase = useMemo(() => {
+    if (!activeIcon?.cdn || activeIcon.custom) return null
+    const raw = svgTextReady.get(svgKey(activeIcon.pack, activeIcon.name))
+    return raw ? sanitizeSvgMarkup(raw) : null
+  }, [activeIcon])
+  const baseSvgText = localBase || fetchedBase || cachedCdnBase
 
   // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
   useEffect(() => {
@@ -651,8 +748,27 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
   }, [activeIcon, size, color, isColoredPack, themeInk, rotate, flipH, flipV])
 
+  // Brand/colored artwork: the Stage tone follows the same sampled per-icon tone
+  // as the grid chips — light gradient unless the artwork is near-white. Seeded
+  // from the shared cache (usually already populated by the grid), refined by
+  // the stage image's own onLoad sampling if not.
+  const brandKey = activeIcon?.cdn && !activeIcon.custom ? svgKey(activeIcon.pack, activeIcon.name) : null
+  const [brandTone, setBrandTone] = useState(() => (brandKey && toneCache.get(brandKey)) || 'light')
+  const [prevBrandKey, setPrevBrandKey] = useState(brandKey)
+  if (brandKey !== prevBrandKey) {
+    // Derive-during-render on icon change (no effect → no cascading-render lint).
+    setPrevBrandKey(brandKey)
+    setBrandTone((brandKey && toneCache.get(brandKey)) || 'light')
+  }
+  const onStageImgLoad = (e) => {
+    if (!isColoredPack) return
+    const key = svgKey(activeIcon.pack, activeIcon.name)
+    if (!toneCache.has(key)) toneCache.set(key, sampleGlyphTone(e.currentTarget))
+    setBrandTone(toneCache.get(key))
+  }
+
   const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
-  const stageIsLight = !isColoredPack && relativeLuminance(effectiveColor) < 0.35
+  const stageIsLight = isColoredPack ? brandTone === 'light' : relativeLuminance(effectiveColor) < 0.35
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -855,7 +971,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   {!baseSvgText && <span className="icust-stage-msg">{loadErr ? 'Couldn’t load this icon.' : 'Loading…'}</span>}
                 </>
               ) : (
-                <img className="icust-stage-img" src={stageImgUrl} width={size} height={size} alt={activeIcon.name} />
+                <img
+                  className="icust-stage-img"
+                  src={stageImgUrl}
+                  width={size}
+                  height={size}
+                  alt={activeIcon.name}
+                  crossOrigin={isColoredPack ? 'anonymous' : undefined}
+                  onLoad={isColoredPack ? onStageImgLoad : undefined}
+                />
               )}
             </div>
 
@@ -1548,12 +1672,20 @@ export default function IconLibrary({ onCopy, embedded }) {
   // icons, reused by the main grid and both My Icons sections.
   const iconGlyph = (icon) => {
     if (icon.custom) {
-      return <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
+      const img = <img src={svgToDataUri(icon.svg)} width="24" height="24" className={icon.colored ? '' : 'ig-inv'} loading="lazy" alt={icon.name} />
+      return icon.colored ? <span className="ig-chip">{img}</span> : img
     }
     if (icon.logo) {
-      return <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
+      // logo.dev serves opaque-background marks — no sampling (unknown CORS), a
+      // plain light chip always gives enough separation from the card surface.
+      return (
+        <span className="ig-chip">
+          <img src={logodevUrl(icon.ref, 64)} width="28" height="28" className="ig-logo" loading="lazy" alt={icon.name} />
+        </span>
+      )
     }
     if (icon.cdn) {
+      if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} />
       return <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} />
     }
     return (
@@ -1572,6 +1704,8 @@ export default function IconLibrary({ onCopy, embedded }) {
       aria-label={icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`}
       onClick={() => handleIconClick(icon)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIconClick(icon) } }}
+      onMouseEnter={() => prefetchIconSvg(icon)}
+      onFocus={() => prefetchIconSvg(icon)}
     >
       {iconGlyph(icon)}
       <span>{icon.name}</span>
