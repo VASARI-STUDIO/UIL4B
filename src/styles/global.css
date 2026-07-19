@@ -6050,7 +6050,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-btn-ghost{background:transparent;border-color:var(--ggn-line-2);color:var(--ggn-t1)}
 .ggn-btn-ghost:hover{border-color:var(--ggn-t2);color:var(--ggn-t0);background:var(--hvr)}
 .ggn-btn-sm{padding:6px 13px;font-size:12px}
-.ggn-diamond{font-size:10px;line-height:1}
 /* Grid: preview + panel */
 .ggn-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:20px;align-items:start;margin-bottom:20px}
 .ggn-preview-wrap{position:relative}

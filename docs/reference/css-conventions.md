@@ -63,3 +63,10 @@ Designs must hold from **320px → 4K**. Test the affected screen at 768 / 480 /
   (already wired in `global.css`).
 - Keep `:focus-visible` outlines — don't strip focus styles.
 - Maintain WCAG AA contrast (QA checks this).
+
+## Icon conventions
+
+- **Any "Random" / "Randomise" button uses the Lucide shuffle glyph** via the
+  shared `<ShuffleIcon />` component (`src/components/ShuffleIcon.jsx`) — never a
+  bespoke glyph. It's `stroke="currentColor"`, so it inherits the button colour;
+  pass `size` to match the button's text.

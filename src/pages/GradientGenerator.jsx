@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import ColorPickerPop from '../components/ColorPickerPop'
+import ShuffleIcon from '../components/ShuffleIcon'
 import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 
@@ -274,7 +275,7 @@ export default function GradientGenerator({ onCopy, toast }) {
         </div>
         <div className="ggn-head-actions">
           <button type="button" className="ggn-btn ggn-btn-accent" onClick={randomise}>
-            <span className="ggn-diamond" aria-hidden="true">◆</span> Random
+            <ShuffleIcon size={15} /> Random
           </button>
           <button type="button" className="ggn-btn ggn-btn-ghost" onClick={reset}>Reset</button>
         </div>
