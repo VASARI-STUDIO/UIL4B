@@ -4,6 +4,55 @@ All notable changes to the Vasari Obsidian Web Design Toolkit.
 
 ---
 
+## v2.6.0 — Workspace Repositioning, Nav & Home Rebuild, Colour + Icon Tool Overhauls
+
+### Positioning & App Shell
+- Product repositioned around three surfaces: **Create** (build), **Discover** (browse), **Learn** (understand)
+- Home page rebuilt (Mobbin-inspired) with live Create previews and a two-line hero
+- Navigation rebuilt: fixed full-width top bar with mega-menus (labelled column groupings, deep links), global section switcher, centred search, and a 3-dot utility menu; profile popover absorbs settings and promotes the Upgrade CTA
+- New public pages: `/plans` pricing page, visual site map at `/sitemap`, Discover/Learn sales pages
+
+### Colour Tools
+- Colour Studio rebuilt in slices: Colour System popup, "See it shipped" UI previews, dark-default theme
+- Every colour feature split onto its own routed tool page with real page chrome and a cross-link footer; `/color` sales page with Design System Builder entry
+- **Palette Builder v3** (7 waves): full-bleed workbench, unified toolbar/button system, canonical Pro modal, drag-anywhere swatch reorder, free colour cap raised 6 → 8, persisted variations, brand-territory seed randomiser, wholesale brand-system apply with proper Pro gating, drag-and-drop image picker, bookmark save + community submit popup, editorial palette names, user handles & flair
+- Tint tool upgraded: multi-ramp, palette import, real perceived/linear scales, 0–1000 steps
+- **Gradient Cockpit** overhaul: restyled to the design system, palette/project import, presets, and a new Discover gradient gallery (38 curated gradients with search, tag/type filters, likes, Copy CSS, and one-click "Open in Cockpit" hand-off)
+- UI State Colours page redesigned; palette-picker replacement; fixed Palette Builder blank first load and cross-tool palette state loss
+
+### Icon & Emoji Libraries
+- Live Iconify-backed Icon Library and fuller Emoji Library, merged into one pill-toggle surface
+- Icon customizer + Custom Icons library ("My Icons"), save-to-project picker, similar-icons row, theme-follow preview, sticky stroke width
+- Cross-pack collection filtering, filter/search/pack composition fixes, pack sort, clear-recent
+- Pro-gated line-style controls (cap + join) with a lighter upgrade popup (shows yearly plan at its monthly rate); copy tracking with a daily free copy cap
+- Performance: keep-alive tabs, collection cache, faster emoji load
+
+### Imagery & Media Tools
+- File Converter wired live + redesigned: ICO favicon output, JPEG background fill, GIF trim, frame ranges
+- Aspect & Resolution Calculator rebuilt: canonical ratio names, device/screen presets, merged size finder
+
+### Discover
+- Discover surface supersedes External Resources: community fold with curated galleries
+- Palette gallery + palette history, and the new gradient gallery
+
+### Pricing, Pro & Accounts
+- All price surfaces wired to live Stripe prices via a shared hook — no hardcoded prices
+- Free-tier caps enforced (3 projects / 8 custom icons); founder accounts get Pro without Stripe
+- Device-level multi-account switching; custom profile photos; gradient default avatars; Settings Accessibility section
+- Checkout fixes: embedded Checkout migrated to `embedded_page`, silent 500 branches now logged, base64 service-account key support
+
+### Platform & AI
+- Primary AI provider migrated DeepSeek → OpenRouter with Gemini fallback
+- AI routes consolidated into a single `/api/ai` dispatcher; new `/api/share` OG endpoint
+- Admin dashboard rebuilt: users tab, Stripe auto-fill, overview categories
+
+### Consistency & Quality
+- All full-screen modals unified onto the canonical `.ui-modal` system and `--scrim` backdrop; toast restyled to the design system
+- Fixed the Colour→Color label flash on first paint; filled missing icon/emoji locale headers
+- Responsive passes across tools and galleries (down to 380px, no horizontal overflow)
+
+---
+
 ## v2.5.0 — Projects, Pro Features, Admin Tools & Security Hardening
 
 ### Projects
