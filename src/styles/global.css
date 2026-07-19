@@ -4246,9 +4246,12 @@ img,svg,video{max-width:100%;height:auto}
       and the Palette Builder's colour-gallery popup. A card is a rounded stack
       of colour stripes (hero on top) with a light foot: like + name + use. ── */
 .pgal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:22px 18px}
-.pgal-card{display:flex;flex-direction:column;gap:8px;min-width:0}
-.pgal-stripes{display:flex;flex-direction:column;height:196px;border-radius:var(--radius-l);overflow:hidden;border:1px solid var(--border);transition:transform .18s cubic-bezier(.2,0,0,1),box-shadow .18s}
+.pgal-card{position:relative;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pgal-stripes{display:flex;flex-direction:column;height:196px;border-radius:var(--radius-l);overflow:hidden;border:1px solid var(--border);transition:transform .18s cubic-bezier(.2,0,0,1),box-shadow .18s,outline-color .18s}
 .pgal-card:hover .pgal-stripes{transform:translateY(-2px);box-shadow:var(--warm-shadow)}
+/* Selected (imported) card: a brand ring on the stripes + a tick badge. */
+.pgal-card.is-selected .pgal-stripes{outline:2px solid var(--brand);outline-offset:2px}
+.pgal-tick{position:absolute;top:8px;right:8px;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--brand);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
 .pgal-stripe{position:relative;flex:1;min-height:0;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end}
 .pgal-stripe:first-child{flex:2.4}
 .pgal-hex{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:rgba(10,10,14,.5);padding:2px 7px;border-radius:var(--radius-pill);margin-right:8px;opacity:0;transition:opacity .15s;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);pointer-events:none}
@@ -4261,6 +4264,8 @@ img,svg,video{max-width:100%;height:auto}
 .pgal-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pgal-use{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-family:var(--font);font-size:11.5px;font-weight:700;color:var(--t2);background:none;border:none;padding:4px 2px;cursor:pointer;text-decoration:none;transition:color .15s}
 .pgal-use:hover{color:var(--brand)}
+.pgal-use.is-selected{color:var(--brand)}
+.pgal-use.is-selected svg{stroke:var(--brand)}
 .pgal-cmp{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color .15s,border-color .15s}
 .pgal-cmp:hover{color:var(--brand);border-color:var(--bh)}
 .dsc-save{position:absolute;top:10px;right:10px;z-index:3;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:var(--radius-pill);border:1px solid var(--border);cursor:pointer;background:color-mix(in srgb,var(--bg-1) 78%,transparent);color:var(--t2);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:color .15s,background .15s,border-color .15s}
@@ -5751,8 +5756,8 @@ button.plb-varrow:hover{background:var(--bg-2)}
    mobile block below pins every label open. Reduced-motion users get the label
    without the slide. */
 .plb-icobtn{gap:0}
-.plb-icobtn .plb-lbl{display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;margin-left:0;transition:max-width .26s cubic-bezier(.22,.8,.3,1),opacity .2s ease,margin-left .26s cubic-bezier(.22,.8,.3,1)}
-.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl,.plb-menuwrap:focus-within .plb-icobtn .plb-lbl{max-width:160px;opacity:1;margin-left:7px}
+.plb-icobtn .plb-lbl{display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;margin-left:0}
+.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl,.plb-menuwrap:focus-within .plb-icobtn .plb-lbl{max-width:160px;opacity:1;margin-left:7px;transition:max-width .26s cubic-bezier(.22,.8,.3,1),opacity .2s ease,margin-left .26s cubic-bezier(.22,.8,.3,1)}
 @media(prefers-reduced-motion:reduce){.plb-icobtn .plb-lbl{transition:none}}
 
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
