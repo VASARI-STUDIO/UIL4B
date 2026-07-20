@@ -6,7 +6,7 @@ import { GALLERY_GRADIENTS, GRADIENT_TAGS } from '../data/gradientGallery'
 // /discover/gradients — the curated gradient gallery. A designgradients-style
 // browse surface over the local static set (src/data/gradientGallery.js):
 // search by name/hex/tag, filter by mood tag and gradient type, copy the CSS
-// or open any gradient straight in the Gradient Cockpit. No network, no
+// or open any gradient straight in the Gradient Generator. No network, no
 // loading state — the only Murphy state is "no results", which is never a
 // dead end (one-tap clear).
 
@@ -38,11 +38,11 @@ export default function GradientGallery({ toast }) {
         <h1>Gradient gallery.</h1>
         <p>
           A curated set of production-ready CSS gradients — copy the rule in one
-          tap, or open any of them in the Gradient Cockpit to make it yours.
+          tap, or open any of them in the Gradient Generator to make it yours.
         </p>
         <Link className="btn btn-accent grg-cta" to="/color/gradient">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
-          Open the Gradient Cockpit
+          Open the Gradient Generator
         </Link>
       </header>
 

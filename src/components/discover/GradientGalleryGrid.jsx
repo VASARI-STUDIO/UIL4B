@@ -6,7 +6,7 @@ import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from '../../data/grad
 // /discover/gradients. Everything is local + static (src/data/gradientGallery.js):
 // swatches are plain CSS backgrounds, likes live in localStorage, "CSS" copies
 // the production background rule and "Open" hands the gradient to the Gradient
-// Cockpit via the ?gs= URL scheme.
+// Generator via the ?gs= URL scheme.
 
 const LIKES_KEY = 'vs-gradient-likes'
 
@@ -53,7 +53,7 @@ export default function GradientGalleryGrid({ toast, gradients = GALLERY_GRADIEN
             className="grg-swatch"
             to={gradientToolUrl(g)}
             style={{ background: gradientCss(g.type, g.angle, g.stops) }}
-            aria-label={`Open ${g.name} in the Gradient Cockpit`}
+            aria-label={`Open ${g.name} in the Gradient Generator`}
           >
             <span className="grg-pill" aria-hidden="true">
               {g.type === 'Linear' ? `${g.angle}°` : g.type}
@@ -87,7 +87,7 @@ export default function GradientGalleryGrid({ toast, gradients = GALLERY_GRADIEN
             <Link
               className="grg-open"
               to={gradientToolUrl(g)}
-              aria-label={`Open ${g.name} in the Gradient Cockpit`}
+              aria-label={`Open ${g.name} in the Gradient Generator`}
             >
               Open <span aria-hidden="true">→</span>
             </Link>
