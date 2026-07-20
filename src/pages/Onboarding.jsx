@@ -72,7 +72,7 @@ export default function Onboarding() {
 
   const finishFree = () => {
     persist()
-    navigate('/dashboard')
+    navigate('/home')
   }
 
   const finishPro = async () => {
@@ -81,13 +81,13 @@ export default function Onboarding() {
     try {
       await checkout(billing)
     } catch {
-      navigate('/dashboard')
+      navigate('/home')
     }
   }
 
   const skip = () => {
     try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
-    navigate('/dashboard')
+    navigate('/home')
   }
 
   return (

@@ -1,0 +1,192 @@
+# Audit Implementation — Central Backlog & Tracker
+
+*The single source of truth for turning the Phase-16 UX/UI/accessibility/QA
+audit into shipped, verified improvements. Consolidated from the audit's
+[`04-critical-issues.md`](04-critical-issues.md) (P0/P1) and
+[`10-backlog.md`](10-backlog.md) (slices A–F). Every item keeps its source ID,
+`file:line` evidence, fix, and acceptance criteria so nothing is lost.*
+
+> **Branch:** `claude/audit-implementation-qa-a1hjzp` → PR → `main` (no direct
+> pushes to `main`; PR-only merge per the git workflow).
+
+---
+
+## Status vocabulary
+
+Work moves **strictly in order** — no item jumps from *In progress* to *Complete*.
+
+| Status | Meaning |
+|---|---|
+| `Backlog` | Captured, not yet started |
+| `Ready` | Scoped + acceptance criteria agreed; safe to implement |
+| `In progress` | Being implemented |
+| `In review` | Implemented + self-verified (build + lint); awaiting **independent** code + security review |
+| `In QA` | Passed review; awaiting **independent** QA sign-off (functionality / a11y / responsive / UX-states) |
+| `Blocked` | Cannot proceed — needs a dependency or a decision |
+| `Escalated` | Needs an owner product decision (see [Escalations](#escalations)) |
+| `🔒 Owner-validate` | Human Validation Zone (auth/Stripe) — implemented + reviewed, but must be validated by the founder before merge |
+| `Complete` | Reviewed + QA-signed + (if 🔒) owner-validated + acceptance criteria met on the running app |
+
+**Definition of done (per item):** change lands · `npx vite build` passes ·
+`npx eslint .` clean · acceptance criteria met on the running app · independent
+review + QA signed · 🔒 items owner-validated. A code read alone is never "done".
+
+---
+
+## Phase roadmap
+
+1. **Phase 1 — Critical stability / funnel** (Slice A + trivial C1/B2). Stop the
+   acquired-user leak; make onboarding real. ← *in progress*
+2. **Phase 2 — Core UX & IA** (Slice B) once the surface strategy (A3) is decided.
+3. **Phase 3 — Accessibility & responsive** (Slices C, D).
+4. **Phase 4 — Interface consistency** (metadata, breakpoints, tokens).
+5. **Phase 5 — Premium motion polish** (Slice E) — last, never before core usability.
+6. **Owner-gated / larger** (Slice F) — scheduled deliberately.
+
+---
+
+## Slice A — Fix the funnel (highest impact)
+
+| ID | Src | Item | Effort | Zone | Status |
+|---|---|---|:--:|:--:|---|
+| **A1** | P0-1 | Make onboarding reachable for new sign-ups | M | 🔒 | **In review / 🔒 Owner-validate** |
+| **A2** | P0-2 | Onboarding nav `/dashboard` → `/home` (×3) | S | — | **In review** |
+| **A3** | P1-3 | Reconcile Discover/Learn (honesty **or** thin real slice) | M | — | **Escalated** |
+| **A4** | P1-4 | Replace `/home` grey placeholders with real screenshots | M | — | **Blocked** (needs captured assets — owner/design) |
+| **A5** | — | Surface `GradientGallery` under Discover nav | S | — | **Blocked** (depends on A3 decision) |
+
+### A1 · Onboarding reachable for new sign-ups &nbsp;🔒
+- **Source:** P0-1 (`04-critical-issues.md`). **Evidence:** `AuthGate.jsx:21,40`;
+  gate at `App.jsx:290-293`; `Onboarding.jsx`.
+- **Root cause:** (a) `AuthGate` wrote `vs-onboarded='1'` the instant the account
+  was created, so `Onboarding` never rendered; (b) the primary path (`LoginPopup`
+  via `requireLogin`) never routed a new account to `/onboarding` at all, and
+  `/home` has no onboarding guard — only `/` checked.
+- **Fix implemented:**
+  - `AuthContext.jsx` — import `getAdditionalUserInfo`; add `pendingOnboarding`
+    state set on **account creation only** (email `signup`, and Google
+    popup/One-Tap when `getAdditionalUserInfo(result).isNewUser`); expose
+    `pendingOnboarding` + `clearPendingOnboarding`.
+  - `App.jsx` (`AppInner`) — one effect routes `authUser && pendingOnboarding`
+    → `/onboarding` once, then clears the flag. Keyed off the *account-creation*
+    event, so **returning users never carry it** and are never bounced.
+  - `AuthGate.jsx` — removed both `vs-onboarded` writes (lines 21, 40).
+  - `Onboarding.persist()` is now the **only** writer of `vs-onboarded`.
+- **Acceptance:** brand-new account → `/onboarding`; completing/skipping sets
+  `vs-onboarded` and lands `/home`; returning login → `/home`, never re-sees
+  onboarding. Storage-blocked browsers still treat `catch` as onboarded
+  (`App.jsx:291` unchanged). ✅ build + lint green.
+- **Owner-validate note (🔒 + regression to confirm):** a brand-new user who
+  signs up *mid-action* (e.g. via a "save this palette" `requireLogin` popup, or
+  a tool's `AuthGate`) is now routed to `/onboarding`, interrupting that action.
+  Their save still completes (fire-and-forget), but they land on onboarding
+  rather than back on the tool. This is arguably good for activation, but it is a
+  behavioural change the founder should validate. See [Escalations](#escalations).
+- **Still to do:** independent code + security review · QA (fresh signup Google +
+  email reaches onboarding; second login skips it; keyboard path) · owner sign-off.
+
+### A2 · Onboarding nav target `/dashboard` → `/home`
+- **Source:** P0-2. **Evidence:** `Onboarding.jsx:75` (`finishFree`), `:84`
+  (`finishPro` catch), `:90` (`skip`).
+- **Note:** `/dashboard` was not truly dead — `App.jsx:328` redirects it to
+  `/home` — so this was a fragile double-hop / time-bomb, not a live break.
+- **Fix implemented:** all three `navigate('/dashboard')` → `navigate('/home')`.
+- **Acceptance:** grep of `Onboarding.jsx` shows no `/dashboard`; free/pro/skip
+  all land `/home`. ✅ build + lint green.
+- **Still to do:** QA the three exits on the running app (reachable now A1 lands).
+
+### A3 · Reconcile Discover/Learn — **Escalated**
+- **Source:** P1-3. Two of three headline surfaces are marketed on Home + footer,
+  hidden from nav, and dead-end where reachable. **Genuine product decision** —
+  (a) honesty (soften links to match nav) vs (b) thin-but-true (ship a real slice,
+  un-hide nav). Option (b) may need the shared-publishing back-end → **11/12
+  serverless function ceiling** watch. Escalated to owner; A5 + parts of B depend
+  on this.
+
+### A4 · Real `/home` screenshots — **Blocked**
+- **Source:** P1-4. Needs real captured/optimised assets (owner/design); cannot be
+  fully done from code alone. Engineering can prep responsive `<img>` slots +
+  `alt` scaffolding once assets exist.
+
+### A5 · Surface `GradientGallery` — **Blocked on A3**
+- The one real Discover asset (`/discover/gradients` → `GradientGallery`) is
+  unlinked. Give it a nav entry point once A3 ships a slice.
+
+---
+
+## Slice B — Debt & IA (fast follow)
+
+| ID | Item | Effort | Status |
+|---|---|:--:|---|
+| **B1** | Triage ~23 orphaned pages: per page re-wire or delete | L | `Backlog` (depends on A3) |
+| **B2** | Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS` for removed paths | S | `Ready` (trivial; ship with A) |
+| **B3** | Resolve `/color` landing-vs-studio ambiguity | M | `Backlog` |
+| **B4** | De-emphasise "Soon" groups in Create mega-menu | S | `Backlog` |
+
+## Slice C — Accessibility (WCAG 2.2 AA)
+
+| ID | Item | Effort | Status |
+|---|---|:--:|---|
+| **C1** | Skip-to-content link → `<main id="main">` (2.4.1) | S | `Ready` (trivial; ship with A) |
+| **C2** | Contrast pass, both themes (1.4.3) | M | `Backlog` |
+| **C3** | Keyboard/AT test of mega-menu (4.1.2) | M | `Backlog` (needs running app) |
+| **C4** | Target-size audit `ui-pill-sm` + icon-only (2.5.8) | S | `Backlog` |
+| **C5** | Re-test onboarding a11y after A1 | M | `Backlog` (needs A1 landed) |
+
+## Slice D — Responsive
+
+| ID | Item | Effort | Status |
+|---|---|:--:|---|
+| **D1** | Normalise 18 breakpoints → ~5 named scale | M | `Backlog` |
+| **D2** | Verify/fix 320–360 px floor | M | `Backlog` (needs running app) |
+| **D3** | Confirm 4K max-width ceilings | S | `Backlog` |
+
+## Slice E — Motion polish (last)
+
+| ID | Item | Effort | Status |
+|---|---|:--:|---|
+| **E1** | Resolve `--dur-3` 280/380 ms conflict | S | `Backlog` |
+| **E2** | Migrate inline durations → `--dur-*` | M | `Backlog` |
+| **E3** | Success motion on export/copy/save (reduced-motion-safe) | M | `Backlog` |
+
+## Slice F — Reliability & performance (owner-gated / larger)
+
+| ID | Item | Effort | Zone | Status |
+|---|---|:--:|:--:|---|
+| **F1** | Remove `unpkg.com` ffmpeg.wasm CDN dependency | M | — | `Backlog` |
+| **F2** | Trim critical-path JS (defer/lazy Firebase) | L | — | `Backlog` |
+| **F3** | Community publishing: local-only vs real pipeline | L | 🔒 | `Escalated` (function ceiling) |
+| **F4** | Validate Stripe checkout abandon/return/retry | M | 🔒 | `Backlog` (owner-gated) |
+
+> **Function-ceiling watch:** only **1 of 12** serverless slots is free. F3 and any
+> Discover/Learn back-end must consolidate, not add.
+
+---
+
+## Escalations
+
+Items needing an **owner product decision** before they can ship. Implementation
+must not pick a direction unilaterally here.
+
+1. **A3 — Discover/Learn strategy.** (a) Honesty: soften Home/footer links to
+   match the hidden nav, keep "coming soon" shells. **(b)** Thin-but-true: ship a
+   first real slice (orphaned `Discover`/`PromptLibrary`/`FontGallery`/Docs are
+   already built; surface `GradientGallery`) and un-hide nav. Blocks A5 + parts of B1.
+2. **A1 in-context-signup behaviour (🔒).** Should a brand-new user who signs up
+   *mid-action* (save/upgrade prompt, tool `AuthGate`) be pulled into onboarding
+   (current implementation, favours activation), or resume their action and see
+   onboarding later? Founder to validate the auth-flow change.
+3. **Merge cadence.** Confirm: land Slice A as one PR to `main` after independent
+   review + QA + owner validation of A1 (recommended), vs. batching more slices
+   per PR.
+4. **F3 — Community publishing** (🔒, function-ceiling): local-only staged vs real
+   shared pipeline; Home currently markets a community.
+
+---
+
+## Change log
+
+- **2026-07-20** — A1 + A2 implemented on `claude/audit-implementation-qa-a1hjzp`;
+  `npx vite build` + `npx eslint .` green. Status → **In review** (A1 also
+  🔒 Owner-validate). Central backlog + [testing ledger](TESTING-LEDGER.md)
+  established. A3, A1-behaviour, merge cadence, F3 escalated to owner.

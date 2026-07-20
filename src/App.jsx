@@ -133,16 +133,28 @@ function LoginRoute() {
 }
 
 function AppInner() {
-  const { user: authUser, loading: authLoading } = useAuth()
+  const { user: authUser, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   useSmoothScroll()
   const { message, visible, type, toast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     return initAnalytics()
   }, [])
+
+  // Brand-new sign-ups must reach onboarding no matter where they signed up from
+  // (the /home logo, a tool's AuthGate, or an in-context save prompt). Auth
+  // resolves without a route change, so we route here once, keyed off the
+  // account-creation flag — returning users never carry it, so they are never
+  // bounced (AUDIT-A1).
+  useEffect(() => {
+    if (authLoading || !authUser || !pendingOnboarding) return
+    clearPendingOnboarding()
+    if (location.pathname !== '/onboarding') navigate('/onboarding', { replace: true })
+  }, [authLoading, authUser, pendingOnboarding, clearPendingOnboarding, location.pathname, navigate])
 
   useEffect(() => {
     document.querySelector('.main')?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
