@@ -205,6 +205,25 @@ export default function GradientGenerator({ onCopy, toast }) {
     toast?.(`Imported ${src.name}`)
   }, [toast])
 
+  // ── Presets built from the user's own palettes/projects ──
+  // Each import source becomes a ready-made gradient (colours spread evenly
+  // across a linear ramp) so a saved palette is a one-tap gradient. These lead
+  // the Presets grid, ahead of the built-in starters. Angles rotate through a
+  // small set so consecutive palette presets don't all look identical.
+  const palettePresets = useMemo(() => {
+    const angles = [135, 90, 160, 45]
+    return importSources.map((src, i) => ({
+      n: src.name,
+      type: 'Linear',
+      angle: angles[i % angles.length],
+      mine: true,
+      stops: src.colors.map((color, j) => ({
+        color: color.toUpperCase(),
+        position: Math.round((j / (src.colors.length - 1)) * 100),
+      })),
+    }))
+  }, [importSources])
+
   const copyCss = useCallback(() => {
     onCopy?.(cssValue)
     setCopied(true)
@@ -432,6 +451,12 @@ export default function GradientGenerator({ onCopy, toast }) {
           </Link>
         </div>
         <div className="ggn-presets">
+          {palettePresets.map((p, i) => (
+            <button key={`mine-${i}`} type="button" className="ggn-preset ggn-preset--mine" onClick={() => applyPreset(p)} title={`Gradient from ${p.n}`}>
+              <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />
+              <span className="ggn-preset-name">{p.n}</span>
+            </button>
+          ))}
           {PRESETS.map(p => (
             <button key={p.n} type="button" className="ggn-preset" onClick={() => applyPreset(p)}>
               <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />

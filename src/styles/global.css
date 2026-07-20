@@ -5556,6 +5556,11 @@ a.prev-btn{text-decoration:none}
    the toolbar's content edge lines up with the pill nav's at every width. */
 .plb-toolbar{position:sticky;top:var(--nav-clear);z-index:30;display:flex;align-items:center;justify-content:space-between;gap:10px 18px;flex-wrap:wrap;padding:10px max(20px,calc((100% - 1440px)/2 + 20px));background:var(--bg-0);border-bottom:1px solid var(--border)}
 .plb-toolbar-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative}
+/* Action group (icon buttons) stays on one line so a label expanding inline on
+   hover widens the group rather than bumping a button to a new row (wrap-flash,
+   bug #106). The whole group can still wrap below the title group via the
+   parent .plb-toolbar's flex-wrap. */
+.plb-toolbar-group:last-child{flex-wrap:nowrap}
 .plb-toolbar-sep{width:1px;height:22px;background:var(--border)}
 .plb-title{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--t0);margin:0 6px 0 0}
 /* Seed picker: reuses ColorPickerPop; the popover opens left-aligned because the
@@ -5750,19 +5755,21 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
 .plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color .15s ease,color .15s ease,background .15s ease}
 .plb-dsb-link:hover{border-color:var(--brand);color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)}
-/* ── Icon toolbar buttons that reveal their label as a tooltip on hover/focus.
-   The label is an ABSOLUTELY-positioned pill (out of flow) that fades in below
-   the button — it never changes the button's size or its neighbours' positions,
-   and only opacity/transform animate, so there's no per-frame layout reflow (an
-   inline max-width expansion pushed siblings sideways = moving hover target +
-   jank, especially with a big menu mounted). Suppressed while the button's own
-   menu is open. On touch there's no hover, so the mobile block pins the label
-   inline. Reduced-motion users get the tooltip without the slide. */
+/* ── Icon toolbar buttons that reveal their label INLINE on hover/focus
+   (Coolors-style): the icon stays put and its label expands to the right,
+   growing max-width from 0. Only the button itself widens rightward, so the
+   hovered button's own left edge never moves — the hover target stays stable;
+   buttons to its right slide over, which is the intended reveal. The icon-
+   button group is pinned flex-wrap:nowrap (below) so an expanding label can
+   never bump a neighbour onto a second line (the old wrap-flash, bug #106).
+   The button's own open menu (aria-expanded) also holds its label open. We do
+   NOT expand every label on menu focus-within — that mounted-menu-wide reflow
+   was the lag. On touch there's no hover, so the mobile block pins the label
+   inline. Reduced-motion users get the reveal without the width tween. */
 .plb-icobtn{gap:0;position:relative}
-.plb-icobtn .plb-lbl{position:absolute;top:calc(100% + 6px);left:50%;z-index:45;padding:4px 9px;font-size:11px;font-weight:600;white-space:nowrap;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-xs);opacity:0;transform:translate(-50%,-4px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
-.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl{opacity:1;transform:translate(-50%,0)}
-.plb-icobtn[aria-expanded="true"] .plb-lbl{opacity:0;transform:translate(-50%,-4px)}
-@media(prefers-reduced-motion:reduce){.plb-icobtn .plb-lbl{transition:none}}
+.plb-icobtn .plb-lbl{display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;margin-left:0;transition:max-width .26s cubic-bezier(.22,.8,.3,1),opacity .2s ease,margin-left .26s cubic-bezier(.22,.8,.3,1)}
+.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{max-width:160px;opacity:1;margin-left:7px}
+@media(prefers-reduced-motion:reduce){.plb-icobtn .plb-lbl{transition:opacity .2s ease}}
 
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
 .plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
@@ -5893,10 +5900,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up .22s cubic-bezier(.2,0,0,1)}
   .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .plb-scrolllist{max-height:min(52dvh,420px)}
-  /* Touch has no hover, so pin every toolbar-icon label open INLINE (undo the
-     desktop absolute tooltip) — the ribbon is horizontally swipeable, so labels
+  /* Touch has no hover, so pin every toolbar-icon label open (un-clamp the
+     desktop max-width:0) — the ribbon is horizontally swipeable, so labels
      always showing beside their icon is fine here. */
-  .plb-icobtn .plb-lbl{position:static;transform:none;opacity:1;z-index:auto;padding:0;margin-left:7px;font-size:inherit;font-weight:inherit;color:inherit;background:none;border:none;box-shadow:none;pointer-events:auto}
+  .plb-icobtn .plb-lbl{max-width:none;overflow:visible;opacity:1;margin-left:7px;transition:none;font-size:inherit;font-weight:inherit;color:inherit;pointer-events:auto}
   /* The gallery popup keeps its fixed-head / scroll-body split as a bottom
      sheet: re-assert padding:0 + flex column (the generic .plb-menu mobile rule
      above would otherwise pad it and break the internal scroll region). The
@@ -6091,7 +6098,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-angle.is-disabled{opacity:.4;pointer-events:none}
 .ggn-dial{position:relative;width:64px;height:64px;flex-shrink:0;border-radius:50%;background:var(--ggn-panel-2);border:1px solid var(--ggn-line-2);cursor:grab;touch-action:none}
 .ggn-dial:active{cursor:grabbing}
-.ggn-dial-hand{position:absolute;left:50%;top:50%;width:2px;height:26px;background:var(--ggn-accent);border-radius:2px;transform-origin:bottom center;transform:translate(-50%,-100%)}
+.ggn-dial-hand{position:absolute;left:calc(50% - 1px);bottom:50%;width:2px;height:26px;background:var(--ggn-accent);border-radius:2px;transform-origin:center bottom;transform:rotate(0deg)}
 .ggn-dial-center{position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:var(--ggn-accent);transform:translate(-50%,-50%)}
 .ggn-angle-ctrl{flex:1;min-width:0}
 .ggn-range{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:var(--radius-pill);background:var(--ggn-panel-2);outline:none;cursor:pointer}
@@ -6132,6 +6139,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-preset:hover .ggn-preset-swatch{transform:translateY(-2px);box-shadow:var(--shadow-m)}
 .ggn-preset-name{font-size:12px;font-weight:600;color:var(--ggn-t1);text-align:left}
 .ggn-preset:hover .ggn-preset-name{color:var(--ggn-t0)}
+/* Presets derived from the user's own palettes — an accent ring + tinted name
+   set them apart from the built-in starter gradients in the same grid. */
+.ggn-preset--mine .ggn-preset-swatch{border-color:var(--ggn-accent);box-shadow:0 0 0 1px var(--ggn-accent)}
+.ggn-preset--mine .ggn-preset-name{color:var(--ggn-accent)}
 @media(max-width:860px){
   .ggn-grid{grid-template-columns:1fr}
   .ggn-presets{grid-template-columns:repeat(2,1fr)}
