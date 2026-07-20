@@ -1557,8 +1557,11 @@ export default function IconLibrary({ onCopy, embedded }) {
   useEffect(() => {
     if (didInit.current) return
     didInit.current = true
-    const id = setTimeout(() => browseAll(), 0)
-    return () => clearTimeout(id)
+    // Call browseAll directly — not via setTimeout. A deferred timer gets
+    // cancelled by this effect's StrictMode cleanup before it can fire, and the
+    // didInit guard then blocks the remount from rescheduling, so the initial
+    // browse never runs (grid stuck on skeletons). browseAll dedupes via reqId.
+    browseAll()
   }, [browseAll])
 
   // Infinite scroll — reveal another page as the sentinel comes into view. The
