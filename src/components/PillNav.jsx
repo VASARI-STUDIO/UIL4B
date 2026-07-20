@@ -289,6 +289,11 @@ export default function PillNav() {
   const openedBy = useRef(null)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  // Discover + Learn are admin-only for now — regular users see only Create.
+  // Filter once here so both the desktop bar and the mobile sheet stay in sync.
+  const visibleSections = isAdmin
+    ? NAV_SECTIONS
+    : NAV_SECTIONS.filter((s) => s.id !== 'discover' && s.id !== 'learn')
   const avatarUrl = userProfile?.photoURL || ''
   const displayName = userProfile?.displayName || user?.email?.split('@')[0] || 'Account'
   const accountEmail = userProfile?.email || user?.email || ''
@@ -432,7 +437,7 @@ export default function PillNav() {
 
           {/* The three section menus — centred in the bar (grid middle column). */}
           <div className="pnav-items">
-            {NAV_SECTIONS.map((section) => (
+            {visibleSections.map((section) => (
               <button
                 key={section.id}
                 type="button"
@@ -762,7 +767,7 @@ export default function PillNav() {
       {/* Mobile sheet */}
       {sheet && (
         <div className="pnav-sheet" role="dialog" aria-modal="true" aria-label="Menu">
-          {NAV_SECTIONS.map((section) => {
+          {visibleSections.map((section) => {
             const expanded = sheetSection === section.id
             return (
               <div className="pnav-acc" key={section.id}>

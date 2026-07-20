@@ -27,7 +27,7 @@ const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 
 // Colour — /color is the colour SALES page (handled upstream in App.jsx, never
 // reaches this shell). semantic/ui are the same ColorStudio focused on their
-// section (it reads the pathname); gradient is its own dark "Gradient Cockpit"
+// section (it reads the pathname); gradient is its own dark "Gradient Generator"
 // surface. Palette is its own full-bleed workbench, and tint + contrast are light
 // standalone pages — all on the same colour maths.
 const ColorStudio = lazy(() => import('./ColorStudio'))

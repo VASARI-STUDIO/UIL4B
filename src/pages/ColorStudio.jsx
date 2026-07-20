@@ -11,6 +11,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
 import SnapSlider from '../components/SnapSlider'
+import ShuffleIcon from '../components/ShuffleIcon'
 import { extractColorPointsFromImage } from '../utils/extractColors'
 import { COLOR_LIBRARIES, findClosestNamedColor } from '../data/namedColors'
 
@@ -3013,9 +3014,7 @@ ${stateVars}
             <h2 className="cs-pb-title">Palette Builder</h2>
           </>}
           <button className="btn btn-accent btn-s cs-pb-randomize" onClick={(e) => { e.stopPropagation(); randomize() }} title="Random palette (or press Spacebar)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10" /><path d="M20.49 15a9 9 0 01-14.85 3.36L1 14" />
-            </svg>
+            <ShuffleIcon size={14} />
             Randomise
             <kbd className="cs-pb-kbd">Space</kbd>
           </button>

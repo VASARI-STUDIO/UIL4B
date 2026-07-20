@@ -346,7 +346,7 @@ function AppInner() {
               <Route path="/resources" element={<Navigate to="/discover" replace />} />
 
               {/* Curated gradient gallery — copy CSS or hand a gradient to the
-                  Gradient Cockpit (?gs= scheme). Renders inside the app-shell. */}
+                  Gradient Generator (?gs= scheme). Renders inside the app-shell. */}
               <Route path="/discover/gradients" element={<GradientGallery toast={toast} />} />
 
               {/* Account, billing, legal and system pages — rendered inside the
