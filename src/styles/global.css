@@ -5750,14 +5750,18 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
 .plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color .15s ease,color .15s ease,background .15s ease}
 .plb-dsb-link:hover{border-color:var(--brand);color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)}
-/* ── Icon toolbar buttons that slide open to reveal their label on hover/focus.
-   The label is a max-width:0 span that expands on hover, focus-within, or when
-   the button's menu is open (aria-expanded). On touch there's no hover, so the
-   mobile block below pins every label open. Reduced-motion users get the label
-   without the slide. */
-.plb-icobtn{gap:0}
-.plb-icobtn .plb-lbl{display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;margin-left:0}
-.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl,.plb-menuwrap:focus-within .plb-icobtn .plb-lbl{max-width:160px;opacity:1;margin-left:7px;transition:max-width .26s cubic-bezier(.22,.8,.3,1),opacity .2s ease,margin-left .26s cubic-bezier(.22,.8,.3,1)}
+/* ── Icon toolbar buttons that reveal their label as a tooltip on hover/focus.
+   The label is an ABSOLUTELY-positioned pill (out of flow) that fades in below
+   the button — it never changes the button's size or its neighbours' positions,
+   and only opacity/transform animate, so there's no per-frame layout reflow (an
+   inline max-width expansion pushed siblings sideways = moving hover target +
+   jank, especially with a big menu mounted). Suppressed while the button's own
+   menu is open. On touch there's no hover, so the mobile block pins the label
+   inline. Reduced-motion users get the tooltip without the slide. */
+.plb-icobtn{gap:0;position:relative}
+.plb-icobtn .plb-lbl{position:absolute;top:calc(100% + 6px);left:50%;z-index:45;padding:4px 9px;font-size:11px;font-weight:600;white-space:nowrap;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-xs);opacity:0;transform:translate(-50%,-4px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
+.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl{opacity:1;transform:translate(-50%,0)}
+.plb-icobtn[aria-expanded="true"] .plb-lbl{opacity:0;transform:translate(-50%,-4px)}
 @media(prefers-reduced-motion:reduce){.plb-icobtn .plb-lbl{transition:none}}
 
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
@@ -5889,9 +5893,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up .22s cubic-bezier(.2,0,0,1)}
   .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .plb-scrolllist{max-height:min(52dvh,420px)}
-  /* Touch has no hover, so pin every toolbar-icon label open — the ribbon is
-     horizontally swipeable, so labels always showing is fine here. */
-  .plb-icobtn .plb-lbl{max-width:160px;opacity:1;margin-left:7px}
+  /* Touch has no hover, so pin every toolbar-icon label open INLINE (undo the
+     desktop absolute tooltip) — the ribbon is horizontally swipeable, so labels
+     always showing beside their icon is fine here. */
+  .plb-icobtn .plb-lbl{position:static;transform:none;opacity:1;z-index:auto;padding:0;margin-left:7px;font-size:inherit;font-weight:inherit;color:inherit;background:none;border:none;box-shadow:none;pointer-events:auto}
   /* The gallery popup keeps its fixed-head / scroll-body split as a bottom
      sheet: re-assert padding:0 + flex column (the generic .plb-menu mobile rule
      above would otherwise pad it and break the internal scroll region). The
