@@ -76,7 +76,10 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
           {selected && (
             <span className="pgal-tick" aria-hidden="true"><CheckGlyph /></span>
           )}
-          {/* The stripes — hover a stripe to reveal its hex, click to copy */}
+          {/* The stripes. On Discover (no onPick) each stripe copies its hex.
+              Inside the builder popup (onPick) the whole swatch is the select
+              surface: clicking any stripe enables the palette (or, when it's
+              already selected, toggles it back off) — no per-hex copy. */}
           <div className="pgal-stripes" role="group" aria-label={`${p.name} palette`}>
             {p.colors.map(hex => (
               <button
@@ -84,11 +87,13 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
                 type="button"
                 className="pgal-stripe"
                 style={{ background: hex }}
-                onClick={() => copyHex(hex)}
-                title={`Copy ${hex}`}
-                aria-label={`Copy ${hex}`}
+                onClick={() => onPick ? onPick(p.colors, p.name, p.id) : copyHex(hex)}
+                title={onPick ? (selected ? `Deselect ${p.name}` : `Use ${p.name}`) : `Copy ${hex}`}
+                aria-label={onPick
+                  ? (selected ? `Deselect ${p.name} and restore your previous palette` : `Use ${p.name} in the Palette Builder`)
+                  : `Copy ${hex}`}
               >
-                <span className="pgal-hex">{hex.replace('#', '')}</span>
+                {!onPick && <span className="pgal-hex">{hex.replace('#', '')}</span>}
               </button>
             ))}
           </div>

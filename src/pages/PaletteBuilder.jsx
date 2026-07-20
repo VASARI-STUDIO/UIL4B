@@ -1149,18 +1149,21 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setGalleryOpen(false)
     setPreview({ mode: 'light', tab: 'ui', compare: { label, colors: cols, score: scorePalette(cols) } })
   }
-  // On importing a community palette, surface a top/bottom colour-vision check so
-  // the user sees how the palette they just loaded holds up for colour-blind
-  // viewers. Defaults to deuteranopia (the most common form).
+  // Open a top/bottom colour-vision check so the user can see how the current
+  // palette holds up for colour-blind viewers. Triggered on demand from the
+  // toolbar's Vision button. Defaults to deuteranopia (the most common form).
   const openSplitVision = (colors, name) => {
     const cols = colors.map(c => normaliseHex(c)).filter(Boolean)
     if (cols.length < 2) return
     setSplitVision({ colors: cols, name, mode: 'deuteranopia' })
   }
-  // Import a community-gallery palette as a toggle. First click snapshots the
-  // current system, applies the palette and ticks the card. Clicking the SAME
-  // (ticked) card reverts to that snapshot. Any edit afterwards clears the tick
-  // (see the edit-detection effect) because the board is now a derivative.
+  // Import a community-gallery palette as a toggle. The FIRST import snapshots
+  // the user's own pre-gallery system; applying it ticks the card. Clicking the
+  // SAME (ticked) card — or switching to a different card and toggling it —
+  // reverts to that original snapshot, never to an intermediate gallery pick.
+  // Any edit afterwards clears the tick (see the edit-detection effect) because
+  // the board is now a derivative. Enabling a palette applies it directly — no
+  // info popup — so the whole gallery swatch reads as a one-click select.
   const importGalleryPalette = (cols, name, id) => {
     if (importedGalleryId === id && preImportRef.current) {
       const snap = preImportRef.current
@@ -1175,12 +1178,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
       toast?.('Reverted to your previous palette')
       return
     }
-    preImportRef.current = { colors, adjust, seed, seedInput }
+    // Snapshot only the user's own palette — the one in place before any gallery
+    // import. Switching gallery A → B must NOT overwrite it, so revert always
+    // lands on the user's work, not the previously-selected gallery item.
+    if (!preImportRef.current) preImportRef.current = { colors, adjust, seed, seedInput }
     importedSigRef.current = null // let the effect record the imported baseline
     applyPalette(cols, `Loaded ${name}`)
     setImportedGalleryId(id)
     setGalleryOpen(false)
-    openSplitVision(cols, name)
   }
   // Clear the imported tick once the board diverges from the imported baseline.
   // The first run after an import records the baseline (colours + adjust lens);
@@ -1603,6 +1608,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
             }}
           >
             <IcoContrast /><span className="plb-lbl">Contrast</span>{!isPro && <IcoLock open={false} size={12} />}
+          </button>
+          <button
+            type="button"
+            className="btn btn-s plb-icobtn"
+            title="Colour-vision check — see how the palette reads for colour-blind viewers"
+            onClick={() => openSplitVision(colors, '')}
+          >
+            <IcoEye /><span className="plb-lbl">Vision</span>
           </button>
           <div className="plb-menuwrap">
             <button
