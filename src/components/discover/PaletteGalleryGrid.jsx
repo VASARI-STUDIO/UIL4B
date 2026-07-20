@@ -34,7 +34,19 @@ function EyeGlyph() {
   )
 }
 
-export default function PaletteGalleryGrid({ toast, onPick, onCompare, palettes = GALLERY_PALETTES }) {
+function CheckGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m20 6-11 11-5-5" />
+    </svg>
+  )
+}
+
+// `selectedId` (optional) marks a card as the currently-imported palette: it gets
+// a tick badge and its action flips to "Selected", so clicking it again toggles
+// the import off (the builder reverts to the pre-import system).
+export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = GALLERY_PALETTES }) {
   const [likes, setLikes] = useState(loadLikes)
 
   const toggleLike = useCallback((id) => {
@@ -57,8 +69,13 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, palettes 
 
   return (
     <div className="pgal-grid">
-      {palettes.map(p => (
-        <article key={p.id} className="pgal-card">
+      {palettes.map(p => {
+        const selected = selectedId != null && p.id === selectedId
+        return (
+        <article key={p.id} className={`pgal-card${selected ? ' is-selected' : ''}`}>
+          {selected && (
+            <span className="pgal-tick" aria-hidden="true"><CheckGlyph /></span>
+          )}
           {/* The stripes — hover a stripe to reveal its hex, click to copy */}
           <div className="pgal-stripes" role="group" aria-label={`${p.name} palette`}>
             {p.colors.map(hex => (
@@ -102,11 +119,16 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, palettes 
             {onPick ? (
               <button
                 type="button"
-                className="pgal-use"
-                onClick={() => onPick(p.colors, p.name)}
-                aria-label={`Use ${p.name} in the Palette Builder`}
+                className={`pgal-use${selected ? ' is-selected' : ''}`}
+                onClick={() => onPick(p.colors, p.name, p.id)}
+                aria-pressed={selected}
+                aria-label={selected ? `Deselect ${p.name} and restore your previous palette` : `Use ${p.name} in the Palette Builder`}
               >
-                Use <span aria-hidden="true">→</span>
+                {selected ? (
+                  <><CheckGlyph /> Selected</>
+                ) : (
+                  <>Use <span aria-hidden="true">→</span></>
+                )}
               </button>
             ) : (
               <Link
@@ -119,7 +141,8 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, palettes 
             )}
           </div>
         </article>
-      ))}
+        )
+      })}
     </div>
   )
 }
