@@ -18,7 +18,6 @@ export default function AuthGate({ children, featureLabel }) {
     setError(null)
     try {
       await loginWithGoogle()
-      try { localStorage.setItem('vs-onboarded', '1') } catch {}
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
         setError(err.code === 'auth/unauthorized-domain' ? 'Google sign-in unavailable on this domain' : 'Sign-in failed — try again')
@@ -37,7 +36,6 @@ export default function AuthGate({ children, featureLabel }) {
       } else {
         await login(email, password)
       }
-      try { localStorage.setItem('vs-onboarded', '1') } catch {}
     } catch (err) {
       const code = err.code
       if (code === 'auth/user-not-found' && mode === 'login') {

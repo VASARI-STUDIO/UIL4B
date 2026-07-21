@@ -54,6 +54,13 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     if (!user) {
       const u = await requireLogin('upgrade to Pro')
       if (!u) return
+      // A brand-new sign-up here is intercepted into onboarding by App.jsx,
+      // which would otherwise discard this checkout intent (QA Q1). Stash the
+      // destination so onboarding resumes the user straight to checkout when
+      // they finish. Harmless for an existing-account login: onboarding never
+      // runs, the navigate below reaches /checkout directly, and the key is
+      // session-scoped and consumed only inside the onboarding flow.
+      try { sessionStorage.setItem('vs-resume-after-onboarding', '/checkout') } catch { /* ignore */ }
     }
     navigate('/checkout')
   }

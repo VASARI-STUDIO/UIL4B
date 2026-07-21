@@ -119,6 +119,14 @@ function LoginRoute() {
       else navigate(from, { replace: true })
       return
     }
+    // A brand-new sign-up completed from this launcher is intercepted into
+    // onboarding by AppInner, which would otherwise discard `from` (QA Q1).
+    // Stash the intended destination so onboarding can resume the user there;
+    // the /home default needs no stash, and the key is session-scoped and
+    // consumed only inside the onboarding flow (harmless for existing logins).
+    if (from && from !== '/home') {
+      try { sessionStorage.setItem('vs-resume-after-onboarding', from) } catch { /* ignore */ }
+    }
     openLogin({ reason: '', from }).then((u) => {
       if (gate && u) { window.close(); return }
       navigate(from, { replace: true })
@@ -133,16 +141,30 @@ function LoginRoute() {
 }
 
 function AppInner() {
-  const { user: authUser, loading: authLoading } = useAuth()
+  const { user: authUser, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   useSmoothScroll()
   const { message, visible, type, toast } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     return initAnalytics()
   }, [])
+
+  // Brand-new sign-ups must reach onboarding no matter where they signed up from
+  // (the /home logo, a tool's AuthGate, or an in-context save prompt). Auth
+  // resolves without a route change, so we route here once, keyed off the
+  // account-creation flag — returning users never carry it, so they are never
+  // bounced (AUDIT-A1). Idempotent under StrictMode's dev double-invoke:
+  // clearPendingOnboarding() flips the flag off before the second run's guard,
+  // and a replace-navigation to the path we're already on is a no-op.
+  useEffect(() => {
+    if (authLoading || !authUser || !pendingOnboarding) return
+    clearPendingOnboarding()
+    if (location.pathname !== '/onboarding') navigate('/onboarding', { replace: true })
+  }, [authLoading, authUser, pendingOnboarding, clearPendingOnboarding, location.pathname, navigate])
 
   useEffect(() => {
     document.querySelector('.main')?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
