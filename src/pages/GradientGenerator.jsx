@@ -41,6 +41,11 @@ const PRESETS = [
 
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
+// A palette colour counts only if it's a full 6-digit hex (3-digit shorthand
+// and blanks are rejected) — shared by every palette-sampling path below so the
+// rule can't drift between call sites.
+const isValidHex = (c) => /^#[0-9a-f]{6}$/i.test(c || '')
+
 // Interpolated colour between two hex values at a 0–1 ratio — used when
 // inserting a stop so the new swatch blends its neighbours.
 function mixHex(a, b, t = 0.5) {
@@ -188,7 +193,7 @@ export default function GradientGenerator({ onCopy, toast }) {
   // Valid hex colours in the live Palette Builder palette — feeds the
   // "From palette" button (needs 2+ to build a gradient).
   const paletteHexes = useMemo(
-    () => (design?.palette?.colors || []).filter(c => /^#[0-9a-f]{6}$/i.test(c || '')),
+    () => [...new Set((design?.palette?.colors || []).filter(isValidHex))],
     [design?.palette?.colors]
   )
   const canRandomFromPalette = paletteHexes.length >= 2
@@ -198,7 +203,7 @@ export default function GradientGenerator({ onCopy, toast }) {
   // take 2–3 → spread evenly → random type/angle. Falls back to fully-random
   // if the palette can't make a gradient (guarded by canRandomFromPalette).
   const randomiseFromPalette = useCallback(() => {
-    const pool = (design?.palette?.colors || []).filter(c => /^#[0-9a-f]{6}$/i.test(c || ''))
+    const pool = paletteHexes // already filtered + deduped
     if (pool.length < 2) { randomise(); return }
     const shuffled = [...pool]
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -215,7 +220,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     setAngle(Math.round(Math.random() * 360))
     setActiveStop(0)
     toast?.('Random gradient from your palette')
-  }, [design?.palette?.colors, randomise, toast])
+  }, [paletteHexes, randomise, toast])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
 
@@ -223,14 +228,13 @@ export default function GradientGenerator({ onCopy, toast }) {
   // A source needs 2+ real hex colours to make a gradient; capped at 5 stops so
   // an imported ramp stays readable.
   const importSources = useMemo(() => {
-    const isHex = (c) => /^#[0-9a-f]{6}$/i.test(c || '')
     const list = []
-    const current = (design?.palette?.colors || []).filter(isHex)
+    const current = (design?.palette?.colors || []).filter(isValidHex)
     if (current.length >= 2) {
       list.push({ key: 'palette', name: 'Current palette', meta: 'Palette Builder', colors: current.slice(0, 5) })
     }
     for (const p of projects || []) {
-      const colors = (p?.design?.palette?.colors || []).filter(isHex)
+      const colors = (p?.design?.palette?.colors || []).filter(isValidHex)
       if (colors.length >= 2) {
         list.push({ key: `proj-${p.id}`, name: p.name || 'Untitled project', meta: 'Saved project', colors: colors.slice(0, 5) })
       }
@@ -341,8 +345,11 @@ export default function GradientGenerator({ onCopy, toast }) {
           <button
             type="button"
             className="ggn-btn ggn-btn-ghost"
-            onClick={randomiseFromPalette}
-            disabled={!canRandomFromPalette}
+            onClick={() => canRandomFromPalette && randomiseFromPalette()}
+            aria-disabled={!canRandomFromPalette || undefined}
+            aria-label={canRandomFromPalette
+              ? 'Random gradient from your palette'
+              : 'From palette — add 2+ colours in the Palette Builder to use this'}
             title={canRandomFromPalette
               ? 'Build a random gradient from your current palette'
               : 'Add 2+ colours in the Palette Builder to use this'}
