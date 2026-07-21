@@ -149,7 +149,9 @@ function AppInner() {
   // (the /home logo, a tool's AuthGate, or an in-context save prompt). Auth
   // resolves without a route change, so we route here once, keyed off the
   // account-creation flag — returning users never carry it, so they are never
-  // bounced (AUDIT-A1).
+  // bounced (AUDIT-A1). Idempotent under StrictMode's dev double-invoke:
+  // clearPendingOnboarding() flips the flag off before the second run's guard,
+  // and a replace-navigation to the path we're already on is a no-op.
   useEffect(() => {
     if (authLoading || !authUser || !pendingOnboarding) return
     clearPendingOnboarding()

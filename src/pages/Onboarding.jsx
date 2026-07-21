@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -49,6 +49,17 @@ export default function Onboarding() {
   const [billing, setBilling] = useState('yearly')
   const [busy, setBusy] = useState(false)
   const proPrice = useProPrice()
+  const headingRef = useRef(null)
+
+  // New sign-ups now reach /onboarding via a `navigate(..., {replace:true})` that
+  // manages no focus of its own (App.jsx), so a keyboard/AT user would be dropped
+  // to <body> with no announcement. Move focus to the step heading on mount and on
+  // every step change so the flow is keyboard-navigable and screen-reader-announced
+  // (audit C5 / QA Q3). The heading carries tabIndex={-1} to be programmatically
+  // focusable without becoming a tab stop.
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [step])
 
   // Onboarding only makes sense for a signed-in user. While auth is still
   // resolving we show the flow shell; if definitively signed out, go to login.
@@ -110,7 +121,7 @@ export default function Onboarding() {
             {step === 0 && (
               <div className="onb-greeting">Welcome, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
             )}
-            <h1 className="onb-q">{QUESTIONS[step].q}</h1>
+            <h1 className="onb-q" ref={headingRef} tabIndex={-1}>{QUESTIONS[step].q}</h1>
             <p className="onb-sub">Quick question {step + 1} of {total} — this helps us improve UIL4B.</p>
             <div className="onb-options">
               {QUESTIONS[step].options.map(opt => (
@@ -134,7 +145,7 @@ export default function Onboarding() {
         ) : (
           <div className="onb-step onb-pricing-step">
             <div className="onb-greeting">You're all set, <em>{firstName}</em>.</div>
-            <h1 className="onb-q">Pick the plan that fits.</h1>
+            <h1 className="onb-q" ref={headingRef} tabIndex={-1}>Pick the plan that fits.</h1>
             <p className="onb-sub">Everything core is free forever. Upgrade any time for more AI — or start free and decide later.</p>
 
             <div className="onb-billing">

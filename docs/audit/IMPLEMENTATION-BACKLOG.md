@@ -49,11 +49,12 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
 
 | ID | Src | Item | Effort | Zone | Status |
 |---|---|---|:--:|:--:|---|
-| **A1** | P0-1 | Make onboarding reachable for new sign-ups | M | 🔒 | **In review / 🔒 Owner-validate** |
-| **A2** | P0-2 | Onboarding nav `/dashboard` → `/home` (×3) | S | — | **In review** |
-| **A3** | P1-3 | Reconcile Discover/Learn (honesty **or** thin real slice) | M | — | **Escalated** |
+| **A1** | P0-1 | Make onboarding reachable for new sign-ups | M | 🔒 | **🔒 Owner-validate** (review + QA ✅; awaiting founder + live verify) |
+| **A2** | P0-2 | Onboarding nav `/dashboard` → `/home` (×3) | S | — | **In QA** (static ✅; live exits ⏳ with A1) |
+| **A3** | P1-3 | Reconcile Discover/Learn — **decided: thin-but-true** (un-hide nav, surface built pages) | M | — | **Ready** (own PR, after A1/A2 merges) |
 | **A4** | P1-4 | Replace `/home` grey placeholders with real screenshots | M | — | **Blocked** (needs captured assets — owner/design) |
-| **A5** | — | Surface `GradientGallery` under Discover nav | S | — | **Blocked** (depends on A3 decision) |
+| **A5** | — | Surface `GradientGallery` under Discover nav | S | — | **Ready** (rolls into A3 slice) |
+| **A6** | QA/rev | Firestore onboarding-truth + resume-target + routing-dedupe (MED-1/2, Q1, Q4) | M | 🔒 | **Backlog** (post-A1-merge design pass) |
 
 ### A1 · Onboarding reachable for new sign-ups &nbsp;🔒
 - **Source:** P0-1 (`04-critical-issues.md`). **Evidence:** `AuthGate.jsx:21,40`;
@@ -76,14 +77,57 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
   `vs-onboarded` and lands `/home`; returning login → `/home`, never re-sees
   onboarding. Storage-blocked browsers still treat `catch` as onboarded
   (`App.jsx:291` unchanged). ✅ build + lint green.
-- **Owner-validate note (🔒 + regression to confirm):** a brand-new user who
-  signs up *mid-action* (e.g. via a "save this palette" `requireLogin` popup, or
-  a tool's `AuthGate`) is now routed to `/onboarding`, interrupting that action.
-  Their save still completes (fire-and-forget), but they land on onboarding
-  rather than back on the tool. This is arguably good for activation, but it is a
-  behavioural change the founder should validate. See [Escalations](#escalations).
-- **Still to do:** independent code + security review · QA (fresh signup Google +
-  email reaches onboarding; second login skips it; keyboard path) · owner sign-off.
+- **Owner-validate note (🔒 + regression to confirm) — CORRECTED per QA (Q1/Q2):**
+  a brand-new user who signs up *mid-action* is now routed to `/onboarding`, and the
+  triggering action does **not** silently complete, as an earlier draft of this note
+  wrongly claimed. Two cases:
+  - **Save/submit prompts** (palette "Save & share" / "submit to community", icon
+    "save"): on login these only *open a picker/panel* — nothing is persisted yet —
+    so the onboarding redirect pre-empts the panel before the user can save. No data
+    loss, but the save they signed up to make doesn't happen on that visit.
+  - **"Upgrade to Pro"** (`ProUpgradeModal.goCheckout`): its `navigate('/checkout')`
+    races the onboarding redirect and is **discarded** — the high-intent user lands
+    on `/onboarding` instead of Stripe. They can still reach Pro via onboarding's
+    pricing step (`finishPro`), so they are re-routed, not stranded — but the direct
+    checkout intent is dropped. See [Escalations #2](#escalations).
+- **Review results (2026-07-20):**
+  - **Security review — ✅ clean.** 0 crit/high/med; 1 low (the `vs-onboarded`
+    localStorage flag is client-writable — pre-existing, UX not security).
+    Confirmed no authz surface, no new `/api`, `pendingOnboarding` gates nothing
+    privileged. Approves on security grounds; HVZ sign-off still a process gate.
+  - **Code review — ✅ approve-with-nits.** 0 crit/high; routing logic verified
+    correct; independently confirmed **no returning-user path can set the flag**.
+    2 medium + 3 low (below).
+  - **QA — ⚠️ PASS WITH FOLLOW-UPS.** Build/lint green, 0 new warnings; every new
+    sign-up entry point verified to route through `pendingOnboarding`; returning
+    users structurally cannot carry the flag (R1 sound); storage-blocked signup now
+    works (flag is pure React state, no `localStorage` read). Raised **Q1** (HIGH —
+    the discarded-checkout case above; drove the note correction) and **Q3** (MEDIUM
+    a11y — focus dropped to `<body>` on the `/onboarding` route change). All "Manual"
+    ledger rows remain ⏳ pending live Firebase verification; QA cannot mark 🔒 done.
+- **Known residual — tracked follow-up (A6, not fixed in this PR by design):**
+  - **MED-1** — abandon `/onboarding` (no Skip/Finish) then return via `login()`
+    on `/home`/a deep link (not `/`) → never re-routed. A *narrower* variant of the
+    original gap (was: every new signup skipped; now: abandon-then-return-via-
+    non-root only). Proper fix = consult a Firestore onboarding-completion truth,
+    **but** the naive version bounces legacy users with no `onboarding.completedAt`
+    → a genuine regression. Needs a deliberate design pass → **A6**.
+  - **MED-2** — `skip()` writes only localStorage, not Firestore; not durable
+    cross-device. Only functionally meaningful *with* MED-1's Firestore routing.
+- **Nits handled in this PR:**
+  - **Q3 (a11y) — ✅ applied.** `Onboarding.jsx` moves focus to the step heading
+    (`ref` + `tabIndex={-1}` + `useEffect` on `step`) so keyboard/AT users aren't
+    dropped to `<body>` on the redirect; pre-satisfies C5's onboarding-focus case.
+    Build + lint clean, 0 new warnings.
+  - **LOW-3 — ✅ applied.** One-line StrictMode-idempotency comment on the App.jsx
+    router effect (non-HVZ; documentation only).
+  - **LOW-1 — declined (rationale).** A dev `console.error` on the swallowed
+    `getAdditionalUserInfo` catch would add noise to an **HVZ** file for a path that
+    already fails safe (a throw just means "don't flag onboarding"). Kept HVZ churn
+    minimal. **LOW-2** (DRY extract of the two Google gates, ~2 lines) skipped.
+- **Still to do:** founder HVZ sign-off + Escalation #2 decision (present with the
+  full review + QA package) · live-app verification of the ⏳ ledger rows · then the
+  focused Slice-A PR.
 
 ### A2 · Onboarding nav target `/dashboard` → `/home`
 - **Source:** P0-2. **Evidence:** `Onboarding.jsx:75` (`finishFree`), `:84`
@@ -95,22 +139,49 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
   all land `/home`. ✅ build + lint green.
 - **Still to do:** QA the three exits on the running app (reachable now A1 lands).
 
-### A3 · Reconcile Discover/Learn — **Escalated**
+### A3 · Reconcile Discover/Learn — **Decided: thin-but-true**
 - **Source:** P1-3. Two of three headline surfaces are marketed on Home + footer,
-  hidden from nav, and dead-end where reachable. **Genuine product decision** —
-  (a) honesty (soften links to match nav) vs (b) thin-but-true (ship a real slice,
-  un-hide nav). Option (b) may need the shared-publishing back-end → **11/12
-  serverless function ceiling** watch. Escalated to owner; A5 + parts of B depend
-  on this.
+  hidden from nav, and dead-end where reachable.
+- **Owner decision (2026-07-20):** **thin-but-true** — un-hide the Discover/Learn
+  nav and surface the already-built-but-orphaned pages (`Discover`,
+  `PromptLibrary`, `FontGallery`, Docs, `GradientGallery`) as a first real slice
+  of both surfaces. **Constraint:** any shared/publishing back-end must fit the
+  **1 free serverless slot (11/12 used)** — consolidate, don't add.
+- **Plan (own PR, after A1/A2 merges):** audit the orphaned routes → wire nav
+  entries → verify each renders with proper loading/empty states → absorb A5
+  (GradientGallery under Discover). No new `/api` function unless it displaces one.
+- **Depends-on:** A1/A2 PR merged first (keeps the auth PR focused).
 
 ### A4 · Real `/home` screenshots — **Blocked**
 - **Source:** P1-4. Needs real captured/optimised assets (owner/design); cannot be
   fully done from code alone. Engineering can prep responsive `<img>` slots +
   `alt` scaffolding once assets exist.
 
-### A5 · Surface `GradientGallery` — **Blocked on A3**
+### A5 · Surface `GradientGallery` — **Ready (rolls into A3)**
 - The one real Discover asset (`/discover/gradients` → `GradientGallery`) is
-  unlinked. Give it a nav entry point once A3 ships a slice.
+  unlinked. Now that A3 is decided **thin-but-true**, this is just one of the nav
+  entries wired in that slice — no longer a standalone blocked item.
+
+### A6 · Onboarding-truth + resume-target follow-up — **Backlog (post-A1-merge)**
+Deliberately deferred out of the focused A1 PR (each needs a design pass or would
+bounce legacy users if done naively). Collected from the independent review + QA:
+- **MED-1 (review)** — abandon `/onboarding` (no Skip/Finish) then return via
+  `login()` on `/home`/a deep link (not `/`) → never re-routed. Proper fix consults
+  a Firestore onboarding-completion truth, **but** the naive version bounces legacy
+  users with no `onboarding.completedAt` → a real regression. Needs a migration/
+  back-fill plan first.
+- **MED-2 (review)** — `skip()` writes only `localStorage`, not Firestore; not
+  durable cross-device. Only meaningful once MED-1's Firestore routing exists.
+- **Q1 resume-target (QA, HIGH)** — give the onboarding router an intended
+  destination: on a mid-action signup, stash the target (e.g.
+  `sessionStorage['vs-resume-after-onboarding'] = '/checkout'`) and have
+  `Onboarding.finishFree/finishPro/skip` read + clear it instead of hardcoding
+  `/home`. Restores direct checkout/save intent after onboarding. **Gated on the
+  Escalation #2 decision** (may be unnecessary if the founder accepts option A).
+- **Q4 routing-dedupe (QA, LOW)** — the `/` root route still has its own
+  `vs-onboarded` onboarding check (`App.jsx`) parallel to the new `pendingOnboarding`
+  effect. Harmless today; collapse onto one source of truth once A1 is stable to
+  avoid future drift.
 
 ---
 
@@ -168,25 +239,47 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
 Items needing an **owner product decision** before they can ship. Implementation
 must not pick a direction unilaterally here.
 
-1. **A3 — Discover/Learn strategy.** (a) Honesty: soften Home/footer links to
-   match the hidden nav, keep "coming soon" shells. **(b)** Thin-but-true: ship a
-   first real slice (orphaned `Discover`/`PromptLibrary`/`FontGallery`/Docs are
-   already built; surface `GradientGallery`) and un-hide nav. Blocks A5 + parts of B1.
-2. **A1 in-context-signup behaviour (🔒).** Should a brand-new user who signs up
-   *mid-action* (save/upgrade prompt, tool `AuthGate`) be pulled into onboarding
-   (current implementation, favours activation), or resume their action and see
-   onboarding later? Founder to validate the auth-flow change.
-3. **Merge cadence.** Confirm: land Slice A as one PR to `main` after independent
-   review + QA + owner validation of A1 (recommended), vs. batching more slices
-   per PR.
-4. **F3 — Community publishing** (🔒, function-ceiling): local-only staged vs real
-   shared pipeline; Home currently markets a community.
+1. ✅ **A3 — Discover/Learn strategy — RESOLVED 2026-07-20: thin-but-true.**
+   Un-hide nav and surface the already-built orphaned pages as a first real slice;
+   back-end (if any) must fit the 1 free serverless slot. Unblocks A5 + parts of B1.
+2. ⏳ **A1 in-context-signup behaviour (🔒) — OPEN, sharpened by QA Q1.** A brand-new
+   user who signs up *mid-action* is pulled into onboarding, and the triggering
+   action does **not** complete: save panels are pre-empted before they open, and an
+   "Upgrade to Pro" click has its `/checkout` navigation **discarded** (the user
+   reaches Pro only via onboarding's own pricing step). Decision needed:
+   - **(A) Accept for A1 [recommended].** Onboarding still upsells Pro, so no one is
+     stranded. Ship the focused PR as-is; log the direct-intent *resume-target* as
+     A6. Thinnest — no extra HVZ code now.
+   - **(B) Build the resume-target now.** Stash the intended destination and route
+     there on onboarding finish (the A6 work, pulled forward). Honours explicit
+     intent but adds scope to the auth PR.
+   - **(C) High-intent bypass.** Let "Upgrade to Pro" sign-ups skip onboarding
+     straight to checkout (max conversion on the pay-now moment; they never onboard).
+   Presented to the founder with the full review + QA package for HVZ sign-off.
+3. ✅ **Merge cadence — RESOLVED 2026-07-20:** land **A1+A2 as one focused PR** to
+   `main` after independent review + QA + owner validation of A1. Later slices
+   (A3 thin-but-true, C1, B2, …) get their own PRs.
+4. ⏳ **F3 — Community publishing** (🔒, function-ceiling): local-only staged vs
+   real shared pipeline; Home currently markets a community.
 
 ---
 
 ## Change log
 
 - **2026-07-20** — A1 + A2 implemented on `claude/audit-implementation-qa-a1hjzp`;
-  `npx vite build` + `npx eslint .` green. Status → **In review** (A1 also
-  🔒 Owner-validate). Central backlog + [testing ledger](TESTING-LEDGER.md)
-  established. A3, A1-behaviour, merge cadence, F3 escalated to owner.
+  `npx vite build` + full-tree `npx eslint .` green (0 errors; 0 new warnings from
+  the 4 changed files). Committed `cc12d20` + pushed. Central backlog +
+  [testing ledger](TESTING-LEDGER.md) established. A3, A1-behaviour, merge cadence,
+  F3 escalated to owner.
+- **2026-07-20** — Independent gates kicked off on A1/A2: code review, security
+  review, QA (specialist agents). **Owner decisions:** A3 → **thin-but-true**
+  (own PR after A1/A2); merge cadence → **A1+A2 as one focused PR**. A5 unblocked.
+  A1 in-context-signup 🔒 validation deferred to present with review/QA results.
+- **2026-07-21** — Independent gates **completed. Security ✅ clean · Code ✅
+  approve-with-nits · QA ⚠️ PASS-WITH-FOLLOW-UPS.** QA Q1 (HIGH) proved the
+  mid-action checkout intent is *discarded*, not deferred — **corrected** the
+  backlog's inaccurate "fire-and-forget completes" note and Escalation #2. Applied
+  **Q3** (onboarding focus management) + **LOW-3** (comment); **declined LOW-1**
+  (HVZ noise). Added **A6** (Firestore onboarding-truth + resume-target + routing-
+  dedupe). A1 → **🔒 Owner-validate**; awaiting founder sign-off + Escalation #2
+  decision, then the focused Slice-A PR. Build + lint green; live ledger rows ⏳.
