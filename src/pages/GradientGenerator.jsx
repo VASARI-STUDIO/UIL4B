@@ -16,8 +16,10 @@ import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 
 const GRAD_TYPES = ['Linear', 'Radial', 'Conic']
 
-// Starter presets (the 4×2 grid). Explicit hex so the preview is vivid
-// regardless of the user's current palette.
+// Starter presets (the 4×4 grid). Explicit hex so the preview is vivid
+// regardless of the user's current palette. A spread of moods — vivid,
+// muted, warm, cool, mono — and all three gradient types (Linear / Radial /
+// Conic) so the grid doubles as a tour of what the tool can build.
 const PRESETS = [
   { n: 'Nebula', type: 'Conic', angle: 90, stops: [{ color: '#7C3AED', position: 0 }, { color: '#DB2777', position: 50 }, { color: '#F59E0B', position: 100 }] },
   { n: 'Aqua', type: 'Linear', angle: 120, stops: [{ color: '#0EA5E9', position: 0 }, { color: '#22D3EE', position: 100 }] },
@@ -27,6 +29,14 @@ const PRESETS = [
   { n: 'Graphite', type: 'Linear', angle: 135, stops: [{ color: '#1F2937', position: 0 }, { color: '#4B5563', position: 100 }] },
   { n: 'Peach', type: 'Linear', angle: 90, stops: [{ color: '#FB7185', position: 0 }, { color: '#FDBA74', position: 100 }] },
   { n: 'Mono', type: 'Linear', angle: 180, stops: [{ color: '#0F172A', position: 0 }, { color: '#64748B', position: 100 }] },
+  { n: 'Sunset', type: 'Linear', angle: 60, stops: [{ color: '#F97316', position: 0 }, { color: '#DB2777', position: 55 }, { color: '#7C3AED', position: 100 }] },
+  { n: 'Lagoon', type: 'Linear', angle: 135, stops: [{ color: '#0D9488', position: 0 }, { color: '#0EA5E9', position: 100 }] },
+  { n: 'Grape', type: 'Linear', angle: 150, stops: [{ color: '#7E22CE', position: 0 }, { color: '#DB2777', position: 100 }] },
+  { n: 'Citrus', type: 'Linear', angle: 90, stops: [{ color: '#FACC15', position: 0 }, { color: '#65A30D', position: 100 }] },
+  { n: 'Twilight', type: 'Linear', angle: 200, stops: [{ color: '#0F172A', position: 0 }, { color: '#4338CA', position: 55 }, { color: '#DB2777', position: 100 }] },
+  { n: 'Aurora', type: 'Conic', angle: 140, stops: [{ color: '#22D3EE', position: 0 }, { color: '#818CF8', position: 45 }, { color: '#4ADE80', position: 100 }] },
+  { n: 'Bloom', type: 'Radial', angle: 90, stops: [{ color: '#FDE68A', position: 0 }, { color: '#FB7185', position: 60 }, { color: '#BE185D', position: 100 }] },
+  { n: 'Ocean', type: 'Radial', angle: 90, stops: [{ color: '#38BDF8', position: 0 }, { color: '#1E3A8A', position: 100 }] },
 ]
 
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -175,6 +185,38 @@ export default function GradientGenerator({ onCopy, toast }) {
     setActiveStop(0)
   }, [])
 
+  // Valid hex colours in the live Palette Builder palette — feeds the
+  // "From palette" button (needs 2+ to build a gradient).
+  const paletteHexes = useMemo(
+    () => (design?.palette?.colors || []).filter(c => /^#[0-9a-f]{6}$/i.test(c || '')),
+    [design?.palette?.colors]
+  )
+  const canRandomFromPalette = paletteHexes.length >= 2
+
+  // Like Random, but samples the user's OWN palette instead of random hex, so
+  // the result always sits inside their brand colours. Fisher–Yates shuffle →
+  // take 2–3 → spread evenly → random type/angle. Falls back to fully-random
+  // if the palette can't make a gradient (guarded by canRandomFromPalette).
+  const randomiseFromPalette = useCallback(() => {
+    const pool = (design?.palette?.colors || []).filter(c => /^#[0-9a-f]{6}$/i.test(c || ''))
+    if (pool.length < 2) { randomise(); return }
+    const shuffled = [...pool]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    const n = Math.min(shuffled.length, 2 + Math.floor(Math.random() * 2)) // 2–3
+    const picked = shuffled.slice(0, n)
+    setStops(picked.map((color, i) => ({
+      color: color.toUpperCase(),
+      position: Math.round((i / (n - 1)) * 100),
+    })))
+    setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
+    setAngle(Math.round(Math.random() * 360))
+    setActiveStop(0)
+    toast?.('Random gradient from your palette')
+  }, [design?.palette?.colors, randomise, toast])
+
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
 
   // ── Import colours: the live Palette Builder palette + saved projects ──
@@ -295,6 +337,17 @@ export default function GradientGenerator({ onCopy, toast }) {
         <div className="ggn-head-actions">
           <button type="button" className="ggn-btn ggn-btn-accent" onClick={randomise}>
             <ShuffleIcon size={15} /> Random
+          </button>
+          <button
+            type="button"
+            className="ggn-btn ggn-btn-ghost"
+            onClick={randomiseFromPalette}
+            disabled={!canRandomFromPalette}
+            title={canRandomFromPalette
+              ? 'Build a random gradient from your current palette'
+              : 'Add 2+ colours in the Palette Builder to use this'}
+          >
+            <ShuffleIcon size={15} /> From palette
           </button>
           <button type="button" className="ggn-btn ggn-btn-ghost" onClick={reset}>Reset</button>
         </div>
