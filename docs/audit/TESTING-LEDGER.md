@@ -117,6 +117,7 @@ Localhost headless-Chromium keyboard smoke against the real bundle (11/11).
 | Focused skip link **slides on-screen** (above PillNav z-index) | Smoke | ✅ | real-Tab focus → `top=8` (programmatic `.focus()` doesn't fire `:focus` in headless — measured after a genuine Tab) |
 | **Enter** on the skip link moves focus to `#main` | Smoke | ✅ | `document.activeElement.id === 'main'` |
 | Reduced-motion honoured (transition suppressed) | Static | ✅ | `@media(prefers-reduced-motion:reduce){.skip-link{transition:none}}` |
+| **Dark-theme AA contrast** on the skip link (QA-1 fix) | Static | ✅ | Background `var(--brand)` (#3B82F6, 3.68:1 on white — failed AA-normal) → `var(--accent-strong)` (#2563EB dark / #1D4ED8 light, both ≥5:1). Fixed post-QA. |
 | Build + lint (6 changed files) | Auto | ✅ | `npx vite build` ✓; `eslint` on the 6 files 0 errors/0 new warnings |
 
 ### B2 · Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS`
@@ -164,4 +165,5 @@ Changes touch the **auth flow (HVZ)** — regressions to actively re-verify:
 | — | A3, A5 | Independent code review + QA | code-reviewer / qa | ⏳ pending (per protocol — implementer is not the sole approver) |
 | — | A3, A5 | Founder eyes on deployed preview | Founder | ⏳ with the A3 slice review |
 | 2026-07-21 | C1, B2 | Self build + lint (6 files) + **localhost headless-Chromium keyboard smoke** (C1 11/11) + A3/A5 regression re-run (8/8) | PM (implementation + verification) | ✅ build ✓ · lint 0/0 · **C1 smoke 11/11 · no regression** — client-only; independent review/QA next |
-| — | A3, A5, C1, B2 | Independent code review + QA on the unmerged branch diff | code-reviewer / qa | ⏳ running before the merge PR |
+| — | A3, A5, C1, B2 | Independent code review + QA on the unmerged branch diff | code-reviewer / qa | ✅ **PASS** — review: Approve (0 crit/high/med); QA: PASS-with-follow-ups (0 P0/P1). QA-1 (dark-theme skip-link contrast) fixed in-branch; QA-2/3/4 logged as follow-ups below. |
+| 2026-07-21 | C1 | QA-1 contrast fix re-verified (build + token math) | PM | ✅ build ✓ · `--accent-strong` ≥5:1 both themes · behaviour-neutral (background token only) |

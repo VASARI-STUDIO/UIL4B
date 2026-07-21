@@ -1768,7 +1768,7 @@ img,svg,video{max-width:100%;height:auto}
 /* Skip-to-content link — offscreen until keyboard focus, then it slides in over
    everything (above the fixed PillNav's z-index:120). Mouse users never see it;
    keyboard users get a one-Tab bypass of the nav (WCAG 2.4.1). */
-.skip-link{position:fixed;top:8px;left:8px;z-index:200;transform:translateY(calc(-100% - 16px));padding:10px 16px;border-radius:var(--radius-s);background:var(--brand);color:var(--accent-fg);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-decoration:none;box-shadow:0 8px 24px -8px rgba(0,0,0,.4);transition:transform .18s ease}
+.skip-link{position:fixed;top:8px;left:8px;z-index:200;transform:translateY(calc(-100% - 16px));padding:10px 16px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-decoration:none;box-shadow:0 8px 24px -8px rgba(0,0,0,.4);transition:transform .18s ease}
 .skip-link:focus{transform:translateY(0);outline:2px solid var(--accent-fg);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.skip-link{transition:none}}
 .plans-page{max-width:1120px}

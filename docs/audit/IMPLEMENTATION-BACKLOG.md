@@ -234,7 +234,8 @@ is no longer part of A6.)*
 | ID | Item | Effort | Status |
 |---|---|:--:|---|
 | **B1** | Triage ~23 orphaned pages: per page re-wire or delete | L | `Backlog` (depends on A3) |
-| **B2** | Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS` for removed paths | S | **In QA** — 7 redirect-only keys removed from both maps (`/dashboard`, `/resources`, `/docs-*`); redirect routes kept. Build ✅ / lint ✅ |
+| **B2** | Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS` for removed paths | S | **QA ✅ → merging** — 7 redirect-only keys removed from both maps (`/dashboard`, `/resources`, `/docs-*`); redirect routes kept. Independent review Approve + QA PASS. Build ✅ / lint ✅. Merge via PR. |
+| **B3** | Add `/learn` to `PAGE_TITLES`/`PAGE_DESCRIPTIONS` + prune stale `sitemap.xml` redirect URLs | S | `Backlog` — QA-3/QA-4 follow-ups (pre-existing, adjacent to B2). `/learn` is live but has no title/description entry (falls back to generic); `sitemap.xml` still lists 6 redirect-only `/docs-*` + `/resources` URLs the audit now documents as redirect-only. SEO-owner follow-up. |
 | **B3** | Resolve `/color` landing-vs-studio ambiguity | M | `Backlog` |
 | **B4** | De-emphasise "Soon" groups in Create mega-menu | S | `Backlog` |
 
@@ -242,7 +243,8 @@ is no longer part of A6.)*
 
 | ID | Item | Effort | Status |
 |---|---|:--:|---|
-| **C1** | Skip-to-content link → `<main id="main">` (2.4.1) | S | **In QA** — one skip link (App shell) + `id="main"` on every layout's content-start; localhost keyboard smoke 11/11 (Tab→skip visible, Enter→#main). Build ✅ / lint ✅ |
+| **C1** | Skip-to-content link → `<main id="main">` (2.4.1) | S | **QA ✅ → merging** — independent review Approve + QA PASS (0 P0/P1). QA-1 (dark-theme skip-link contrast, `--brand`→`--accent-strong`) fixed in-branch. Localhost keyboard smoke 11/11. Build ✅ / lint ✅. Merge to `main` via PR. |
+| **C1a** | Skip target should be a `<main>` **landmark**, not `<header id="main">` (QA-2) | M | `Backlog` — QA-2 follow-up. Home/ColorLanding/SurfaceLanding tag the hero `<header>` with `id="main"`; WCAG 2.4.1 (G1) is met + keyboard bypass verified, but SR landmark-nav finds no `<main>` on those 4 routes. Wrap hero+body in `<main id="main">`. Pre-existing structural gap; deferred (restructures 3 pages → own review/QA). |
 | **C2** | Contrast pass, both themes (1.4.3) | M | `Backlog` |
 | **C3** | Keyboard/AT test of mega-menu (4.1.2) | M | `Backlog` (needs running app) |
 | **C4** | Target-size audit `ui-pill-sm` + icon-only (2.5.8) | S | `Backlog` |
@@ -309,6 +311,15 @@ must not pick a direction unilaterally here.
 
 ## Change log
 
+- **2026-07-21** — **A3/A5 + C1 + B2 independent gates completed.** Code review:
+  **Approve** (0 crit/high/med; 3 LOW nits deferred). Independent QA: **PASS**
+  (0 P0/P1). Two P2s surfaced: **QA-1** (dark-theme skip-link contrast — new
+  code) **fixed in-branch** (`.skip-link` background `var(--brand)`→
+  `var(--accent-strong)`, now ≥5:1 both themes); **QA-2** (skip target is a
+  `<header>`, not a `<main>` landmark — pre-existing, WCAG G1 still met) logged
+  as **C1a**. Two P3 SEO gaps (missing `/learn` metadata; stale `sitemap.xml`
+  redirect URLs) logged as **B3**. C1 + B2 → **QA ✅ → merging**; A3/A5 remain
+  in QA for the founder page-flip decision. Rebuilt green after the QA-1 fix.
 - **2026-07-20** — A1 + A2 implemented on `claude/audit-implementation-qa-a1hjzp`;
   `npx vite build` + full-tree `npx eslint .` green (0 errors; 0 new warnings from
   the 4 changed files). Committed `cc12d20` + pushed. Central backlog +
