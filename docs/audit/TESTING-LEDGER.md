@@ -19,6 +19,38 @@ Legend: ✅ pass · ⏳ pending · 🔒 owner-gated · — n/a
 
 ---
 
+## Running-build smoke (localhost, headless Chromium)
+
+The production build was served with `vite preview` on `127.0.0.1:4173` and driven
+with headless Chromium (Playwright). This exercises the **real bundled app** and
+**live React Router**, so it upgrades the riskiest structural claim — the
+generalized Q1 fix (`LoginRoute` stash) — from static review to **running-app
+evidence**. It does **not** reach Firebase/Google/Stripe (see egress note below),
+so the auth-completion and resume-consume halves stay ⏳.
+
+| Check | Result | Evidence |
+|---|:--:|---|
+| App boots + renders at `/`, auth resolves logged-out | ✅ | `rootTextLen=856`; no app-level console errors (network/Firebase filtered) |
+| `RequireAuth` `/checkout?plan=yearly` (logged out) → `/login` | ✅ | landed `pathname === '/login'`, modal mounted |
+| **`LoginRoute` stashes `/checkout` intent** (NEW code) | ✅ | `sessionStorage['vs-resume-after-onboarding'] === '/checkout'` |
+| **`LoginRoute` stashes `/projects` intent** (generality) | ✅ | stash `=== '/projects'` on a second protected route |
+| Direct `/login` (no `from`) writes **no** stash (`from=/home` guard) | ✅ | stash `=== null` |
+
+> **Boot 404 (benign):** one request 404s on boot. It is an **egress-blocked
+> external resource** (Firebase/googleapis/analytics), not a code defect — proven
+> by construction: the app rendered content and all routing assertions passed,
+> which a broken JS chunk would have prevented.
+
+> **⛔ Egress note — live-preview + Firebase/Google/Stripe verification is BLOCKED
+> in this session.** The Vercel preview
+> (`uil4b-git-claude-audit-implementation-qa-a1hjzp-…vercel.app`) and Google/Firebase
+> hosts return **403 from the org egress proxy** (policy denial — not retried or
+> routed around, per environment rules). Every row still marked ⏳/🔒 below needs
+> a running app **with authenticated Firebase**, which only the founder (or a
+> non-egress-blocked environment) can drive.
+
+---
+
 ## Per-item verification
 
 ### A1 · Onboarding reachable for new sign-ups &nbsp;🔒
@@ -37,7 +69,7 @@ Legend: ✅ pass · ⏳ pending · 🔒 owner-gated · — n/a
 | Independent QA | QA | ⚠️ | PASS-with-follow-ups; Q1 (HIGH, checkout intent discarded) + Q3 (a11y) raised |
 | Keyboard-only signup path lands focus predictably | a11y (C5/Q3) | ✅ | **Fixed** — `Onboarding.jsx` focuses step heading on mount + step change. Live AT pass still ⏳ |
 | Mid-action **"Upgrade to Pro"** signup → onboarding → resumes `/checkout` | Manual (Q1) | ⏳ | **Fixed in code** — `ProUpgradeModal.goCheckout` stashes `vs-resume-after-onboarding`; `skip`/checkout-fail resume there. Live-verify on preview |
-| Mid-action **`/login` `from`** signup (e.g. `/checkout?plan=` link) → onboarding → resumes `from` | Manual (Q1) | ⏳ | `LoginRoute` stashes non-`/home` `from`; onboarding resumes there. Live-verify |
+| Mid-action **`/login` `from`** signup (e.g. `/checkout?plan=` link) → onboarding → resumes `from` | Manual (Q1) | ⏳ | **Stash-write half ✅ verified on local build** (see running-build smoke: `LoginRoute` stashes `/checkout` **and** `/projects`, direct `/login` writes none). The onboarding-**resume** half still needs authenticated Firebase → ⏳ live-verify |
 | Onboarding **"Start with Free"** after a mid-action signup → `/home` (intent dropped by explicit choice) | Manual (Q1) | ⏳ | `finishFree` clears the stashed target. Live-verify |
 | Unprompted signup (no stash) → onboarding finish → `/home` | Manual (Q1) | ⏳ | `takeResumeTarget()` returns null → `/home` fallback. Live-verify |
 | Owner validation of auth-flow change | 🔒 | 🔒 | Founder sign-off + live resume-path verify required before merge |
@@ -78,5 +110,7 @@ Changes touch the **auth flow (HVZ)** — regressions to actively re-verify:
 | 2026-07-21 | A1, A2 | Independent QA (static) | qa | ⚠️ PASS-with-follow-ups (Q1 HIGH, Q3 a11y) |
 | 2026-07-21 | A1 (Q3) | a11y focus fix build + lint | PM (implementation) | ✅ green, 0 new warnings |
 | 2026-07-21 | A1 (Q1) | Resume-target build + lint (Escalation #2 → B) | PM (implementation) | ✅ green, 0 new warnings |
-| — | A1, A2 | Live-app QA (running Firebase) | — | ⏳ all "Manual" rows above (incl. resume-path) |
-| — | A1 | Owner validation (🔒 auth) + live resume-path verify | Founder | 🔒 pending |
+| 2026-07-21 | A1 (Q1) | **Running-build smoke** (localhost `vite preview`, headless Chromium) — `LoginRoute` stash producer + `RequireAuth` redirect | PM (verification) | ✅ 5/5 checks pass (stash-write half of Q1 now running-app evidence) |
+| 2026-07-21 | A1 (HVZ) | **Founder Human-Validation-Zone sign-off** on the auth-flow change ("continue, you have approval for HV zones") | Founder | ✅ HVZ gate approved — proceed toward merge |
+| — | A1, A2 | Live-app QA (running Firebase) | — | ⏳ auth-completion + resume-consume rows — **BLOCKED by session egress 403** (founder-drivable only) |
+| — | A1 | Owner validation (🔒 auth) — live resume-path verify on preview | Founder | 🔒 pending — egress-blocked here; needs founder preview smoke |

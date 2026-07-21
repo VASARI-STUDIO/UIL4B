@@ -49,7 +49,7 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
 
 | ID | Src | Item | Effort | Zone | Status |
 |---|---|---|:--:|:--:|---|
-| **A1** | P0-1 | Make onboarding reachable for new sign-ups | M | 🔒 | **🔒 Owner-validate** (review + QA ✅; awaiting founder + live verify) |
+| **A1** | P0-1 | Make onboarding reachable for new sign-ups | M | 🔒 | **🔒 Owner-validate** — HVZ sign-off ✅ (founder); stash producer ✅ (local build). **Blocker:** live preview + Firebase verify is egress-403 here → founder-drivable only |
 | **A2** | P0-2 | Onboarding nav `/dashboard` → `/home` (×3) | S | — | **In QA** (static ✅; live exits ⏳ with A1) |
 | **A3** | P1-3 | Reconcile Discover/Learn — **decided: thin-but-true** (un-hide nav, surface built pages) | M | — | **Ready** (own PR, after A1/A2 merges) |
 | **A4** | P1-4 | Replace `/home` grey placeholders with real screenshots | M | — | **Blocked** (needs captured assets — owner/design) |
@@ -135,9 +135,14 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
     `getAdditionalUserInfo` catch would add noise to an **HVZ** file for a path that
     already fails safe (a throw just means "don't flag onboarding"). Kept HVZ churn
     minimal. **LOW-2** (DRY extract of the two Google gates, ~2 lines) skipped.
-- **Still to do:** founder HVZ sign-off + Escalation #2 decision (present with the
-  full review + QA package) · live-app verification of the ⏳ ledger rows · then the
-  focused Slice-A PR.
+- **Done since:** founder HVZ sign-off ✅ ("continue, you have approval for HV
+  zones") · Escalation #2 → option B resolved · **running-build smoke on localhost
+  ✅** (stash producer + `RequireAuth` redirect — 5/5, see ledger).
+- **Still to do (BLOCKED here):** live-preview + Firebase verification of the ⏳
+  ledger rows (auth-completion + resume-consume) — the Vercel preview and Firebase
+  return **403 from this session's egress proxy**, so this half is **founder-drivable
+  only**. Merge decision escalated to founder (run the preview smoke checklist, or
+  authorize merge-without-live-verify). The Slice-A PR (#161) is open with CI green.
 
 ### A2 · Onboarding nav target `/dashboard` → `/home`
 - **Source:** P0-2. **Evidence:** `Onboarding.jsx:75` (`finishFree`), `:84`
@@ -297,3 +302,17 @@ must not pick a direction unilaterally here.
   MED-1/2 + Q4 only). `npx vite build` ✓ + `eslint` on the 3 changed files clean,
   0 new warnings. Opening the focused Slice-A PR next; auth (HVZ) still gated on a
   live smoke-test of the resume path on the Vercel preview + founder validation.
+- **2026-07-21** — **Slice-A PR #161 opened, CI green.** Founder granted **HVZ
+  sign-off** ("continue, you have approval for HV zones") — recorded in the ledger
+  sign-off log. Ran **maximum honest verification from this container:** built the
+  app and served it on localhost, then drove headless Chromium against the real
+  bundle — **5/5 running-build smoke checks pass** (app boots; `RequireAuth`
+  `/checkout`→`/login`; **`LoginRoute` stashes `/checkout` and `/projects`**; direct
+  `/login` writes no stash). This upgrades the **stash-producer** half of Q1 from
+  static review to running-app evidence. **BLOCKED:** the Vercel preview and
+  Firebase/Google hosts return **403 from this session's egress proxy** (org policy —
+  not retried/routed around), so the **auth-completion + resume-consume** halves and
+  the whole Google/Stripe path cannot be driven here. **Merge decision escalated to
+  founder:** run a short preview smoke checklist and confirm green (then PM merges),
+  or explicitly authorize merge-without-live-verify. Not merging auth to production
+  unilaterally — the committed live-preview gate can't be met from this container.
