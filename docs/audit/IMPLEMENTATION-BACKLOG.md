@@ -54,7 +54,7 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
 | **A3** | P1-3 | Reconcile Discover/Learn — **decided: thin-but-true** (un-hide nav, surface built pages) | M | — | **Ready** (own PR, after A1/A2 merges) |
 | **A4** | P1-4 | Replace `/home` grey placeholders with real screenshots | M | — | **Blocked** (needs captured assets — owner/design) |
 | **A5** | — | Surface `GradientGallery` under Discover nav | S | — | **Ready** (rolls into A3 slice) |
-| **A6** | QA/rev | Firestore onboarding-truth + resume-target + routing-dedupe (MED-1/2, Q1, Q4) | M | 🔒 | **Backlog** (post-A1-merge design pass) |
+| **A6** | QA/rev | Firestore onboarding-truth + routing-dedupe (MED-1/2, Q4) | M | 🔒 | **Backlog** (post-A1-merge design pass; Q1 resume-target shipped in this PR) |
 
 ### A1 · Onboarding reachable for new sign-ups &nbsp;🔒
 - **Source:** P0-1 (`04-critical-issues.md`). **Evidence:** `AuthGate.jsx:21,40`;
@@ -77,19 +77,22 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
   `vs-onboarded` and lands `/home`; returning login → `/home`, never re-sees
   onboarding. Storage-blocked browsers still treat `catch` as onboarded
   (`App.jsx:291` unchanged). ✅ build + lint green.
-- **Owner-validate note (🔒 + regression to confirm) — CORRECTED per QA (Q1/Q2):**
-  a brand-new user who signs up *mid-action* is now routed to `/onboarding`, and the
-  triggering action does **not** silently complete, as an earlier draft of this note
-  wrongly claimed. Two cases:
+- **Owner-validate note (🔒 + regression to confirm) — UPDATED per Escalation #2 →
+    option B:** a brand-new user who signs up *mid-action* is routed to `/onboarding`.
+    The triggering action does **not** silently complete on that visit, but the
+    resume-target (below) now preserves the user's destination through onboarding:
+  - **"Upgrade to Pro"** (`ProUpgradeModal.goCheckout`) and any protected-route
+    `/login` **`from`**: the intended destination is stashed in
+    `sessionStorage['vs-resume-after-onboarding']` and onboarding resumes there on
+    finish (skip / checkout-failure) — so the direct checkout intent is **no longer
+    discarded**. Choosing Pro in onboarding fulfils it directly via `finishPro`.
+    ✅ **fixed in this PR** (was Q1). Live-verify on the preview.
   - **Save/submit prompts** (palette "Save & share" / "submit to community", icon
     "save"): on login these only *open a picker/panel* — nothing is persisted yet —
     so the onboarding redirect pre-empts the panel before the user can save. No data
-    loss, but the save they signed up to make doesn't happen on that visit.
-  - **"Upgrade to Pro"** (`ProUpgradeModal.goCheckout`): its `navigate('/checkout')`
-    races the onboarding redirect and is **discarded** — the high-intent user lands
-    on `/onboarding` instead of Stripe. They can still reach Pro via onboarding's
-    pricing step (`finishPro`), so they are re-routed, not stranded — but the direct
-    checkout intent is dropped. See [Escalations #2](#escalations).
+    loss, but the save they signed up to make doesn't happen on that visit. Not a
+    navigation, so it's outside the resume-target scope; tracked as a picker-reopen
+    UX follow-up, not a data-loss bug. See [Escalations #2](#escalations).
 - **Review results (2026-07-20):**
   - **Security review — ✅ clean.** 0 crit/high/med; 1 low (the `vs-onboarded`
     localStorage flag is client-writable — pre-existing, UX not security).
@@ -114,7 +117,14 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
     → a genuine regression. Needs a deliberate design pass → **A6**.
   - **MED-2** — `skip()` writes only localStorage, not Firestore; not durable
     cross-device. Only functionally meaningful *with* MED-1's Firestore routing.
-- **Nits handled in this PR:**
+- **Follow-ups handled in this PR:**
+  - **Q1 (resume-target, HIGH) — ✅ applied** (Escalation #2 → option B). Mid-action
+    signups no longer lose their destination: `ProUpgradeModal.goCheckout` and the
+    `/login` `LoginRoute` stash the intended target in
+    `sessionStorage['vs-resume-after-onboarding']`, and `Onboarding.finishFree/
+    finishPro/skip` read + clear it and resume there instead of hardcoding `/home`
+    (Free = explicit decline → `/home`; Pro → `checkout()` directly; skip /
+    checkout-failure → stashed target). Build + lint clean, 0 new warnings.
   - **Q3 (a11y) — ✅ applied.** `Onboarding.jsx` moves focus to the step heading
     (`ref` + `tabIndex={-1}` + `useEffect` on `step`) so keyboard/AT users aren't
     dropped to `<body>` on the redirect; pre-satisfies C5's onboarding-focus case.
@@ -162,9 +172,11 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
   unlinked. Now that A3 is decided **thin-but-true**, this is just one of the nav
   entries wired in that slice — no longer a standalone blocked item.
 
-### A6 · Onboarding-truth + resume-target follow-up — **Backlog (post-A1-merge)**
+### A6 · Onboarding-truth + routing-dedupe follow-up — **Backlog (post-A1-merge)**
 Deliberately deferred out of the focused A1 PR (each needs a design pass or would
-bounce legacy users if done naively). Collected from the independent review + QA:
+bounce legacy users if done naively). Collected from the independent review + QA.
+*(Q1 resume-target was pulled forward into this PR per Escalation #2 → option B and
+is no longer part of A6.)*
 - **MED-1 (review)** — abandon `/onboarding` (no Skip/Finish) then return via
   `login()` on `/home`/a deep link (not `/`) → never re-routed. Proper fix consults
   a Firestore onboarding-completion truth, **but** the naive version bounces legacy
@@ -172,12 +184,6 @@ bounce legacy users if done naively). Collected from the independent review + QA
   back-fill plan first.
 - **MED-2 (review)** — `skip()` writes only `localStorage`, not Firestore; not
   durable cross-device. Only meaningful once MED-1's Firestore routing exists.
-- **Q1 resume-target (QA, HIGH)** — give the onboarding router an intended
-  destination: on a mid-action signup, stash the target (e.g.
-  `sessionStorage['vs-resume-after-onboarding'] = '/checkout'`) and have
-  `Onboarding.finishFree/finishPro/skip` read + clear it instead of hardcoding
-  `/home`. Restores direct checkout/save intent after onboarding. **Gated on the
-  Escalation #2 decision** (may be unnecessary if the founder accepts option A).
 - **Q4 routing-dedupe (QA, LOW)** — the `/` root route still has its own
   `vs-onboarded` onboarding check (`App.jsx`) parallel to the new `pendingOnboarding`
   effect. Harmless today; collapse onto one source of truth once A1 is stable to
@@ -242,20 +248,19 @@ must not pick a direction unilaterally here.
 1. ✅ **A3 — Discover/Learn strategy — RESOLVED 2026-07-20: thin-but-true.**
    Un-hide nav and surface the already-built orphaned pages as a first real slice;
    back-end (if any) must fit the 1 free serverless slot. Unblocks A5 + parts of B1.
-2. ⏳ **A1 in-context-signup behaviour (🔒) — OPEN, sharpened by QA Q1.** A brand-new
-   user who signs up *mid-action* is pulled into onboarding, and the triggering
-   action does **not** complete: save panels are pre-empted before they open, and an
-   "Upgrade to Pro" click has its `/checkout` navigation **discarded** (the user
-   reaches Pro only via onboarding's own pricing step). Decision needed:
-   - **(A) Accept for A1 [recommended].** Onboarding still upsells Pro, so no one is
-     stranded. Ship the focused PR as-is; log the direct-intent *resume-target* as
-     A6. Thinnest — no extra HVZ code now.
-   - **(B) Build the resume-target now.** Stash the intended destination and route
-     there on onboarding finish (the A6 work, pulled forward). Honours explicit
-     intent but adds scope to the auth PR.
-   - **(C) High-intent bypass.** Let "Upgrade to Pro" sign-ups skip onboarding
-     straight to checkout (max conversion on the pay-now moment; they never onboard).
-   Presented to the founder with the full review + QA package for HVZ sign-off.
+2. ✅ **A1 in-context-signup behaviour (🔒) — RESOLVED 2026-07-21: build the
+   resume-target now (option B).** A brand-new user who signs up *mid-action* is
+   pulled into onboarding; previously the triggering intent (an "Upgrade to Pro"
+   `/checkout` navigation, or any protected-route `from`) was **discarded**. Owner
+   chose to honour the explicit intent rather than accept the drop (A) or bypass
+   onboarding entirely (C). **Implemented in this PR:** the intended destination is
+   stashed in `sessionStorage['vs-resume-after-onboarding']` at the two mid-action
+   entry points — `ProUpgradeModal.goCheckout` (`→ /checkout`) and the `/login`
+   launcher `LoginRoute` (the protected-route `from`, generalising beyond checkout)
+   — and `Onboarding.finishFree/finishPro/skip` read + clear it and resume there
+   instead of hardcoding `/home` (Free is an explicit decline → `/home`; Pro fulfils
+   via `checkout()` directly; skip / checkout-failure fall back to the stashed
+   target). Live-verify the resume path on the Vercel preview before merge.
 3. ✅ **Merge cadence — RESOLVED 2026-07-20:** land **A1+A2 as one focused PR** to
    `main` after independent review + QA + owner validation of A1. Later slices
    (A3 thin-but-true, C1, B2, …) get their own PRs.
@@ -283,3 +288,12 @@ must not pick a direction unilaterally here.
   (HVZ noise). Added **A6** (Firestore onboarding-truth + resume-target + routing-
   dedupe). A1 → **🔒 Owner-validate**; awaiting founder sign-off + Escalation #2
   decision, then the focused Slice-A PR. Build + lint green; live ledger rows ⏳.
+- **2026-07-21** — **Escalation #2 → RESOLVED (option B): resume-target built.**
+  Founder chose to honour mid-action intent. Implemented the resume-target across
+  both mid-action entry points — `ProUpgradeModal.goCheckout` (`→/checkout`) and the
+  `/login` `LoginRoute` (protected-route `from`, generalised beyond checkout) stash
+  `sessionStorage['vs-resume-after-onboarding']`; `Onboarding.finishFree/finishPro/
+  skip` read + clear it and resume there. **Q1 pulled forward out of A6** (A6 now =
+  MED-1/2 + Q4 only). `npx vite build` ✓ + `eslint` on the 3 changed files clean,
+  0 new warnings. Opening the focused Slice-A PR next; auth (HVZ) still gated on a
+  live smoke-test of the resume path on the Vercel preview + founder validation.

@@ -14,8 +14,8 @@ Legend: ✅ pass · ⏳ pending · 🔒 owner-gated · — n/a
 
 | Check | Command | Result | When |
 |---|---|---|---|
-| Production build | `npx vite build` | ✅ built, no errors | 2026-07-21 (after A1+A2+Q3/LOW-3) |
-| Lint (whole tree) | `npx eslint .` | ✅ 0 errors — 34 warnings, **all pre-existing** (`set-state-in-effect` in Settings/search comps; `reauthenticate` deps + fast-refresh in untouched `AuthContext` fns). The 4 changed files (`AuthContext`, `App`, `AuthGate`, `Onboarding`) add **0** new warnings — re-verified after the Q3 focus fix + LOW-3 comment. | 2026-07-21 |
+| Production build | `npx vite build` | ✅ built, no errors | 2026-07-21 (after A1+A2+Q3/LOW-3 + Q1 resume-target) |
+| Lint (changed files) | `npx eslint <changed>` | ✅ 0 errors / 0 warnings on the changed files (`Onboarding`, `ProUpgradeModal`, `App`) — re-verified after the Q1 resume-target. Tree-wide `eslint .` remains 0 errors + 34 pre-existing warnings; the changed files add **0** new. | 2026-07-21 |
 
 ---
 
@@ -36,7 +36,11 @@ Legend: ✅ pass · ⏳ pending · 🔒 owner-gated · — n/a
 | Independent security review | Review | ✅ | Clean — 0 crit/high/med; 1 pre-existing low (`vs-onboarded` client-writable) |
 | Independent QA | QA | ⚠️ | PASS-with-follow-ups; Q1 (HIGH, checkout intent discarded) + Q3 (a11y) raised |
 | Keyboard-only signup path lands focus predictably | a11y (C5/Q3) | ✅ | **Fixed** — `Onboarding.jsx` focuses step heading on mount + step change. Live AT pass still ⏳ |
-| Owner validation of auth-flow change | 🔒 | 🔒 | Founder sign-off + Escalation #2 decision required before merge |
+| Mid-action **"Upgrade to Pro"** signup → onboarding → resumes `/checkout` | Manual (Q1) | ⏳ | **Fixed in code** — `ProUpgradeModal.goCheckout` stashes `vs-resume-after-onboarding`; `skip`/checkout-fail resume there. Live-verify on preview |
+| Mid-action **`/login` `from`** signup (e.g. `/checkout?plan=` link) → onboarding → resumes `from` | Manual (Q1) | ⏳ | `LoginRoute` stashes non-`/home` `from`; onboarding resumes there. Live-verify |
+| Onboarding **"Start with Free"** after a mid-action signup → `/home` (intent dropped by explicit choice) | Manual (Q1) | ⏳ | `finishFree` clears the stashed target. Live-verify |
+| Unprompted signup (no stash) → onboarding finish → `/home` | Manual (Q1) | ⏳ | `takeResumeTarget()` returns null → `/home` fallback. Live-verify |
+| Owner validation of auth-flow change | 🔒 | 🔒 | Founder sign-off + live resume-path verify required before merge |
 
 ### A2 · Onboarding nav `/dashboard` → `/home`
 
@@ -58,7 +62,7 @@ Changes touch the **auth flow (HVZ)** — regressions to actively re-verify:
 |---|---|---|---|:--:|
 | **R1** | Returning users bounced into onboarding | Flag keyed off *account-creation* event (`isNewUser`/`signup`); returning users never set it | Second login (email + Google) skips onboarding | ⏳ |
 | **R2** | Storage-blocked browsers wrongly forced to onboard | `App.jsx:291` unchanged — `catch` still treats user as onboarded; A1 adds no new localStorage read on the guard | Signup with storage blocked | ⏳ |
-| **R3** | In-context signup (save/upgrade/`AuthGate`) hijacked to onboarding | *By design* — flagged as owner-validate. **Corrected per QA Q1/Q2:** the pending action does **not** complete — save panels are pre-empted before they open, and "Upgrade to Pro"'s `/checkout` nav is discarded (user reaches Pro via onboarding's pricing step). No data loss; re-routed not stranded. Escalation #2. | Signup via "Upgrade to Pro": confirm user lands on `/onboarding` and can still reach Pro at the pricing step | 🔒 |
+| **R3** | In-context signup (save/upgrade/`AuthGate`) hijacked to onboarding | *By design* — flagged as owner-validate. **Escalation #2 → option B:** the checkout/`from` intent is **no longer discarded** — it's stashed in `vs-resume-after-onboarding` and onboarding resumes there (skip / checkout-fail) or fulfils Pro directly. Save panels are still pre-empted (picker-open, not persistence → no data loss; tracked as a UX follow-up, not resume-scope). | Signup via "Upgrade to Pro" **and** via a `/checkout?plan=` link: confirm `/onboarding`, then that skip / decline-to-checkout resumes to `/checkout` (not stranded on `/home`) | 🔒 |
 | **R4** | Cross-device onboarded user sees onboarding before Firestore sync | Unaffected — A1 doesn't force onboarding via localStorage guard; only the new-account flag routes | New device login of onboarded account → `/home` | ⏳ |
 | **R5** | `onboarding` loop (routed back after skip) | `clearPendingOnboarding()` fires before/at navigation; flag is one-shot React state (not persisted) | Skip onboarding → stays on `/home`, no bounce | ⏳ |
 
@@ -73,5 +77,6 @@ Changes touch the **auth flow (HVZ)** — regressions to actively re-verify:
 | 2026-07-21 | A1, A2 | Independent code review | code-reviewer | ✅ approve-with-nits |
 | 2026-07-21 | A1, A2 | Independent QA (static) | qa | ⚠️ PASS-with-follow-ups (Q1 HIGH, Q3 a11y) |
 | 2026-07-21 | A1 (Q3) | a11y focus fix build + lint | PM (implementation) | ✅ green, 0 new warnings |
-| — | A1, A2 | Live-app QA (running Firebase) | — | ⏳ all "Manual" rows above |
-| — | A1 | Owner validation (🔒 auth) + Escalation #2 | Founder | 🔒 pending |
+| 2026-07-21 | A1 (Q1) | Resume-target build + lint (Escalation #2 → B) | PM (implementation) | ✅ green, 0 new warnings |
+| — | A1, A2 | Live-app QA (running Firebase) | — | ⏳ all "Manual" rows above (incl. resume-path) |
+| — | A1 | Owner validation (🔒 auth) + live resume-path verify | Founder | 🔒 pending |

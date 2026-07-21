@@ -119,6 +119,14 @@ function LoginRoute() {
       else navigate(from, { replace: true })
       return
     }
+    // A brand-new sign-up completed from this launcher is intercepted into
+    // onboarding by AppInner, which would otherwise discard `from` (QA Q1).
+    // Stash the intended destination so onboarding can resume the user there;
+    // the /home default needs no stash, and the key is session-scoped and
+    // consumed only inside the onboarding flow (harmless for existing logins).
+    if (from && from !== '/home') {
+      try { sessionStorage.setItem('vs-resume-after-onboarding', from) } catch { /* ignore */ }
+    }
     openLogin({ reason: '', from }).then((u) => {
       if (gate && u) { window.close(); return }
       navigate(from, { replace: true })

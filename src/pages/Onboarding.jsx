@@ -5,6 +5,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice } from '../hooks/usePrices'
 
 const ONBOARDED_KEY = 'vs-onboarded'
+const RESUME_KEY = 'vs-resume-after-onboarding'
 
 const QUESTIONS = [
   {
@@ -74,6 +75,20 @@ export default function Onboarding() {
     try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
   }
 
+  // A mid-action sign-up (e.g. clicked "Upgrade to Pro" → created an account)
+  // is intercepted into onboarding by App.jsx, which would otherwise silently
+  // drop the user's original destination (QA Q1). The call site stashes that
+  // destination in sessionStorage; read + clear it here so a finishing user
+  // resumes there instead of the generic /home. Returns null when nothing was
+  // stashed (the common, unprompted-onboarding case).
+  const takeResumeTarget = () => {
+    try {
+      const t = sessionStorage.getItem(RESUME_KEY)
+      sessionStorage.removeItem(RESUME_KEY)
+      return t || null
+    } catch { return null }
+  }
+
   const choose = (qid, value) => {
     setAnswers(prev => ({ ...prev, [qid]: value }))
     setTimeout(() => setStep(s => s + 1), 160)
@@ -83,22 +98,31 @@ export default function Onboarding() {
 
   const finishFree = () => {
     persist()
+    // Explicit Free choice on the pricing step — drop any stashed checkout
+    // intent rather than pushing the user into a checkout they just declined.
+    takeResumeTarget()
     navigate('/home')
   }
 
   const finishPro = async () => {
     persist()
+    // Chose Pro here — checkout() fulfils the intent directly. Capture (and
+    // clear) the stashed target up front so the Stripe redirect can't leave a
+    // stale key; fall back to it only if checkout itself fails.
+    const resume = takeResumeTarget() || '/home'
     setBusy(true)
     try {
       await checkout(billing)
     } catch {
-      navigate('/home')
+      navigate(resume)
     }
   }
 
   const skip = () => {
     try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
-    navigate('/home')
+    // Skipping the survey shouldn't discard why they signed up — resume to the
+    // stashed destination (e.g. /checkout) when there is one.
+    navigate(takeResumeTarget() || '/home')
   }
 
   return (
