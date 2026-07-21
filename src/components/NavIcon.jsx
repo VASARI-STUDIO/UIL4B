@@ -61,6 +61,12 @@ const ICONS = {
       <path d="M4 20 20 4" />
     </>
   ),
+  'gradient-gallery': (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="2.5" />
+      <path d="M4 20 20 4" />
+    </>
+  ),
   contrast: (
     <>
       <circle cx="12" cy="12" r="8" />

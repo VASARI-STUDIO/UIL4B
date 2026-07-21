@@ -127,7 +127,7 @@ export default function Onboarding() {
 
   return (
     <div className="onb">
-      <div className="onb-card">
+      <div className="onb-card" id="main" tabIndex={-1}>
         <div className="onb-top">
           <div className="onb-brand">UIL4B</div>
           <button type="button" className="onb-skip" onClick={skip}>Skip</button>
