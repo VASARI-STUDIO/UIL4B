@@ -39,7 +39,7 @@ export const SECTIONS = [
   {
     id: 'learn',
     label: 'Learn',
-    home: '/docs',
+    home: '/learn',
     description: 'Docs, guides & design principles',
     // Open book icon.
     icon: (
@@ -55,9 +55,11 @@ export const SECTIONS = [
 const DISCOVER_EXACT = new Set(['/discover', '/resources', '/community'])
 const DISCOVER_PREFIXES = ['/discover/']
 
-// Routes that belong to Learn (docs, help, info). All DocsX routes use the
-// `/docs` prefix, plus the standalone `/docs` category dashboard.
-const LEARN_EXACT = new Set(['/docs', '/help', '/info'])
+// Routes that belong to Learn (the surface landing, docs, help, info). `/docs`
+// and the DocsX routes redirect to `/learn`, but they stay matched here so the
+// section switcher highlights Learn during the redirect hop as well as on the
+// landing itself.
+const LEARN_EXACT = new Set(['/learn', '/docs', '/help', '/info'])
 const LEARN_PREFIXES = ['/docs-', '/docs/']
 
 /**

@@ -103,10 +103,13 @@ export const CREATE_GROUPS = [
   },
 ]
 
-// Discover + Learn are blank landing shells in Phase 1: every menu entry routes
-// to the surface landing (which owns the honest "coming soon" messaging), so
-// there are no dead links and nothing claims to be live before it is.
+// Discover + Learn are landing shells in Phase 1: most menu entries route to the
+// surface landing (which owns the honest "coming soon" messaging), so there are
+// no dead links and nothing claims to be live before it is. The exception is the
+// Gradient Gallery — a real, curated browse surface — which is `soon: false` and
+// links straight to its live page, so it renders as a live card and menu row.
 export const DISCOVER_GROUPS = [
+  { id: 'gradient-gallery', label: 'Gradient Gallery', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
   { id: 'inspiration', label: 'Inspiration', desc: 'Community UI systems, Mobbin-style browsing.', route: '/discover', soon: true },
   { id: 'community-fonts', label: 'Community Fonts', desc: 'Pairings the community actually ships.', route: '/discover', soon: true },
   { id: 'community-prompts', label: 'Community Prompts', desc: 'Proven prompts, submitted and curated.', route: '/discover', soon: true },
@@ -223,6 +226,7 @@ function groupsToMenu(groups, spec) {
 }
 
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
+  { label: 'Browse', ids: ['gradient-gallery'] },
   { label: 'Community', ids: ['inspiration', 'community-fonts', 'community-prompts'] },
   { label: 'Your library', ids: ['curated', 'collections'] },
 ])

@@ -110,7 +110,7 @@ export default function Home() {
       <PillNav />
 
       {/* ── Hero ── */}
-      <header className="home-hero">
+      <header className="home-hero" id="main" tabIndex={-1}>
         <h1 className="home-hero-h1">
           <span className="home-hero-line"><span className="home-hero-line-in">No more tab hoarding.</span></span>
           <span className="home-hero-line"><span className="home-hero-line-in">Every design tool, one workspace.</span></span>
