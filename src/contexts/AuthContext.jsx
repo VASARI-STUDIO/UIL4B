@@ -4,6 +4,7 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  getAdditionalUserInfo,
   signOut,
   onAuthStateChanged,
   updateProfile as fbUpdateProfile,
@@ -97,6 +98,11 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [knownAccounts, setKnownAccounts] = useState(getKnownAccounts)
+  // Set true the moment a brand-new account is created (email signup or a
+  // first-time Google sign-in). Keyed off the account-creation event — never
+  // set for returning users — so the onboarding router can send new sign-ups to
+  // /onboarding exactly once without ever bouncing a returning user (AUDIT-A1).
+  const [pendingOnboarding, setPendingOnboarding] = useState(false)
   const profileRef = useRef(null)
 
   useEffect(() => {
@@ -177,7 +183,11 @@ export function AuthProvider({ children }) {
     const p = { ...DEFAULT_PROFILE, displayName: displayName || '', email }
     setCachedProfile(cred.user.uid, p)
     saveProfileToFirestore(cred.user.uid, p)
+    setPendingOnboarding(true)
+    return cred.user
   }, [])
+
+  const clearPendingOnboarding = useCallback(() => setPendingOnboarding(false), [])
 
   const logout = useCallback(async () => {
     await signOut(firebaseAuth)
@@ -189,7 +199,8 @@ export function AuthProvider({ children }) {
 
   const loginWithGoogle = useCallback(async () => {
     try {
-      await signInWithPopup(firebaseAuth, googleProvider)
+      const result = await signInWithPopup(firebaseAuth, googleProvider)
+      try { if (getAdditionalUserInfo(result)?.isNewUser) setPendingOnboarding(true) } catch { /* ignore */ }
       try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
     } catch (err) {
       if (err?.code === 'auth/configuration-not-found' || err?.code === 'auth/invalid-api-key' || err?.code === 'auth/api-key-not-valid') {
@@ -202,7 +213,8 @@ export function AuthProvider({ children }) {
   // Sign in with a Google ID token from Google Identity Services (One Tap).
   const loginWithGoogleCredential = useCallback(async (idToken) => {
     const credential = GoogleAuthProvider.credential(idToken)
-    await signInWithCredential(firebaseAuth, credential)
+    const result = await signInWithCredential(firebaseAuth, credential)
+    try { if (getAdditionalUserInfo(result)?.isNewUser) setPendingOnboarding(true) } catch { /* ignore */ }
     try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
   }, [])
 
@@ -296,6 +308,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, userProfile, loading,
+      pendingOnboarding, clearPendingOnboarding,
       login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,
       knownAccounts, switchAccount, removeKnownAccount,
       updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,

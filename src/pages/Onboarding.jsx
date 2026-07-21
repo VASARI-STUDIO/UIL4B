@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice } from '../hooks/usePrices'
 
 const ONBOARDED_KEY = 'vs-onboarded'
+const RESUME_KEY = 'vs-resume-after-onboarding'
 
 const QUESTIONS = [
   {
@@ -49,6 +50,17 @@ export default function Onboarding() {
   const [billing, setBilling] = useState('yearly')
   const [busy, setBusy] = useState(false)
   const proPrice = useProPrice()
+  const headingRef = useRef(null)
+
+  // New sign-ups now reach /onboarding via a `navigate(..., {replace:true})` that
+  // manages no focus of its own (App.jsx), so a keyboard/AT user would be dropped
+  // to <body> with no announcement. Move focus to the step heading on mount and on
+  // every step change so the flow is keyboard-navigable and screen-reader-announced
+  // (audit C5 / QA Q3). The heading carries tabIndex={-1} to be programmatically
+  // focusable without becoming a tab stop.
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [step])
 
   // Onboarding only makes sense for a signed-in user. While auth is still
   // resolving we show the flow shell; if definitively signed out, go to login.
@@ -63,6 +75,20 @@ export default function Onboarding() {
     try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
   }
 
+  // A mid-action sign-up (e.g. clicked "Upgrade to Pro" → created an account)
+  // is intercepted into onboarding by App.jsx, which would otherwise silently
+  // drop the user's original destination (QA Q1). The call site stashes that
+  // destination in sessionStorage; read + clear it here so a finishing user
+  // resumes there instead of the generic /home. Returns null when nothing was
+  // stashed (the common, unprompted-onboarding case).
+  const takeResumeTarget = () => {
+    try {
+      const t = sessionStorage.getItem(RESUME_KEY)
+      sessionStorage.removeItem(RESUME_KEY)
+      return t || null
+    } catch { return null }
+  }
+
   const choose = (qid, value) => {
     setAnswers(prev => ({ ...prev, [qid]: value }))
     setTimeout(() => setStep(s => s + 1), 160)
@@ -72,22 +98,31 @@ export default function Onboarding() {
 
   const finishFree = () => {
     persist()
-    navigate('/dashboard')
+    // Explicit Free choice on the pricing step — drop any stashed checkout
+    // intent rather than pushing the user into a checkout they just declined.
+    takeResumeTarget()
+    navigate('/home')
   }
 
   const finishPro = async () => {
     persist()
+    // Chose Pro here — checkout() fulfils the intent directly. Capture (and
+    // clear) the stashed target up front so the Stripe redirect can't leave a
+    // stale key; fall back to it only if checkout itself fails.
+    const resume = takeResumeTarget() || '/home'
     setBusy(true)
     try {
       await checkout(billing)
     } catch {
-      navigate('/dashboard')
+      navigate(resume)
     }
   }
 
   const skip = () => {
     try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
-    navigate('/dashboard')
+    // Skipping the survey shouldn't discard why they signed up — resume to the
+    // stashed destination (e.g. /checkout) when there is one.
+    navigate(takeResumeTarget() || '/home')
   }
 
   return (
@@ -110,7 +145,7 @@ export default function Onboarding() {
             {step === 0 && (
               <div className="onb-greeting">Welcome, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
             )}
-            <h1 className="onb-q">{QUESTIONS[step].q}</h1>
+            <h1 className="onb-q" ref={headingRef} tabIndex={-1}>{QUESTIONS[step].q}</h1>
             <p className="onb-sub">Quick question {step + 1} of {total} — this helps us improve UIL4B.</p>
             <div className="onb-options">
               {QUESTIONS[step].options.map(opt => (
@@ -134,7 +169,7 @@ export default function Onboarding() {
         ) : (
           <div className="onb-step onb-pricing-step">
             <div className="onb-greeting">You're all set, <em>{firstName}</em>.</div>
-            <h1 className="onb-q">Pick the plan that fits.</h1>
+            <h1 className="onb-q" ref={headingRef} tabIndex={-1}>Pick the plan that fits.</h1>
             <p className="onb-sub">Everything core is free forever. Upgrade any time for more AI — or start free and decide later.</p>
 
             <div className="onb-billing">
