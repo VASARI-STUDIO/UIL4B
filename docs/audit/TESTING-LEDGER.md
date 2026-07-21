@@ -112,5 +112,6 @@ Changes touch the **auth flow (HVZ)** — regressions to actively re-verify:
 | 2026-07-21 | A1 (Q1) | Resume-target build + lint (Escalation #2 → B) | PM (implementation) | ✅ green, 0 new warnings |
 | 2026-07-21 | A1 (Q1) | **Running-build smoke** (localhost `vite preview`, headless Chromium) — `LoginRoute` stash producer + `RequireAuth` redirect | PM (verification) | ✅ 5/5 checks pass (stash-write half of Q1 now running-app evidence) |
 | 2026-07-21 | A1 (HVZ) | **Founder Human-Validation-Zone sign-off** on the auth-flow change ("continue, you have approval for HV zones") | Founder | ✅ HVZ gate approved — proceed toward merge |
-| — | A1, A2 | Live-app QA (running Firebase) | — | ⏳ auth-completion + resume-consume rows — **BLOCKED by session egress 403** (founder-drivable only) |
-| — | A1 | Owner validation (🔒 auth) — live resume-path verify on preview | Founder | 🔒 pending — egress-blocked here; needs founder preview smoke |
+| 2026-07-21 | A1, A2 | **Merge to `main`** (#161 squash) per founder "continue" + HVZ sign-off; all runnable gates green + localhost smoke 5/5 | PM (merge) | ✅ merged — live-preview smoke **deferred to founder**, residual risk owned |
+| — | A1, A2 | Live-app QA (running Firebase) on preview | Founder | ⏳ **deferred** — auth-completion + resume-consume + Google/Stripe; egress-blocked in CI, founder-drivable only. Revert #161 if it fails |
+| — | A1 | Owner validation (🔒 auth) — live resume-path verify on preview | Founder | 🔒 post-merge — founder preview smoke on the same URL |

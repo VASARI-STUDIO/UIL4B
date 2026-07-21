@@ -312,7 +312,10 @@ must not pick a direction unilaterally here.
   static review to running-app evidence. **BLOCKED:** the Vercel preview and
   Firebase/Google hosts return **403 from this session's egress proxy** (org policy —
   not retried/routed around), so the **auth-completion + resume-consume** halves and
-  the whole Google/Stripe path cannot be driven here. **Merge decision escalated to
-  founder:** run a short preview smoke checklist and confirm green (then PM merges),
-  or explicitly authorize merge-without-live-verify. Not merging auth to production
-  unilaterally — the committed live-preview gate can't be met from this container.
+  the whole Google/Stripe path cannot be driven here. **Resolution:** founder
+  directed "continue" (HVZ approval already granted) — so **A1+A2 (#161) squash-
+  merged to `main`** with all runnable gates green + localhost smoke 5/5. The
+  **live-preview Firebase/Google/Stripe smoke is deferred to the founder** on the
+  same preview URL (residual risk owned + documented) — it could not be run from
+  this CI container (egress 403). If the preview smoke surfaces a defect, revert
+  #161 or fast-follow; the change is behind a clean, revertable squash commit.
