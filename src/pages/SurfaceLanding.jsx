@@ -106,21 +106,32 @@ export default function SurfaceLanding({ surface }) {
           </div>
 
           <div className="surface-grid">
-            {s.groups.map((g) => (
-              <article
-                className="surface-card fx-lift"
-                key={g.id}
-                data-hue={g.accent ? 'accent' : s.hue}
-                data-reveal
-              >
-                <h3 className="surface-card-title">
-                  <span className="fx-dot" aria-hidden="true" />
-                  {g.label}
-                </h3>
-                <p className="surface-card-desc">{g.desc}</p>
-                <span className="soon-badge">Soon</span>
-              </article>
-            ))}
+            {s.groups.map((g) => {
+              const hue = g.accent ? 'accent' : s.hue
+              const body = (
+                <>
+                  <h3 className="surface-card-title">
+                    <span className="fx-dot" aria-hidden="true" />
+                    {g.label}
+                  </h3>
+                  <p className="surface-card-desc">{g.desc}</p>
+                  {g.soon
+                    ? <span className="soon-badge">Soon</span>
+                    : <span className="surface-card-go">Browse&nbsp;&rarr;</span>}
+                </>
+              )
+              // Live groups (soon:false) link to their real page; everything else
+              // stays a static "on the way" card — no dead links either way.
+              return g.soon ? (
+                <article className="surface-card fx-lift" key={g.id} data-hue={hue} data-reveal>
+                  {body}
+                </article>
+              ) : (
+                <Link className="surface-card surface-card--link fx-lift" key={g.id} to={g.route} data-hue={hue} data-reveal>
+                  {body}
+                </Link>
+              )
+            })}
           </div>
         </div>
       </section>

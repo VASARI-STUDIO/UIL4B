@@ -51,9 +51,9 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
 |---|---|---|:--:|:--:|---|
 | **A1** | P0-1 | Make onboarding reachable for new sign-ups | M | 🔒 | **🔒 Owner-validate** — HVZ sign-off ✅ (founder); stash producer ✅ (local build). **Blocker:** live preview + Firebase verify is egress-403 here → founder-drivable only |
 | **A2** | P0-2 | Onboarding nav `/dashboard` → `/home` (×3) | S | — | **In QA** (static ✅; live exits ⏳ with A1) |
-| **A3** | P1-3 | Reconcile Discover/Learn — **decided: thin-but-true** (un-hide nav, surface built pages) | M | — | **Ready** (own PR, after A1/A2 merges) |
+| **A3** | P1-3 | Reconcile Discover/Learn — **decided: thin-but-true** (un-hide nav, surface built pages) | M | — | **In QA** — first slice built (GradientGallery surfaced live; nav already un-hidden). Remaining page-flips (`Discover`, `PromptLibrary`, `FontGallery`, Docs) are a **founder decision** (override the deliberate coming-soon design) |
 | **A4** | P1-4 | Replace `/home` grey placeholders with real screenshots | M | — | **Blocked** (needs captured assets — owner/design) |
-| **A5** | — | Surface `GradientGallery` under Discover nav | S | — | **Ready** (rolls into A3 slice) |
+| **A5** | — | Surface `GradientGallery` under Discover nav | S | — | **In QA** — built (menu row + live landing card → `/discover/gradients`); localhost smoke 8/8. Live-preview verify ⏳ with A3 slice |
 | **A6** | QA/rev | Firestore onboarding-truth + routing-dedupe (MED-1/2, Q4) | M | 🔒 | **Backlog** (post-A1-merge design pass; Q1 resume-target shipped in this PR) |
 
 ### A1 · Onboarding reachable for new sign-ups &nbsp;🔒
@@ -166,16 +166,49 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
   entries → verify each renders with proper loading/empty states → absorb A5
   (GradientGallery under Discover). No new `/api` function unless it displaces one.
 - **Depends-on:** A1/A2 PR merged first (keeps the auth PR focused).
+- **Built so far (2026-07-21, this slice):**
+  - **Premise re-checked against the live tree.** The "hidden from nav" half of
+    P1-3 is already resolved: the live nav is driven by `NAV_SECTIONS`
+    (`toolTree.js`) → `PillNav`, which already lists all three surfaces; `/discover`
+    and `/learn` land on honest coming-soon shells (`SurfaceLanding.jsx`), not
+    dead-ends. So the remaining A3 work is *surfacing built pages*, not un-hiding.
+  - **A5 delivered as the first real surfaced page** (see A5 below): the complete,
+    orphaned `GradientGallery` is now a live Discover card + menu row.
+  - **`sections.jsx` drift fixes** (Learn `home: '/docs'`→`'/learn'`; `LEARN_EXACT`
+    gains `/learn`): **latent-correctness only.** `resolveSection` + the surface-model
+    `SECTIONS` are consumed **only** by `TopBar.jsx`, which is **retired** (never
+    mounted — App.jsx line 50: "the old Sidebar + TopBar chrome is retired"). No
+    current user-visible effect; fixed so the model is correct when/if reused.
+- **Still open — founder decision:** whether to also flip `soon:true`→live on the
+  *other* orphaned pages the decision named (`Discover.jsx`, `FontGallery`,
+  `PromptLibrary`, Docs). These may be incomplete, and surfacing them overrides the
+  deliberate post-audit coming-soon design. Deliberately **not** done in this slice
+  (only the unambiguously-complete GradientGallery was surfaced). Needs a per-page
+  readiness check + founder go-ahead before flipping.
 
 ### A4 · Real `/home` screenshots — **Blocked**
 - **Source:** P1-4. Needs real captured/optimised assets (owner/design); cannot be
   fully done from code alone. Engineering can prep responsive `<img>` slots +
   `alt` scaffolding once assets exist.
 
-### A5 · Surface `GradientGallery` — **Ready (rolls into A3)**
-- The one real Discover asset (`/discover/gradients` → `GradientGallery`) is
-  unlinked. Now that A3 is decided **thin-but-true**, this is just one of the nav
-  entries wired in that slice — no longer a standalone blocked item.
+### A5 · Surface `GradientGallery` — **Built (in QA)**
+- The one real Discover asset (`/discover/gradients` → `GradientGallery`, 38 curated
+  gradients, search/filter, honest empty state) was unlinked. **Now surfaced** as the
+  single live Discover entry, everything else honestly `Soon`:
+  - `toolTree.js` — new `gradient-gallery` group at the head of `DISCOVER_GROUPS`
+    (`soon:false`, `route:'/discover/gradients'`) + a `Browse` column in
+    `DISCOVER_MENU` so it renders as a mega-menu row.
+  - `SurfaceLanding.jsx` — live groups (`soon:false`) render as a `Link`
+    (`.surface-card--link`) with a `Browse →` affordance; `soon:true` groups stay
+    static `Soon` cards. No dead links either way. (Reuses the founder's pre-built
+    `.surface-card--link` / `.surface-card-go` CSS — live cards were within design.)
+  - `NavIcon.jsx` — `gradient-gallery` glyph alias so the menu row shows the gradient
+    icon, not the fallback dot.
+- **Verified:** `npx vite build` ✓ · `eslint` on the 4 changed files clean ·
+  **localhost headless-Chromium smoke 8/8** (live card present + links to
+  `/discover/gradients`; exactly 1 live card; other 5 Discover + all 8 Learn cards
+  stay `Soon`; click **and** direct-load both render the real gallery; count reads
+  "38 gradients"). Live-preview verify travels with the A3 slice.
 
 ### A6 · Onboarding-truth + routing-dedupe follow-up — **Backlog (post-A1-merge)**
 Deliberately deferred out of the focused A1 PR (each needs a design pass or would
@@ -319,3 +352,18 @@ must not pick a direction unilaterally here.
   same preview URL (residual risk owned + documented) — it could not be run from
   this CI container (egress 403). If the preview smoke surfaces a defect, revert
   #161 or fast-follow; the change is behind a clean, revertable squash commit.
+- **2026-07-21** — **Slice A3/A5 (first thin-but-true surface) built** on
+  `claude/audit-implementation-qa-a1hjzp` (restarted from the merged-#161 `main`).
+  **Re-checked A3's premise against the live tree:** nav is already un-hidden
+  (`PillNav`/`NAV_SECTIONS` lists all three surfaces; `/discover`+`/learn` land on
+  honest coming-soon shells), so the real work is *surfacing built pages*, not
+  un-hiding. **Shipped A5:** the complete orphaned `GradientGallery` is now the one
+  live Discover card + mega-menu row (`toolTree.js`, `SurfaceLanding.jsx`,
+  `NavIcon.jsx`); every other Discover/Learn card stays honestly `Soon`. **Also
+  fixed `sections.jsx` drift** (Learn `home`→`/learn`; `LEARN_EXACT` gains `/learn`)
+  — **latent-correctness only**, since `resolveSection`/`SECTIONS` are consumed only
+  by the **retired** `TopBar`. `npx vite build` ✓ · `eslint` on 4 files clean ·
+  **localhost smoke 8/8.** **Still open (founder decision):** flipping the *other*
+  named orphans (`Discover`, `FontGallery`, `PromptLibrary`, Docs) live would
+  override the deliberate coming-soon design — deferred pending per-page readiness +
+  founder go-ahead. Pushed to the branch; **no PR opened** (awaiting founder ask).

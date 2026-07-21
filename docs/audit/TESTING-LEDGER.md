@@ -84,6 +84,26 @@ so the auth-completion and resume-consume halves stay ⏳.
 | "Skip" / "Maybe later" → `/home` | Manual | ⏳ | |
 | Build + lint | Auto | ✅ | |
 
+### A3 / A5 · Surface Discover (GradientGallery) — first thin-but-true slice
+
+Served the production build on `127.0.0.1:4173` and drove headless Chromium — the
+**real bundle + live React Router**. This slice is client-only (no Firebase/Stripe),
+so localhost smoke covers the whole user-visible surface; the sole ⏳ is the founder's
+own eyes on the deployed preview.
+
+| Test | Type | Status | Evidence |
+|---|---|:--:|---|
+| `/discover` renders a **live** Gradient Gallery card → `/discover/gradients` | Smoke | ✅ | `a.surface-card--link[href="/discover/gradients"]`, text incl. "Browse →" |
+| Exactly **1** live card; other **5** Discover cards stay `Soon` (no regression) | Smoke | ✅ | `live=1`, `soon=5` |
+| Clicking the card lands on the real gallery (SPA nav) | Smoke | ✅ | url `…/discover/gradients`, `h1` = "Gradient gallery." |
+| **Direct load** `/discover/gradients` renders the gallery (deep-link safe) | Smoke | ✅ | `h1` = "Gradient gallery." |
+| Gallery is populated (not an empty shell) | Smoke | ✅ | count reads "38 gradients" |
+| `/learn` unchanged — all **8** cards `Soon`, **0** live (no regression) | Smoke | ✅ | `soon=8`, `live=0` |
+| Nav mega-menu row shows the gradient glyph (not fallback) | Static | ✅ | `NavIcon` `gradient-gallery` alias added |
+| `sections.jsx` drift fixes | Static | ✅ | **Latent-correctness only** — `resolveSection`/`SECTIONS` consumed solely by the **retired** `TopBar` (never mounted); no user-visible effect |
+| Build + lint (4 changed files) | Auto | ✅ | `npx vite build` ✓; `eslint` on the 4 files 0 errors/0 new warnings |
+| Founder eyes on deployed preview | Manual | ⏳ | Client-only change; travels with the A3 slice review |
+
 ---
 
 ## Regression matrix
@@ -115,3 +135,6 @@ Changes touch the **auth flow (HVZ)** — regressions to actively re-verify:
 | 2026-07-21 | A1, A2 | **Merge to `main`** (#161 squash) per founder "continue" + HVZ sign-off; all runnable gates green + localhost smoke 5/5 | PM (merge) | ✅ merged — live-preview smoke **deferred to founder**, residual risk owned |
 | — | A1, A2 | Live-app QA (running Firebase) on preview | Founder | ⏳ **deferred** — auth-completion + resume-consume + Google/Stripe; egress-blocked in CI, founder-drivable only. Revert #161 if it fails |
 | — | A1 | Owner validation (🔒 auth) — live resume-path verify on preview | Founder | 🔒 post-merge — founder preview smoke on the same URL |
+| 2026-07-21 | A3, A5 | Self build + lint (4 files) + **localhost headless-Chromium smoke** on the real bundle | PM (implementation + verification) | ✅ build ✓ · lint 0/0 · **smoke 8/8** — client-only surface fully exercised; not yet independently reviewed/QA'd |
+| — | A3, A5 | Independent code review + QA | code-reviewer / qa | ⏳ pending (per protocol — implementer is not the sole approver) |
+| — | A3, A5 | Founder eyes on deployed preview | Founder | ⏳ with the A3 slice review |
