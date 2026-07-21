@@ -234,7 +234,7 @@ is no longer part of A6.)*
 | ID | Item | Effort | Status |
 |---|---|:--:|---|
 | **B1** | Triage ~23 orphaned pages: per page re-wire or delete | L | `Backlog` (depends on A3) |
-| **B2** | Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS` for removed paths | S | `Ready` (trivial; ship with A) |
+| **B2** | Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS` for removed paths | S | **In QA** — 7 redirect-only keys removed from both maps (`/dashboard`, `/resources`, `/docs-*`); redirect routes kept. Build ✅ / lint ✅ |
 | **B3** | Resolve `/color` landing-vs-studio ambiguity | M | `Backlog` |
 | **B4** | De-emphasise "Soon" groups in Create mega-menu | S | `Backlog` |
 
@@ -242,7 +242,7 @@ is no longer part of A6.)*
 
 | ID | Item | Effort | Status |
 |---|---|:--:|---|
-| **C1** | Skip-to-content link → `<main id="main">` (2.4.1) | S | `Ready` (trivial; ship with A) |
+| **C1** | Skip-to-content link → `<main id="main">` (2.4.1) | S | **In QA** — one skip link (App shell) + `id="main"` on every layout's content-start; localhost keyboard smoke 11/11 (Tab→skip visible, Enter→#main). Build ✅ / lint ✅ |
 | **C2** | Contrast pass, both themes (1.4.3) | M | `Backlog` |
 | **C3** | Keyboard/AT test of mega-menu (4.1.2) | M | `Backlog` (needs running app) |
 | **C4** | Target-size audit `ui-pill-sm` + icon-only (2.5.8) | S | `Backlog` |
@@ -367,3 +367,16 @@ must not pick a direction unilaterally here.
   named orphans (`Discover`, `FontGallery`, `PromptLibrary`, Docs) live would
   override the deliberate coming-soon design — deferred pending per-page readiness +
   founder go-ahead. Pushed to the branch; **no PR opened** (awaiting founder ask).
+- **2026-07-21** — **C1 + B2 built** on the same branch (on top of A3/A5).
+  **C1 (skip-to-content, WCAG 2.4.1):** one `.skip-link` in the App shell (first
+  focusable node on every route) targets `#main`; each mutually-exclusive layout
+  tags its content-start with `id="main" tabIndex={-1}` (chrome-shell `<main>`,
+  `CreateTool` `<main>`, Home/Colour/Surface heroes, Onboarding card) — exactly one
+  `#main` per page. Offscreen until keyboard focus, slides in above the PillNav.
+  **B2 (dead metadata):** removed 7 redirect-only keys (`/dashboard`, `/resources`,
+  `/docs-themes|brand|seo|marketing|ai`) from both `PAGE_TITLES` and
+  `PAGE_DESCRIPTIONS` — those paths render a `<Navigate>` and inherit the target's
+  metadata; the redirect *routes* themselves are kept. `npx vite build` ✓ · `eslint`
+  on the 6 changed files clean · **localhost C1 keyboard smoke 11/11** (single
+  `#main` on 6 routes; Tab→skip visible at top=8; Enter→focus `#main`) · **A3/A5
+  regression smoke 8/8** (no regression). Pushed to the branch.

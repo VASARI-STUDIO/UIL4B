@@ -123,7 +123,7 @@ export default function CreateTool() {
 
       <div className="rail-shell" data-hue={group.hue}>
         {/* ── Content: the live tool, or the 🤫 still-building state ── */}
-        <main className={LiveTool ? 'rail-content rail-content--live' : 'rail-content'}>
+        <main id="main" tabIndex={-1} className={LiveTool ? 'rail-content rail-content--live' : 'rail-content'}>
           {LiveTool ? (
             <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
               <LiveTool onCopy={copy} toast={toast} />

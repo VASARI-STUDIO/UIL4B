@@ -40,7 +40,7 @@ export default function ColorLanding() {
       <PillNav />
 
       {/* ── Hero ── */}
-      <header className="home-hero">
+      <header className="home-hero" id="main" tabIndex={-1}>
         <span className="home-eyebrow">Colour System Generator</span>
         <h1 className="home-hero-h1">One colour system, start to finish.</h1>
         <p className="home-hero-sub">

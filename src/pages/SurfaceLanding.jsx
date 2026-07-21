@@ -61,7 +61,7 @@ export default function SurfaceLanding({ surface }) {
       <PillNav />
 
       {/* ── Hero ── */}
-      <header className="home-hero">
+      <header className="home-hero" id="main" tabIndex={-1}>
         <span className="home-eyebrow">{s.eyebrow}</span>
         <h1 className="home-hero-h1">{s.title}</h1>
         <p className="home-hero-sub">{s.lede}</p>

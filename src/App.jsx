@@ -177,10 +177,13 @@ function AppInner() {
     else window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     trackPageView(location.pathname)
     trackSessionPage(location.pathname)
+    // Titles/descriptions for real destinations only. Legacy redirect-only paths
+    // (/dashboard, /resources, /docs-*) are intentionally absent — they render a
+    // <Navigate> and inherit their target's metadata, so an entry here would only
+    // describe a page that no longer exists (AUDIT-B2).
     const PAGE_TITLES = {
       '/': 'UI L4B | Design Toolkit',
       '/home': 'UI L4B | Design Toolkit',
-      '/dashboard': 'UI L4B | Dashboard',
       '/color': 'UI L4B | Colour System Generator',
       '/color/palette': 'UI L4B | Palette Generator',
       '/color/semantic': 'UI L4B | Semantic Colour Generator',
@@ -195,7 +198,6 @@ function AppInner() {
       '/icons': 'UI L4B | Icon Library',
       '/imagery': 'UI L4B | Imagery',
       '/icons-emoji': 'UI L4B | Icons & Emoji',
-      '/resources': 'UI L4B | Resources',
       '/discover': 'UI L4B | Discover',
       '/discover/gradients': 'UI L4B | Gradient Library',
       '/alt-text': 'UI L4B | Alt Text Generator',
@@ -221,11 +223,6 @@ function AppInner() {
       '/terms': 'UI L4B | Terms',
       '/sitemap': 'UI L4B | Sitemap',
       '/admin': 'UI L4B | Admin',
-      '/docs-themes': 'UI L4B | UI Design Themes',
-      '/docs-brand': 'UI L4B | Brand Colour Guide',
-      '/docs-seo': 'UI L4B | SEO for Small Business',
-      '/docs-marketing': 'UI L4B | Marketing Fundamentals',
-      '/docs-ai': 'UI L4B | AI Coding Assistants',
       '/auto-builder': 'UI L4B | UI Auto-Builder',
       '/file-converter': 'UI L4B | File Converter',
     }
@@ -233,7 +230,6 @@ function AppInner() {
     const PAGE_DESCRIPTIONS = {
       '/': DEFAULT_DESCRIPTION,
       '/home': DEFAULT_DESCRIPTION,
-      '/dashboard': 'Your UI L4B dashboard. Access all design tools, recent projects, and saved palettes in one place.',
       '/color': 'Build professional colour systems with palette generation, tint scales, gradient builder, and named colour libraries. Export CSS, Tailwind, PNG and SVG.',
       '/color/palette': 'Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps, accessibility checks, and production-ready CSS exports.',
       '/color/semantic': 'Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.',
@@ -248,7 +244,6 @@ function AppInner() {
       '/icons': 'Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
       '/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
       '/icons-emoji': 'Search 200,000+ icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
-      '/resources': 'A curated directory of the best external design resources — fonts, colour tools, AI generators, and inspiration galleries.',
       '/discover': 'Discover the best external design resources — gradients, palettes, fonts, components and inspiration — with a one-tap hand-off into the UI L4B tools that use them.',
       '/discover/gradients': 'A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.',
       '/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
@@ -275,11 +270,6 @@ function AppInner() {
       '/terms': 'UI L4B terms of service. Usage rules, intellectual property, and account policies.',
       '/sitemap': 'The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.',
       '/admin': DEFAULT_DESCRIPTION,
-      '/docs-themes': 'Learn about UI design themes — dark mode, light mode, and custom theme systems for modern web applications.',
-      '/docs-brand': 'A practical guide to choosing brand colours. Understand colour psychology, contrast, and accessibility basics.',
-      '/docs-seo': 'SEO fundamentals for small businesses. Learn keyword strategy, on-page optimisation, and technical SEO basics.',
-      '/docs-marketing': 'Marketing fundamentals for designers. Understand positioning, messaging, and visual communication strategies.',
-      '/docs-ai': 'A guide to AI coding assistants. Learn how to use AI tools effectively for web development and design.',
       '/file-converter': 'Convert files between formats directly in your browser. Fast, private, client-side processing.',
     }
 
@@ -341,7 +331,7 @@ function AppInner() {
     <div className="app-shell">
       <PillNav />
 
-      <main className="app-page" key={location.pathname}>
+      <main className="app-page" id="main" tabIndex={-1} key={location.pathname}>
         <ErrorBoundary>
           <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
             <Routes location={location}>
@@ -416,6 +406,10 @@ export default function App() {
   return (
     <LoginPromptProvider>
       <ProModalProvider>
+        {/* Skip-to-content: first focusable element on every route, so a keyboard
+            user's first Tab bypasses the repeated PillNav and jumps to #main
+            (WCAG 2.4.1). Each layout tags its content-start with id="main". */}
+        <a href="#main" className="skip-link">Skip to content</a>
         <AppInner />
       </ProModalProvider>
     </LoginPromptProvider>

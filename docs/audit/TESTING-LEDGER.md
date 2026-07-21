@@ -14,7 +14,7 @@ Legend: ✅ pass · ⏳ pending · 🔒 owner-gated · — n/a
 
 | Check | Command | Result | When |
 |---|---|---|---|
-| Production build | `npx vite build` | ✅ built, no errors | 2026-07-21 (after A1+A2+Q3/LOW-3 + Q1 resume-target) |
+| Production build | `npx vite build` | ✅ built, no errors | 2026-07-21 (latest: after A3/A5 + C1 + B2) |
 | Lint (changed files) | `npx eslint <changed>` | ✅ 0 errors / 0 warnings on the changed files (`Onboarding`, `ProUpgradeModal`, `App`) — re-verified after the Q1 resume-target. Tree-wide `eslint .` remains 0 errors + 34 pre-existing warnings; the changed files add **0** new. | 2026-07-21 |
 
 ---
@@ -104,6 +104,31 @@ own eyes on the deployed preview.
 | Build + lint (4 changed files) | Auto | ✅ | `npx vite build` ✓; `eslint` on the 4 files 0 errors/0 new warnings |
 | Founder eyes on deployed preview | Manual | ⏳ | Client-only change; travels with the A3 slice review |
 
+### C1 · Skip-to-content link → `<main id="main">` (WCAG 2.4.1)
+
+Localhost headless-Chromium keyboard smoke against the real bundle (11/11).
+
+| Test | Type | Status | Evidence |
+|---|---|:--:|---|
+| Exactly **one** `#main` per route — Home hero, Colour hero, Discover hero, chrome `<main>`, Create tool `<main>`, Onboarding card | Smoke | ✅ | `count=1` on `/home`, `/color`, `/discover`, `/plans`, `/typography`, `/onboarding` |
+| Skip link present, `href="#main"`, **first focusable** node in the DOM | Smoke | ✅ | `{href:'#main', text:'Skip to content', first:true}` |
+| Offscreen by default (mouse users never see it) | Smoke | ✅ | `bottom=-8` (translated above the viewport) |
+| First **Tab** lands on the skip link | Smoke | ✅ | `activeElement.className` incl. `skip-link` |
+| Focused skip link **slides on-screen** (above PillNav z-index) | Smoke | ✅ | real-Tab focus → `top=8` (programmatic `.focus()` doesn't fire `:focus` in headless — measured after a genuine Tab) |
+| **Enter** on the skip link moves focus to `#main` | Smoke | ✅ | `document.activeElement.id === 'main'` |
+| Reduced-motion honoured (transition suppressed) | Static | ✅ | `@media(prefers-reduced-motion:reduce){.skip-link{transition:none}}` |
+| Build + lint (6 changed files) | Auto | ✅ | `npx vite build` ✓; `eslint` on the 6 files 0 errors/0 new warnings |
+
+### B2 · Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS`
+
+| Test | Type | Status | Evidence |
+|---|---|:--:|---|
+| 7 redirect-only keys removed from **both** maps | Static | ✅ | `/dashboard`, `/resources`, `/docs-themes|brand|seo|marketing|ai` absent from `PAGE_TITLES` **and** `PAGE_DESCRIPTIONS` |
+| Redirect **routes** kept (old bookmarks still resolve) | Static | ✅ | `<Navigate>` entries for those paths untouched; they inherit the target page's title/description |
+| Live/"soon" tool routes untouched (real reachable pages keep metadata) | Static | ✅ | Only redirect-only paths stripped |
+| No orphaned metadata for a page that no longer exists | Static | ✅ | Explanatory comment added above `PAGE_TITLES` (AUDIT-B2) |
+| Build + lint | Auto | ✅ | Green (shared with C1 above) |
+
 ---
 
 ## Regression matrix
@@ -138,3 +163,5 @@ Changes touch the **auth flow (HVZ)** — regressions to actively re-verify:
 | 2026-07-21 | A3, A5 | Self build + lint (4 files) + **localhost headless-Chromium smoke** on the real bundle | PM (implementation + verification) | ✅ build ✓ · lint 0/0 · **smoke 8/8** — client-only surface fully exercised; not yet independently reviewed/QA'd |
 | — | A3, A5 | Independent code review + QA | code-reviewer / qa | ⏳ pending (per protocol — implementer is not the sole approver) |
 | — | A3, A5 | Founder eyes on deployed preview | Founder | ⏳ with the A3 slice review |
+| 2026-07-21 | C1, B2 | Self build + lint (6 files) + **localhost headless-Chromium keyboard smoke** (C1 11/11) + A3/A5 regression re-run (8/8) | PM (implementation + verification) | ✅ build ✓ · lint 0/0 · **C1 smoke 11/11 · no regression** — client-only; independent review/QA next |
+| — | A3, A5, C1, B2 | Independent code review + QA on the unmerged branch diff | code-reviewer / qa | ⏳ running before the merge PR |
