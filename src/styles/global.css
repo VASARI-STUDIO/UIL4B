@@ -6073,6 +6073,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-btn-ghost{background:transparent;border-color:var(--ggn-line-2);color:var(--ggn-t1)}
 .ggn-btn-ghost:hover{border-color:var(--ggn-t2);color:var(--ggn-t0);background:var(--hvr)}
 .ggn-btn-sm{padding:6px 13px;font-size:12px}
+/* Disabled ("From palette" with <2 palette colours): dim, no pointer, and
+   suppress the ghost hover so it reads as inert. Uses [aria-disabled] (not
+   :disabled) so the button stays focusable + announced; the hover reset is
+   scoped to the ghost variant so it can't leak onto other disabled .ggn-btn. */
+.ggn-btn[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+.ggn-btn-ghost[aria-disabled="true"]:hover{background:transparent;border-color:var(--ggn-line-2);color:var(--ggn-t1)}
 /* Grid: preview + panel */
 .ggn-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:20px;align-items:start;margin-bottom:20px}
 .ggn-preview-wrap{position:relative}
@@ -6158,6 +6164,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
 }
 @media(max-width:480px){
   .ggn{padding:20px 14px 44px}
+  /* Three header buttons can't share one row on narrow phones (their nowrap
+     labels overflow below ~380px) — wrap to 2-per-row + a full-width third. */
+  .ggn-head-actions{flex-wrap:wrap}
+  .ggn-btn{flex:1 1 calc(50% - 5px)}
   .ggn-stop{gap:6px;padding:8px}
   .ggn-stop-hex{font-size:12px;letter-spacing:0}
   .ggn-stop-pos input{width:40px;padding:5px 4px}
