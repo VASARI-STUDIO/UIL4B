@@ -75,6 +75,32 @@ function StopHexInput({ color, label, onCommit }) {
   )
 }
 
+// Padlock glyph — open shackle when unlocked, closed when locked — so a locked
+// control reads at a glance. Stroke-based to match the other ggn icons.
+const IcoLock = ({ size = 13, open = false }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="4" y="11" width="16" height="10" rx="2" />
+    {open
+      ? <path d="M8 11V7a4 4 0 0 1 7.9-.9" />
+      : <path d="M8 11V7a4 4 0 0 1 8 0v4" />}
+  </svg>
+)
+
+// Small lock toggle used across the tool — pins a setting so it survives a
+// randomise. `on` = locked; the glyph flips its shackle to reflect state.
+const LockBtn = ({ on, onClick, label, className = '' }) => (
+  <button
+    type="button"
+    className={`ggn-lock${on ? ' is-on' : ''}${className ? ' ' + className : ''}`}
+    onClick={onClick}
+    aria-pressed={on}
+    aria-label={label}
+    title={label}
+  >
+    <IcoLock open={!on} />
+  </button>
+)
+
 export default function GradientGenerator({ onCopy, toast }) {
   const { design, setGradient, projects } = useProject()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -94,8 +120,13 @@ export default function GradientGenerator({ onCopy, toast }) {
   const [activeStop, setActiveStop] = useState(0)
   const [copied, setCopied] = useState(false)
 
+  // Randomise locks — pin any of type / angle / stop-count so a shuffle keeps
+  // them. Per-stop colour+position locks live on the stop objects (`.locked`).
+  const [locks, setLocks] = useState({ type: false, angle: false, count: false })
+
   const barRef = useRef(null)
   const dialRef = useRef(null)
+  const suppressBarClickRef = useRef(false) // set during a stop drag so the drag-ending click doesn't add a stop
 
   const css = gradientCss(type, angle, stops)
   const cssValue = `background: ${css};`
@@ -141,7 +172,7 @@ export default function GradientGenerator({ onCopy, toast }) {
 
   // Insert a stop at a given position (0–100), blending the colour from the two
   // stops it lands between. Used by both the "+ Stop" button (midpoint) and a
-  // double-click on the preview bar (exact position). Focuses the new stop.
+  // click on the preview bar (exact position). Focuses the new stop.
   const addStopAt = useCallback((pct) => {
     setStops(prev => {
       const sorted = [...prev].sort((a, b) => a.position - b.position)
@@ -178,17 +209,35 @@ export default function GradientGenerator({ onCopy, toast }) {
   }, [])
 
   const randomHex = () => '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0').toUpperCase()
+
+  // Build a fresh set of stops that honours the current locks: a locked count
+  // keeps the same number, and any stop marked `.locked` keeps its colour +
+  // position while the rest are re-rolled. `sample(i)` supplies the colour for
+  // an unlocked slot (random hex, or a palette pick) so both randomisers share
+  // this logic.
+  const rollStops = useCallback((sample) => {
+    // A locked stop must always survive, even when the rolled count is smaller
+    // than its index — so if ANY stop is locked we keep the current length
+    // rather than shrinking to a random 2–3 and dropping locked stops.
+    const hasStopLock = stops.some(s => s.locked)
+    const n = (locks.count || hasStopLock) ? stops.length : 2 + Math.floor(Math.random() * 2) // 2–3 stops
+    return Array.from({ length: n }, (_, i) => {
+      const ex = stops[i]
+      if (ex?.locked) return { color: ex.color, position: ex.position, locked: true }
+      return {
+        color: sample(i),
+        position: Math.round((i / (n - 1)) * 100),
+        locked: false,
+      }
+    })
+  }, [locks.count, stops])
+
   const randomise = useCallback(() => {
-    const n = 2 + Math.floor(Math.random() * 2) // 2–3 stops
-    const next = Array.from({ length: n }, (_, i) => ({
-      color: randomHex(),
-      position: Math.round((i / (n - 1)) * 100),
-    }))
-    setStops(next)
-    setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
-    setAngle(Math.round(Math.random() * 360))
+    setStops(rollStops(() => randomHex()))
+    if (!locks.type) setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
+    if (!locks.angle) setAngle(Math.round(Math.random() * 360))
     setActiveStop(0)
-  }, [])
+  }, [rollStops, locks.type, locks.angle])
 
   // Valid hex colours in the live Palette Builder palette — feeds the
   // "From palette" button (needs 2+ to build a gradient).
@@ -210,17 +259,14 @@ export default function GradientGenerator({ onCopy, toast }) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
-    const n = Math.min(shuffled.length, 2 + Math.floor(Math.random() * 2)) // 2–3
-    const picked = shuffled.slice(0, n)
-    setStops(picked.map((color, i) => ({
-      color: color.toUpperCase(),
-      position: Math.round((i / (n - 1)) * 100),
-    })))
-    setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
-    setAngle(Math.round(Math.random() * 360))
+    // Draw unlocked slots from the shuffled palette, cycling if there are more
+    // stops than colours so a locked count never runs the pool dry.
+    setStops(rollStops(i => shuffled[i % shuffled.length].toUpperCase()))
+    if (!locks.type) setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
+    if (!locks.angle) setAngle(Math.round(Math.random() * 360))
     setActiveStop(0)
     toast?.('Random gradient from your palette')
-  }, [paletteHexes, randomise, toast])
+  }, [paletteHexes, randomise, rollStops, locks.type, locks.angle, toast])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
 
@@ -282,6 +328,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     e.stopPropagation()
     setActiveStop(idx)
     const move = (ev) => {
+      suppressBarClickRef.current = true // a real drag happened → swallow the click that ends it
       const rect = barRef.current?.getBoundingClientRect()
       if (!rect) return
       const pct = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100))
@@ -295,8 +342,12 @@ export default function GradientGenerator({ onCopy, toast }) {
     window.addEventListener('pointerup', up)
   }, [updateStop])
 
-  // Double-click an empty part of the bar to drop a stop right there.
-  const barDoubleClick = useCallback((e) => {
+  // Click an empty part of the bar to drop a stop right where you click. Clicks
+  // that land on a handle (its own button, incl. the click that ends a drag)
+  // bubble up here too, so ignore them — those move a stop, they don't add one.
+  const barClick = useCallback((e) => {
+    if (suppressBarClickRef.current) { suppressBarClickRef.current = false; return }
+    if (e.target.closest('.ggn-handle')) return
     const rect = barRef.current?.getBoundingClientRect()
     if (!rect) return
     const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
@@ -371,29 +422,32 @@ export default function GradientGenerator({ onCopy, toast }) {
             <div
               className="ggn-bar"
               ref={barRef}
-              onDoubleClick={barDoubleClick}
-              title="Double-click to add a stop"
+              onClick={barClick}
+              title="Click to add a stop"
             >
               <div className="ggn-bar-track" style={{ background: `linear-gradient(90deg, ${[...stops].sort((a, b) => a.position - b.position).map(s => `${s.color} ${Math.round(s.position)}%`).join(', ')})` }} />
               {sortedForBar.map(s => (
                 <button
                   key={s.i}
                   type="button"
-                  className={`ggn-handle${activeStop === s.i ? ' is-active' : ''}`}
+                  className={`ggn-handle${activeStop === s.i ? ' is-active' : ''}${s.locked ? ' is-locked' : ''}`}
                   style={{ left: `${s.position}%`, '--h-color': s.color }}
                   onPointerDown={(e) => dragStop(e, s.i)}
-                  aria-label={`Gradient stop ${s.i + 1} at ${Math.round(s.position)}%`}
+                  aria-label={`Gradient stop ${s.i + 1} at ${Math.round(s.position)}%${s.locked ? ', locked' : ''}`}
                 />
               ))}
             </div>
           </div>
-          <p className="ggn-preview-hint">Drag a handle to move a stop · double-click the bar to add one</p>
+          <p className="ggn-preview-hint">Drag a handle to move a stop · click the bar to add one</p>
         </div>
 
         {/* Control panel */}
         <div className="ggn-panel">
           <div className="ggn-field">
-            <span className="ggn-label">Type</span>
+            <div className="ggn-label-row">
+              <span className="ggn-label">Type</span>
+              <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked — unlock to randomise it' : 'Lock type when randomising'} />
+            </div>
             <div className="ggn-seg">
               {GRAD_TYPES.map(t => (
                 <button key={t} type="button" className={`ggn-seg-btn${type === t ? ' is-on' : ''}`} onClick={() => setType(t)}>{t}</button>
@@ -402,7 +456,10 @@ export default function GradientGenerator({ onCopy, toast }) {
           </div>
 
           <div className="ggn-field">
-            <span className="ggn-label">Angle</span>
+            <div className="ggn-label-row">
+              <span className="ggn-label">Angle</span>
+              <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked — unlock to randomise it' : 'Lock angle when randomising'} />
+            </div>
             <div className={`ggn-angle${angleActive ? '' : ' is-disabled'}`}>
               <div className="ggn-dial" ref={dialRef} onPointerDown={dragDial} role="slider" aria-label="Gradient angle" aria-valuenow={Math.round(angle)} aria-valuemin={0} aria-valuemax={360} tabIndex={angleActive ? 0 : -1}
                 onKeyDown={(e) => {
@@ -443,6 +500,7 @@ export default function GradientGenerator({ onCopy, toast }) {
         <div className="ggn-block-head">
           <span className="ggn-label">Stops</span>
           <div className="ggn-block-actions">
+            <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked — unlock to randomise it' : 'Lock the number of stops when randomising'} />
             <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={addStop}>+ Stop</button>
             <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={flip}>⇄ Flip</button>
           </div>
@@ -470,6 +528,12 @@ export default function GradientGenerator({ onCopy, toast }) {
                 />
                 <span>%</span>
               </div>
+              <LockBtn
+                on={!!s.locked}
+                onClick={(e) => { e.stopPropagation(); updateStop(i, { locked: !s.locked }) }}
+                className="ggn-stop-lock"
+                label={s.locked ? `Stop ${i + 1} locked — colour & position kept on randomise` : `Lock stop ${i + 1} colour & position when randomising`}
+              />
               <button type="button" className="ggn-stop-x" onClick={(e) => { e.stopPropagation(); removeStop(i) }} disabled={stops.length <= 2} aria-label={`Remove stop ${i + 1}`}>×</button>
             </div>
           ))}
