@@ -1,9 +1,9 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import CreatePreview from '../components/CreatePreview'
 import { useHomeMotion } from '../hooks/useHomeMotion'
-import { CREATE_GROUPS } from '../data/toolTree'
+import { CREATE_GROUPS, LEARN_GROUPS } from '../data/toolTree'
 
 // The real Export dialog, lazy-loaded so its (and its focus-trap's) code only
 // ships when a visitor actually asks to see the export formats.
@@ -22,37 +22,27 @@ const ExportPanel = lazy(() => import('../components/ExportPanel'))
 // `set-state-in-effect` advisory. The single bit of local state here is the
 // Create category toggle, set from click only.
 
-// The three surfaces, as cards. `to` points at each surface's landing.
-const SURFACES = [
-  {
-    id: 'create',
-    hue: 'component',
-    title: 'Create',
-    desc: 'Build the foundations — colour, type, components, imagery, icons and AI — in one workspace.',
-    link: 'Start building',
-    to: '/color',
-  },
-  {
-    id: 'discover',
-    hue: 'imagery',
-    title: 'Discover',
-    desc: 'Browse community UI systems and hand-picked resources that actually earn a tab.',
-    link: 'Explore Discover',
-    to: '/discover',
-  },
-  {
-    id: 'learn',
-    hue: 'ai',
-    title: 'Learn',
-    desc: 'Understand the why — design principles, colour and type guides, and growth playbooks.',
-    link: 'Open Learn',
-    to: '/learn',
-  },
+// A small contrast report, drawn as a real card graphic in the Validate section
+// (replaces the old `spec-frame` placeholder). Ratios/grades are illustrative.
+const REPORT = [
+  { pair: 'Ink on surface', fg: '#0F172A', bg: '#FFFFFF', ratio: '15.8', grade: 'AAA', ok: true },
+  { pair: 'Accent on tint', fg: '#1D4ED8', bg: '#EFF6FF', ratio: '7.2', grade: 'AAA', ok: true },
+  { pair: 'Muted on surface', fg: '#64748B', bg: '#FFFFFF', ratio: '4.9', grade: 'AA', ok: true },
+  { pair: 'White on accent', fg: '#FFFFFF', bg: '#3B82F6', ratio: '3.1', grade: 'AA Large', ok: true },
+  { pair: 'Grey on grey', fg: '#94A3B8', bg: '#E2E8F0', ratio: '1.8', grade: 'Fail', ok: false },
 ]
 
-// Placeholder community tiles for the horizontal scroller. Real submissions land
-// here once Discover ships; for now they set the visual rhythm.
-const COMMUNITY = ['System 01', 'System 02', 'System 03', 'System 04', 'System 05', 'System 06']
+// Community system tiles for the Discover scroller, drawn as real mini-system
+// thumbnails (palette + specimen) via `data-hue` (replaces the placeholders).
+// Real submissions land here once Discover community ships.
+const COMMUNITY = [
+  { label: 'Nimbus', meta: 'SaaS · 5 colours', hue: 'colour', pal: ['#0051FF', '#4C8DFF', '#A9C7FF', '#0B1B3A'] },
+  { label: ' Member', meta: 'Fintech · 5 colours', hue: 'component', pal: ['#7C3AED', '#A78BFA', '#DDD6FE', '#2E1065'] },
+  { label: 'Orchard', meta: 'Wellness · 5 colours', hue: 'imagery', pal: ['#059669', '#34D399', '#A7F3D0', '#022C22'] },
+  { label: 'Ember', meta: 'Commerce · 5 colours', hue: 'ai', pal: ['#EA580C', '#FB923C', '#FED7AA', '#431407'] },
+  { label: 'Slate', meta: 'Dev tool · 5 colours', hue: 'type', pal: ['#0EA5E9', '#38BDF8', '#BAE6FD', '#0C2A3E'] },
+  { label: 'Bloom', meta: 'Editorial · 5 colours', hue: 'icons', pal: ['#DB2777', '#F472B6', '#FBCFE8', '#500724'] },
+]
 
 // Export section content. The format names + descriptions are kept verbatim in
 // sync with `ExportPanel`'s FORMATS so the homepage never promises a format the
@@ -69,41 +59,7 @@ const EXPORT_FILES = ['system.html', 'tokens.css', 'tokens.json', 'tailwind.conf
 export default function Home() {
   const rootRef = useRef(null)
   useHomeMotion(rootRef)
-  const [active, setActive] = useState(CREATE_GROUPS[0].id)
   const [exportOpen, setExportOpen] = useState(false)
-  const activeGroup = CREATE_GROUPS.find((g) => g.id === active) || CREATE_GROUPS[0]
-
-  // Sliding indicator for the Create segmented control. We position a single
-  // "thumb" over whichever tab is active by measuring geometry and writing the
-  // element's style imperatively (via refs) — never React state — so we keep
-  // clear of the `set-state-in-effect` advisory and get a buttery CSS-eased
-  // slide. Measured from bounding rects so it stays exact regardless of the
-  // reveal transform or varying label widths.
-  const segRef = useRef(null)
-  const thumbRef = useRef(null)
-  const moveThumb = useCallback(() => {
-    const seg = segRef.current
-    const thumb = thumbRef.current
-    if (!seg || !thumb) return
-    const btn = seg.querySelector('[data-active="true"]')
-    if (!btn) return
-    const s = seg.getBoundingClientRect()
-    const b = btn.getBoundingClientRect()
-    thumb.style.width = `${b.width}px`
-    thumb.style.height = `${b.height}px`
-    thumb.style.transform = `translate(${b.left - s.left}px, ${b.top - s.top}px)`
-    thumb.style.opacity = '1'
-  }, [])
-
-  // Reposition on active change (layout effect = no flash) and on resize / font
-  // settle (rAF catches width shifts after the webfont swaps in).
-  useLayoutEffect(() => { moveThumb() }, [active, moveThumb])
-  useEffect(() => {
-    const onResize = () => moveThumb()
-    window.addEventListener('resize', onResize)
-    const raf = requestAnimationFrame(moveThumb)
-    return () => { window.removeEventListener('resize', onResize); cancelAnimationFrame(raf) }
-  }, [moveThumb])
 
   return (
     <div className="home" ref={rootRef}>
@@ -131,74 +87,15 @@ export default function Home() {
         <p className="home-hero-hint">Free to start · No credit card · Runs in your browser</p>
       </header>
 
-      {/* ── Create: interactive category toggle ── */}
-      <section className="home-section" id="create">
+      {/* ── Create: the live browser graphic, sat directly under the hero ── */}
+      <section className="home-showcase" id="create">
         <div className="home-container">
-          <div className="home-head home-head-center" data-reveal>
-            <span className="home-eyebrow">Create</span>
-            <h2 className="home-h2">Six systems. One place to build.</h2>
-            <p className="home-lede">
-              Every foundation you reach for, side by side — so a colour choice, a type scale and a
-              component all live in the same file.
-            </p>
-          </div>
-
-          <div className="home-seg-wrap" data-reveal>
-            <div className="home-seg" role="tablist" aria-label="Create systems" ref={segRef}>
-              <span className="home-seg-thumb" aria-hidden="true" ref={thumbRef} />
-              {CREATE_GROUPS.map((group) => (
-                <button
-                  key={group.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active === group.id}
-                  data-active={active === group.id}
-                  className="home-seg-tab"
-                  data-hue={group.hue}
-                  onClick={() => setActive(group.id)}
-                >
-                  <span className="fx-dot" aria-hidden="true" />
-                  {group.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="home-stage" data-reveal="media" aria-live="polite">
-            <CreatePreview group={activeGroup} />
+            <CreatePreview />
           </div>
-        </div>
-      </section>
-
-      {/* ── Three surfaces ── */}
-      <section className="home-section">
-        <div className="home-container">
-          <div className="home-head home-head-center" data-reveal>
-            <span className="home-eyebrow">Three surfaces</span>
-            <h2 className="home-h2">Build, browse, understand.</h2>
-            <p className="home-lede">
-              One product, one login, three ways in — whether you're making a system, looking for
-              one, or learning the craft behind it.
-            </p>
-          </div>
-
-          <div className="home-surfaces" data-reveal-group>
-            {SURFACES.map((s) => (
-              <article className="home-surface fx-lift" key={s.id} data-hue={s.hue}>
-                <div className="spec-frame">
-                  <span className="spec-label">{s.title}</span>
-                </div>
-                <h3 className="home-surface-title">
-                  <span className="fx-dot" aria-hidden="true" />
-                  {s.title}
-                </h3>
-                <p className="home-surface-desc">{s.desc}</p>
-                <Link className="home-surface-link" to={s.to}>
-                  {s.link} &rarr;
-                </Link>
-              </article>
-            ))}
-          </div>
+          <p className="home-stage-cap" data-reveal>
+            One workspace, every foundation — click a tab to try it.
+          </p>
         </div>
       </section>
 
@@ -235,8 +132,23 @@ export default function Home() {
               </ul>
             </div>
             <div className="home-split-media" data-reveal="media">
-              <div className="spec-frame">
-                <span className="spec-label">Contrast · report</span>
+              <div className="home-report" data-hue="colour">
+                <div className="home-report-bar">
+                  <span className="prev-traffic" aria-hidden="true"><i /><i /><i /></span>
+                  <span className="home-report-title">Contrast report</span>
+                </div>
+                <ul className="home-report-list">
+                  {REPORT.map((r) => (
+                    <li className="home-report-row" key={r.pair}>
+                      <span className="home-report-chips" aria-hidden="true">
+                        <span className="home-report-chip" style={{ background: r.bg, color: r.fg }}>Aa</span>
+                      </span>
+                      <span className="home-report-pair">{r.pair}</span>
+                      <span className="home-report-ratio">{r.ratio}</span>
+                      <span className="home-report-grade" data-ok={r.ok}>{r.grade}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </div>
@@ -292,13 +204,53 @@ export default function Home() {
             </p>
           </div>
           <div className="home-scroller" data-reveal>
-            {COMMUNITY.map((label) => (
-              <div className="home-card" key={label}>
-                <div className="spec-frame">
-                  <span className="spec-label">{label}</span>
+            {COMMUNITY.map((sys) => (
+              <Link className="home-card fx-lift" key={sys.label} to="/discover" data-hue={sys.hue}>
+                <div className="home-card-art">
+                  <div className="home-card-swatches" aria-hidden="true">
+                    {sys.pal.map((hex, i) => (
+                      <span className="home-card-swatch" key={i} style={{ background: hex }} />
+                    ))}
+                  </div>
+                  <span className="home-card-specimen" aria-hidden="true">Aa</span>
                 </div>
-                <p className="home-card-label">{label}</p>
-              </div>
+                <div className="home-card-foot">
+                  <p className="home-card-label">{sys.label}</p>
+                  <p className="home-card-meta">{sys.meta}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="home-scroller-cta">
+            <Link className="ui-pill ui-pill-out ui-pill-md" to="/discover">
+              Explore Discover
+              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Learn ── */}
+      <section className="home-section" id="learn">
+        <div className="home-container">
+          <div className="home-head" data-reveal>
+            <span className="home-eyebrow">Learn</span>
+            <h2 className="home-h2">Understand the why.</h2>
+            <p className="home-lede">
+              A growing hub of guides and references — AI workflows, marketing, UI and colour — so
+              you know not just what to build, but why it works.
+            </p>
+          </div>
+          <div className="home-learn" data-reveal-group>
+            {LEARN_GROUPS.map((g) => (
+              <Link className="home-learn-card fx-lift" key={g.id} to={g.route} data-accent={g.accent || undefined}>
+                <span className="home-learn-title">
+                  <span className="fx-dot" aria-hidden="true" />
+                  {g.label}
+                </span>
+                <span className="home-learn-desc">{g.desc}</span>
+                <span className="home-learn-go">{g.soon ? 'Coming soon' : 'Read'} &rarr;</span>
+              </Link>
             ))}
           </div>
         </div>
@@ -306,13 +258,22 @@ export default function Home() {
 
       {/* ── Final CTA ── */}
       <section className="home-cta">
-        <div className="home-cta-dots" aria-hidden="true">
-          <span className="home-cta-dot" /><span className="home-cta-dot" /><span className="home-cta-dot" />
-          <span className="home-cta-dot" /><span className="home-cta-dot" /><span className="home-cta-dot" />
+        <div className="home-cta-glow" aria-hidden="true" />
+        <div className="home-cta-tabs" aria-hidden="true">
+          {CREATE_GROUPS.map((group) => (
+            <span className="home-cta-tab" key={group.id} data-hue={group.hue}>
+              <span className="fx-dot" />
+            </span>
+          ))}
         </div>
         <div className="home-cta-inner" data-reveal>
           <span className="home-eyebrow">Start free</span>
-          <h2 className="home-h2">Build your first system today.</h2>
+          <h2 className="home-cta-h2">
+            Build your first system <span className="home-cta-em">today.</span>
+          </h2>
+          <p className="home-cta-lede">
+            Every tool, one workspace — free to start, right in your browser.
+          </p>
           <div className="home-hero-cta">
             <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
               Start for Free
