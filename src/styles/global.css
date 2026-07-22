@@ -5289,7 +5289,7 @@ html.lenis,html.lenis body{height:auto}
 .imc-bar-val{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t0);text-align:right;min-width:56px}
 .imc-quality{min-width:0}
 .imc-upload{position:relative;overflow:hidden}
-.imc-err{margin:0;font-size:12px;color:#dc2626}
+.imc-err{margin:0;font-size:12px;color:var(--err)}
 a.prev-btn{text-decoration:none}
 .prev-btn:disabled{opacity:.5;cursor:not-allowed}
 .prev-btn:disabled:hover{filter:none;transform:none}
@@ -5451,7 +5451,7 @@ a.prev-btn{text-decoration:none}
      hover-state affordance) is redundant — drop it. Signed-in users keep the
      avatar; theme + auth live in the sheet / Settings. */
   .pnav-more-wrap{display:none}
-  .home-learn{grid-template-columns:repeat(2,1fr)}
+  /* .home-learn stays 2-col here — already set at ≤1024; 1-col kicks in at ≤480. */
   .home-split,.home-split.reverse{grid-template-columns:1fr;gap:var(--s-6)}
   .home-split .home-split-copy,.home-split.reverse .home-split-copy{order:2}
   .home-split .home-split-media{order:1}
@@ -5924,6 +5924,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-toolbar-group:last-child{flex:0 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;margin:0 -4px;padding:2px 4px}
   .plb-toolbar-group:last-child::-webkit-scrollbar{display:none}
   .plb-toolbar-group:last-child>*{flex:0 0 auto;scroll-snap-align:start}
+}
+/* Shared bottom-sheet treatment for every width where the action group scrolls
+   internally (mid-band 769–960 AND the ≤768 stack): a scroll container clips its
+   dropdowns on both axes, so each escapes as a fixed bottom sheet. Declared once
+   here for both ranges instead of duplicated in each query. */
+@media(max-width:960px){
   .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up .22s cubic-bezier(.2,0,0,1)}
   .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .plb-scrolllist{max-height:min(52dvh,420px)}
@@ -5948,25 +5954,13 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-random{order:-1}
   .plb-kbd{display:none}
   .plb-toolbar-sep{display:none}
-  /* Every toolbar dropdown becomes a bottom sheet: full-width, big targets,
-     slides up. Stays inside .plb-menuwrap so the outside-tap dismiss layer
-     still closes it; position:fixed escapes the ribbon's scroll clip. */
-  .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up .22s cubic-bezier(.2,0,0,1)}
-  .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
-  .plb-scrolllist{max-height:min(52dvh,420px)}
+  /* The bottom-sheet dropdown treatment (.plb-menu / .plb-scrolllist /
+     .plb-galpopup*) is shared with the mid-band in the @media(max-width:960px)
+     block above — only the ≤768-unique rules live here. */
   /* Touch has no hover, so pin every toolbar-icon label open (un-clamp the
      desktop max-width:0) — the ribbon is horizontally swipeable, so labels
      always showing beside their icon is fine here. */
   .plb-icobtn .plb-lbl{max-width:none;overflow:visible;opacity:1;margin-left:7px;transition:none;font-size:inherit;font-weight:inherit;color:inherit;pointer-events:auto}
-  /* The gallery popup keeps its fixed-head / scroll-body split as a bottom
-     sheet: re-assert padding:0 + flex column (the generic .plb-menu mobile rule
-     above would otherwise pad it and break the internal scroll region). The
-     grab handle (.plb-menu::before) becomes the first flex child above the
-     head; margin-top keeps it clear of the sheet's rounded top. */
-  .plb-galpopup{padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:min(82dvh,640px)}
-  .plb-galpopup::before{margin:10px auto 2px}
-  .plb-galpopup-head{padding:8px 16px 12px}
-  .plb-galpopup-body .pgal-grid{grid-template-columns:1fr}
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
   .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}

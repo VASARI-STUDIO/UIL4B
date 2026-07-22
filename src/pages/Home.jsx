@@ -37,7 +37,7 @@ const REPORT = [
 // Real submissions land here once Discover community ships.
 const COMMUNITY = [
   { label: 'Nimbus', meta: 'SaaS · 5 colours', hue: 'colour', pal: ['#0051FF', '#4C8DFF', '#A9C7FF', '#0B1B3A'] },
-  { label: ' Member', meta: 'Fintech · 5 colours', hue: 'component', pal: ['#7C3AED', '#A78BFA', '#DDD6FE', '#2E1065'] },
+  { label: 'Amethyst', meta: 'Fintech · 5 colours', hue: 'component', pal: ['#7C3AED', '#A78BFA', '#DDD6FE', '#2E1065'] },
   { label: 'Orchard', meta: 'Wellness · 5 colours', hue: 'imagery', pal: ['#059669', '#34D399', '#A7F3D0', '#022C22'] },
   { label: 'Ember', meta: 'Commerce · 5 colours', hue: 'ai', pal: ['#EA580C', '#FB923C', '#FED7AA', '#431407'] },
   { label: 'Slate', meta: 'Dev tool · 5 colours', hue: 'type', pal: ['#0EA5E9', '#38BDF8', '#BAE6FD', '#0C2A3E'] },

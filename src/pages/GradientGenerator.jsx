@@ -126,6 +126,7 @@ export default function GradientGenerator({ onCopy, toast }) {
 
   const barRef = useRef(null)
   const dialRef = useRef(null)
+  const suppressBarClickRef = useRef(false) // set during a stop drag so the drag-ending click doesn't add a stop
 
   const css = gradientCss(type, angle, stops)
   const cssValue = `background: ${css};`
@@ -215,7 +216,11 @@ export default function GradientGenerator({ onCopy, toast }) {
   // an unlocked slot (random hex, or a palette pick) so both randomisers share
   // this logic.
   const rollStops = useCallback((sample) => {
-    const n = locks.count ? stops.length : 2 + Math.floor(Math.random() * 2) // 2–3 stops
+    // A locked stop must always survive, even when the rolled count is smaller
+    // than its index — so if ANY stop is locked we keep the current length
+    // rather than shrinking to a random 2–3 and dropping locked stops.
+    const hasStopLock = stops.some(s => s.locked)
+    const n = (locks.count || hasStopLock) ? stops.length : 2 + Math.floor(Math.random() * 2) // 2–3 stops
     return Array.from({ length: n }, (_, i) => {
       const ex = stops[i]
       if (ex?.locked) return { color: ex.color, position: ex.position, locked: true }
@@ -323,6 +328,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     e.stopPropagation()
     setActiveStop(idx)
     const move = (ev) => {
+      suppressBarClickRef.current = true // a real drag happened → swallow the click that ends it
       const rect = barRef.current?.getBoundingClientRect()
       if (!rect) return
       const pct = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100))
@@ -340,6 +346,7 @@ export default function GradientGenerator({ onCopy, toast }) {
   // that land on a handle (its own button, incl. the click that ends a drag)
   // bubble up here too, so ignore them — those move a stop, they don't add one.
   const barClick = useCallback((e) => {
+    if (suppressBarClickRef.current) { suppressBarClickRef.current = false; return }
     if (e.target.closest('.ggn-handle')) return
     const rect = barRef.current?.getBoundingClientRect()
     if (!rect) return
