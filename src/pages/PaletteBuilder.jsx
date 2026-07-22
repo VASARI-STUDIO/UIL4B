@@ -476,6 +476,13 @@ const VISION_GLYPHS = {
   achromatopsia: <><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none" /></>,
 }
 const VisionGlyph = ({ id, size = 14 }) => <Ico size={size}>{VISION_GLYPHS[id] || VISION_GLYPHS.normal}</Ico>
+// Colour-blindness glyph (Material "invert colors" droplet) — fill-based, so a
+// standalone inline SVG rather than the stroke-based <Ico>.
+const IcoCvd = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 19.58c-1.6 0-3.11-.62-4.24-1.75A5.95 5.95 0 0 1 6 13.58c0-1.58.62-3.11 1.76-4.24L12 5.1m5.66 2.83L12 2.27L6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31A7.98 7.98 0 0 0 12 21.58c2.05 0 4.1-.78 5.66-2.34c3.12-3.12 3.12-8.19 0-11.31" />
+  </svg>
+)
 
 // ── HctPicker — per-column Hue·Chroma·Tone editor (the M3 space the whole
 // engine runs in), plus a hex field. Edits the RAW colour; the global adjust
@@ -1612,10 +1619,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <button
             type="button"
             className="btn btn-s plb-icobtn"
-            title="Colour-vision check — see how the palette reads for colour-blind viewers"
+            title="Colour blindness — see how the palette reads for colour-blind viewers"
             onClick={() => openSplitVision(colors, '')}
           >
-            <IcoEye /><span className="plb-lbl">Vision</span>
+            <IcoCvd size={13} /><span className="plb-lbl">Colour blindness</span>
           </button>
           <div className="plb-menuwrap">
             <button
@@ -1623,11 +1630,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
               className="btn btn-s"
               aria-expanded={visionOpen}
               aria-haspopup="menu"
-              title="Preview the palette through colour-vision deficiencies"
+              title="Simulate the palette through colour-vision deficiencies"
               onClick={() => { const n = !visionOpen; closeAllMenus(); setVisionOpen(n) }}
             >
               <VisionGlyph id={vision} size={13} />
-              <span className="plb-harm-k">Vision</span>
+              <span className="plb-harm-k">Simulate</span>
               {activeVision[1]}
               <IcoChevron />
             </button>
