@@ -69,6 +69,16 @@ out by surface, Create/Discover/Learn derived from `toolTree.js` so it can't dri
 design-system consistency is parsed and sequenced into 7 waves →
 [`build-plan/palette-v3-plan.md`](build-plan/palette-v3-plan.md). **Start there.**
 
+**Phase-16 UX/accessibility audit — follow-up in flight (2026-07-22):** the
+audit's first tranche shipped to `main` (#164 — gradient lockable-settings on
+randomise + click-to-add-stop, palette toolbar single-line, homepage redesign).
+A second Palette Builder pass is on `claude/audit-implementation-qa-a1hjzp`:
+**Vision type** now splits each swatch (top = palette colour, bottom = the
+colour-vision simulation), retiring the standalone "Colour blindness" button and
+its split-screen modal so one control does the job; plus slide-close on remove,
+the community gallery staying open on select, icon-button label slide-out, and a
+one-line Icon Customizer footer. build+lint+QA-gated.
+
 **Known bugs & deferred backlog** → [`build-plan/roadmap.md`](build-plan/roadmap.md).
 
 ---
