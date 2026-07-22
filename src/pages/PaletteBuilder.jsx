@@ -344,12 +344,15 @@ function contrastPair(hex) {
 }
 
 // Column colour + legible ink through CSS custom properties — the
-// no-inline-styles route (same pattern as TintTool's swatchRef).
-function colRef(color, ink) {
+// no-inline-styles route (same pattern as TintTool's swatchRef). `sim` is the
+// colour-vision-simulated shade painted on the bottom half when a vision type
+// is active; it equals `color` when vision is Normal (so the split is seamless).
+function colRef(color, ink, sim) {
   return (el) => {
     if (!el) return
     el.style.setProperty('--plb-c', color)
     el.style.setProperty('--plb-ink', ink)
+    el.style.setProperty('--plb-sim', sim || color)
   }
 }
 function barRef(color) {
@@ -476,13 +479,6 @@ const VISION_GLYPHS = {
   achromatopsia: <><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none" /></>,
 }
 const VisionGlyph = ({ id, size = 14 }) => <Ico size={size}>{VISION_GLYPHS[id] || VISION_GLYPHS.normal}</Ico>
-// Colour-blindness glyph (Material "invert colors" droplet) — fill-based, so a
-// standalone inline SVG rather than the stroke-based <Ico>.
-const IcoCvd = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M12 19.58c-1.6 0-3.11-.62-4.24-1.75A5.95 5.95 0 0 1 6 13.58c0-1.58.62-3.11 1.76-4.24L12 5.1m5.66 2.83L12 2.27L6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31A7.98 7.98 0 0 0 12 21.58c2.05 0 4.1-.78 5.66-2.34c3.12-3.12 3.12-8.19 0-11.31" />
-  </svg>
-)
 
 // ── HctPicker — per-column Hue·Chroma·Tone editor (the M3 space the whole
 // engine runs in), plus a hex field. Edits the RAW colour; the global adjust
@@ -726,11 +722,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
   const [ctxMenu, setCtxMenu] = useState(null)     // { i, x, y } right-click menu
   const [preview, setPreview] = useState(null)     // { mode, tab, compare } modal
-  // Split-screen colour-vision check shown when a community palette is imported:
-  // top = normal, bottom = the same palette through a colour-vision simulation,
-  // so the user immediately sees how accessible their new palette is. { colors,
-  // name, mode } where mode is a simCvd id (deuteranopia by default).
-  const [splitVision, setSplitVision] = useState(null)
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
   // Community submit popup (Wave 5 items 20–22): a proper modal with a palette
@@ -771,14 +762,17 @@ export default function PaletteBuilder({ onCopy, toast }) {
     clearTimeout(animTimer.current)
     animTimer.current = setTimeout(() => setAnimIdx(null), 450)
   }
-  useEffect(() => () => clearTimeout(animTimer.current), [])
+  // Slide-close: the removed column plays the reverse of the grow-in before it
+  // actually leaves the array, so pressing ✕ collapses the swatch shut.
+  const [outIdx, setOutIdx] = useState(null)
+  const outTimer = useRef(null)
+  useEffect(() => () => { clearTimeout(animTimer.current); clearTimeout(outTimer.current) }, [])
 
   const seedValid = normaliseHex(seedInput) != null
 
   // The adjust lens is non-destructive: `colors` stays raw, exports/labels use
   // the adjusted values, and the board shows the vision-simulated version.
   const adjusted = useMemo(() => applyAdjust(colors, adjust), [colors, adjust])
-  const view = useMemo(() => adjusted.map(c => simCvd(c, vision)), [adjusted, vision])
   const paletteScore = useMemo(() => scorePalette(adjusted), [adjusted])
   const variations = useMemo(() => (varBase ? paletteVariations(varBase) : []), [varBase])
 
@@ -978,13 +972,24 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   const removeCol = (i) => {
     if (colors.length <= 2) { toast?.('A palette needs at least two colours'); return }
-    setColors(prev => prev.filter((_, k) => k !== i))
-    setLocked(prev => {
-      const next = new Set()
-      prev.forEach(k => { if (k < i) next.add(k); else if (k > i) next.add(k - 1) })
-      return next
-    })
+    if (outIdx != null) return // let the current close animation finish first
     setTintsIdx(null); setPickerIdx(null); setCtxMenu(null)
+    const drop = () => {
+      setColors(prev => prev.filter((_, k) => k !== i))
+      setLocked(prev => {
+        const next = new Set()
+        prev.forEach(k => { if (k < i) next.add(k); else if (k > i) next.add(k - 1) })
+        return next
+      })
+      setOutIdx(null)
+      setLiveMsg('Colour removed')
+    }
+    // Slide the swatch closed first (reverse of the grow-in), then splice it out.
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (reduce) { drop(); return }
+    setOutIdx(i)
+    clearTimeout(outTimer.current)
+    outTimer.current = setTimeout(drop, 300)
   }
 
   // Single insert path for the Add block AND the click-between gaps — gates
@@ -1156,14 +1161,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setGalleryOpen(false)
     setPreview({ mode: 'light', tab: 'ui', compare: { label, colors: cols, score: scorePalette(cols) } })
   }
-  // Open a top/bottom colour-vision check so the user can see how the current
-  // palette holds up for colour-blind viewers. Triggered on demand from the
-  // toolbar's Vision button. Defaults to deuteranopia (the most common form).
-  const openSplitVision = (colors, name) => {
-    const cols = colors.map(c => normaliseHex(c)).filter(Boolean)
-    if (cols.length < 2) return
-    setSplitVision({ colors: cols, name, mode: 'deuteranopia' })
-  }
   // Import a community-gallery palette as a toggle. The FIRST import snapshots
   // the user's own pre-gallery system; applying it ticks the card. Clicking the
   // SAME (ticked) card — or switching to a different card and toggling it —
@@ -1192,7 +1189,8 @@ export default function PaletteBuilder({ onCopy, toast }) {
     importedSigRef.current = null // let the effect record the imported baseline
     applyPalette(cols, `Loaded ${name}`)
     setImportedGalleryId(id)
-    setGalleryOpen(false)
+    // Keep the gallery popup open so selecting swatches reads as a live toggle —
+    // the user can compare picks (and untick to revert) without reopening it.
   }
   // Clear the imported tick once the board diverges from the imported baseline.
   // The first run after an import records the baseline (colours + adjust lens);
@@ -1616,25 +1614,17 @@ export default function PaletteBuilder({ onCopy, toast }) {
           >
             <IcoContrast /><span className="plb-lbl">Contrast</span>{!isPro && <IcoLock open={false} size={12} />}
           </button>
-          <button
-            type="button"
-            className="btn btn-s plb-icobtn"
-            title="Colour blindness — see how the palette reads for colour-blind viewers"
-            onClick={() => openSplitVision(colors, '')}
-          >
-            <IcoCvd size={13} /><span className="plb-lbl">Colour blindness</span>
-          </button>
           <div className="plb-menuwrap">
             <button
               type="button"
               className="btn btn-s"
               aria-expanded={visionOpen}
               aria-haspopup="menu"
-              title="Simulate the palette through colour-vision deficiencies"
+              title="Vision type — split each swatch to preview it through a colour-vision deficiency"
               onClick={() => { const n = !visionOpen; closeAllMenus(); setVisionOpen(n) }}
             >
               <VisionGlyph id={vision} size={13} />
-              <span className="plb-harm-k">Simulate</span>
+              <span className="plb-harm-k">Vision type</span>
               {activeVision[1]}
               <IcoChevron />
             </button>
@@ -1774,23 +1764,30 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
       {/* ── The board ── */}
       <div className="plb-board">
-        {view.map((c, i) => {
-          const ink = textColorForBg(c)
-          const contrast = contrastPair(adjusted[i])
+        {adjusted.map((c, i) => {
+          // Vision type split: TOP half paints the real palette colour, BOTTOM
+          // half simulates it through the selected colour-vision deficiency.
+          // 'normal' leaves the swatch as a single flat colour.
+          const isSplit = vision !== 'normal'
+          const sim = isSplit ? simCvd(c, vision) : c
+          const ink = textColorForBg(sim)
+          const contrast = contrastPair(c)
           const ramp = tonalRamp(c)
           const role = i < ROLES.length ? ROLES[i] : `ALTERNATIVE ${i - ROLES.length + 1}`
           const isLocked = locked.has(i)
           const colClass = [
             'plb-col',
             isLocked && 'plb-col--locked',
+            isSplit && 'plb-col--split',
             animIdx === i && 'plb-col--in',
+            outIdx === i && 'plb-col--out',
             overIdx === i && dragFrom.current != null && 'plb-col--over',
           ].filter(Boolean).join(' ')
           return (
             <section
               key={i}
               className={colClass}
-              ref={colRef(c, ink)}
+              ref={colRef(c, ink, sim)}
               aria-label={`${role} ${adjusted[i]}`}
               // Whole-swatch drag: grab anywhere on the column to reorder (the
               // grip glyph stays as a visual affordance). Disabled while a tints
@@ -1848,7 +1845,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 >
                   <IcoSliders />
                 </button>
-                {view.length > 1 && (
+                {adjusted.length > 1 && (
                   <button type="button" className="plb-tool" title="Swap with the next column" aria-label={`Swap ${role} with the next column`} onClick={() => swapCols(i)}>
                     <IcoSwap />
                   </button>
@@ -1856,7 +1853,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 <button type="button" className="plb-tool" title="Copy hex" aria-label={`Copy ${adjusted[i]}`} onClick={() => onCopy?.(adjusted[i])}>
                   <IcoCopy />
                 </button>
-                {view.length > 2 && (
+                {adjusted.length > 2 && (
                   <button type="button" className="plb-tool" title="Remove colour" aria-label={`Remove ${role}`} onClick={() => removeCol(i)}>
                     <IcoX />
                   </button>
@@ -1917,7 +1914,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 />
               )}
 
-              {i < view.length - 1 && (
+              {i < adjusted.length - 1 && (
                 <button
                   type="button"
                   className="plb-gap"
@@ -2024,59 +2021,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Split-screen colour-vision check (shown on community import) ── */}
-      {splitVision && (
-        <div
-          className="plb-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Colour-vision check"
-          onPointerDown={(e) => { if (e.target === e.currentTarget) setSplitVision(null) }}
-        >
-          <div className="plb-modal-card">
-            <div className="plb-modal-head">
-              <span className="plb-pop-title">Colour-vision check{splitVision.name ? ` — ${splitVision.name}` : ''}</span>
-              <div className="plb-modal-modes" role="group" aria-label="Colour-vision type">
-                {VISION_MODES.filter(([id]) => id !== 'normal').map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={splitVision.mode === id ? 'plb-mode plb-mode--on' : 'plb-mode'}
-                    aria-pressed={splitVision.mode === id}
-                    onClick={() => setSplitVision(s => ({ ...s, mode: id }))}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="plb-pop-x" aria-label="Close colour-vision check" onClick={() => setSplitVision(null)}><IcoX /></button>
-            </div>
-            <div className="plb-modal-body">
-              <div className="plb-cvd-row">
-                <div className="plb-cvd-label"><IcoEye /> Normal vision</div>
-                <div className="plb-cvd-strip">
-                  {splitVision.colors.map((c, i) => (
-                    <span key={i} className="plb-cvd-sw" ref={barRef(c)} />
-                  ))}
-                </div>
-              </div>
-              <div className="plb-cvd-row">
-                <div className="plb-cvd-label"><IcoEye /> {VISION_MODES.find(([id]) => id === splitVision.mode)?.[1] || 'Simulated'}</div>
-                <div className="plb-cvd-strip">
-                  {splitVision.colors.map((c, i) => (
-                    <span key={i} className="plb-cvd-sw" ref={barRef(simCvd(c, splitVision.mode))} />
-                  ))}
-                </div>
-              </div>
-              <p className="plb-cvd-note">Top row shows your palette as most people see it; the bottom row simulates how it appears with {(VISION_MODES.find(([id]) => id === splitVision.mode)?.[1] || '').toLowerCase()}. Colours that collapse together may be hard to tell apart.</p>
-            </div>
-            <div className="plb-modal-actions">
-              <button type="button" className="btn btn-s btn-accent" onClick={() => setSplitVision(null)}>Got it</button>
-            </div>
           </div>
         </div>
       )}
