@@ -289,11 +289,10 @@ export default function PillNav() {
   const openedBy = useRef(null)
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
-  // Discover + Learn are admin-only for now — regular users see only Create.
-  // Filter once here so both the desktop bar and the mobile sheet stay in sync.
-  const visibleSections = isAdmin
-    ? NAV_SECTIONS
-    : NAV_SECTIONS.filter((s) => s.id !== 'discover' && s.id !== 'learn')
+  // All three section menus (Create / Discover / Learn) are visible to everyone.
+  // Not-ready tools inside them carry their own "Soon" badge, so nothing here is
+  // gated — the desktop bar and the mobile sheet both render the full set.
+  const visibleSections = NAV_SECTIONS
   const avatarUrl = userProfile?.photoURL || ''
   const displayName = userProfile?.displayName || user?.email?.split('@')[0] || 'Account'
   const accountEmail = userProfile?.email || user?.email || ''
