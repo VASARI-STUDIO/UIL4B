@@ -4846,6 +4846,7 @@ html.lenis,html.lenis body{height:auto}
 .icust-paste-input::placeholder{color:var(--t3)}
 .icust-err{font-size:var(--fs-caption);color:var(--err)}
 .icust-paste .icust-foot{padding:16px 0 0}
+.icust-paste .icust-foot .ui-pill{flex:0 1 auto}
 /* Stage — fixed dark canvas; --light swap for dark-on-light legibility */
 .icust-stage{position:relative;display:grid;place-items:center;min-height:220px;margin:4px 24px 0;padding:24px;border-radius:var(--radius-xl);background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);overflow:hidden;--ig-size:48px;--ig-stroke:2;--ig-color:#F4F4F5;--ig-transform:none;--ig-cap:round;--ig-join:round}
 .icust-stage--light{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
@@ -4952,10 +4953,11 @@ html.lenis,html.lenis body{height:auto}
 /* Copy-only snippet: the text is not selectable, so the Copy button is the one
    way out — keeps the workflow inside UIL4B. */
 .icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
-/* Footer + Pro save-lock — buttons stay on one line */
-.icust-foot{display:flex;flex-wrap:nowrap;align-items:center;gap:10px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
-.icust-foot .ui-pill{white-space:nowrap}
-.icust-reset{margin-left:auto}
+/* Footer + Pro save-lock — the four actions share the row width evenly and only
+   wrap to a second line when the footer is genuinely too narrow, so none clip. */
+.icust-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
+.icust-foot .ui-pill{flex:1 1 auto;min-width:max-content;height:40px;padding:0 14px;font-size:var(--fs-body-s);white-space:nowrap}
+.icust-reset{margin-left:0}
 .icust-save-lock{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
 .icust-save--locked{cursor:pointer;opacity:.85}
 .icust-save--locked:hover{opacity:1}
@@ -5690,6 +5692,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
 /* ── The board ── */
 .plb-board{display:flex;flex:1;min-height:420px}
 .plb-col{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;padding:20px 8px 26px;background:var(--plb-c);color:var(--plb-ink)}
+/* Vision type split: top half the real palette colour, bottom half the
+   colour-vision simulation. Content sits in the bottom half (justify-end), so
+   --plb-ink is computed against --plb-sim. */
+.plb-col--split{background:linear-gradient(to bottom,var(--plb-c) 0 50%,var(--plb-sim) 50% 100%)}
 .plb-col-tools{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px}
 .plb-tool{display:flex;align-items:center;justify-content:center;width:32px;height:32px;color:inherit;background:none;border:none;border-radius:8px;cursor:pointer;opacity:0;transition:opacity var(--t),background var(--t)}
 .plb-col:hover .plb-tool,.plb-col:focus-within .plb-tool,.plb-tool--on{opacity:1}
@@ -5712,6 +5718,11 @@ button.plb-varrow:hover{background:var(--bg-2)}
 /* Board interactions: insert-grow animation, drag-reorder states, gap inserts */
 @keyframes plb-in{from{flex-grow:.02;opacity:.2}to{flex-grow:1;opacity:1}}
 .plb-col--in{animation:plb-in .38s cubic-bezier(.22,.8,.3,1)}
+/* Slide-close: the mirror of plb-in. The removed column collapses shut before
+   it leaves the array (removeCol splices it out once this finishes). */
+@keyframes plb-out{from{flex-grow:1;opacity:1}to{flex-grow:.02;opacity:.2}}
+.plb-col--out{animation:plb-out .3s cubic-bezier(.22,.8,.3,1) forwards;pointer-events:none;overflow:hidden}
+@media(prefers-reduced-motion:reduce){.plb-col--in,.plb-col--out{animation:none}}
 .plb-col--over{box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--plb-ink) 55%,transparent)}
 .plb-tool--grip{cursor:grab}
 /* Whole-swatch drag: the column background reads as grabbable; interactive
@@ -5799,9 +5810,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
    was the lag. On touch there's no hover, so the mobile block pins the label
    inline. Reduced-motion users get the reveal without the width tween. */
 .plb-icobtn{gap:0;position:relative}
-.plb-icobtn .plb-lbl{display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;margin-left:0;transition:max-width .26s cubic-bezier(.22,.8,.3,1),opacity .2s ease,margin-left .26s cubic-bezier(.22,.8,.3,1)}
-.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{max-width:160px;opacity:1;margin-left:7px}
-@media(prefers-reduced-motion:reduce){.plb-icobtn .plb-lbl{transition:opacity .2s ease}}
+/* Icon button label slides out on hover/focus: the text glides in from behind
+   the icon (translateX) while its track widens (max-width), for one smooth
+   reveal rather than a hard pop. */
+.plb-icobtn .plb-lbl{display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;margin-left:0;transform:translateX(-8px);transition:max-width .32s cubic-bezier(.22,.8,.3,1),transform .32s cubic-bezier(.22,.8,.3,1),opacity .24s ease,margin-left .32s cubic-bezier(.22,.8,.3,1)}
+.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{max-width:160px;opacity:1;margin-left:7px;transform:translateX(0)}
+@media(prefers-reduced-motion:reduce){.plb-icobtn .plb-lbl{transform:none;transition:opacity .2s ease}}
 
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
 .plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
@@ -5960,7 +5974,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
   /* Touch has no hover, so pin every toolbar-icon label open (un-clamp the
      desktop max-width:0) — the ribbon is horizontally swipeable, so labels
      always showing beside their icon is fine here. */
-  .plb-icobtn .plb-lbl{max-width:none;overflow:visible;opacity:1;margin-left:7px;transition:none;font-size:inherit;font-weight:inherit;color:inherit;pointer-events:auto}
+  .plb-icobtn .plb-lbl{max-width:none;overflow:visible;opacity:1;margin-left:7px;transform:none;transition:none;font-size:inherit;font-weight:inherit;color:inherit;pointer-events:auto}
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
   .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}
