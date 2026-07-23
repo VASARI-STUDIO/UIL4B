@@ -235,7 +235,7 @@ is no longer part of A6.)*
 |---|---|:--:|---|
 | **B1** | Triage ~23 orphaned pages: per page re-wire or delete | L | `Backlog` (depends on A3) |
 | **B2** | Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS` for removed paths | S | **QA ✅ → merging** — 7 redirect-only keys removed from both maps (`/dashboard`, `/resources`, `/docs-*`); redirect routes kept. Independent review Approve + QA PASS. Build ✅ / lint ✅. Merge via PR. |
-| **B3** | Add `/learn` to `PAGE_TITLES`/`PAGE_DESCRIPTIONS` + prune stale `sitemap.xml` redirect URLs | S | `Backlog` — QA-3/QA-4 follow-ups (pre-existing, adjacent to B2). `/learn` is live but has no title/description entry (falls back to generic); `sitemap.xml` still lists 6 redirect-only `/docs-*` + `/resources` URLs the audit now documents as redirect-only. SEO-owner follow-up. |
+| **B3** | Add `/learn` to `PAGE_TITLES`/`PAGE_DESCRIPTIONS` + prune stale `sitemap.xml` redirect URLs | S | **Shipped** — `/learn` gains an honest coming-soon title + description (no longer falls back to generic). `sitemap.xml`: 9 redirect-only URLs pruned (`/docs`, `/resources`, all 7 `/docs-*`), emptying the "Documentation" section; live `/discover/gradients` added under a new "Discover" section (all other entries cross-checked live against `PAGE_TITLES`). `/learn` deliberately NOT sitemapped — a coming-soon shell is thin content we don't solicit crawl for. Build ✅ / lint ✅ (0 err / 34 warn baseline). Merge via PR. |
 | **B3** | Resolve `/color` landing-vs-studio ambiguity | M | `Backlog` |
 | **B4** | De-emphasise "Soon" groups in Create mega-menu | S | `Backlog` |
 
