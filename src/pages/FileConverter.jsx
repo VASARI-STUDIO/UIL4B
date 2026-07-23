@@ -2,6 +2,11 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import SnapSlider from '../components/SnapSlider'
 import { takePendingImages } from '../utils/imageHandoff'
+// Self-hosted ffmpeg core (single-threaded). Vite emits these as fingerprinted,
+// same-origin assets — no third-party CDN. `?url` yields just the asset URL, so
+// the ~32 MB wasm is only fetched when a conversion actually runs, not on load.
+import ffmpegCoreURL from '@ffmpeg/core?url'
+import ffmpegWasmURL from '@ffmpeg/core/wasm?url'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MODES = [
@@ -49,10 +54,10 @@ const MAX_CANVAS_DIM = 16384
 // the item instead so the batch — and the UI — always finishes.
 const ENCODE_TIMEOUT_MS = 30000
 
-// ffmpeg.wasm CDN URLs (single-threaded core; works without cross-origin isolation)
-const FFMPEG_PKG = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'
-const FFMPEG_UTIL = 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js'
-const FFMPEG_CORE_BASE = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
+// ffmpeg.wasm is loaded from bundled npm packages (single-threaded core; works
+// without cross-origin isolation). Core asset URLs are imported at the top of
+// this file; the FFmpeg class + util are dynamically imported in getFfmpeg so
+// their code only loads when a video conversion is first used.
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatBytes(b) {
@@ -542,14 +547,14 @@ async function getFfmpeg(onLog) {
   if (ffmpegLoadPromise) return ffmpegLoadPromise
   ffmpegLoadPromise = (async () => {
     const [{ FFmpeg }, { toBlobURL, fetchFile }] = await Promise.all([
-      import(/* @vite-ignore */ FFMPEG_PKG),
-      import(/* @vite-ignore */ FFMPEG_UTIL),
+      import('@ffmpeg/ffmpeg'),
+      import('@ffmpeg/util'),
     ])
     const ffmpeg = new FFmpeg()
     if (onLog) ffmpeg.on('log', ({ message }) => onLog(message))
     await ffmpeg.load({
-      coreURL: await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
+      coreURL: await toBlobURL(ffmpegCoreURL, 'text/javascript'),
+      wasmURL: await toBlobURL(ffmpegWasmURL, 'application/wasm'),
     })
     ffmpeg._fetchFile = fetchFile
     ffmpegInstance = ffmpeg
