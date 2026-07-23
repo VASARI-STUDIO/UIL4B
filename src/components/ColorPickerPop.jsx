@@ -57,7 +57,7 @@ const DEFAULT_SWATCHES = [
   '#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#78716c',
 ]
 
-export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom colour', swatches = DEFAULT_SWATCHES }) {
+export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom colour', swatches = DEFAULT_SWATCHES, disabled = false, onDisabledClick }) {
   const [open, setOpen] = useState(false)
   const current = normalizeHex(value) || '#000000'
   // hsv is the working state while the popover is open — it preserves hue when
@@ -132,7 +132,13 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
         aria-label={ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        aria-disabled={disabled}
+        onClick={() => {
+          // Stay a real (not natively disabled) button when locked so a click
+          // still reaches onDisabledClick — the Pro gate wants to raise its modal.
+          if (disabled) { onDisabledClick?.(); return }
+          setOpen((o) => !o)
+        }}
       >
         <span className="cpk-trigger-chip" style={{ background: current }} aria-hidden="true" />
       </button>

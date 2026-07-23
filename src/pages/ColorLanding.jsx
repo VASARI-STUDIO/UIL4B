@@ -39,8 +39,9 @@ export default function ColorLanding() {
     <div className="home">
       <PillNav />
 
+      <main id="main" tabIndex={-1}>
       {/* ── Hero ── */}
-      <header className="home-hero" id="main" tabIndex={-1}>
+      <header className="home-hero">
         <span className="home-eyebrow">Colour System Generator</span>
         <h1 className="home-hero-h1">One colour system, start to finish.</h1>
         <p className="home-hero-sub">
@@ -130,6 +131,7 @@ export default function ColorLanding() {
           <p className="home-cta-hint">No credit card · Build in your browser</p>
         </div>
       </section>
+      </main>
     </div>
   )
 }
