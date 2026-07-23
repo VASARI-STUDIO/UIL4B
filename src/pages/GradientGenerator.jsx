@@ -543,7 +543,20 @@ export default function GradientGenerator({ onCopy, toast }) {
                   className="ggn-range"
                   aria-label="Gradient angle slider"
                 />
-                <div className="ggn-angle-val">{angleActive ? `${Math.round(angle)}°` : 'n/a for radial'}</div>
+                {angleActive ? (
+                  <div className="ggn-angle-num">
+                    <input
+                      type="number" min="0" max="360" value={Math.round(angle)}
+                      onChange={(e) => { const v = e.target.value; if (v === '') return; if (guardEdit()) setAngle(((Math.round(+v) % 360) + 360) % 360) }}
+                      disabled={editLocked}
+                      className="ggn-angle-input"
+                      aria-label="Gradient angle in degrees"
+                    />
+                    <span className="ggn-angle-deg" aria-hidden="true">°</span>
+                  </div>
+                ) : (
+                  <div className="ggn-angle-val">n/a for radial</div>
+                )}
               </div>
             </div>
           </div>
@@ -566,13 +579,14 @@ export default function GradientGenerator({ onCopy, toast }) {
           <span className="ggn-label">Stops</span>
           <div className="ggn-block-actions">
             <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked — unlock to randomise it' : 'Lock the number of stops when randomising'} />
-            <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={addStop}>{editLocked && <IcoLock size={12} />} + Stop</button>
+            <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={addStop}>{editLocked && <IcoLock size={12} />} + Add Stop</button>
             <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={flip}>{editLocked && <IcoLock size={12} />} ⇄ Flip</button>
           </div>
         </div>
         <div className="ggn-stops">
           {stops.map((s, i) => (
             <div key={i} className={`ggn-stop${activeStop === i ? ' is-active' : ''}`} onClick={() => setActiveStop(i)}>
+              <span className="ggn-stop-idx" aria-hidden="true">{i + 1}</span>
               <div className="ggn-stop-swatch">
                 <ColorPickerPop
                   value={s.color}
