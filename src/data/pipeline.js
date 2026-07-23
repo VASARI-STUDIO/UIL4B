@@ -111,7 +111,7 @@ export const PIPELINE_PROCESSES = [
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
   { id: 'design-consistency', title: 'Consolidate bespoke buttons onto .btn', priority: 'P1', effort: 'L', area: 'Design', status: 'doing', note: 'Headline red flag: multiple button styles + inconsistent padding.' },
-  { id: 'F1', title: 'Remove unpkg.com ffmpeg.wasm CDN dependency', priority: 'P1', effort: 'M', area: 'Infra', status: 'todo', note: 'Third-party CDN in the converter — self-host or bundle.' },
+  { id: 'F1', title: 'Remove unpkg.com ffmpeg.wasm CDN dependency', priority: 'P1', effort: 'M', area: 'Infra', status: 'done', note: 'Self-hosted: ffmpeg core+wasm now bundled by Vite as fingerprinted same-origin assets — no third-party CDN.' },
   { id: 'C3', title: 'Mega-menu accessibility retest', priority: 'P1', effort: 'M', area: 'A11y', status: 'review', note: 'Needs a running app to verify keyboard + ARIA.' },
   { id: 'D2', title: '320–360px small-screen floor', priority: 'P1', effort: 'M', area: 'Responsive', status: 'review', note: 'Needs a running app to verify no overflow at the floor.' },
   { id: 'B4', title: 'De-emphasise "Soon" groups in Create mega-menu', priority: 'P2', effort: 'S', area: 'Nav', status: 'todo', note: 'Coming-soon groups compete with live tools.' },
