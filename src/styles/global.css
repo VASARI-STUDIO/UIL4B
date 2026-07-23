@@ -6043,6 +6043,9 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ui-pro-amount{font-size:26px;font-weight:680;letter-spacing:-.02em;color:var(--t0)}
 .ui-pro-per{font-size:13px;color:var(--t2)}
 .ui-pro-save{font-size:11.5px;font-weight:600;color:var(--brand);background:var(--brand-bg);border-radius:var(--radius-pill);padding:3px 9px}
+/* Placeholder held over the amount until the live price settles — reserves the
+   line height so the real number doesn't shift the layout when it lands. */
+.ui-pro-price-skel{display:inline-block;width:190px;height:22px;border-radius:var(--radius-s)}
 .ui-pro-cta{margin-top:16px}
 .ui-pro-cta .btn{width:100%;justify-content:center}
 .ui-pro-note{margin:12px 0 0;font-size:11.5px;color:var(--t2);text-align:center}
@@ -6122,6 +6125,8 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-title{font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--ggn-t0);line-height:1.1;margin:0}
 .ggn-badge{display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:var(--ggn-accent);background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 34%,transparent);padding:3px 11px;border-radius:var(--radius-pill);font-variant-numeric:tabular-nums}
 .ggn-sub{margin:10px 0 0;font-size:14px;line-height:1.55;color:var(--ggn-t2);max-width:520px}
+.ggn-lock-note{display:flex;align-items:flex-start;gap:7px;margin:12px 0 0;padding:9px 13px;font-size:12.5px;line-height:1.5;font-weight:500;color:var(--ggn-accent);background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:var(--radius-s);max-width:520px}
+.ggn-lock-note svg{flex-shrink:0;margin-top:2px}
 .ggn-head-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .ggn-btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;border-radius:var(--radius-pill);padding:9px 18px;transition:all var(--t);white-space:nowrap;border:1px solid transparent}
 .ggn-btn-accent{background:var(--ggn-accent);border-color:var(--ggn-accent);color:var(--accent-fg)}

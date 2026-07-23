@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { useProModal } from '../contexts/ProModalContext'
 import ColorPickerPop from '../components/ColorPickerPop'
 import ShuffleIcon from '../components/ShuffleIcon'
 import { hexToRgb } from '../utils/colors'
@@ -103,6 +105,8 @@ const LockBtn = ({ on, onClick, label, className = '' }) => (
 
 export default function GradientGenerator({ onCopy, toast }) {
   const { design, setGradient, projects } = useProject()
+  const { isPro } = useSubscription()
+  const { openProModal } = useProModal()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Seed from the saved gradient. Null stop colours (the untouched default,
@@ -119,6 +123,14 @@ export default function GradientGenerator({ onCopy, toast }) {
   })
   const [activeStop, setActiveStop] = useState(0)
   const [copied, setCopied] = useState(false)
+
+  // A gradient carried in from the Discover gallery is free to preview + copy,
+  // but reshaping it is a Pro tool. `fromLibrary` is set only on the ?gs= hand-off
+  // (below); every wholesale-replace action (Reset / Random / From palette /
+  // Import / preset) clears it, so those act as free escape hatches to an
+  // editable, from-scratch gradient. The flag lives in component state, so the
+  // gate applies to the gallery → edit journey within a session.
+  const [fromLibrary, setFromLibrary] = useState(false)
 
   // Randomise locks — pin any of type / angle / stop-count so a shuffle keeps
   // them. Per-stop colour+position locks live on the stop objects (`.locked`).
@@ -147,6 +159,7 @@ export default function GradientGenerator({ onCopy, toast }) {
       setType(incoming.type)
       setAngle(incoming.angle)
       setActiveStop(0)
+      setFromLibrary(true)
       toast?.(`Loaded ${incoming.name || 'gradient'}`)
     } else {
       const preset = presetSlug ? PRESETS.find(p => slugify(p.n) === presetSlug) : null
@@ -159,21 +172,46 @@ export default function GradientGenerator({ onCopy, toast }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // A gallery gradient is free to view + copy; reshaping it — adding/moving/
+  // recolouring stops, switching type or angle, flipping — is Pro. `editLocked`
+  // drives the visual cues; `guardEdit` intercepts every edit action, raises the
+  // Pro modal and returns false so the caller bails. Returns true (edit allowed)
+  // for Pro users and for any gradient not sourced from the gallery.
+  const editLocked = fromLibrary && !isPro
+  const guardEdit = useCallback(() => {
+    if (!fromLibrary || isPro) return true
+    openProModal({
+      eyebrow: 'Pro gradient tools',
+      title: 'Editing gallery gradients is Pro',
+      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Hit Reset, Random or From palette to start an editable gradient of your own.',
+      features: [
+        'Add, move & recolour stops on any gallery gradient',
+        'Switch gradient type and fine-tune the angle',
+        'Flip and randomise straight from your own palette',
+        'Unlimited saved projects across every colour tool',
+      ],
+    })
+    return false
+  }, [fromLibrary, isPro, openProModal])
+
   const applyPreset = useCallback((p) => {
     setStops(p.stops.map(s => ({ ...s })))
     setType(p.type)
     setAngle(p.angle)
     setActiveStop(0)
+    setFromLibrary(false)
   }, [])
 
   const updateStop = useCallback((idx, patch) => {
+    if (!guardEdit()) return
     setStops(prev => prev.map((s, i) => i === idx ? { ...s, ...patch } : s))
-  }, [])
+  }, [guardEdit])
 
   // Insert a stop at a given position (0–100), blending the colour from the two
   // stops it lands between. Used by both the "+ Stop" button (midpoint) and a
   // click on the preview bar (exact position). Focuses the new stop.
   const addStopAt = useCallback((pct) => {
+    if (!guardEdit()) return
     setStops(prev => {
       const sorted = [...prev].sort((a, b) => a.position - b.position)
       let lo = sorted[0], hi = sorted[sorted.length - 1]
@@ -186,7 +224,7 @@ export default function GradientGenerator({ onCopy, toast }) {
       return next
     })
     setActiveStop(stops.length) // the appended stop
-  }, [stops.length])
+  }, [stops.length, guardEdit])
 
   const addStop = useCallback(() => {
     const sorted = [...stops].sort((a, b) => a.position - b.position)
@@ -200,13 +238,15 @@ export default function GradientGenerator({ onCopy, toast }) {
   }, [stops, addStopAt])
 
   const removeStop = useCallback((idx) => {
+    if (!guardEdit()) return
     setStops(prev => prev.length > 2 ? prev.filter((_, i) => i !== idx) : prev)
     setActiveStop(0)
-  }, [])
+  }, [guardEdit])
 
   const flip = useCallback(() => {
+    if (!guardEdit()) return
     setStops(prev => prev.map(s => ({ ...s, position: 100 - s.position })))
-  }, [])
+  }, [guardEdit])
 
   const randomHex = () => '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0').toUpperCase()
 
@@ -237,6 +277,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     if (!locks.type) setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
     if (!locks.angle) setAngle(Math.round(Math.random() * 360))
     setActiveStop(0)
+    setFromLibrary(false)
   }, [rollStops, locks.type, locks.angle])
 
   // Valid hex colours in the live Palette Builder palette — feeds the
@@ -265,6 +306,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     if (!locks.type) setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
     if (!locks.angle) setAngle(Math.round(Math.random() * 360))
     setActiveStop(0)
+    setFromLibrary(false)
     toast?.('Random gradient from your palette')
   }, [paletteHexes, randomise, rollStops, locks.type, locks.angle, toast])
 
@@ -294,6 +336,7 @@ export default function GradientGenerator({ onCopy, toast }) {
       position: Math.round((i / (src.colors.length - 1)) * 100),
     })))
     setActiveStop(0)
+    setFromLibrary(false)
     toast?.(`Imported ${src.name}`)
   }, [toast])
 
@@ -326,6 +369,7 @@ export default function GradientGenerator({ onCopy, toast }) {
   const dragStop = useCallback((e, idx) => {
     e.preventDefault()
     e.stopPropagation()
+    if (!guardEdit()) return
     setActiveStop(idx)
     const move = (ev) => {
       suppressBarClickRef.current = true // a real drag happened → swallow the click that ends it
@@ -340,7 +384,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
-  }, [updateStop])
+  }, [updateStop, guardEdit])
 
   // Click an empty part of the bar to drop a stop right where you click. Clicks
   // that land on a handle (its own button, incl. the click that ends a drag)
@@ -358,6 +402,7 @@ export default function GradientGenerator({ onCopy, toast }) {
   const angleActive = type !== 'Radial'
   const dragDial = useCallback((e) => {
     if (!angleActive) return
+    if (!guardEdit()) return
     const compute = (ev) => {
       const rect = dialRef.current?.getBoundingClientRect()
       if (!rect) return
@@ -373,7 +418,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
-  }, [angleActive])
+  }, [angleActive, guardEdit])
 
   const sortedForBar = [...stops.map((s, i) => ({ ...s, i }))].sort((a, b) => a.position - b.position)
 
@@ -388,6 +433,12 @@ export default function GradientGenerator({ onCopy, toast }) {
             <span className="ggn-badge">{stops.length} {stops.length === 1 ? 'stop' : 'stops'}</span>
           </div>
           <p className="ggn-sub">Build any gradient — drag the stops, dial the angle and copy production-ready CSS. It follows you across every colour tool.</p>
+          {editLocked && (
+            <p className="ggn-lock-note">
+              <IcoLock size={12} />
+              <span>Gallery gradient — free to preview &amp; copy. Editing it is a Pro tool; Reset or Random to start a free, editable one.</span>
+            </p>
+          )}
         </div>
         <div className="ggn-head-actions">
           <button type="button" className="ggn-btn ggn-btn-accent" onClick={randomise}>
@@ -438,7 +489,11 @@ export default function GradientGenerator({ onCopy, toast }) {
               ))}
             </div>
           </div>
-          <p className="ggn-preview-hint">Drag a handle to move a stop · click the bar to add one</p>
+          <p className="ggn-preview-hint">
+            {editLocked
+              ? 'Editing gallery gradients is a Pro feature — Reset or Random to start a free, editable gradient.'
+              : 'Drag a handle to move a stop · click the bar to add one'}
+          </p>
         </div>
 
         {/* Control panel */}
@@ -450,7 +505,7 @@ export default function GradientGenerator({ onCopy, toast }) {
             </div>
             <div className="ggn-seg">
               {GRAD_TYPES.map(t => (
-                <button key={t} type="button" className={`ggn-seg-btn${type === t ? ' is-on' : ''}`} onClick={() => setType(t)}>{t}</button>
+                <button key={t} type="button" className={`ggn-seg-btn${type === t ? ' is-on' : ''}`} onClick={() => { if (guardEdit()) setType(t) }}>{t}</button>
               ))}
             </div>
           </div>
@@ -464,8 +519,8 @@ export default function GradientGenerator({ onCopy, toast }) {
               <div className="ggn-dial" ref={dialRef} onPointerDown={dragDial} role="slider" aria-label="Gradient angle" aria-valuenow={Math.round(angle)} aria-valuemin={0} aria-valuemax={360} tabIndex={angleActive ? 0 : -1}
                 onKeyDown={(e) => {
                   if (!angleActive) return
-                  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setAngle(a => (a + 1) % 360) }
-                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setAngle(a => (a + 359) % 360) }
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); if (guardEdit()) setAngle(a => (a + 1) % 360) }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); if (guardEdit()) setAngle(a => (a + 359) % 360) }
                 }}>
                 <div className="ggn-dial-hand" style={{ transform: `rotate(${angle}deg)` }} />
                 <div className="ggn-dial-center" />
@@ -473,7 +528,7 @@ export default function GradientGenerator({ onCopy, toast }) {
               <div className="ggn-angle-ctrl">
                 <input
                   type="range" min="0" max="360" value={Math.round(angle)}
-                  onChange={(e) => setAngle(+e.target.value)}
+                  onChange={(e) => { if (guardEdit()) setAngle(+e.target.value) }}
                   disabled={!angleActive}
                   className="ggn-range"
                   aria-label="Gradient angle slider"
@@ -501,7 +556,7 @@ export default function GradientGenerator({ onCopy, toast }) {
           <span className="ggn-label">Stops</span>
           <div className="ggn-block-actions">
             <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked — unlock to randomise it' : 'Lock the number of stops when randomising'} />
-            <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={addStop}>+ Stop</button>
+            <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={addStop}>{editLocked && <IcoLock size={12} />} + Stop</button>
             <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={flip}>⇄ Flip</button>
           </div>
         </div>
