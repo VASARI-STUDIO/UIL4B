@@ -65,8 +65,9 @@ export default function Home() {
     <div className="home" ref={rootRef}>
       <PillNav />
 
+      <main id="main" tabIndex={-1}>
       {/* ── Hero ── */}
-      <header className="home-hero" id="main" tabIndex={-1}>
+      <header className="home-hero">
         <h1 className="home-hero-h1">
           <span className="home-hero-line"><span className="home-hero-line-in">No more tab hoarding.</span></span>
           <span className="home-hero-line"><span className="home-hero-line-in">Every design tool, one workspace.</span></span>
@@ -286,6 +287,8 @@ export default function Home() {
           <p className="home-cta-hint">No credit card · Upgrade only when you're ready</p>
         </div>
       </section>
+
+      </main>
 
       {/* ── Footer (Coolors-style tools grid + link columns) ── */}
       <footer className="home-foot">
