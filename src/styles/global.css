@@ -6040,12 +6040,13 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ui-pro-li{display:flex;gap:11px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--t1)}
 .ui-pro-tick{flex:none;width:20px;height:20px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--brand-bg);color:var(--brand)}
 .ui-pro-price{margin:22px 0 0;display:flex;align-items:baseline;gap:8px}
-.ui-pro-amount{font-size:26px;font-weight:680;letter-spacing:-.02em;color:var(--t0)}
+.ui-pro-amount{font-size:26px;font-weight:680;line-height:1;letter-spacing:-.02em;color:var(--t0)}
 .ui-pro-per{font-size:13px;color:var(--t2)}
 .ui-pro-save{font-size:11.5px;font-weight:600;color:var(--brand);background:var(--brand-bg);border-radius:var(--radius-pill);padding:3px 9px}
-/* Placeholder held over the amount until the live price settles — reserves the
-   line height so the real number doesn't shift the layout when it lands. */
-.ui-pro-price-skel{display:inline-block;width:190px;height:22px;border-radius:var(--radius-s)}
+/* Placeholder held over the amount until the live price settles — its height
+   matches the real amount's line box (26px, line-height:1) so the swap to the
+   live number doesn't shift the modal layout when it lands. */
+.ui-pro-price-skel{display:inline-block;width:190px;height:26px;border-radius:var(--radius-s)}
 .ui-pro-cta{margin-top:16px}
 .ui-pro-cta .btn{width:100%;justify-content:center}
 .ui-pro-note{margin:12px 0 0;font-size:11.5px;color:var(--t2);text-align:center}

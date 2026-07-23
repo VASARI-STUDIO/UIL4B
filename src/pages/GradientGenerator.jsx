@@ -125,12 +125,13 @@ export default function GradientGenerator({ onCopy, toast }) {
   const [copied, setCopied] = useState(false)
 
   // A gradient carried in from the Discover gallery is free to preview + copy,
-  // but reshaping it is a Pro tool. `fromLibrary` is set only on the ?gs= hand-off
+  // but reshaping it is a Pro tool. `fromLibrary` is set on the ?gs= hand-off
   // (below); every wholesale-replace action (Reset / Random / From palette /
   // Import / preset) clears it, so those act as free escape hatches to an
-  // editable, from-scratch gradient. The flag lives in component state, so the
-  // gate applies to the gallery → edit journey within a session.
-  const [fromLibrary, setFromLibrary] = useState(false)
+  // editable, from-scratch gradient. We seed it from the shared design's
+  // `source` flag so the gate survives a remount or refresh — and stays in sync
+  // with the parallel gradient editor in ColorStudio, which writes the same flag.
+  const [fromLibrary, setFromLibrary] = useState(() => design?.gradient?.source === 'gallery')
 
   // Randomise locks — pin any of type / angle / stop-count so a shuffle keeps
   // them. Per-stop colour+position locks live on the stop objects (`.locked`).
@@ -144,10 +145,12 @@ export default function GradientGenerator({ onCopy, toast }) {
   const cssValue = `background: ${css};`
 
   // Persist to the shared design so the gradient follows the user across tools.
+  // `source` travels with it so the Pro gate on gallery gradients survives a
+  // remount/refresh and stays consistent with ColorStudio's gradient editor.
   useEffect(() => {
-    setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position })), angle, type })
+    setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position })), angle, type, source: fromLibrary ? 'gallery' : 'own' })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stops, angle, type])
+  }, [stops, angle, type, fromLibrary])
 
   // ── Hand-offs: gallery (?gs=…&gt=…&ga=…) and Discover (?preset=&tab=) ──
   useEffect(() => {
@@ -206,6 +209,13 @@ export default function GradientGenerator({ onCopy, toast }) {
     if (!guardEdit()) return
     setStops(prev => prev.map((s, i) => i === idx ? { ...s, ...patch } : s))
   }, [guardEdit])
+
+  // Toggling a stop's randomise-lock isn't reshaping the gradient — it's a
+  // shuffle control, exactly like the ungated type / angle / count locks — so it
+  // bypasses guardEdit and stays available on a gallery gradient.
+  const toggleStopLock = useCallback((idx) => {
+    setStops(prev => prev.map((s, i) => i === idx ? { ...s, locked: !s.locked } : s))
+  }, [])
 
   // Insert a stop at a given position (0–100), blending the colour from the two
   // stops it lands between. Used by both the "+ Stop" button (midpoint) and a
@@ -529,7 +539,7 @@ export default function GradientGenerator({ onCopy, toast }) {
                 <input
                   type="range" min="0" max="360" value={Math.round(angle)}
                   onChange={(e) => { if (guardEdit()) setAngle(+e.target.value) }}
-                  disabled={!angleActive}
+                  disabled={!angleActive || editLocked}
                   className="ggn-range"
                   aria-label="Gradient angle slider"
                 />
@@ -557,7 +567,7 @@ export default function GradientGenerator({ onCopy, toast }) {
           <div className="ggn-block-actions">
             <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked — unlock to randomise it' : 'Lock the number of stops when randomising'} />
             <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={addStop}>{editLocked && <IcoLock size={12} />} + Stop</button>
-            <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={flip}>⇄ Flip</button>
+            <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={flip}>{editLocked && <IcoLock size={12} />} ⇄ Flip</button>
           </div>
         </div>
         <div className="ggn-stops">
@@ -568,6 +578,8 @@ export default function GradientGenerator({ onCopy, toast }) {
                   value={s.color}
                   onChange={(hex) => updateStop(i, { color: hex.toUpperCase() })}
                   ariaLabel={`Stop ${i + 1} colour`}
+                  disabled={editLocked}
+                  onDisabledClick={guardEdit}
                 />
               </div>
               <StopHexInput
@@ -579,13 +591,14 @@ export default function GradientGenerator({ onCopy, toast }) {
                 <input
                   type="number" min="0" max="100" value={Math.round(s.position)}
                   onChange={(e) => updateStop(i, { position: Math.max(0, Math.min(100, +e.target.value)) })}
+                  disabled={editLocked}
                   aria-label={`Stop ${i + 1} position`}
                 />
                 <span>%</span>
               </div>
               <LockBtn
                 on={!!s.locked}
-                onClick={(e) => { e.stopPropagation(); updateStop(i, { locked: !s.locked }) }}
+                onClick={(e) => { e.stopPropagation(); toggleStopLock(i) }}
                 className="ggn-stop-lock"
                 label={s.locked ? `Stop ${i + 1} locked — colour & position kept on randomise` : `Lock stop ${i + 1} colour & position when randomising`}
               />
