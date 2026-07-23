@@ -7,7 +7,7 @@ const STORAGE_KEY = 'vs-appearance'
 // curated, not user-customised. Only reduced-motion remains adjustable because
 // it is an accessibility preference, not a cosmetic one.
 const DEFAULTS = {
-  rounding: 'default', // "Medium" rounding — locked for everyone
+  rounding: 'default', // squarer, soft corners — locked for everyone
   density: 'cozy',     // single comfortable density — locked for everyone
   reducedMotion: false,
 }
