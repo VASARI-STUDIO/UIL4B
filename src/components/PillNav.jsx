@@ -701,7 +701,7 @@ export default function PillNav() {
                 {activeSection.columns.map((stack) => (
                   <div className="pnav-colstack" key={stack[0].label}>
                     {stack.map((col) => (
-                      <div className="pnav-col" key={col.label}>
+                      <div className="pnav-col" key={col.label} data-soon={col.tools.length > 0 && col.tools.every((t) => t.soon) ? 'true' : undefined}>
                         <p className="pnav-col-label">{col.label}</p>
                         <ul className="pnav-toollist">
                           {col.tools.map((t) => (
@@ -782,7 +782,7 @@ export default function PillNav() {
                 {expanded && (
                   <div className="pnav-acc-panel">
                     {section.columns.flat().map((col) => (
-                      <div className="pnav-acc-col" key={col.label}>
+                      <div className="pnav-acc-col" key={col.label} data-soon={col.tools.length > 0 && col.tools.every((t) => t.soon) ? 'true' : undefined}>
                         <p className="pnav-acc-colhead">{col.label}</p>
                         {col.tools.map((t) => (
                           <Link
