@@ -60,8 +60,9 @@ export default function SurfaceLanding({ surface }) {
     <div className="home">
       <PillNav />
 
+      <main id="main" tabIndex={-1}>
       {/* ── Hero ── */}
-      <header className="home-hero" id="main" tabIndex={-1}>
+      <header className="home-hero">
         <span className="home-eyebrow">{s.eyebrow}</span>
         <h1 className="home-hero-h1">{s.title}</h1>
         <p className="home-hero-sub">{s.lede}</p>
@@ -171,6 +172,7 @@ export default function SurfaceLanding({ surface }) {
           <p className="home-cta-hint">No credit card · Build in your browser</p>
         </div>
       </section>
+      </main>
     </div>
   )
 }
