@@ -1788,6 +1788,7 @@ export default function ColorStudio({ onCopy, toast }) {
       harmonies: 'Harmony systems are a Pro feature — upgrade to unlock',
       'extra-colours': 'Palettes beyond 8 colours are a Pro feature — upgrade to unlock',
       previews: 'Premium UI previews are a Pro feature — upgrade to unlock',
+      'gallery-gradient': 'Editing a gallery gradient is a Pro feature — hit Reset to start your own',
     }
     toast?.(labels[feature] || 'This is a Pro feature')
   }, [toast])
@@ -2924,7 +2925,16 @@ ${stateVars}
   const gradFn = gradType === 'Radial' ? 'radial-gradient' : gradType === 'Conic' ? 'conic-gradient' : 'linear-gradient'
   const angleStr = gradType === 'Linear' ? `${gradAngle}deg, ` : gradType === 'Conic' ? `from ${gradAngle}deg, ` : ''
   const gradCSS = `${gradFn}(${angleStr}${gradStops.map((s, i) => `${resolveStop(s, i)} ${s.position}%`).join(', ')})`
+  // A gallery gradient (carried in via the shared design.gradient.source flag) is
+  // free to preview + copy here too, but reshaping it is Pro — mirroring the gate
+  // in GradientGenerator. guardGradEdit raises the toast and blocks the edit; the
+  // escape hatches (Reset / preset chips) clear source back to 'own' so the
+  // resulting from-scratch gradient is freely editable.
+  const gradFromLibrary = design?.gradient?.source === 'gallery'
+  const gradEditLocked = gradFromLibrary && !isPro
+  const guardGradEdit = () => { if (!gradFromLibrary || isPro) return true; onProGate('gallery-gradient'); return false }
   const addGradStop = () => {
+    if (!guardGradEdit()) return
     const sorted = [...gradStops].sort((a, b) => a.position - b.position)
     const lastTwo = sorted.slice(-2)
     const midPos = Math.round((lastTwo[0].position + lastTwo[1].position) / 2)
@@ -2933,9 +2943,9 @@ ${stateVars}
     const midHex = '#' + [0, 1, 2].map(i => Math.round((c1[i] + c2[i]) / 2).toString(16).padStart(2, '0')).join('')
     setGradStops([...gradStops, { color: midHex, position: midPos }])
   }
-  const removeGradStop = (idx) => { if (gradStops.length > 2) setGradStops(gradStops.filter((_, i) => i !== idx)) }
-  const updateStop = (idx, updates) => setGradStops(gradStops.map((s, i) => i === idx ? { ...s, ...updates } : s))
-  const applyPreset = (preset) => { setGradStops(preset.stops.map(s => ({ color: s.color, position: s.pos }))); setGradAngle(preset.angle); setGradType(preset.type); setStopPickerIdx(null) }
+  const removeGradStop = (idx) => { if (!guardGradEdit()) return; if (gradStops.length > 2) setGradStops(gradStops.filter((_, i) => i !== idx)) }
+  const updateStop = (idx, updates) => { if (!guardGradEdit()) return; setGradStops(gradStops.map((s, i) => i === idx ? { ...s, ...updates } : s)) }
+  const applyPreset = (preset) => { setGradStops(preset.stops.map(s => ({ color: s.color, position: s.pos }))); setGradAngle(preset.angle); setGradType(preset.type); setStopPickerIdx(null); setGradient({ source: 'own' }) }
 
   return (
     <div className="sec">
@@ -3500,8 +3510,8 @@ ${stateVars}
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>Gradient Tool</h2>
           </>}
           <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-s" onClick={addGradStop}>+ Add Stop</button>
-            <button className="btn btn-s" onClick={() => setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }])} style={{ fontSize: 10 }}>Reset</button>
+            <button className="btn btn-s" onClick={addGradStop}>{gradEditLocked && <LockGlyph size={11} />} + Add Stop</button>
+            <button className="btn btn-s" onClick={() => { setGradStops([{ color: null, position: 0 }, { color: null, position: 100 }]); setGradient({ source: 'own' }) }} style={{ fontSize: 10 }}>Reset</button>
           </div>
         </div>
 
@@ -3523,15 +3533,15 @@ ${stateVars}
                 const resolved = resolveStop(stop, si)
                 return (
                   <div key={si} style={{ display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
-                    <button type="button" onClick={() => setStopPickerIdx(stopPickerIdx === si ? null : si)}
+                    <button type="button" onClick={() => { if (!guardGradEdit()) return; setStopPickerIdx(stopPickerIdx === si ? null : si) }}
                       style={{ width: 32, height: 32, borderRadius: 6, cursor: 'pointer', background: resolved, border: '2px solid var(--border)', padding: 0, flexShrink: 0, transition: 'border-color .15s' }}
                       title="Pick from palette & tints"
                       aria-label="Pick from palette and tints"
                     />
-                    <input type="text" value={resolved.toUpperCase()} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, minWidth: 0 }}
+                    <input type="text" value={resolved.toUpperCase()} disabled={gradEditLocked} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, minWidth: 0 }}
                       onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
                     />
-                    <input type="number" min="0" max="100" value={stop.position} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
+                    <input type="number" min="0" max="100" value={stop.position} disabled={gradEditLocked} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
                       style={{ width: 52, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center', padding: '4px 2px', MozAppearance: 'textfield' }}
                     />
                     <span style={{ fontSize: 9, color: 'var(--t3)' }}>%</span>
@@ -3588,8 +3598,8 @@ ${stateVars}
               })}
             </div>
             <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-              <button className="btn btn-s" onClick={addGradStop} style={{ fontSize: 10 }}>+ Stop</button>
-              <button className="btn btn-s" onClick={() => setGradStops(prev => [...prev].reverse().map((s, i, arr) => ({ ...s, position: 100 - arr[arr.length - 1 - i].position })))} title="Flip gradient direction" style={{ fontSize: 10 }}>&#8644; Flip</button>
+              <button className="btn btn-s" onClick={addGradStop} style={{ fontSize: 10 }}>{gradEditLocked && <LockGlyph size={11} />} + Stop</button>
+              <button className="btn btn-s" onClick={() => { if (!guardGradEdit()) return; setGradStops(prev => [...prev].reverse().map((s, i, arr) => ({ ...s, position: 100 - arr[arr.length - 1 - i].position }))) }} title="Flip gradient direction" style={{ fontSize: 10 }}>{gradEditLocked && <LockGlyph size={11} />} &#8644; Flip</button>
             </div>
           </div>
 
@@ -3599,7 +3609,7 @@ ${stateVars}
             <div className="seg-label">Type</div>
             <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
               {GRAD_TYPES.map(t => (
-                <button key={t} className={`pt-t${gradType === t ? ' on' : ''}`} onClick={() => setGradType(t)} style={{ flex: 1, justifyContent: 'center', padding: '5px 10px', fontSize: 11 }}>{t}</button>
+                <button key={t} className={`pt-t${gradType === t ? ' on' : ''}`} onClick={() => { if (!guardGradEdit()) return; setGradType(t) }} style={{ flex: 1, justifyContent: 'center', padding: '5px 10px', fontSize: 11 }}>{t}</button>
               ))}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -3608,7 +3618,8 @@ ${stateVars}
             <SnapSlider min={0} max={360} value={gradAngle} defaultValue={135}
               snaps={[0, 45, 90, 135, 180, 225, 270, 315, 360]} unit="°"
               ariaLabel="Gradient angle"
-              onChange={setGradAngle} />
+              disabled={gradEditLocked}
+              onChange={(v) => { if (guardGradEdit()) setGradAngle(v) }} />
 
             {/* CSS Export */}
             <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 14 }}>

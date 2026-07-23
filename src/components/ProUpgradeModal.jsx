@@ -98,11 +98,21 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                 </li>
               ))}
             </ul>
-            <div className="ui-pro-price">
-              <span className="ui-pro-amount">{amount}</span>
-              <span className="ui-pro-per">/ month — {price.yearlyTotal} billed yearly</span>
-              {price.savingsPct > 0 && (
-                <span className="ui-pro-save">Save {price.savingsPct}% vs monthly</span>
+            <div className="ui-pro-price" aria-live="polite">
+              {price.loaded ? (
+                <>
+                  <span className="ui-pro-amount">{amount}</span>
+                  <span className="ui-pro-per">/ month — {price.yearlyTotal} billed yearly</span>
+                  {price.savingsPct > 0 && (
+                    <span className="ui-pro-save">Save {price.savingsPct}% vs monthly</span>
+                  )}
+                </>
+              ) : (
+                // First open of the session: hold a skeleton until the one live
+                // price fetch settles, so the amount never jumps wrong-then-right.
+                <span className="sk ui-pro-price-skel">
+                  <span className="sr-only">Loading price…</span>
+                </span>
               )}
             </div>
             <div className="ui-pro-cta">
