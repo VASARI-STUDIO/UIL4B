@@ -830,6 +830,16 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .toast-success .toast-ico{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .toast-error .toast-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
 .toast-info .toast-ico{background:var(--accent-bg);color:var(--accent)}
+/* Success motion: icon spring-pop + checkmark stroke draw (E3, motion-safe) */
+.toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
+.toast-success.show .toast-ico{animation:toast-pop var(--dur-4) var(--ease-spring) both}
+.toast-success.show .toast-ico svg path{animation:toast-draw var(--dur-3) var(--ease-out) 90ms forwards}
+@keyframes toast-pop{from{transform:scale(.5)}to{transform:scale(1)}}
+@keyframes toast-draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){
+  .toast-success.show .toast-ico{animation:none}
+  .toast-success .toast-ico svg path,.toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
+}
 
 /* ─── Dashboard (Bento) ─── */
 .dash{padding:20px 0 24px;display:flex;flex-direction:column;gap:16px;min-height:100%;box-sizing:border-box}

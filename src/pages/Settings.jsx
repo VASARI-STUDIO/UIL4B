@@ -776,7 +776,7 @@ export default function Settings({ toast }) {
                 <NavLink to="/privacy" className="btn btn-s">Full disclosure</NavLink>
               </div>
               <div className="settings-card-body">
-                <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.65, padding: '12px 0' }}>
+                <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.65, padding: '12px 0', maxWidth: '64ch' }}>
                   We don't sell your data or use third-party trackers. Preferences and projects are stored locally in your browser. When signed in, data syncs securely via Firebase for cross-device access.
                 </p>
                 <div className="settings-row" style={{ paddingTop: 16, paddingBottom: 16 }}>
