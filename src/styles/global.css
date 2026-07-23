@@ -3053,6 +3053,14 @@ img,svg,video{max-width:100%;height:auto}
 /* Empty state */
 .adm-empty{padding:32px 16px;text-align:center;font-size:13px;color:var(--t3)}
 
+/* Pipeline tab */
+.adm-pipe-bar{height:5px;border-radius:var(--radius-pill);background:var(--bg-2);overflow:hidden}
+.adm-pipe-bar-fill{display:block;height:100%;border-radius:var(--radius-pill);transition:width var(--t)}
+.adm-pipe-todo{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);transition:border-color .15s}
+.adm-pipe-todo:hover{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
+.adm-pipe-prio{flex-shrink:0;font-size:10px;font-weight:800;letter-spacing:.04em;font-family:var(--mono);padding:3px 7px;border:1px solid;border-radius:var(--radius-xs,4px);line-height:1}
+.adm-pipe-status{font-size:10px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:var(--radius-pill);white-space:nowrap}
+
 /* Submission cards */
 .adm-submission{border-left:3px solid var(--border);transition:opacity .2s}
 .adm-submission.done{opacity:.7}

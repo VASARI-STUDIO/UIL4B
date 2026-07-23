@@ -7,6 +7,7 @@ import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/me
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import { MODULE_BOARD } from '../data/moduleBoard'
+import { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../data/pipeline'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 const STATUSES = ['new', 'in-progress', 'done']
@@ -21,6 +22,7 @@ const WEEK = 7 * DAY
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'pipeline', label: 'Pipeline' },
   { id: 'board', label: 'Board' },
   { id: 'design', label: 'Design' },
   { id: 'submissions', label: 'Submissions' },
@@ -557,6 +559,116 @@ function ModuleBoard() {
         })}
       </div>
     </div>
+  )
+}
+
+const PRIORITY_COLOR = { P0: 'var(--err)', P1: 'var(--warn)', P2: 'var(--t2)' }
+const TODO_STATUS_COLOR = { todo: 'var(--t3)', doing: 'var(--brand)', review: 'var(--warn)', blocked: 'var(--err)' }
+const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', blocked: 'Blocked' }
+
+// Pipeline — the owner's ops view: current app condition, the workstreams
+// moving through the pipeline, and the prioritised next-to-do queue. Renders
+// from src/data/pipeline.js (no backend). Complements the Board tab, which
+// tracks each feature module.
+function PipelineBoard() {
+  const [todoFilter, setTodoFilter] = useState('all')
+  const todoFilters = ['all', 'doing', 'todo', 'review', 'blocked']
+  const visibleTodos = NEXT_TODO.filter(t => todoFilter === 'all' || t.status === todoFilter)
+
+  return (
+    <>
+      {/* Current app condition */}
+      <div className="adm-section">
+        <div className="adm-section-h">
+          <div className="adm-section-title"><span className="adm-section-bar" />App condition</div>
+        </div>
+        <div className="adm-stats">
+          {APP_CONDITION.map(c => (
+            <div key={c.id} className="adm-stat">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: HEALTH_COLOR[c.status] || 'var(--t3)', flexShrink: 0 }} title={c.status} />
+                <div className="adm-stat-value" style={{ fontSize: 18 }}>{c.value}</div>
+              </div>
+              <div className="adm-stat-label">{c.label}</div>
+              <div className="adm-stat-sub">{c.detail}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Processes moving through the pipeline */}
+      <div className="adm-section">
+        <div className="adm-section-h">
+          <div className="adm-section-title"><span className="adm-section-bar" />Pipeline ({PIPELINE_PROCESSES.length} processes)</div>
+        </div>
+        <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 12, alignItems: 'flex-start' }}>
+          {PIPELINE_STAGES.map(stage => {
+            const items = PIPELINE_PROCESSES.filter(p => p.stage === stage.id)
+            return (
+              <div key={stage.id} style={{ flex: '0 0 260px', minWidth: 260, background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t0)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{stage.label}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>{items.length}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {items.map(p => (
+                    <div key={p.id} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-s)', padding: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)', lineHeight: 1.3 }}>{p.name}</span>
+                        <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--brand)', background: 'var(--brand-bg)', padding: '2px 7px', borderRadius: 999, flexShrink: 0 }}>{p.area}</span>
+                      </div>
+                      <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.5, margin: '0 0 10px' }}>{p.summary}</p>
+                      <div className="adm-pipe-bar" role="progressbar" aria-valuenow={p.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${p.name} progress`}>
+                        <span className="adm-pipe-bar-fill" style={{ width: `${p.progress}%`, background: stage.color }} />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                        <span style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>Updated {p.updated}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{p.progress}%</span>
+                      </div>
+                    </div>
+                  ))}
+                  {items.length === 0 && <div style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic', padding: '8px 4px' }}>Nothing here.</div>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Next-to-do queue */}
+      <div className="adm-section">
+        <div className="adm-section-h">
+          <div className="adm-section-title"><span className="adm-section-bar" />Next to do ({visibleTodos.length})</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {todoFilters.map(f => (
+              <button key={f} className={`adm-time-btn${todoFilter === f ? ' active' : ''}`} onClick={() => setTodoFilter(f)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {visibleTodos.map(t => (
+            <div key={t.id} className="adm-pipe-todo">
+              <span className="adm-pipe-prio" style={{ color: PRIORITY_COLOR[t.priority] || 'var(--t2)', borderColor: PRIORITY_COLOR[t.priority] || 'var(--t2)' }}>{t.priority}</span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t0)' }}>{t.title}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--t2)', background: 'var(--bg-2)', padding: '2px 7px', borderRadius: 999 }}>{t.area}</span>
+                </div>
+                {t.note && <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.5, margin: '4px 0 0' }}>{t.note}</p>}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', fontFamily: 'var(--mono)' }} title="Effort">{t.effort}</span>
+                <span className="adm-pipe-status" style={{ color: TODO_STATUS_COLOR[t.status] || 'var(--t3)', background: 'color-mix(in srgb, currentColor 12%, transparent)' }}>{TODO_STATUS_LABEL[t.status] || t.status}</span>
+              </div>
+            </div>
+          ))}
+          {visibleTodos.length === 0 && <div className="adm-card"><div className="adm-empty">Nothing in this state.</div></div>}
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -2054,6 +2166,9 @@ export default function Admin({ toast }) {
 
       {/* ═══════ USERS TAB ═══════ */}
       {tab === 'users' && <UsersPanel localUsers={data.users} toast={toast} />}
+
+      {/* ═══════ PIPELINE TAB ═══════ */}
+      {tab === 'pipeline' && <PipelineBoard />}
 
       {/* ═══════ BOARD TAB ═══════ */}
       {tab === 'board' && <ModuleBoard />}
