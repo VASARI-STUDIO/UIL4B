@@ -23,21 +23,13 @@
   <url><loc>https://www.uil4b.com/imagery</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
   <url><loc>https://www.uil4b.com/icons-emoji</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-19</lastmod></url>
   <url><loc>https://www.uil4b.com/ai-tools</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
-  <url><loc>https://www.uil4b.com/docs</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
+
+  <!-- Discover -->
+  <url><loc>https://www.uil4b.com/discover/gradients</loc><priority>0.7</priority><changefreq>weekly</changefreq><lastmod>2026-07-23</lastmod></url>
 
   <!-- Community & content -->
   <url><loc>https://www.uil4b.com/prompts</loc><priority>0.6</priority><changefreq>weekly</changefreq><lastmod>2026-06-17</lastmod></url>
-  <url><loc>https://www.uil4b.com/resources</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
   <url><loc>https://www.uil4b.com/community</loc><priority>0.5</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
-
-  <!-- Documentation -->
-  <url><loc>https://www.uil4b.com/docs-seo</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
-  <url><loc>https://www.uil4b.com/docs-marketing</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
-  <url><loc>https://www.uil4b.com/docs-brand</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
-  <url><loc>https://www.uil4b.com/docs-themes</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
-  <url><loc>https://www.uil4b.com/docs-ai</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
-  <url><loc>https://www.uil4b.com/docs-social</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
-  <url><loc>https://www.uil4b.com/docs-design</loc><priority>0.6</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
 
   <!-- Support & legal -->
   <url><loc>https://www.uil4b.com/help</loc><priority>0.5</priority><changefreq>monthly</changefreq><lastmod>2026-06-17</lastmod></url>
