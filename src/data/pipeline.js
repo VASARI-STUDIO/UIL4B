@@ -17,7 +17,7 @@ export const APP_CONDITION = [
   { id: 'create', label: 'Create surface', value: 'Live', status: 'good', detail: 'Full tool suite shipped' },
   { id: 'discover', label: 'Discover surface', value: 'Building', status: 'watch', detail: 'Gradients live; more resources coming' },
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
-  { id: 'design-system', label: 'Design system', value: 'Consolidating', status: 'watch', detail: 'Unifying bespoke buttons onto .btn' },
+  { id: 'design-system', label: 'Design system', value: 'Consolidating', status: 'watch', detail: 'Brand-fill buttons on --accent-fg token; specialisation kept where justified' },
   { id: 'phase', label: 'Current phase', value: 'Phase 16', status: 'good', detail: 'Audit implementation + QA' },
 ]
 
@@ -46,9 +46,9 @@ export const PIPELINE_PROCESSES = [
     id: 'design-system',
     name: 'Design-system consolidation',
     area: 'Design',
-    stage: 'in-progress',
-    progress: 25,
-    summary: 'One button primitive, one spacing scale. Folding ~40 bespoke button classes onto .btn and normalising padding/radius to tokens.',
+    stage: 'review',
+    progress: 55,
+    summary: 'Audited the ~61 bespoke button classes: most are justified specialisation, not duplication (#171 already removed the real duplicates). Shipped the safe unification — brand/accent-fill controls now use the --accent-fg token instead of hardcoded #fff (14 sites). Mass .btn migration deferred: it would flatten intentional design.',
     updated: '2026-07-23',
   },
   {
@@ -110,7 +110,7 @@ export const PIPELINE_PROCESSES = [
 // ── Next-to-do queue (prioritised) ──────────────────────────────────────────
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
-  { id: 'design-consistency', title: 'Consolidate bespoke buttons onto .btn', priority: 'P1', effort: 'L', area: 'Design', status: 'doing', note: 'Headline red flag: multiple button styles + inconsistent padding.' },
+  { id: 'design-consistency', title: 'Consolidate bespoke buttons onto .btn', priority: 'P1', effort: 'L', area: 'Design', status: 'review', note: 'Investigated: ~61 bespoke -btn/-cta selectors are mostly justified specialisation (inverted copy buttons, colour swatches, steppers, 44px icon buttons, select triggers, serif tab switchers), not dead duplication — #171 already removed the real duplicate styles and no exact .btn clones remain. The one genuinely-safe consolidation shipped in this slice: aligning brand/accent-fill controls’ hardcoded color:#fff to var(--accent-fg) (14 sites) so they track the accent-foreground token like .btn-accent. A mass .btn migration would flatten intentional design (a UX regression) — recommend keeping specialisation and only unifying padding/radius where a bespoke button visibly drifts from the scale. Held for review (PR open, not merged).' },
   { id: 'F1', title: 'Remove unpkg.com ffmpeg.wasm CDN dependency', priority: 'P1', effort: 'M', area: 'Infra', status: 'done', note: 'Self-hosted: ffmpeg core+wasm now bundled by Vite as fingerprinted same-origin assets — no third-party CDN.' },
   { id: 'C3', title: 'Mega-menu accessibility retest', priority: 'P1', effort: 'M', area: 'A11y', status: 'review', note: 'Needs a running app to verify keyboard + ARIA.' },
   { id: 'D2', title: '320–360px small-screen floor', priority: 'P1', effort: 'M', area: 'Responsive', status: 'review', note: 'Needs a running app to verify no overflow at the floor.' },
