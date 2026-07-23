@@ -4668,6 +4668,9 @@ html.lenis,html.lenis body{height:auto}
 .pnav-col{position:relative;display:flex;flex-direction:column;min-width:0}
 .pnav-col-label{display:flex;align-items:center;gap:9px;margin:0 0 22px;padding-bottom:12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-caption);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t1)}
 .pnav-col-label::before{content:'';flex:0 0 auto;width:16px;height:2px;border-radius:1px;background:var(--accent)}
+/* Whole-group coming-soon: mute the eyebrow so live columns lead the eye. */
+.pnav-col[data-soon] .pnav-col-label{color:var(--t3)}
+.pnav-col[data-soon] .pnav-col-label::before{background:var(--t3)}
 /* Hairline divider between adjacent grid columns so the regrouped layout reads
    as distinct, captioned sections rather than one undifferentiated grid. */
 .pnav-menu .pnav-colstack + .pnav-colstack::before{content:'';position:absolute;top:3px;bottom:2px;left:-28px;width:1px;background:var(--border)}
@@ -4777,6 +4780,7 @@ html.lenis,html.lenis body{height:auto}
 /* Column eyebrow inside an expanded accordion, plus soon-badge push + dimming. */
 .pnav-acc-col + .pnav-acc-col{margin-top:4px}
 .pnav-acc-colhead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:14px 0 6px}
+.pnav-acc-col[data-soon] .pnav-acc-colhead{color:var(--t3)}
 .pnav-acc-link .soon-badge{margin-left:auto}
 .pnav-acc-link[data-soon]{opacity:.45}
 .pnav-acc-link[data-soon] .pnav-acc-label{color:var(--t3)}
