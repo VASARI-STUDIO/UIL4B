@@ -6198,6 +6198,13 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-css{display:block;width:100%;text-align:left;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);padding:12px 14px;cursor:pointer;transition:border-color var(--t)}
 .ggn-css:hover{border-color:var(--ggn-line-2)}
 .ggn-css code{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ggn-t1);word-break:break-all;white-space:pre-wrap}
+.ggn-fmt{display:inline-flex;gap:3px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);padding:3px;margin-bottom:9px}
+.ggn-fmt-btn{font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--ggn-t2);background:transparent;border:none;border-radius:var(--radius-xs);padding:5px 12px;cursor:pointer;transition:all var(--t)}
+.ggn-fmt-btn:hover{color:var(--ggn-t0)}
+.ggn-fmt-btn.is-on{background:var(--ggn-accent);color:var(--accent-fg)}
+.ggn-fmt-btn:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
+.ggn-css--block{max-height:190px;overflow:auto}
+.ggn-css--block code{white-space:pre-wrap;word-break:break-word}
 /* Blocks (Stops / Presets) */
 .ggn-block{background:var(--ggn-panel);border:1px solid var(--ggn-line);border-radius:var(--radius-l);padding:18px;margin-top:16px}
 .ggn-block-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
