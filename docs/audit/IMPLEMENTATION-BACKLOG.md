@@ -35,13 +35,27 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
 
 ## Phase roadmap
 
-1. **Phase 1 — Critical stability / funnel** (Slice A + trivial C1/B2). Stop the
-   acquired-user leak; make onboarding real. ← *in progress*
-2. **Phase 2 — Core UX & IA** (Slice B) once the surface strategy (A3) is decided.
-3. **Phase 3 — Accessibility & responsive** (Slices C, D).
-4. **Phase 4 — Interface consistency** (metadata, breakpoints, tokens).
-5. **Phase 5 — Premium motion polish** (Slice E) — last, never before core usability.
-6. **Owner-gated / larger** (Slice F) — scheduled deliberately.
+> **Live status (2026-07-24):** the client-side audit backlog is **essentially
+> shipped**. Every engineering-owned item across Slices A–F that could ship from
+> this environment is merged to `main` and live (see the per-slice tables + change
+> log). What remains is **not** engineering work: founder/live-Firebase-gated
+> verification (A1 live-preview smoke, A2 exit-QA, C5 onboarding re-test), founder
+> product decisions (A3 page-flips, B5 `/color` ambiguity, F3 community pipeline,
+> F4 Stripe abandon/return), owner assets (A4 screenshots), and two deliberately
+> deferred larger items (A6 Firestore onboarding-truth, F2 lazy-Firebase).
+
+1. **Phase 1 — Critical stability / funnel** (Slice A + trivial C1/B2). ✅ *shipped*
+   (A1/A2 #161, C1/B2 #162) — live-Firebase verify of A1/A2 is founder-drivable.
+2. **Phase 2 — Core UX & IA** (Slice B). ✅ *shipped* (B2 #162, B3 #169, B4 #171);
+   B1 depends on the A3 surface decision, B5 is a founder call.
+3. **Phase 3 — Accessibility & responsive** (Slices C, D). ✅ *shipped/verified*
+   (C1 #162, C1a #168, C2 #162+#176, C3 #180, C4 verified; D1 #175, D2 verified,
+   D3 #172) — C5 re-test is Firebase-gated.
+4. **Phase 4 — Interface consistency** (metadata, breakpoints, tokens). ✅ *shipped*
+   (B3 #169, D1 #175, C2/#21 tokens #176).
+5. **Phase 5 — Premium motion polish** (Slice E). ✅ *shipped* (E1/E2 #175, E3 #172).
+6. **Owner-gated / larger** (Slice F). F1 ✅ *shipped* (#174); F2/F3/F4 remain
+   owner-gated / deliberately scheduled.
 
 ---
 
@@ -49,11 +63,11 @@ review + QA signed · 🔒 items owner-validated. A code read alone is never "do
 
 | ID | Src | Item | Effort | Zone | Status |
 |---|---|---|:--:|:--:|---|
-| **A1** | P0-1 | Make onboarding reachable for new sign-ups | M | 🔒 | **🔒 Owner-validate** — HVZ sign-off ✅ (founder); stash producer ✅ (local build). **Blocker:** live preview + Firebase verify is egress-403 here → founder-drivable only |
-| **A2** | P0-2 | Onboarding nav `/dashboard` → `/home` (×3) | S | — | **In QA** (static ✅; live exits ⏳ with A1) |
+| **A1** | P0-1 | Make onboarding reachable for new sign-ups | M | 🔒 | **🔒 Owner-validate — code merged (#161)** — HVZ sign-off ✅ (founder); stash producer ✅ (local build). **Residual:** live preview + Firebase verify is egress-403 here → founder-drivable only |
+| **A2** | P0-2 | Onboarding nav `/dashboard` → `/home` (×3) | S | — | **Shipped ✅ (#161)** — three exits land `/home` (static ✅). Live exit-QA ⏳ (travels with A1 live-verify, Firebase-gated) |
 | **A3** | P1-3 | Reconcile Discover/Learn — **decided: thin-but-true** (un-hide nav, surface built pages) | M | — | **In QA** — first slice built (GradientGallery surfaced live; nav already un-hidden). Remaining page-flips (`Discover`, `PromptLibrary`, `FontGallery`, Docs) are a **founder decision** (override the deliberate coming-soon design) |
 | **A4** | P1-4 | Replace `/home` grey placeholders with real screenshots | M | — | **Blocked** (needs captured assets — owner/design) |
-| **A5** | — | Surface `GradientGallery` under Discover nav | S | — | **In QA** — built (menu row + live landing card → `/discover/gradients`); localhost smoke 8/8. Live-preview verify ⏳ with A3 slice |
+| **A5** | — | Surface `GradientGallery` under Discover nav | S | — | **Shipped ✅ (#162)** — live Discover card + mega-menu row → `/discover/gradients`; localhost smoke 8/8 |
 | **A6** | QA/rev | Firestore onboarding-truth + routing-dedupe (MED-1/2, Q4) | M | 🔒 | **Backlog** (post-A1-merge design pass; Q1 resume-target shipped in this PR) |
 
 ### A1 · Onboarding reachable for new sign-ups &nbsp;🔒
@@ -234,43 +248,43 @@ is no longer part of A6.)*
 | ID | Item | Effort | Status |
 |---|---|:--:|---|
 | **B1** | Triage ~23 orphaned pages: per page re-wire or delete | L | `Backlog` (depends on A3) |
-| **B2** | Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS` for removed paths | S | **QA ✅ → merging** — 7 redirect-only keys removed from both maps (`/dashboard`, `/resources`, `/docs-*`); redirect routes kept. Independent review Approve + QA PASS. Build ✅ / lint ✅. Merge via PR. |
-| **B3** | Add `/learn` to `PAGE_TITLES`/`PAGE_DESCRIPTIONS` + prune stale `sitemap.xml` redirect URLs | S | **Shipped** — `/learn` gains an honest coming-soon title + description (no longer falls back to generic). `sitemap.xml`: 9 redirect-only URLs pruned (`/docs`, `/resources`, all 7 `/docs-*`), emptying the "Documentation" section; live `/discover/gradients` added under a new "Discover" section (all other entries cross-checked live against `PAGE_TITLES`). `/learn` deliberately NOT sitemapped — a coming-soon shell is thin content we don't solicit crawl for. Build ✅ / lint ✅ (0 err / 34 warn baseline). Merge via PR. |
-| **B3** | Resolve `/color` landing-vs-studio ambiguity | M | `Backlog` |
-| **B4** | De-emphasise "Soon" groups in Create mega-menu | S | `Backlog` |
+| **B2** | Strip dead `PAGE_TITLES`/`PAGE_DESCRIPTIONS` for removed paths | S | **Shipped ✅ (#162)** — 7 redirect-only keys removed from both maps (`/dashboard`, `/resources`, `/docs-*`); redirect routes kept. Independent review Approve + QA PASS. Build ✅ / lint ✅. |
+| **B3** | Add `/learn` to `PAGE_TITLES`/`PAGE_DESCRIPTIONS` + prune stale `sitemap.xml` redirect URLs | S | **Shipped ✅ (#169)** — `/learn` gains an honest coming-soon title + description (no longer falls back to generic). `sitemap.xml`: 9 redirect-only URLs pruned (`/docs`, `/resources`, all 7 `/docs-*`), emptying the "Documentation" section; live `/discover/gradients` added under a new "Discover" section (all other entries cross-checked live against `PAGE_TITLES`). `/learn` deliberately NOT sitemapped — a coming-soon shell is thin content we don't solicit crawl for. Build ✅ / lint ✅ (0 err / 34 warn baseline). |
+| **B5** | Resolve `/color` landing-vs-studio ambiguity *(was mis-labelled a 2nd "B3")* | M | **Escalated** — product decision: does `/color` land or open the studio? Not an engineering call — needs founder direction before implementation. |
+| **B4** | De-emphasise "Soon" groups in Create mega-menu | S | **Shipped ✅ (#171)** — design-system-consistency slice de-emphasised the mega-menu `Soon` groups. |
 
 ## Slice C — Accessibility (WCAG 2.2 AA)
 
 | ID | Item | Effort | Status |
 |---|---|:--:|---|
-| **C1** | Skip-to-content link → `<main id="main">` (2.4.1) | S | **QA ✅ → merging** — independent review Approve + QA PASS (0 P0/P1). QA-1 (dark-theme skip-link contrast, `--brand`→`--accent-strong`) fixed in-branch. Localhost keyboard smoke 11/11. Build ✅ / lint ✅. Merge to `main` via PR. |
-| **C1a** | Skip target should be a `<main>` **landmark**, not `<header id="main">` (QA-2) | M | `Backlog` — QA-2 follow-up. Home/ColorLanding/SurfaceLanding tag the hero `<header>` with `id="main"`; WCAG 2.4.1 (G1) is met + keyboard bypass verified, but SR landmark-nav finds no `<main>` on those 4 routes. Wrap hero+body in `<main id="main">`. Pre-existing structural gap; deferred (restructures 3 pages → own review/QA). |
-| **C2** | Contrast pass, both themes (1.4.3) | M | `Backlog` |
-| **C3** | Keyboard/AT test of mega-menu (4.1.2) | M | **QA ✅ → merging** — audit found Escape closed the mega-menu/account popover but dropped focus to `<body>` (WCAG 2.4.3 Focus Order violation). Fix in `PillNav.jsx`: latest-open/menu ref-mirror (in an effect, not during render) so the once-bound key handler returns focus to the owning control on Escape; section triggers now carry `aria-controls="pnav-mega"` (4.1.2) and the panel an `id`. Headless Chromium keyboard test 8/8 (focus returns to trigger + to account button, not body). Build ✅ / lint ✅ (0 err / 34 warn). Follow-up (noted, not blocking): account popover `role=menu` still lacks arrow-key nav. |
-| **C4** | Target-size audit `ui-pill-sm` + icon-only (2.5.8) | S | `Backlog` |
-| **C5** | Re-test onboarding a11y after A1 | M | `Backlog` (needs A1 landed) |
+| **C1** | Skip-to-content link → `<main id="main">` (2.4.1) | S | **Shipped ✅ (#162)** — independent review Approve + QA PASS (0 P0/P1). QA-1 (dark-theme skip-link contrast, `--brand`→`--accent-strong`) fixed in-branch. Localhost keyboard smoke 11/11. Build ✅ / lint ✅. |
+| **C1a** | Skip target should be a `<main>` **landmark**, not `<header id="main">` (QA-2) | M | **Shipped ✅ (#168)** — Home/ColorLanding/SurfaceLanding now wrap hero+body in `<main id="main" tabIndex={-1}>` (verified on `main`: `Home.jsx:68`, `ColorLanding.jsx:42`, `SurfaceLanding.jsx:63`). SR landmark-nav resolves; the skip target is a true `<main>` landmark. |
+| **C2** | Contrast pass, both themes (1.4.3) | M | **Shipped ✅ (#162 + #176)** — dark-theme skip-link contrast fixed (`--brand`→`--accent-strong`, ≥5:1 both themes, #162); **#21 brand/accent-fill token alignment** (#176) moved 14 brand/accent-fill controls onto `var(--accent-fg)` so fills read theme-correct in light **and** dark (runtime-identical today, future-safe). The mass `.btn` migration was deferred as a UX-regression risk (recorded in the Admin pipeline) — not required for AA. |
+| **C3** | Keyboard/AT test of mega-menu (4.1.2) | M | **Shipped ✅ (#180)** — audit found Escape closed the mega-menu/account popover but dropped focus to `<body>` (WCAG 2.4.3 Focus Order violation). Fix in `PillNav.jsx`: latest-open/menu ref-mirror (in an effect, not during render) so the once-bound key handler returns focus to the owning control on Escape; section triggers now carry `aria-controls="pnav-mega"` (4.1.2) and the panel an `id`. Headless Chromium keyboard test 8/8 (focus returns to trigger + to account button, not body). Deploy verified READY on production. Follow-up (noted, not blocking): account popover `role=menu` still lacks arrow-key nav. |
+| **C4** | Target-size audit `ui-pill-sm` + icon-only (2.5.8) | S | **Verified ✅** — audit found existing target sizes already meet WCAG 2.5.8 AA: `.ui-pill-sm` 40 px tall, icon-only controls 36–44 px, plus dedicated ≥44 px mobile touch-target rules (`.btn`, `.nav-item`, tool/tile pins, `.export-dropdown-item`, `.nav-switch-item`). No interactive control drops below the 24 px AA floor. No fix required. |
+| **C5** | Re-test onboarding a11y after A1 | M | **Backlog** — A1 landed (#161); the re-test itself needs live onboarding (Firebase-gated) → founder-drivable. Q3 focus-management fix already pre-satisfies the onboarding-focus case. |
 
 ## Slice D — Responsive
 
 | ID | Item | Effort | Status |
 |---|---|:--:|---|
-| **D1** | Normalise 18 breakpoints → ~5 named scale | M | `Backlog` |
-| **D2** | Verify/fix 320–360 px floor | M | `Backlog` (needs running app) |
-| **D3** | Confirm 4K max-width ceilings | S | `Backlog` |
+| **D1** | Normalise 18 breakpoints → ~5 named scale | M | **Shipped ✅ (#175)** — canonical named breakpoint scale documented + reconciled. |
+| **D2** | Verify/fix 320–360 px floor | M | **Verified ✅** — headless-Chromium sweep of all **40 public routes** at **320 px and 360 px** (80 page loads): `documentElement.scrollWidth ≤ clientWidth` on every one — **zero** horizontal overflow, no offending elements past the viewport edge. No fix required; the existing 320/380 px breakpoints already hold the small-screen floor. Confirms PR #176's narrower sweep across the full route set. |
+| **D3** | Confirm 4K max-width ceilings | S | **Shipped ✅ (#172)** — Settings paragraph measure capped; 4K max-width ceilings confirmed. |
 
 ## Slice E — Motion polish (last)
 
 | ID | Item | Effort | Status |
 |---|---|:--:|---|
-| **E1** | Resolve `--dur-3` 280/380 ms conflict | S | `Backlog` |
-| **E2** | Migrate inline durations → `--dur-*` | M | `Backlog` |
-| **E3** | Success motion on export/copy/save (reduced-motion-safe) | M | `Backlog` |
+| **E1** | Resolve `--dur-3` 280/380 ms conflict | S | **Shipped ✅ (#175)** — canonical motion scale: `--dur-3` is now a single `280ms` definition (verified in `global.css:4402`); the 280/380 ms conflict is gone. |
+| **E2** | Migrate inline durations → `--dur-*` | M | **Shipped ✅ (#175)** — inline transition durations migrated onto the `--dur-*` tokens. |
+| **E3** | Success motion on export/copy/save (reduced-motion-safe) | M | **Shipped ✅ (#172)** — success-toast draw motion added, gated behind `prefers-reduced-motion`. |
 
 ## Slice F — Reliability & performance (owner-gated / larger)
 
 | ID | Item | Effort | Zone | Status |
 |---|---|:--:|:--:|---|
-| **F1** | Remove `unpkg.com` ffmpeg.wasm CDN dependency | M | — | `Backlog` |
+| **F1** | Remove `unpkg.com` ffmpeg.wasm CDN dependency | M | — | **Shipped ✅ (#174)** — ffmpeg.wasm self-hosted; the `unpkg.com` runtime CDN dependency is removed. |
 | **F2** | Trim critical-path JS (defer/lazy Firebase) | L | — | `Backlog` |
 | **F3** | Community publishing: local-only vs real pipeline | L | 🔒 | `Escalated` (function ceiling) |
 | **F4** | Validate Stripe checkout abandon/return/retry | M | 🔒 | `Backlog` (owner-gated) |
@@ -306,11 +320,35 @@ must not pick a direction unilaterally here.
    (A3 thin-but-true, C1, B2, …) get their own PRs.
 4. ⏳ **F3 — Community publishing** (🔒, function-ceiling): local-only staged vs
    real shared pipeline; Home currently markets a community.
+5. ⏳ **B5 — `/color` landing-vs-studio ambiguity:** should `/color` present a
+   landing page or open the studio directly? A product/IA call, not an engineering
+   one — needs founder direction before implementation.
+6. ⏳ **A3 remaining page-flips:** flipping the other named orphans (`Discover`,
+   `FontGallery`, `PromptLibrary`, Docs) from `soon:true` → live would override the
+   deliberate post-audit coming-soon design — deferred pending per-page readiness +
+   founder go-ahead (A5/GradientGallery already surfaced as the first live slice).
+7. ⏳ **F4 — Stripe checkout abandon/return/retry** (🔒, owner-gated): validate on
+   the live Stripe integration — founder-drivable only.
 
 ---
 
 ## Change log
 
+- **2026-07-24** — **Tracker reconciled against `main`.** The Slice B–F tables had
+  drifted badly out of date — many merged-and-live items were still marked
+  `Backlog` or "QA → merging". Cross-referenced every item against
+  `git log origin/main` (PR titles) **and** the session task ledger and updated
+  each row to its true state with PR-number evidence: **shipped** — A1/A2 (#161),
+  A5/C1/B2 (#162), C1a (#168), B3-metadata (#169), B4 (#171), D3/E3 (#172), F1
+  (#174), D1/E1/E2 (#175), C2/#21-tokens (#176), C3 (#180); **verified-no-fix** —
+  C4 (target sizes already meet 2.5.8 AA), D2 (0 horizontal overflow, 40 routes ×
+  320/360 px). Confirmed on `main`: `<main id="main">` landmark present in
+  Home/ColorLanding/SurfaceLanding (C1a) and `--dur-3` collapsed to a single
+  `280ms` (E1). Fixed a duplicate **"B3"** ID — the `/color` landing-vs-studio
+  item is now **B5** (Escalated, founder call). Remaining open items are all
+  founder/owner-gated or Firebase-live-verify only (A1 live smoke, A2 exit-QA, A3
+  page-flips, A4 assets, A6, B1, B5, C5, F2/F3/F4) — no engineering work is left
+  that can ship from this environment. Docs-only change.
 - **2026-07-21** — **A3/A5 + C1 + B2 independent gates completed.** Code review:
   **Approve** (0 crit/high/med; 3 LOW nits deferred). Independent QA: **PASS**
   (0 P0/P1). Two P2s surfaced: **QA-1** (dark-theme skip-link contrast — new
