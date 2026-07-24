@@ -246,7 +246,7 @@ is no longer part of A6.)*
 | **C1** | Skip-to-content link → `<main id="main">` (2.4.1) | S | **QA ✅ → merging** — independent review Approve + QA PASS (0 P0/P1). QA-1 (dark-theme skip-link contrast, `--brand`→`--accent-strong`) fixed in-branch. Localhost keyboard smoke 11/11. Build ✅ / lint ✅. Merge to `main` via PR. |
 | **C1a** | Skip target should be a `<main>` **landmark**, not `<header id="main">` (QA-2) | M | `Backlog` — QA-2 follow-up. Home/ColorLanding/SurfaceLanding tag the hero `<header>` with `id="main"`; WCAG 2.4.1 (G1) is met + keyboard bypass verified, but SR landmark-nav finds no `<main>` on those 4 routes. Wrap hero+body in `<main id="main">`. Pre-existing structural gap; deferred (restructures 3 pages → own review/QA). |
 | **C2** | Contrast pass, both themes (1.4.3) | M | `Backlog` |
-| **C3** | Keyboard/AT test of mega-menu (4.1.2) | M | `Backlog` (needs running app) |
+| **C3** | Keyboard/AT test of mega-menu (4.1.2) | M | **QA ✅ → merging** — audit found Escape closed the mega-menu/account popover but dropped focus to `<body>` (WCAG 2.4.3 Focus Order violation). Fix in `PillNav.jsx`: latest-open/menu ref-mirror (in an effect, not during render) so the once-bound key handler returns focus to the owning control on Escape; section triggers now carry `aria-controls="pnav-mega"` (4.1.2) and the panel an `id`. Headless Chromium keyboard test 8/8 (focus returns to trigger + to account button, not body). Build ✅ / lint ✅ (0 err / 34 warn). Follow-up (noted, not blocking): account popover `role=menu` still lacks arrow-key nav. |
 | **C4** | Target-size audit `ui-pill-sm` + icon-only (2.5.8) | S | `Backlog` |
 | **C5** | Re-test onboarding a11y after A1 | M | `Backlog` (needs A1 landed) |
 
