@@ -287,6 +287,18 @@ export default function PillNav() {
   // How the current mega-menu got opened ('hover' | 'click') — a click on a
   // hover-opened trigger must pin the menu, not toggle it shut (see toggle()).
   const openedBy = useRef(null)
+  // Section-trigger + account-button elements, so Escape can return focus to the
+  // control that owns the layer it just closed (WCAG 2.4.3 / APG disclosure).
+  const triggerRefs = useRef({})
+  const accountBtnRef = useRef(null)
+  // Latest open/menu mirrored into a ref so the once-bound key handler reads the
+  // current layer without re-subscribing. Written in an effect (never during
+  // render) to satisfy React's rules-of-refs.
+  const stateRef = useRef({ open: null, menu: null })
+  useEffect(() => {
+    stateRef.current.open = open
+    stateRef.current.menu = menu
+  }, [open, menu])
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
   // All three section menus (Create / Discover / Learn) are visible to everyone.
@@ -320,7 +332,14 @@ export default function PillNav() {
       setMenu(null)
     }
     const onKey = (e) => {
-      if (e.key === 'Escape') { setOpen(null); setSheet(false); setMenu(null) }
+      if (e.key === 'Escape') {
+        const { open: wasOpen, menu: wasMenu } = stateRef.current
+        setOpen(null); setSheet(false); setMenu(null)
+        // Return focus to the control that owns the layer we just closed, so
+        // keyboard/AT users aren't dropped onto <body> (WCAG 2.4.3 / APG).
+        if (wasOpen) triggerRefs.current[wasOpen]?.focus()
+        else if (wasMenu === 'account') accountBtnRef.current?.focus()
+      }
       // "/" opens search — but never while the visitor is typing in a field.
       if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const el = e.target
@@ -441,8 +460,10 @@ export default function PillNav() {
                 key={section.id}
                 type="button"
                 className="pnav-trigger"
+                ref={(el) => { if (el) triggerRefs.current[section.id] = el }}
                 aria-expanded={open === section.id}
                 aria-haspopup="true"
+                aria-controls={open === section.id ? 'pnav-mega' : undefined}
                 onClick={() => toggle(section.id)}
                 onMouseEnter={() => hoverOpen(section.id)}
               >
@@ -524,6 +545,7 @@ export default function PillNav() {
                   <button
                     type="button"
                     className="pnav-avatar-btn"
+                    ref={accountBtnRef}
                     aria-haspopup="true"
                     aria-expanded={menu === 'account'}
                     aria-label="Account and settings"
@@ -617,6 +639,7 @@ export default function PillNav() {
                 <button
                   type="button"
                   className="pnav-more"
+                  ref={accountBtnRef}
                   aria-haspopup="true"
                   aria-expanded={menu === 'account'}
                   aria-label="Menu"
@@ -684,6 +707,7 @@ export default function PillNav() {
       {activeSection && (
         <div
           ref={menuRef}
+          id="pnav-mega"
           className="pnav-menu"
           data-menu={activeSection.id}
           role="region"
