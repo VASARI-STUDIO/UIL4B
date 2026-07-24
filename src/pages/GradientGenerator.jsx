@@ -57,6 +57,40 @@ function mixHex(a, b, t = 0.5) {
 
 const DEFAULT_STOPS = () => PRESETS[0].stops.map(s => ({ ...s }))
 
+// Export formats offered under the preview. SVG is dropped for conic gradients
+// (SVG has no conic-gradient element), so the toggle adapts to the type.
+const EXPORT_FORMATS = [
+  { id: 'css', label: 'CSS' },
+  { id: 'tailwind', label: 'Tailwind' },
+  { id: 'svg', label: 'SVG' },
+]
+
+// Build a standalone, paste-ready SVG for a linear or radial gradient. The CSS
+// angle (0deg = up, 90deg = right, clockwise) is converted to the gradient
+// vector SVG wants. Conic isn't representable as an SVG gradient, so callers
+// only offer SVG for linear/radial.
+function gradientSvg(type, angle, stops) {
+  const stopEls = [...stops]
+    .sort((a, b) => a.position - b.position)
+    .map(s => `      <stop offset="${Math.round(s.position)}%" stop-color="${s.color.toUpperCase()}" />`)
+    .join('\n')
+  let def
+  if (type === 'Radial') {
+    def = `    <radialGradient id="grad" cx="50%" cy="50%" r="75%">\n${stopEls}\n    </radialGradient>`
+  } else {
+    const rad = ((angle % 360) + 360) % 360 * Math.PI / 180
+    const dx = Math.sin(rad), dy = -Math.cos(rad)
+    const x1 = (50 - dx * 50).toFixed(1), y1 = (50 - dy * 50).toFixed(1)
+    const x2 = (50 + dx * 50).toFixed(1), y2 = (50 + dy * 50).toFixed(1)
+    def = `    <linearGradient id="grad" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">\n${stopEls}\n    </linearGradient>`
+  }
+  return `<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">\n  <defs>\n${def}\n  </defs>\n  <rect width="600" height="400" fill="url(#grad)" />\n</svg>`
+}
+
+// Turn a CSS gradient value into a Tailwind arbitrary value. Tailwind reads
+// underscores as spaces inside arbitrary values, so every space becomes `_`.
+const tailwindValue = (css) => `bg-[${css.replace(/ /g, '_')}]`
+
 // Hex text field with a local draft, so partially-typed values aren't wiped by
 // the controlled stop colour on every keystroke. Commits when the text is a
 // valid #rrggbb; reverts to the stop's colour on blur if left invalid.
@@ -123,6 +157,7 @@ export default function GradientGenerator({ onCopy, toast }) {
   })
   const [activeStop, setActiveStop] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
 
   // A gradient carried in from the Discover gallery is free to preview + copy,
   // but reshaping it is a Pro tool. `fromLibrary` is set on the ?gs= hand-off
@@ -142,7 +177,15 @@ export default function GradientGenerator({ onCopy, toast }) {
   const suppressBarClickRef = useRef(false) // set during a stop drag so the drag-ending click doesn't add a stop
 
   const css = gradientCss(type, angle, stops)
-  const cssValue = `background: ${css};`
+
+  // Export code for the copy panel. SVG only applies to linear/radial, so a
+  // conic gradient falls back to CSS even if SVG was the last-picked format.
+  const effFmt = fmt === 'svg' && type === 'Conic' ? 'css' : fmt
+  const exportCode = useMemo(() => {
+    if (effFmt === 'tailwind') return tailwindValue(css)
+    if (effFmt === 'svg') return gradientSvg(type, angle, stops)
+    return `background: ${css};`
+  }, [effFmt, css, type, angle, stops])
 
   // Persist to the shared design so the gradient follows the user across tools.
   // `source` travels with it so the Pro gate on gallery gradients survives a
@@ -369,11 +412,11 @@ export default function GradientGenerator({ onCopy, toast }) {
     }))
   }, [importSources])
 
-  const copyCss = useCallback(() => {
-    onCopy?.(cssValue)
+  const copyCode = useCallback(() => {
+    onCopy?.(exportCode)
     setCopied(true)
     setTimeout(() => setCopied(false), 1400)
-  }, [cssValue, onCopy])
+  }, [exportCode, onCopy])
 
   // ── Drag: stop handles on the preview bar ──
   const dragStop = useCallback((e, idx) => {
@@ -563,11 +606,23 @@ export default function GradientGenerator({ onCopy, toast }) {
 
           <div className="ggn-field">
             <div className="ggn-label-row">
-              <span className="ggn-label">CSS</span>
-              <button type="button" className="ggn-copy" onClick={copyCss}>{copied ? '✓ Copied' : 'Copy CSS'}</button>
+              <span className="ggn-label">Code</span>
+              <button type="button" className="ggn-copy" onClick={copyCode}>{copied ? '✓ Copied' : 'Copy'}</button>
             </div>
-            <button type="button" className="ggn-css" onClick={copyCss} title="Click to copy">
-              <code>{cssValue}</code>
+            <div className="ggn-fmt" role="tablist" aria-label="Export format">
+              {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={effFmt === f.id}
+                  className={`ggn-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
+                  onClick={() => setFmt(f.id)}
+                >{f.label}</button>
+              ))}
+            </div>
+            <button type="button" className={`ggn-css${effFmt === 'svg' ? ' ggn-css--block' : ''}`} onClick={copyCode} title="Click to copy">
+              <code>{exportCode}</code>
             </button>
           </div>
         </div>
