@@ -103,6 +103,36 @@ function cellRef(color) {
   }
 }
 
+function closestStop(labels, colors, target) {
+  if (!colors.length) return { label: target, color: '#000000' }
+  let closestIndex = 0
+  labels.forEach((label, index) => {
+    if (Math.abs(label - target) < Math.abs(labels[closestIndex] - target)) closestIndex = index
+  })
+  return { label: labels[closestIndex], color: colors[closestIndex] }
+}
+
+function previewRef(labels, colors) {
+  return (el) => {
+    if (!el || !colors.length) return
+    const canvas = closestStop(labels, colors, 50).color
+    const surface = closestStop(labels, colors, 100).color
+    const border = closestStop(labels, colors, 200).color
+    const accent = closestStop(labels, colors, 600).color
+    const accentHover = closestStop(labels, colors, 700).color
+    const muted = closestStop(labels, colors, 700).color
+    const text = closestStop(labels, colors, 900).color
+    el.style.setProperty('--tt-pv-canvas', canvas)
+    el.style.setProperty('--tt-pv-surface', surface)
+    el.style.setProperty('--tt-pv-border', border)
+    el.style.setProperty('--tt-pv-accent', accent)
+    el.style.setProperty('--tt-pv-accent-hover', accentHover)
+    el.style.setProperty('--tt-pv-on-accent', textColorForBg(accent))
+    el.style.setProperty('--tt-pv-muted', muted)
+    el.style.setProperty('--tt-pv-text', text)
+  }
+}
+
 export default function TintTool({ onCopy, toast }) {
   const { design } = useProject()
   const [bases, setBases] = useState(() => [mkBase('#2563EB')])
@@ -111,6 +141,7 @@ export default function TintTool({ onCopy, toast }) {
   const [chroma, setChroma] = useState(DEFAULT_TUNING.chroma)
   const [stepMode, setStepMode] = useState(DEFAULT_TUNING.stepMode)
   const [includeEnds, setIncludeEnds] = useState(DEFAULT_TUNING.includeEnds)
+  const [audience, setAudience] = useState('designer')
 
   const labels = useMemo(() => stepLabels(stepMode, includeEnds), [stepMode, includeEnds])
   const dense = labels.length > 24 // thin bars — hide per-cell text, keep hover titles
@@ -174,22 +205,87 @@ export default function TintTool({ onCopy, toast }) {
     return `:root {\n${lines.join('\n')}\n}`
   }, [ramps, labels, multi])
 
+  const primaryRamp = ramps[0]?.colors || []
+  const roleSamples = [
+    ['Canvas', closestStop(labels, primaryRamp, 50)],
+    ['Surface', closestStop(labels, primaryRamp, 100)],
+    ['Border', closestStop(labels, primaryRamp, 200)],
+    ['Primary', closestStop(labels, primaryRamp, 600)],
+    ['Hover', closestStop(labels, primaryRamp, 700)],
+    ['Text', closestStop(labels, primaryRamp, 900)],
+  ]
+  const handleAudienceKeyDown = (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const next = event.key === 'ArrowLeft' || event.key === 'Home' ? 'designer' : 'developer'
+    setAudience(next)
+    requestAnimationFrame(() => document.getElementById(`tt-tab-${next}`)?.focus())
+  }
+
   return (
-    <div className="sec">
-      <div className="sec-h">
-        <div className="sec-h-eyebrow">Colour</div>
-        <h1>Tint Scale Generator</h1>
-        <p>
-          Turn one colour &mdash; or a whole palette &mdash; into production-ready
-          tonal ramps. Pick <em>Perceived</em> for evenly-lit, on-brand tones or
-          <em> Linear</em> for a flat lightness sweep, choose your step range, then
-          copy any swatch, row or the whole set as CSS.
-        </p>
+    <div className="sec tt-page">
+      <header className="tt-hero">
+        <div className="sec-h-eyebrow">Colour system workspace</div>
+        <div className="tt-hero-copy">
+          <h1>Tint Scale Generator</h1>
+          <p>
+            Build a tonal system that designers can evaluate and developers can
+            ship. Start with one colour or import a palette, tune the curve, then
+            inspect real interface roles or copy production-ready tokens.
+          </p>
+        </div>
+        <div className="tt-audience" role="tablist" aria-label="Choose your tint scale workflow">
+          <button
+            type="button"
+            role="tab"
+            id="tt-tab-designer"
+            aria-selected={audience === 'designer'}
+            aria-controls="tt-audience-panel"
+            tabIndex={audience === 'designer' ? 0 : -1}
+            className={audience === 'designer' ? 'tt-audience-tab tt-audience-tab--on' : 'tt-audience-tab'}
+            onClick={() => setAudience('designer')}
+            onKeyDown={handleAudienceKeyDown}
+          >
+            <span className="tt-audience-kicker">For designers</span>
+            <strong>Preview the system</strong>
+            <span>See hierarchy and semantic roles in context.</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="tt-tab-developer"
+            aria-selected={audience === 'developer'}
+            aria-controls="tt-audience-panel"
+            tabIndex={audience === 'developer' ? 0 : -1}
+            className={audience === 'developer' ? 'tt-audience-tab tt-audience-tab--on' : 'tt-audience-tab'}
+            onClick={() => setAudience('developer')}
+            onKeyDown={handleAudienceKeyDown}
+          >
+            <span className="tt-audience-kicker">For developers</span>
+            <strong>Ship the tokens</strong>
+            <span>Inspect names and copy a complete CSS handoff.</span>
+          </button>
+        </div>
+      </header>
+
+      <div className="tt-status" aria-live="polite">
+        <span><strong>{bases.length}</strong> base colour{bases.length > 1 ? 's' : ''}</span>
+        <span><strong>{labels.length}</strong> stops per scale</span>
+        <span><strong>{mode === 'perceived' ? 'HCT' : 'HSL'}</strong> lightness curve</span>
+        <span><strong>{ramps.length * labels.length}</strong> generated tokens</span>
       </div>
 
       <div className="tt-grid">
         {/* ── Controls ── */}
-        <div className="card tt-panel">
+        <section className="card tt-panel tt-config" aria-labelledby="tt-config-title">
+          <div className="tt-section-head">
+            <span className="tt-section-num">01</span>
+            <div>
+              <h2 id="tt-config-title">Tune the system</h2>
+              <p>One rule set keeps every colour ramp consistent.</p>
+            </div>
+          </div>
+
           <label className="seg-label">Lightness curve</label>
           <div className="tt-seg" role="group" aria-label="Lightness curve">
             {[['perceived', 'Perceived'], ['linear', 'Linear']].map(([value, label]) => (
@@ -268,12 +364,20 @@ export default function TintTool({ onCopy, toast }) {
           <button type="button" className="tt-reset" onClick={resetTuning}>
             Reset tuning
           </button>
-        </div>
+        </section>
 
         {/* ── Ramps ── */}
-        <div className="card tt-panel">
+        <section className="card tt-panel tt-output" aria-labelledby="tt-output-title">
+          <div className="tt-section-head tt-section-head--output">
+            <span className="tt-section-num">02</span>
+            <div>
+              <h2 id="tt-output-title">Build the scale</h2>
+              <p>Add up to eight source colours. Every scale uses the same tuning.</p>
+            </div>
+          </div>
+
           <div className="tt-bases-head">
-            <label className="seg-label">Base colours</label>
+            <span className="seg-label">Source colours</span>
             <div className="tt-bases-actions">
               <button type="button" className="tt-copy-all" onClick={importPalette}>
                 Import from palette
@@ -295,6 +399,10 @@ export default function TintTool({ onCopy, toast }) {
               const valid = normaliseHex(b.input) != null
               return (
                 <div className="tt-ramp-block" key={b.id}>
+                  <div className="tt-ramp-meta">
+                    <strong>Scale {ri + 1}</strong>
+                    <span>{b.hex} source</span>
+                  </div>
                   <div className="tt-ramp-head">
                     <input
                       type="color"
@@ -342,26 +450,134 @@ export default function TintTool({ onCopy, toast }) {
                       </button>
                     ))}
                   </div>
+                  <p className="tt-ramp-scroll">Scroll horizontally to inspect every stop.</p>
                 </div>
               )
             })}
           </div>
 
-          <div className="tt-export-head">
-            <label className="seg-label" htmlFor="tt-export">CSS variables</label>
-            <button type="button" className="tt-copy-all" onClick={() => onCopy?.(allCss)}>
-              Copy all CSS
-            </button>
+          <div className="tt-delivery">
+            <div className="tt-delivery-head">
+              <div>
+                <span className="tt-section-num">03</span>
+                <div>
+                  <h2>{audience === 'designer' ? 'Evaluate the system' : 'Prepare the handoff'}</h2>
+                  <p>
+                    {audience === 'designer'
+                      ? 'The first scale is mapped to common interface roles.'
+                      : 'Every generated stop is named and ready to paste.'}
+                  </p>
+                </div>
+              </div>
+              <div className="tt-view-switch" aria-label="Output view">
+                <button
+                  type="button"
+                  className={audience === 'designer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
+                  aria-pressed={audience === 'designer'}
+                  onClick={() => setAudience('designer')}
+                >
+                  Design preview
+                </button>
+                <button
+                  type="button"
+                  className={audience === 'developer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
+                  aria-pressed={audience === 'developer'}
+                  onClick={() => setAudience('developer')}
+                >
+                  Developer handoff
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="tt-audience-panel"
+              role="tabpanel"
+              aria-labelledby={audience === 'designer' ? 'tt-tab-designer' : 'tt-tab-developer'}
+            >
+              {audience === 'designer' ? (
+                <div className="tt-design-view">
+                  <div className="tt-preview" ref={previewRef(labels, primaryRamp)}>
+                    <div className="tt-preview-bar">
+                      <span className="tt-preview-mark" aria-hidden="true" />
+                      <span>Interface preview</span>
+                      <span className="tt-preview-status">Role mapping</span>
+                    </div>
+                    <div className="tt-preview-body">
+                      <div className="tt-preview-copy">
+                        <span className="tt-preview-eyebrow">Release-ready colour</span>
+                        <h3>One scale, clear hierarchy.</h3>
+                        <p>
+                          Test surfaces, borders, text and actions together before
+                          handing the tokens to engineering.
+                        </p>
+                        <div className="tt-preview-actions">
+                          <span className="tt-preview-primary">Primary action</span>
+                          <span className="tt-preview-secondary">Secondary</span>
+                        </div>
+                      </div>
+                      <div className="tt-preview-card">
+                        <span className="tt-preview-card-k">Token coverage</span>
+                        <strong>{roleSamples.length} roles</strong>
+                        <span>{labels.length} stops available</span>
+                        <div className="tt-preview-spectrum" aria-hidden="true">
+                          {roleSamples.map(([name, sample]) => (
+                            <span key={name} ref={cellRef(sample.color)} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="tt-role-map" aria-label="Suggested semantic role mapping">
+                    {roleSamples.map(([name, sample]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="tt-role-sample"
+                        ref={cellRef(sample.color)}
+                        onClick={() => onCopy?.(sample.color)}
+                        aria-label={`Copy ${name} role colour ${sample.color}`}
+                      >
+                        <span>{name}</span>
+                        <strong>{sample.label}</strong>
+                        <code>{sample.color}</code>
+                      </button>
+                    ))}
+                  </div>
+                  {ramps.length > 1 && (
+                    <p className="tt-view-note">Previewing Scale 1. Every scale remains available above and in the developer handoff.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="tt-developer-view">
+                  <div className="tt-code-meta">
+                    <div>
+                      <span className="seg-label">CSS custom properties</span>
+                      <p>{ramps.length} scale{ramps.length > 1 ? 's' : ''} · {ramps.length * labels.length} variables · deterministic names</p>
+                    </div>
+                    <button type="button" className="tt-copy-primary" onClick={() => onCopy?.(allCss)}>
+                      Copy all CSS
+                    </button>
+                  </div>
+                  <pre id="tt-export" className="tt-export" tabIndex="0"><code>{allCss}</code></pre>
+                </div>
+              )}
+            </div>
           </div>
-          <pre id="tt-export" className="tt-export"><code>{allCss}</code></pre>
-        </div>
+        </section>
       </div>
 
       {/* Cross-links keep the standalone page part of the colour suite. */}
       <nav className="tt-more" aria-label="More colour tools">
-        <NavLink to="/color/palette" className="tt-more-link">Build a full palette &rarr;</NavLink>
-        <NavLink to="/color/contrast" className="tt-more-link">Check this colour&rsquo;s contrast &rarr;</NavLink>
-        <NavLink to="/color" className="tt-more-link">All colour tools &rarr;</NavLink>
+        <div>
+          <span className="tt-more-kicker">Continue your colour system</span>
+          <strong>Move from a useful scale to a complete interface foundation.</strong>
+        </div>
+        <div className="tt-more-links">
+          <NavLink to="/color/palette" className="tt-more-link">Build a full palette &rarr;</NavLink>
+          <NavLink to="/color/contrast" className="tt-more-link">Check contrast &rarr;</NavLink>
+          <NavLink to="/color" className="tt-more-link">All colour tools &rarr;</NavLink>
+        </div>
       </nav>
     </div>
   )
