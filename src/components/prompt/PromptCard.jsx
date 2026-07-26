@@ -1,4 +1,5 @@
 import { parseTags } from '../../utils/promptStore'
+import UserName from '../UserName'
 
 // A single prompt tile in the gallery. Presentational — all behaviour is wired
 // through props by the parent library.
@@ -35,7 +36,7 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, isLocked }
         )}
         {isCommunity && (
           <div className="pl-card-author">
-            <span>{p.author}</span>
+            <UserName name={p.author} ownerId={p.ownerId} bold={!!p.ownerId} />
             {p.saves > 0 && <span className="pl-card-saves">{p.saves} saves</span>}
             {isSaved && (
               <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto' }}>

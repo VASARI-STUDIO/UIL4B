@@ -1,9 +1,12 @@
 import { useEffect } from 'react'
 import { parseTags } from '../../utils/promptStore'
+import UserName from '../UserName'
+import { resolvePromptProfileLink } from '../../utils/promptSubmission'
 
 // Full prompt detail modal — works for both community and personal prompts.
 export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove, isCommunity, isSaved }) {
   const pTags = parseTags(prompt.tags)
+  const profileLink = resolvePromptProfileLink(prompt)
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -29,10 +32,10 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
           )}
           {isCommunity && prompt.author && (
             <div className="pl-modal-author">
-              <span>{prompt.author}</span>
-              {prompt.authorProfile && (
+              <UserName name={prompt.author} ownerId={prompt.ownerId} bold={!!prompt.ownerId} />
+              {profileLink && (
                 <a
-                  href={prompt.authorProfile}
+                  href={profileLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', marginLeft: 4 }}

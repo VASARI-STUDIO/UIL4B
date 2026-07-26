@@ -3,6 +3,7 @@
 // band on Discover render one shared card. Uses existing ch-* classes only — no
 // new CSS. The thumbnail is a generated gradient (no external fetch); the credit
 // link is a real nofollow new-tab anchor.
+import { safeHttpUrl } from '../../utils/urlSafety'
 
 function HeartIcon({ filled }) {
   return (
@@ -13,21 +14,31 @@ function HeartIcon({ filled }) {
 }
 
 export default function CommunityCard({ item, saved, count, onToggle, offline = false }) {
+  const href = safeHttpUrl(item.url)
+  const thumbProps = {
+    className: 'ch-thumb',
+    style: { '--c1': item.c1, '--c2': item.c2 },
+  }
+  const thumbContent = (
+    <span className="ch-thumb-mono">{item.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
+  )
   return (
     <article className="ch-card">
-      <a
-        className="ch-thumb"
-        href={offline ? undefined : item.url}
-        target="_blank"
-        rel="noopener noreferrer nofollow"
-        style={{ '--c1': item.c1, '--c2': item.c2 }}
-        aria-label={`${item.name} — open in new tab`}
-        aria-disabled={offline || undefined}
-        tabIndex={offline ? -1 : undefined}
-        onClick={(e) => { if (offline) e.preventDefault() }}
-      >
-        <span className="ch-thumb-mono">{item.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
-      </a>
+      {!offline && href ? (
+        <a
+          {...thumbProps}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          aria-label={`${item.name} — open in new tab`}
+        >
+          {thumbContent}
+        </a>
+      ) : (
+        <div {...thumbProps} aria-label={`${item.name} preview — external link unavailable`}>
+          {thumbContent}
+        </div>
+      )}
       <button
         className={`ch-heart${saved ? ' is-saved' : ''}`}
         onClick={() => onToggle(item.id)}
@@ -41,10 +52,11 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
       <div className="ch-card-body">
         <div className="ch-card-name">{item.name}</div>
         <div className="ch-card-meta">
-          <span>{item.author}</span>
+          <UserName name={item.author} ownerId={item.ownerId} bold={!!item.ownerId} />
           <span className="ch-card-tag">{item.category}</span>
         </div>
       </div>
     </article>
   )
 }
+import UserName from '../UserName'

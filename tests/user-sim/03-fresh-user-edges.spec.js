@@ -30,11 +30,11 @@ test.describe('mobile (390×844)', () => {
     const fb = watch(page, PERSONA)
     await go(page, '/ratio')
     for (const t of ['Devices', 'Screens', 'Social', 'Ratios']) {
-      await expect(page.locator('.rc-tab', { hasText: t })).toBeVisible()
+      await expect(page.getByRole('button', { name: t, exact: true })).toBeVisible()
     }
-    await page.locator('.rc-tab', { hasText: 'Devices' }).click()
-    await page.locator('.arc-select-btn').first().click()
-    const pop = page.locator('.arc-select-pop')
+    await page.getByRole('button', { name: 'Devices', exact: true }).click()
+    await page.getByRole('button', { name: /Pick a device/ }).click()
+    const pop = page.getByRole('listbox', { name: /Pick a device/ })
     await expect(pop).toBeVisible()
     const box = await pop.boundingBox()
     if (box && (box.x < 0 || box.x + box.width > 390)) {
@@ -55,16 +55,18 @@ test.describe('keyboard behaviour', () => {
   test('Escape closes the preset dropdown', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/ratio')
-    await page.locator('.arc-select-btn').first().click()
-    await expect(page.locator('.arc-select-pop')).toBeVisible()
+    await page.getByRole('button', { name: 'Devices', exact: true }).click()
+    await page.getByRole('button', { name: /Pick a device/ }).click()
+    await expect(page.getByRole('listbox', { name: /Pick a device/ })).toBeVisible()
     await page.keyboard.press('Escape')
-    await expect(page.locator('.arc-select-pop')).toHaveCount(0)
+    await expect(page.getByRole('listbox', { name: /Pick a device/ })).toHaveCount(0)
   })
 
   test('dropdown trigger is reachable and operable by keyboard', async ({ page }) => {
     const fb = watch(page, PERSONA)
     await go(page, '/ratio')
-    const btn = page.locator('.arc-select-btn').first()
+    await page.getByRole('button', { name: 'Devices', exact: true }).click()
+    const btn = page.getByRole('button', { name: /Pick a device/ })
     await btn.focus()
     await page.keyboard.press('Enter')
     const opened = await page.locator('.arc-select-pop').isVisible().catch(() => false)
@@ -84,9 +86,8 @@ test.describe('garbage input never breaks the calculator', () => {
     test(`ratio inputs: ${c.name}`, async ({ page }) => {
       const fb = watch(page, PERSONA)
       await go(page, '/ratio')
-      const inputs = page.locator('.rc-ratio-row input')
-      await inputs.nth(0).fill(c.w)
-      await inputs.nth(1).fill(c.h)
+      await page.getByRole('spinbutton', { name: 'Ratio width' }).fill(c.w)
+      await page.getByRole('spinbutton', { name: 'Ratio height' }).fill(c.h)
       // The tool may show a placeholder/empty result — it must never show
       // NaN/Infinity or throw (pageerror is caught by watch()).
       const body = await page.locator('body').innerText()

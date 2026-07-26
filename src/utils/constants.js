@@ -1,16 +1,28 @@
 export const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
+export const PUBLIC_OWNER_ID = 'uil4b-founder'
 
 // Site owner(s). Keyed by lowercase email. When a matching user's name renders
 // anywhere in the app, UserName upgrades it to this canonical handle + crown and
 // a "Site owner" tooltip. Distinct from ADMIN_EMAILS (access control) — this is
 // purely presentational identity.
 export const OWNER_HANDLES = {
-  'dylanjacob1100@gmail.com': { name: 'Dylan Coleman', crown: '👑', title: 'Site owner' },
+  'dylanjacob1100@gmail.com': {
+    name: 'Dylan Coleman',
+    crown: '👑',
+    publicHandle: 'Dylan Coleman 👑',
+    title: 'UIL4B founder',
+    publicId: PUBLIC_OWNER_ID,
+  },
 }
 
 export function getOwnerHandle(email) {
   if (!email) return null
   return OWNER_HANDLES[email.toLowerCase()] || null
+}
+
+export function getPublicOwner(ownerId) {
+  if (!ownerId) return null
+  return Object.values(OWNER_HANDLES).find((owner) => owner.publicId === ownerId) || null
 }
 
 // Flair catalog — a small tag shown next to a user's name to signal role or

@@ -16,6 +16,7 @@ export default defineConfig({
   globalSetup: './tests/user-sim/global-setup.js',
   globalTeardown: './tests/user-sim/global-teardown.js',
   fullyParallel: true,
+  workers: 4,
   timeout: 30000,
   reporter: [
     ['list'],

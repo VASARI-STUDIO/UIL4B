@@ -9,6 +9,7 @@ import { useProPrice } from '../hooks/usePrices'
 import { LOCATIONS } from '../data/locations'
 import { FLAIRS, getFlair } from '../utils/constants'
 import UserName from '../components/UserName'
+import { clearCommunitySubmissions, COMMUNITY_SUBMISSIONS_KEY } from '../utils/communitySubmissions'
 
 const STORAGE_DISCLOSURE = [
   { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
@@ -19,6 +20,10 @@ const STORAGE_DISCLOSURE = [
   { key: 'vs-current-design', purpose: 'Active palette, fonts, type scale', pii: 'no' },
   { key: 'vs-projects', purpose: 'Saved design projects (per account)', pii: 'local' },
   { key: 'vs-prompts', purpose: 'Your AI prompt library', pii: 'local' },
+  { key: 'vs-community-submissions', purpose: 'Designs submitted from this browser', pii: 'local' },
+  { key: 'vs-community-saves', purpose: 'Community designs you saved', pii: 'no' },
+  { key: 'vs-community-handle', purpose: 'Public community handle', pii: 'local' },
+  { key: 'vs-palette-history', purpose: 'Recent Palette Builder recovery history', pii: 'no' },
   { key: 'vs-state-shades', purpose: 'Cached state colour shades', pii: 'no' },
   { key: 'vs-profile-cache', purpose: 'Cached user profile (synced via Firebase)', pii: 'yes' },
   { key: 'vs-admin-unlocked', purpose: 'Admin panel access flag', pii: 'no' },
@@ -481,7 +486,10 @@ export default function Settings({ toast }) {
   }
 
   const deleteAllData = () => {
-    ['vs-prompts', 'vs-pinned-tools', 'vs-recent-tools', 'vs-current-design', 'vs-state-shades', 'vs-nav-open'].forEach(k => localStorage.removeItem(k))
+    clearCommunitySubmissions()
+    STORAGE_DISCLOSURE
+      .filter(({ key }) => key !== 'vs-admin-unlocked' && key !== COMMUNITY_SUBMISSIONS_KEY)
+      .forEach(({ key }) => localStorage.removeItem(key))
     setConfirmClear(false)
     toast(t('settings.dataCleared') || 'Local data cleared')
   }

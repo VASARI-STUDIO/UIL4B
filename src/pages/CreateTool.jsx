@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
+import AppFooter from '../components/AppFooter'
 import Toast from '../components/Toast'
 import { findCreateGroup, resolveTool } from '../data/toolTree'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -134,6 +135,7 @@ export default function CreateTool() {
         </main>
       </div>
 
+      <AppFooter compact />
       <Toast message={message} visible={visible} type={type} />
     </>
   )
