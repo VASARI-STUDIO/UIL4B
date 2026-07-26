@@ -1,5 +1,9 @@
 # Audit Implementation — Central Backlog & Tracker
 
+> **Closed historical tracker (2026-07-25).** Preserve this file as audit
+> evidence. Current priorities live in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and
+> `src/data/pipeline.js`; do not append new UI-refresh tasks here.
+
 *The single source of truth for turning the Phase-16 UX/UI/accessibility/QA
 audit into shipped, verified improvements. Consolidated from the audit's
 [`04-critical-issues.md`](04-critical-issues.md) (P0/P1) and

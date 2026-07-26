@@ -1,4 +1,4 @@
-import { getOwnerHandle, getFlair } from '../utils/constants'
+import { getOwnerHandle, getPublicOwner, getFlair } from '../utils/constants'
 
 // Renders a user's name with two optional identity signals:
 //   • Owner treatment — for site owner(s), the name is upgraded to a canonical
@@ -9,11 +9,12 @@ import { getOwnerHandle, getFlair } from '../utils/constants'
 export default function UserName({
   name,
   email,
+  ownerId,
   flair,
   bold = false,
   className = '',
 }) {
-  const owner = getOwnerHandle(email)
+  const owner = getOwnerHandle(email) || getPublicOwner(ownerId)
   const shown = owner?.name || name || (email ? email.split('@')[0] : 'User')
   const flairDef = getFlair(flair)
   const strong = bold || !!owner

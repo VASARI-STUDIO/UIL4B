@@ -56,6 +56,7 @@ function mixHex(a, b, t = 0.5) {
 }
 
 const DEFAULT_STOPS = () => PRESETS[0].stops.map(s => ({ ...s }))
+const MAX_STOPS = 12
 
 // Export formats offered under the preview. SVG is dropped for conic gradients
 // (SVG has no conic-gradient element), so the toggle adapts to the type.
@@ -97,17 +98,79 @@ const tailwindValue = (css) => `bg-[${css.replace(/ /g, '_')}]`
 function StopHexInput({ color, label, onCommit }) {
   const [draft, setDraft] = useState(color.toUpperCase())
   useEffect(() => { setDraft(color.toUpperCase()) }, [color])
+  const valid = isValidHex(draft)
+  const revert = () => setDraft(color.toUpperCase())
   return (
-    <input
-      type="text" className="ggn-stop-hex" value={draft}
-      onChange={(e) => {
-        const v = e.target.value
-        setDraft(v)
-        if (/^#[0-9a-f]{6}$/i.test(v)) onCommit(v.toUpperCase())
-      }}
-      onBlur={() => setDraft(color.toUpperCase())}
-      aria-label={label}
-    />
+    <span className="ggn-stop-hex-field">
+      <input
+        type="text"
+        className="ggn-stop-hex"
+        value={draft}
+        onChange={(e) => {
+          const v = e.target.value
+          setDraft(v)
+          if (isValidHex(v)) onCommit(v.toUpperCase())
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            if (valid) onCommit(draft.toUpperCase())
+            else revert()
+            e.currentTarget.blur()
+          } else if (e.key === 'Escape') {
+            revert()
+            e.currentTarget.blur()
+          }
+        }}
+        onBlur={revert}
+        aria-label={label}
+        aria-invalid={!valid}
+        spellCheck="false"
+        autoComplete="off"
+      />
+      {!valid && <span className="ggn-field-error" role="status">Use a 6-digit hex</span>}
+    </span>
+  )
+}
+
+function StopPositionInput({ value, label, disabled, onCommit }) {
+  const [draft, setDraft] = useState(String(Math.round(value)))
+  useEffect(() => { setDraft(String(Math.round(value))) }, [value])
+
+  const commit = () => {
+    const parsed = Number(draft)
+    if (!Number.isFinite(parsed)) {
+      setDraft(String(Math.round(value)))
+      return
+    }
+    const next = Math.max(0, Math.min(100, Math.round(parsed)))
+    setDraft(String(next))
+    onCommit(next)
+  }
+
+  return (
+    <div className="ggn-stop-pos">
+      <input
+        type="number"
+        min="0"
+        max="100"
+        inputMode="numeric"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            commit()
+            e.currentTarget.blur()
+          } else if (e.key === 'Escape') {
+            setDraft(String(Math.round(value)))
+            e.currentTarget.blur()
+          }
+        }}
+        disabled={disabled}
+        aria-label={label}
+      />
+      <span aria-hidden="true">%</span>
+    </div>
   )
 }
 
@@ -265,6 +328,10 @@ export default function GradientGenerator({ onCopy, toast }) {
   // click on the preview bar (exact position). Focuses the new stop.
   const addStopAt = useCallback((pct) => {
     if (!guardEdit()) return
+    if (stops.length >= MAX_STOPS) {
+      toast?.(`A gradient can contain up to ${MAX_STOPS} stops`)
+      return
+    }
     setStops(prev => {
       const sorted = [...prev].sort((a, b) => a.position - b.position)
       let lo = sorted[0], hi = sorted[sorted.length - 1]
@@ -277,7 +344,7 @@ export default function GradientGenerator({ onCopy, toast }) {
       return next
     })
     setActiveStop(stops.length) // the appended stop
-  }, [stops.length, guardEdit])
+  }, [stops.length, guardEdit, toast])
 
   const addStop = useCallback(() => {
     const sorted = [...stops].sort((a, b) => a.position - b.position)
@@ -412,11 +479,20 @@ export default function GradientGenerator({ onCopy, toast }) {
     }))
   }, [importSources])
 
-  const copyCode = useCallback(() => {
-    onCopy?.(exportCode)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1400)
-  }, [exportCode, onCopy])
+  const copyCode = useCallback(async () => {
+    try {
+      const result = await onCopy?.(exportCode)
+      if (result === false) {
+        setCopied(false)
+        return
+      }
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1400)
+    } catch {
+      setCopied(false)
+      toast?.('Copy failed — select the code and copy it manually')
+    }
+  }, [exportCode, onCopy, toast])
 
   // ── Drag: stop handles on the preview bar ──
   const dragStop = useCallback((e, idx) => {
@@ -434,9 +510,11 @@ export default function GradientGenerator({ onCopy, toast }) {
     const up = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
   }, [updateStop, guardEdit])
 
   // Click an empty part of the bar to drop a stop right where you click. Clicks
@@ -468,9 +546,11 @@ export default function GradientGenerator({ onCopy, toast }) {
     const up = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
   }, [angleActive, guardEdit])
 
   const sortedForBar = [...stops.map((s, i) => ({ ...s, i }))].sort((a, b) => a.position - b.position)
@@ -480,12 +560,11 @@ export default function GradientGenerator({ onCopy, toast }) {
       {/* Header */}
       <header className="ggn-head">
         <div className="ggn-head-id">
-          <span className="ggn-eyebrow">Colour · Gradient</span>
+          <span className="ggn-eyebrow">Colour system workspace</span>
           <div className="ggn-title-row">
             <h1 className="ggn-title">Gradient Generator</h1>
-            <span className="ggn-badge">{stops.length} {stops.length === 1 ? 'stop' : 'stops'}</span>
           </div>
-          <p className="ggn-sub">Build any gradient — drag the stops, dial the angle and copy production-ready CSS. It follows you across every colour tool.</p>
+          <p className="ggn-sub">Compose on a direct canvas, refine every stop in the inspector, then hand off production-ready CSS, Tailwind or SVG.</p>
           {editLocked && (
             <p className="ggn-lock-note">
               <IcoLock size={12} />
@@ -515,19 +594,37 @@ export default function GradientGenerator({ onCopy, toast }) {
         </div>
       </header>
 
-      <div className="ggn-grid">
+      <div className="ggn-status" aria-live="polite">
+        <span><strong>{type}</strong> gradient</span>
+        <span><strong>{stops.length}</strong> editable stop{stops.length === 1 ? '' : 's'}</span>
+        <span><strong>{angleActive ? `${Math.round(angle)}°` : 'Centred'}</strong> direction</span>
+        <span><strong>{effFmt.toUpperCase()}</strong> handoff</span>
+      </div>
+
+      <div className="ggn-grid" aria-label="Gradient workbench">
         {/* Preview */}
-        <div className="ggn-preview-wrap">
-          <div className="ggn-preview" style={{ background: css }}>
-            <div className="ggn-preview-pills">
-              <span className="ggn-pill">{type}</span>
-              {angleActive && <span className="ggn-pill">{Math.round(angle)}°</span>}
+        <section className="ggn-stage" aria-labelledby="ggn-stage-title">
+          <div className="ggn-stage-head">
+            <div>
+              <span className="ggn-step">01 · Canvas</span>
+              <h2 id="ggn-stage-title">Shape the gradient</h2>
+            </div>
+            <span className="ggn-badge">{stops.length}/{MAX_STOPS} stops</span>
+          </div>
+          <div className="ggn-preview-wrap">
+            <div className="ggn-preview" style={{ background: css }}>
+              <div className="ggn-preview-pills">
+                <span className="ggn-pill">{type}</span>
+                {angleActive && <span className="ggn-pill">{Math.round(angle)}°</span>}
+              </div>
             </div>
             <div
               className="ggn-bar"
               ref={barRef}
               onClick={barClick}
               title="Click to add a stop"
+              role="group"
+              aria-label="Gradient stop rail. Click empty space to add a stop."
             >
               <div className="ggn-bar-track" style={{ background: `linear-gradient(90deg, ${[...stops].sort((a, b) => a.position - b.position).map(s => `${s.color} ${Math.round(s.position)}%`).join(', ')})` }} />
               {sortedForBar.map(s => (
@@ -537,20 +634,45 @@ export default function GradientGenerator({ onCopy, toast }) {
                   className={`ggn-handle${activeStop === s.i ? ' is-active' : ''}${s.locked ? ' is-locked' : ''}`}
                   style={{ left: `${s.position}%`, '--h-color': s.color }}
                   onPointerDown={(e) => dragStop(e, s.i)}
+                  onFocus={() => setActiveStop(s.i)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      updateStop(s.i, { position: Math.min(100, Math.round(s.position) + (e.shiftKey ? 10 : 1)) })
+                    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      updateStop(s.i, { position: Math.max(0, Math.round(s.position) - (e.shiftKey ? 10 : 1)) })
+                    } else if (e.key === 'Home') {
+                      e.preventDefault()
+                      updateStop(s.i, { position: 0 })
+                    } else if (e.key === 'End') {
+                      e.preventDefault()
+                      updateStop(s.i, { position: 100 })
+                    } else if ((e.key === 'Delete' || e.key === 'Backspace') && stops.length > 2) {
+                      e.preventDefault()
+                      removeStop(s.i)
+                    }
+                  }}
                   aria-label={`Gradient stop ${s.i + 1} at ${Math.round(s.position)}%${s.locked ? ', locked' : ''}`}
                 />
               ))}
             </div>
+            <p className="ggn-preview-hint">
+              {editLocked
+                ? 'Editing gallery gradients is a Pro feature — Reset or Random to start a free, editable gradient.'
+                : 'Drag or arrow a handle to move it · Shift + arrow moves 10% · click the rail to add'}
+            </p>
           </div>
-          <p className="ggn-preview-hint">
-            {editLocked
-              ? 'Editing gallery gradients is a Pro feature — Reset or Random to start a free, editable gradient.'
-              : 'Drag a handle to move a stop · click the bar to add one'}
-          </p>
-        </div>
+        </section>
 
         {/* Control panel */}
-        <div className="ggn-panel">
+        <aside className="ggn-panel" aria-labelledby="ggn-inspector-title">
+          <div className="ggn-panel-head">
+            <div>
+              <span className="ggn-step">02 · Inspector</span>
+              <h2 id="ggn-inspector-title">Refine &amp; export</h2>
+            </div>
+          </div>
           <div className="ggn-field">
             <div className="ggn-label-row">
               <span className="ggn-label">Type</span>
@@ -625,7 +747,7 @@ export default function GradientGenerator({ onCopy, toast }) {
               <code>{exportCode}</code>
             </button>
           </div>
-        </div>
+        </aside>
       </div>
 
       {/* Stops */}
@@ -634,7 +756,14 @@ export default function GradientGenerator({ onCopy, toast }) {
           <span className="ggn-label">Stops</span>
           <div className="ggn-block-actions">
             <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked — unlock to randomise it' : 'Lock the number of stops when randomising'} />
-            <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={addStop}>{editLocked && <IcoLock size={12} />} + Add Stop</button>
+            <button
+              type="button"
+              className="ggn-btn ggn-btn-ghost ggn-btn-sm"
+              onClick={addStop}
+              disabled={stops.length >= MAX_STOPS}
+            >
+              {editLocked && <IcoLock size={12} />} + Add Stop
+            </button>
             <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={flip}>{editLocked && <IcoLock size={12} />} ⇄ Flip</button>
           </div>
         </div>
@@ -656,15 +785,12 @@ export default function GradientGenerator({ onCopy, toast }) {
                 label={`Stop ${i + 1} hex`}
                 onCommit={(v) => updateStop(i, { color: v })}
               />
-              <div className="ggn-stop-pos">
-                <input
-                  type="number" min="0" max="100" value={Math.round(s.position)}
-                  onChange={(e) => updateStop(i, { position: Math.max(0, Math.min(100, +e.target.value)) })}
-                  disabled={editLocked}
-                  aria-label={`Stop ${i + 1} position`}
-                />
-                <span>%</span>
-              </div>
+              <StopPositionInput
+                value={s.position}
+                disabled={editLocked}
+                label={`Stop ${i + 1} position`}
+                onCommit={(position) => updateStop(i, { position })}
+              />
               <LockBtn
                 on={!!s.locked}
                 onClick={(e) => { e.stopPropagation(); toggleStopLock(i) }}
@@ -678,9 +804,12 @@ export default function GradientGenerator({ onCopy, toast }) {
       </section>
 
       {/* Import colours — from the Palette Builder or a saved project */}
-      <section className="ggn-block">
+      <section className="ggn-block ggn-sources">
         <div className="ggn-block-head">
-          <span className="ggn-label">Import colours</span>
+          <div>
+            <span className="ggn-step">03 · Starting points</span>
+            <h2>Begin with colours you trust</h2>
+          </div>
         </div>
         {importSources.length > 0 ? (
           <div className="ggn-imports">
@@ -704,9 +833,12 @@ export default function GradientGenerator({ onCopy, toast }) {
       </section>
 
       {/* Presets */}
-      <section className="ggn-block">
+      <section className="ggn-block ggn-starting">
         <div className="ggn-block-head">
-          <span className="ggn-label">Presets</span>
+          <div>
+            <span className="ggn-label">Curated gradients</span>
+            <p>Choose a direction, then make it yours in the canvas.</p>
+          </div>
           <Link className="ggn-gal-link" to="/discover/gradients">
             Browse the gradient gallery <span aria-hidden="true">→</span>
           </Link>

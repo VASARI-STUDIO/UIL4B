@@ -37,7 +37,7 @@ within the **12/12 serverless-function cap** — the rebuild adds no functions.
 
 - **Colour System Generator** — _one merged tool_ (`/color`)
   - Palette Generator · Semantic (UI-state) Colour Generator · Tint Generator ·
-    UI Colour Generator · Gradient Generator · Contrast Checker
+    Gradient Generator · Contrast Checker
 - **Typography System Builder**
   - Font Gallery `→ /fontgallery` · Font Pair Tool `→ /fontpairs` · Type Scale `→ /typescale`
 - **UI Component Builder**

@@ -40,10 +40,10 @@ const ICONS = {
   ),
   icons: (
     <>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M9 10.5h.01" />
-      <path d="M15 10.5h.01" />
-      <path d="M8.5 14.5c.9 1.1 2.1 1.7 3.5 1.7s2.6-.6 3.5-1.7" />
+      <rect x="4" y="4" width="6" height="6" rx="1.5" />
+      <circle cx="17" cy="7" r="3" />
+      <path d="m7 14-3 6h6z" />
+      <path d="M14 14h6v6h-6z" />
     </>
   ),
   // ── Create · per-tool menu glyphs ──

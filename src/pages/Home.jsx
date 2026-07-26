@@ -2,6 +2,8 @@ import { lazy, Suspense, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import CreatePreview from '../components/CreatePreview'
+import NavIcon from '../components/NavIcon'
+import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
 import { CREATE_GROUPS, LEARN_GROUPS } from '../data/toolTree'
 
@@ -48,13 +50,20 @@ const COMMUNITY = [
 // sync with `ExportPanel`'s FORMATS so the homepage never promises a format the
 // real dialog doesn't list. The file names are a decorative faux-output stack.
 const EXPORT_FORMATS = [
-  { name: 'HTML design system', desc: 'A full page — tokens, components and styles as ready-to-ship HTML + CSS.' },
-  { name: 'CSS tokens', desc: 'Custom properties for colour, type, spacing and radii — drop into any stylesheet.' },
-  { name: 'JSON tokens', desc: 'Design tokens as JSON for pipelines and Style Dictionary.' },
-  { name: 'Tailwind theme', desc: 'A tailwind.config theme extension mapped to your system.' },
-  { name: 'Asset bundle', desc: 'Icons and swatches exported together as SVG + PNG.' },
+  { name: 'HTML design system', desc: 'Planned: a full page of tokens, components and styles as HTML + CSS.' },
+  { name: 'CSS tokens', desc: 'Planned: custom properties for colour, type, spacing and radii.' },
+  { name: 'JSON tokens', desc: 'Planned: design tokens for pipelines and Style Dictionary.' },
+  { name: 'Tailwind theme', desc: 'Planned: a Tailwind theme extension mapped to your system.' },
+  { name: 'Asset bundle', desc: 'Planned: icons and swatches bundled as SVG + PNG.' },
 ]
 const EXPORT_FILES = ['system.html', 'tokens.css', 'tokens.json', 'tailwind.config.js', 'assets.zip']
+
+const PRODUCT_PROOF = [
+  { value: 'Available now', label: 'connected tools', detail: 'Colour, icons and imagery share one working foundation' },
+  { value: 'Live checks', label: 'validation', detail: 'Contrast and consistency feedback while you build' },
+  { value: 'Copy-ready', label: 'handoff', detail: 'Use live colour values now; broader export formats are coming soon' },
+  { value: 'Browser-first', label: 'setup', detail: 'Start immediately without installing a design stack' },
+]
 
 export default function Home() {
   const rootRef = useRef(null)
@@ -68,34 +77,76 @@ export default function Home() {
       <main id="main" tabIndex={-1}>
       {/* ── Hero ── */}
       <header className="home-hero">
-        <h1 className="home-hero-h1">
-          <span className="home-hero-line"><span className="home-hero-line-in">No more tab hoarding.</span></span>
-          <span className="home-hero-line"><span className="home-hero-line-in">Every design tool, one workspace.</span></span>
-        </h1>
-        <p className="home-hero-sub">
-          Colour, type, components and icons — built, checked and exported from one
-          place instead of seventeen tabs.
-        </p>
-        <div className="home-hero-cta">
-          <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
-            Start for Free
-            <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
-          </Link>
-          <Link className="ui-pill ui-pill-out ui-pill-lg" to="/plans">
-            See our plans
-          </Link>
+        <div className="home-orbit-rings" aria-hidden="true"><i /><i /><i /></div>
+        <ul className="home-orbit-tools" aria-label="Connected UI system builders">
+          {CREATE_GROUPS.map((group) => (
+            <li key={group.id} data-hue={group.hue}>
+              <Link
+                to={group.home}
+                aria-label={group.soon ? `${group.label} — coming soon` : `Open ${group.label}`}
+                data-soon={group.soon || undefined}
+              >
+                <NavIcon id={group.id} />
+                <span>{group.label.replace(' System Generator', '').replace(' System Builder', '')}</span>
+                {group.soon && <em>Soon</em>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="home-hero-core">
+          <p className="home-hero-kicker">
+            <span className="home-hero-kicker-dot" aria-hidden="true" />
+            The operating workspace for UI systems
+          </p>
+          <h1 className="home-hero-h1">
+            <span className="home-hero-line"><span className="home-hero-line-in">Build the system.</span></span>
+            <span className="home-hero-line home-hero-line--accent"><span className="home-hero-line-in">Keep every decision connected.</span></span>
+          </h1>
+          <p className="home-hero-sub">
+            Build, organise and validate colour and assets in one connected workspace.
+            Typography, component tooling and broader exports are coming soon.
+          </p>
+          <div className="home-hero-cta">
+            <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
+              Start building free
+              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
+            </Link>
+            <a className="ui-pill ui-pill-out ui-pill-lg" href="#create">Explore the workspace</a>
+          </div>
+          <p className="home-hero-hint">No credit card · No setup · Your first system stays free</p>
         </div>
-        <p className="home-hero-hint">Free to start · No credit card · Runs in your browser</p>
+
+        <dl className="home-proof" aria-label="UIL4B product capabilities">
+          {PRODUCT_PROOF.map((item) => (
+            <div className="home-proof-item" key={item.label}>
+              <dt>
+                <strong>{item.value}</strong>
+                <span>{item.label}</span>
+              </dt>
+              <dd>{item.detail}</dd>
+            </div>
+          ))}
+        </dl>
       </header>
 
       {/* ── Create: the live browser graphic, sat directly under the hero ── */}
       <section className="home-showcase" id="create">
         <div className="home-container">
-          <div className="home-stage" data-reveal="media" aria-live="polite">
-            <CreatePreview />
+          <div className="home-stage-shell" data-reveal="media">
+            <div className="home-stage-meta">
+              <span className="home-stage-status">
+                <i aria-hidden="true" />
+                Interactive workspace preview
+              </span>
+              <span className="home-stage-meta-note">Try every tab</span>
+            </div>
+            <div className="home-stage" aria-live="polite">
+              <CreatePreview />
+            </div>
           </div>
           <p className="home-stage-cap" data-reveal>
-            One workspace, every foundation — click a tab to try it.
+            A connected product, not a feature montage. Change a palette, inspect colour roles
+            or compress an image without leaving the page.
           </p>
         </div>
       </section>
@@ -122,7 +173,7 @@ export default function Home() {
                   <svg className="home-check-mark" viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
                     <path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  Type scales that stay in proportion
+                  Colour scales that stay in proportion
                 </li>
                 <li>
                   <svg className="home-check-mark" viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
@@ -161,10 +212,10 @@ export default function Home() {
         <div className="home-container">
           <div className="home-head" data-reveal>
             <span className="home-eyebrow">Export</span>
-            <h2 className="home-h2">Export the whole system, not just the swatches.</h2>
+            <h2 className="home-h2">Preview the export roadmap.</h2>
             <p className="home-lede">
-              Everything you build leaves as clean, framework-ready code — tokens, components and
-              assets, in the format your stack already speaks.
+              Copy live colour values from the tools today. Full-system, typography and component
+              exports below are clearly marked as coming soon.
             </p>
           </div>
           <div className="home-export">
@@ -172,6 +223,7 @@ export default function Home() {
               {EXPORT_FORMATS.map((f, i) => (
                 <li className={i === 0 ? 'home-export-row is-primary' : 'home-export-row'} key={f.name}>
                   <span className="home-export-name">{f.name}</span>
+                  <em className="home-export-soon">Soon</em>
                   <span className="home-export-desc">{f.desc}</span>
                 </li>
               ))}
@@ -258,97 +310,15 @@ export default function Home() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="home-cta">
-        <div className="home-cta-glow" aria-hidden="true" />
-        <div className="home-cta-tabs" aria-hidden="true">
-          {CREATE_GROUPS.map((group) => (
-            <span className="home-cta-tab" key={group.id} data-hue={group.hue}>
-              <span className="fx-dot" />
-            </span>
-          ))}
-        </div>
-        <div className="home-cta-inner" data-reveal>
-          <span className="home-eyebrow">Start free</span>
-          <h2 className="home-cta-h2">
-            Build your first system <span className="home-cta-em">today.</span>
-          </h2>
-          <p className="home-cta-lede">
-            Every tool, one workspace — free to start, right in your browser.
-          </p>
-          <div className="home-hero-cta">
-            <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
-              Start for Free
-              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
-            </Link>
-            <Link className="ui-pill ui-pill-out ui-pill-lg" to="/plans">
-              See our plans
-            </Link>
-          </div>
-          <p className="home-cta-hint">No credit card · Upgrade only when you're ready</p>
-        </div>
-      </section>
+      <SystemCTA
+        title="From first decision to clean handoff."
+        description="Build a coherent UI system in one place, then take it straight into production."
+        secondaryLabel="See our plans"
+        secondaryTo="/plans"
+        hint="No credit card · Upgrade only when you're ready"
+      />
 
       </main>
-
-      {/* ── Footer (Coolors-style tools grid + link columns) ── */}
-      <footer className="home-foot">
-        <div className="home-container">
-          <div className="home-foot-feat">
-            {CREATE_GROUPS.map((group) => (
-              <Link
-                className="home-foot-feat-link"
-                key={group.id}
-                to={group.home}
-                data-hue={group.hue}
-              >
-                <span className="home-foot-feat-title">
-                  <span className="fx-dot" aria-hidden="true" />
-                  {group.label}
-                </span>
-                <span className="home-foot-feat-desc">{group.desc}</span>
-              </Link>
-            ))}
-          </div>
-
-          <div className="home-foot-cols">
-            <div>
-              <p className="home-foot-colhead">Create</p>
-              {CREATE_GROUPS.map((group) => (
-                <Link className="home-foot-link" key={group.id} to={group.home}>
-                  {group.label}
-                </Link>
-              ))}
-            </div>
-            <div>
-              <p className="home-foot-colhead">Discover</p>
-              <Link className="home-foot-link" to="/discover">Inspiration</Link>
-              <Link className="home-foot-link" to="/discover">Community fonts</Link>
-              <Link className="home-foot-link" to="/discover">Curated resources</Link>
-              <Link className="home-foot-link" to="/discover">Collections</Link>
-            </div>
-            <div>
-              <p className="home-foot-colhead">Learn</p>
-              <Link className="home-foot-link" to="/learn">Design principles</Link>
-              <Link className="home-foot-link" to="/learn">Colour &amp; type guides</Link>
-              <Link className="home-foot-link" to="/learn">SEO &amp; marketing</Link>
-              <Link className="home-foot-link" to="/learn">Help &amp; getting started</Link>
-            </div>
-            <div>
-              <p className="home-foot-colhead">Product</p>
-              <Link className="home-foot-link" to="/home">Home</Link>
-              <Link className="home-foot-link" to="/login">Log in</Link>
-              <Link className="home-foot-link" to="/login">Start for Free</Link>
-            </div>
-          </div>
-
-          <div className="home-foot-legal">
-            <div className="home-foot-brand">
-              <span className="pnav-word">UIL4B</span>
-            </div>
-            <p className="home-foot-copy">© {new Date().getFullYear()} UIL4B · Build UI systems, faster.</p>
-          </div>
-        </div>
-      </footer>
 
       {exportOpen && (
         <Suspense fallback={null}>

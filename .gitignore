@@ -17,6 +17,12 @@ yarn.lock
 # Build
 dist/
 .cache/
+.npm-cache/
+tmp/
+debug.log
+tests/user-sim/report/
+test-results/
+playwright-report/
 
 # Env
 .env

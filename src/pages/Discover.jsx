@@ -12,6 +12,7 @@ import DiscoverEmpty from '../components/discover/DiscoverEmpty'
 import DiscoverModal from '../components/discover/DiscoverModal'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import { GALLERY_PALETTES } from '../data/paletteGallery'
+import { readCommunitySubmissions } from '../utils/communitySubmissions'
 
 // Discover (Slice 2a) — a read-only surface over the static seed in
 // src/data/discoverResources.js. Everything here is client-side: search,
@@ -29,7 +30,6 @@ const BROKEN_KEY = 'vs-discover-broken'
 // deliberately NOT vs-discover-saves, so a bookmark on an external resource and a
 // heart on a community design never collide.
 const COMMUNITY_SAVES_KEY = 'vs-community-saves'
-const COMMUNITY_SUBMISSIONS_KEY = 'vs-community-submissions'
 
 function loadSet(key) {
   try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')) } catch { return new Set() }
@@ -38,13 +38,6 @@ function loadSet(key) {
 // Read-only load of the user's local community submissions (authored on the
 // Community Hub). Discover surfaces them but never writes them — submission stays
 // the Community Hub's local-only placeholder.
-function loadCommunitySubmissions() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(COMMUNITY_SUBMISSIONS_KEY) || '[]')
-    return Array.isArray(parsed) ? parsed : []
-  } catch { return [] }
-}
-
 const SORTS = [
   { key: 'trending', label: 'Trending' },
   { key: 'saved', label: 'Most saved' },
@@ -82,7 +75,7 @@ export default function Discover({ toast, forcedType = null }) {
   const [broken, setBroken] = useState(() => loadSet(BROKEN_KEY))
   // Community saves (own key) + a read-only snapshot of local submissions.
   const [communitySaves, setCommunitySaves] = useState(() => loadSet(COMMUNITY_SAVES_KEY))
-  const [communitySubmissions] = useState(loadCommunitySubmissions)
+  const [communitySubmissions] = useState(readCommunitySubmissions)
 
   // ─── View state ───────────────────────────────────────────────────────────
   const [rawQuery, setRawQuery] = useState('')

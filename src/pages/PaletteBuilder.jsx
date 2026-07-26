@@ -14,6 +14,9 @@ import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import { useAuth } from '../contexts/AuthContext'
+import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
+import { appendCommunitySubmission } from '../utils/communitySubmissions'
 
 // Palette Builder — the standalone /color/palette workbench. A Coolors-style
 // full-bleed board: a toolbar (seed + harmony + brands/variations/preview +
@@ -72,7 +75,6 @@ const ZERO_ADJUST = { h: 0, s: 0, b: 0, temp: 0 }
 const TINT_TONES = [95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
 const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i
-const SUBMISSIONS_KEY = 'vs-community-submissions' // same store Community.jsx reads
 const HANDLE_KEY = 'vs-community-handle'            // the user's chosen social name
 
 // Palette history (toolbar History menu): a rolling local log of the boards the
@@ -84,6 +86,18 @@ function loadHistory() {
     const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
     return Array.isArray(raw) ? raw.filter(h => h && Array.isArray(h.colors) && h.colors.length >= 2).slice(0, HISTORY_MAX) : []
   } catch { return [] }
+}
+function paletteSignature(snapshot) {
+  return JSON.stringify({
+    colors: snapshot.colors || [],
+    seed: snapshot.seed || snapshot.colors?.[0] || DEFAULT_SEED,
+    harmony: snapshot.harmony || 'analogous',
+    locked: snapshot.locked || [],
+    adjust: snapshot.adjust || ZERO_ADJUST,
+    vision: snapshot.vision || 'normal',
+    showContrast: Boolean(snapshot.showContrast),
+    importedGalleryId: snapshot.importedGalleryId || null,
+  })
 }
 // Compact relative time for the history rows — "Just now", "5m ago", "2h ago".
 function timeAgo(ts) {
@@ -444,6 +458,12 @@ const IcoDice = () => (
 const IcoHistory = () => (
   <Ico size={13}><path d="M3 12a9 9 0 1 0 2.8-6.5" /><path d="M3 4v5h5" /><path d="M12 8v4l3 2" /></Ico>
 )
+const IcoUndo = () => (
+  <Ico size={13}><path d="m9 7-5 5 5 5" /><path d="M20 17a7 7 0 0 0-7-7H4" /></Ico>
+)
+const IcoReset = () => (
+  <Ico size={13}><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></Ico>
+)
 const IcoGallery = () => (
   <Ico size={13}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></Ico>
 )
@@ -666,6 +686,8 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   const { requireLogin } = useLoginPrompt()
+  const { user } = useAuth()
+  const ownerHandle = getOwnerHandle(user?.email)
 
   // A free user can only ever run a free system through the generator. Paid
   // harmonies and brand systems collapse to 'auto' for them, so editing from a
@@ -750,6 +772,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // Palette history: rolling localStorage log (see HISTORY_KEY above).
   const [histOpen, setHistOpen] = useState(false)
   const [history, setHistory] = useState(loadHistory)
+  const resetSnapshotRef = useRef(null)
   const fileRef = useRef(null)
 
   // Drag-reorder plumbing + the grow-in animation slot for inserted colours.
@@ -919,15 +942,27 @@ export default function PaletteBuilder({ onCopy, toast }) {
   useEffect(() => {
     const t = setTimeout(() => {
       setHistory(prev => {
-        const key = colors.join(',')
-        if (prev[0] && prev[0].colors.join(',') === key) return prev
-        const next = [{ colors: [...colors], at: Date.now() }, ...prev].slice(0, HISTORY_MAX)
+        const snapshot = {
+          colors: [...colors],
+          seed,
+          seedInput,
+          harmony,
+          locked: [...locked],
+          adjust: { ...adjust },
+          vision,
+          showContrast,
+          importedGalleryId,
+          at: Date.now(),
+        }
+        const signature = paletteSignature(snapshot)
+        if (prev[0] && paletteSignature(prev[0]) === signature) return prev
+        const next = [snapshot, ...prev.filter(entry => paletteSignature(entry) !== signature)].slice(0, HISTORY_MAX)
         try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)) } catch { /* quota / disabled */ }
         return next
       })
     }, 900)
     return () => clearTimeout(t)
-  }, [colors])
+  }, [colors, seed, seedInput, harmony, locked, adjust, vision, showContrast, importedGalleryId])
 
   const toggleLock = (i) => {
     setLocked(prev => {
@@ -1132,6 +1167,124 @@ export default function PaletteBuilder({ onCopy, toast }) {
     if (msg) { setLiveMsg(msg); toast?.(msg) }
   }
 
+  const resetPalette = () => {
+    const current = {
+      colors: [...colors],
+      seed,
+      seedInput,
+      harmony,
+      locked: [...locked],
+      adjust: { ...adjust },
+      vision,
+      showContrast,
+      importedGalleryId,
+      preImport: preImportRef.current,
+      importedSig: importedSigRef.current,
+      at: Date.now(),
+    }
+    const defaults = generateHarmony(DEFAULT_SEED, 'analogous')
+    const baseline = {
+      colors: defaults,
+      seed: DEFAULT_SEED,
+      seedInput: DEFAULT_SEED,
+      harmony: 'analogous',
+      locked: [],
+      adjust: ZERO_ADJUST,
+      vision: 'normal',
+      showContrast: false,
+      importedGalleryId: null,
+    }
+    const defaultPalette = paletteSignature(current) === paletteSignature(baseline)
+    // Preserve the first meaningful pre-reset snapshot when Reset is pressed
+    // repeatedly. Without this guard, a defensive double-click replaces the
+    // recoverable state with an already-reset board.
+    if (!resetSnapshotRef.current || !defaultPalette) {
+      resetSnapshotRef.current = {
+        before: current,
+        baseline,
+      }
+    }
+    setHistory(prev => {
+      const signature = paletteSignature(current)
+      const withoutDuplicate = prev.filter((entry) => paletteSignature(entry) !== signature)
+      const next = [current, ...withoutDuplicate].slice(0, HISTORY_MAX)
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)) } catch { /* quota / disabled */ }
+      return next
+    })
+    setColors(defaults)
+    setSeed(DEFAULT_SEED)
+    setSeedInput(DEFAULT_SEED)
+    setHarmony('analogous')
+    setLocked(new Set())
+    setAdjust(ZERO_ADJUST)
+    setVision('normal')
+    setShowContrast(false)
+    setImportedGalleryId(null)
+    preImportRef.current = null
+    importedSigRef.current = null
+    setTintsIdx(null)
+    setPickerIdx(null)
+    setCtxMenu(null)
+    setPreview(null)
+    setVarBase(null)
+    setActiveVar(null)
+    closeAllMenus()
+    setLiveMsg('Palette reset to the default system')
+    toast?.('Palette reset · Undo is available')
+  }
+
+  const undoPalette = () => {
+    const resetSnapshot = resetSnapshotRef.current
+    if (resetSnapshot) {
+      const current = {
+        colors, seed, seedInput, harmony, locked: [...locked], adjust, vision,
+        showContrast, importedGalleryId,
+      }
+      const editedAfterReset = paletteSignature(current) !== paletteSignature(resetSnapshot.baseline)
+      const target = editedAfterReset ? resetSnapshot.baseline : resetSnapshot.before
+      setColors(target.colors)
+      setSeed(target.seed || target.colors[0])
+      setSeedInput(target.seedInput || target.seed || target.colors[0])
+      setHarmony(target.harmony || 'analogous')
+      setLocked(new Set(target.locked || []))
+      setAdjust({ ...(target.adjust || ZERO_ADJUST) })
+      setVision(target.vision || 'normal')
+      setShowContrast(Boolean(target.showContrast))
+      setImportedGalleryId(target.importedGalleryId || null)
+      preImportRef.current = target.preImport || null
+      importedSigRef.current = target.importedSig || null
+      resetSnapshotRef.current = null
+      if (editedAfterReset) {
+        const editedSignature = paletteSignature(current)
+        setHistory(prev => {
+          const next = prev.filter(entry => paletteSignature(entry) !== editedSignature)
+          try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)) } catch { /* quota / disabled */ }
+          return next
+        })
+      }
+      setLiveMsg('Palette state restored')
+      toast?.('Palette state restored')
+      return
+    }
+    const currentSignature = paletteSignature({
+      colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
+    })
+    const entry = history.find((item) => paletteSignature(item) !== currentSignature)
+    if (!entry) return
+    const restored = entry.colors.slice(0, HARD_MAX)
+    setColors(restored)
+    setSeed(entry.seed || restored[0])
+    setSeedInput(entry.seedInput || entry.seed || restored[0])
+    setHarmony(entry.harmony || 'analogous')
+    setAdjust({ ...(entry.adjust || ZERO_ADJUST) })
+    setLocked(new Set(entry.locked || []))
+    setVision(entry.vision || 'normal')
+    setShowContrast(Boolean(entry.showContrast))
+    setImportedGalleryId(entry.importedGalleryId || null)
+    setLiveMsg('Last palette restored')
+    toast?.('Last palette restored')
+  }
+
   const pickVariation = (v, idx) => {
     if (!isPro && idx >= FREE_VARIATIONS) {
       openProModal({ eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
@@ -1311,13 +1464,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const submitToCommunity = () => {
     const name = submitName.trim()
     if (!name) { setSubmitErr('Give the palette a name first.'); return }
-    if (!handle) { setSubmitErr('Set your community handle first.'); return }
+    const publicHandle = ownerHandle?.publicHandle || (handle ? '@' + handle : '')
+    if (!publicHandle) { setSubmitErr('Set your community handle first.'); return }
     try {
-      const list = JSON.parse(localStorage.getItem(SUBMISSIONS_KEY) || '[]')
-      list.push({
+      appendCommunitySubmission({
         id: 'u' + Date.now(),
         name,
-        author: '@' + handle,
+        author: publicHandle,
+        ownerId: ownerHandle ? PUBLIC_OWNER_ID : undefined,
         category: 'Branding',
         url: shareLink(),
         c1: adjusted[0],
@@ -1326,7 +1480,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
         saves: 0,
         mine: true,
       })
-      localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(list))
       setSubmitName('')
       setSubmitOpen(false)
       toast?.('Submitted to the community — thanks!')
@@ -1348,6 +1501,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
   }
 
   const adjustDirty = ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
+  const canUndo = resetSnapshotRef.current != null
+    || history.some((entry) => paletteSignature(entry) !== paletteSignature({
+      colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
+    }))
   const activeHarmony = HARMONIES.find(h => h.id === harmony) || HARMONIES[0]
   const activeVision = VISION_MODES.find(([id]) => id === vision) || VISION_MODES[0]
 
@@ -1651,6 +1808,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
+          <button type="button" className="btn btn-s plb-icobtn" onClick={undoPalette} disabled={!canUndo} title="Undo the last palette change">
+            <IcoUndo /><span className="plb-lbl">Undo</span>
+          </button>
+          <button type="button" className="btn btn-s plb-icobtn" onClick={resetPalette} title="Reset every palette control to its default">
+            <IcoReset /><span className="plb-lbl">Reset</span>
+          </button>
           <div className="plb-menuwrap">
             <button
               type="button"
@@ -1676,7 +1839,20 @@ export default function PaletteBuilder({ onCopy, toast }) {
                           type="button"
                           role="menuitem"
                           className="plb-varrow"
-                          onClick={() => { applyPalette(h.colors, 'Palette restored from history'); setHistOpen(false) }}
+                          onClick={() => {
+                            setColors(h.colors.slice(0, HARD_MAX))
+                            setSeed(h.seed || h.colors[0])
+                            setSeedInput(h.seedInput || h.seed || h.colors[0])
+                            setHarmony(h.harmony || 'analogous')
+                            setLocked(new Set(h.locked || []))
+                            setAdjust({ ...(h.adjust || ZERO_ADJUST) })
+                            setVision(h.vision || 'normal')
+                            setShowContrast(Boolean(h.showContrast))
+                            setImportedGalleryId(h.importedGalleryId || null)
+                            setLiveMsg('Palette restored from history')
+                            toast?.('Palette restored from history')
+                            setHistOpen(false)
+                          }}
                         >
                           <span className="plb-strip" aria-hidden="true">
                             {h.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
@@ -1704,7 +1880,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               className="btn btn-s btn-accent plb-icobtn"
               aria-expanded={saveOpen}
               aria-haspopup="dialog"
-              title="Save this palette to a project, or share &amp; export it"
+              title="Save, share or export this palette"
               onClick={async () => {
                 if (!canSaveProjects) {
                   const user = await requireLogin('save this palette', { free: true })
@@ -1713,7 +1889,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 const n = !saveOpen; closeAllMenus(); setSaveOpen(n)
               }}
             >
-              <IcoBookmark /><span className="plb-lbl">Save &amp; share</span>
+              <IcoBookmark /><span className="plb-lbl">Save / export</span>
             </button>
             {saveOpen && (
               <div className="plb-menu plb-menu--left plb-savemenu" role="dialog" aria-label="Save, share and export this palette" data-lenis-prevent>
@@ -1750,11 +1926,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
                   </>
                 )}
                 <div className="plb-menu-div" role="separator" />
-                <div className="plb-menu-sub">Share &amp; export</div>
+                <div className="plb-menu-sub">Share</div>
                 <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(shareLink()); setSaveOpen(false) }}><IcoCopy /> Copy link to this palette</button>
+                <div className="plb-menu-sub">Export</div>
                 <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(cssExport); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
                 <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
                 <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
+                <div className="plb-menu-sub">Community</div>
                 <button type="button" className="plb-menu-item" onClick={openSubmit}><IcoUsers /> Submit to the community…</button>
               </div>
             )}
@@ -2047,7 +2225,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               ))}
             </div>
 
-            {!handle ? (
+            {!handle && !ownerHandle ? (
               <>
                 <div className="plb-menu-sub">Choose your community handle</div>
                 <p className="plb-submit-hint">This is the name shown on everything you post. Letters, numbers and underscores — pick it once.</p>
@@ -2070,8 +2248,8 @@ export default function PaletteBuilder({ onCopy, toast }) {
             ) : (
               <>
                 <div className="plb-submit-as">
-                  Posting as <strong>@{handle}</strong>
-                  <button type="button" className="plb-linkbtn" onClick={() => { setHandle(''); setHandleErr('') }}>change</button>
+                  Posting as <strong>{ownerHandle?.publicHandle || `@${handle}`}</strong>
+                  {!ownerHandle && <button type="button" className="plb-linkbtn" onClick={() => { setHandle(''); setHandleErr('') }}>change</button>}
                 </div>
                 <div className="plb-menu-sub">Palette name</div>
                 <div className="plb-menu-row">
@@ -2120,14 +2298,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
               <div className="plb-dsb-emoji" aria-hidden="true">🤫</div>
               <p className="plb-dsb-lede">
                 A guided walkthrough that carries you across every colour tool — palette,
-                semantic, tints, UI colour and gradients — into one finished system.
+                semantic roles, tints, gradients and contrast — into one finished system.
               </p>
               <p className="plb-dsb-sub">It&rsquo;s on the way. For now, jump straight into any of the tools it will connect:</p>
               <nav className="plb-dsb-links" aria-label="Colour tools">
                 <Link className="plb-dsb-link" to="/color/palette" onClick={() => setDsbOpen(false)}>Palette</Link>
                 <Link className="plb-dsb-link" to="/color/semantic" onClick={() => setDsbOpen(false)}>Semantic Colour</Link>
                 <Link className="plb-dsb-link" to="/color/tint" onClick={() => setDsbOpen(false)}>Tint</Link>
-                <Link className="plb-dsb-link" to="/color/ui" onClick={() => setDsbOpen(false)}>UI Colour</Link>
                 <Link className="plb-dsb-link" to="/color/gradient" onClick={() => setDsbOpen(false)}>Gradient</Link>
                 <Link className="plb-dsb-link" to="/color/contrast" onClick={() => setDsbOpen(false)}>Contrast Checker</Link>
               </nav>

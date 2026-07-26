@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice } from '../hooks/usePrices'
 import { FREE_SAVE_LIMITS } from '../contexts/SubscriptionContext'
+import SystemCTA from '../components/SystemCTA'
 
 function Check() {
   return (
@@ -249,6 +250,16 @@ export default function Plans() {
           </div>
         ))}
       </div>
+      <SystemCTA
+        eyebrow="Start on Free"
+        title="Build first. Upgrade when the handoff grows."
+        description="Every core builder is ready without a card. Pro expands AI, saves and export formats when you need them."
+        primaryLabel={user ? 'Open the workspace' : 'Start building free'}
+        primaryTo={user ? '/color' : '/login'}
+        secondaryLabel="See the colour workflow"
+        secondaryTo="/color"
+        hint="No trial clock on Free · Cancel Pro anytime"
+      />
     </div>
   )
 }

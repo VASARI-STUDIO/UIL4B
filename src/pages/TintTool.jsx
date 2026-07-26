@@ -142,6 +142,8 @@ export default function TintTool({ onCopy, toast }) {
   const [stepMode, setStepMode] = useState(DEFAULT_TUNING.stepMode)
   const [includeEnds, setIncludeEnds] = useState(DEFAULT_TUNING.includeEnds)
   const [audience, setAudience] = useState('designer')
+  const [selectedBaseId, setSelectedBaseId] = useState(() => bases[0].id)
+  const [selectedStopIndex, setSelectedStopIndex] = useState(0)
 
   const labels = useMemo(() => stepLabels(stepMode, includeEnds), [stepMode, includeEnds])
   const dense = labels.length > 24 // thin bars — hide per-cell text, keep hover titles
@@ -153,6 +155,9 @@ export default function TintTool({ onCopy, toast }) {
   )
 
   const multi = ramps.length > 1
+  const selectedRampIndex = Math.max(0, bases.findIndex((base) => base.id === selectedBaseId))
+  const selectedRamp = ramps[selectedRampIndex] || ramps[0]
+  const selectedDenseIndex = Math.min(selectedStopIndex, Math.max(0, labels.length - 1))
 
   const setBaseInput = (id, raw) => setBases((prev) => prev.map((b) => {
     if (b.id !== id) return b
@@ -167,7 +172,12 @@ export default function TintTool({ onCopy, toast }) {
     const [h, s, l] = hexToHsl(prev[prev.length - 1]?.hex || '#2563EB')
     return [...prev, mkBase(hslToHex((h + 47) % 360, s, l))]
   })
-  const removeBase = (id) => setBases((prev) => (prev.length > 1 ? prev.filter((b) => b.id !== id) : prev))
+  const removeBase = (id) => {
+    if (bases.length <= 1) return
+    const next = bases.filter((base) => base.id !== id)
+    setBases(next)
+    if (selectedBaseId === id) setSelectedBaseId(next[0].id)
+  }
 
   // Pull the live Palette Builder palette (shared through ProjectContext) straight
   // in as base colours — the "import from palette" bridge, deduped + capped.
@@ -178,7 +188,9 @@ export default function TintTool({ onCopy, toast }) {
       .filter((c) => c && !seen.has(c) && seen.add(c))
       .slice(0, MAX_RAMPS)
     if (!cols.length) { toast?.('No palette to import yet — build one in the Palette tool first.'); return }
-    setBases(cols.map(mkBase))
+    const next = cols.map(mkBase)
+    setBases(next)
+    setSelectedBaseId(next[0].id)
     toast?.(`Imported ${cols.length} colour${cols.length > 1 ? 's' : ''} from your palette`)
   }
 
@@ -197,6 +209,7 @@ export default function TintTool({ onCopy, toast }) {
   const rampRow = (colors) => colors.join(', ')
   const rampCss = (colors, rampIdx) =>
     `:root {\n${colors.map((c, i) => `  ${varName(rampIdx, labels[i])}: ${c};`).join('\n')}\n}`
+  const selectedCss = selectedRamp ? rampCss(selectedRamp.colors, selectedRampIndex) : ':root {\n}'
   const allCss = useMemo(() => {
     const lines = ramps.flatMap((r, ri) => r.colors.map((c, i) => {
       const name = multi ? `--tint-${ri + 1}-${labels[i]}` : `--tint-${labels[i]}`
@@ -205,7 +218,7 @@ export default function TintTool({ onCopy, toast }) {
     return `:root {\n${lines.join('\n')}\n}`
   }, [ramps, labels, multi])
 
-  const primaryRamp = ramps[0]?.colors || []
+  const primaryRamp = selectedRamp?.colors || []
   const roleSamples = [
     ['Canvas', closestStop(labels, primaryRamp, 50)],
     ['Surface', closestStop(labels, primaryRamp, 100)],
@@ -220,6 +233,33 @@ export default function TintTool({ onCopy, toast }) {
     const next = event.key === 'ArrowLeft' || event.key === 'Home' ? 'designer' : 'developer'
     setAudience(next)
     requestAnimationFrame(() => document.getElementById(`tt-tab-${next}`)?.focus())
+  }
+  const handleRampKeyDown = (event, index) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const last = bases.length - 1
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? last
+        : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+          ? (index - 1 + bases.length) % bases.length
+          : (index + 1) % bases.length
+    setSelectedBaseId(bases[nextIndex].id)
+    requestAnimationFrame(() => document.getElementById(`tt-ramp-select-${bases[nextIndex].id}`)?.focus())
+  }
+  const handleDenseStopKeyDown = (event, rampId, index) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? labels.length - 1
+        : event.key === 'ArrowLeft'
+          ? Math.max(0, index - 1)
+          : Math.min(labels.length - 1, index + 1)
+    setSelectedStopIndex(nextIndex)
+    requestAnimationFrame(() => document.getElementById(`tt-stop-${rampId}-${nextIndex}`)?.focus())
   }
 
   return (
@@ -276,10 +316,244 @@ export default function TintTool({ onCopy, toast }) {
       </div>
 
       <div className="tt-grid">
+        {/* ── Ramps ── */}
+        <section className="card tt-panel tt-output" aria-labelledby="tt-output-title">
+          <div className="tt-section-head tt-section-head--output">
+            <span className="tt-section-num">01</span>
+            <div>
+              <h2 id="tt-output-title">Choose source colours</h2>
+              <p>Add up to eight sources, then select the scale that drives the preview and handoff.</p>
+            </div>
+          </div>
+
+          <div className="tt-bases-head">
+            <span className="seg-label">Source colours</span>
+            <div className="tt-bases-actions">
+              <button type="button" className="tt-copy-all" onClick={importPalette}>
+                Import from palette
+              </button>
+              <button
+                type="button"
+                className="tt-copy-all"
+                onClick={addBase}
+                disabled={bases.length >= MAX_RAMPS}
+              >
+                Add colour
+              </button>
+            </div>
+          </div>
+
+          <div className="tt-ramps" role="radiogroup" aria-label="Select the active tint scale">
+            {bases.map((b, ri) => {
+              const colors = ramps[ri]?.colors || []
+              const valid = normaliseHex(b.input) != null
+              const selected = b.id === selectedBaseId
+              return (
+                <div className={selected ? 'tt-ramp-block tt-ramp-block--selected' : 'tt-ramp-block'} key={b.id}>
+                  <div className="tt-ramp-meta">
+                    <button
+                      type="button"
+                      id={`tt-ramp-select-${b.id}`}
+                      className="tt-ramp-select"
+                      role="radio"
+                      aria-checked={selected}
+                      tabIndex={selected ? 0 : -1}
+                      onClick={() => setSelectedBaseId(b.id)}
+                      onKeyDown={(event) => handleRampKeyDown(event, ri)}
+                    >
+                      <span className="tt-ramp-select-dot" aria-hidden="true" />
+                      <span>
+                        <strong>Scale {ri + 1}</strong>
+                        <small>{b.hex} source</small>
+                      </span>
+                      <em>{selected ? 'Active output' : 'Use this scale'}</em>
+                    </button>
+                  </div>
+                  <div className="tt-ramp-head">
+                    <input
+                      type="color"
+                      className="tt-picker tt-picker--s"
+                      value={b.hex}
+                      onChange={(e) => setBaseHex(b.id, e.target.value.toUpperCase())}
+                      aria-label={`Pick base colour ${ri + 1}`}
+                    />
+                    <input
+                      type="text"
+                      className={valid ? 'tt-hex-input' : 'tt-hex-input tt-hex-input--bad'}
+                      value={b.input}
+                      onChange={(e) => setBaseInput(b.id, e.target.value)}
+                      onBlur={() => blurBase(b.id)}
+                      placeholder="#2563EB"
+                      spellCheck="false"
+                      autoComplete="off"
+                      aria-invalid={!valid}
+                      aria-label={`Base colour ${ri + 1} hex`}
+                    />
+                    <button type="button" className="tt-mini" onClick={() => onCopy?.(rampRow(colors))} title="Copy this ramp as a row of hex values">Copy row</button>
+                    <button type="button" className="tt-mini" onClick={() => onCopy?.(rampCss(colors, ri))} title="Copy this ramp as CSS variables">Copy CSS</button>
+                    {bases.length > 1 && (
+                      <button type="button" className="tt-mini tt-mini--x" onClick={() => removeBase(b.id)} aria-label={`Remove base colour ${ri + 1}`}>×</button>
+                    )}
+                  </div>
+
+                  <div className={dense ? 'tt-ramp tt-ramp--dense' : 'tt-ramp'}>
+                    {colors.map((c, i) => (
+                      <button
+                        key={labels[i]}
+                        id={`tt-stop-${b.id}-${i}`}
+                        type="button"
+                        className="tt-cell"
+                        ref={cellRef(c)}
+                        onClick={() => onCopy?.(c)}
+                        onFocus={() => { if (dense) setSelectedStopIndex(i) }}
+                        onKeyDown={(event) => { if (dense) handleDenseStopKeyDown(event, b.id, i) }}
+                        tabIndex={dense ? (i === selectedDenseIndex ? 0 : -1) : 0}
+                        title={`${labels[i]} · ${c}`}
+                        aria-label={`Copy ${labels[i]} swatch ${c}`}
+                      >
+                        {!dense && (
+                          <>
+                            <span className="tt-cell-step">{labels[i]}</span>
+                            <span className="tt-cell-hex">{c}</span>
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {dense && (
+                    <div className="tt-dense-inspector" aria-live="polite">
+                      <span>Selected stop <strong>{labels[selectedDenseIndex]}</strong></span>
+                      <code>{colors[selectedDenseIndex]}</code>
+                      <span>Use left and right arrow keys to inspect.</span>
+                    </div>
+                  )}
+                  <p className="tt-ramp-scroll">{dense ? 'Dense scale: scroll horizontally; one swatch per ramp stays in the Tab order.' : 'Scroll horizontally to inspect every stop.'}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="tt-delivery">
+            <div className="tt-delivery-head">
+              <div>
+                <span className="tt-section-num">03</span>
+                <div>
+                  <h2>{audience === 'designer' ? 'Evaluate the system' : 'Prepare the handoff'}</h2>
+                  <p>
+                    {audience === 'designer'
+                      ? `Scale ${selectedRampIndex + 1} is mapped to common interface roles.`
+                      : `Scale ${selectedRampIndex + 1} is named and ready to paste.`}
+                  </p>
+                </div>
+              </div>
+              <div className="tt-view-switch" aria-label="Output view">
+                <button
+                  type="button"
+                  className={audience === 'designer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
+                  aria-pressed={audience === 'designer'}
+                  onClick={() => setAudience('designer')}
+                >
+                  Design preview
+                </button>
+                <button
+                  type="button"
+                  className={audience === 'developer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
+                  aria-pressed={audience === 'developer'}
+                  onClick={() => setAudience('developer')}
+                >
+                  Developer handoff
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="tt-audience-panel"
+              role="tabpanel"
+              aria-labelledby={audience === 'designer' ? 'tt-tab-designer' : 'tt-tab-developer'}
+            >
+              {audience === 'designer' ? (
+                <div className="tt-design-view">
+                  <div className="tt-preview" ref={previewRef(labels, primaryRamp)}>
+                    <div className="tt-preview-bar">
+                      <span className="tt-preview-mark" aria-hidden="true" />
+                      <span>Interface preview</span>
+                      <span className="tt-preview-status">Role mapping</span>
+                    </div>
+                    <div className="tt-preview-body">
+                      <div className="tt-preview-copy">
+                        <span className="tt-preview-eyebrow">Release-ready colour</span>
+                        <h3>One scale, clear hierarchy.</h3>
+                        <p>
+                          Test surfaces, borders, text and actions together before
+                          handing the tokens to engineering.
+                        </p>
+                        <div className="tt-preview-actions">
+                          <span className="tt-preview-primary">Primary action</span>
+                          <span className="tt-preview-secondary">Secondary</span>
+                        </div>
+                      </div>
+                      <div className="tt-preview-card">
+                        <span className="tt-preview-card-k">Token coverage</span>
+                        <strong>{roleSamples.length} roles</strong>
+                        <span>{labels.length} stops available</span>
+                        <div className="tt-preview-spectrum" aria-hidden="true">
+                          {roleSamples.map(([name, sample]) => (
+                            <span key={name} ref={cellRef(sample.color)} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="tt-role-map" aria-label="Suggested semantic role mapping">
+                    {roleSamples.map(([name, sample]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="tt-role-sample"
+                        ref={cellRef(sample.color)}
+                        onClick={() => onCopy?.(sample.color)}
+                        aria-label={`Copy ${name} role colour ${sample.color}`}
+                      >
+                        <span>{name}</span>
+                        <strong>{sample.label}</strong>
+                        <code>{sample.color}</code>
+                      </button>
+                    ))}
+                  </div>
+                  {ramps.length > 1 && (
+                    <p className="tt-view-note">Previewing Scale {selectedRampIndex + 1}. Select any source scale above to compare it in the same interface.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="tt-developer-view">
+                  <div className="tt-code-meta">
+                    <div>
+                      <span className="seg-label">CSS custom properties</span>
+                      <p>Scale {selectedRampIndex + 1} · {labels.length} variables · deterministic names</p>
+                    </div>
+                    <div className="tt-code-actions">
+                      {ramps.length > 1 && (
+                        <button type="button" className="tt-copy-all" onClick={() => onCopy?.(allCss)}>
+                          Copy all scales
+                        </button>
+                      )}
+                      <button type="button" className="tt-copy-primary" onClick={() => onCopy?.(selectedCss)}>
+                        Copy selected CSS
+                      </button>
+                    </div>
+                  </div>
+                  <pre id="tt-export" className="tt-export" tabIndex="0"><code>{selectedCss}</code></pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* ── Controls ── */}
         <section className="card tt-panel tt-config" aria-labelledby="tt-config-title">
           <div className="tt-section-head">
-            <span className="tt-section-num">01</span>
+            <span className="tt-section-num">02</span>
             <div>
               <h2 id="tt-config-title">Tune the system</h2>
               <p>One rule set keeps every colour ramp consistent.</p>
@@ -364,206 +638,6 @@ export default function TintTool({ onCopy, toast }) {
           <button type="button" className="tt-reset" onClick={resetTuning}>
             Reset tuning
           </button>
-        </section>
-
-        {/* ── Ramps ── */}
-        <section className="card tt-panel tt-output" aria-labelledby="tt-output-title">
-          <div className="tt-section-head tt-section-head--output">
-            <span className="tt-section-num">02</span>
-            <div>
-              <h2 id="tt-output-title">Build the scale</h2>
-              <p>Add up to eight source colours. Every scale uses the same tuning.</p>
-            </div>
-          </div>
-
-          <div className="tt-bases-head">
-            <span className="seg-label">Source colours</span>
-            <div className="tt-bases-actions">
-              <button type="button" className="tt-copy-all" onClick={importPalette}>
-                Import from palette
-              </button>
-              <button
-                type="button"
-                className="tt-copy-all"
-                onClick={addBase}
-                disabled={bases.length >= MAX_RAMPS}
-              >
-                Add colour
-              </button>
-            </div>
-          </div>
-
-          <div className="tt-ramps">
-            {bases.map((b, ri) => {
-              const colors = ramps[ri]?.colors || []
-              const valid = normaliseHex(b.input) != null
-              return (
-                <div className="tt-ramp-block" key={b.id}>
-                  <div className="tt-ramp-meta">
-                    <strong>Scale {ri + 1}</strong>
-                    <span>{b.hex} source</span>
-                  </div>
-                  <div className="tt-ramp-head">
-                    <input
-                      type="color"
-                      className="tt-picker tt-picker--s"
-                      value={b.hex}
-                      onChange={(e) => setBaseHex(b.id, e.target.value.toUpperCase())}
-                      aria-label={`Pick base colour ${ri + 1}`}
-                    />
-                    <input
-                      type="text"
-                      className={valid ? 'tt-hex-input' : 'tt-hex-input tt-hex-input--bad'}
-                      value={b.input}
-                      onChange={(e) => setBaseInput(b.id, e.target.value)}
-                      onBlur={() => blurBase(b.id)}
-                      placeholder="#2563EB"
-                      spellCheck="false"
-                      autoComplete="off"
-                      aria-invalid={!valid}
-                      aria-label={`Base colour ${ri + 1} hex`}
-                    />
-                    <button type="button" className="tt-mini" onClick={() => onCopy?.(rampRow(colors))} title="Copy this ramp as a row of hex values">Copy row</button>
-                    <button type="button" className="tt-mini" onClick={() => onCopy?.(rampCss(colors, ri))} title="Copy this ramp as CSS variables">Copy CSS</button>
-                    {bases.length > 1 && (
-                      <button type="button" className="tt-mini tt-mini--x" onClick={() => removeBase(b.id)} aria-label={`Remove base colour ${ri + 1}`}>×</button>
-                    )}
-                  </div>
-
-                  <div className={dense ? 'tt-ramp tt-ramp--dense' : 'tt-ramp'}>
-                    {colors.map((c, i) => (
-                      <button
-                        key={labels[i]}
-                        type="button"
-                        className="tt-cell"
-                        ref={cellRef(c)}
-                        onClick={() => onCopy?.(c)}
-                        title={`${labels[i]} · ${c}`}
-                        aria-label={`Copy ${labels[i]} swatch ${c}`}
-                      >
-                        {!dense && (
-                          <>
-                            <span className="tt-cell-step">{labels[i]}</span>
-                            <span className="tt-cell-hex">{c}</span>
-                          </>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="tt-ramp-scroll">Scroll horizontally to inspect every stop.</p>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="tt-delivery">
-            <div className="tt-delivery-head">
-              <div>
-                <span className="tt-section-num">03</span>
-                <div>
-                  <h2>{audience === 'designer' ? 'Evaluate the system' : 'Prepare the handoff'}</h2>
-                  <p>
-                    {audience === 'designer'
-                      ? 'The first scale is mapped to common interface roles.'
-                      : 'Every generated stop is named and ready to paste.'}
-                  </p>
-                </div>
-              </div>
-              <div className="tt-view-switch" aria-label="Output view">
-                <button
-                  type="button"
-                  className={audience === 'designer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
-                  aria-pressed={audience === 'designer'}
-                  onClick={() => setAudience('designer')}
-                >
-                  Design preview
-                </button>
-                <button
-                  type="button"
-                  className={audience === 'developer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
-                  aria-pressed={audience === 'developer'}
-                  onClick={() => setAudience('developer')}
-                >
-                  Developer handoff
-                </button>
-              </div>
-            </div>
-
-            <div
-              id="tt-audience-panel"
-              role="tabpanel"
-              aria-labelledby={audience === 'designer' ? 'tt-tab-designer' : 'tt-tab-developer'}
-            >
-              {audience === 'designer' ? (
-                <div className="tt-design-view">
-                  <div className="tt-preview" ref={previewRef(labels, primaryRamp)}>
-                    <div className="tt-preview-bar">
-                      <span className="tt-preview-mark" aria-hidden="true" />
-                      <span>Interface preview</span>
-                      <span className="tt-preview-status">Role mapping</span>
-                    </div>
-                    <div className="tt-preview-body">
-                      <div className="tt-preview-copy">
-                        <span className="tt-preview-eyebrow">Release-ready colour</span>
-                        <h3>One scale, clear hierarchy.</h3>
-                        <p>
-                          Test surfaces, borders, text and actions together before
-                          handing the tokens to engineering.
-                        </p>
-                        <div className="tt-preview-actions">
-                          <span className="tt-preview-primary">Primary action</span>
-                          <span className="tt-preview-secondary">Secondary</span>
-                        </div>
-                      </div>
-                      <div className="tt-preview-card">
-                        <span className="tt-preview-card-k">Token coverage</span>
-                        <strong>{roleSamples.length} roles</strong>
-                        <span>{labels.length} stops available</span>
-                        <div className="tt-preview-spectrum" aria-hidden="true">
-                          {roleSamples.map(([name, sample]) => (
-                            <span key={name} ref={cellRef(sample.color)} />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="tt-role-map" aria-label="Suggested semantic role mapping">
-                    {roleSamples.map(([name, sample]) => (
-                      <button
-                        key={name}
-                        type="button"
-                        className="tt-role-sample"
-                        ref={cellRef(sample.color)}
-                        onClick={() => onCopy?.(sample.color)}
-                        aria-label={`Copy ${name} role colour ${sample.color}`}
-                      >
-                        <span>{name}</span>
-                        <strong>{sample.label}</strong>
-                        <code>{sample.color}</code>
-                      </button>
-                    ))}
-                  </div>
-                  {ramps.length > 1 && (
-                    <p className="tt-view-note">Previewing Scale 1. Every scale remains available above and in the developer handoff.</p>
-                  )}
-                </div>
-              ) : (
-                <div className="tt-developer-view">
-                  <div className="tt-code-meta">
-                    <div>
-                      <span className="seg-label">CSS custom properties</span>
-                      <p>{ramps.length} scale{ramps.length > 1 ? 's' : ''} · {ramps.length * labels.length} variables · deterministic names</p>
-                    </div>
-                    <button type="button" className="tt-copy-primary" onClick={() => onCopy?.(allCss)}>
-                      Copy all CSS
-                    </button>
-                  </div>
-                  <pre id="tt-export" className="tt-export" tabIndex="0"><code>{allCss}</code></pre>
-                </div>
-              )}
-            </div>
-          </div>
         </section>
       </div>
 

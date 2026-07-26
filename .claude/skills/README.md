@@ -1,42 +1,68 @@
-# Vendored agent skills
+# UIL4B project skills
 
-Project-scoped skills for Claude Code, available in every session (committed to
-the repo so they survive the ephemeral web container). Curated from Addy
-Osmani's **[agent-skills](https://github.com/addyosmani/agent-skills)** and kept
-close to source so upstream fixes are easy to pull.
+Project-scoped skills make reusable methods and knowledge available to every
+agent without bloating agent personas. They are committed with UIL4B so the
+repository never depends on Dylan's private local wiki.
 
-## Skills in this workspace
+## First-party skills
 
-| Skill | Why it earns a place in UIL4B |
+| Skill | Purpose |
 |---|---|
-| `frontend-ui-engineering` | Production-quality UI, real design-system adherence, a11y, and killing the generic "AI aesthetic" — the heart of what UIL4B ships. |
-| `incremental-implementation` | Thin vertical slices with verification and commits — matches our ship-in-slices cadence. |
-| `spec-driven-development` | Turns rough, out-of-order ideas into a concrete spec before code — fits how work arrives here. |
-| `browser-testing-with-devtools` | Runtime verification via the Chrome DevTools MCP (already configured) — fills the "verify in a real browser" gap. |
-| `performance-optimization` | Core Web Vitals + profiling — matters for a design product and for SEO. |
-| `debugging-and-error-recovery` | Systematic root-cause triage instead of guess-and-check. |
+| `uil4b-brand-design` | Governs UIL4B identity, product-versus-sales continuity, anti-slop critique, and the brand learning loop. |
 
-Skills that duplicated an existing subagent (code review, security, git
-workflow) or don't apply yet (no test suite → TDD) were intentionally left out.
+Brand-specific decisions belong here and in the live project sources it names,
+not in `.claude/agents/design.md`.
+
+## Vendored workflow skills
+
+| Skill | Purpose in UIL4B |
+|---|---|
+| `spec-driven-development` | Turns ambiguous work into an explicit outcome and acceptance criteria before implementation. |
+| `incremental-implementation` | Delivers coherent vertical slices with verification at each useful boundary. |
+| `frontend-ui-engineering` | Applies production UI, accessibility, state, and responsive engineering practices. |
+| `browser-testing-with-devtools` | Verifies rendered behaviour and interaction in a real browser. |
+| `performance-optimization` | Measures, diagnoses, and corrects performance bottlenecks. |
+| `debugging-and-error-recovery` | Finds root causes and verifies regressions systematically. |
 
 ## Precedence
 
-These are general-purpose skills. Where they differ from UIL4B's own
-conventions, **the project conventions win** — in particular:
+Use this order when guidance conflicts:
 
-- Styling is **class-based CSS in a single `global.css`** with design tokens.
-  Ignore the skills' Tailwind / inline-style examples; see
-  [`docs/reference/css-conventions.md`](../../docs/reference/css-conventions.md).
-- The verify gate is `npx vite build` + `npx eslint .`; see
-  [`docs/reference/build-and-verify.md`](../../docs/reference/build-and-verify.md).
-- Human Validation Zones (auth / Stripe) remain founder-gated regardless of what
-  a skill suggests.
+1. Current explicit user direction.
+2. `CLAUDE.md` and canonical project reference documents.
+3. Approved task acceptance criteria.
+4. First-party UIL4B skills.
+5. Vendored general-purpose skills.
+6. General examples or external conventions.
 
-## License / attribution
+In particular:
 
-Vendored from https://github.com/addyosmani/agent-skills under the MIT License:
+- Follow `docs/reference/css-conventions.md` for the current styling system.
+- Follow `docs/reference/build-and-verify.md` for required verification.
+- Follow `docs/reference/human-validation-zones.md` for founder-gated scope.
+- Read live code for implemented values instead of copying values into a skill
+  or agent unless they are durable brand decisions.
 
-```
+## Updating knowledge
+
+Update the narrowest authoritative layer:
+
+- a task-specific decision goes in the task specification;
+- a current architecture or product rule goes in project docs;
+- a reusable method or quality bar goes in a skill;
+- an implemented value goes in code;
+- a durable founder brand response follows
+  `uil4b-brand-design/references/learning-loop.md`.
+
+Do not turn a single preference into a global rule, and do not make the app
+agents read from an absolute private-vault path.
+
+## Licence and attribution
+
+The six workflow skills were vendored from
+https://github.com/addyosmani/agent-skills under the MIT License:
+
+```text
 MIT License
 
 Copyright (c) 2025 Addy Osmani
@@ -44,9 +70,9 @@ Copyright (c) 2025 Addy Osmani
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.

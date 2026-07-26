@@ -1,6 +1,26 @@
 # Changelog
 
-All notable changes to the Vasari Obsidian Web Design Toolkit.
+All notable changes to UIL4B.
+
+---
+
+## v2.7.0 — Public UI Quality Release (2026-07-25)
+
+### Public Shell
+- Reframed the home hero around one connected UI system while preserving the interactive Create preview directly below it
+- Rebuilt mega-menus around task-led editorial hierarchy, complete keyboard navigation and a focus-safe mobile sheet
+- Added a reusable beams-style closing CTA to Home, Colour, Surface and Plans, plus a clearer public footer
+- Removed UI Colour from public navigation, search and sitemap data; `/color/ui` now redirects safely to `/color`
+
+### Tool Workflows
+- Refined Gradient, Tint and Semantic Colour workbenches for clearer responsive use
+- Added Palette Builder Reset with immediate Undo and clarified the existing Save / export group without removing options
+- Unified the Icon + Emoji command header with distinct mode symbols, keyboard switching and visible loading/offline states
+
+### Community & Quality
+- Added the founder public identity **Dylan Coleman 👑** with an accessible owner treatment
+- Reconciled the Build Plan, pipeline, module board, README, changelog and tool tree; archived completed floating task lists
+- Release-gated with production build, lint, interaction and cross-device checks
 
 ---
 

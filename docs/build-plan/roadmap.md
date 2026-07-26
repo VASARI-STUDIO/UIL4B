@@ -4,6 +4,9 @@ _History + what's next. Read when you need the why/where behind the current
 state. Hub → [`../BUILD-PLAN.md`](../BUILD-PLAN.md) ·
 tool tree → [`tool-tree.md`](tool-tree.md)._
 
+_Current execution lives only in the Build Plan hub and the in-app pipeline.
+This file retains release history, known bugs and genuinely deferred work._
+
 ---
 
 ## Rebuild detail (founder, 2026-07-02)

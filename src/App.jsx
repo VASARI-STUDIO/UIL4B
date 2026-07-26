@@ -188,7 +188,6 @@ function AppInner() {
       '/color/palette': 'UI L4B | Palette Generator',
       '/color/semantic': 'UI L4B | Semantic Colour Generator',
       '/color/tint': 'UI L4B | Tint Scale Generator',
-      '/color/ui': 'UI L4B | UI Colour Systems',
       '/color/gradient': 'UI L4B | Gradient Generator',
       '/color/contrast': 'UI L4B | Colour Contrast Checker',
       '/typography': 'UI L4B | Typography',
@@ -235,7 +234,6 @@ function AppInner() {
       '/color/palette': 'Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps, accessibility checks, and production-ready CSS exports.',
       '/color/semantic': 'Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.',
       '/color/tint': 'Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.',
-      '/color/ui': 'Start your UI colour system from a proven foundation — design-system palettes, brand colours, and named colour libraries, one click from your own palette.',
       '/color/gradient': 'Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.',
       '/color/contrast': 'Free WCAG colour contrast checker. Test text and background pairs against AA and AAA, preview the pair live, and get one-click fixes that pass.',
       '/typography': 'Typography tools for designers and developers. Pair fonts, build type scales, and browse the Google Fonts catalogue.',
@@ -291,10 +289,13 @@ function AppInner() {
     return <Navigate to="/home" replace />
   }
   if (location.pathname === '/home') {
-    return <><Home /><GoogleOneTap /></>
+    return <><Home /><AppFooter /><GoogleOneTap /></>
   }
   if (location.pathname === '/onboarding') {
     return <Onboarding />
+  }
+  if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/color/ui') {
+    return <Navigate to="/color" replace />
   }
   if (location.pathname === '/') {
     // Render the sales page immediately — first paint must not depend on Firebase
@@ -305,7 +306,7 @@ function AppInner() {
       const onboarded = (() => { try { return localStorage.getItem('vs-onboarded') === '1' } catch { return true } })()
       return <Navigate to={onboarded ? '/home' : '/onboarding'} replace />
     }
-    return <><Home /><GoogleOneTap /></>
+    return <><Home /><AppFooter /><GoogleOneTap /></>
   }
 
   // Create tool shells + the Discover / Learn landings render full-screen with the
@@ -322,8 +323,8 @@ function AppInner() {
     return (
       <>
         {bare === '/color'
-          ? <ColorLanding />
-          : surface ? <SurfaceLanding key={surface} surface={surface} /> : <CreateTool />}
+          ? <><ColorLanding /><AppFooter /></>
+          : surface ? <><SurfaceLanding key={surface} surface={surface} /><AppFooter /></> : <CreateTool />}
         <GoogleOneTap />
       </>
     )
