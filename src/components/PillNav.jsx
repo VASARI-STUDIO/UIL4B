@@ -33,6 +33,33 @@ const ExportPanel = lazy(() => import('./ExportPanel'))
 // instead (matches the sales-page nav reference).
 const SALES_PATHS = new Set(['/', '/home', '/plans', '/pricing'])
 
+const MENU_TOOL_COPY = {
+  palette: 'Build a usable palette from one seed.',
+  gradient: 'Compose and copy production CSS.',
+  contrast: 'Check WCAG pairs and repair failures.',
+  tint: 'Tune a complete 50–950 scale.',
+  semantic: 'Map intent across light and dark modes.',
+  'font-gallery': 'Browse and compare type families.',
+  'font-pair': 'Pair display and reading faces.',
+  'type-scale': 'Create a responsive type hierarchy.',
+  'component-designer': 'Shape components and their states.',
+  'box-shadow': 'Build deliberate depth systems.',
+  'auto-builder': 'Generate a connected UI foundation.',
+  icons: 'Search, customise and copy SVG icons.',
+  emoji: 'Find and copy emoji by category.',
+  'file-converter': 'Convert and compress files locally.',
+  ratio: 'Calculate dimensions and aspect ratios.',
+  'ai-prompt': 'Structure production-ready image prompts.',
+  'landing-prompts': 'Plan a page around a clear outcome.',
+  'alt-text': 'Write useful image descriptions.',
+  prompts: 'Reuse prompts proven by the community.',
+}
+
+function menuDescription(section, tool) {
+  if (MENU_TOOL_COPY[tool.id]) return MENU_TOOL_COPY[tool.id]
+  return section.groups?.find((group) => group.id === tool.id)?.desc || ''
+}
+
 // Small inline chevron so the nav has zero asset dependencies.
 function Chevron() {
   return (
@@ -278,6 +305,8 @@ export default function PillNav() {
   const [exportOpen, setExportOpen] = useState(false)
   const navRef = useRef(null)
   const menuRef = useRef(null)
+  const sheetRef = useRef(null)
+  const mobileBtnRef = useRef(null)
   const closeTimer = useRef(null)
   // If opening/closing the menu ever shifts layout under a stationary cursor,
   // Chrome re-fires mouseenter for whichever trigger lands there, flipping the
@@ -294,11 +323,12 @@ export default function PillNav() {
   // Latest open/menu mirrored into a ref so the once-bound key handler reads the
   // current layer without re-subscribing. Written in an effect (never during
   // render) to satisfy React's rules-of-refs.
-  const stateRef = useRef({ open: null, menu: null })
+  const stateRef = useRef({ open: null, menu: null, sheet: false })
   useEffect(() => {
     stateRef.current.open = open
     stateRef.current.menu = menu
-  }, [open, menu])
+    stateRef.current.sheet = sheet
+  }, [open, menu, sheet])
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
   // All three section menus (Create / Discover / Learn) are visible to everyone.
@@ -333,12 +363,13 @@ export default function PillNav() {
     }
     const onKey = (e) => {
       if (e.key === 'Escape') {
-        const { open: wasOpen, menu: wasMenu } = stateRef.current
+        const { open: wasOpen, menu: wasMenu, sheet: wasSheet } = stateRef.current
         setOpen(null); setSheet(false); setMenu(null)
         // Return focus to the control that owns the layer we just closed, so
         // keyboard/AT users aren't dropped onto <body> (WCAG 2.4.3 / APG).
         if (wasOpen) triggerRefs.current[wasOpen]?.focus()
         else if (wasMenu === 'account') accountBtnRef.current?.focus()
+        else if (wasSheet) mobileBtnRef.current?.focus()
       }
       // "/" opens search — but never while the visitor is typing in a field.
       if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -367,7 +398,28 @@ export default function PillNav() {
     if (!sheet) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    const panel = sheetRef.current
+    const focusable = () => [...(panel?.querySelectorAll('button:not([disabled]),a[href]') || [])]
+    focusable()[0]?.focus()
+    const trap = (event) => {
+      if (event.key !== 'Tab') return
+      const items = focusable()
+      if (!items.length) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    panel?.addEventListener('keydown', trap)
+    return () => {
+      panel?.removeEventListener('keydown', trap)
+      document.body.style.overflow = prev
+    }
   }, [sheet])
 
   const clearClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null } }
@@ -400,6 +452,39 @@ export default function PillNav() {
   const openSearch = () => { closeAll(); setSearchOpen(true) }
   const openExport = () => { closeAll(); setExportOpen(true) }
   const onSignOut = () => { setMenu(null); logout() }
+  const onTriggerKeyDown = (event, id, index) => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault()
+      const delta = event.key === 'ArrowRight' ? 1 : -1
+      const next = visibleSections[(index + delta + visibleSections.length) % visibleSections.length]
+      triggerRefs.current[next.id]?.focus()
+      return
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      openedBy.current = 'click'
+      setMenu(null)
+      setOpen(id)
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const items = menuRef.current?.querySelectorAll('[data-pnav-menuitem]')
+        const target = event.key === 'ArrowDown' ? items?.[0] : items?.[items.length - 1]
+        target?.focus()
+      }))
+    }
+  }
+  const onMenuKeyDown = (event) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    const items = [...(menuRef.current?.querySelectorAll('[data-pnav-menuitem]') || [])]
+    if (!items.length) return
+    event.preventDefault()
+    const current = items.indexOf(document.activeElement)
+    if (event.key === 'Home') items[0].focus()
+    else if (event.key === 'End') items[items.length - 1].focus()
+    else {
+      const delta = event.key === 'ArrowDown' ? 1 : -1
+      items[(current + delta + items.length) % items.length].focus()
+    }
+  }
 
   // Other accounts previously signed in on this device (display data only —
   // switching re-authenticates through Firebase, see AuthContext).
@@ -455,7 +540,7 @@ export default function PillNav() {
 
           {/* The three section menus — centred in the bar (grid middle column). */}
           <div className="pnav-items">
-            {visibleSections.map((section) => (
+            {visibleSections.map((section, index) => (
               <button
                 key={section.id}
                 type="button"
@@ -466,6 +551,7 @@ export default function PillNav() {
                 aria-controls={open === section.id ? 'pnav-mega' : undefined}
                 onClick={() => toggle(section.id)}
                 onMouseEnter={() => hoverOpen(section.id)}
+                onKeyDown={(event) => onTriggerKeyDown(event, section.id, index)}
               >
                 {section.label}
                 <Chevron />
@@ -686,6 +772,7 @@ export default function PillNav() {
             <button
               type="button"
               className="pnav-mobile"
+              ref={mobileBtnRef}
               aria-label={sheet ? 'Close menu' : 'Open menu'}
               aria-expanded={sheet}
               onClick={() => setSheet((s) => !s)}
@@ -714,9 +801,19 @@ export default function PillNav() {
           aria-label={`${activeSection.label} menu`}
           onMouseEnter={clearClose}
           onMouseLeave={hoverLeave}
+          onKeyDown={onMenuKeyDown}
         >
           <div className="pnav-menu-body">
             <div className="pnav-menu-cols">
+              <aside className="pnav-editorial">
+                <div className="pnav-editorial-visual" aria-hidden="true"><PromoMock section={activeSection.id} /></div>
+                <span className="pnav-promo-eyebrow">{activeSection.promo?.eyebrow || activeSection.label}</span>
+                <p className="pnav-editorial-title">{activeSection.promo?.title}</p>
+                <p className="pnav-editorial-blurb">{activeSection.promo?.blurb}</p>
+                <Link className="pnav-editorial-link" to={activeSection.viewAllHref} onClick={closeAll}>
+                  Explore {activeSection.label} <span aria-hidden="true">&rarr;</span>
+                </Link>
+              </aside>
               <div className="pnav-grid">
                 {/* Each stack = one grid column; a stack can hold several
                     captioned groups top-to-bottom (Create: Icons above
@@ -737,9 +834,13 @@ export default function PillNav() {
                                 data-soon={t.soon ? 'true' : undefined}
                                 aria-label={t.soon ? `${t.label} — coming soon` : undefined}
                                 onClick={closeAll}
+                                data-pnav-menuitem
                               >
                                 <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                                <span className="pnav-tool-label">{t.label}</span>
+                                <span className="pnav-tool-copy">
+                                  <span className="pnav-tool-label">{t.label}</span>
+                                  {menuDescription(activeSection, t) && <span className="pnav-tool-desc">{menuDescription(activeSection, t)}</span>}
+                                </span>
                                 {t.soon && <span className="soon-badge">Soon</span>}
                               </Link>
                             </li>
@@ -749,33 +850,7 @@ export default function PillNav() {
                     ))}
                   </div>
                 ))}
-                <Link className="pnav-viewall" to={activeSection.viewAllHref} onClick={closeAll}>
-                  View all {activeSection.label} tools <span aria-hidden="true">→</span>
-                </Link>
               </div>
-              {activeSection.promo && (
-                <aside className="pnav-promo">
-                  <div className="pnav-promo-visual" aria-hidden="true"><PromoMock section={activeSection.id} /></div>
-                  <span className="pnav-promo-eyebrow">{activeSection.promo.eyebrow}</span>
-                  <p className="pnav-promo-title">{activeSection.promo.title}</p>
-                  <p className="pnav-promo-blurb">{activeSection.promo.blurb}</p>
-                  <div className="pnav-promo-actions">
-                    {activeSection.promo.guide ? (
-                      <>
-                        <button type="button" className="ui-pill ui-pill-accent ui-pill-sm" onClick={launchBrandKit}>
-                          {activeSection.promo.cta || 'Start building'}
-                        </button>
-                        <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={activeSection.promo.href} onClick={closeAll}>Learn more</Link>
-                      </>
-                    ) : (
-                      <>
-                        <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={activeSection.promo.href} onClick={closeAll}>Learn more</Link>
-                        <Link className="ui-pill ui-pill-accent ui-pill-sm" to={activeSection.promo.docsHref} onClick={closeAll}>View docs</Link>
-                      </>
-                    )}
-                  </div>
-                </aside>
-              )}
             </div>
           </div>
           <div className="pnav-menu-foot">
@@ -789,7 +864,7 @@ export default function PillNav() {
 
       {/* Mobile sheet */}
       {sheet && (
-        <div className="pnav-sheet" role="dialog" aria-modal="true" aria-label="Menu">
+        <div ref={sheetRef} className="pnav-sheet" role="dialog" aria-modal="true" aria-label="Menu">
           {visibleSections.map((section) => {
             const expanded = sheetSection === section.id
             return (
@@ -821,7 +896,10 @@ export default function PillNav() {
                             <span className="pnav-acc-ico" aria-hidden="true">
                               <NavIcon id={t.icon} />
                             </span>
-                            <span className="pnav-acc-label">{t.label}</span>
+                            <span className="pnav-acc-copy">
+                              <span className="pnav-acc-label">{t.label}</span>
+                              {menuDescription(section, t) && <span className="pnav-acc-desc">{menuDescription(section, t)}</span>}
+                            </span>
                             {t.soon && <span className="soon-badge">Soon</span>}
                           </Link>
                         ))}

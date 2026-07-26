@@ -1,79 +1,102 @@
-# UIL4B Subagent Roster
+# UIL4B agent roster
 
-Specialised subagents for the **UIL4B** web-design toolkit (React 19 + Vite SPA on
-Vercel; single class-based `src/styles/global.css`; Firebase Auth/Firestore; Stripe;
-DeepSeek/Gemini AI; 12-function `/api` limit). The **PM / team-lead is the main
-Claude thread**: it reads the request, routes work to the right agent(s) via the
-Agent tool, relays their findings, and performs the actions subagents can't (opening
-and squash-merging PRs via the GitHub MCP tools).
+UIL4B uses specialised agents for accountable roles and project-scoped skills
+for reusable methods and knowledge. The main thread is the project manager: it
+understands the request, loads current context, and routes the fewest agents
+needed for the outcome.
 
-Every agent `Read`s `CLAUDE.md` at the start of a task, plus the relevant
-`docs/reference/*.md` for its area (conventions, validation zones, constants),
-and `docs/BUILD-PLAN.md` for the live state of the app (what's shipped,
-what's in flight, what's blocked on the owner).
+## Agent and skill boundary
 
-## The 10 agents
-
-| Agent | Model | Purpose (one line) |
+| Layer | Owns | Must not own |
 |---|---|---|
-| **research** | sonnet | First phase — market & competitor intelligence; cited, decision-ready strategy reports. |
-| **design** | opus | AAA, agency-grade UI/UX specs and design reviews, grounded in references + behavioural science. |
-| **seo** | sonnet | Technical + content + AI-search SEO; prioritised, data-backed organic-growth specs. |
-| **engineer** | opus | The executor — turns approved specs into clean, convention-true React/CSS/`/api` code; verifies with a green build. |
-| **code-reviewer** | sonnet | Severity-ranked code-QUALITY review of a diff (naming, complexity, errors, DRY, UX-state gaps) with `file:line` fixes. |
-| **security-reviewer** | opus | OWASP-style security review of `/api`, authz, UGC, uploads, and fetches; concrete exploit + remediation per finding. |
-| **secret-scanner** | sonnet | Pre-commit hardcoded-secret detector; redacts matches, BLOCK/PASS verdict, knows the public-by-design values. |
-| **qa** | sonnet | Final functional gate — PASS/FAIL on functionality, responsive, a11y, performance, UX states, honesty, SEO/meta. |
-| **release-captain** | sonnet | Drives the branch through the gates; GO/NO-GO report + prepared PR title/body; hands the merge to the PM. |
-| **analytics** | sonnet | Instrumentation specialist — audits the localStorage + `analytics-daily` layer and designs goal-aligned events/funnels. |
+| Agent | Role, judgement, evidence, hand-off, stop conditions | Replaceable brand values, framework details, duplicated project facts |
+| Skill | Reusable workflow, quality bar, and domain knowledge | Task status or a fictional persona |
+| Project docs | Current product, architecture, constraints, and policy | Generic methods already expressed by a skill |
+| Live code | Implemented behaviour and tokens | Unreviewed product or brand strategy |
+| Private wiki | Long-term research, synthesis, and learning | A hidden runtime dependency for the repository |
 
-**Model policy (founder rule, 2026-06-30).** Opus is reserved for the work where
-reasoning depth pays for itself: **design, engineer, security-reviewer, and the
-PM (main thread)**. Everything else runs on **sonnet** (research, seo,
-code-reviewer, secret-scanner, qa, release-captain, analytics). Keep this table
-and the `model:` field in each agent file in sync; if you change one, change both.
+Knowledge from the private Vasari Studio wiki must be distilled into a
+repository-local skill or project document before an app agent depends on it.
+Never add an absolute vault path to an agent.
 
-## Routing (task-dependent — no fixed chain)
+Brand literals and visual-system decisions belong to
+`.claude/skills/uil4b-brand-design/` and the live sources it references. They do
+not belong in `design.md`.
 
-There is **no fixed composition chain**. Every task varies in which agent(s)
-handle it, and the goal is to use the **fewest agents that do the job well** —
-each unnecessary agent burns context. The **PM (main thread) routes per task**;
-the routing rules live in
-[`docs/reference/project-manager.md`](../../docs/reference/project-manager.md).
+## Sources of truth
 
-Quick orientation (defaults, not a mandated sequence):
+Resolve conflicts in this order:
 
-- **Advisory/strategy** tasks (research, seo, analytics, design reviews) usually
-  need **one** agent — don't add gates that have nothing to gate.
-- **Code changes** are implemented by **engineer** and always end at a green
-  build; before a PR they pass **secret-scanner** + **code-reviewer**
-  (+ **security-reviewer** for `/api`/auth/UGC/uploads) + **qa**.
-- **release-captain** prepares the GO/NO-GO + PR and **hands off to the PM**,
-  who opens and **squash-merges** via the GitHub MCP tools (only when asked).
-- **Human Validation Zones** (auth, Stripe) are flagged to the founder for
-  approval **before** any implementation.
+1. The user's current explicit instruction.
+2. `CLAUDE.md` and canonical `docs/reference/` decisions.
+3. The approved task specification and acceptance criteria.
+4. Relevant project skills.
+5. The current implementation and tests.
+6. General best practice and external references.
 
-## Batched gate (founder rule, 2026-06-30 — lighten the process)
+`docs/BUILD-PLAN.md` supplies current delivery state. Agents should read source
+documents rather than copying facts that will drift.
 
-To cut token spend, **don't drag every small change through the full agent
-chain.** The cadence:
+## The ten agents
 
-- **Per change:** the engineer runs the **simple local check** — `npx vite build`
-  + `npx eslint .` (zero model/API cost). That's the bar to keep moving.
-- **Per cluster:** once a group of related changes has landed, run **one combined
-  code-review + qa pass** over the whole cluster before merging it — not a
-  separate review per micro-edit.
-- **Always, no exception:** any change touching **`/api`, auth, Stripe, or
-  user-generated content** still gets **secret-scanner + security-reviewer**
-  before merge. Security-sensitive code is never batched away.
+| Agent | Model | Accountable outcome |
+|---|---|---|
+| **research** | sonnet | Cited, decision-ready evidence about a defined market, user, or technical question. |
+| **design** | opus | Coherent user flows, experience direction, anti-slop critique, and buildable acceptance criteria. |
+| **seo** | sonnet | Prioritised technical and content search improvements supported by current evidence. |
+| **engineer** | opus | The smallest complete implementation with runtime and build evidence. |
+| **code-reviewer** | sonnet | Severity-ranked outcome and code-quality findings with line-level evidence. |
+| **security-reviewer** | opus | Threat-focused review and concrete remediation for security-sensitive changes. |
+| **secret-scanner** | sonnet | Pre-commit secret and credential-leak verdict with safe redaction. |
+| **qa** | sonnet | End-to-end functional verdict across requirements, states, viewports, and accessibility. |
+| **release-captain** | sonnet | Evidence-based release readiness and prepared hand-off to the project manager. |
+| **analytics** | sonnet | Measurement plans and instrumentation that answer defined product questions. |
 
-This is the "build everything, then scan/test the batch" model the founder asked
-for. See `docs/reference/build-and-verify.md` and
-`docs/reference/project-manager.md` for the full policy.
+Model assignments are a founder decision. Keep this table and each agent's
+`model:` field in sync.
 
-## Enforcement principles
+## Core-agent skill routing
 
-- **Verify-first build gate.** Nothing is "done" without a passing `npx vite build` (and `npx eslint .` with 0 errors). Agents never claim success without that evidence — "compiles" is not "works".
-- **BLOCK on any CRITICAL.** Any CRITICAL from **security-reviewer** or **secret-scanner** (or a red build) is a hard **NO-GO** at the release gate — no overrides.
-- **Human Validation Zones are founder-gated.** Auth (`AuthContext`, `AuthGate`, `GoogleOneTap`, `src/utils/firebase.js`, `api/verify-admin.js`) and all Stripe files are never edited without explicit approval; every agent flags rather than touches them.
-- **Public-by-design is not a leak.** The Firebase web `apiKey`, the Stripe publishable key, and the Google client ID ship in the bundle on purpose (secured by rules + authorised domains). Real secrets are server-only `process.env`, never `VITE_`-prefixed.
+| Agent | Always or conditionally load |
+|---|---|
+| **design** | `uil4b-brand-design` for all brand-facing work; target project sources; accessibility and research standards as needed |
+| **engineer** | `incremental-implementation` or `debugging-and-error-recovery`; `frontend-ui-engineering` and `uil4b-brand-design` for user-facing UI; browser and performance skills when relevant |
+| **code-reviewer** | Approved criteria and diff; `frontend-ui-engineering` and `uil4b-brand-design` for user-facing changes |
+| **qa** | Build-and-verify and Murphy-state references; browser-testing workflow for rendered flows |
+| **research** | Primary-source and citation discipline; product positioning before interpreting external material |
+
+Loading a skill does not give an agent authority outside its role. For example,
+the reviewer may use the brand quality bar but remains read-only.
+
+## Routing
+
+There is no mandatory agent chain. Use the fewest agents that cover the task:
+
+- Advisory work normally needs one accountable specialist.
+- Product or brand ambiguity goes to `design` before implementation.
+- A clear, bounded implementation goes directly to `engineer`.
+- A related cluster receives one combined `code-reviewer` and `qa` pass before
+  release, not one pass per micro-edit.
+- Changes involving API boundaries, authentication, billing, uploads, user
+  content, or credentials receive the specialist security gates required by
+  `docs/reference/project-manager.md`.
+- `release-captain` prepares release evidence; the main thread performs external
+  GitHub actions only when the user authorises them.
+
+## Non-negotiable gates
+
+- Follow `docs/reference/build-and-verify.md`; compilation alone is not runtime
+  verification.
+- Follow `docs/reference/human-validation-zones.md`; do not duplicate or guess
+  its protected scope.
+- Critical security findings, leaked secrets, and a red required build are hard
+  release blockers.
+- Preserve unrelated local work and state assumptions or untested boundaries.
+- Never fabricate research, analytics, product proof, testimonials, or success.
+
+## Keeping the system current
+
+When project truth changes, update its canonical document or code source. When a
+reusable method improves, update its skill. When founder feedback reveals a
+durable identity preference, use the brand skill's learning loop. Change an agent
+only when its role, judgement, evidence standard, or hand-off needs to change.

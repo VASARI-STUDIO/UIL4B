@@ -1,7 +1,6 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
-import AppFooter from '../components/AppFooter'
 
 const IconLibrary = lazy(() => import('./IconLibrary'))
 const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
@@ -31,15 +30,50 @@ export default function IconEmojiLibrary({ onCopy }) {
   // visited tab is folded in via React's derive-state-during-render pattern (no
   // effect, so no cascading-render lint warning and no extra commit).
   const [mounted, setMounted] = useState(() => new Set([tab]))
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
+  const tabRefs = useRef({})
   if (!mounted.has(tab)) setMounted(new Set(mounted).add(tab))
 
-  const fallback = <div className="page-loading"><div className="fg-loader" /></div>
+  useEffect(() => {
+    const onOnline = () => setOnline(true)
+    const onOffline = () => setOnline(false)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
+    }
+  }, [])
+
+  const activateTab = (next) => navigate(next === 'icon' ? '/icons' : '/emoji')
+  const onTabKeyDown = (event, current) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const next = event.key === 'ArrowLeft' || event.key === 'Home'
+      ? 'icon'
+      : event.key === 'ArrowRight' || event.key === 'End' ? 'emoji' : current
+    activateTab(next)
+    requestAnimationFrame(() => tabRefs.current[next]?.focus())
+  }
+
+  const fallback = (
+    <div className="lib-loading" role="status" aria-live="polite">
+      <div className="fg-loader" />
+      <strong>Opening the {tab === 'icon' ? 'icon' : 'emoji'} library</strong>
+      <span>Your search and filters will stay in place when you switch libraries.</span>
+    </div>
+  )
 
   return (
     <>
     <div className="sec">
-      <div className="sec-h lib-head">
-        <div className="lib-switch" role="tablist" aria-label="Library">
+      <header className="lib-head">
+        <div className="lib-head-copy">
+          <span className="lib-eyebrow">Asset library</span>
+          <h1>Find the right symbol. Keep building.</h1>
+          <p>{tab === 'icon' ? t('iconLibrary.subtitle') : t('emojiLibrary.subtitle')}</p>
+        </div>
+        <div className="lib-switch" role="tablist" aria-label="Choose asset library">
           <button
             id="lib-tab-icon"
             type="button"
@@ -48,9 +82,12 @@ export default function IconEmojiLibrary({ onCopy }) {
             aria-controls="lib-panel-icon"
             tabIndex={tab === 'icon' ? 0 : -1}
             className={`lib-switch-btn${tab === 'icon' ? ' is-active' : ''}`}
-            onClick={() => { if (tab !== 'icon') navigate('/icons') }}
+            ref={(node) => { if (node) tabRefs.current.icon = node }}
+            onClick={() => activateTab('icon')}
+            onKeyDown={(event) => onTabKeyDown(event, 'icon')}
           >
-            Icons
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5" /><circle cx="17" cy="7" r="3" /><path d="m7 14-3 6h6zM14 14h6v6h-6z" /></svg>
+            <span><strong>Icons</strong><small>SVG and JSX</small></span>
           </button>
           <button
             id="lib-tab-emoji"
@@ -60,13 +97,22 @@ export default function IconEmojiLibrary({ onCopy }) {
             aria-controls="lib-panel-emoji"
             tabIndex={tab === 'emoji' ? 0 : -1}
             className={`lib-switch-btn${tab === 'emoji' ? ' is-active' : ''}`}
-            onClick={() => { if (tab !== 'emoji') navigate('/emoji') }}
+            ref={(node) => { if (node) tabRefs.current.emoji = node }}
+            onClick={() => activateTab('emoji')}
+            onKeyDown={(event) => onTabKeyDown(event, 'emoji')}
           >
-            Emoji
+            <span className="lib-switch-emoji" aria-hidden="true">🙂</span>
+            <span><strong>Emoji</strong><small>Unicode, copy-ready</small></span>
           </button>
         </div>
-        <p>{tab === 'icon' ? t('iconLibrary.subtitle') : t('emojiLibrary.subtitle')}</p>
-      </div>
+        <div className="lib-head-status">
+          <span className={online ? 'lib-net is-online' : 'lib-net is-offline'}>
+            <i aria-hidden="true" />
+            {online ? 'Live library connected' : 'Offline · built-in assets remain available'}
+          </span>
+          <span className="lib-keyhint">Use ← → to switch</span>
+        </div>
+      </header>
 
       {/* Both panels stay mounted once visited; only the active one is shown. */}
       <div
@@ -95,9 +141,6 @@ export default function IconEmojiLibrary({ onCopy }) {
         )}
       </div>
     </div>
-    {/* Chromeless Create surface — mount the shared system footer here so the
-        icon/emoji library closes with the same footer as the rest of the app. */}
-    <AppFooter />
     </>
   )
 }

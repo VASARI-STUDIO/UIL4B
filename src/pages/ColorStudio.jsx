@@ -92,16 +92,23 @@ const STATE_PRESETS = {
 const STATE_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
 
 const STATE_BUNDLES = [
-  { name: 'Default', config: { success: 1, warning: 0, error: 0, info: 0 } },
-  { name: 'Material', config: { success: 4, warning: 4, error: 4, info: 4 } },
-  { name: 'Vivid', config: { success: 0, warning: 2, error: 1, info: 2 } },
-  { name: 'Cool', config: { success: 2, warning: 1, error: 2, info: 1 } },
-  { name: 'Warm', config: { success: 1, warning: 0, error: 0, info: 2 } },
-  { name: 'Apple', config: { success: 3, warning: 3, error: 3, info: 3 } },
-  { name: 'Tailwind', config: { success: 5, warning: 5, error: 5, info: 5 } },
+  { name: 'Balanced', desc: 'Familiar, calm defaults for most product UI.', config: { success: 1, warning: 0, error: 0, info: 0 } },
+  { name: 'Material', desc: 'Established Material state foundations.', config: { success: 4, warning: 4, error: 4, info: 4 } },
+  { name: 'Vivid', desc: 'Higher chroma for expressive interfaces.', config: { success: 0, warning: 2, error: 1, info: 2 } },
+  { name: 'Cool', desc: 'Teal, yellow, pink and sky emphasis.', config: { success: 2, warning: 1, error: 2, info: 1 } },
+  { name: 'Warm', desc: 'Classic green, amber and red signals.', config: { success: 1, warning: 0, error: 0, info: 2 } },
+  { name: 'Apple', desc: 'System colours aligned with Apple platforms.', config: { success: 3, warning: 3, error: 3, info: 3 } },
+  { name: 'Tailwind', desc: 'Direct mapping to Tailwind colour ramps.', config: { success: 5, warning: 5, error: 5, info: 5 } },
 ]
 
-// Reference "500" hex per role, taken from the Default bundle — the canonical
+const STATE_META = {
+  success: { label: 'Success', cue: '✓', intent: 'Completed, connected or ready' },
+  warning: { label: 'Warning', cue: '!', intent: 'Needs attention before continuing' },
+  error: { label: 'Error', cue: '×', intent: 'Failed, destructive or blocked' },
+  info: { label: 'Information', cue: 'i', intent: 'Helpful context or neutral update' },
+}
+
+// Reference "500" hex per role, taken from the Balanced bundle — the canonical
 // seed for each role's custom hue arc and generated ramp (Cluster F).
 const STATE_REF_HEX = Object.fromEntries(
   Object.entries(STATE_BUNDLES[0].config).map(([role, idx]) => [role, STATE_PRESETS[role][idx].shades[5]])
@@ -179,6 +186,16 @@ function StateShade({ shade, label, onCopy }) {
       <span className="stc-cell-hex">{shade.replace('#', '').toLowerCase()}</span>
     </div>
   )
+}
+
+function semanticExampleRef(colours) {
+  return (element) => {
+    if (!element) return
+    element.style.setProperty('--stc-soft', colours.soft)
+    element.style.setProperty('--stc-border', colours.border)
+    element.style.setProperty('--stc-strong', colours.strong)
+    element.style.setProperty('--stc-ink', colours.ink)
+  }
 }
 
 function TintSwatch({ color, label, onCopy }) {
@@ -1740,14 +1757,13 @@ function PreviewUpsell({ onUpgrade }) {
   )
 }
 
-// The six colour tools, each its own routed page under /color/<tool>. The
+// The five visible colour tools, each its own routed page under /color/<tool>. The
 // section tools re-enter the studio focused on their section (via the pathname
 // effect below); tint + contrast are standalone pages. The footer at the bottom
 // links across to all of them. Order mirrors the mega-menu.
 const COLOUR_TOOLS = [
   { id: 'palette', label: 'Palette', route: '/color/palette', desc: 'Build the core ramp' },
   { id: 'semantic', label: 'Semantic Colour', route: '/color/semantic', desc: 'Success, warning, error' },
-  { id: 'ui-colour', label: 'UI Colour', route: '/color/ui', desc: 'Systems, brands, libraries' },
   { id: 'gradient', label: 'Gradient', route: '/color/gradient', desc: 'Blend across your palette' },
   { id: 'tint', label: 'Tint', route: '/color/tint', desc: 'Scale any swatch' },
   { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', desc: 'Verify AA / AAA' },
@@ -1755,7 +1771,7 @@ const COLOUR_TOOLS = [
 
 // /color/<tool> route → the single studio section that route renders (#39).
 const PATH_TO_SECTION = { palette: 'palette', semantic: 'states', ui: 'systems', gradient: 'gradients' }
-const SOLO_TITLES = { palette: 'Palette Builder', states: 'UI State Colours', systems: 'UI Colour Systems', gradients: 'Gradient Tool' }
+const SOLO_TITLES = { palette: 'Palette Builder', states: 'Semantic Colours', systems: 'UI Colour Systems', gradients: 'Gradient Tool' }
 
 // Tool-specific hero copy for the standalone pages (#50). The merged studio
 // keeps the generic i18n description; each solo page says what IT does — the
@@ -2900,8 +2916,34 @@ ${stateVars}
 
   const stateCSS = Object.entries(stateColors).map(([state, sel]) => {
     const shades = resolveStateShades(state, sel)
-    return shades.map((c, i) => `  --${state}-${STATE_LABELS[i]}: ${c};`).join('\n')
+    return shades.map((c, i) => `  --color-${state}-${STATE_LABELS[i]}: ${c};`).join('\n')
   }).join('\n')
+  const activeStateBundle = STATE_BUNDLES.find(
+    (bundle) => JSON.stringify(stateColors) === JSON.stringify(bundle.config),
+  )
+  const activeStateBundleIndex = STATE_BUNDLES.findIndex(
+    (bundle) => JSON.stringify(stateColors) === JSON.stringify(bundle.config),
+  )
+  const handleStateBundleKeyDown = (event, index) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const last = STATE_BUNDLES.length - 1
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? last
+        : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+          ? (index - 1 + STATE_BUNDLES.length) % STATE_BUNDLES.length
+          : (index + 1) % STATE_BUNDLES.length
+    setStateColors(STATE_BUNDLES[nextIndex].config)
+    requestAnimationFrame(() => document.getElementById(`stc-bundle-${nextIndex}`)?.focus())
+  }
+  const statePreview = Object.fromEntries(
+    Object.entries(stateColors).map(([state, selection]) => {
+      const shades = resolveStateShades(state, selection)
+      return [state, { soft: shades[0], border: shades[2], strong: shades[6], ink: shades[8] }]
+    }),
+  )
 
   // "Custom" semantic-hue helpers (Cluster F). Switching a role to Custom seeds
   // the slider at its canonical hue; pasting a hex rotates the pasted hue into
@@ -3331,22 +3373,47 @@ ${stateVars}
           {!soloSection && (
             <div className="stc-head-title">
               <svg className={`cs-chevron${collapsed.states ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              <h2 style={{ fontSize: 18, fontWeight: 700 }}>UI State Colours</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 700 }}>Semantic Colours</h2>
             </div>
           )}
           <div className="stc-toolbar" onClick={e => e.stopPropagation()}>
-            <span className="stc-kicker">Bundle</span>
-            {STATE_BUNDLES.map(b => (
-              <button key={b.name}
-                className={`pt-t${JSON.stringify(stateColors) === JSON.stringify(b.config) ? ' on' : ''}`}
-                onClick={() => setStateColors(b.config)}
-                style={{ padding: '4px 10px', fontSize: 10 }}
-              >{b.name}</button>
-            ))}
-            <button className="stc-copy-btn" onClick={copyStateTokens}>Copy tokens</button>
+            <div className="stc-toolbar-copy">
+              <span className="stc-kicker">Semantic bundle</span>
+              <span>{activeStateBundle?.name || 'Custom mix'} · 40 canonical tokens</span>
+            </div>
+            <button className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
           </div>
         </div>
         {(soloSection === 'states' || !collapsed.states) && <>
+        <div className="stc-bundles" role="radiogroup" aria-label="Semantic colour bundle">
+          {STATE_BUNDLES.map((bundle, bundleIndex) => {
+            const selected = JSON.stringify(stateColors) === JSON.stringify(bundle.config)
+            return (
+              <button
+                key={bundle.name}
+                type="button"
+                id={`stc-bundle-${bundleIndex}`}
+                className={selected ? 'stc-bundle stc-bundle--on' : 'stc-bundle'}
+                role="radio"
+                aria-checked={selected}
+                tabIndex={selected || (activeStateBundleIndex < 0 && bundleIndex === 0) ? 0 : -1}
+                onClick={() => setStateColors(bundle.config)}
+                onKeyDown={(event) => handleStateBundleKeyDown(event, bundleIndex)}
+              >
+                <span className="stc-bundle-top">
+                  <strong>{bundle.name}</strong>
+                  <span aria-hidden="true">{selected ? 'Selected' : 'Choose'}</span>
+                </span>
+                <span className="stc-bundle-swatches" aria-hidden="true">
+                  {Object.entries(bundle.config).map(([role, index]) => (
+                    <i key={role} ref={element => element?.style.setProperty('--stc-bundle-c', STATE_PRESETS[role][index].shades[5])} />
+                  ))}
+                </span>
+                <small>{bundle.desc}</small>
+              </button>
+            )
+          })}
+        </div>
         {Object.entries(STATE_PRESETS).map(([state, presets]) => {
           const sel = stateColors[state]
           // NB: coerce to a real boolean. `sel` is 0 for the default preset of
@@ -3358,8 +3425,13 @@ ${stateVars}
           return (
             <div key={state} className="stc-role">
               <div className="stc-role-head">
-                <div className="stc-dot" style={{ background: shades[5] }} />
-                <span className="stc-role-name">{state}</span>
+                <div className="stc-role-id">
+                  <span className="stc-role-cue" aria-hidden="true">{STATE_META[state].cue}</span>
+                  <span>
+                    <strong className="stc-role-name">{STATE_META[state].label}</strong>
+                    <small>{STATE_META[state].intent}</small>
+                  </span>
+                </div>
                 <div className="stc-role-presets">
                   {presets.map((p, pi) => (
                     <button key={p.name} onClick={() => setStateColors({ ...stateColors, [state]: pi })}
@@ -3393,7 +3465,11 @@ ${stateVars}
                       <span>{describeColor(at(arc.lo))}</span>
                       <input type="text" className="cs-hue-hex" placeholder="Paste hex" maxLength={7}
                         aria-label={`Import a hex colour for ${state}`}
-                        onKeyDown={e => { if (e.key === 'Enter' && applyHexToArc(state, e.currentTarget.value)) e.currentTarget.value = '' }}
+                        onKeyDown={e => {
+                          if (e.key !== 'Enter') return
+                          if (applyHexToArc(state, e.currentTarget.value)) e.currentTarget.value = ''
+                          else toast?.('Enter a six-digit hex colour, for example #16A34A')
+                        }}
                       />
                       <span>{describeColor(at(arc.hi))}</span>
                     </div>
@@ -3408,6 +3484,62 @@ ${stateVars}
             </div>
           )
         })}
+
+        <section className="stc-preview-section" aria-labelledby="stc-preview-title">
+          <div className="stc-subhead">
+            <div>
+              <span className="stc-kicker">Live UI proof</span>
+              <h2 id="stc-preview-title">Check every state in context</h2>
+              <p>Light and dark surfaces use the same roles, with a symbol and message so meaning never depends on colour alone.</p>
+            </div>
+          </div>
+          <div className="stc-preview-grid">
+            {['Light interface', 'Dark interface'].map((themeLabel, themeIndex) => (
+              <div className={themeIndex ? 'stc-preview stc-preview--dark' : 'stc-preview'} key={themeLabel}>
+                <div className="stc-preview-head">
+                  <strong>{themeLabel}</strong>
+                  <span>{activeStateBundle?.name || 'Custom mix'} bundle</span>
+                </div>
+                <div className="stc-example-list">
+                  {Object.entries(STATE_META).map(([state, meta]) => (
+                    <div className="stc-example" key={state} ref={semanticExampleRef(statePreview[state])}>
+                      <span className="stc-example-cue" aria-hidden="true">{meta.cue}</span>
+                      <span>
+                        <strong>{meta.label}</strong>
+                        <small>{meta.intent}</small>
+                      </span>
+                      <button type="button" onClick={() => onCopy(resolveStateShades(state, stateColors[state])[6])}>
+                        Copy 600
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="stc-handoff" aria-labelledby="stc-handoff-title">
+          <div className="stc-handoff-copy">
+            <span className="stc-kicker">Developer handoff</span>
+            <h2 id="stc-handoff-title">Canonical, predictable token names</h2>
+            <p>Each role exports from <code>--color-success-50</code> through <code>--color-info-900</code>, ready for CSS or a token pipeline.</p>
+            <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy 40 CSS variables</button>
+          </div>
+          <pre className="stc-code" tabIndex="0"><code>{`:root {\n${stateCSS}\n}`}</code></pre>
+        </section>
+
+        <nav className="stc-next" aria-label="Continue building the colour system">
+          <div>
+            <span className="stc-kicker">Next in the workflow</span>
+            <strong>Validate the states, then connect them to the rest of your interface foundation.</strong>
+          </div>
+          <div>
+            <NavLink to="/color/contrast">Check contrast <span aria-hidden="true">→</span></NavLink>
+            <NavLink to="/color/tint">Build tonal scales <span aria-hidden="true">→</span></NavLink>
+            <NavLink to="/color/palette">Return to palette <span aria-hidden="true">→</span></NavLink>
+          </div>
+        </nav>
         </>}
       </section>
       )}

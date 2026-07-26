@@ -2,9 +2,10 @@
 
 UIL4B is the **operating workspace for UI system creation** — build, organize,
 validate, and export interface foundations without tab-hopping. One product, one
-account, one Stripe subscription, three surfaces: **Create** (build),
-**Discover** (browse), **Learn** (understand). React 19 SPA (Vite + Vercel);
-Firebase Auth + Firestore; Stripe subscriptions; DeepSeek/Gemini AI.
+account, one Stripe subscription, three surfaces: **Workspace** (currently
+labelled Create in parts of the product), **Discover**, and **Learn**. React 19
+SPA (Vite + Vercel); Firebase Auth + Firestore; Stripe subscriptions; OpenRouter
+AI with Gemini fallback.
 
 > Lean index. Canonical story → [`positioning.md`](docs/reference/positioning.md).
 > **Taking over / new to the project?** Read
@@ -52,9 +53,11 @@ every turn until compaction — cost ≈ (tokens/turn) × (turns). Keep both low
 ## Self-extension (auto skill creation)
 
 When a request reveals a **reusable, structured** capability gap no skill covers,
-create one at `~/.claude/skills/[name]/SKILL.md` (minimal YAML frontmatter:
-`name`, `description`, `allowed-tools`), use it immediately, and tell me:
-"Created new skill: [name] — [what it does]."
+create and validate a skill. Put UIL4B-specific knowledge in
+`.claude/skills/[name]/` so it travels with the repository; reserve
+`~/.claude/skills/` for genuinely cross-project capabilities. Keep agent roles
+free of replaceable domain knowledge, use the skill immediately, and report what
+was created.
 
 ---
 
@@ -89,6 +92,9 @@ Read the relevant one before working in that area.
 - **[Growth & Persuasion](docs/reference/growth-persuasion.md)** — ethical
   activation, belonging, and social-proof playbook (read before onboarding /
   upgrade / empty-state / marketing copy).
+- **[UIL4B Brand Design](.claude/skills/uil4b-brand-design/SKILL.md)** — evolving
+  product identity, product/sales continuity, and anti-slop quality bar. Read for
+  any brand-facing design, implementation, or review.
 
 **State & planning (two living areas):** [`BUILD-PLAN.md`](docs/BUILD-PLAN.md)
 (hub: direction + live status; sub-files in [`docs/build-plan/`](docs/build-plan)

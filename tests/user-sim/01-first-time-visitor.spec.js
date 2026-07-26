@@ -48,7 +48,7 @@ test.describe('first-time visitor', () => {
   test('can find out what it costs', async ({ page }) => {
     const fb = watch(page, PERSONA)
     await go(page, '/')
-    const pricingLink = page.locator('a[href="/plans"], a[href="/pricing"]').first()
+    const pricingLink = page.getByRole('link', { name: 'Plans', exact: true }).first()
     if (await pricingLink.count()) {
       await pricingLink.click()
       await expect(page).toHaveURL(/\/plans/)
@@ -56,8 +56,8 @@ test.describe('first-time visitor', () => {
       fb.note('improve', 'No pricing link reachable from the landing page — going direct.')
       await go(page, '/plans')
     }
-    // The page must actually show money.
-    await expect(page.locator('body')).toContainText(/[$£€]\s?\d/)
+    await expect(page.getByRole('heading', { level: 1, name: /Simple, honest pricing/ })).toBeVisible()
+    await expect(page.locator('.sub-tier', { hasText: 'Free' }).first()).toContainText('$0')
   })
 
   test('wandering the main surfaces never hits a blank or broken page', async ({ page }) => {

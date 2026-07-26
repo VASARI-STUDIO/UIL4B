@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import WorldMap from '../components/WorldMap'
+import SystemCTA from '../components/SystemCTA'
 import { useReveal } from '../hooks/useReveal'
 import { DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
+import { readCommunitySubmissions } from '../utils/communitySubmissions'
 
 // The Discover + Learn landing shells. Phase 1 is structure-only: both surfaces
 // render a Mobbin-style hero over a grid of the sections that are on the way, each
@@ -55,6 +58,9 @@ const SURFACES = {
 export default function SurfaceLanding({ surface }) {
   useReveal()
   const s = SURFACES[surface] || SURFACES.discover
+  useEffect(() => {
+    if (surface === 'discover') readCommunitySubmissions()
+  }, [surface])
 
   return (
     <div className="home">
@@ -152,26 +158,15 @@ export default function SurfaceLanding({ surface }) {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="home-cta">
-        <div className="home-cta-dots" aria-hidden="true">
-          <span className="home-cta-dot" /><span className="home-cta-dot" /><span className="home-cta-dot" />
-          <span className="home-cta-dot" /><span className="home-cta-dot" /><span className="home-cta-dot" />
-        </div>
-        <div className="home-cta-inner" data-reveal>
-          <span className="home-eyebrow">Start free</span>
-          <h2 className="home-h2">Build your first system today.</h2>
-          <div className="home-hero-cta">
-            <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/color">
-              Start building
-              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
-            </Link>
-            <Link className="ui-pill ui-pill-out ui-pill-lg" to="/home">
-              Back to home
-            </Link>
-          </div>
-          <p className="home-cta-hint">No credit card · Build in your browser</p>
-        </div>
-      </section>
+      <SystemCTA
+        eyebrow={`${s.eyebrow} meets Create`}
+        title="Turn what you find into a system you can ship."
+        description="Move from reference to real interface foundations without rebuilding the context in another app."
+        primaryLabel="Start building"
+        primaryTo="/color"
+        secondaryLabel="Back to home"
+        secondaryTo="/home"
+      />
       </main>
     </div>
   )

@@ -4,18 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>UI L4B | Design Toolkit</title>
-<meta name="description" content="Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion, video frames, and production-ready CSS exports.">
+<meta name="description" content="Free browser-based design toolkit for colour systems, icons, emoji, image conversion, aspect ratios, gradients and contrast checks.">
 <meta name="theme-color" content="#FAFAFA">
 <meta property="og:title" content="UI L4B | Design Toolkit">
-<meta property="og:description" content="Free browser-based design toolkit for colour, typography, imagery, and exports.">
+<meta property="og:description" content="Browser-based tools for colour systems, icons, emoji, imagery and interface validation.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.uil4b.com">
 <meta property="og:site_name" content="UI L4B">
 <meta property="og:image" content="https://www.uil4b.com/previews/og-image.png">
-<meta property="og:image:alt" content="UI L4B Design Toolkit — colour palettes, font pairing, icon library, and CSS exports">
+<meta property="og:image:alt" content="UI L4B Design Toolkit — colour, icon, emoji and imagery tools">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="UI L4B | Design Toolkit">
-<meta name="twitter:description" content="Free browser-based design toolkit for colour, typography, imagery, and exports.">
+<meta name="twitter:description" content="Browser-based tools for colour systems, icons, emoji, imagery and interface validation.">
 <meta name="twitter:image" content="https://www.uil4b.com/previews/og-image.png">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.uil4b.com">
@@ -28,7 +28,7 @@
   "url": "https://www.uil4b.com",
   "applicationCategory": "DesignApplication",
   "operatingSystem": "Web",
-  "description": "Free browser-based design toolkit. Build colour systems, pair fonts, browse icons, convert images, generate alt text with AI, and export production-ready CSS and design systems.",
+  "description": "Free browser-based design toolkit for building colour systems, browsing icons and emoji, converting imagery, calculating aspect ratios, and checking interface colour.",
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "AUD" },
     { "@type": "Offer", "name": "Pro", "price": "4.99", "priceCurrency": "AUD" }
@@ -45,6 +45,26 @@ html[data-theme="dark"]{background:#0A0B0D;color:#e8e8e8;color-scheme:dark}
 html[data-theme="light"]{background:#FAFAFA;color:#0A0A0B;color-scheme:light}
 body{background:inherit;color:inherit}
 svg{color:inherit}
+#root{min-height:100vh}
+.boot-shell{min-height:100vh;padding:18px clamp(18px,4vw,48px);font-family:Outfit,system-ui,sans-serif}
+.boot-status{position:fixed;left:50%;bottom:18px;z-index:1;transform:translateX(-50%);font-size:11px;font-weight:600;letter-spacing:.04em;color:rgba(71,85,105,.72)}
+.boot-nav{display:flex;align-items:center;justify-content:space-between;max-width:1180px;height:52px;margin:0 auto;border:1px solid rgba(15,23,42,.1);border-radius:16px;padding:0 16px;background:rgba(255,255,255,.82)}
+.boot-mark{font-weight:800;letter-spacing:-.04em}
+.boot-nav-lines,.boot-actions{display:flex;gap:10px}
+.boot-line,.boot-action,.boot-copy,.boot-card{display:block;background:rgba(100,116,139,.13);overflow:hidden;position:relative}
+.boot-line::after,.boot-action::after,.boot-copy::after,.boot-card::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:boot-shimmer 1.4s ease-in-out infinite}
+.boot-line{width:72px;height:8px;border-radius:999px}.boot-action{width:76px;height:28px;border-radius:9px}
+.boot-main{max-width:980px;margin:0 auto;padding:clamp(72px,12vh,130px) 0 48px;text-align:center}
+.boot-kicker{width:180px;height:10px;margin:0 auto 24px}.boot-title{width:min(680px,88%);height:clamp(52px,8vw,86px);margin:0 auto 18px;border-radius:18px}
+.boot-sub{width:min(520px,72%);height:14px;margin:0 auto 38px;border-radius:999px}
+.boot-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.boot-card{height:132px;border-radius:18px}
+html[data-theme="dark"] .boot-nav{background:rgba(18,20,24,.82);border-color:rgba(255,255,255,.1)}
+html[data-theme="dark"] .boot-status{color:rgba(203,213,225,.72)}
+html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[data-theme="dark"] .boot-copy,html[data-theme="dark"] .boot-card{background:rgba(255,255,255,.09)}
+@keyframes boot-shimmer{to{transform:translateX(100%)}}
+@media(max-width:640px){.boot-nav-lines{display:none}.boot-main{padding-top:88px}.boot-cards{grid-template-columns:1fr}.boot-card:nth-child(n+2){display:none}}
+@media(prefers-reduced-motion:reduce){.boot-line::after,.boot-action::after,.boot-copy::after,.boot-card::after{animation:none}}
+html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="true"] .boot-action::after,html[data-reduced-motion="true"] .boot-copy::after,html[data-reduced-motion="true"] .boot-card::after{animation:none}
 </style>
 <script>
 // Apply the saved theme synchronously, before first paint, so there is no
@@ -57,17 +77,34 @@ svg{color:inherit}
 </script>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+  <div class="boot-shell" id="boot-shell">
+    <span class="boot-status" role="status" aria-live="polite">Loading UIL4B</span>
+    <div class="boot-decoration" aria-hidden="true">
+    <div class="boot-nav">
+      <span class="boot-mark">UIL4B</span>
+      <span class="boot-nav-lines"><i class="boot-line"></i><i class="boot-line"></i><i class="boot-line"></i></span>
+      <span class="boot-actions"><i class="boot-action"></i><i class="boot-action"></i></span>
+    </div>
+    <div class="boot-main">
+      <i class="boot-copy boot-kicker"></i>
+      <i class="boot-copy boot-title"></i>
+      <i class="boot-copy boot-sub"></i>
+      <div class="boot-cards"><i class="boot-card"></i><i class="boot-card"></i><i class="boot-card"></i></div>
+    </div>
+    </div>
+  </div>
+</div>
 <noscript>
 <div style="max-width:720px;margin:0 auto;padding:48px 24px;font-family:system-ui,sans-serif;line-height:1.6">
 <h1>UI L4B | Design Toolkit</h1>
 <p>Every design tool you reach for, together. UIL4B is a free, browser-based workspace for designers and developers.</p>
 <h2>What you can do</h2>
 <ul>
-<li>Build complete colour systems — palettes, tints, gradients and CSS exports</li>
-<li>Pair fonts and preview a modular type scale with hundreds of Google Fonts</li>
-<li>Search thousands of icons, convert and compress images, and generate accessible alt text with AI</li>
-<li>Reference design tokens and export a full design system in one click</li>
+<li>Build colour systems with palettes, tints, gradients and contrast checks</li>
+<li>Search icons and emoji, then copy production-ready SVG, JSX or Unicode</li>
+<li>Convert and compress images, extract video frames and calculate aspect ratios</li>
+<li>Copy colour values and CSS from the individual tools that support them</li>
 </ul>
 <h2>Pricing</h2>
 <p>Free forever for all core tools, with 40 AI generations per day. Upgrade to Pro from $4.99 AUD/month for 1,000 AI generations per day, higher-quality models, and synced projects.</p>
