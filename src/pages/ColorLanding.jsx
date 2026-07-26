@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
+import SystemCTA from '../components/SystemCTA'
 import { useReveal } from '../hooks/useReveal'
 import { CREATE_GROUPS } from '../data/toolTree'
 
@@ -20,13 +21,12 @@ const TOOL_COPY = {
   palette: 'Generate a full palette from one seed — harmony systems, tonal ramps and accessibility built in.',
   semantic: 'Success, warning, error and info colours that stay legible and on-brand in light and dark.',
   tint: 'Turn any colour into a production-ready tint scale. Tune the curve, then copy swatches or CSS.',
-  'ui-colour': 'Start from a proven foundation — design-system palettes and brand colours, one click from your own.',
   gradient: 'Design linear, radial and conic gradients across your palette and copy the CSS in one click.',
   contrast: 'Free WCAG checker — test any pair against AA and AAA and get one-click fixes that pass.',
 }
 
 const PILLARS = [
-  { title: 'One system, not six tabs', desc: 'Palette, semantic colours, tints, UI colour and gradients all run on the same colour maths — so every tool agrees and nothing drifts.' },
+  { title: 'One system, not five tabs', desc: 'Palette, semantic colours, tints and gradients all run on the same colour maths — so every tool agrees and nothing drifts.' },
   { title: 'Built on real colour science', desc: 'HCT tonal palettes and WCAG contrast under the hood mean the colours you ship stay legible and consistent in light and dark.' },
   { title: 'Export-ready, everywhere', desc: 'Copy CSS variables, Tailwind config, JSON, PNG or SVG — carry your system straight into the build with zero reformatting.' },
 ]
@@ -47,7 +47,7 @@ export default function ColorLanding() {
         <p className="home-hero-sub">
           Build a palette, derive semantic colours, generate tints and gradients, and
           check contrast — all on the same engine, all export-ready. No more stitching
-          six colour tools together.
+          five colour tools together.
         </p>
         <div className="home-hero-cta">
           <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/color/palette">
@@ -86,7 +86,7 @@ export default function ColorLanding() {
           <div className="home-head home-head-center" data-reveal>
             <span className="home-eyebrow">The tools</span>
             <h2 className="home-h2">Everything colour, in one place.</h2>
-            <p className="home-lede">Six focused tools, one shared foundation — jump into any of them and your work carries across.</p>
+            <p className="home-lede">Five focused tools, one shared foundation — jump into any of them and your work carries across.</p>
           </div>
 
           <div className="surface-grid">
@@ -111,26 +111,14 @@ export default function ColorLanding() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="home-cta">
-        <div className="home-cta-dots" aria-hidden="true">
-          <span className="home-cta-dot" /><span className="home-cta-dot" /><span className="home-cta-dot" />
-          <span className="home-cta-dot" /><span className="home-cta-dot" /><span className="home-cta-dot" />
-        </div>
-        <div className="home-cta-inner" data-reveal>
-          <span className="home-eyebrow">Start free</span>
-          <h2 className="home-h2">Build your colour system today.</h2>
-          <div className="home-hero-cta">
-            <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/color/palette">
-              Start with a palette
-              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
-            </Link>
-            <Link className="ui-pill ui-pill-out ui-pill-lg" to="/home">
-              Back to home
-            </Link>
-          </div>
-          <p className="home-cta-hint">No credit card · Build in your browser</p>
-        </div>
-      </section>
+      <SystemCTA
+        title="Build a colour system that stays connected."
+        description="Start with one decision, validate every role, and leave with production-ready tokens."
+        primaryLabel="Start with a palette"
+        primaryTo="/color/palette"
+        secondaryLabel="Back to home"
+        secondaryTo="/home"
+      />
       </main>
     </div>
   )

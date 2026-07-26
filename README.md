@@ -1,8 +1,8 @@
-# UIL4B — The UI System Workspace
+# UIL4B — Build connected UI systems
 
 The operating workspace for UI system creation — build, organize, validate, and export interface foundations without tab-hopping. Create colour palettes, generate tint scales, check contrast, build gradients, pair fonts, design UI components, convert images, extract video frames, and export production-ready CSS, all in the browser.
 
-The product is organised around three surfaces: **Workspace** (create), **Discover** (browse community + curated external resources), and **Learn** (understand). See [`docs/reference/positioning.md`](docs/reference/positioning.md) for the canonical story.
+The product is organised around three surfaces: **Create** (build), **Discover** (browse community + curated external resources), and **Learn** (understand). See [`docs/reference/positioning.md`](docs/reference/positioning.md) for the canonical story.
 
 **Live:** [uil4b.com](https://www.uil4b.com)
 
@@ -10,7 +10,7 @@ The product is organised around three surfaces: **Workspace** (create), **Discov
 
 ### Colour
 
-- **Colour Studio** — Palette builder with 6 harmony modes, 10-step tint scale generator, UI state colour presets (success/warning/error/info), WCAG contrast checker, gradient builder with flip control and 16 presets, interactive light/dark UI preview, "Add to Project", and design system export (HTML, CSS, clipboard)
+- **Colour System** — Connected Palette, Semantic Colour, Tint, Gradient and Contrast tools with recovery paths, UI previews and production-ready exports
 
 ### Typography
 
@@ -20,8 +20,8 @@ The product is organised around three surfaces: **Workspace** (create), **Discov
 
 ### Imagery
 
-- **Icon Library** — Search thousands of icons via the Iconify API with copy-to-clipboard
-- **Emoji Library** — Browse and copy emojis organised by category
+- **Icon Library** — Search and customise Iconify packs with copy, save and project workflows
+- **Emoji Library** — Browse, filter and copy emojis by category from the same resilient library surface
 - **Image Converter** — Convert, compress, and resize images locally (WebP, PNG, JPEG, AVIF)
 - **Alt Text Generator** — Batch-generate accessible alt text for images using AI
 - **Video to Frames** — Extract individual frames from video files with format, quality, and scale controls; batch download as ZIP
@@ -40,7 +40,7 @@ The product is organised around three surfaces: **Workspace** (create), **Discov
 
 ## Features
 
-- **Dashboard** — Personalised greeting, pinnable tool cards with drag-and-drop reorder, category exploration
+- **Product-led home** — Connected-system hero with an interactive Create preview, clear tool pathways and shared public calls to action
 - **Projects** — Save palettes, fonts, and designs to named projects with archive/restore and type-to-confirm deletion; auto-created default project on first sign-in
 - **Pro Subscription** — Stripe Embedded Checkout (monthly/yearly with 7-day trial), customer portal for billing management, cancellation retention flow with tailored offers
 - **Command Palette** — `Cmd/Ctrl + K` to search and jump to any tool

@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { COMMUNITY_DESIGNS, COMMUNITY_CATEGORIES } from '../data/communityDesigns'
 import CommunityCard from '../components/discover/CommunityCard'
+import { useAuth } from '../contexts/AuthContext'
+import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
+import { readCommunitySubmissions, writeCommunitySubmissions } from '../utils/communitySubmissions'
 
 // Community Hub — browse, save, and submit design inspiration. Saves drive the
 // ranking. Baseline save counts are illustrative for now; the heart toggle and
@@ -13,17 +16,16 @@ import CommunityCard from '../components/discover/CommunityCard'
 // local-only placeholder here (no shared publishing pipeline yet).
 
 const SAVES_KEY = 'vs-community-saves'
-const SUBMISSIONS_KEY = 'vs-community-submissions'
 
 function loadSaves() {
   try { return new Set(JSON.parse(localStorage.getItem(SAVES_KEY) || '[]')) } catch { return new Set() }
 }
 function loadSubmissions() {
-  try { return JSON.parse(localStorage.getItem(SUBMISSIONS_KEY) || '[]') } catch { return [] }
+  return readCommunitySubmissions()
 }
 
-function SubmitModal({ onClose, onSubmit }) {
-  const [form, setForm] = useState({ name: '', author: '', url: '', category: 'Landing' })
+function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
+  const [form, setForm] = useState({ name: '', author: authorName || '', url: '', category: 'Landing' })
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -41,6 +43,7 @@ function SubmitModal({ onClose, onSubmit }) {
       id: 'u' + Date.now(),
       name: form.name.trim(),
       author: form.author.trim() || 'You',
+      ownerId: ownerId || undefined,
       category: form.category,
       url: url || '#',
       c1: '#3B82F6', c2: '#8B5CF6',
@@ -92,6 +95,8 @@ function SubmitModal({ onClose, onSubmit }) {
 }
 
 export default function Community({ toast }) {
+  const { user, userProfile } = useAuth()
+  const owner = getOwnerHandle(user?.email)
   const [saves, setSaves] = useState(loadSaves)
   const [submissions, setSubmissions] = useState(loadSubmissions)
   const [filter, setFilter] = useState('All')
@@ -102,7 +107,7 @@ export default function Community({ toast }) {
     try { localStorage.setItem(SAVES_KEY, JSON.stringify([...saves])) } catch { /* quota */ }
   }, [saves])
   useEffect(() => {
-    try { localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(submissions)) } catch { /* quota */ }
+    writeCommunitySubmissions(submissions)
   }, [submissions])
 
   const toggleSave = useCallback((id) => {
@@ -173,7 +178,14 @@ export default function Community({ toast }) {
         </div>
       )}
 
-      {submitOpen && <SubmitModal onClose={() => setSubmitOpen(false)} onSubmit={handleSubmit} />}
+      {submitOpen && (
+        <SubmitModal
+          onClose={() => setSubmitOpen(false)}
+          onSubmit={handleSubmit}
+          authorName={owner?.publicHandle || userProfile?.displayName || user?.displayName || ''}
+          ownerId={owner ? PUBLIC_OWNER_ID : undefined}
+        />
+      )}
     </div>
   )
 }

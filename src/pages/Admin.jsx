@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import { MODULE_BOARD } from '../data/moduleBoard'
 import { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../data/pipeline'
+import { resolvePromptProfileLink } from '../utils/promptSubmission'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 const STATUSES = ['new', 'in-progress', 'done']
@@ -377,6 +378,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
 
   const statusColor = { pending: 'var(--warn)', approved: 'var(--ok)', rejected: 'var(--err)' }[prompt.status] || 'var(--t2)'
   const statusBg = { pending: 'rgba(245,158,11,.1)', approved: 'rgba(16,185,129,.1)', rejected: 'rgba(239,68,68,.1)' }[prompt.status] || 'var(--bg-2)'
+  const profileLink = resolvePromptProfileLink(prompt)
 
   return (
     <div className="adm-card adm-prompt" style={{ borderLeftColor: statusColor }}>
@@ -384,7 +386,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
         <div className="adm-prompt-header">
           <span className="adm-badge" style={{ color: statusColor, background: statusBg }}>{prompt.status}</span>
           {prompt.authorName && <span style={{ fontSize: 11, color: 'var(--t2)' }}>by {prompt.authorName}</span>}
-          {prompt.authorEmail && <span style={{ fontSize: 10, color: 'var(--t3)' }}>({prompt.authorEmail})</span>}
+          {prompt.authorUid && <span title="Firebase user ID" style={{ fontSize: 10, color: 'var(--t3)' }}>UID {prompt.authorUid}</span>}
           <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
         </div>
 
@@ -416,9 +418,9 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
                 {prompt.tags.map(tag => <span key={tag} className="adm-prompt-tag">{tag}</span>)}
               </div>
             )}
-            {prompt.profileLink && (
+            {profileLink && (
               <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 8 }}>
-                Profile: <a href={prompt.profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>{prompt.profileLink}</a>
+                Profile: <a href={profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>{profileLink}</a>
               </div>
             )}
             {prompt.mediaUrl && (

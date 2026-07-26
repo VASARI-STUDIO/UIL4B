@@ -17,7 +17,6 @@ export const FINDINGS_FILE = path.join(REPORT_DIR, 'findings.jsonl')
 const EXPECTED_NOISE = [
   /_vercel\/insights/,
   /fonts\.googleapis\.com/, /fonts\.gstatic\.com/,
-  /accounts\.google\.com/, /apis\.google\.com/, /www\.gstatic\.com/,
   /googleapis\.com/, /firebaseinstallations/, /identitytoolkit/,
   /api\.iconify\.design/,
   /ERR_CONNECTION|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|ERR_TUNNEL/,
@@ -25,7 +24,22 @@ const EXPECTED_NOISE = [
 
 function isExpectedNoise(text, url) {
   const hay = `${text} ${url || ''}`
+  const knownGsiTeardownAbort = /AbortError.*signal is aborted|signal is aborted.*AbortError/i.test(hay)
+    && /accounts\.google\.com\/gsi|fedcm|google one tap|\bgsi\b/i.test(hay)
+  const knownFedCmTokenFailure = /\[GSI_LOGGER\]: FedCM get\(\) rejects with NetworkError: Error retrieving a token/i.test(hay)
+    && /accounts\.google\.com\/gsi/i.test(hay)
+  if (knownGsiTeardownAbort || knownFedCmTokenFailure) return true
   return EXPECTED_NOISE.some((re) => re.test(hay))
+}
+
+function isKnownGsiDocumentNoise(page, text, location, gsiRequested) {
+  if (!gsiRequested) return false
+  const documentLevel = (location.lineNumber || 0) === 0
+    && (location.columnNumber || 0) === 0
+    && location.url === page.url()
+  if (text === 'The request has been aborted.') return documentLevel
+  if (!/Provider's accounts list is empty/i.test(text)) return false
+  return documentLevel || /\[GSI_LOGGER\]|\bFedCM\b/i.test(text)
 }
 
 export function record(finding) {
@@ -38,6 +52,10 @@ export function record(finding) {
  * Returns { note } for recording soft UX observations mid-flow.
  */
 export function watch(page, persona) {
+  let gsiRequested = false
+  page.on('request', (request) => {
+    if (request.url().startsWith('https://accounts.google.com/gsi/')) gsiRequested = true
+  })
   page.on('pageerror', (err) => {
     record({
       persona,
@@ -49,14 +67,19 @@ export function watch(page, persona) {
   })
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return
-    const url = (msg.location() && msg.location().url) || ''
+    const location = msg.location() || {}
+    const url = location.url || ''
     if (isExpectedNoise(msg.text(), url)) return
+    if (isKnownGsiDocumentNoise(page, msg.text(), location, gsiRequested)) return
+    const source = url
+      ? ` (${url}${location.lineNumber != null ? `:${location.lineNumber}:${location.columnNumber || 0}` : ''})`
+      : ''
     record({
       persona,
       severity: 'error',
       kind: 'console-error',
       where: page.url(),
-      message: `${msg.text().slice(0, 300)}${url ? ` (${url})` : ''}`,
+      message: `${msg.text().slice(0, 300)}${source}`,
     })
   })
   return {

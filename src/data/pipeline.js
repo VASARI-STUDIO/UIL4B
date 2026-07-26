@@ -12,13 +12,13 @@
 // status: 'good' | 'watch' | 'blocked'
 export const APP_CONDITION = [
   { id: 'build', label: 'Build', value: 'Passing', status: 'good', detail: 'vite build clean' },
-  { id: 'lint', label: 'Lint', value: '0 errors', status: 'good', detail: '≤34 warnings (baseline)' },
+  { id: 'lint', label: 'Lint', value: '0 errors', status: 'good', detail: 'Advisory warnings tracked separately' },
   { id: 'functions', label: 'Serverless fns', value: '11 / 12', status: 'watch', detail: '1 slot free — consolidate before adding' },
-  { id: 'create', label: 'Create surface', value: 'Live', status: 'good', detail: 'Full tool suite shipped' },
-  { id: 'discover', label: 'Discover surface', value: 'Building', status: 'watch', detail: 'Gradients live; more resources coming' },
+  { id: 'create', label: 'Create surface', value: 'Polishing', status: 'watch', detail: 'Core tools live; public workflow QA in progress' },
+  { id: 'discover', label: 'Discover surface', value: 'Building', status: 'watch', detail: 'Galleries are intentionally a later workstream' },
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
-  { id: 'design-system', label: 'Design system', value: 'Consolidating', status: 'watch', detail: 'Brand-fill buttons on --accent-fg token; specialisation kept where justified' },
-  { id: 'phase', label: 'Current phase', value: 'Phase 16', status: 'good', detail: 'Audit implementation + QA' },
+  { id: 'design-system', label: 'Design system', value: 'Public consistency pass', status: 'watch', detail: 'Shared shell, controls and CTA patterns under review' },
+  { id: 'phase', label: 'Current phase', value: 'Public UI quality', status: 'watch', detail: 'Premium refresh, resilience and cross-device QA' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -34,22 +34,40 @@ export const PIPELINE_STAGES = [
 // stage: one of PIPELINE_STAGES ids · progress: 0–100
 export const PIPELINE_PROCESSES = [
   {
-    id: 'audit-impl',
-    name: 'Phase-16 audit implementation',
-    area: 'Quality',
-    stage: 'in-progress',
-    progress: 72,
-    summary: 'Turning the UX/UI/a11y/QA audit into shipped, tested improvements — slice by slice to main.',
-    updated: '2026-07-23',
+    id: 'public-ui-premium',
+    name: 'Premium public UI release',
+    area: 'Product',
+    stage: 'review',
+    progress: 88,
+    summary: 'A connected home, editorial mega-menu, shared CTA and footer system across every public surface.',
+    updated: '2026-07-25',
   },
   {
-    id: 'design-system',
-    name: 'Design-system consolidation',
-    area: 'Design',
+    id: 'colour-tools-polish',
+    name: 'Colour tools workflow polish',
+    area: 'Product',
+    stage: 'in-progress',
+    progress: 85,
+    summary: 'Gradient, tint, semantic and palette workflows are being refined around clearer actions, safer reset paths and responsive workbenches.',
+    updated: '2026-07-25',
+  },
+  {
+    id: 'library-workflow',
+    name: 'Icon + Emoji library workflow',
+    area: 'Product',
     stage: 'review',
-    progress: 55,
-    summary: 'Audited the ~61 bespoke button classes: most are justified specialisation, not duplication (#171 already removed the real duplicates). Shipped the safe unification — brand/accent-fill controls now use the --accent-fg token instead of hardcoded #fff (14 sites). Mass .btn migration deferred: it would flatten intentional design.',
-    updated: '2026-07-23',
+    progress: 92,
+    summary: 'One resilient library header with distinct modes, keyboard navigation, mobile layout and visible network state.',
+    updated: '2026-07-25',
+  },
+  {
+    id: 'public-page-qa',
+    name: 'Public-page release QA',
+    area: 'Quality',
+    stage: 'qa',
+    progress: 70,
+    summary: 'Build, lint, keyboard, narrow-screen, reduced-motion, loading and offline checks before release.',
+    updated: '2026-07-25',
   },
   {
     id: 'discover-buildout',
@@ -57,26 +75,8 @@ export const PIPELINE_PROCESSES = [
     area: 'Product',
     stage: 'in-progress',
     progress: 20,
-    summary: 'Community + curated-resource hub. Gradient library live; palettes, shadows and fonts still to come.',
-    updated: '2026-07-23',
-  },
-  {
-    id: 'a11y-pass',
-    name: 'Accessibility (WCAG AA) pass',
-    area: 'Quality',
-    stage: 'qa',
-    progress: 95,
-    summary: 'Contrast, target sizes, landmarks and keyboard paths — all shipped. The two items that needed a running app are now verified on a live build: mega-menu keyboard + ARIA (Enter/Escape, aria-expanded) and the 320px small-screen floor (no overflow across 14 routes).',
-    updated: '2026-07-23',
-  },
-  {
-    id: 'seo-pass',
-    name: 'SEO / metadata pass',
-    area: 'Growth',
-    stage: 'shipped',
-    progress: 100,
-    summary: 'Per-route titles/descriptions and a pruned sitemap. Shipped in the B3 slice.',
-    updated: '2026-07-23',
+    summary: 'Community and curated-resource galleries are the next product workstream after the public UI release.',
+    updated: '2026-07-25',
   },
   {
     id: 'learn-content',
@@ -85,7 +85,7 @@ export const PIPELINE_PROCESSES = [
     stage: 'backlog',
     progress: 0,
     summary: 'The "understand the why" surface. Routes and metadata exist; the articles do not yet.',
-    updated: '2026-07-23',
+    updated: '2026-07-25',
   },
   {
     id: 'community-backend',
@@ -94,7 +94,7 @@ export const PIPELINE_PROCESSES = [
     stage: 'backlog',
     progress: 10,
     summary: 'Media at scale needs a real backend. Escalated — a design decision before build.',
-    updated: '2026-07-23',
+    updated: '2026-07-25',
   },
   {
     id: 'billing-config',
@@ -103,22 +103,17 @@ export const PIPELINE_PROCESSES = [
     stage: 'backlog',
     progress: 0,
     summary: 'Owner-gated: create the retention coupon and enable cancellation in the Stripe Customer Portal. Code is ready; config is manual.',
-    updated: '2026-07-23',
+    updated: '2026-07-25',
   },
 ]
 
 // ── Next-to-do queue (prioritised) ──────────────────────────────────────────
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
-  { id: 'design-consistency', title: 'Consolidate bespoke buttons onto .btn', priority: 'P1', effort: 'L', area: 'Design', status: 'review', note: 'Investigated: ~61 bespoke -btn/-cta selectors are mostly justified specialisation (inverted copy buttons, colour swatches, steppers, 44px icon buttons, select triggers, serif tab switchers), not dead duplication — #171 already removed the real duplicate styles and no exact .btn clones remain. The one genuinely-safe consolidation shipped in this slice: aligning brand/accent-fill controls’ hardcoded color:#fff to var(--accent-fg) (14 sites) so they track the accent-foreground token like .btn-accent. A mass .btn migration would flatten intentional design (a UX regression) — recommend keeping specialisation and only unifying padding/radius where a bespoke button visibly drifts from the scale. Held for review (PR open, not merged).' },
-  { id: 'F1', title: 'Remove unpkg.com ffmpeg.wasm CDN dependency', priority: 'P1', effort: 'M', area: 'Infra', status: 'done', note: 'Self-hosted: ffmpeg core+wasm now bundled by Vite as fingerprinted same-origin assets — no third-party CDN.' },
-  { id: 'C3', title: 'Mega-menu accessibility retest', priority: 'P1', effort: 'M', area: 'A11y', status: 'done', note: 'Verified on a running build (Playwright, 1280px): all 3 Create/Discover/Learn triggers expose aria-haspopup + aria-expanded (false at rest), are keyboard-focusable, open on Enter (aria-expanded→true, 26 panel links reachable) and close on Escape (→false). Coming-soon tools carry visible soon-badge markers (22 found) rather than looking clickable.' },
-  { id: 'D2', title: '320–360px small-screen floor', priority: 'P1', effort: 'M', area: 'Responsive', status: 'done', note: 'Verified on a running build (Playwright, 320px viewport): swept all 14 public routes (home, plans, pricing, discover/gradients, color-studio, palette, gradients, contrast, community, about, faq, sitemap, help) — zero horizontal overflow at the 320px floor on every one.' },
-  { id: 'B4', title: 'De-emphasise "Soon" groups in Create mega-menu', priority: 'P2', effort: 'S', area: 'Nav', status: 'done', note: 'Shipped (#171): coming-soon groups dimmed + de-prioritised so live tools lead.' },
-  { id: 'E2', title: 'Migrate inline transition durations to --dur-* tokens', priority: 'P2', effort: 'M', area: 'Design', status: 'review', note: 'Canonical motion scale now documented (css-conventions.md → Motion). ~290 raw-literal durations remain; dominant off-scale value is .15s (×122) which snaps to no token. Recommend a reviewed retune (150ms→120ms or 200ms is a judgement call, not find-replace) rather than a blind migration — snapping changes perceived speed.' },
-  { id: 'E3', title: 'Success motion on export / copy / save', priority: 'P2', effort: 'M', area: 'Design', status: 'done', note: 'Shipped (#172): spring-pop + check-draw toast confirmation, fully reduced-motion-safe.' },
-  { id: 'D1', title: 'Normalise breakpoints to a named scale', priority: 'P2', effort: 'M', area: 'Responsive', status: 'review', note: 'Named scale now documented (css-conventions.md → Responsive breakpoints): 980/768/640/560/480/380 + 320 floor. ~12 content-specific one-offs (1180/1024/960/900/880/…) remain, each tied to a component reflow width. Recommend consolidating only where a one-off is within a few px of a scale value — the rest are geometry-driven and moving them can reintroduce overflow.' },
-  { id: 'D3', title: 'Confirm / add 4K max-width ceilings', priority: 'P2', effort: 'S', area: 'Responsive', status: 'done', note: 'Shipped (#172): content-measure ceilings so wide screens do not stretch edge-to-edge.' },
+  { id: 'public-release-qa', title: 'Complete public-page release QA', priority: 'P0', effort: 'M', area: 'Quality', status: 'doing', note: 'Verify every public route at desktop and mobile widths, including keyboard, reduced-motion, loading, offline and slow-network states.' },
+  { id: 'fout-font-gallery', title: 'Remove Font Gallery first-load font flash', priority: 'P1', effort: 'M', area: 'Performance', status: 'todo', note: 'Known deferred issue; solve when Font Gallery is next in scope.' },
+  { id: 'discover-buildout', title: 'Build Discover galleries', priority: 'P1', effort: 'L', area: 'Product', status: 'todo', note: 'Founder intentionally deferred Discover work until after this public UI release.' },
+  { id: 'learn-content', title: 'Build the Learn content library', priority: 'P2', effort: 'L', area: 'Content', status: 'todo', note: 'Information architecture exists; articles and learning journeys remain.' },
   { id: 'F4', title: 'Stripe checkout / retention config', priority: 'P1', effort: 'S', area: 'Infra', status: 'blocked', note: 'Owner-gated — manual Stripe dashboard config.' },
   { id: 'F3', title: 'Community publishing backend', priority: 'P1', effort: 'L', area: 'Product', status: 'blocked', note: 'Escalated — needs a design decision first.' },
 ]

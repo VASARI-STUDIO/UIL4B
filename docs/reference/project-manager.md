@@ -12,6 +12,19 @@ work to the right specialist agent(s) via the Agent tool, relays their findings
 back, and performs the actions subagents can't (opening and squash-merging PRs
 via the GitHub MCP tools).
 
+## Keep agents, skills, and sources distinct
+
+Agents own an accountable role and its judgement. Skills own reusable methods
+and domain knowledge. Canonical project documents and live code own current
+facts. The private Vasari Studio wiki may inform work, but a repository agent
+must not depend on a local vault path; distil durable knowledge into a
+project-scoped skill or reference document first.
+
+For brand-facing work, route the relevant agent through
+`.claude/skills/uil4b-brand-design/SKILL.md`. Fonts, colours, visual systems, and
+anti-slop design knowledge belong there or in the live sources it names, not in
+the design agent's persona.
+
 ## 🚫 HARD RULE: the PM never writes or edits code
 
 **The PM does not write, edit, or refactor code, CSS, or config — ever.** No

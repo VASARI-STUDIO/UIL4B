@@ -23,13 +23,12 @@ export const CREATE_GROUPS = [
     desc: 'Palettes, tints, gradients and contrast — one system.',
     soon: false,
     // Every colour feature is its own tool on its own page. /color stays the
-    // merged full studio; palette/semantic/ui/gradient render the studio
+    // merged full studio; palette/semantic/gradient render the studio
     // focused on their section, while tint + contrast are standalone pages.
     tools: [
       { id: 'palette', label: 'Palette', route: '/color/palette', soon: false },
       { id: 'semantic', label: 'Semantic Colour', route: '/color/semantic', soon: false },
       { id: 'tint', label: 'Tint', route: '/color/tint', soon: false },
-      { id: 'ui-colour', label: 'UI Colour', route: '/color/ui', soon: false },
       { id: 'gradient', label: 'Gradient', route: '/color/gradient', soon: false },
       { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', soon: false },
     ],
@@ -142,7 +141,7 @@ export const LEARN_GROUPS = [
 // groups — "Icons", "Media" (converter + aspect calculator) and "AI" — so each
 // gets its own eyebrow without forcing a fourth (cramped) grid column.
 //
-// NOTE: the six Colour rows are real pages under /color/<tool> (see
+// NOTE: the five Colour rows are real pages under /color/<tool> (see
 // CREATE_GROUPS above) — createRoutes() picks them up automatically.
 const CREATE_MENU = [
   [{
@@ -153,7 +152,6 @@ const CREATE_MENU = [
       { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', icon: 'contrast', hue: 'colour', soon: false },
       { id: 'tint', label: 'Tint', route: '/color/tint', icon: 'tint', hue: 'colour', soon: false },
       { id: 'semantic', label: 'Semantic Colour', route: '/color/semantic', icon: 'semantic', hue: 'colour', soon: false },
-      { id: 'ui-colour', label: 'UI Colour', route: '/color/ui', icon: 'ui-colour', hue: 'colour', soon: false },
     ],
   }],
   [{

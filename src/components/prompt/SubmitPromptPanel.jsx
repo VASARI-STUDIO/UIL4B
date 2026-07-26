@@ -3,6 +3,7 @@ import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../../utils/firebase'
 import { processImageForUpload } from '../../utils/imageProcessing'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../../utils/mediaUpload'
+import { buildCommunityPromptRecord } from '../../utils/promptSubmission'
 
 // Community-submission form. Fully self-contained — owns its inputs, media
 // handling, and the Firestore write. Tells the parent to close on success.
@@ -44,17 +45,14 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
     setSubmitting(true)
     let mediaDropped = false
     try {
-      const doc = {
-        title: submitTitle.trim() || submitText.trim().slice(0, 60),
-        text: submitText.trim(),
-        tags: submitTags.trim(),
-        authorEmail: user.email,
-        authorName: userProfile?.displayName || user.email?.split('@')[0],
-        authorUid: user.uid,
-        authorProfile: submitProfile.trim() || null,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      }
+      const doc = buildCommunityPromptRecord({
+        user,
+        userProfile,
+        title: submitTitle,
+        text: submitText,
+        tags: submitTags,
+        profileLink: submitProfile,
+      })
       if (submitMediaPreview) {
         doc.mediaType = submitMediaPreview.type
         // Preferred path: upload the processed media to Firebase Storage and

@@ -4,7 +4,7 @@ _The **read-first** doc: current direction + a live status snapshot, with the
 detail split out so a session reads only the slice it needs. Update the snapshot
 **in place** — no dated copies, no parallel backlog._
 
-_Last updated: 2026-07-11._
+_Last updated: 2026-07-25._
 
 ---
 
@@ -25,10 +25,10 @@ Full rebuild detail (the two "not-ready" systems, phases, cluster-by-cluster log
 
 ---
 
-## Status snapshot (2026-07-11)
+## Status snapshot (2026-07-25)
 
-**`main` health:** build green · ESLint 0 errors / ~30 advisory warnings (all
-pre-existing `set-state-in-effect` hints — match, never add).
+**Release-branch health:** production build green · ESLint 0 errors. Advisory
+warnings remain a separately tracked baseline; do not add new ones.
 
 **Live on `main`:** the rebuild is shipped. Mega-menu nav (Create/Discover/Learn,
 "Soon" badges), Mobbin-style **living-preview** home, unified **Icon + Emoji**
@@ -52,32 +52,25 @@ expanded state); and the full visual **`/sitemap`** page — every destination l
 out by surface, Create/Discover/Learn derived from `toolTree.js` so it can't drift
 (distinct from the crawler-facing `public/sitemap.xml`). All build+lint+QA-gated.
 
-**Next / founder-gated — Cluster D remainder:**
-- **Price flip (real money — founder only).** UI is ready — every surface reads
-  live `/api/get-prices`, so nothing displays a price Stripe doesn't charge
-  (#145). What's left is the **founder saving the new ladder in Stripe**: monthly
-  **$4.99 AUD**, yearly **≈$41.99 AUD**, lifetime **$129 AUD**, `.99` international
-  (USD/EUR/GBP/NZD/CAD). A live price is a Human Validation Zone; exact steps in
-  [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). Lifetime also **needs code first**
-  (one-time price + `mode:'payment'` + webhook flag) — kept a "coming soon"
-  placeholder, not advertised. Optional: a dedicated **Plans** page + removing the
-  pricing block from Settings.
-- **Google-profile default avatar** (overridable) — touches `GoogleOneTap.jsx` /
-  `AuthContext.jsx` (HVZ), needs founder sign-off.
+**Active release — public UI quality (`release/premium-public-ui-refresh`):**
 
-**Active work order (2026-07-15):** founder brief for Palette v3 + site-wide
-design-system consistency is parsed and sequenced into 7 waves →
-[`build-plan/palette-v3-plan.md`](build-plan/palette-v3-plan.md). **Start there.**
+- Premium public shell: a connected-system home hero, task-led editorial
+  mega-menus, distinct Icon Library glyph, shared beams-style closing CTA and a
+  clearer public footer.
+- Colour workflows: Gradient, Tint, Semantic and Palette refinements, including
+  Palette Reset + Undo. The standalone **UI Colour** destination is removed from
+  public IA; `/color/ui` safely redirects to `/color`.
+- Library workflow: Icon + Emoji share one resilient command header with
+  keyboard navigation, mobile composition, loading and offline feedback.
+- Community identity: the founder's public handle is **Dylan Coleman 👑**, with a
+  gold owner treatment that retains text/crown semantics.
+- Release gate: build, lint, focused interaction tests, then desktop/mobile,
+  keyboard, reduced-motion and slow-network review across all public pages.
 
-**Phase-16 UX/accessibility audit — follow-up in flight (2026-07-22):** the
-audit's first tranche shipped to `main` (#164 — gradient lockable-settings on
-randomise + click-to-add-stop, palette toolbar single-line, homepage redesign).
-A second Palette Builder pass is on `claude/audit-implementation-qa-a1hjzp`:
-**Vision type** now splits each swatch (top = palette colour, bottom = the
-colour-vision simulation), retiring the standalone "Colour blindness" button and
-its split-screen modal so one control does the job; plus slide-close on remove,
-the community gallery staying open on select, icon-button label slide-out, and a
-one-line Icon Customizer footer. build+lint+QA-gated.
+**Next:** Discover-page build-out remains intentionally deferred until this
+release is complete. Learn content, the Font Gallery FOUT and the owner-gated
+Stripe/community-backend work stay in the live pipeline rather than duplicated
+here.
 
 **Known bugs & deferred backlog** → [`build-plan/roadmap.md`](build-plan/roadmap.md).
 
