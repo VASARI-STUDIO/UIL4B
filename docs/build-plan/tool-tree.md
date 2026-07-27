@@ -9,10 +9,9 @@ nav. Founder-confirmed 2026-07-02. Hub → [`../BUILD-PLAN.md`](../BUILD-PLAN.md
 
 **Top nav:** logo · **Create ▾** · **Discover ▾** · **Learn ▾** · search ·
 account. Each ▾ opens a mega-menu (Coolors footer style: large bold main-tool
-heading + smaller sub-tool links with one-line descriptions). **A left in-tool
-sidebar exists ONLY inside tool pages** — quick access to sibling tools in the
-same Create group; at its bottom a **CTA to Upgrade**, which becomes a **profile
-link** if the user is already Pro.
+heading + smaller sub-tool links with one-line descriptions). Tool pages use the
+top navigation and a full-width workbench; the retired left rail is not part of
+the current shell.
 
 **Home (`/`)** = the Mobbin-style **sales page** (the "living preview" — the page
 itself is a working demo). **Dashboard is removed.** The "Create" label + surface
@@ -21,8 +20,8 @@ id is `create` (renamed from the old `workspace`).
 **Two "not-ready" systems, kept distinct:**
 1. **Blank TBD tool pages** — public, in the nav, **"Soon"-badged**, "coming
    soon" (chosen over a `#` prefix so the public menu reads as intentional).
-2. **Hidden tools** reached by direct URL — the re-skinned
-   "🤫 You found something we're still building" page (`ComingSoon.jsx`).
+2. **Unbuilt direct routes** — resolved by `CreateTool` to the same honest
+   workshop state; dormant implementations are not mounted until activated.
 
 ---
 
@@ -30,14 +29,15 @@ id is `create` (renamed from the old `workspace`).
 
 Main tools = **large heading** (a *system* with sub-tools built in). Sub-tools =
 **smaller font** beneath, each also getting its **own standalone page** (reused
-components). Colour is **one** client-side tool (no Vercel function). We stay
-within the **12/12 serverless-function cap** — the rebuild adds no functions.
+components). Colour is client-side (no Vercel function). We currently use
+**11 of 12 serverless functions** — one slot remains, and new concerns should
+consolidate before consuming it.
 
 ### CREATE (build)
 
-- **Colour System Generator** — _one merged tool_ (`/color`)
+- **Colour System Generator** — landing at `/color`
   - Palette Generator · Semantic (UI-state) Colour Generator · Tint Generator ·
-    Gradient Generator · Contrast Checker
+    Gradient Generator · Contrast Checker, each live at `/color/*`
 - **Typography System Builder**
   - Font Gallery `→ /fontgallery` · Font Pair Tool `→ /fontpairs` · Type Scale `→ /typescale`
 - **UI Component Builder**
@@ -72,7 +72,7 @@ within the **12/12 serverless-function cap** — the rebuild adds no functions.
 
 ## Reusable tool code (do NOT delete — reuse when each tool is actioned)
 
-Colour Studio (`/color`, already merges palette/tints/contrast/gradients) ·
+Colour tools (`/color/*`; `/color` is their landing) ·
 Typography (`/fontgallery`, `/fontpairs`, `/typescale`) · UI (`/ui-builder`,
 `/box-shadow`, `/auto-builder`) · Imagery (`/file-converter`, `/ratio`) · AI
 (`/ai-prompt`, `/landing-prompts`, `/alt-text`, `/prompts`) · Icons/Emoji
@@ -80,5 +80,5 @@ Typography (`/fontgallery`, `/fontpairs`, `/typescale`) · UI (`/ui-builder`,
 
 **Kept infra/features:** Firebase Auth/Firestore, Stripe, OpenRouter/Gemini AI,
 feedback tool, admin dashboard, `sections.jsx` surface model (Workspace→Create),
-`ComingSoon.jsx` hidden-tool page. **Removed:** Dashboard page; all prior design
-styling. Backup of the pre-rebuild app: `backup/pre-redesign-2026-07-02`.
+and the `CreateTool` workshop state. **Removed from runtime:** Dashboard and the
+old tool rail. Backup of the pre-rebuild app: `backup/pre-redesign-2026-07-02`.

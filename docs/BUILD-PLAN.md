@@ -4,7 +4,7 @@ _The **read-first** doc: current direction + a live status snapshot, with the
 detail split out so a session reads only the slice it needs. Update the snapshot
 **in place** — no dated copies, no parallel backlog._
 
-_Last updated: 2026-07-25._
+_Last updated: 2026-07-28 · current `main`: `1e7fbdd`._
 
 ---
 
@@ -25,52 +25,31 @@ Full rebuild detail (the two "not-ready" systems, phases, cluster-by-cluster log
 
 ---
 
-## Status snapshot (2026-07-25)
+## Status snapshot (2026-07-28)
 
 **Release-branch health:** production build green · ESLint 0 errors. Advisory
 warnings remain a separately tracked baseline; do not add new ones.
 
-**Live on `main`:** the rebuild is shipped. Mega-menu nav (Create/Discover/Learn,
-"Soon" badges), Mobbin-style **living-preview** home, unified **Icon + Emoji**
-library, reused Colour / Typography / Imagery / AI tool shells, **Discover +
-Learn** sales pages (with the Brisbane world-map marker), **Settings** restyled
-(Accessibility section, initials-on-gradient default avatar, city/country
-autocomplete). That covers **Clusters A–C, E, F, G** and **Cluster D's safe
-slice** (PRs #134–#145). Colour→Color first-paint flash fixed (#141). Curated
-agent skills vendored + dead preview images removed (#142). Every price surface
-(Landing, Settings, Onboarding, Checkout, HelpCentre) now reads live Stripe data
-via `src/hooks/usePrices.js`, so the founder's price flip propagates to the whole
-UI with zero code change (#145).
+**Live on `main` (`1e7fbdd`):** **v2.7 is shipped.** It includes the premium
+public shell; refined Palette, Gradient, Tint and Semantic workflows; the
+resilient Icon + Emoji library command surface; shared CTA/footer patterns; the
+retired UI Colour redirect; and the founder's accessible public owner treatment.
+The homepage bridge in `1e7fbdd` connects the hero controls to the real living
+workspace preview rather than presenting a detached mock-up.
 
-**July backlog — fully shipped to production (direct-to-`main`):** OpenRouter AI
-migration; nav mega-menu column redesign; public **`/plans`** pricing page with
-upgrade-CTA routing; three live Create tools wired (**Colour Studio** at `/color`,
-**File Converter** + **Aspect Ratio** under Imagery); Icon/Emoji perf overhaul
-(keep-alive tabs, collection cache, **My Icons** page); the nav-pill rework
-(3-dots at rest, merged profile+settings popover, cog-on-hover avatar, wider
-expanded state); and the full visual **`/sitemap`** page — every destination laid
-out by surface, Create/Discover/Learn derived from `toolTree.js` so it can't drift
-(distinct from the crawler-facing `public/sitemap.xml`). All build+lint+QA-gated.
+The broader rebuild remains live: Create/Discover/Learn mega-menus, public
+`/plans`, visual `/sitemap`, live Stripe-backed price display, Settings, account
+and Admin surfaces. `/color` is the colour-system landing; its five live tools
+remain scoped to `/color/*`. Discover is intentionally partial: Gradient Gallery
+is live and the wider gallery workstream is queued at 20%. Learn remains a
+coming-soon shell; dormant article files are not treated as published content.
 
-**Active release — public UI quality (`release/premium-public-ui-refresh`):**
-
-- Premium public shell: a connected-system home hero, task-led editorial
-  mega-menus, distinct Icon Library glyph, shared beams-style closing CTA and a
-  clearer public footer.
-- Colour workflows: Gradient, Tint, Semantic and Palette refinements, including
-  Palette Reset + Undo. The standalone **UI Colour** destination is removed from
-  public IA; `/color/ui` safely redirects to `/color`.
-- Library workflow: Icon + Emoji share one resilient command header with
-  keyboard navigation, mobile composition, loading and offline feedback.
-- Community identity: the founder's public handle is **Dylan Coleman 👑**, with a
-  gold owner treatment that retains text/crown semantics.
-- Release gate: build, lint, focused interaction tests, then desktop/mobile,
-  keyboard, reduced-motion and slow-network review across all public pages.
-
-**Next:** Discover-page build-out remains intentionally deferred until this
-release is complete. Learn content, the Font Gallery FOUT and the owner-gated
-Stripe/community-backend work stay in the live pipeline rather than duplicated
-here.
+**Next queue:** canonical public-route, metadata and sitemap truth is P0, followed
+by the static OG card, account-menu keyboard completion and global 404/offline
+states. Discover and Learn remain separate queued workstreams. Font Gallery FOUT
+and accessibility are deferred until that route is activated. Owner/HVZ blocks
+(OpenRouter key, Stripe retention and live checkout QA, Firebase critical-path
+changes) stay explicit in the pipeline and owner list.
 
 **Known bugs & deferred backlog** → [`build-plan/roadmap.md`](build-plan/roadmap.md).
 
@@ -84,7 +63,7 @@ here.
 | [`build-plan/tool-tree.md`](build-plan/tool-tree.md) | building/placing a tool or touching nav — the CREATE/DISCOVER/LEARN tree, site structure, reusable-code inventory, the 12-function cap |
 | [`build-plan/roadmap.md`](build-plan/roadmap.md) | needing history/what's-next — rebuild detail, phases, the cluster A–G log, known bugs, deferred backlog |
 | [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md) | anything the founder must do (Stripe prices, keys, infra) |
-| [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md) | founder-gated calls I reached but stopped before executing (free-tier number, typeface, auth/Stripe HVZ) — one-line answers unblock each |
+| [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md) | genuinely open founder calls: free caps, community architecture, SEO prerender and lifetime tier direction |
 
 **How work ships:** `research → design → engineer → code-review + security-review →
 secret-scan → qa → ship`. One PR per slice → squash-merge to `main` → realign the

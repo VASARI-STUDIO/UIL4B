@@ -1,92 +1,50 @@
 # UIL4B — Decisions Needed (founder-gated)
 
-Short list of items that need a **founder call** before code moves. Every item is
-written so you can decide in one line; once you do, the change is small and ships
-fast.
+Only genuinely open product or architecture calls belong here. Owner-only
+dashboard/configuration work lives in [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md);
+execution order lives in `src/data/pipeline.js`.
 
-> Distinct from [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md) (things only *you* can do
-> in a dashboard). These are things **I can do**, but shouldn't guess at.
-> Last reviewed 2026-07-12.
+_Last reviewed: 2026-07-28._
+
+Resolved 2026-07-12 HVZ decisions and their security-review provenance are
+preserved in
+[`audit/HVZ-DECISIONS-2026-07-12.md`](audit/HVZ-DECISIONS-2026-07-12.md).
 
 ---
-
-## Open decisions
 
 ## 1. Confirm the free-tier cap numbers
 
-The Free plan now **enforces** 3 saved projects / 8 custom icons (single source
-of truth: `FREE_SAVE_LIMITS` in `SubscriptionContext`; `/plans` copy reads the
-same values). Those numbers came from your earlier note — **confirm they're the
-caps you want**. Changing them is a one-line edit and every surface updates.
-**One-word reply:** `keep` · or `caps <projects>/<icons>`.
+Free currently enforces **3 saved projects / 8 custom icons** through
+`FREE_SAVE_LIMITS`; `/plans` reads the same source.
 
----
+**Reply:** `keep` · or `caps <projects>/<icons>`.
 
-## ✅ Resolved this pass (previously listed here — no decision left)
+## 2. Choose the community publishing architecture
 
-0. **Merge the feature branch** — resolved 2026-07-12: on your instruction
-   ("push all changes to main") the branch was fast-forwarded onto `main`
-   (`b2c07b1` → `e5f75d1`). The HVZ security review below was completed before
-   the merge, all clear.
+The local-first Community surface works, but durable media, moderation,
+cross-device submissions and palette-handle uniqueness need one backend
+decision. Choose:
 
-**HVZ security review (done 2026-07-12, all clear):**
-- *Admin Pro entitlement* — the grant only derives from a server-verified
-  Firebase ID token: `planForUser` (`api/_lib/plans.js`) checks the token email
-  against a hardcoded allowlist, and every AI endpoint passes the email **only
-  when `decoded.email_verified` is true**, so registering the admin address
-  unverified gets nothing. The client-side `isAdmin` flag is cosmetic — every
-  paid call re-verifies server-side, so flipping it in devtools unlocks nothing.
-  Non-admins cannot mint Pro.
-- *verify-admin `includeUsers`* — the cross-user list is returned **only**
-  inside the `isAdmin` branch (verified email + allowlist), so no non-admin
-  token can pull user data. The Users tab keeps the response in memory only
-  (never localStorage), masks emails by default, and reveals per explicit
-  toggle; the CSV export (full emails) is an intentional admin feature.
-- *setup-stripe* — GET and POST both sit behind the same verified-email
-  allowlist (403 otherwise); amounts are validated (0 < n ≤ 100 000, supported
-  currencies only) before any Stripe write.
-- *Multi-account switching* — the localStorage registry stores **display data
-  only** (uid, email, name, photo); no tokens or credentials ever persist, and
-  switching always re-authenticates through Firebase (Google `login_hint` popup
-  or the login page). On a shared computer the account emails are visible in
-  the switcher — same behaviour as Google's own account chooser.
-- *Pre-existing, unchanged:* the `/api` routes send `Access-Control-Allow-Origin: *`;
-  safe because the bearer ID token is the credential and browsers never attach
-  it cross-origin automatically — noted for completeness, not introduced by
-  this branch.
+- `local-first` — keep public seed/local submissions and defer durable publishing;
+- `firebase` — Firestore + Storage, with a transactional lowercased handle
+  registry and moderation state;
+- `separate-backend` — define the service before more Community features ship.
 
-1. **Free-tier "saves" copy vs. product** — resolved by *enforcing* a real cap
-   (3 projects / 8 icons) and aligning the `/plans` copy — `6faabc5`. Only the
-   number-confirmation above remains.
-2. **App typeface** — Outfit confirmed and locked as the single app-wide
-   typeface (`--font` + `--serif` both resolve to Outfit; export templates and
-   the font-browser intentionally excepted). Nothing further to decide.
-3. **Multi-account switching (#7)** — approved, designed, and shipped:
-   device-level account switcher with silent re-auth where possible, Login
-   hand-off otherwise — `e3f5f30`. HVZ — security review passed, merged.
-4. **Admin premium + checkout bypass (#10)** — approved and shipped: allowlisted
-   founder accounts resolve to Pro without Stripe, server-verified
-   (`email_verified` required) so it cannot mint Pro for non-admins — `8cc2b99`.
-   HVZ — security review passed, merged.
-5. **Admin dashboard rebuild (#12/#13)** — approved and shipped — `eaca7bd`:
-   - **Overview** regrouped into four visually separated categories (Traffic &
-     Engagement / Audience / Feedback & Community / Setup).
-   - **Submissions** — search, per-type/per-status counts, status summary,
-     newest/oldest toggle.
-   - **Stripe pricing** — edit one price and every currency (monthly + yearly)
-     auto-fills to the nearest `.99`, scaled off the default ratios; checkbox to
-     disable for manual fine-tuning.
-   - **Users tab (#13)** — emails masked behind per-row eye toggles (first
-     characters shown, rest blurred), plan / role / category / country
-     (flag + tooltip) / joined / last-login columns, column sorting, search +
-     plan + per-country chip filters with counts (answers "how many users from
-     X"), CSV export. Data comes from an admin-gated server endpoint (Admin SDK),
-     with a this-browser fallback if the server list is unavailable.
-6. **Login + pricing polish (#4/#5)** — shipped as chrome/presentation only:
-   login card polish + trust line (`a758b09`), `/plans` value-prop and Get Pro
-   pill polish (`bdb0aa2`, `7691a31`). No checkout wiring touched.
+**Reply:** `community local-first` · `community firebase` · or
+`community separate-backend`.
 
-Also shipped on the same branch (never needed a decision): Mobbin-style nav
-redesign with centred search (`88a4fd2`), colour tools split into their own
-pages (`c5778b1`), guided brand-kit builder entry (`b9c9d5b`), icon-editor
-retention features, File Converter + Aspect Ratio redesigns, i18n parity fixes.
+## 3. Decide whether to prerender public SEO routes
+
+UIL4B remains a client-rendered Vite SPA. Prerendering improves crawlable route
+content but changes the build/deploy architecture and must define which public
+tool, Discover and Learn routes are eligible.
+
+**Reply:** `prerender yes` · `prerender defer` · or `prerender no`.
+
+## 4. Set the lifetime tier direction
+
+No lifetime price or entitlement exists. Shipping it requires one-time Stripe
+checkout, webhook persistence and plan resolution; creating a dashboard price
+before that work would let a customer pay without receiving Pro.
+
+**Reply:** `lifetime build` · `lifetime defer` · or `lifetime remove`.

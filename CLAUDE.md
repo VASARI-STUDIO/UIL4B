@@ -96,7 +96,12 @@ Read the relevant one before working in that area.
   product identity, product/sales continuity, and anti-slop quality bar. Read for
   any brand-facing design, implementation, or review.
 
-**State & planning (two living areas):** [`BUILD-PLAN.md`](docs/BUILD-PLAN.md)
-(hub: direction + live status; sub-files in [`docs/build-plan/`](docs/build-plan)
-for the tool tree + roadmap) · [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md)
-(founder-only infra tasks) · subagent roster [`.claude/agents/README.md`](.claude/agents/README.md).
+**State & planning (canonical map):**
+[`BUILD-PLAN.md`](docs/BUILD-PLAN.md) owns direction + the compact live snapshot;
+`src/data/pipeline.js` owns execution order, blocks and current workstreams;
+`src/data/moduleBoard.js` owns per-module status; [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md)
+owns founder-only dashboard/credential work; [`DECISIONS-NEEDED.md`](docs/DECISIONS-NEEDED.md)
+owns only unresolved founder calls. [`docs/build-plan/`](docs/build-plan) retains
+the stable tool tree + roadmap; [`docs/audit/`](docs/audit) is closed evidence,
+never a competing backlog. Subagent roster:
+[`.claude/agents/README.md`](.claude/agents/README.md).

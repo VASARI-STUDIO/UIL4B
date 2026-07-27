@@ -1,57 +1,41 @@
 # UIL4B — Owner Action List
 
 Things only **you** can do (credentials, dashboards, infra) to fully activate the
-work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-15.
+work that's now in the codebase. Ordered by impact. Last reviewed 2026-07-28.
 
-> **⚠ Status is uncertain — verify before you fix.** As of 2026-06-30 you weren't
-> sure which of these you'd already done, and the agent environment **cannot reach
-> `uil4b.com` to check for you** (outbound to the production domain is blocked by
-> the sandbox network policy — a `403 CONNECT` on every request). So each item
-> below now leads with a **self-check you can run in ~30 seconds**. Run the check
-> first; only do the fix if the check fails. Nothing here is destructive — re-doing
-> an already-done step is harmless.
+> **Reachability status (2026-07-28):** the production AI diagnostic was reachable
+> and confirmed Firebase credentials plus Gemini are healthy. Dashboard mutations
+> remain owner-only, so each manual action still starts with a read-only check.
+> Do not repeat a completed dashboard action just because it appears in history.
 
 ---
 
-## 🔴 1. Make the AI features work again (CRITICAL)
+## 🔴 1. Add the missing OpenRouter primary key
 
 **▶ Check first (30 sec):** open
 `https://uil4b.com/api/ai?diag=uil4b-dev-2026` in your browser (or
-`curl` it). You want to see `firebaseCredential: "ok"` and both `GEMINI_API_KEY`
-and `OPENROUTER_API_KEY` reported as `set (… chars)`. If all three are healthy,
-**this item is done — skip the fix.** (Even quicker: sign in and open the Alt Text
-Generator; if it works, AI is alive.)
+`curl` it).
 
-**Last known state (2026-06-20 diagnostic — may be stale if you've since fixed it):**
+**Verified production state (2026-07-28):**
 
-| Env var | Status then | Verdict |
+| Env/config | Status | Verdict |
 |---|---|---|
-| `GEMINI_API_KEY` | **set (39 chars)** | ✅ present, correct length |
-| `OPENROUTER_API_KEY` | **MISSING** | ❌ not set in Production (replaces DEEPSEEK_API_KEY) |
-| `FIREBASE_SERVICE_ACCOUNT_KEY` | **set, but not valid service-account JSON** | ❌ malformed |
+| Firebase Admin credential | **healthy** | ✅ token verification works |
+| `GEMINI_API_KEY` | **set** | ✅ production AI fallback is available |
+| `OPENROUTER_API_KEY` | **MISSING** | ❌ intended primary provider is unavailable |
 
-If the check above still shows those failures: every AI tool verifies your login
-(`verifyIdToken`) *before* calling the AI model, and that needs a valid
-service-account credential. A malformed `FIREBASE_SERVICE_ACCOUNT_KEY` (the code
-snippet from that page, the web-app `firebaseConfig`, or a partial paste — instead
-of the real service-account JSON) makes auth fail, so **every** AI tool dies no
-matter how correct the AI keys are.
+AI is therefore operational through Gemini; this is provider completion, not an
+AI outage.
 
-**Fix (≈5 min):**
+**Fix (≈3 min):**
 
-1. **`FIREBASE_SERVICE_ACCOUNT_KEY`** — replace the value:
-   - Firebase Console → ⚙ **Project Settings → Service Accounts → Generate new private key** → a `.json` file downloads.
-   - Open it, copy the **entire** contents (starts with `{"type":"service_account","project_id":"uil4b-357c5",...}`) and paste that as the value. **Not** the code snippet on that page, **not** the web `firebaseConfig`.
-   - Scope: **Production** (+ Preview if you want previews to work).
-2. **`OPENROUTER_API_KEY`** — the primary AI provider (replaces DeepSeek). Add it (OpenRouter → https://openrouter.ai/keys, key starts with `sk-or-`), scoped to **Production**, no surrounding quotes/spaces. *(Gemini already works as the fallback, so AI will function once Firebase is fixed even before you add OpenRouter — but OpenRouter is the primary prompt model, so add it.)* Optional: `OPENROUTER_MODEL` to override the default `deepseek/deepseek-chat`.
-3. **Redeploy** — Vercel env-var changes only take effect on the next deployment.
-4. **Verify** — re-run the diagnostic URL above. You want `firebaseCredential: "ok"` and both keys `set (... chars)`. (Or just open the Alt Text Generator while signed in — the on-screen error now names the exact cause.)
-
-The code now strips stray quotes/newlines from the AI keys and decodes a double-encoded
-service-account blob, so a *slightly* mis-pasted value self-heals — but an outright-wrong value
-(as now) still needs re-pasting. All three keys are server-only (never `VITE_`):
-`FIREBASE_SERVICE_ACCOUNT_KEY` (verifies logins on every AI call), `GEMINI_API_KEY`
-(alt-text + photo-scan + fallback), `OPENROUTER_API_KEY` (prompt generation).
+1. Create/copy an OpenRouter key from <https://openrouter.ai/keys>.
+2. In Vercel, add `OPENROUTER_API_KEY=sk-or-…` to **Production** (and Preview if
+   previews should exercise the primary provider), with no surrounding quotes.
+3. Optional: set `OPENROUTER_MODEL`; otherwise the code uses
+   `deepseek/deepseek-chat`.
+4. Redeploy, then rerun the diagnostic. Firebase and Gemini should remain healthy
+   and OpenRouter should report `set (… chars)`.
 
 ---
 
@@ -192,41 +176,21 @@ aggregate-analytics panel waits on the rules publish.)*
 
 ---
 
-## 🟡 5. Create the social-share image (`og-image.png`)
-
-`index.html` references `https://www.uil4b.com/previews/og-image.png` for link previews, but the file doesn't exist — so every shared link currently shows a broken/blank card. Drop a **1200×630 PNG** at `public/previews/og-image.png` (a branded card: wordmark + tagline on the dark theme). If you'd rather, give me the wording/look and I'll generate it.
-
-*Update 2026-07-15: palette share links (`/p/:code`) are now covered — `/api/share` generates a dynamic OG card + palette-stripe PNG per link. The static `og-image.png` is still needed for every **generic** page (home, tools, docs).*
-
----
-
-## 🟡 6. SEO: decide on prerendering (biggest organic-growth lever)
-
-The app is a client-rendered SPA, so Google sees deferred/partial content and **AI answer engines (ChatGPT/Perplexity/Bing) see almost nothing** — every route looks identical to them. The SEO audit's #1 recommendation is to **prerender/static-generate the public routes** (via `vite-react-ssg` or Vercel prerender). This is an architectural change I don't want to make unannounced. **Give me the go-ahead** and I'll implement it for the public tool/docs/landing routes (auth pages stay client-only). It simultaneously fixes indexability, AI-citation, social cards, and the largest performance problem.
-
-*(The smaller SEO wins — sitemap cleanup, `llms.txt`, robots — are already done.)*
-
----
-
 ## ✅ Already handled in code (no action needed, just FYI)
 - Commit signing is working (you authorised it).
 - Converters consolidated into File Converter; `/imgconvert` + `/video-frames` redirect.
 - Auth return-path, feedback failure handling, accessibility pass, Color Studio undo, etc. — all merged.
-- **Free-tier save cap is now enforced in code** — Free = **3 saved projects / 8 custom
-  icons**, Pro = unlimited (single source of truth: `FREE_SAVE_LIMITS` in
-  `SubscriptionContext`, consumed by `ProjectContext`, `IconLibrary` and the `/plans`
-  copy). ⚠ *Founder check:* confirm those two numbers are the caps you want — changing
-  them is a one-line edit in `FREE_SAVE_LIMITS` and every surface updates.
 - **Merged to `main` (2026-07-12, on your instruction):** admin dashboard
   rebuild (categorised overview, upgraded submissions, Stripe price auto-fill,
   full Users tab with masked emails / country flags / sorting / filters / CSV
   export), device-level multi-account switching, founder accounts auto-Pro
   without Stripe, login + `/plans` polish, Mobbin-style nav, colour tools as
   separate pages. The two auth/Stripe HVZ slices passed the security review
-  before merge — see [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md).
+  before merge — see the closed
+  [`audit/HVZ-DECISIONS-2026-07-12.md`](audit/HVZ-DECISIONS-2026-07-12.md).
 
 ---
 
 ### Quick reference: every env var, in one place
 **Client (`VITE_` — likely already set):** `VITE_FIREBASE_*`, `VITE_GOOGLE_CLIENT_ID`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_GOOGLE_FONTS_API_KEY` (optional).
-**Server (set in Vercel, NO `VITE_` prefix):** `FIREBASE_SERVICE_ACCOUNT_KEY` ⬅ *fixes AI*, `GEMINI_API_KEY` ⬅ *fixes AI*, `OPENROUTER_API_KEY` ⬅ *fixes AI (replaces DEEPSEEK_API_KEY)*, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `STRIPE_PRICE_LIFETIME` (Early Investor), `STRIPE_RETENTION_COUPON` (optional).
+**Server (set in Vercel, NO `VITE_` prefix):** `FIREBASE_SERVICE_ACCOUNT_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY` (**missing in Production as of 2026-07-28**) + optional `OPENROUTER_MODEL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `STRIPE_PRICE_LIFETIME` (only after the lifetime decision + code), `STRIPE_RETENTION_COUPON` (optional).

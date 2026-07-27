@@ -1,5 +1,11 @@
 # Audit Implementation — Testing Ledger & Regression Matrix
 
+> **Closed historical verification ledger (closed 2026-07-28).** This records
+> evidence and residual risks for the Phase-16 implementation branch; pending
+> rows are not the current queue. Current priorities live in
+> [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and `src/data/pipeline.js`. New release
+> verification belongs with the current workstream, not as appended rows here.
+
 *Tracks verification for every implemented item. An item is only `Complete` in
 the [backlog](IMPLEMENTATION-BACKLOG.md) once its row here is fully green,
 independently reviewed, QA-signed, and (if 🔒) owner-validated. A passing build

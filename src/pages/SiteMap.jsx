@@ -50,19 +50,28 @@ const FLAT_SECTIONS = [
   },
 ]
 
-// One tappable row: a labelled link with its live route shown in mono, plus an
-// optional "Soon" badge when the destination isn't switched on yet.
+// Live destinations are links. Staged destinations keep their route and context
+// visible, but are deliberately non-interactive so "Soon" never behaves like a
+// shipped action.
 function MapLink({ label, route, note, soon }) {
+  const content = (
+    <>
+      <span className="smap-link-label">
+        {label}
+        {soon && <span className="smap-soon">Soon</span>}
+      </span>
+      <span className="smap-link-route">{route}</span>
+      {note && <span className="smap-link-note">{note}</span>}
+    </>
+  )
+
   return (
-    <li className="smap-link">
-      <NavLink to={route} className="smap-link-a">
-        <span className="smap-link-label">
-          {label}
-          {soon && <span className="smap-soon">Soon</span>}
-        </span>
-        <span className="smap-link-route">{route}</span>
-        {note && <span className="smap-link-note">{note}</span>}
-      </NavLink>
+    <li className="smap-link" data-route={route} data-soon={soon ? 'true' : undefined}>
+      {soon ? (
+        <div className="smap-link-a smap-link-a--soon">{content}</div>
+      ) : (
+        <NavLink to={route} className="smap-link-a">{content}</NavLink>
+      )}
     </li>
   )
 }
@@ -117,20 +126,22 @@ export default function SiteMap() {
           <p>Browse curated inspiration, then dig into the why behind it.</p>
         </div>
         <div className="smap-grid smap-grid--two">
-          <div className="smap-cat" data-hue="accent">
+          <div className="smap-cat" data-hue="accent" data-sitemap-section="discover">
             <div className="smap-cat-h">
               <span className="smap-cat-dot" aria-hidden="true" />
               <h3>Discover</h3>
-              <span className="smap-soon">Soon</span>
+              <span className="smap-stage">
+                {DISCOVER_GROUPS.filter((group) => !group.soon).length} live &middot; more coming
+              </span>
             </div>
             <p className="smap-cat-desc">Community systems, fonts, prompts and curated resources.</p>
             <ul className="smap-links">
               {DISCOVER_GROUPS.map((g) => (
-                <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} />
+                <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}
             </ul>
           </div>
-          <div className="smap-cat" data-hue="accent">
+          <div className="smap-cat" data-hue="accent" data-sitemap-section="learn">
             <div className="smap-cat-h">
               <span className="smap-cat-dot" aria-hidden="true" />
               <h3>Learn</h3>
@@ -139,7 +150,7 @@ export default function SiteMap() {
             <p className="smap-cat-desc">Principles, theme systems and guides that make interfaces hold up.</p>
             <ul className="smap-links">
               {LEARN_GROUPS.map((g) => (
-                <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} />
+                <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}
             </ul>
           </div>

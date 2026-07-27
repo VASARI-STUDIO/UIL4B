@@ -4,7 +4,7 @@
 //
 // status: 'live' | 'in-progress' | 'planned' | 'idea'
 // health: 'good' | 'watch' | 'blocked'
-// Derived from docs/task-tracker.csv.
+// Reconciled from current routes, shipped evidence and the canonical planning sources.
 
 export const MODULE_BOARD = [
   {
@@ -28,18 +28,18 @@ export const MODULE_BOARD = [
       'Reworked color info popup: tabbed UI + OKLCH + CVD sim (CS-05)',
     ],
     nextSteps: [
-      'Complete cross-device and slow-network release QA',
+      'Keep colour routes in the continuous canonical-route and slow-network QA matrix',
       'Add ASE + PDF export when export parity returns to scope',
     ],
-    updated: '2026-07-25',
+    updated: '2026-07-28',
   },
   {
     id: 'typography',
     name: 'Typography / Font Pair Finder',
     area: 'Type',
-    status: 'live',
-    health: 'good',
-    summary: 'Font pairing tool with copy tracking feeding design analytics.',
+    status: 'planned',
+    health: 'watch',
+    summary: 'Reusable typography tools exist in code but remain behind public Soon states.',
     recentChanges: [
       'Font copy events wired into admin design analytics',
       'Brand-blue accent applied to primary/accent buttons (NAV-06)',
@@ -47,16 +47,17 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Surface "most copied fonts" trends back into the picker UI',
       'Add pairing presets sourced from real brand systems',
+      'Complete Font Gallery FOUT and keyboard/dialog readiness before activation',
     ],
-    updated: '2026-06-16',
+    updated: '2026-07-28',
   },
   {
     id: 'ai-image-prompt',
     name: 'AI Image Prompt Generator',
     area: 'AI',
-    status: 'live',
+    status: 'planned',
     health: 'watch',
-    summary: 'Alpha-flagged structured JSON prompt builder with photo scanning.',
+    summary: 'Alpha implementation exists but the public route remains a Soon state.',
     recentChanges: [
       'scan-photo endpoint now per-user rate-limited (was the only uncapped paid AI call)',
       'Converted to structured JSON prompt generator + live preview (AIP-02)',
@@ -68,17 +69,17 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Graduate out of alpha once prompt quality is validated',
       'Add user prompt history / saved presets',
-      'Monitor OpenRouter vs Gemini fallback reliability',
+      'Validate prompt quality after the production OpenRouter key is added',
     ],
-    updated: '2026-06-17',
+    updated: '2026-07-28',
   },
   {
     id: 'ai-landing-prompts',
     name: 'AI Landing Page Prompts',
     area: 'AI',
-    status: 'live',
+    status: 'planned',
     health: 'watch',
-    summary: 'New AI Tools page generating JSON landing-page prompts.',
+    summary: 'Dormant alpha implementation; the public route remains a Soon state.',
     recentChanges: [
       'New page + nav section created (AIW-01)',
       'Grouped with related tools under AI Tools category (AIW-02)',
@@ -87,15 +88,15 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Gather usage data before exiting alpha',
     ],
-    updated: '2026-06-16',
+    updated: '2026-07-28',
   },
   {
     id: 'alt-text-generator',
     name: 'Alt Text Generator',
     area: 'AI',
-    status: 'live',
-    health: 'good',
-    summary: 'Batch alt-text tool verified end-to-end with WCAG-tuned prompts.',
+    status: 'planned',
+    health: 'watch',
+    summary: 'Reusable batch alt-text implementation exists but is not activated in the public route tree.',
     recentChanges: [
       'End-to-end QA: auth + upload + batch + retry + CSV + tone (ALT-01)',
       'Strengthened WCAG/alt-text guidance in prompt (ALT-02)',
@@ -103,15 +104,15 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Expose per-image tone controls in the batch view',
     ],
-    updated: '2026-06-16',
+    updated: '2026-07-28',
   },
   {
     id: 'ui-auto-builder',
     name: 'UI Auto-Builder',
     area: 'AI',
-    status: 'in-progress',
+    status: 'planned',
     health: 'watch',
-    summary: 'Alpha "describe your business → UI" tool; full AI mode deferred.',
+    summary: 'Dormant alpha "describe your business → UI" implementation; public activation is deferred.',
     recentChanges: [
       'Prompt-your-UI: business description → client-side colors/fonts/hero (ALPHA-01)',
       'Brand asset upload: logo color extraction + font input (ALPHA-02)',
@@ -120,24 +121,23 @@ export const MODULE_BOARD = [
     nextSteps: [
       'AI mode deferred to stay under Vercel 12-function limit — revisit',
     ],
-    updated: '2026-06-16',
+    updated: '2026-07-28',
   },
   {
     id: 'file-converter',
     name: 'File Converter',
     area: 'Tools',
-    status: 'in-progress',
+    status: 'live',
     health: 'watch',
-    summary: 'Media converter (alpha) — image formats + video->GIF + video->frames; old tools kept.',
+    summary: 'Live media converter for image formats, video-to-GIF and video frames; 3D conversion remains deferred.',
     recentChanges: [
       'Converter page shipped: image formats + video->GIF (ffmpeg.wasm) + video->frames + 3D coming-soon (CONV-01)',
       'Scoped against ezgif.com reference (webp<->gif, mp4->gif, resize/crop)',
     ],
     nextSteps: [
-      'Keep existing tools live until the converter is fully approved',
       'Add 3D format conversion (currently coming-soon placeholder)',
     ],
-    updated: '2026-06-16',
+    updated: '2026-07-28',
   },
   {
     id: 'community-hub',
@@ -155,9 +155,10 @@ export const MODULE_BOARD = [
     ],
     nextSteps: [
       'COM-01/02/03 still need a proper backend for media at scale (COM-05)',
+      'Enforce unique palette community handles in the same backend architecture',
       'Engagement plan: gamified submissions, weekly featured prompt, Discord, profiles (COM-04)',
     ],
-    updated: '2026-07-25',
+    updated: '2026-07-28',
   },
   {
     id: 'projects',
@@ -202,26 +203,27 @@ export const MODULE_BOARD = [
     id: 'public-shell',
     name: 'Home & Public Shell',
     area: 'Core',
-    status: 'in-progress',
-    health: 'watch',
-    summary: 'Connected public product story spanning the home hero, Create preview, CTA system and footer.',
+    status: 'live',
+    health: 'good',
+    summary: 'Shipped v2.7 public system spanning the connected home hero, living Create preview, CTA system and footer.',
     recentChanges: [
       'Home hero now visualises the connected Create system while keeping the interactive preview immediately below',
+      'Homepage workspace bridge shipped on main at 1e7fbdd',
       'Shared beams-style CTA introduced across Home, Colour, Surface and Plans',
       'Footer rebuilt around clear Create, Discover, Learn and company pathways',
     ],
     nextSteps: [
-      'Complete production-sized visual QA before merging the public UI release',
+      'Keep public link, metadata and sitemap truth in continuous route QA',
     ],
-    updated: '2026-07-25',
+    updated: '2026-07-28',
   },
   {
     id: 'documentation',
     name: 'Documentation',
     area: 'Content',
-    status: 'live',
-    health: 'good',
-    summary: 'Large doc library across SEO, marketing, brand, AI, and UI themes.',
+    status: 'planned',
+    health: 'watch',
+    summary: 'Dormant article implementations exist; Learn remains a coming-soon surface pending editorial and route readiness.',
     recentChanges: [
       'Fixed DocsMarketing layout so the shared TOC aligns; removed unused i18n imports',
       'SEO docs: 8 articles (GBP/local/technical/on-page/schema...) (DOC-01)',
@@ -231,16 +233,16 @@ export const MODULE_BOARD = [
       'Update dates added to all doc pages (DOC-07)',
     ],
     nextSteps: [
-      'Keep articles current as 2026 SEO/AI guidance shifts',
+      'Set citation/editorial standards and scoped article routes before activating Learn',
     ],
-    updated: '2026-06-17',
+    updated: '2026-07-28',
   },
   {
     id: 'navigation',
     name: 'Navigation / IA',
     area: 'Core',
     status: 'live',
-    health: 'good',
+    health: 'watch',
     summary: 'Editorial public navigation with task-led mega-menus and complete keyboard/mobile paths.',
     recentChanges: [
       'Mega-menus now lead with editorial context, task descriptions and purposeful hierarchy',
@@ -248,9 +250,10 @@ export const MODULE_BOARD = [
       'Icon Library now uses a distinct nav glyph; UI Colour removed from nav, search and sitemap data',
     ],
     nextSteps: [
+      'Add arrow-key navigation to the account popover',
       'Retest against every public route whenever the tool tree changes',
     ],
-    updated: '2026-07-25',
+    updated: '2026-07-28',
   },
   {
     id: 'landing',
@@ -302,10 +305,11 @@ export const MODULE_BOARD = [
     ],
     nextSteps: [
       'Owner: create retention coupon + enable cancellation in Stripe Customer Portal config',
+      'Owner/HVZ: validate production checkout abandon, return and retry separately',
       'Validation zone — never modify webhook/checkout without owner approval',
       'Wire up email notifications (RESEND_API_KEY) for billing events',
     ],
-    updated: '2026-06-17',
+    updated: '2026-07-28',
   },
   {
     id: 'ai-backend',
@@ -313,16 +317,17 @@ export const MODULE_BOARD = [
     area: 'Infra',
     status: 'live',
     health: 'watch',
-    summary: 'OpenRouter primary with Gemini fallback and tuned sampling.',
+    summary: 'Production Firebase verification and Gemini are healthy; the intended OpenRouter primary key is missing.',
     recentChanges: [
       'Migrated primary provider DeepSeek → OpenRouter, kept Gemini fallback (DS-01)',
       'Chain-of-thought prompt + tuned sampling (temp 0.75 / top_p 0.9) (DS-02)',
     ],
     nextSteps: [
+      'Owner: add OPENROUTER_API_KEY in Production and redeploy',
       'Watch the Vercel 12-function limit when adding AI routes',
       'Add provider health/latency monitoring',
     ],
-    updated: '2026-06-16',
+    updated: '2026-07-28',
   },
   {
     id: 'infra-deploy',
@@ -348,16 +353,16 @@ export const MODULE_BOARD = [
     area: 'Core',
     status: 'live',
     health: 'good',
-    summary: 'Shared premium public UI system under active consistency and usability review.',
+    summary: 'Shipped shared premium public UI system with continuous consistency and usability review.',
     recentChanges: [
       'Introduced a shared CTA composition with restrained beams, concrete product outcomes and reduced-motion safety',
       'Refined navigation, footer, tool command bars and responsive control hierarchy without flattening specialist workflows',
       'Owner identity treatment uses text and crown semantics in addition to colour',
     ],
     nextSteps: [
-      'Finish the all-public-page control and responsive audit',
+      'Treat route changes as continuous control, responsive and failure-state QA',
     ],
-    updated: '2026-07-25',
+    updated: '2026-07-28',
   },
   {
     id: 'process-governance',
@@ -368,6 +373,7 @@ export const MODULE_BOARD = [
     summary: 'Verify-first delivery with a single current plan, honest pipeline and explicit release gates.',
     recentChanges: [
       'Reconciled the public UI release across BUILD-PLAN, pipeline, module board, README and changelog',
+      'Closed stale PR #151 as superseded by the shipped v2.7 release and current Admin history',
       'Closed historical task lists and removed generated caches/logs from the working tree',
       'Full product audit of all 40 pages + execution roadmap + resolution log; P0/P1 QC remediation wave + accessibility pass',
       'CLAUDE.md with verify-first + validation zones + Murphy’s Law (GOV-01)',
@@ -375,10 +381,10 @@ export const MODULE_BOARD = [
       'User testing + subagent-team plans documented (GOV-04/05)',
     ],
     nextSteps: [
-      'Complete focused interaction tests and the full public-route smoke matrix',
-      'Merge only after build, lint and cross-device gates remain green',
+      'Keep the canonical pipeline, owner actions and decision list reconciled after each shipped slice',
+      'Require build, lint and focused route verification before every merge',
     ],
-    updated: '2026-07-25',
+    updated: '2026-07-28',
   },
 ]
 

@@ -1,11 +1,11 @@
 import { lazy, Suspense, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import CreatePreview, { LIVE_PREVIEW_GROUPS } from '../components/CreatePreview'
+import CreatePreview from '../components/CreatePreview'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
-import { LEARN_GROUPS } from '../data/toolTree'
+import { LEARN_GROUPS, LIVE_PREVIEW_GROUPS } from '../data/toolTree'
 
 // The real Export dialog, lazy-loaded so its (and its focus-trap's) code only
 // ships when a visitor actually asks to see the export formats.
