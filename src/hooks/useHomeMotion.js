@@ -56,6 +56,8 @@ export function useHomeMotion(scopeRef) {
 
     let cancelled = false
     let teardown = null
+    let restoreBridgeAvailability = null
+    let teardownBridgeHandoff = null
 
     Promise.all([import('gsap'), import('gsap/ScrollTrigger')])
       .then(([{ gsap }, { ScrollTrigger }]) => {
@@ -83,7 +85,160 @@ export function useHomeMotion(scopeRef) {
 
           // ── Hero parallax: content gently recedes as you scroll past it, giving
           //    the fold depth against the sections sliding up beneath it. ──
-          gsap.to('.home-hero', {
+          // The live product controls share React state with the preview tabs.
+          // On wide screens, motion adds a visual hand-off between those same
+          // controls; mobile and reduced-motion layouts remain static.
+          const bridgeItems = gsap.utils.toArray('.home-workspace-bridge li')
+          const previewTabs = gsap.utils.toArray('.prev-tab')
+          if (window.matchMedia?.('(min-width: 1025px)').matches && bridgeItems.length === previewTabs.length) {
+            const bridge = scope.querySelector('.home-workspace-bridge')
+            let isConverged = false
+            let keyboardHeld = false
+            let heldItem = null
+            let releaseFrame = null
+            let bridgeTimeline = null
+            const setItemUnavailable = (item, unavailable) => {
+              item.inert = unavailable
+              if (unavailable) {
+                item.setAttribute('inert', '')
+                item.setAttribute('aria-hidden', 'true')
+              } else {
+                item.removeAttribute('inert')
+                item.removeAttribute('aria-hidden')
+              }
+            }
+            const restoreBridgeItems = () => {
+              bridge.inert = false
+              bridge.removeAttribute('inert')
+              bridge.removeAttribute('aria-hidden')
+              bridgeItems.forEach((item) => setItemUnavailable(item, false))
+            }
+            const retireBridge = () => {
+              bridge.inert = true
+              bridge.setAttribute('inert', '')
+              bridge.setAttribute('aria-hidden', 'true')
+              bridgeItems.forEach((item) => setItemUnavailable(item, true))
+            }
+            const enterKeyboardHold = (item) => {
+              if (!item || isConverged || keyboardHeld) return
+              keyboardHeld = true
+              heldItem = item
+              bridgeTimeline?.scrollTrigger?.disable(false, true)
+              bridgeTimeline?.pause()
+              gsap.set(bridgeItems, { clearProps: 'transform,opacity,visibility' })
+              restoreBridgeItems()
+              bridgeItems.forEach((candidate) => {
+                setItemUnavailable(candidate, candidate !== item)
+              })
+              scope.dataset.homeBridgeState = 'keyboard-held'
+            }
+            const releaseKeyboardHold = () => {
+              if (!keyboardHeld) return
+              keyboardHeld = false
+              heldItem = null
+              restoreBridgeItems()
+              scope.dataset.homeBridgeState = 'moving'
+              bridgeTimeline?.paused(false)
+              const bridgeTrigger = bridgeTimeline?.scrollTrigger
+              bridgeTrigger?.enable(false, true)
+              bridgeTrigger?.refresh()
+              bridgeTrigger?.update()
+              ScrollTrigger.update()
+            }
+            const onBridgeFocusIn = (event) => {
+              const focusedButton = event.target.closest?.('.home-workspace-bridge-tab')
+              const currentBridge = scope.querySelector('.home-workspace-bridge')
+              if (!focusedButton || !currentBridge?.contains(focusedButton) || !focusedButton.matches(':focus-visible')) return
+              enterKeyboardHold(focusedButton.closest('[data-preview-id]'))
+            }
+            const onBridgeFocusOut = (event) => {
+              const currentBridge = scope.querySelector('.home-workspace-bridge')
+              if (!keyboardHeld || !currentBridge?.contains(event.target)) return
+              if (releaseFrame != null) cancelAnimationFrame(releaseFrame)
+              releaseFrame = requestAnimationFrame(() => {
+                releaseFrame = null
+                if (keyboardHeld && heldItem && !currentBridge.contains(document.activeElement)) {
+                  releaseKeyboardHold()
+                }
+              })
+            }
+            scope.addEventListener('focus', onBridgeFocusIn, true)
+            scope.addEventListener('focusin', onBridgeFocusIn)
+            scope.addEventListener('focusout', onBridgeFocusOut)
+
+            const setBridgeConverged = (nextConverged) => {
+              if (keyboardHeld) {
+                scope.dataset.homeBridgeState = 'keyboard-held'
+                return
+              }
+              if (!bridge || nextConverged === isConverged) return
+              isConverged = nextConverged
+
+              if (nextConverged) retireBridge()
+              else restoreBridgeItems()
+            }
+            restoreBridgeAvailability = () => {
+              if (releaseFrame != null) cancelAnimationFrame(releaseFrame)
+              releaseFrame = null
+              keyboardHeld = false
+              heldItem = null
+              isConverged = false
+              restoreBridgeItems()
+              gsap.set(bridgeItems, { clearProps: 'transform,opacity,visibility' })
+            }
+            teardownBridgeHandoff = () => {
+              scope.removeEventListener('focus', onBridgeFocusIn, true)
+              scope.removeEventListener('focusin', onBridgeFocusIn)
+              scope.removeEventListener('focusout', onBridgeFocusOut)
+              if (releaseFrame != null) cancelAnimationFrame(releaseFrame)
+              releaseFrame = null
+              keyboardHeld = false
+              heldItem = null
+              restoreBridgeItems()
+            }
+            scope.dataset.homeBridgeState = 'ready'
+            bridgeTimeline = gsap.timeline({
+              scrollTrigger: {
+                trigger: '.home-hero',
+                start: '32% top',
+                end: 'bottom 28%',
+                scrub: 0.25,
+                invalidateOnRefresh: true,
+                onUpdate: ({ progress }) => {
+                  if (keyboardHeld) {
+                    scope.dataset.homeBridgeState = 'keyboard-held'
+                    return
+                  }
+                  const converged = progress >= 0.86
+                  setBridgeConverged(converged)
+                  scope.dataset.homeBridgeState = converged ? 'converged' : 'moving'
+                },
+              },
+            })
+
+            bridgeItems.forEach((item, index) => {
+              const target = previewTabs[index]
+              const translatedLeft = () => {
+                const currentX = Number(gsap.getProperty(item, 'x')) || 0
+                const source = item.getBoundingClientRect()
+                const destination = target.getBoundingClientRect()
+                return destination.left - (source.left - currentX) + (destination.width - source.width) / 2
+              }
+              const translatedTop = () => {
+                const currentY = Number(gsap.getProperty(item, 'y')) || 0
+                const source = item.getBoundingClientRect()
+                const destination = target.getBoundingClientRect()
+                return destination.top - (source.top - currentY) + (destination.height - source.height) / 2
+              }
+              bridgeTimeline
+                .to(item, { x: translatedLeft, y: translatedTop, ease: 'none', duration: 0.86 }, 0)
+                .to(item, { autoAlpha: 0, duration: 0.14 }, 0.86)
+            })
+            bridgeTimeline.fromTo(previewTabs, { autoAlpha: 0.35 }, { autoAlpha: 1, duration: 0.2 }, 0.72)
+          }
+
+          // Recede only the copy so the bridge can converge precisely.
+          gsap.to('.home-hero-core', {
             yPercent: -8,
             autoAlpha: 0.5,
             ease: 'none',
@@ -165,8 +320,11 @@ export function useHomeMotion(scopeRef) {
 
         teardown = () => {
           lenis?.off('scroll', ScrollTrigger.update)
+          teardownBridgeHandoff?.()
+          restoreBridgeAvailability?.()
           ctx.revert()
           scope.classList.remove('has-gsap')
+          delete scope.dataset.homeBridgeState
         }
       })
       .catch(() => {

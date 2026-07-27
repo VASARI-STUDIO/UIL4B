@@ -1,7 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SnapSlider from './SnapSlider'
 import { CREATE_GROUPS } from '../data/toolTree'
+
+const PREVIEW_META = {
+  colour: { previewLabel: 'Colour', previewHome: '/color' },
+  icons: { previewLabel: 'Icons', previewHome: '/icons' },
+  imagery: { previewLabel: 'Imagery', previewHome: '/file-converter' },
+}
+
+export const LIVE_PREVIEW_GROUPS = CREATE_GROUPS
+  .filter((group) => Object.hasOwn(PREVIEW_META, group.id))
+  .map((group) => ({ ...group, ...PREVIEW_META[group.id] }))
 
 // Live, working micro-tools for the homepage Create section, wrapped in a fake
 // browser so a visitor understands what UIL4B *does* in the first few seconds —
@@ -262,34 +272,59 @@ function ComponentTool() {
 
 /* ── 4 · Imagery — live image compressor (real bytes, real savings) ─────── */
 
-// Read the byte size of a base64 data URL without decoding it: every 4 base64
-// chars carry 3 bytes, minus any `=` padding. Lets us measure encode output
-// synchronously (no async toBlob), so the demo stays lint-clean.
-function dataUrlBytes(url) {
-  const i = url.indexOf(',') + 1
-  if (i <= 0) return 0
-  const len = url.length - i
-  const pad = url.endsWith('==') ? 2 : url.endsWith('=') ? 1 : 0
-  return Math.max(0, Math.round(len * 3 / 4) - pad)
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    if (!canvas || typeof canvas.toBlob !== 'function') {
+      reject(new Error('Image encoding is not supported in this browser.'))
+      return
+    }
+    try {
+      canvas.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error('This browser could not encode the image.')),
+        type,
+        quality,
+      )
+    } catch {
+      reject(new Error('Image encoding is not supported in this browser.'))
+    }
+  })
 }
 
-// Encode a canvas as WebP; fall back to JPEG where WebP encode is unsupported
-// (older Safari) so the savings demo still works everywhere.
-function encode(canvas, quality) {
-  let url = canvas.toDataURL('image/webp', quality)
-  let ext = 'webp'
-  if (!url.startsWith('data:image/webp')) { url = canvas.toDataURL('image/jpeg', quality); ext = 'jpg' }
-  return { url, ext }
+const ENCODE_FORMATS = {
+  'image/webp': { ext: 'webp', format: 'WebP' },
+  'image/jpeg': { ext: 'jpg', format: 'JPEG' },
+  'image/png': { ext: 'png', format: 'PNG' },
 }
 
-// A detailed sample image so PNG stays heavy and the WebP saving is dramatic:
-// a vivid gradient, translucent orbs and fine noise. Drawn synchronously in a
-// lazy state initializer (runs during render, which is allowed).
+async function encodeCanvas(canvas, quality) {
+  let blob = await canvasToBlob(canvas, 'image/webp', quality)
+  if (blob.type !== 'image/webp') {
+    blob = await canvasToBlob(canvas, 'image/jpeg', quality)
+  }
+  const metadata = ENCODE_FORMATS[blob.type]
+  if (!metadata || !blob.size) throw new Error('This browser returned an unsupported image format.')
+  return { blob, bytes: blob.size, ...metadata }
+}
+
+// A detailed sample image so PNG stays heavy and the WebP saving is dramatic.
+// Canvas drawing is cheap; all byte encoding is deferred to the async pipeline.
 function makeSampleCanvas() {
   const w = 520, h = 340
   const c = document.createElement('canvas')
   c.width = w; c.height = h
   const ctx = c.getContext('2d')
+  if (!ctx) {
+    return {
+      canvas: null,
+      name: 'sample-hero.png',
+      outputName: 'sample-hero',
+      originalW: w,
+      originalH: h,
+      outputW: w,
+      outputH: h,
+      originalBytes: 0,
+    }
+  }
   const g = ctx.createLinearGradient(0, 0, w, h)
   g.addColorStop(0, '#0051FF'); g.addColorStop(0.5, '#8B5CF6'); g.addColorStop(1, '#FF3B30')
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
@@ -308,92 +343,267 @@ function makeSampleCanvas() {
     ctx.fillRect(Math.random() * w, Math.random() * h, 1.4, 1.4)
   }
   ctx.globalAlpha = 1
-  return { canvas: c, name: 'sample-hero', w, h, png: c.toDataURL('image/png') }
+  return {
+    canvas: c,
+    name: 'sample-hero.png',
+    outputName: 'sample-hero',
+    originalW: w,
+    originalH: h,
+    outputW: w,
+    outputH: h,
+    originalBytes: 0,
+  }
 }
 
 const IMG_Q = [30, 50, 70, 85, 95]
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024
+const MAX_CANVAS_EDGE = 1600
+const MAX_CANVAS_PIXELS = 4_000_000
+const ENCODE_DEBOUNCE_MS = 180
 
 function ImageryTool() {
   const [source, setSource] = useState(makeSampleCanvas)
   const [quality, setQuality] = useState(70)
   const [err, setErr] = useState('')
+  const [readBusy, setReadBusy] = useState(false)
+  const [encodeBusy, setEncodeBusy] = useState(true)
+  const [comp, setComp] = useState({
+    url: '',
+    ext: '',
+    format: 'Pending',
+    bytes: 0,
+    originalBytes: 0,
+    quality: 70,
+    error: '',
+  })
+  const fileRef = useRef(null)
+  const encodeTimerRef = useRef(null)
+  const encodeTokenRef = useRef(0)
+  const outputUrlRef = useRef('')
+  const originalSizeCacheRef = useRef(new WeakMap())
+  const busy = readBusy || encodeBusy
 
-  const origBytes = useMemo(() => dataUrlBytes(source.png), [source])
-  const comp = useMemo(() => {
-    const { url, ext } = encode(source.canvas, quality / 100)
-    return { url, ext, bytes: dataUrlBytes(url) }
+  useEffect(() => {
+    const token = ++encodeTokenRef.current
+    clearTimeout(encodeTimerRef.current)
+    encodeTimerRef.current = setTimeout(async () => {
+      try {
+        let originalBytes = source.originalBytes
+        if (!originalBytes && source.canvas) {
+          originalBytes = originalSizeCacheRef.current.get(source.canvas) || 0
+          if (!originalBytes) {
+            const originalBlob = await canvasToBlob(source.canvas, 'image/png')
+            originalBytes = originalBlob.size
+            originalSizeCacheRef.current.set(source.canvas, originalBytes)
+          }
+        }
+        const encoded = await encodeCanvas(source.canvas, quality / 100)
+        if (encodeTokenRef.current !== token) return
+        const nextUrl = URL.createObjectURL(encoded.blob)
+        if (encodeTokenRef.current !== token) {
+          URL.revokeObjectURL(nextUrl)
+          return
+        }
+        if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
+        outputUrlRef.current = nextUrl
+        setComp({
+          url: nextUrl,
+          ext: encoded.ext,
+          format: encoded.format,
+          bytes: encoded.bytes,
+          originalBytes,
+          quality,
+          error: '',
+        })
+      } catch (error) {
+        if (encodeTokenRef.current !== token) return
+        if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
+        outputUrlRef.current = ''
+        setComp({
+          url: '',
+          ext: '',
+          format: 'Unavailable',
+          bytes: 0,
+          originalBytes: source.originalBytes,
+          quality,
+          error: error.message || 'This image could not be encoded.',
+        })
+      } finally {
+        if (encodeTokenRef.current === token) setEncodeBusy(false)
+      }
+    }, ENCODE_DEBOUNCE_MS)
+
+    return () => {
+      clearTimeout(encodeTimerRef.current)
+      if (encodeTokenRef.current === token) encodeTokenRef.current += 1
+    }
   }, [source, quality])
 
-  const saved = origBytes ? Math.max(0, Math.round((1 - comp.bytes / origBytes) * 100)) : 0
+  useEffect(() => () => {
+    encodeTokenRef.current += 1
+    clearTimeout(encodeTimerRef.current)
+    if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
+    outputUrlRef.current = ''
+  }, [])
+
+  const originalBytes = source.originalBytes || comp.originalBytes
+  const deltaPercent = originalBytes
+    ? Math.round(Math.abs(1 - comp.bytes / originalBytes) * 100)
+    : 0
+  const result = !comp.bytes || !originalBytes
+    ? { tone: 'neutral', headline: 'Comparison unavailable', detail: comp.error || 'Choose another image to try again.' }
+    : comp.bytes < originalBytes
+      ? { tone: 'smaller', headline: `${deltaPercent}% smaller`, detail: `${kb(originalBytes - comp.bytes)} saved from the original upload.` }
+      : comp.bytes > originalBytes
+        ? { tone: 'larger', headline: `${deltaPercent}% larger`, detail: `${kb(comp.bytes - originalBytes)} larger than the original. Keep the source or lower quality.` }
+        : { tone: 'neutral', headline: 'Same file size', detail: 'This image does not benefit from this encoding.' }
+  const chartMax = Math.max(originalBytes, comp.bytes, 1)
+  const changeQuality = (nextQuality) => {
+    if (nextQuality === quality) return
+    setEncodeBusy(true)
+    setQuality(nextQuality)
+  }
 
   const loadFile = (file) => {
     setErr('')
-    if (!file || !file.type.startsWith('image/')) { setErr('Please choose an image file.'); return }
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setErr('Choose a PNG, JPEG, WebP or another readable image file.'); return }
+    if (file.size > MAX_IMAGE_BYTES) { setErr('That image is over 25 MB. Use the full File Converter for very large files.'); return }
+    if (typeof FileReader === 'undefined' || typeof Image === 'undefined') {
+      setErr('Image reading is not supported in this browser.')
+      return
+    }
+    setReadBusy(true)
     const reader = new FileReader()
     reader.onload = () => {
       const im = new Image()
       im.onload = () => {
-        const scale = Math.min(1, 640 / im.naturalWidth)
-        const cw = Math.max(1, Math.round(im.naturalWidth * scale))
-        const ch = Math.max(1, Math.round(im.naturalHeight * scale))
-        const c = document.createElement('canvas')
-        c.width = cw; c.height = ch
-        c.getContext('2d').drawImage(im, 0, 0, cw, ch)
-        setSource({ canvas: c, name: file.name.replace(/\.[^.]+$/, '') || 'image', w: cw, h: ch, png: c.toDataURL('image/png') })
+        try {
+          const originalW = im.naturalWidth
+          const originalH = im.naturalHeight
+          if (!originalW || !originalH) throw new Error('That image has no readable dimensions.')
+          const pixelScale = Math.sqrt(MAX_CANVAS_PIXELS / (originalW * originalH))
+          const scale = Math.min(1, MAX_CANVAS_EDGE / originalW, MAX_CANVAS_EDGE / originalH, pixelScale)
+          const outputW = Math.max(1, Math.round(originalW * scale))
+          const outputH = Math.max(1, Math.round(originalH * scale))
+          const canvas = document.createElement('canvas')
+          canvas.width = outputW
+          canvas.height = outputH
+          const context = canvas.getContext('2d')
+          if (!context) throw new Error('Canvas compression is not supported in this browser.')
+          context.drawImage(im, 0, 0, outputW, outputH)
+          setSource({
+            canvas,
+            name: file.name || 'image',
+            outputName: (file.name || 'image').replace(/\.[^.]+$/, '') || 'image',
+            originalW,
+            originalH,
+            outputW,
+            outputH,
+            originalBytes: file.size,
+          })
+          setEncodeBusy(true)
+          setReadBusy(false)
+        } catch (error) {
+          setErr(error.message || 'That image could not be compressed.')
+          setReadBusy(false)
+        }
       }
-      im.onerror = () => setErr('That image could not be loaded.')
+      im.onerror = () => { setErr('That image could not be decoded. Try a different file.'); setReadBusy(false) }
       im.src = reader.result
     }
-    reader.onerror = () => setErr('That file could not be read.')
-    reader.readAsDataURL(file)
+    reader.onerror = () => { setErr('That file could not be read.'); setReadBusy(false) }
+    try {
+      reader.readAsDataURL(file)
+    } catch {
+      setErr('That file could not be read.')
+      setReadBusy(false)
+    }
   }
 
   return (
-    <div className="imc">
-      <div className="imc-stage">
-        <img className="imc-shot" src={comp.url} alt="" />
-        <div className="imc-save" aria-hidden="true">
-          <span className="imc-save-pct">−{saved}%</span>
-          <span className="imc-save-cap">smaller</span>
+    <div className="imc" aria-busy={busy}>
+      <div className="imc-outcome">
+        <div className="imc-stage">
+          {comp.url
+            ? <img className="imc-shot" src={comp.url} alt={`Compressed preview of ${source.name}`} />
+            : <div className="imc-stage-empty">Preview unavailable</div>}
+        </div>
+        <div className="imc-result" data-tone={result.tone} aria-live="polite">
+          <span className="imc-result-label">Compression result</span>
+          <strong>{readBusy ? 'Reading image…' : encodeBusy ? 'Encoding image…' : result.headline}</strong>
+          <span>{busy ? 'Preparing an honest byte comparison.' : result.detail}</span>
         </div>
       </div>
-      <div className="imc-bars" role="group" aria-label="File size before and after">
+
+      <div className="imc-file">
+        <div>
+          <span className="imc-file-name">{source.name}</span>
+          <span className="imc-file-meta">{source.originalW} × {source.originalH}px</span>
+        </div>
+        <span className="imc-output-meta">
+          {encodeBusy ? `Encoding ${quality}% quality` : `${comp.format} · ${comp.quality}% quality`} · {source.outputW} × {source.outputH}px
+        </span>
+      </div>
+
+      <div className="imc-bars" role="group" aria-label="Actual file size before and after compression">
         <div className="imc-bar-row">
-          <span className="imc-bar-key">Original PNG</span>
-          <span className="imc-bar-track"><span className="imc-bar-fill is-orig" style={{ width: '100%' }} /></span>
-          <span className="imc-bar-val">{kb(origBytes)}</span>
+          <span className="imc-bar-key">Original upload</span>
+          <span className="imc-bar-track"><span className="imc-bar-fill is-orig" style={{ width: `${Math.max(4, originalBytes / chartMax * 100)}%` }} /></span>
+          <span className="imc-bar-val">{kb(originalBytes)}</span>
         </div>
         <div className="imc-bar-row">
-          <span className="imc-bar-key">Compressed</span>
+          <span className="imc-bar-key">{comp.format} output</span>
           <span className="imc-bar-track">
-            <span className="imc-bar-fill is-comp" style={{ width: `${origBytes ? Math.max(4, (comp.bytes / origBytes) * 100) : 0}%` }} />
+            <span className="imc-bar-fill is-comp" style={{ width: `${Math.max(4, comp.bytes / chartMax * 100)}%` }} />
           </span>
           <span className="imc-bar-val">{kb(comp.bytes)}</span>
         </div>
       </div>
-      <label className="cm-slider imc-quality">
-        <span className="prev-hint">Quality</span>
-        <SnapSlider
-          min={30}
-          max={95}
-          value={quality}
-          defaultValue={70}
-          snaps={IMG_Q}
-          unit="%"
-          ariaLabel="Compression quality"
-          onChange={setQuality}
-        />
-      </label>
-      {err && <p className="imc-err">{err}</p>}
-      <div className="prev-controls">
-        <a className="prev-btn prev-btn-go" href={comp.url} download={`${source.name}.${comp.ext}`}>
-          <IconDown /> Download · {kb(comp.bytes)}
-        </a>
-        <label className="prev-btn imc-upload">
-          <IconImage /> Try your image
-          <input type="file" accept="image/*" onChange={(e) => loadFile(e.target.files?.[0])} style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }} />
+
+      <div className="imc-controls">
+        <label className="cm-slider imc-quality">
+          <span className="prev-hint">Output quality</span>
+          <SnapSlider
+            min={30}
+            max={95}
+            value={quality}
+            defaultValue={70}
+            snaps={IMG_Q}
+            unit="%"
+            ariaLabel="Compression quality"
+            onChange={changeQuality}
+          />
         </label>
+        <div className="prev-controls">
+          <input
+            ref={fileRef}
+            className="imc-file-input"
+            type="file"
+            tabIndex={-1}
+            accept="image/*"
+            onChange={(event) => {
+              loadFile(event.target.files?.[0])
+              event.target.value = ''
+            }}
+          />
+          <button type="button" className="prev-btn" disabled={busy} onClick={() => fileRef.current?.click()}>
+            <IconImage /> Try image
+          </button>
+          {encodeBusy
+            ? (
+              <button type="button" className="prev-btn prev-btn-go" disabled>
+                <IconDown /> Encoding…
+              </button>
+            )
+            : comp.url && (
+              <a className="prev-btn prev-btn-go" href={comp.url} download={`${source.outputName}.${comp.ext}`}>
+                <IconDown /> Download {comp.format}
+              </a>
+            )}
+        </div>
       </div>
+      {(err || comp.error) && <p className="imc-err" role="alert">{err || comp.error}</p>}
     </div>
   )
 }
@@ -513,17 +723,6 @@ function IconsTool() {
 
 /* ── browser frame + tab router ────────────────────────────────────────── */
 
-// Short, tab-sized labels keyed by CREATE group id (the full labels are far too
-// long for a browser tab strip).
-const TAB_LABEL = {
-  colour: 'Colour',
-  icons: 'Icons',
-  type: 'Type',
-  component: 'Components',
-  imagery: 'Imagery',
-  ai: 'AI Studio',
-}
-
 const TOOLS = {
   colour: () => <ColourTool />,
   type: () => <TypeTool />,
@@ -536,29 +735,51 @@ const TOOLS = {
 // A fake browser holding one open tab per CREATE system. Switching tabs remounts
 // the mini-app (keyed on the group id), giving a clean crossfade and a fresh
 // palette / compression each visit. The address bar's "Open →" converts.
-export default function CreatePreview() {
-  const [activeId, setActiveId] = useState(CREATE_GROUPS[0].id)
-  const group = CREATE_GROUPS.find((g) => g.id === activeId) || CREATE_GROUPS[0]
+export default function CreatePreview({ activeId, onActiveChange }) {
+  const tabRefs = useRef([])
+  const group = LIVE_PREVIEW_GROUPS.find((item) => item.id === activeId) || LIVE_PREVIEW_GROUPS[0]
+  const selectedId = group.id
   const render = TOOLS[group.id] || TOOLS.colour
+  const setActive = (id) => onActiveChange?.(id)
+  const onTabKeyDown = (event, index) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const last = LIVE_PREVIEW_GROUPS.length - 1
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? last
+        : event.key === 'ArrowLeft'
+          ? (index - 1 + LIVE_PREVIEW_GROUPS.length) % LIVE_PREVIEW_GROUPS.length
+          : (index + 1) % LIVE_PREVIEW_GROUPS.length
+    setActive(LIVE_PREVIEW_GROUPS[nextIndex].id)
+    requestAnimationFrame(() => tabRefs.current[nextIndex]?.focus())
+  }
 
   return (
     <div className="prev" data-hue={group.hue}>
       <div className="prev-chrome">
         <span className="prev-traffic" aria-hidden="true"><i /><i /><i /></span>
-        <div className="prev-tabs" role="tablist" aria-label="UIL4B tools">
-          {CREATE_GROUPS.map((g) => (
+        <div className="prev-tabs" role="tablist" aria-label="Live UIL4B workspace previews">
+          {LIVE_PREVIEW_GROUPS.map((g, index) => (
             <button
               key={g.id}
+              ref={(node) => { tabRefs.current[index] = node }}
               type="button"
               role="tab"
-              aria-selected={g.id === activeId}
-              data-active={g.id === activeId}
+              id={`home-preview-tab-${g.id}`}
+              aria-controls="home-preview-panel"
+              aria-selected={g.id === selectedId}
+              data-active={g.id === selectedId}
               data-hue={g.hue}
+              data-preview-id={g.id}
               className="prev-tab"
-              onClick={() => setActiveId(g.id)}
+              tabIndex={g.id === selectedId ? 0 : -1}
+              onClick={() => setActive(g.id)}
+              onKeyDown={(event) => onTabKeyDown(event, index)}
             >
               <span className="fx-dot" aria-hidden="true" />
-              <span className="prev-tab-label">{TAB_LABEL[g.id] || g.label}</span>
+              <span className="prev-tab-label">{g.previewLabel}</span>
             </button>
           ))}
         </div>
@@ -566,13 +787,18 @@ export default function CreatePreview() {
       <div className="prev-addr">
         <span className="prev-url">
           <IconLock open={false} />
-          <span className="prev-url-text">uil4b.com{group.home}</span>
+          <span className="prev-url-text">uil4b.com{group.previewHome}</span>
         </span>
-        <Link className="prev-open" to={group.home}>
-          Open <IconArrow />
+        <Link className="prev-open" to={group.previewHome}>
+          Open {group.previewLabel} <IconArrow />
         </Link>
       </div>
-      <div className="prev-screen" aria-live="polite">
+      <div
+        className="prev-screen"
+        id="home-preview-panel"
+        role="tabpanel"
+        aria-labelledby={`home-preview-tab-${group.id}`}
+      >
         <div className="prev-anim" key={group.id}>
           {render()}
         </div>

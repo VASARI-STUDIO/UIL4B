@@ -1,11 +1,11 @@
 import { lazy, Suspense, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import CreatePreview from '../components/CreatePreview'
+import CreatePreview, { LIVE_PREVIEW_GROUPS } from '../components/CreatePreview'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
-import { CREATE_GROUPS, LEARN_GROUPS } from '../data/toolTree'
+import { LEARN_GROUPS } from '../data/toolTree'
 
 // The real Export dialog, lazy-loaded so its (and its focus-trap's) code only
 // ships when a visitor actually asks to see the export formats.
@@ -58,17 +58,11 @@ const EXPORT_FORMATS = [
 ]
 const EXPORT_FILES = ['system.html', 'tokens.css', 'tokens.json', 'tailwind.config.js', 'assets.zip']
 
-const PRODUCT_PROOF = [
-  { value: 'Available now', label: 'connected tools', detail: 'Colour, icons and imagery share one working foundation' },
-  { value: 'Live checks', label: 'validation', detail: 'Contrast and consistency feedback while you build' },
-  { value: 'Copy-ready', label: 'handoff', detail: 'Use live colour values now; broader export formats are coming soon' },
-  { value: 'Browser-first', label: 'setup', detail: 'Start immediately without installing a design stack' },
-]
-
 export default function Home() {
   const rootRef = useRef(null)
   useHomeMotion(rootRef)
   const [exportOpen, setExportOpen] = useState(false)
+  const [activePreviewId, setActivePreviewId] = useState(LIVE_PREVIEW_GROUPS[0].id)
 
   return (
     <div className="home" ref={rootRef}>
@@ -76,35 +70,21 @@ export default function Home() {
 
       <main id="main" tabIndex={-1}>
       {/* ── Hero ── */}
+      <div className="home-workspace-intro">
       <header className="home-hero">
         <div className="home-orbit-rings" aria-hidden="true"><i /><i /><i /></div>
-        <ul className="home-orbit-tools" aria-label="Connected UI system builders">
-          {CREATE_GROUPS.map((group) => (
-            <li key={group.id} data-hue={group.hue}>
-              <Link
-                to={group.home}
-                aria-label={group.soon ? `${group.label} — coming soon` : `Open ${group.label}`}
-                data-soon={group.soon || undefined}
-              >
-                <NavIcon id={group.id} />
-                <span>{group.label.replace(' System Generator', '').replace(' System Builder', '')}</span>
-                {group.soon && <em>Soon</em>}
-              </Link>
-            </li>
-          ))}
-        </ul>
         <div className="home-hero-core">
           <p className="home-hero-kicker">
             <span className="home-hero-kicker-dot" aria-hidden="true" />
             The operating workspace for UI systems
           </p>
           <h1 className="home-hero-h1">
-            <span className="home-hero-line"><span className="home-hero-line-in">Build the system.</span></span>
-            <span className="home-hero-line home-hero-line--accent"><span className="home-hero-line-in">Keep every decision connected.</span></span>
+            <span className="home-hero-line"><span className="home-hero-line-in">No more tab hoarding.</span></span>
+            <span className="home-hero-line home-hero-line--accent"><span className="home-hero-line-in">Build your UI system in one place.</span></span>
           </h1>
           <p className="home-hero-sub">
-            Build, organise and validate colour and assets in one connected workspace.
-            Typography, component tooling and broader exports are coming soon.
+            Build, validate and hand off live colour systems, icons and imagery in one
+            workspace. Typography and component tooling are coming next.
           </p>
           <div className="home-hero-cta">
             <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
@@ -115,18 +95,22 @@ export default function Home() {
           </div>
           <p className="home-hero-hint">No credit card · No setup · Your first system stays free</p>
         </div>
-
-        <dl className="home-proof" aria-label="UIL4B product capabilities">
-          {PRODUCT_PROOF.map((item) => (
-            <div className="home-proof-item" key={item.label}>
-              <dt>
-                <strong>{item.value}</strong>
-                <span>{item.label}</span>
-              </dt>
-              <dd>{item.detail}</dd>
-            </div>
+        <ul className="home-workspace-bridge" aria-label="Choose a live workspace preview">
+          {LIVE_PREVIEW_GROUPS.map((group) => (
+            <li key={group.id} data-hue={group.hue} data-preview-id={group.id}>
+              <button
+                type="button"
+                className="home-workspace-bridge-tab"
+                aria-pressed={activePreviewId === group.id}
+                aria-controls="home-preview-panel"
+                onClick={() => setActivePreviewId(group.id)}
+              >
+                <NavIcon id={group.id} />
+                <span>{group.previewLabel}</span>
+              </button>
+            </li>
           ))}
-        </dl>
+        </ul>
       </header>
 
       {/* ── Create: the live browser graphic, sat directly under the hero ── */}
@@ -138,18 +122,15 @@ export default function Home() {
                 <i aria-hidden="true" />
                 Interactive workspace preview
               </span>
-              <span className="home-stage-meta-note">Try every tab</span>
+              <span className="home-stage-meta-note">Switch tabs · try the live controls</span>
             </div>
-            <div className="home-stage" aria-live="polite">
-              <CreatePreview />
+            <div className="home-stage">
+              <CreatePreview activeId={activePreviewId} onActiveChange={setActivePreviewId} />
             </div>
           </div>
-          <p className="home-stage-cap" data-reveal>
-            A connected product, not a feature montage. Change a palette, inspect colour roles
-            or compress an image without leaving the page.
-          </p>
         </div>
       </section>
+      </div>
 
       {/* ── Validate ── */}
       <section className="home-section">
