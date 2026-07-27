@@ -101,9 +101,11 @@ test.describe('garbage input never breaks the calculator', () => {
 
 test.describe('route sweep — every public page loads clean', () => {
   const ROUTES = [
-    '/', '/ratio', '/color', '/icons', '/emoji', '/file-converter',
-    '/discover', '/learn', '/plans', '/community', '/help', '/info',
-    '/sitemap', '/privacy', '/terms', '/feedback', '/seo', '/login', '/settings',
+    '/', '/color', '/color/palette', '/color/semantic', '/color/tint',
+    '/color/gradient', '/color/contrast', '/icons', '/emoji', '/file-converter',
+    '/ratio', '/discover', '/discover/gradients', '/learn', '/plans', '/community',
+    '/help', '/info', '/sitemap', '/privacy', '/terms', '/feedback', '/seo',
+    '/login', '/settings',
   ]
   for (const url of ROUTES) {
     test(`sweep ${url}`, async ({ page }) => {

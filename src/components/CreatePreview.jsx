@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SnapSlider from './SnapSlider'
-import { CREATE_GROUPS } from '../data/toolTree'
-
-const PREVIEW_META = {
-  colour: { previewLabel: 'Colour', previewHome: '/color' },
-  icons: { previewLabel: 'Icons', previewHome: '/icons' },
-  imagery: { previewLabel: 'Imagery', previewHome: '/file-converter' },
-}
-
-export const LIVE_PREVIEW_GROUPS = CREATE_GROUPS
-  .filter((group) => Object.hasOwn(PREVIEW_META, group.id))
-  .map((group) => ({ ...group, ...PREVIEW_META[group.id] }))
+import { LIVE_PREVIEW_GROUPS } from '../data/toolTree'
 
 // Live, working micro-tools for the homepage Create section, wrapped in a fake
 // browser so a visitor understands what UIL4B *does* in the first few seconds —
