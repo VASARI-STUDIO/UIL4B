@@ -56,3 +56,20 @@ surface. Maintain consistent:
 
 A useful hand-off test is: after clicking the primary CTA, can the user see the
 same job, object, and expected outcome within the first product view?
+
+## Homepage product-proof continuity
+
+**Canonical — founder direction, 2026-07-26. Scope: UIL4B homepage.**
+
+- Lead with the concrete user problem (“No more tab hoarding”) and the connected
+  workspace outcome, then move directly into working product evidence.
+- The hero and live preview should read as one continuous interaction. A small
+  set of live product controls may visually converge into the matching preview
+  rail, but both control sets must share state and remain fully usable without
+  motion.
+- Homepage preview navigation represents only capabilities that work now.
+  Typography and component tooling may be named as coming next, but must not
+  appear as interactive live-preview tabs.
+- Prefer honest workflow evidence—real controls, measured output, keyboard
+  behavior, recovery states—over detached capability-stat strips.
+- Do not insert an abstract manifesto caption between the promise and its proof.

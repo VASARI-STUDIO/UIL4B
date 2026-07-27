@@ -6,6 +6,19 @@ import { appendCommunitySubmission, readCommunitySubmissions } from '../../src/u
 import { buildCommunityPromptRecord, resolvePromptProfileLink } from '../../src/utils/promptSubmission.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
 
+async function dispatchWindowEvent(page, type) {
+  await expect.poll(async () => {
+    try {
+      return await page.evaluate((eventType) => {
+        window.dispatchEvent(new Event(eventType))
+        return true
+      }, type)
+    } catch {
+      return false
+    }
+  }, { timeout: 5000 }).toBe(true)
+}
+
 test.describe('public UI quality release', () => {
   test('mega-menu supports directional entry and retired UI Colour links redirect safely', async ({ page }) => {
     watch(page, 'keyboard-first designer')
@@ -57,6 +70,23 @@ test.describe('public UI quality release', () => {
     }
   })
 
+  test('Discover and Learn map blips keep a 24px target around the compact visual dot', async ({ page }) => {
+    watch(page, 'touch user exploring public community proof')
+    await page.setViewportSize({ width: 390, height: 844 })
+    for (const route of ['/discover', '/learn']) {
+      await go(page, route)
+      const blips = page.locator('.wmap-blip:not(.is-home)')
+      await expect(blips.first()).toBeVisible()
+      const sizes = await blips.evaluateAll((buttons) => buttons.map((button) => {
+        const target = button.getBoundingClientRect()
+        const dot = button.querySelector('.wmap-blip-dot').getBoundingClientRect()
+        return { targetW: target.width, targetH: target.height, dotW: dot.width, dotH: dot.height }
+      }))
+      expect(sizes.every(({ targetW, targetH }) => targetW >= 24 && targetH >= 24)).toBe(true)
+      expect(sizes.every(({ dotW, dotH }) => dotW <= 11 && dotH <= 11)).toBe(true)
+    }
+  })
+
   test('compact footer stays contained and exposes Plans on a narrow tool route', async ({ page }) => {
     watch(page, 'mobile visitor checking plans after using a tool')
     await page.setViewportSize({ width: 320, height: 720 })
@@ -84,10 +114,10 @@ test.describe('public UI quality release', () => {
     await expect(page.getByRole('tab', { name: /Emoji/ })).toBeFocused()
 
     await context.setOffline(true)
-    await page.evaluate(() => window.dispatchEvent(new Event('offline')))
+    await dispatchWindowEvent(page, 'offline')
     await expect(page.getByText(/Offline · built-in assets remain available/)).toBeVisible()
     await context.setOffline(false)
-    await page.evaluate(() => window.dispatchEvent(new Event('online')))
+    await dispatchWindowEvent(page, 'online')
   })
 
   test('Palette Reset then edit then Undo restores the latest mutation before the pre-reset state', async ({ page }) => {
