@@ -18,7 +18,7 @@ export const APP_CONDITION = [
   { id: 'discover', label: 'Discover surface', value: 'Queued · 20%', status: 'watch', detail: 'Gradient Gallery is live; broader galleries remain backlog' },
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
   { id: 'design-system', label: 'Design system', value: 'v2.7 shipped', status: 'good', detail: 'Shared shell, controls, CTA and footer patterns are live' },
-  { id: 'phase', label: 'Current phase', value: 'Truth & resilience', status: 'watch', detail: 'Canonical-route accuracy, social cards and global failure states' },
+  { id: 'phase', label: 'Current phase', value: 'Homepage + account/billing reliability', status: 'watch', detail: 'Homepage proof, account-switch reliability and Plans/lifetime HVZ work are active' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -33,6 +33,33 @@ export const PIPELINE_STAGES = [
 // ── Active processes / workstreams ──────────────────────────────────────────
 // stage: one of PIPELINE_STAGES ids · progress: 0–100
 export const PIPELINE_PROCESSES = [
+  {
+    id: 'homepage-chaos-to-calm',
+    name: 'Homepage chaos → calm proof',
+    area: 'Product',
+    stage: 'in-progress',
+    progress: 10,
+    summary: 'Founder-approved build spec: eight stable live-tool links resolve into four honest mini-workbench tabs, with static fallback and bounded handoffs.',
+    updated: '2026-07-28',
+  },
+  {
+    id: 'account-switch-reliability',
+    name: 'Account-switch reliability',
+    area: 'Account',
+    stage: 'in-progress',
+    progress: 0,
+    summary: 'Founder-requested reliability pass is active; completion awaits implementation and focused account-state verification.',
+    updated: '2026-07-28',
+  },
+  {
+    id: 'plans-lifetime-build',
+    name: 'Plans redesign + lifetime billing',
+    area: 'Billing',
+    stage: 'in-progress',
+    progress: 0,
+    summary: 'Founder-requested Plans and lifetime-billing build is active inside the billing/auth human-validation zone; no completion is claimed.',
+    updated: '2026-07-28',
+  },
   {
     id: 'public-ui-premium',
     name: 'Premium public UI release',
@@ -62,11 +89,20 @@ export const PIPELINE_PROCESSES = [
   },
   {
     id: 'canonical-route-qa',
-    name: 'Canonical-route QA',
+    name: 'Public route truth release',
     area: 'Quality',
-    stage: 'in-progress',
-    progress: 35,
-    summary: 'Continuously reconcile router, navigation, sitemap, metadata and failure states as public routes change.',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'Router, public navigation, metadata and sitemap truth shipped to main in d210a0d and passed the 79/79 release suite.',
+    updated: '2026-07-28',
+  },
+  {
+    id: 'static-og-card',
+    name: 'Static social-share card',
+    area: 'Growth',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'The static public social-share card shipped to main in d210a0d and passed the 79/79 release suite.',
     updated: '2026-07-28',
   },
   {
@@ -110,8 +146,9 @@ export const PIPELINE_PROCESSES = [
 // ── Next-to-do queue (prioritised) ──────────────────────────────────────────
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
-  { id: 'public-route-truth', title: 'Reconcile public routes, metadata and sitemap truth', priority: 'P0', effort: 'M', area: 'Quality', status: 'doing', note: 'Keep App routes, toolTree, PAGE_TITLES/PAGE_DESCRIPTIONS, public sitemap and Soon affordances aligned; no generic loops or claims for workshop-only pages.' },
-  { id: 'static-og-card', title: 'Ship the static social-share card', priority: 'P1', effort: 'S', area: 'Growth', status: 'doing', note: 'Create the 1200×630 public/previews/og-image.png already referenced by index.html; palette share cards remain dynamic.' },
+  { id: 'homepage-chaos-to-calm', title: 'Build the approved homepage chaos → calm experience', priority: 'P0', effort: 'L', area: 'Product', status: 'doing', note: 'Implement docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md exactly: eight stable satellite links, four tabs, static motion fallback, one-time image handoff, validated icon draft and full responsive/performance acceptance.' },
+  { id: 'account-switch-reliability', title: 'Complete the account-switch reliability pass', priority: 'P1', effort: 'M', area: 'Account', status: 'doing', note: 'Founder-requested active batch: verify add/switch/remove, stale-session and return-path behaviour before claiming completion.' },
+  { id: 'plans-lifetime-build', title: 'Build the Plans redesign and lifetime billing path', priority: 'P0', effort: 'L', area: 'Billing', status: 'doing', note: 'Founder-requested active HVZ batch: implement and validate the Plans experience, one-time checkout, durable entitlement and recovery paths without bypassing billing/auth review.' },
   { id: 'account-menu-arrow-nav', title: 'Add arrow-key navigation to the account menu', priority: 'P1', effort: 'S', area: 'Accessibility', status: 'todo', note: 'Complete the menu keyboard contract: roving focus, Home/End, Escape focus restoration and assistive-technology semantics.' },
   { id: 'global-failure-states', title: 'Add global 404 and offline states', priority: 'P1', effort: 'M', area: 'Quality', status: 'todo', note: 'Replace wildcard-to-home recovery with a branded 404 and add one app-level offline signal with retry guidance for network-dependent workflows.' },
   { id: 'font-gallery-readiness', title: 'Prepare Font Gallery for activation', priority: 'P2', effort: 'M', area: 'Performance', status: 'todo', note: 'Deferred until the route is activated: remove featured-card FOUT, reserve metrics, and complete keyboard/dialog accessibility before flipping the Soon state.' },
