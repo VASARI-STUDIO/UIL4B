@@ -113,7 +113,7 @@ export const NEXT_TODO = [
   { id: 'public-release-qa', title: 'Complete public-page release QA', priority: 'P0', effort: 'M', area: 'Quality', status: 'doing', note: 'Verify every public route at desktop and mobile widths, including keyboard, reduced-motion, loading, offline and slow-network states.' },
   { id: 'fout-font-gallery', title: 'Remove Font Gallery first-load font flash', priority: 'P1', effort: 'M', area: 'Performance', status: 'todo', note: 'Known deferred issue; solve when Font Gallery is next in scope.' },
   { id: 'discover-buildout', title: 'Build Discover galleries', priority: 'P1', effort: 'L', area: 'Product', status: 'todo', note: 'Founder intentionally deferred Discover work until after this public UI release.' },
-  { id: 'learn-content', title: 'Build the Learn content library', priority: 'P2', effort: 'L', area: 'Content', status: 'todo', note: 'Information architecture exists; articles and learning journeys remain.' },
+  { id: 'learn-content', title: 'Build the Learn content library', priority: 'P2', effort: 'L', area: 'Content', status: 'todo', note: 'Information architecture exists; articles and learning journeys remain. Homepage Soon Learn cards should be non-navigable preview states until scoped article destinations ship, then link to those destinations instead of looping generically to /learn.' },
   { id: 'F4', title: 'Stripe checkout / retention config', priority: 'P1', effort: 'S', area: 'Infra', status: 'blocked', note: 'Owner-gated — manual Stripe dashboard config.' },
   { id: 'F3', title: 'Community publishing backend', priority: 'P1', effort: 'L', area: 'Product', status: 'blocked', note: 'Escalated — needs a design decision first.' },
 ]
