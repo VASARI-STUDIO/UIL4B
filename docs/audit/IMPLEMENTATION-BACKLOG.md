@@ -4,6 +4,13 @@
 > evidence. Current priorities live in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and
 > `src/data/pipeline.js`; do not append new UI-refresh tasks here.
 
+> **Post-close reconciliation (2026-07-28):** B5 is resolved: `/color` is the
+> colour-system landing and live tools remain under `/color/*`. A4's screenshot
+> request was superseded by the shipped living workspace preview (`1e7fbdd`).
+> Remaining Discover/Learn/Font Gallery page flips are absorbed into the live
+> Discover, Learn and Font-readiness workstreams; their historical rows below are
+> retained unchanged.
+
 *The single source of truth for turning the Phase-16 UX/UI/accessibility/QA
 audit into shipped, verified improvements. Consolidated from the audit's
 [`04-critical-issues.md`](04-critical-issues.md) (P0/P1) and

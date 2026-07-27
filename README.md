@@ -56,7 +56,7 @@ The product is organised around three surfaces: **Create** (build), **Discover**
 
 - **React 19** + **React Router** (BrowserRouter)
 - **Vite** — dev server and production build
-- **Vercel** — hosting + serverless API functions (`api/`)
+- **Vercel** — hosting + serverless API functions (`api/`) + Web Analytics
 - **CSS Custom Properties** — warm/dark theme system, no CSS-in-JS
 - **Firebase** — Auth (Google One Tap + email), Firestore (projects, prompts, feedback, subscriptions)
 - **Stripe** — Embedded Checkout + Billing Portal for Pro subscriptions
@@ -109,7 +109,8 @@ Server-side (Vercel, no prefix):
 | `STRIPE_SECRET_KEY` | Stripe secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` | Stripe price IDs |
-| `DEEPSEEK_API_KEY` | AI generation — primary backend (prompts, alt text, scan, etc.) |
+| `OPENROUTER_API_KEY` | AI generation — primary provider |
+| `OPENROUTER_MODEL` | Optional OpenRouter model override (default `deepseek/deepseek-chat`) |
 | `GEMINI_API_KEY` | AI generation — fallback backend |
 | `RESEND_API_KEY` / `SUPPORT_NOTIFY_EMAIL` | Feedback email notifications (optional) |
 | `GOOGLE_SHEETS_WEBHOOK_URL` | Feedback → Google Sheets sync (optional, see `docs/google-sheets-setup.md`) |

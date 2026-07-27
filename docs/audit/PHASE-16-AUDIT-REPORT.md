@@ -1,5 +1,11 @@
 # UIL4B — Comprehensive App Audit & Review Report
 
+> **Closed historical audit (compiled 2026-07-23; closed 2026-07-28).** Findings
+> and verification below describe the Phase-16 branch at that time. Do not use
+> its priorities or route-status claims as current state. Current execution lives
+> in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and `src/data/pipeline.js`; owner-only
+> work and open calls live in `OWNER-ACTIONS.md` and `DECISIONS-NEEDED.md`.
+
 *Phase 16 · compiled 2026-07-23 · branch `claude/audit-implementation-qa-a1hjzp`*
 
 This is the **review document**. It covers every use case per surface, the

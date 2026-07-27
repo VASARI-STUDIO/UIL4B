@@ -102,6 +102,19 @@ export const CREATE_GROUPS = [
   },
 ]
 
+// Homepage workspace previews are a deliberately small live subset of Create.
+// Keep this derived from CREATE_GROUPS so the hero bridge, preview tabs and their
+// destinations inherit the same labels/routes as the canonical tool tree.
+const HOME_PREVIEW_META = {
+  colour: { previewLabel: 'Colour', previewHome: '/color' },
+  icons: { previewLabel: 'Icons', previewHome: '/icons' },
+  imagery: { previewLabel: 'Imagery', previewHome: '/file-converter' },
+}
+
+export const LIVE_PREVIEW_GROUPS = CREATE_GROUPS
+  .filter((group) => Object.hasOwn(HOME_PREVIEW_META, group.id))
+  .map((group) => ({ ...group, ...HOME_PREVIEW_META[group.id] }))
+
 // Discover + Learn are landing shells in Phase 1: most menu entries route to the
 // surface landing (which owns the honest "coming soon" messaging), so there are
 // no dead links and nothing claims to be live before it is. The exception is the

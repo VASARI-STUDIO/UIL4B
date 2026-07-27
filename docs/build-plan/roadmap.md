@@ -73,18 +73,20 @@ squash-merge → realign the branch.
   ladder in Stripe: monthly **$4.99 AUD**, yearly **≈$41.99 AUD**, lifetime
   **$129 AUD**, `.99` international (a live price is real money / a Human Validation
   Zone); lifetime also **needs code first** (one-time price + `mode:'payment'` +
-  webhook flag) so it stays a non-advertised "coming soon" placeholder; optional UI
-  follow-up is a dedicated **Plans** page + trimming pricing from Settings — targets
-  + steps in [`../OWNER-ACTIONS.md`](../OWNER-ACTIONS.md); (2) the **Google-profile
-  default avatar** (overridable), which touches a Human Validation Zone
-  (`GoogleOneTap.jsx` / `AuthContext.jsx`).
+  webhook flag) so it stays a non-advertised "coming soon" placeholder. The
+  dedicated **Plans** page is shipped; optional UI follow-up is trimming pricing
+  from Settings. The old Google-profile-default-avatar proposal is closed:
+  initials on the shipped gradient avatar remain the canonical default.
 - **Cluster E — Discover / Learn — ✅ MERGED (#136).** Discover + Learn sales
   pages improved; Discover's stylised world map shipped (UIL4B marker on Brisbane,
   hover/click-to-region, no user info); `navbar.gallery` featured in
   `discoverResources.js`.
 - **Cluster F — Colour tool — ✅ MERGED (#136).** Tint generator imported; custom
   semantic colours drawn from the applicable side of the colour wheel (e.g.
-  success = blue→yellow), capped halfway.
+  success = blue→yellow), capped halfway. The later `/color` ambiguity is also
+  resolved: `/color` is the colour-system landing and the live tools are
+  `/color/palette`, `/color/semantic`, `/color/tint`, `/color/gradient` and
+  `/color/contrast`.
 - **Cluster G — Unify Icon + Emoji — ✅ MERGED (#137).** Merged into one pill-
   toggle surface; fixed the malformed nav SVGs (gear, search) and the hover-reveal
   of the gear/avatar controls.
@@ -93,22 +95,28 @@ squash-merge → realign the branch.
 
 ## 🐞 Known bugs (fix when the relevant tool is rebuilt)
 
-1. ~~**Colour/Color label flash on refresh.**~~ ✅ **FIXED + MERGED (#141).**
-   `en-US` is statically imported and seeded into the `I18nContext` locale cache,
-   so the active English locale resolves synchronously on first paint — no
-   British→American re-render. Non-English locales keep their async code-split.
-2. **Font-gallery FOUT on scroll.** `src/pages/FontGallery.jsx` lazy-loads each
+1. **Font-gallery FOUT on scroll.** `src/pages/FontGallery.jsx` lazy-loads each
    font via an `IntersectionObserver` and swaps placeholder→real per card — janky
    reflow. **Fix:** preload the visible set + reserve card metrics + reliable
-   load path (retry/fallback). _(Deferred — hard to verify headlessly.)_
+   load path (retry/fallback), plus keyboard/dialog readiness before activation.
+   _(Deferred until Font Gallery is activated.)_
+
+## Resolved bug history
+
+- **Colour/Color label flash on refresh** — fixed and merged in #141. `en-US`
+  seeds the locale cache synchronously; non-English locales remain code-split.
 
 ## 🔴 Owner-blocking (can't be coded) → [`../OWNER-ACTIONS.md`](../OWNER-ACTIONS.md)
 
 Stripe monthly/yearly price flip (targets in OWNER-ACTIONS; the **lifetime tier
 needs code first** — a one-time price + entitlement, not a Stripe-only edit) ·
-AI keys (Firebase service-account + OpenRouter) ·
+OpenRouter production key (Firebase + Gemini verified healthy 2026-07-28) ·
 Stripe `RETAIN50` coupon + portal · Firebase Storage + `storage.rules` /
-`firestore.rules` · `og-image.png` (1200×630) · SEO prerender decision.
+`firestore.rules`.
+
+SEO prerender and lifetime direction are founder calls in
+[`../DECISIONS-NEEDED.md`](../DECISIONS-NEEDED.md); the static OG card is an
+engineering-owned pipeline item.
 
 ---
 

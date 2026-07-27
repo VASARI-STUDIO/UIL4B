@@ -1,5 +1,11 @@
 # Palette v3 + Design-System Consistency — Execution Plan
 
+> **Closed historical execution plan (2026-07-28).** All implementation waves
+> described here shipped. The only residual is server-side community-handle
+> uniqueness, now folded into the canonical Community backend decision/workstream
+> in `docs/DECISIONS-NEEDED.md` and `src/data/pipeline.js`. Preserve this document
+> for founder-brief provenance; do not use it as a current backlog.
+
 _Founder brief received 2026-07-15 (this doc is the parsed, re-sequenced version).
 Written for the next session/agent to execute. Work the waves in order — Wave 1
 is the foundation everything else reuses. One wave ≈ one commit/verify cycle._

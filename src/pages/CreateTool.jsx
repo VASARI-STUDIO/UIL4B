@@ -49,7 +49,6 @@ const RatioCalculator = lazy(() => import('./RatioCalculator'))
 const LIVE_TOOLS = {
   '/color/palette': PaletteBuilder,
   '/color/semantic': ColorStudio,
-  '/color/ui': ColorStudio,
   '/color/gradient': GradientGenerator,
   '/color/tint': TintTool,
   '/color/contrast': ContrastChecker,
