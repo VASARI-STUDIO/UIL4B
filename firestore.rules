@@ -3,13 +3,46 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // User profiles — only the owner can read/write
+    // Billing/entitlement fields on a user doc. These decide whether the server
+    // hands out Pro (api/_lib/plans.js → planForUser reads `subscription` and
+    // `lifetimeEntitlement` straight off this doc), so a client that could write
+    // them could grant itself Pro and bill the founder for the AI calls.
+    // Only the Stripe webhook / checkout reconciliation may set them, and those
+    // run through the Firebase Admin SDK, which bypasses these rules entirely.
+    function lockedUserFields() {
+      return ['lifetimeEntitlement', 'subscription', 'stripeCustomerId'];
+    }
+
+    // Create path: the incoming document must not carry any locked field.
+    function createsNoLockedField() {
+      return !request.resource.data.keys().hasAny(lockedUserFields());
+    }
+
+    // Update path: `request.resource.data` is the POST-merge document, so
+    // diffing against `resource.data` catches added, changed AND deleted locked
+    // fields — including ones smuggled in via setDoc(..., { merge: true }).
+    function leavesLockedFieldsUntouched() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(lockedUserFields());
+    }
+
+    // User profiles — only the owner can read/write, and never the billing fields
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      allow read: if isOwner();
+      allow create: if isOwner() && createsNoLockedField();
+      allow update: if isOwner() && leavesLockedFieldsUntouched();
+      // Account deletion (AuthContext.deleteAccount) removes the whole doc.
+      // Dropping entitlements can only ever lose the owner access, never grant
+      // it: every grant path re-verifies a paid Stripe session server-side.
+      allow delete: if isOwner();
 
       // Sync data subcollection — only the owner
       match /sync/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner();
       }
     }
 

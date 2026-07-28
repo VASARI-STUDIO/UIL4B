@@ -1,10 +1,67 @@
 import { getStripeServer } from './_lib/stripe.js'
-import { LOOKUP_KEYS, DEFAULT_PRICES, fromCents } from './_lib/pricing.js'
+import {
+  BILLING_INTERVALS,
+  CURRENCY_CODES,
+  DEFAULT_PRICES,
+  LOOKUP_KEYS,
+  PRICE_ENV_KEYS,
+  fromCents,
+} from './_lib/pricing.js'
 
-// Module-level cache with 5-minute TTL so we don't hit Stripe on every page load.
 let cached = null
 let cachedAt = 0
 const TTL_MS = 5 * 60 * 1000
+
+function priceMatchesInterval(price, interval) {
+  if (!price?.active) return false
+  if (interval === 'lifetime') return !price.recurring
+  return price.recurring?.interval === (interval === 'yearly' ? 'year' : 'month')
+}
+
+async function resolveLivePrice(stripe, interval) {
+  const envId = process.env[PRICE_ENV_KEYS[interval]]
+  if (envId) {
+    try {
+      const price = await stripe.prices.retrieve(envId, { expand: ['currency_options'] })
+      if (priceMatchesInterval(price, interval)) return price
+    } catch { /* fall through to the lookup key */ }
+  }
+  const found = await stripe.prices.list({
+    lookup_keys: [LOOKUP_KEYS[interval]],
+    active: true,
+    limit: 1,
+    expand: ['data.currency_options'],
+  })
+  const price = found.data[0]
+  return priceMatchesInterval(price, interval) ? price : null
+}
+
+function currencyMap(price) {
+  if (!price) return null
+  const result = { [price.currency]: fromCents(price.unit_amount) }
+  for (const [currency, option] of Object.entries(price.currency_options || {})) {
+    if (option?.unit_amount != null) result[currency] = fromCents(option.unit_amount)
+  }
+  return result
+}
+
+function responseFromLive(live = {}) {
+  const response = {
+    availability: {},
+    currencyAvailability: {},
+    source: {},
+  }
+  for (const interval of BILLING_INTERVALS) {
+    const map = live[interval] || null
+    response[interval] = map || DEFAULT_PRICES[interval]
+    response.availability[interval] = !!map
+    response.source[interval] = map ? 'live' : 'fallback'
+    response.currencyAvailability[interval] = Object.fromEntries(
+      CURRENCY_CODES.map((currency) => [currency, !!map && map[currency] != null]),
+    )
+  }
+  return response
+}
 
 async function fetchPrices() {
   const now = Date.now()
@@ -12,31 +69,18 @@ async function fetchPrices() {
 
   try {
     const stripe = getStripeServer()
-    const result = {}
-
-    for (const [interval, lk] of Object.entries(LOOKUP_KEYS)) {
-      const found = await stripe.prices.list({
-        lookup_keys: [lk], active: true, limit: 1, expand: ['data.currency_options'],
-      })
-      if (!found.data.length) { result[interval] = null; continue }
-      const p = found.data[0]
-      const currencies = { [p.currency]: fromCents(p.unit_amount) }
-      for (const [cur, opt] of Object.entries(p.currency_options || {})) {
-        currencies[cur] = fromCents(opt.unit_amount)
-      }
-      result[interval] = currencies
+    const live = {}
+    for (const interval of BILLING_INTERVALS) {
+      live[interval] = currencyMap(await resolveLivePrice(stripe, interval))
     }
-
-    // Only cache if we got at least one interval back from Stripe.
-    if (result.monthly || result.yearly) {
-      cached = result
+    const response = responseFromLive(live)
+    if (Object.values(response.availability).some(Boolean)) {
+      cached = response
       cachedAt = now
     }
-
-    return result
+    return response
   } catch {
-    // Stripe not configured or network error — fall through to defaults.
-    return null
+    return responseFromLive()
   }
 }
 
@@ -46,23 +90,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const prices = await fetchPrices()
-
-    // Fall back to defaults if Stripe returned nothing or threw.
-    const monthly = prices?.monthly ?? DEFAULT_PRICES.monthly
-    const yearly = prices?.yearly ?? DEFAULT_PRICES.yearly
-
-    return res.status(200).json({ monthly, yearly })
+    return res.status(200).json(await fetchPrices())
   } catch (err) {
     console.error('get-prices failed:', err)
-    return res.status(200).json({
-      monthly: DEFAULT_PRICES.monthly,
-      yearly: DEFAULT_PRICES.yearly,
-    })
+    return res.status(200).json(responseFromLive())
   }
 }
