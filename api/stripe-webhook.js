@@ -1,5 +1,6 @@
 import { adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
+import { lifetimeEntitlementFromSession } from './_lib/billing.js'
 
 export const config = { api: { bodyParser: false } }
 
@@ -80,6 +81,59 @@ async function flagTrialEnding(subscription) {
   }, { merge: true })
 }
 
+async function grantLifetimeEntitlement(session) {
+  const uid = session.metadata?.firebaseUid
+  const candidate = lifetimeEntitlementFromSession(session)
+  if (!uid || !candidate) return false
+
+  const ref = adminDb().collection('users').doc(uid)
+  const snap = await ref.get()
+  const current = snap.exists ? snap.data() : {}
+  if (current?.stripeCustomerId && candidate.customerId !== current.stripeCustomerId) {
+    // A paid session we refuse to honour is money taken without access, so it
+    // must never fail silently — this is the one branch an owner has to see.
+    console.error('stripe-webhook: paid lifetime session rejected — customer mismatch', {
+      uid, sessionId: session.id, sessionCustomer: candidate.customerId, userCustomer: current.stripeCustomerId,
+    })
+    return false
+  }
+  if (current?.lifetimeEntitlement?.checkoutSessionId === session.id
+    && current.lifetimeEntitlement.active === true) return true
+
+  await ref.set({
+    lifetimeEntitlement: {
+      ...candidate,
+      grantedAt: current?.lifetimeEntitlement?.grantedAt || candidate.grantedAt,
+    },
+  }, { merge: true })
+  return true
+}
+
+async function revokeLifetimeForFullRefund(charge) {
+  if (!charge || charge.amount_refunded < charge.amount) return false
+  const uid = await uidForCustomer(charge.customer)
+  if (!uid) return false
+  const ref = adminDb().collection('users').doc(uid)
+  const snap = await ref.get()
+  const entitlement = snap.data()?.lifetimeEntitlement
+  const paymentIntentId = typeof charge.payment_intent === 'string'
+    ? charge.payment_intent
+    : charge.payment_intent?.id
+  if (!entitlement?.active || !paymentIntentId || entitlement.paymentIntentId !== paymentIntentId) return false
+  const now = Date.now()
+  await ref.set({
+    lifetimeEntitlement: {
+      ...entitlement,
+      active: false,
+      revokedAt: now,
+      revokedReason: 'full_refund',
+      refundedChargeId: charge.id || null,
+      updatedAt: now,
+    },
+  }, { merge: true })
+  return true
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
@@ -120,7 +174,17 @@ export default async function handler(req, res) {
       if (session.subscription) {
         const sub = await stripe.subscriptions.retrieve(session.subscription)
         await upsertSubscription(sub)
+      } else {
+        await grantLifetimeEntitlement(session)
       }
+      break
+    }
+    case 'checkout.session.async_payment_succeeded': {
+      await grantLifetimeEntitlement(event.data.object)
+      break
+    }
+    case 'charge.refunded': {
+      await revokeLifetimeForFullRefund(event.data.object)
       break
     }
     case 'invoice.payment_failed': {

@@ -461,7 +461,11 @@ export default async function handler(req, res) {
   let plan, limit, used
   try {
     const userSnap = await fireDb.doc(`users/${uid}`).get()
-    plan = planForUser({ subscription: userSnap.data()?.subscription || null, email })
+    plan = planForUser({
+      subscription: userSnap.data()?.subscription || null,
+      lifetimeEntitlement: userSnap.data()?.lifetimeEntitlement || null,
+      email,
+    })
     limit = dailyLimitFor(plan, toolId)
     const usageSnap = await usageRef.get()
     used = usageSnap.data()?.[toolId] || 0

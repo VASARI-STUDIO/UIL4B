@@ -2,13 +2,13 @@ import { getStripeServer } from './_lib/stripe.js'
 import { adminAuth, credentialProblem } from './_lib/firebase-admin.js'
 import {
   SUPPORTED_CURRENCIES, CURRENCY_CODES, BASE_CURRENCY, DEFAULT_PRICES,
-  LOOKUP_KEYS, INTERVAL_MAP, toCents, fromCents,
+  LOOKUP_KEYS, INTERVAL_MAP, BILLING_INTERVALS, LIFETIME_CURRENCY_CODES, toCents, fromCents,
 } from './_lib/pricing.js'
 
 const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 const PRODUCT_NAME = 'UIL4B Pro'
 const PRODUCT_DESCRIPTION =
-  '1,000 AI generations per day, higher-quality models, cross-device project sync, and advanced design-system exports.'
+  '1,000 AI actions per day, unlimited project and custom-icon saves, advanced colour controls, and full design JSON export.'
 
 async function requireAdmin(req) {
   const authHeader = req.headers.authorization
@@ -55,12 +55,13 @@ async function readPrices(stripe) {
 }
 
 function validatePrices(prices) {
-  for (const interval of ['monthly', 'yearly']) {
+  for (const interval of BILLING_INTERVALS) {
     const map = prices?.[interval]
     if (!map || typeof map !== 'object') return `Missing ${interval} prices`
     if (!(BASE_CURRENCY in map)) return `${interval}: base currency (${BASE_CURRENCY.toUpperCase()}) is required`
     for (const [cur, amt] of Object.entries(map)) {
       if (!CURRENCY_CODES.includes(cur)) return `Unsupported currency: ${cur}`
+      if (interval === 'lifetime' && !LIFETIME_CURRENCY_CODES.includes(cur)) return `Lifetime pricing is not approved for ${cur.toUpperCase()}`
       const n = Number(amt)
       if (!isFinite(n) || n <= 0 || n > 100000) return `${interval} ${cur.toUpperCase()}: invalid amount`
     }
@@ -100,7 +101,7 @@ export default async function handler(req, res) {
     const product = await findOrCreateProduct(stripe)
     const out = {}
 
-    for (const interval of ['monthly', 'yearly']) {
+    for (const interval of BILLING_INTERVALS) {
       const lk = LOOKUP_KEYS[interval]
       const amounts = prices[interval]
 
@@ -115,16 +116,17 @@ export default async function handler(req, res) {
         currency_options[cur] = { unit_amount: toCents(amt) }
       }
 
-      const newPrice = await stripe.prices.create({
+      const priceParams = {
         product: product.id,
         currency: BASE_CURRENCY,
         unit_amount: toCents(amounts[BASE_CURRENCY]),
-        recurring: { interval: INTERVAL_MAP[interval] },
         lookup_key: lk,
         transfer_lookup_key: true,
         currency_options,
         nickname: `${PRODUCT_NAME} ${interval}`,
-      })
+      }
+      if (interval !== 'lifetime') priceParams.recurring = { interval: INTERVAL_MAP[interval] }
+      const newPrice = await stripe.prices.create(priceParams)
 
       if (existing.data[0] && existing.data[0].id !== newPrice.id) {
         await stripe.prices.update(existing.data[0].id, { active: false })
@@ -137,7 +139,7 @@ export default async function handler(req, res) {
       ok: true,
       product: product.id,
       prices: out,
-      note: 'Prices saved. Checkout resolves them by lookup key and shows each customer their local currency automatically.',
+      note: 'Prices saved. Recurring and one-off checkout resolve by lookup key; lifetime stays unavailable in currencies without an approved amount.',
     })
   } catch (err) {
     console.error('setup-stripe failed:', err)

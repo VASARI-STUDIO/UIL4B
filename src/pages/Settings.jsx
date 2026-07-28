@@ -394,41 +394,22 @@ function NavIcon({ id }) {
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
-  const { isPro, isAdmin, subscription, checkout, openPortal, loading: subLoading } = useSubscription()
+  const { isPro, isAdmin, subscription, lifetimeEntitlement, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
   const [active, setActive] = useState('subscription')
   const [confirmClear, setConfirmClear] = useState(false)
   const [billing, setBilling] = useState('yearly')
   const [checkingOut, setCheckingOut] = useState(false)
   const proPrice = useProPrice()
-  const [coffeeIdx, setCoffeeIdx] = useState(0)
   const location = useLocation()
-
-  const PRICE_COMPARISONS = [
-    { item: 'coffees', emoji: '☕', text: 'less than 2 coffees a month' },
-    { item: 'smoothie', emoji: '🥤', text: 'less than one smoothie a month' },
-    { item: 'streaming', emoji: '🎬', text: 'less than most streaming services' },
-    { item: 'lunch', emoji: '🍔', text: 'less than one lunch out' },
-    { item: 'parking', emoji: '🅿️', text: 'less than 2 hours of city parking' },
-    { item: 'beer', emoji: '🍺', text: 'less than one pint at the pub' },
-    { item: 'uber', emoji: '🚗', text: 'less than one short Uber ride' },
-    { item: 'cinema', emoji: '🎬', text: 'less than one movie ticket' },
-    { item: 'magazine', emoji: '📖', text: 'less than a magazine subscription' },
-    { item: 'snack', emoji: '🍩', text: 'less than a daily snack run' },
-  ]
-
-  useEffect(() => {
-    const timer = setInterval(() => setCoffeeIdx(i => (i + 1) % PRICE_COMPARISONS.length), 4000)
-    return () => clearInterval(timer)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startCheckout = async (interval) => {
     if (!user || checkingOut) return
     setCheckingOut(true)
     try {
       await checkout(interval)
-    } catch (e) {
-      toast?.(e?.message || 'Could not start checkout')
+    } catch (error) {
+      toast?.(error?.message || 'Could not start checkout')
       setCheckingOut(false)
     }
   }
@@ -548,7 +529,9 @@ export default function Settings({ toast }) {
                   <div className="sub-active-info">
                     <div className="sub-active-title">UIL4B Pro is active</div>
                     <div className="sub-active-meta">
-                      {isAdmin && !subscription ? 'Founder account — Pro included, no billing' : (
+                      {isAdmin && !subscription && !lifetimeEntitlement ? 'Founder account — Pro included, no billing'
+                        : lifetimeEntitlement?.active && !subscription ? 'One-off Pro access — no subscription or renewal'
+                          : (
                         <>
                           {subscription?.interval === 'year' ? 'Billed yearly' : 'Billed monthly'}
                           {subscription?.cancelAtPeriodEnd && ' · cancels at period end'}
@@ -562,7 +545,7 @@ export default function Settings({ toast }) {
                 </div>
                 {/* Admins without a real Stripe subscription have no billing
                     portal to open — hide the buttons instead of 500ing. */}
-                {!(isAdmin && !subscription) && (
+                {!!subscription && (
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button className="btn" onClick={() => openPortal()}>Manage billing</button>
                     {!subscription?.cancelAtPeriodEnd && (
@@ -608,51 +591,29 @@ export default function Settings({ toast }) {
                     <div className="sub-tier-head">
                       <div className="sub-tier-name">Pro</div>
                       <div className="sub-tier-price">
-                        <span className="sub-tier-amount">{billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly}</span>
+                        <span className="sub-tier-amount">{proPrice.loaded ? (billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly) : '—'}</span>
                         <span className="sub-tier-per">{billing === 'yearly' ? 'per year' : 'per month'}</span>
                       </div>
-                      <div className="sub-tier-sub">{billing === 'yearly' ? `AUD · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? `, save ${proPrice.savingsPct}%` : ''} · 7-day free trial` : 'AUD · billed monthly'}</div>
+                      <div className="sub-tier-sub">{!proPrice.loaded ? 'Checking live price…' : billing === 'yearly' ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? `, save ${proPrice.savingsPct}%` : ''} · 7-day free trial` : `${proPrice.currencyLabel} · billed monthly`}</div>
                     </div>
                     <ul className="sub-tier-list">
                       <li><Check /> <strong>Everything in Free, plus:</strong></li>
                       {billing === 'yearly' && <li><Check /> <strong>7-day free trial</strong> — cancel anytime</li>}
-                      <li><Check /> 1,000 AI generations per day</li>
-                      <li><Check /> Higher-quality AI models</li>
-                      <li><Check /> Projects synced across devices</li>
-                      <li><Check /> Advanced design-system exports</li>
-                      <li><Check /> Priority support</li>
+                      <li><Check /> 1,000 AI actions per day</li>
+                      <li><Check /> Unlimited project and custom-icon saves</li>
+                      <li><Check /> Advanced colour controls</li>
+                      <li><Check /> Full design JSON and watermark-free palette export</li>
                     </ul>
                     <button
                       className="btn btn-accent sub-tier-btn"
                       onClick={() => startCheckout(billing)}
-                      disabled={!user || subLoading || checkingOut}
+                      disabled={!user || subLoading || checkingOut || !proPrice.loaded}
                     >
-                      {checkingOut ? 'Opening checkout…' : billing === 'yearly' ? 'Start 7-day free trial' : `Upgrade — ${proPrice.monthly}/mo`}
+                      {checkingOut ? 'Opening checkout…' : billing === 'yearly' ? 'Start 7-day free trial' : 'Choose monthly Pro'}
                     </button>
                     <div className="sub-tier-foot">Secure checkout via Stripe · cancel anytime</div>
-                    <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: 'var(--t1)', transition: 'opacity .3s' }}>
-                      <span style={{ marginRight: 4 }}>{PRICE_COMPARISONS[coffeeIdx].emoji}</span>
-                      That&apos;s {PRICE_COMPARISONS[coffeeIdx].text}
-                    </div>
                   </div>
 
-                  {/* Premium Plus — coming soon */}
-                  <div className="sub-tier" style={{ opacity: 0.55, pointerEvents: 'none', position: 'relative' }}>
-                    <span className="sub-tier-flag" style={{ background: 'var(--bg-2)', color: 'var(--t2)' }}>Coming Soon</span>
-                    <div className="sub-tier-head">
-                      <div className="sub-tier-name">Premium Plus</div>
-                      <div className="sub-tier-price"><span className="sub-tier-amount">—</span><span className="sub-tier-per">TBA</span></div>
-                    </div>
-                    <ul className="sub-tier-list">
-                      <li><Check /> Everything in Pro</li>
-                      <li><Check /> Unlimited AI generations</li>
-                      <li><Check /> Team collaboration</li>
-                      <li><Check /> Custom branding on exports</li>
-                      <li><Check /> White-label option</li>
-                      <li><Check /> Dedicated support</li>
-                    </ul>
-                    <button className="btn sub-tier-btn" disabled>Coming soon</button>
-                  </div>
                 </div>
               </>
             )}

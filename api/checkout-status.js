@@ -1,5 +1,6 @@
 import { adminAuth, adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
+import { lifetimeEntitlementFromSession } from './_lib/billing.js'
 
 // Returns the status of an embedded Checkout session so the /checkout/return
 // page can confirm the result. The session is verified to belong to the
@@ -42,14 +43,41 @@ export default async function handler(req, res) {
 
     // Only let a user read their own checkout session.
     const userDoc = await adminDb().collection('users').doc(uid).get()
-    const customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
-    if (!customerId || session.customer !== customerId) {
+    const userData = userDoc.exists ? userDoc.data() : {}
+    const customerId = userData?.stripeCustomerId || null
+    if (!customerId || session.customer !== customerId
+      || (session.metadata?.firebaseUid && session.metadata.firebaseUid !== uid)) {
       return res.status(403).json({ error: 'Session does not belong to this account' })
+    }
+
+    // Safety net for one-off purchases: the webhook is the primary grant path,
+    // but a completed payment must never depend on a single delivery. The
+    // session has already been proved to belong to this account above, and
+    // lifetimeEntitlementFromSession only returns a grant for a complete, PAID
+    // session carrying the lifetime SKU — so this can add access, never
+    // fabricate it. A revoked (refunded) entitlement is never re-granted.
+    let entitlementActive = userData?.lifetimeEntitlement?.active === true
+    const revoked = !!userData?.lifetimeEntitlement?.revokedAt
+    if (!entitlementActive && !revoked) {
+      const candidate = lifetimeEntitlementFromSession(session)
+      if (candidate && candidate.customerId === customerId && session.metadata.firebaseUid === uid) {
+        await adminDb().collection('users').doc(uid).set({
+          lifetimeEntitlement: {
+            ...candidate,
+            grantedAt: userData?.lifetimeEntitlement?.grantedAt || candidate.grantedAt,
+          },
+        }, { merge: true })
+        entitlementActive = true
+        console.warn('checkout-status: reconciled a paid one-off entitlement the webhook had not applied', { uid, sessionId })
+      }
     }
 
     return res.status(200).json({
       status: session.status, // 'open' | 'complete' | 'expired'
       paymentStatus: session.payment_status, // 'paid' | 'unpaid' | 'no_payment_required'
+      mode: session.mode,
+      interval: session.metadata?.billingInterval || null,
+      entitlementActive,
       customerEmail: session.customer_details?.email || null,
     })
   } catch (err) {

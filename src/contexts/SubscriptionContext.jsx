@@ -4,26 +4,11 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { ADMIN_EMAILS } from '../utils/constants'
+import { detectCurrency } from '../utils/currency'
 
 const SubscriptionContext = createContext()
 
-// Maps the region subtag of the browser locale to a supported Stripe currency
-// so checkout shows each visitor their local pricing. Unknown regions fall
-// through to Stripe's default (USD).
-const REGION_CURRENCY = {
-  AU: 'aud', NZ: 'nzd', GB: 'gbp', US: 'usd', CA: 'cad', SG: 'sgd', CH: 'chf',
-  IE: 'eur', DE: 'eur', FR: 'eur', ES: 'eur', IT: 'eur', NL: 'eur', AT: 'eur',
-  BE: 'eur', FI: 'eur', PT: 'eur', GR: 'eur', LU: 'eur', EE: 'eur', SK: 'eur',
-  SI: 'eur', LV: 'eur', LT: 'eur', CY: 'eur', MT: 'eur',
-}
-
-function detectCurrency() {
-  try {
-    const region = (navigator.language || '').split('-')[1]?.toUpperCase()
-    if (region && REGION_CURRENCY[region]) return REGION_CURRENCY[region]
-  } catch { /* ignore */ }
-  return null
-}
+const BILLING_INTERVALS = new Set(['monthly', 'yearly', 'lifetime'])
 
 // Free-tier save allowance — the single source of truth for BOTH enforcement
 // (ProjectContext, IconLibrary) and the pricing copy (Plans.jsx). Saving is no
@@ -46,7 +31,8 @@ const PRO_PLAN = {
   },
 }
 
-function planForSubscription(sub) {
+function planForSubscription(sub, lifetimeEntitlement) {
+  if (lifetimeEntitlement?.active === true && !lifetimeEntitlement.revokedAt) return PRO_PLAN
   if (!sub) return FREE_PLAN
   const active = sub.status === 'active' || sub.status === 'trialing'
   if (!active) return FREE_PLAN
@@ -57,11 +43,13 @@ function planForSubscription(sub) {
 export function SubscriptionProvider({ children }) {
   const { user } = useAuth()
   const [subscription, setSubscription] = useState(null)
+  const [lifetimeEntitlement, setLifetimeEntitlement] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!user?.uid) {
       setSubscription(null)
+      setLifetimeEntitlement(null)
       setLoading(false)
       return
     }
@@ -69,6 +57,7 @@ export function SubscriptionProvider({ children }) {
     const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
       const data = snap.data()
       setSubscription(data?.subscription || null)
+      setLifetimeEntitlement(data?.lifetimeEntitlement || null)
       setLoading(false)
     }, () => {
       setLoading(false)
@@ -83,19 +72,20 @@ export function SubscriptionProvider({ children }) {
   // it server-side from the ID token — flipping this flag in devtools unlocks
   // nothing that the server doesn't independently grant.
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
-  const plan = isAdmin ? PRO_PLAN : planForSubscription(subscription)
+  const plan = isAdmin ? PRO_PLAN : planForSubscription(subscription, lifetimeEntitlement)
   const isPro = plan.id === 'pro'
 
   // Sends the user to our own embedded checkout page (/checkout) instead of a
   // Stripe-hosted page, so the flow keeps the site's branding and chrome.
   const checkout = useCallback(async (interval = 'monthly') => {
-    const plan = interval === 'yearly' ? 'yearly' : 'monthly'
-    window.location.href = `/checkout?plan=${plan}`
+    if (!BILLING_INTERVALS.has(interval)) throw new Error('Invalid billing interval')
+    window.location.href = `/checkout?plan=${interval}`
   }, [])
 
   // Creates an embedded Checkout session and returns its client_secret, used by
   // the /checkout page to mount Stripe's <EmbeddedCheckout />.
   const createCheckoutSession = useCallback(async (interval = 'monthly') => {
+    if (!BILLING_INTERVALS.has(interval)) throw new Error('Invalid billing interval')
     const token = await firebaseAuth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
     const res = await fetch('/api/create-checkout', {
@@ -137,7 +127,7 @@ export function SubscriptionProvider({ children }) {
 
   return (
     <SubscriptionContext.Provider value={{
-      subscription, plan, isPro, isAdmin, loading,
+      subscription, lifetimeEntitlement, plan, isPro, isAdmin, loading,
       checkout, createCheckoutSession, getCheckoutStatus, openPortal,
     }}>
       {children}
