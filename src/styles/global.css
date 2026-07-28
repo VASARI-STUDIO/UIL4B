@@ -4773,6 +4773,8 @@ html.lenis,html.lenis body{height:auto}
 .pnav-pop-acct-name{font-size:var(--fs-body-s);font-weight:560;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-acct:hover .pnav-pop-acct-name{color:var(--t0)}
 .pnav-pop-acct-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav-pop-acct:disabled{cursor:wait;opacity:.66}
+.pnav-switch-status{margin:7px 10px 3px;padding:8px 10px;border-radius:var(--radius-s);background:var(--bg-2);color:var(--t2);font-size:var(--fs-caption);line-height:1.45}
 
 /* Mega-menu panel — one shared node, morphs width per section */
 .pnav-menu{position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;width:1040px;max-width:calc(100vw - 32px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-4) var(--ease-inout);animation:pnav-menu-in var(--dur-4) var(--ease-out)}

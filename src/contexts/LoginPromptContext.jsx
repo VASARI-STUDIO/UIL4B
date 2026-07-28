@@ -19,23 +19,39 @@ export function LoginPromptProvider({ children }) {
   // synced in an effect (not during render) so it stays current for the
   // event-driven callbacks below.
   const resolverRef = useRef(null)
+  const pendingPromiseRef = useRef(null)
+  const openerRef = useRef(null)
+  const promptIdRef = useRef(0)
   const userRef = useRef(user)
   useEffect(() => { userRef.current = user }, [user])
 
   const finish = useCallback((result) => {
     const resolve = resolverRef.current
     resolverRef.current = null
+    pendingPromiseRef.current = null
     setPrompt(null)
     if (resolve) resolve(result)
+    requestAnimationFrame(() => openerRef.current?.focus?.())
   }, [])
 
   const requireLogin = useCallback((reason, opts = {}) => {
     // Already signed in — nothing to prompt for.
-    if (userRef.current) return Promise.resolve(userRef.current)
-    return new Promise((resolve) => {
+    if (userRef.current && !opts.force) return Promise.resolve(userRef.current)
+    if (pendingPromiseRef.current) return pendingPromiseRef.current
+    openerRef.current = document.activeElement
+    const promise = new Promise((resolve) => {
       resolverRef.current = resolve
-      setPrompt({ reason, free: opts.free !== false })
+      setPrompt({
+        id: ++promptIdRef.current,
+        reason,
+        free: opts.free !== false,
+        initialEmail: typeof opts.email === 'string' ? opts.email : '',
+        lockEmail: !!opts.lockEmail,
+        passwordOnly: opts.mode === 'switch',
+      })
     })
+    pendingPromiseRef.current = promise
+    return promise
   }, [])
 
   // Imperative, reason-less variant for plain "Log in" / "Sign in" affordances
@@ -47,8 +63,12 @@ export function LoginPromptProvider({ children }) {
       {children}
       {prompt && (
         <LoginPopup
+          key={prompt.id}
           reason={prompt.reason}
           free={prompt.free}
+          initialEmail={prompt.initialEmail}
+          lockEmail={prompt.lockEmail}
+          passwordOnly={prompt.passwordOnly}
           onSuccess={(u) => finish(u || userRef.current || null)}
           onDismiss={() => finish(null)}
         />

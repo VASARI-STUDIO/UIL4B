@@ -1,5 +1,5 @@
 import { Component, useEffect, useRef, lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
 import AppFooter from './components/AppFooter'
@@ -99,15 +99,12 @@ function RequireAuth({ children }) {
 // z-index), so every existing `<Link to="/login">` / `navigate('/login')` opens
 // the popup over the app instead of a full page. On success we send the user to
 // where they were headed (RequireAuth / Checkout set location.state.from); on
-// dismiss we return them there too so the URL never gets stuck on /login. The
-// legacy new-window gate (`/login?gate=1`) still closes its window on success.
+// dismiss we return them there too so the URL never gets stuck on /login.
 function LoginRoute() {
   const { openLogin } = useLoginPrompt()
   const { user, loading } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const gate = params.get('gate') === '1'
   const from = location.state?.from || '/home'
   const started = useRef(false)
 
@@ -115,8 +112,7 @@ function LoginRoute() {
     if (loading || started.current) return
     started.current = true
     if (user) {
-      if (gate) window.close()
-      else navigate(from, { replace: true })
+      navigate(from, { replace: true })
       return
     }
     // A brand-new sign-up completed from this launcher is intercepted into
@@ -127,11 +123,10 @@ function LoginRoute() {
     if (from && from !== '/home') {
       try { sessionStorage.setItem('vs-resume-after-onboarding', from) } catch { /* ignore */ }
     }
-    openLogin({ reason: '', from }).then((u) => {
-      if (gate && u) { window.close(); return }
+    openLogin({ reason: '', from }).then(() => {
       navigate(from, { replace: true })
     })
-  }, [loading, user, gate, from, navigate, openLogin])
+  }, [loading, user, from, navigate, openLogin])
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
