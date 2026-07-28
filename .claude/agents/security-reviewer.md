@@ -11,7 +11,7 @@ description: >-
   Knows UIL4B's public-by-design client values are NOT secrets. Read-only and
   advisory — runs after engineering, alongside code-reviewer, before QA.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: claude-opus-5
 effort: high
 ---
 

@@ -41,16 +41,16 @@ documents rather than copying facts that will drift.
 
 | Agent | Model | Accountable outcome |
 |---|---|---|
-| **research** | sonnet | Cited, decision-ready evidence about a defined market, user, or technical question. |
-| **design** | opus | Coherent user flows, experience direction, anti-slop critique, and buildable acceptance criteria. |
-| **seo** | sonnet | Prioritised technical and content search improvements supported by current evidence. |
-| **engineer** | opus | The smallest complete implementation with runtime and build evidence. |
-| **code-reviewer** | sonnet | Severity-ranked outcome and code-quality findings with line-level evidence. |
-| **security-reviewer** | opus | Threat-focused review and concrete remediation for security-sensitive changes. |
-| **secret-scanner** | sonnet | Pre-commit secret and credential-leak verdict with safe redaction. |
-| **qa** | sonnet | End-to-end functional verdict across requirements, states, viewports, and accessibility. |
-| **release-captain** | sonnet | Evidence-based release readiness and prepared hand-off to the project manager. |
-| **analytics** | sonnet | Measurement plans and instrumentation that answer defined product questions. |
+| **research** | claude-sonnet-5 | Cited, decision-ready evidence about a defined market, user, or technical question. |
+| **design** | claude-opus-5 | Coherent user flows, experience direction, anti-slop critique, and buildable acceptance criteria. |
+| **seo** | claude-sonnet-5 | Prioritised technical and content search improvements supported by current evidence. |
+| **engineer** | claude-opus-5 | The smallest complete implementation with runtime and build evidence. |
+| **code-reviewer** | claude-sonnet-5 | Severity-ranked outcome and code-quality findings with line-level evidence. |
+| **security-reviewer** | claude-opus-5 | Threat-focused review and concrete remediation for security-sensitive changes. |
+| **secret-scanner** | claude-sonnet-5 | Pre-commit secret and credential-leak verdict with safe redaction. |
+| **qa** | claude-sonnet-5 | End-to-end functional verdict across requirements, states, viewports, and accessibility. |
+| **release-captain** | claude-sonnet-5 | Evidence-based release readiness and prepared hand-off to the project manager. |
+| **analytics** | claude-sonnet-5 | Measurement plans and instrumentation that answer defined product questions. |
 
 Model assignments are a founder decision. Keep this table and each agent's
 `model:` field in sync.

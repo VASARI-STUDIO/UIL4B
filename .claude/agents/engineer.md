@@ -8,7 +8,7 @@ description: >-
   instead of carrying stale stack, provider, or brand details in its persona.
   Flags human-validation zones and never reports success without evidence.
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: opus
+model: claude-opus-5
 effort: high
 ---
 

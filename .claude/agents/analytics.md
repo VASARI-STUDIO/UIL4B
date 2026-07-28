@@ -9,7 +9,7 @@ description: >-
   funnels, and metrics tied to the business goals, and flags gaps, double-counts,
   and misleading metrics. Advisory — read-only (plus build/grep).
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: claude-sonnet-5
 effort: high
 ---
 

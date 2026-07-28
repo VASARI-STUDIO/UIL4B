@@ -8,7 +8,7 @@ description: >-
   critique. Does not prescribe fonts, colours, frameworks, or fixed visual
   systems from its persona; those belong to project sources and brand skills.
 tools: WebSearch, WebFetch, Read, Grep, Glob
-model: opus
+model: claude-opus-5
 effort: high
 ---
 
