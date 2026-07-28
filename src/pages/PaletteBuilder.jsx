@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
@@ -17,6 +17,10 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
+import { resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
+// The adjust lens contract — see utils/paletteAdjust.js for why the base
+// colours and the slider values are persisted separately.
+import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
 
 // Palette Builder — the standalone /color/palette workbench. A Coolors-style
 // full-bleed board: a toolbar (seed + harmony + brands/variations/preview +
@@ -69,12 +73,10 @@ const ADJUST_FIELDS = [
   { key: 'b', label: 'Tone', min: -100, max: 100, unit: '%', snaps: [-50, 0, 50], snapRadius: 6 },
   { key: 'temp', label: 'Temperature', min: -100, max: 100, unit: '', snaps: [-50, 0, 50], snapRadius: 6 },
 ]
-const ZERO_ADJUST = { h: 0, s: 0, b: 0, temp: 0 }
 
 // Tones for the expanded per-colour tints panel (click the mini ramp to open).
 const TINT_TONES = [95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
-const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i
 const HANDLE_KEY = 'vs-community-handle'            // the user's chosen social name
 
 // Palette history (toolbar History menu): a rolling local log of the boards the
@@ -242,15 +244,6 @@ function handleProblem(raw) {
   const norm = normaliseForFilter(h)
   if (HANDLE_BLOCK.some(w => norm.includes(w))) return 'Please choose a different handle.'
   return null
-}
-
-// '#Abc' / 'aabbcc' → canonical '#AABBCC'; null when the string isn't a hex.
-function normaliseHex(raw) {
-  const m = HEX_RE.exec((raw || '').trim())
-  if (!m) return null
-  let hex = m[1]
-  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('')
-  return `#${hex.toUpperCase()}`
 }
 
 // Perceptual midpoint of two colours (shortest hue arc in HCT) — what the
@@ -458,11 +451,20 @@ const IcoDice = () => (
 const IcoHistory = () => (
   <Ico size={13}><path d="M3 12a9 9 0 1 0 2.8-6.5" /><path d="M3 4v5h5" /><path d="M12 8v4l3 2" /></Ico>
 )
+// Undo — the arrowhead MUST land on the end of the shaft. The previous glyph
+// pointed at y=12 while its shaft ended at y=10, so the head rendered detached
+// and sitting low. Lucide's `undo-2` geometry, unmodified: head at (4,9), shaft
+// leaving the same point.
 const IcoUndo = () => (
-  <Ico size={13}><path d="m9 7-5 5 5 5" /><path d="M20 17a7 7 0 0 0-7-7H4" /></Ico>
+  <Ico size={13}><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" /></Ico>
 )
 const IcoReset = () => (
   <Ico size={13}><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></Ico>
+)
+// Gradient — a swatch with two parallel diagonal bands (the ramp), matching the
+// stroke weight and 13px optical size of the other toolbar glyphs.
+const IcoGradient = () => (
+  <Ico size={13}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 15 15 3" /><path d="M9 21 21 9" /></Ico>
 )
 const IcoGallery = () => (
   <Ico size={13}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></Ico>
@@ -697,20 +699,31 @@ export default function PaletteBuilder({ onCopy, toast }) {
     [isPro]
   )
 
+  const navigate = useNavigate()
+
+  // Read the incoming state ONCE, on first mount — the board owns it from then
+  // on. `queryColors` is a shared ?c= link (already-final colours, so it lands
+  // with a clean lens); `saved` is the carried-in project, split back into its
+  // base colours and the sliders that produced them.
+  const [queryColors] = useState(colorsFromQuery)
+  const [saved] = useState(() => readSavedPalette(design?.palette, HARD_MAX))
+
   // Colours are the source of truth (positional: index 0–4 = the five ROLES,
-  // beyond = ALTERNATIVE n). Seed + harmony act as a generator over the
-  // unlocked slots; a shared ?c= link or a carried-in project wins first paint.
+  // beyond = ALTERNATIVE n). They stay the RAW base: the adjust lens never
+  // writes back into them. Seed + harmony act as a generator over the unlocked
+  // slots; a shared ?c= link or a carried-in project wins first paint.
   const [colors, setColors] = useState(() =>
-    colorsFromQuery()
-    || (design?.palette?.colors?.length >= 2 ? design.palette.colors.slice(0, HARD_MAX) : generateHarmony(DEFAULT_SEED, 'analogous'))
+    queryColors || saved?.colors || generateHarmony(DEFAULT_SEED, 'analogous')
   )
-  const [seed, setSeed] = useState(() => colorsFromQuery()?.[0] || design?.palette?.base || DEFAULT_SEED)
+  const [seed, setSeed] = useState(() => queryColors?.[0] || design?.palette?.base || DEFAULT_SEED)
   const [seedInput, setSeedInput] = useState(seed)
   const [harmony, setHarmony] = useState(() =>
     (HARMONIES.some(h => h.id === design?.palette?.harmony) ? design.palette.harmony : 'analogous')
   )
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
-  const [adjust, setAdjust] = useState(() => design?.palette?.globalAdjust || ZERO_ADJUST)
+  // A shared link carries finished colours, so it opens with the sliders at zero
+  // rather than re-applying whatever lens was last left on this device.
+  const [adjust, setAdjust] = useState(() => (queryColors ? ZERO_ADJUST : saved?.adjust || ZERO_ADJUST))
   const [vision, setVision] = useState('normal')
   const [showContrast, setShowContrast] = useState(false)
   const [liveMsg, setLiveMsg] = useState('')
@@ -818,16 +831,28 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   // Keep ProjectContext in sync so Save/overwrite capture the live palette and
   // the merged studio picks it up (same persisted shape as the studio writes).
+  // `persistedPalette` writes BOTH halves: `colors` is the adjusted palette —
+  // what the user sees, and what every other consumer of design.palette.colors
+  // expects — while `baseColors` carries the un-lensed base this board
+  // re-derives from. See utils/paletteAdjust.js for why both are needed and how
+  // an older saved shape is read back without re-adjusting it.
   // Debounced: each ProjectContext write auto-persists the whole design to
   // localStorage, so writing on every tick would make slider scrubs janky —
   // rapid changes collapse into one write ~200ms after the user settles.
   useEffect(() => {
     const t = setTimeout(() => {
-      setPalette({ base: seed, harmony, colors: adjusted, extraColors: adjusted.slice(ROLES.length), globalAdjust: adjust, locked: [...locked], activeIdx: 0 })
+      setPalette({
+        ...persistedPalette(colors, adjust),
+        base: seed,
+        harmony,
+        extraColors: adjusted.slice(ROLES.length),
+        locked: [...locked],
+        activeIdx: 0,
+      })
     }, 200)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed, harmony, adjusted.join(','), JSON.stringify(adjust), locked])
+  }, [seed, harmony, colors.join(','), adjusted.join(','), JSON.stringify(adjust), locked])
 
   // Regenerate the current system over the UNLOCKED role slots; extras stay.
   const regen = (fromSeed, type) => {
@@ -1382,6 +1407,40 @@ export default function PaletteBuilder({ onCopy, toast }) {
     return `:root {\n${lines.join('\n')}\n}`
   }, [adjusted])
 
+  // ── Hand-offs into the sibling colour tools ─────────────────────────────────
+  // Both carry what the user is actually LOOKING at (the adjusted values, never
+  // the raw base) through the in-memory slot in utils/colorHandoff: versioned,
+  // nothing persisted, consumed exactly once at the destination. A reload or a
+  // direct visit to either tool finds nothing and it opens in its normal state.
+  // If navigation ever throws, the staged draft is dropped so it can't leak into
+  // a later, unrelated visit.
+  const openInGradient = () => {
+    closeAllMenus()
+    if (!setGradientDraft(adjusted)) {
+      toast?.('A gradient needs two different colours — add another to the board first')
+      return
+    }
+    setLiveMsg('Opening your palette in the Gradient Generator')
+    try {
+      navigate('/color/gradient')
+    } catch {
+      resetGradientDraft()
+      toast?.('Couldn’t open the Gradient Generator — try again')
+    }
+  }
+
+  const openInTint = (hex) => {
+    if (!setTintDraft([hex])) { toast?.('That colour couldn’t be handed over — try another'); return }
+    setTintsIdx(null)
+    setLiveMsg(`Opening ${hex} in the Tint Generator`)
+    try {
+      navigate('/color/tint')
+    } catch {
+      resetTintDraft()
+      toast?.('Couldn’t open the Tint Generator — try again')
+    }
+  }
+
   // Short share URL — /p/:code hits /api/share (vercel.json rewrite), which
   // serves social-preview OG meta + a palette-card image, then redirects
   // humans on to /color/palette?c=... where the ?c= parser picks it up.
@@ -1804,6 +1863,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
               </div>
             )}
           </div>
+          <button
+            type="button"
+            className="btn btn-s plb-icobtn"
+            title="Open this palette in the Gradient Generator"
+            onClick={openInGradient}
+          >
+            <IcoGradient /><span className="plb-lbl">Gradient</span>
+          </button>
           <button type="button" className="btn btn-s" onClick={() => setDsbOpen(true)} title="Design System Builder — coming soon"><IcoSliders /> Design System Builder</button>
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
@@ -2079,6 +2146,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
                       </button>
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    className="btn btn-s plb-tintopen"
+                    onClick={() => openInTint(adjusted[i])}
+                  >
+                    Open in Tint Generator
+                  </button>
                 </div>
               )}
 
