@@ -8,6 +8,8 @@ import {
 } from './_lib/pricing.js'
 import { LIFETIME_SKU, parseBillingInterval } from './_lib/billing.js'
 import { planForUser } from './_lib/plans.js'
+import { failRequest } from './_lib/http.js'
+import { resolveOrigin } from './_lib/origins.js'
 
 let priceCache = {}
 
@@ -38,10 +40,14 @@ export default async function handler(req, res) {
 
   const cred = credentialProblem()
   if (cred) {
-    // Logged so the exact credential state is visible in Vercel runtime logs
-    // (the response body carries the same string for the browser console).
-    console.error('create-checkout credential problem:', cred)
-    return res.status(500).json({ error: `Server configuration issue: ${cred}` })
+    // The credential explanation names the env var and the exact failure mode,
+    // so it stays server-side; the browser gets the reference id instead.
+    return failRequest(res, {
+      status: 500,
+      scope: 'create-checkout credential problem',
+      message: 'Payments are temporarily unavailable due to a server configuration issue. No payment was taken.',
+      context: { credential: cred },
+    })
   }
 
   let uid
@@ -97,9 +103,7 @@ export default async function handler(req, res) {
       )
     }
 
-    const ALLOWED_ORIGINS = ['https://uil4b.vercel.app', 'https://uil4b.com', 'https://www.uil4b.com', 'http://localhost:5173']
-    const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
-    const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
+    const origin = resolveOrigin(req)
 
     const subscriptionData = { metadata: { firebaseUid: uid } }
     if (isYearly) {
@@ -154,7 +158,12 @@ export default async function handler(req, res) {
       mode: sessionParams.mode,
     })
   } catch (err) {
-    console.error('create-checkout failed:', err)
-    return res.status(500).json({ error: err?.message || 'Could not create checkout session' })
+    return failRequest(res, {
+      status: 500,
+      scope: 'create-checkout',
+      message: 'Could not start checkout. No payment was taken — please try again, or contact support with the reference below.',
+      err,
+      context: { uid, interval: parseBillingInterval(req.body?.interval) },
+    })
   }
 }

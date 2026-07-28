@@ -10,6 +10,14 @@ const SubscriptionContext = createContext()
 
 const BILLING_INTERVALS = new Set(['monthly', 'yearly', 'lifetime'])
 
+// The billing APIs return a generic message plus a correlation id (the real
+// Stripe/Firebase error stays in the server log). Show the id so a user can
+// quote it to support and the founder can find the exact log line.
+function billingError(data, status, fallback) {
+  const base = data?.error || `${fallback} (server returned ${status})`
+  return new Error(data?.correlationId ? `${base} [ref ${data.correlationId}]` : base)
+}
+
 // Free-tier save allowance — the single source of truth for BOTH enforcement
 // (ProjectContext, IconLibrary) and the pricing copy (Plans.jsx). Saving is no
 // longer fully Pro-gated: a free account gets a real allowance, and Pro lifts
@@ -94,7 +102,7 @@ export function SubscriptionProvider({ children }) {
       body: JSON.stringify({ interval, currency: detectCurrency() }),
     })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.error || `Checkout failed (server returned ${res.status})`)
+    if (!res.ok) throw billingError(data, res.status, 'Checkout failed')
     return data.clientSecret
   }, [])
 
@@ -106,7 +114,7 @@ export function SubscriptionProvider({ children }) {
       headers: { Authorization: `Bearer ${token}` },
     })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.error || `Could not verify checkout (server returned ${res.status})`)
+    if (!res.ok) throw billingError(data, res.status, 'Could not verify checkout')
     return data
   }, [])
 
@@ -121,7 +129,7 @@ export function SubscriptionProvider({ children }) {
       body: JSON.stringify({ flow: opts.flow || null }),
     })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.error || `Portal failed (server returned ${res.status})`)
+    if (!res.ok) throw billingError(data, res.status, 'Portal failed')
     window.location.href = data.url
   }, [])
 

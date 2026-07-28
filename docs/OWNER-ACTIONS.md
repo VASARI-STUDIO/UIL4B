@@ -41,6 +41,38 @@ AI outage.
 
 ## 🔴 2. Pricing & billing
 
+### 2·PRE. ⛔ HARD BLOCKER — configure the Stripe webhook events FIRST
+
+**Do this before you create the lifetime price. Not after. Not at the same time.**
+The one-off purchase has no subscription object behind it, so the *only* things
+that grant and remove access are these webhook events. If the endpoint is not
+subscribed to them when the first purchase lands, the buyer pays and gets
+nothing — or refunds/chargebacks silently keep their Pro access.
+
+Stripe Dashboard → **Developers → Webhooks → your `/api/stripe-webhook`
+endpoint → Update details → Select events.** The endpoint MUST be subscribed to
+every row below:
+
+| Event | What breaks without it |
+|---|---|
+| `checkout.session.completed` | No access is ever granted. |
+| `checkout.session.async_payment_succeeded` | **Delayed payment methods** (bank debits, some wallets) never grant. The buyer pays and stays on Free. |
+| `charge.refunded` | A refunded buyer keeps Pro forever. |
+| `charge.dispute.created` | A chargeback keeps Pro forever. Stripe does **not** send `charge.refunded` for disputes. |
+| `charge.dispute.funds_withdrawn` | Access survives the money actually leaving your account. |
+| `charge.dispute.closed` | A dispute you *win* never restores the buyer's access. |
+| `customer.subscription.created` / `.updated` / `.deleted` | Subscription plan state stops tracking Stripe. |
+| `invoice.payment_failed` / `invoice.paid` | The "payment failed" banner never appears or never clears. |
+| `customer.subscription.trial_will_end` | No trial-ending notice. |
+
+**Verify before going live (2 min):** on the endpoint page, use **Send test
+event** for `checkout.session.async_payment_succeeded` and
+`charge.dispute.created`, then confirm each returns **200** in the endpoint's
+event log. A `400 Invalid signature` means `STRIPE_WEBHOOK_SECRET` in Vercel
+does not match this endpoint's signing secret — fix that before selling.
+
+**Then, and only then, create the lifetime price (2a below).**
+
 ### 2a. Flip to the new price ladder (Stripe)
 
 **▶ Read live first (authoritative):** open the in-app **admin Stripe panel**
@@ -100,7 +132,8 @@ save it in Stripe.
    **and** the client display anchor `src/hooks/usePrices.js → FALLBACK` (the AUD
    figure shown only before `/api/get-prices` resolves or if it's unreachable).
 
-**⚠ Lifetime needs code first — NOT a dashboard-only task.** Entitlement today is
+**⚠ Lifetime needs code first, AND the webhook events from §2·PRE — NOT a
+dashboard-only task.** Entitlement today is
 subscription-only: `api/_lib/plans.js → planForSubscription` reads a Stripe
 **subscription** status, and `create-checkout.js` is hardcoded to
 `mode: 'subscription'`. A lifetime purchase is a **one-time payment** with no
@@ -149,6 +182,22 @@ Why this: it's the standard win-back — meaningful but time-boxed (Pro monthly 
 | "Not using it" | *(no coupon)* — enable **Pause subscription** in the portal | Stripe pauses billing, no coupon needed |
 | "One free month" | **100% off · Duration: Once** → `FREEMONTH` | ⚠ on a **yearly** plan, "once" = a free **year** — only show this to monthly subscribers |
 
+### 2c. ⚠ Back-fill `firebaseUid` on legacy Stripe customers
+
+`/api/create-portal` now refuses to open a billing portal unless the Stripe
+customer's own `metadata.firebaseUid` matches the signed-in user — the Firestore
+`stripeCustomerId` was client-writable until the rules fix, so it is no longer
+accepted as proof on its own. Customers this app created always carry that
+metadata; a customer created **by hand in the Stripe dashboard** (or by an older
+build) does not, and that user will get *"This billing account is not linked to
+your login"*.
+
+**Check (2 min):** Stripe Dashboard → **Customers** → open each existing paying
+customer → confirm **Metadata** has `firebaseUid`. Where it's missing, add it
+with the user's Firebase uid (Admin dashboard → Users tab). The server log line
+distinguishes the two cases: `cause: "missing_metadata"` (back-fill needed) vs
+`cause: "uid_mismatch"` (tampering — do not "fix" by editing metadata).
+
 **Also confirm these Stripe vars exist in Vercel** (needed for checkout to work at all — likely already set): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `VITE_STRIPE_PUBLISHABLE_KEY`. If prices aren't set, run `STRIPE_SECRET_KEY=sk_... npm run setup:stripe`.
 
 ---
@@ -162,12 +211,29 @@ Why this: it's the standard win-back — meaningful but time-boxed (Pro monthly 
 
 ---
 
-## 🟠 4. Publish Firestore rules — activate the Admin "aggregate analytics" panel
+## 🔴 4. Publish Firestore rules — CLOSES A LIVE PRIVILEGE-ESCALATION HOLE
 
-**Why:** the Admin dashboard now has an "All users · aggregate" panel fed by a new `analytics-daily` Firestore collection. It stays empty until the rules are published.
+**Why (upgraded from 🟠 to 🔴):** the published rules currently allow a signed-in
+user to write **any** field to their own `users/{uid}` document — including
+`lifetimeEntitlement`, `subscription` and `stripeCustomerId`, which are exactly
+what the server reads to decide Pro (`api/_lib/plans.js → planForUser`). Anyone
+who can open devtools can grant themselves Pro (1,000 AI actions/day instead of
+40, billed to you). The repo's `firestore.rules` now blocks those three fields on
+create **and** update; **deploying the code does not deploy the rules** — this
+publish is what actually closes it.
 
-1. Firebase Console → **Firestore Database → Rules** → paste the contents of **`firestore.rules`** (repo root) → **Publish**.
-2. The analytics read is gated to **`dylanjacob1100@gmail.com`** — confirm that's your Firebase login email (the rule is in `firestore.rules`; tell me if it should change).
+1. Firebase Console → **Firestore Database → Rules** → paste the contents of
+   **`firestore.rules`** (repo root) → **Publish**.
+2. Sanity-check after publishing: sign in, edit your display name in
+   **Settings** → it should save normally (no warning banner). Rules are
+   versioned in the console, so this is reversible in one click.
+3. The analytics read is gated to **`dylanjacob1100@gmail.com`** — confirm that's
+   your Firebase login email (the rule is in `firestore.rules`; tell me if it
+   should change). This also activates the Admin "All users · aggregate" panel,
+   fed by the `analytics-daily` collection.
+
+*(The rules are covered by emulator tests — `npm run test:rules`, which needs a
+JDK 21+ on PATH. Run them before publishing any future rules edit.)*
 
 *(The new admin **Users tab** does NOT depend on these rules — it reads
 cross-user data through the server's Admin SDK via an admin-gated

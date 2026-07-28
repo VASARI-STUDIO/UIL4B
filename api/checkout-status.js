@@ -1,6 +1,12 @@
 import { adminAuth, adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
-import { lifetimeEntitlementFromSession } from './_lib/billing.js'
+import {
+  lifetimeEntitlementFromSession,
+  lifetimeGrantDecision,
+  lifetimeGrantHealth,
+  retrieveSessionWithCharge,
+} from './_lib/billing.js'
+import { failRequest } from './_lib/http.js'
 
 // Returns the status of an embedded Checkout session so the /checkout/return
 // page can confirm the result. The session is verified to belong to the
@@ -36,39 +42,56 @@ export default async function handler(req, res) {
 
     let session
     try {
-      session = await stripe.checkout.sessions.retrieve(sessionId)
+      // Expanded so the CURRENT state of the money is visible: a fully refunded
+      // session still reports status 'complete' / payment_status 'paid'.
+      session = await retrieveSessionWithCharge(stripe, sessionId)
     } catch {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    // Only let a user read their own checkout session.
+    // Only let a user read their own checkout session. Both checks are
+    // unconditional: a session with no firebaseUid metadata is not ours to
+    // disclose, so a missing value fails rather than being waved through.
     const userDoc = await adminDb().collection('users').doc(uid).get()
     const userData = userDoc.exists ? userDoc.data() : {}
     const customerId = userData?.stripeCustomerId || null
-    if (!customerId || session.customer !== customerId
-      || (session.metadata?.firebaseUid && session.metadata.firebaseUid !== uid)) {
+    const sessionCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null
+    if (!customerId || sessionCustomerId !== customerId || session.metadata?.firebaseUid !== uid) {
       return res.status(403).json({ error: 'Session does not belong to this account' })
     }
 
     // Safety net for one-off purchases: the webhook is the primary grant path,
     // but a completed payment must never depend on a single delivery. The
     // session has already been proved to belong to this account above, and
-    // lifetimeEntitlementFromSession only returns a grant for a complete, PAID
-    // session carrying the lifetime SKU — so this can add access, never
-    // fabricate it. A revoked (refunded) entitlement is never re-granted.
+    // lifetimeGrantHealth only passes a complete, PAID session carrying the
+    // lifetime SKU whose charge is not refunded or disputed — so this can add
+    // access, never fabricate it. The read of the current entitlement and the
+    // grant run inside one transaction, so a refund/dispute webhook landing at
+    // the same moment cannot be clobbered by a stale read.
     let entitlementActive = userData?.lifetimeEntitlement?.active === true
-    const revoked = !!userData?.lifetimeEntitlement?.revokedAt
-    if (!entitlementActive && !revoked) {
-      const candidate = lifetimeEntitlementFromSession(session)
-      if (candidate && candidate.customerId === customerId && session.metadata.firebaseUid === uid) {
-        await adminDb().collection('users').doc(uid).set({
-          lifetimeEntitlement: {
-            ...candidate,
-            grantedAt: userData?.lifetimeEntitlement?.grantedAt || candidate.grantedAt,
-          },
-        }, { merge: true })
-        entitlementActive = true
-        console.warn('checkout-status: reconciled a paid one-off entitlement the webhook had not applied', { uid, sessionId })
+      && !userData.lifetimeEntitlement.revokedAt
+    if (!entitlementActive) {
+      const health = lifetimeGrantHealth(session)
+      const candidate = health.ok ? lifetimeEntitlementFromSession(session) : null
+      if (candidate && candidate.customerId === customerId) {
+        const db = adminDb()
+        const ref = db.collection('users').doc(uid)
+        entitlementActive = await db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref)
+          const current = snap.exists ? snap.data() : {}
+          const decision = lifetimeGrantDecision(current, candidate)
+          if (decision.action === 'noop') return true
+          if (decision.action !== 'grant') return false
+          tx.set(ref, {
+            lifetimeEntitlement: { ...candidate, grantedAt: decision.grantedAt },
+          }, { merge: true })
+          return true
+        })
+        if (entitlementActive) {
+          console.warn('checkout-status: reconciled a paid one-off entitlement the webhook had not applied', { uid, sessionId })
+        }
+      } else if (!health.ok && session.mode === 'payment') {
+        console.warn('checkout-status: one-off session not granted', { uid, sessionId, reason: health.reason })
       }
     }
 
@@ -81,7 +104,12 @@ export default async function handler(req, res) {
       customerEmail: session.customer_details?.email || null,
     })
   } catch (err) {
-    console.error('checkout-status failed:', err)
-    return res.status(500).json({ error: err?.message || 'Could not verify checkout' })
+    return failRequest(res, {
+      status: 500,
+      scope: 'checkout-status',
+      message: 'Could not verify this checkout. Please refresh, or contact support with the reference below.',
+      err,
+      context: { uid, sessionId },
+    })
   }
 }

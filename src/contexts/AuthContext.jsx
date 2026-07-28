@@ -26,6 +26,24 @@ const GOOGLE_RETURNING_KEY = 'vs-google-returning'
 const ACCOUNTS_KEY = 'vs-accounts'
 const MAX_KNOWN_ACCOUNTS = 5
 
+// Billing/entitlement fields. `firestore.rules` rejects ANY client write that
+// creates, changes or deletes one of these — they are written only by the
+// server (Admin SDK, which bypasses rules) after a verified Stripe payment.
+// The client must therefore never include them in a profile write; stripping
+// them here is defence in depth so a future caller can't make every profile
+// save start failing with permission-denied.
+const SERVER_ONLY_PROFILE_FIELDS = ['lifetimeEntitlement', 'subscription', 'stripeCustomerId']
+
+function withoutServerOnlyFields(data) {
+  if (!data || typeof data !== 'object') return data
+  const present = SERVER_ONLY_PROFILE_FIELDS.filter((key) => key in data)
+  if (!present.length) return data
+  console.error('AuthContext: refusing to write server-only billing fields from the client', present)
+  const safe = { ...data }
+  present.forEach((key) => { delete safe[key] })
+  return safe
+}
+
 const DEFAULT_PROFILE = {
   displayName: '',
   email: '',
@@ -96,10 +114,30 @@ async function loadProfileFromFirestore(uid) {
   } catch { return null }
 }
 
+// Never swallows a failure. A rejected profile write means the user's edit only
+// exists on this device, and previously that was invisible — the change looked
+// saved, then vanished on the next sign-in. Returns a discriminated result so
+// the provider can surface an honest message.
+//
+// Note: while offline the Firestore SDK queues the write and leaves this promise
+// pending rather than rejecting, so this never fires a false "not saved" for a
+// dropped connection.
 async function saveProfileToFirestore(uid, data) {
   try {
-    await setDoc(doc(db, 'users', uid), data, { merge: true })
-  } catch {}
+    await setDoc(doc(db, 'users', uid), withoutServerOnlyFields(data), { merge: true })
+    return { ok: true }
+  } catch (error) {
+    const code = error?.code || 'unknown'
+    console.error('AuthContext: profile save to Firestore failed', { uid, code, message: error?.message })
+    return { ok: false, code }
+  }
+}
+
+function profileSaveMessage(code) {
+  if (code === 'permission-denied') {
+    return 'We couldn’t save that to your account — the change is only on this device. Sign out and back in, then try again.'
+  }
+  return 'We couldn’t save that to your account — the change is only on this device. Please try again.'
 }
 
 export function AuthProvider({ children }) {
@@ -112,6 +150,10 @@ export function AuthProvider({ children }) {
   // set for returning users — so the onboarding router can send new sign-ups to
   // /onboarding exactly once without ever bouncing a returning user (AUDIT-A1).
   const [pendingOnboarding, setPendingOnboarding] = useState(false)
+  // Non-null when the last profile write to Firestore was rejected. The local
+  // (optimistic) edit is kept — discarding the user's typing would be worse —
+  // but the UI says plainly that it did not reach their account.
+  const [profileSyncError, setProfileSyncError] = useState(null)
   const profileRef = useRef(null)
   const authEpochRef = useRef(0)
 
@@ -160,13 +202,17 @@ export function AuthProvider({ children }) {
           } else {
             if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)) return
             setCachedProfile(fbUser.uid, initial)
-            saveProfileToFirestore(fbUser.uid, initial)
+            saveProfileToFirestore(fbUser.uid, initial).then((result) => {
+              if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)) return
+              setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
+            })
           }
         }).catch(() => { /* keep cached/initial profile */ })
       } else {
         setFirebaseUser(null)
         setProfile(null)
         profileRef.current = null
+        setProfileSyncError(null)
         setLoading(false)
       }
     })
@@ -197,7 +243,9 @@ export function AuthProvider({ children }) {
     }
     const p = { ...DEFAULT_PROFILE, displayName: displayName || '', email }
     setCachedProfile(cred.user.uid, p)
-    saveProfileToFirestore(cred.user.uid, p)
+    saveProfileToFirestore(cred.user.uid, p).then((result) => {
+      setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
+    })
     setPendingOnboarding(true)
     return cred
   }, [])
@@ -269,13 +317,17 @@ export function AuthProvider({ children }) {
     setKnownAccounts(list)
   }, [])
 
+  const dismissProfileSyncError = useCallback(() => setProfileSyncError(null), [])
+
   const updateProfile = useCallback((fields) => {
     if (!firebaseUser || !profileRef.current) return
     const updated = { ...profileRef.current, ...fields }
     setProfile(updated)
     profileRef.current = updated
     setCachedProfile(firebaseUser.uid, updated)
-    saveProfileToFirestore(firebaseUser.uid, fields)
+    saveProfileToFirestore(firebaseUser.uid, fields).then((result) => {
+      setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
+    })
     if (fields.displayName || fields.photoURL) {
       const fbFields = {}
       if (fields.displayName) fbFields.displayName = fields.displayName
@@ -302,7 +354,8 @@ export function AuthProvider({ children }) {
     setProfile(updated)
     profileRef.current = updated
     setCachedProfile(firebaseUser.uid, updated)
-    saveProfileToFirestore(firebaseUser.uid, { email: newEmail })
+    const result = await saveProfileToFirestore(firebaseUser.uid, { email: newEmail })
+    setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
   }, [firebaseUser])
 
   const updatePassword = useCallback(async (currentPassword, newPassword) => {
@@ -328,6 +381,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, userProfile, loading,
+      profileSyncError, dismissProfileSyncError,
       pendingOnboarding, clearPendingOnboarding,
       login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,
       knownAccounts, switchAccount, removeKnownAccount,
