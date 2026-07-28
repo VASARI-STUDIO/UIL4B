@@ -114,10 +114,20 @@ test.describe('public UI quality release', () => {
     await expect(page.getByRole('tab', { name: /Emoji/ })).toBeFocused()
 
     await context.setOffline(true)
-    await dispatchWindowEvent(page, 'offline')
-    await expect(page.getByText(/Offline · built-in assets remain available/)).toBeVisible()
+    // Re-dispatch while polling. The /emoji panel is a lazy chunk, so on a slow
+    // runner it can mount AFTER a single offline event fires and never hear it —
+    // and Playwright's setOffline does not reliably flip navigator.onLine, so the
+    // fresh mount reads back online. Re-firing until the banner appears tests the
+    // real behaviour (go offline while using the page) without depending on
+    // chunk-load timing.
+    const offlineBanner = page.getByText(/Offline · built-in assets remain available/)
+    await expect.poll(async () => {
+      await dispatchWindowEvent(page, 'offline')
+      return offlineBanner.isVisible()
+    }, { timeout: 15000 }).toBe(true)
     await context.setOffline(false)
     await dispatchWindowEvent(page, 'online')
+    await expect(page.getByText(/Live library connected/)).toBeVisible()
   })
 
   test('Palette Reset then edit then Undo restores the latest mutation before the pre-reset state', async ({ page }) => {
