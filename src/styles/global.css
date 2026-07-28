@@ -6618,22 +6618,23 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-seg-btn{flex:1;font-family:var(--font);font-size:12.5px;font-weight:600;color:var(--ggn-t1);background:transparent;border:none;border-radius:var(--radius-s);padding:8px 6px;cursor:pointer;transition:all var(--t)}
 .ggn-seg-btn:hover{color:var(--ggn-t0)}
 .ggn-seg-btn.is-on{background:var(--ggn-accent);color:var(--accent-fg)}
-/* Angle: dial + slider */
+/* Angle: dial + numeric entry (the dial is the only pointer affordance) */
 .ggn-angle{display:flex;align-items:center;gap:16px}
 .ggn-angle.is-disabled{opacity:.4;pointer-events:none}
 .ggn-dial{position:relative;width:64px;height:64px;flex-shrink:0;border-radius:50%;background:var(--ggn-panel-2);border:1px solid var(--ggn-line-2);cursor:grab;touch-action:none}
 .ggn-dial:active{cursor:grabbing}
 .ggn-dial-hand{position:absolute;left:calc(50% - 1px);bottom:50%;width:2px;height:26px;background:var(--ggn-accent);border-radius:2px;transform-origin:center bottom;transform:rotate(0deg)}
 .ggn-dial-center{position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:var(--ggn-accent);transform:translate(-50%,-50%)}
-.ggn-angle-ctrl{flex:1;min-width:0}
-.ggn-range{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:var(--radius-pill);background:var(--ggn-panel-2);outline:none;cursor:pointer}
-.ggn-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ggn-accent);border:2px solid var(--bg-0);cursor:grab}
-.ggn-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ggn-accent);border:2px solid var(--bg-0);cursor:grab}
-.ggn-angle-val{margin-top:7px;font-family:var(--mono);font-size:12px;color:var(--ggn-t1);font-variant-numeric:tabular-nums}
-/* Editable numeric angle field — type an exact degree alongside the dial/slider */
-.ggn-angle-num{display:inline-flex;align-items:baseline;gap:1px;margin-top:7px;padding:2px 4px 2px 8px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);transition:border-color var(--t)}
+/* No margin-top here: the old 7px cleared the removed range rail, so the numeric
+   field now sits centred against the dial instead of hanging below its midline. */
+.ggn-angle-ctrl{flex:1;min-width:0;display:flex;align-items:center}
+.ggn-angle-val{font-family:var(--mono);font-size:12px;color:var(--ggn-t1);font-variant-numeric:tabular-nums}
+/* Editable numeric angle field — type an exact degree alongside the dial */
+.ggn-angle-num{display:inline-flex;align-items:baseline;gap:1px;padding:2px 4px 2px 8px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);transition:border-color var(--t)}
 .ggn-angle-num:focus-within{border-color:var(--ggn-accent)}
-.ggn-angle-input{width:34px;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ggn-t0);background:transparent;border:none;outline:none;text-align:right;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+/* 58px is wide enough for a 3-digit angle — with the rail gone this field is the
+   only numeric readout in the Angle row, so "215" / "360" must never clip. */
+.ggn-angle-input{width:58px;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ggn-t0);background:transparent;border:none;outline:none;text-align:right;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
 .ggn-angle-input::-webkit-outer-spin-button,.ggn-angle-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .ggn-angle-deg{font-family:var(--mono);font-size:12px;color:var(--ggn-t2)}
 /* CSS output */
@@ -6647,7 +6648,9 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-fmt-btn:hover{color:var(--ggn-t0)}
 .ggn-fmt-btn.is-on{background:var(--ggn-accent);color:var(--accent-fg)}
 .ggn-fmt-btn:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
-.ggn-css--block{max-height:190px;overflow:auto}
+/* The multi-line SVG export used to be capped at 190px with its own scroller.
+   The inspector body now scrolls as one region, so the block flows at full height
+   — no nested scroller, no clipped code. */
 .ggn-css--block code{white-space:pre-wrap;word-break:break-word}
 /* Blocks (Stops / Presets) */
 .ggn-block{background:var(--ggn-panel);border:1px solid var(--ggn-line);border-radius:var(--radius-l);padding:18px;margin-top:16px}
@@ -6750,9 +6753,18 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-bar-track{inset:10px 0;height:26px}
 .ggn-handle{top:50%}
 .ggn-preview-hint{margin:5px 8px 2px}
-.ggn-panel{padding:12px 18px 18px}
-.ggn-panel-head{margin:0 -6px var(--s-4);border-bottom:1px solid var(--ggn-line)}
-.ggn-angle-input{width:44px}
+/* Inspector height cap (two-column only). The slot is a normal grid item that
+   stretches to the row height — which the canvas column alone sets, because the
+   panel inside it is out of flow and contributes nothing to that row. The panel
+   then fills the slot exactly, so it can never push the row taller and its body
+   scrolls instead of clipping. Both are unset at 980px / 860px below. */
+.ggn-panel-slot{position:relative;align-self:stretch;min-width:0}
+.ggn-panel{position:absolute;inset:0;display:flex;flex-direction:column;padding:12px 18px 18px}
+.ggn-panel-head{flex-shrink:0;margin:0 -6px var(--s-4);border-bottom:1px solid var(--ggn-line)}
+/* Negative margin lets the scrollbar sit in the panel's right padding while
+   padding-right keeps the fields clear of it. */
+.ggn-panel-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-right:var(--s-1);margin-right:calc(var(--s-1) * -1)}
+.ggn-panel-body:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
 .ggn-field{margin-bottom:var(--s-5)}
 .ggn-seg-btn,.ggn-fmt-btn{min-height:36px}
 .ggn-css{min-height:76px}
@@ -6773,8 +6785,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-import:focus-visible,.ggn-css:focus-visible,.ggn-btn:focus-visible,.ggn-seg-btn:focus-visible,.ggn-copy:focus-visible,.ggn-stop-x:focus-visible,.ggn-angle-input:focus-visible,.ggn-stop-pos input:focus-visible,.ggn-stop-hex:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
 @media(max-width:980px){
   .ggn-grid{grid-template-columns:1fr}
-  .ggn-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--s-5)}
-  .ggn-panel-head{grid-column:1/-1}
+  /* Single column: drop the height cap entirely — the panel flows with the page
+     and must never become a nested scroll area. The two-up field layout moves
+     onto the body, which is now the fields' direct parent. */
+  .ggn-panel-slot{position:static}
+  .ggn-panel{position:static;display:block}
+  .ggn-panel-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--s-5);overflow:visible;padding-right:0;margin-right:0}
   .ggn-field:last-child{grid-column:1/-1}
 }
 @media(max-width:768px){
@@ -6784,8 +6800,15 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .ggn-status{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ggn-status span:nth-child(3){border-left:0;border-top:1px solid var(--ggn-line)}
   .ggn-status span:nth-child(4){border-top:1px solid var(--ggn-line)}
-  .ggn-panel{display:block}
+  .ggn-panel-body{display:block}
   .ggn-stops{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  /* The global mobile form rule lifts every number input to 16px with 11px/14px
+     padding so iOS can't zoom on focus. Keep the 16px — that's the point — but
+     drop the wide padding and widen the field, or a 3-digit angle clips inside
+     the compact Angle row. */
+  input.ggn-angle-input{width:46px;padding-inline:0}
 }
 @media(max-width:480px){
   .ggn-title{font-size:36px}
