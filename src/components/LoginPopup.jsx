@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 
@@ -16,23 +16,58 @@ function GoogleIcon() {
 // Single-click sign-in. Opened over the current page (never navigates to
 // /login) so the user resumes exactly where they were on success. Composes the
 // existing HVZ auth functions — it does not touch AuthContext itself.
-export default function LoginPopup({ reason, free = true, onSuccess, onDismiss }) {
+export default function LoginPopup({ reason, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, onSuccess, onDismiss }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
   const [isSignup, setIsSignup] = useState(false)
   const [resetMode, setResetMode] = useState(false)
   const [resetSent, setResetSent] = useState(false)
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const dialogRef = useRef(null)
+  const googleRef = useRef(null)
+  const passwordRef = useRef(null)
+  const loadingRef = useRef(false)
+
+  useEffect(() => { loadingRef.current = loading }, [loading])
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape' && !loading) onDismiss() }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const focusFrame = requestAnimationFrame(() => {
+      ;(passwordOnly ? passwordRef.current : googleRef.current)?.focus()
+    })
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !loadingRef.current) {
+        e.preventDefault()
+        onDismiss()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const focusable = [...(dialogRef.current?.querySelectorAll(
+        'button:not([disabled]),input:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])',
+      ) || [])]
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onDismiss, loading])
+    return () => {
+      cancelAnimationFrame(focusFrame)
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [onDismiss, passwordOnly])
 
   const mapError = (err) => {
     const code = err?.code
@@ -62,7 +97,7 @@ export default function LoginPopup({ reason, free = true, onSuccess, onDismiss }
         return
       }
     } catch (err) {
-      if (err?.code === 'auth/user-not-found' && !isSignup && !resetMode) {
+      if (err?.code === 'auth/user-not-found' && !isSignup && !resetMode && !passwordOnly) {
         setIsSignup(true)
         setError(t('auth.errors.noAccountSwitched') || 'No account yet — finish signing up below.')
       } else {
@@ -89,11 +124,13 @@ export default function LoginPopup({ reason, free = true, onSuccess, onDismiss }
 
   const title = resetMode ? (t('auth.resetPassword') || 'Reset your password')
     : isSignup ? (t('auth.createAccount') || 'Create your free account')
-      : reason ? 'Log in to continue' : (t('auth.welcomeBack') || 'Welcome back')
+      : passwordOnly ? 'Switch account'
+        : reason ? 'Log in to continue' : (t('auth.welcomeBack') || 'Welcome back')
 
   return (
     <div className="ui-modal-overlay" onMouseDown={() => { if (!loading) onDismiss() }}>
       <div
+        ref={dialogRef}
         className="ui-modal ui-login"
         role="dialog"
         aria-modal="true"
@@ -114,6 +151,11 @@ export default function LoginPopup({ reason, free = true, onSuccess, onDismiss }
               <span>You must log in to {reason} — don’t worry, it’s still free.</span>
             </p>
           )}
+          {passwordOnly && (
+            <p className="ui-login-note">
+              <span>Sign in as <strong>{initialEmail}</strong>. Your current account stays active unless this sign-in succeeds.</span>
+            </p>
+          )}
 
           {error && <p className="ui-login-err" role="alert">{error}</p>}
 
@@ -127,9 +169,9 @@ export default function LoginPopup({ reason, free = true, onSuccess, onDismiss }
             </div>
           ) : (
             <>
-              {!resetMode && (
+              {!resetMode && !passwordOnly && (
                 <>
-                  <button className="auth-google-btn" type="button" onClick={handleGoogle} disabled={loading}>
+                  <button ref={googleRef} className="auth-google-btn" type="button" onClick={handleGoogle} disabled={loading}>
                     <GoogleIcon />
                     {t('auth.continueWithGoogle') || 'Continue with Google'}
                   </button>
@@ -140,26 +182,26 @@ export default function LoginPopup({ reason, free = true, onSuccess, onDismiss }
               <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
                 {isSignup && !resetMode && (
                   <div className="auth-field">
-                    <label>{t('auth.displayName') || 'Name'}</label>
-                    <input type="text" name="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={t('auth.namePlaceholder') || 'Your name'} autoComplete="name" />
+                    <label htmlFor="ui-login-name">{t('auth.displayName') || 'Name'}</label>
+                    <input id="ui-login-name" type="text" name="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={t('auth.namePlaceholder') || 'Your name'} autoComplete="name" />
                   </div>
                 )}
                 <div className="auth-field">
-                  <label>{t('auth.email') || 'Email'}</label>
-                  <input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder') || 'you@example.com'} required autoComplete="email" />
+                  <label htmlFor="ui-login-email">{t('auth.email') || 'Email'}</label>
+                  <input id="ui-login-email" type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder') || 'you@example.com'} required autoComplete="email" readOnly={lockEmail} />
                 </div>
                 {!resetMode && (
                   <div className="auth-field">
-                    <label>{t('auth.password') || 'Password'}</label>
-                    <input type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder') || '••••••••'} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
+                    <label htmlFor="ui-login-password">{t('auth.password') || 'Password'}</label>
+                    <input ref={passwordRef} id="ui-login-password" type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder') || '••••••••'} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
                   </div>
                 )}
                 <button className="btn btn-accent auth-submit" type="submit" disabled={loading}>
-                  {loading ? (t('auth.pleaseWait') || 'Please wait…') : resetMode ? (t('auth.sendResetLink') || 'Send reset link') : isSignup ? (t('auth.createAccount') || 'Create account') : (t('common.signIn') || 'Sign in')}
+                  {loading ? (t('auth.pleaseWait') || 'Please wait…') : resetMode ? (t('auth.sendResetLink') || 'Send reset link') : isSignup ? (t('auth.createAccount') || 'Create account') : passwordOnly ? 'Switch account' : (t('common.signIn') || 'Sign in')}
                 </button>
               </form>
 
-              <div className="auth-links">
+              {!passwordOnly && <div className="auth-links">
                 {resetMode ? (
                   <button type="button" onClick={() => { setResetMode(false); setError('') }}>{t('auth.backToSignIn') || 'Back to sign in'}</button>
                 ) : (
@@ -170,7 +212,7 @@ export default function LoginPopup({ reason, free = true, onSuccess, onDismiss }
                     {!isSignup && <button type="button" onClick={() => { setResetMode(true); setError('') }}>{t('auth.forgotPassword') || 'Forgot password?'}</button>}
                   </>
                 )}
-              </div>
+              </div>}
             </>
           )}
         </div>

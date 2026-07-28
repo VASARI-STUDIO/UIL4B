@@ -6,6 +6,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useProject } from '../contexts/ProjectContext'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { TOOLS } from '../data/tools'
 import { SECTIONS, resolveSection } from '../data/sections'
 import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
@@ -32,10 +33,6 @@ function downloadFile(content, filename, mime) {
   URL.revokeObjectURL(url)
 }
 
-function openLoginGate() {
-  window.open(`${window.location.origin}/login?gate=1`, '_blank', 'width=500,height=660,noopener')
-}
-
 function ExportDropdown({ onSaveProject }) {
   const [open, setOpen] = useState(false)
   const [exportTab, setExportTab] = useState('colour')
@@ -45,6 +42,7 @@ function ExportDropdown({ onSaveProject }) {
   const { rounding, density } = useAppearance()
   const { user } = useAuth()
   const { isPro } = useSubscription()
+  const { requireLogin } = useLoginPrompt()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -64,8 +62,12 @@ function ExportDropdown({ onSaveProject }) {
     try { return localStorage.getItem(PREVIEW_ROUNDING_KEY) || rounding } catch { return rounding }
   }
 
-  const requireAuth = (action) => {
-    if (!user) { openLoginGate(); setOpen(false); return }
+  const requireAuth = async (action) => {
+    if (!user) {
+      setOpen(false)
+      const signedInUser = await requireLogin('export this design')
+      if (!signedInUser) return
+    }
     action()
   }
 
