@@ -21,9 +21,10 @@ function revealAll(scope) {
 }
 
 // The home page's motion system, scoped to the home route and fully torn down on
-// unmount: a GSAP hero entrance, scroll-triggered reveals, a light hero parallax
-// and a magnetic primary CTA. Everything sits behind a reduced-motion guard — when
-// motion is off we reveal all content instantly and leave native scrolling alone.
+// unmount: a GSAP hero entrance, scroll-triggered reveals, a light hero parallax,
+// the satellite → workbench convergence and a magnetic primary CTA. Everything
+// sits behind a reduced-motion guard — when motion is off we reveal all content
+// instantly and leave native scrolling alone.
 //
 // Smooth scroll itself is owned app-wide by `useSmoothScroll` (a single Lenis
 // module singleton); here we only subscribe ScrollTrigger to that shared instance
@@ -33,10 +34,17 @@ function revealAll(scope) {
 // GSAP + ScrollTrigger (~40KB gzip) are dynamically imported so they code-split
 // into their own chunk and never weigh down the tool pages — only a home visit
 // fetches them. To stay flash-free while that chunk loads, we hide the hero
-// synchronously (in a layout effect, before paint) via `.motion-armed` and hand
-// that hidden state to GSAP the instant it arrives. If the chunk ever fails to
-// load, we reveal everything and fall back to native scroll, so content is never
-// stuck.
+// headline block synchronously (in a layout effect, before paint) via
+// `.motion-armed` and hand that hidden state to GSAP the instant it arrives. If
+// the chunk ever fails to load, we reveal everything and fall back to native
+// scroll, so content is never stuck.
+//
+// PROGRESSIVE-ENHANCEMENT RULE, non-negotiable: the eight satellite links and the
+// whole mini-workbench are never hidden, faded, `inert`ed or opacity-gated by
+// this file. The only thing that depends on GSAP is a layer of decorative,
+// aria-hidden, non-focusable proxies that is CREATED here and destroyed on
+// teardown — if GSAP never arrives, that layer simply never exists and the
+// static composition is already the finished page.
 //
 // Owns the reveals that `useReveal()` handles elsewhere, so Home calls this
 // instead of that hook.
@@ -50,14 +58,14 @@ export function useHomeMotion(scopeRef) {
       return
     }
 
-    // Synchronous, pre-paint: mark the tree so CSS hides the hero and silences its
-    // own reveal transition (GSAP will be the only engine easing these).
+    // Synchronous, pre-paint: mark the tree so CSS hides the hero copy and
+    // silences its own reveal transition (GSAP will be the only engine easing
+    // these). Note this covers the headline block only — never the tool links
+    // and never the workbench.
     scope.classList.add('has-gsap', 'motion-armed')
 
     let cancelled = false
     let teardown = null
-    let restoreBridgeAvailability = null
-    let teardownBridgeHandoff = null
 
     Promise.all([import('gsap'), import('gsap/ScrollTrigger')])
       .then(([{ gsap }, { ScrollTrigger }]) => {
@@ -69,6 +77,8 @@ export function useHomeMotion(scopeRef) {
         // (a teardown race), ScrollTrigger just reads native scroll.
         const lenis = getLenis()
         lenis?.on('scroll', ScrollTrigger.update)
+
+        let removeProxyLayer = null
 
         const ctx = gsap.context(() => {
           // GSAP now controls the hidden state; drop the CSS pre-hide so its
@@ -83,161 +93,113 @@ export function useHomeMotion(scopeRef) {
             .from('.home-hero-cta > *', { y: 18, autoAlpha: 0, duration: 0.7, stagger: 0.1, clearProps: 'transform' }, '-=0.5')
             .from('.home-hero-hint', { y: 14, autoAlpha: 0, duration: 0.6 }, '-=0.45')
 
-          // ── Hero parallax: content gently recedes as you scroll past it, giving
-          //    the fold depth against the sections sliding up beneath it. ──
-          // The live product controls share React state with the preview tabs.
-          // On wide screens, motion adds a visual hand-off between those same
-          // controls; mobile and reduced-motion layouts remain static.
-          const bridgeItems = gsap.utils.toArray('.home-workspace-bridge li')
-          const previewTabs = gsap.utils.toArray('.prev-tab')
-          if (window.matchMedia?.('(min-width: 1025px)').matches && bridgeItems.length === previewTabs.length) {
-            const bridge = scope.querySelector('.home-workspace-bridge')
-            let isConverged = false
-            let keyboardHeld = false
-            let heldItem = null
-            let releaseFrame = null
-            let bridgeTimeline = null
-            const setItemUnavailable = (item, unavailable) => {
-              item.inert = unavailable
-              if (unavailable) {
-                item.setAttribute('inert', '')
-                item.setAttribute('aria-hidden', 'true')
-              } else {
-                item.removeAttribute('inert')
-                item.removeAttribute('aria-hidden')
-              }
-            }
-            const restoreBridgeItems = () => {
-              bridge.inert = false
-              bridge.removeAttribute('inert')
-              bridge.removeAttribute('aria-hidden')
-              bridgeItems.forEach((item) => setItemUnavailable(item, false))
-            }
-            const retireBridge = () => {
-              bridge.inert = true
-              bridge.setAttribute('inert', '')
-              bridge.setAttribute('aria-hidden', 'true')
-              bridgeItems.forEach((item) => setItemUnavailable(item, true))
-            }
-            const enterKeyboardHold = (item) => {
-              if (!item || isConverged || keyboardHeld) return
-              keyboardHeld = true
-              heldItem = item
-              bridgeTimeline?.scrollTrigger?.disable(false, true)
-              bridgeTimeline?.pause()
-              gsap.set(bridgeItems, { clearProps: 'transform,opacity,visibility' })
-              restoreBridgeItems()
-              bridgeItems.forEach((candidate) => {
-                setItemUnavailable(candidate, candidate !== item)
+          // ── Satellite field: an authored, deliberately uneven drift. The links
+          //    themselves keep their layout position and hit area; only a small
+          //    idle offset moves, so nothing collides and no label is clipped. ──
+          const satellites = gsap.utils.toArray('.hsat-item')
+          // Must match the `max-width:1180px` static-field breakpoint in
+          // global.css: below it the field is a plain grid and neither the idle
+          // drift nor the convergence proxies apply.
+          const wide = window.matchMedia?.('(min-width: 1181px)').matches
+          if (wide && satellites.length) {
+            satellites.forEach((item, i) => {
+              gsap.to(item, {
+                y: i % 2 ? 9 : -11,
+                x: i % 3 === 0 ? 6 : -5,
+                duration: 3.4 + (i % 4) * 0.55,
+                ease: 'sine.inOut',
+                repeat: -1,
+                yoyo: true,
+                delay: i * 0.18,
               })
-              scope.dataset.homeBridgeState = 'keyboard-held'
+            })
+          }
+
+          // ── Convergence: the causal story, told with throwaway objects. ──
+          //    Eight tools; four modes. A decorative chip peels off each tool
+          //    link and travels to the workbench tab it belongs to — the three
+          //    extra colour tools all land on Palette, both media tools land on
+          //    Image — then fades as the workbench takes focus. Everything below
+          //    is aria-hidden, non-focusable and removed on teardown.
+          const intro = scope.querySelector('.home-workspace-intro')
+          const anchors = gsap.utils.toArray('.hsat-link')
+          if (wide && intro && anchors.length) {
+            const layer = document.createElement('div')
+            layer.className = 'hsat-proxy-layer'
+            layer.setAttribute('aria-hidden', 'true')
+            intro.appendChild(layer)
+            removeProxyLayer = () => layer.remove()
+
+            const proxies = anchors.map((anchor) => {
+              const el = document.createElement('span')
+              el.className = 'hsat-proxy'
+              el.dataset.family = anchor.dataset.family || ''
+              el.textContent = anchor.querySelector('.hsat-label')?.textContent || ''
+              const hue = anchor.closest('.hsat-item')?.dataset.hue
+              if (hue) el.dataset.hue = hue
+              layer.appendChild(el)
+              return {
+                el,
+                anchor,
+                target: scope.querySelector(`.hw-tab[data-tab="${anchor.dataset.family}"]`),
+              }
+            }).filter((p) => p.target)
+
+            // Both endpoints are measured against the same containing block, so
+            // the travel vector survives scrolling, zoom and a re-layout.
+            const centreIn = (base, el) => {
+              const r = el.getBoundingClientRect()
+              return { x: r.left - base.left + r.width / 2, y: r.top - base.top + r.height / 2 }
             }
-            const releaseKeyboardHold = () => {
-              if (!keyboardHeld) return
-              keyboardHeld = false
-              heldItem = null
-              restoreBridgeItems()
-              scope.dataset.homeBridgeState = 'moving'
-              bridgeTimeline?.paused(false)
-              const bridgeTrigger = bridgeTimeline?.scrollTrigger
-              bridgeTrigger?.enable(false, true)
-              bridgeTrigger?.refresh()
-              bridgeTrigger?.update()
-              ScrollTrigger.update()
-            }
-            const onBridgeFocusIn = (event) => {
-              const focusedButton = event.target.closest?.('.home-workspace-bridge-tab')
-              const currentBridge = scope.querySelector('.home-workspace-bridge')
-              if (!focusedButton || !currentBridge?.contains(focusedButton) || !focusedButton.matches(':focus-visible')) return
-              enterKeyboardHold(focusedButton.closest('[data-preview-id]'))
-            }
-            const onBridgeFocusOut = (event) => {
-              const currentBridge = scope.querySelector('.home-workspace-bridge')
-              if (!keyboardHeld || !currentBridge?.contains(event.target)) return
-              if (releaseFrame != null) cancelAnimationFrame(releaseFrame)
-              releaseFrame = requestAnimationFrame(() => {
-                releaseFrame = null
-                if (keyboardHeld && heldItem && !currentBridge.contains(document.activeElement)) {
-                  releaseKeyboardHold()
-                }
+            const place = () => {
+              const base = intro.getBoundingClientRect()
+              proxies.forEach(({ el, anchor }) => {
+                const r = anchor.getBoundingClientRect()
+                el.style.left = `${r.left - base.left}px`
+                el.style.top = `${r.top - base.top}px`
+                el.style.width = `${r.width}px`
+                el.style.height = `${r.height}px`
               })
             }
-            scope.addEventListener('focus', onBridgeFocusIn, true)
-            scope.addEventListener('focusin', onBridgeFocusIn)
-            scope.addEventListener('focusout', onBridgeFocusOut)
+            place()
 
-            const setBridgeConverged = (nextConverged) => {
-              if (keyboardHeld) {
-                scope.dataset.homeBridgeState = 'keyboard-held'
-                return
-              }
-              if (!bridge || nextConverged === isConverged) return
-              isConverged = nextConverged
-
-              if (nextConverged) retireBridge()
-              else restoreBridgeItems()
-            }
-            restoreBridgeAvailability = () => {
-              if (releaseFrame != null) cancelAnimationFrame(releaseFrame)
-              releaseFrame = null
-              keyboardHeld = false
-              heldItem = null
-              isConverged = false
-              restoreBridgeItems()
-              gsap.set(bridgeItems, { clearProps: 'transform,opacity,visibility' })
-            }
-            teardownBridgeHandoff = () => {
-              scope.removeEventListener('focus', onBridgeFocusIn, true)
-              scope.removeEventListener('focusin', onBridgeFocusIn)
-              scope.removeEventListener('focusout', onBridgeFocusOut)
-              if (releaseFrame != null) cancelAnimationFrame(releaseFrame)
-              releaseFrame = null
-              keyboardHeld = false
-              heldItem = null
-              restoreBridgeItems()
-            }
-            scope.dataset.homeBridgeState = 'ready'
-            bridgeTimeline = gsap.timeline({
+            let converged = false
+            const timeline = gsap.timeline({
               scrollTrigger: {
                 trigger: '.home-hero',
-                start: '32% top',
-                end: 'bottom 28%',
-                scrub: 0.25,
+                start: '34% top',
+                end: 'bottom 26%',
+                scrub: 0.3,
                 invalidateOnRefresh: true,
+                onRefresh: place,
                 onUpdate: ({ progress }) => {
-                  if (keyboardHeld) {
-                    scope.dataset.homeBridgeState = 'keyboard-held'
-                    return
-                  }
-                  const converged = progress >= 0.86
-                  setBridgeConverged(converged)
-                  scope.dataset.homeBridgeState = converged ? 'converged' : 'moving'
+                  const next = progress >= 0.82
+                  if (next === converged) return
+                  converged = next
+                  // Decorative only: the workbench is already visible and usable
+                  // either way. This just lets the arrival land as one beat.
+                  scope.dataset.homeConverge = next ? 'converged' : 'moving'
                 },
+                onLeaveBack: () => { delete scope.dataset.homeConverge },
               },
             })
 
-            bridgeItems.forEach((item, index) => {
-              const target = previewTabs[index]
-              const translatedLeft = () => {
-                const currentX = Number(gsap.getProperty(item, 'x')) || 0
-                const source = item.getBoundingClientRect()
-                const destination = target.getBoundingClientRect()
-                return destination.left - (source.left - currentX) + (destination.width - source.width) / 2
+            proxies.forEach(({ el, anchor, target }, i) => {
+              const travel = (axis) => () => {
+                const base = intro.getBoundingClientRect()
+                const from = centreIn(base, anchor)
+                const to = centreIn(base, target)
+                const current = Number(gsap.getProperty(el, axis)) || 0
+                return axis === 'x' ? to.x - (from.x - current) : to.y - (from.y - current)
               }
-              const translatedTop = () => {
-                const currentY = Number(gsap.getProperty(item, 'y')) || 0
-                const source = item.getBoundingClientRect()
-                const destination = target.getBoundingClientRect()
-                return destination.top - (source.top - currentY) + (destination.height - source.height) / 2
-              }
-              bridgeTimeline
-                .to(item, { x: translatedLeft, y: translatedTop, ease: 'none', duration: 0.86 }, 0)
-                .to(item, { autoAlpha: 0, duration: 0.14 }, 0.86)
+              timeline
+                .fromTo(el, { autoAlpha: 0, scale: 1 }, { autoAlpha: 0.92, duration: 0.08, ease: 'none' }, i * 0.012)
+                .to(el, { x: travel('x'), y: travel('y'), scale: 0.62, ease: 'power1.inOut', duration: 0.74 }, 0.08 + i * 0.012)
+                .to(el, { autoAlpha: 0, duration: 0.12, ease: 'none' }, 0.8 + i * 0.012)
             })
-            bridgeTimeline.fromTo(previewTabs, { autoAlpha: 0.35 }, { autoAlpha: 1, duration: 0.2 }, 0.72)
           }
 
-          // Recede only the copy so the bridge can converge precisely.
+          // Recede only the copy, so the satellites keep a stable travel origin.
           gsap.to('.home-hero-core', {
             yPercent: -8,
             autoAlpha: 0.5,
@@ -320,16 +282,16 @@ export function useHomeMotion(scopeRef) {
 
         teardown = () => {
           lenis?.off('scroll', ScrollTrigger.update)
-          teardownBridgeHandoff?.()
-          restoreBridgeAvailability?.()
           ctx.revert()
+          removeProxyLayer?.()
           scope.classList.remove('has-gsap')
-          delete scope.dataset.homeBridgeState
+          delete scope.dataset.homeConverge
         }
       })
       .catch(() => {
         // Motion chunk failed to load — restore native scroll and reveal all
-        // content so nothing is left hidden behind the arming class.
+        // content so nothing is left hidden behind the arming class. The
+        // satellites and workbench were never hidden in the first place.
         scope.classList.remove('has-gsap', 'motion-armed')
         revealAll(scope)
       })
