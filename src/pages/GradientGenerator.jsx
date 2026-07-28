@@ -692,89 +692,90 @@ export default function GradientGenerator({ onCopy, toast }) {
           </div>
         </section>
 
-        {/* Control panel */}
-        <aside className="ggn-panel" aria-labelledby="ggn-inspector-title">
-          <div className="ggn-panel-head">
-            <div>
-              <span className="ggn-step">02 · Inspector</span>
-              <h2 id="ggn-inspector-title">Refine &amp; export</h2>
-            </div>
-          </div>
-          <div className="ggn-field">
-            <div className="ggn-label-row">
-              <span className="ggn-label">Type</span>
-              <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked — unlock to randomise it' : 'Lock type when randomising'} />
-            </div>
-            <div className="ggn-seg">
-              {GRAD_TYPES.map(t => (
-                <button key={t} type="button" className={`ggn-seg-btn${type === t ? ' is-on' : ''}`} onClick={() => { if (guardEdit()) setType(t) }}>{t}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="ggn-field">
-            <div className="ggn-label-row">
-              <span className="ggn-label">Angle</span>
-              <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked — unlock to randomise it' : 'Lock angle when randomising'} />
-            </div>
-            <div className={`ggn-angle${angleActive ? '' : ' is-disabled'}`}>
-              <div className="ggn-dial" ref={dialRef} onPointerDown={dragDial} role="slider" aria-label="Gradient angle" aria-valuenow={Math.round(angle)} aria-valuemin={0} aria-valuemax={360} tabIndex={angleActive ? 0 : -1}
-                onKeyDown={(e) => {
-                  if (!angleActive) return
-                  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); if (guardEdit()) setAngle(a => (a + 1) % 360) }
-                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); if (guardEdit()) setAngle(a => (a + 359) % 360) }
-                }}>
-                <div className="ggn-dial-hand" style={{ transform: `rotate(${angle}deg)` }} />
-                <div className="ggn-dial-center" />
+        {/* Control panel. The slot stretches to the canvas column's height and the
+            panel is absolutely positioned inside it, so the inspector always matches
+            the canvas height and a long export block scrolls in .ggn-panel-body
+            instead of stretching the row. Both are unset in the single-column
+            breakpoints, where the panel simply flows. */}
+        <div className="ggn-panel-slot">
+          <aside className="ggn-panel" aria-labelledby="ggn-inspector-title">
+            <div className="ggn-panel-head">
+              <div>
+                <span className="ggn-step">02 · Inspector</span>
+                <h2 id="ggn-inspector-title">Refine &amp; export</h2>
               </div>
-              <div className="ggn-angle-ctrl">
-                <input
-                  type="range" min="0" max="360" value={Math.round(angle)}
-                  onChange={(e) => { if (guardEdit()) setAngle(+e.target.value) }}
-                  disabled={!angleActive || editLocked}
-                  className="ggn-range"
-                  aria-label="Gradient angle slider"
-                />
-                {angleActive ? (
-                  <div className="ggn-angle-num">
-                    <input
-                      type="number" min="0" max="360" value={Math.round(angle)}
-                      onChange={(e) => { const v = e.target.value; if (v === '') return; if (guardEdit()) setAngle(((Math.round(+v) % 360) + 360) % 360) }}
-                      disabled={editLocked}
-                      className="ggn-angle-input"
-                      aria-label="Gradient angle in degrees"
-                    />
-                    <span className="ggn-angle-deg" aria-hidden="true">°</span>
+            </div>
+            <div className="ggn-panel-body" tabIndex={0} role="group" aria-label="Inspector controls">
+              <div className="ggn-field">
+                <div className="ggn-label-row">
+                  <span className="ggn-label">Type</span>
+                  <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked — unlock to randomise it' : 'Lock type when randomising'} />
+                </div>
+                <div className="ggn-seg">
+                  {GRAD_TYPES.map(t => (
+                    <button key={t} type="button" className={`ggn-seg-btn${type === t ? ' is-on' : ''}`} onClick={() => { if (guardEdit()) setType(t) }}>{t}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ggn-field">
+                <div className="ggn-label-row">
+                  <span className="ggn-label">Angle</span>
+                  <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked — unlock to randomise it' : 'Lock angle when randomising'} />
+                </div>
+                <div className={`ggn-angle${angleActive ? '' : ' is-disabled'}`}>
+                  <div className="ggn-dial" ref={dialRef} onPointerDown={dragDial} role="slider" aria-label="Gradient angle" aria-valuenow={Math.round(angle)} aria-valuemin={0} aria-valuemax={360} tabIndex={angleActive ? 0 : -1}
+                    onKeyDown={(e) => {
+                      if (!angleActive) return
+                      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); if (guardEdit()) setAngle(a => (a + 1) % 360) }
+                      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); if (guardEdit()) setAngle(a => (a + 359) % 360) }
+                    }}>
+                    <div className="ggn-dial-hand" style={{ transform: `rotate(${angle}deg)` }} />
+                    <div className="ggn-dial-center" />
                   </div>
-                ) : (
-                  <div className="ggn-angle-val">n/a for radial</div>
-                )}
+                  <div className="ggn-angle-ctrl">
+                    {angleActive ? (
+                      <div className="ggn-angle-num">
+                        <input
+                          type="number" min="0" max="360" value={Math.round(angle)}
+                          onChange={(e) => { const v = e.target.value; if (v === '') return; if (guardEdit()) setAngle(((Math.round(+v) % 360) + 360) % 360) }}
+                          disabled={editLocked}
+                          className="ggn-angle-input"
+                          aria-label="Gradient angle in degrees"
+                        />
+                        <span className="ggn-angle-deg" aria-hidden="true">°</span>
+                      </div>
+                    ) : (
+                      <div className="ggn-angle-val">n/a for radial</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="ggn-field">
+                <div className="ggn-label-row">
+                  <span className="ggn-label">Code</span>
+                  <button type="button" className="ggn-copy" onClick={copyCode}>{copied ? '✓ Copied' : 'Copy'}</button>
+                </div>
+                <div className="ggn-fmt" role="tablist" aria-label="Export format">
+                  {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={effFmt === f.id}
+                      className={`ggn-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
+                      onClick={() => setFmt(f.id)}
+                    >{f.label}</button>
+                  ))}
+                </div>
+                <button type="button" className={`ggn-css${effFmt === 'svg' ? ' ggn-css--block' : ''}`} onClick={copyCode} title="Click to copy">
+                  <code>{exportCode}</code>
+                </button>
               </div>
             </div>
-          </div>
-
-          <div className="ggn-field">
-            <div className="ggn-label-row">
-              <span className="ggn-label">Code</span>
-              <button type="button" className="ggn-copy" onClick={copyCode}>{copied ? '✓ Copied' : 'Copy'}</button>
-            </div>
-            <div className="ggn-fmt" role="tablist" aria-label="Export format">
-              {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
-                <button
-                  key={f.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={effFmt === f.id}
-                  className={`ggn-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
-                  onClick={() => setFmt(f.id)}
-                >{f.label}</button>
-              ))}
-            </div>
-            <button type="button" className={`ggn-css${effFmt === 'svg' ? ' ggn-css--block' : ''}`} onClick={copyCode} title="Click to copy">
-              <code>{exportCode}</code>
-            </button>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
 
       {/* Stops */}
