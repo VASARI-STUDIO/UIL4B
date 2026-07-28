@@ -7,6 +7,7 @@ import ColorPickerPop from '../components/ColorPickerPop'
 import ShuffleIcon from '../components/ShuffleIcon'
 import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
+import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 
 // ── Gradient Generator ──
 // The standalone /color/gradient tool: build any linear / radial / conic
@@ -57,6 +58,14 @@ function mixHex(a, b, t = 0.5) {
 
 const DEFAULT_STOPS = () => PRESETS[0].stops.map(s => ({ ...s }))
 const MAX_STOPS = 12
+
+// Palette colours → evenly spread stops. Same shape the "Import colours" path
+// builds, so a palette carried in from the Palette Builder lands identically to
+// one imported here.
+const stopsFromColors = (colors) => colors.map((color, i) => ({
+  color: color.toUpperCase(),
+  position: Math.round((i / (colors.length - 1)) * 100),
+}))
 
 // Export formats offered under the preview. SVG is dropped for conic gradients
 // (SVG has no conic-gradient element), so the toggle adapts to the type.
@@ -206,12 +215,19 @@ export default function GradientGenerator({ onCopy, toast }) {
   const { openProModal } = useProModal()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  // A palette handed over from the Palette Builder's Gradient button. Read (not
+  // consumed) during render, so a render React discards can't lose it; the mount
+  // effect below empties the slot exactly once. A reload or a direct visit reads
+  // nothing and the tool seeds from the saved gradient as usual.
+  const carriedPalette = readGradientDraft()
+
   // Seed from the saved gradient. Null stop colours (the untouched default,
   // "use my palette") resolve to the live palette; a fully-default gradient seeds
   // the Nebula preset so a first-time visitor lands on a vivid look.
   const [type, setType] = useState(() => design?.gradient?.type || 'Conic')
   const [angle, setAngle] = useState(() => design?.gradient?.angle ?? 90)
   const [stops, setStops] = useState(() => {
+    if (carriedPalette) return stopsFromColors(carriedPalette.colors)
     const saved = design?.gradient?.stops
     if (Array.isArray(saved) && saved.some(s => s.color)) {
       return saved.map((s, i) => ({ color: s.color || design?.palette?.colors?.[i] || '#2563EB', position: s.position }))
@@ -229,7 +245,9 @@ export default function GradientGenerator({ onCopy, toast }) {
   // editable, from-scratch gradient. We seed it from the shared design's
   // `source` flag so the gate survives a remount or refresh — and stays in sync
   // with the parallel gradient editor in ColorStudio, which writes the same flag.
-  const [fromLibrary, setFromLibrary] = useState(() => design?.gradient?.source === 'gallery')
+  // A palette carried in from the Palette Builder is the user's OWN work, so it
+  // must never inherit the gallery gradient's Pro edit lock.
+  const [fromLibrary, setFromLibrary] = useState(() => !carriedPalette && design?.gradient?.source === 'gallery')
 
   // Randomise locks — pin any of type / angle / stop-count so a shuffle keeps
   // them. Per-stop colour+position locks live on the stop objects (`.locked`).
@@ -257,6 +275,15 @@ export default function GradientGenerator({ onCopy, toast }) {
     setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position })), angle, type, source: fromLibrary ? 'gallery' : 'own' })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stops, angle, type, fromLibrary])
+
+  // Commit the Palette Builder hand-off. Effects only run for a committed tree,
+  // so this empties the slot exactly once — a remount, a Back/Forward navigation
+  // or a second visit inherits nothing.
+  useEffect(() => {
+    if (readGradientDraft()) toast?.('Gradient built from your palette')
+    consumeGradientDraft()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Hand-offs: gallery (?gs=…&gt=…&ga=…) and Discover (?preset=&tab=) ──
   useEffect(() => {
