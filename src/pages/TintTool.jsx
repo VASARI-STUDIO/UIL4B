@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import { useProject } from '../contexts/ProjectContext'
 import {
   hexToHct, hctToHex, hexToHsl, hslToHex, textColorForBg,
 } from '../utils/colors'
+import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 
 // Tint Scale Generator — the standalone /color/tint page. Turns one OR MORE base
 // colours into production-ready tonal ramps. Every ramp shares one set of
@@ -135,7 +136,12 @@ function previewRef(labels, colors) {
 
 export default function TintTool({ onCopy, toast }) {
   const { design } = useProject()
-  const [bases, setBases] = useState(() => [mkBase('#2563EB')])
+  // A colour handed over from the Palette Builder's tints preview ("Open in Tint
+  // Generator"). Read — never consumed — during render, so a render React throws
+  // away can't lose it; the mount effect below empties the slot exactly once. A
+  // reload or a direct visit reads nothing and the tool opens on its default base.
+  const carriedColors = readTintDraft()
+  const [bases, setBases] = useState(() => (carriedColors ? carriedColors.colors.map(mkBase) : [mkBase('#2563EB')]))
   const [mode, setMode] = useState(DEFAULT_TUNING.mode)
   const [hueShift, setHueShift] = useState(DEFAULT_TUNING.hueShift)
   const [chroma, setChroma] = useState(DEFAULT_TUNING.chroma)
@@ -144,6 +150,15 @@ export default function TintTool({ onCopy, toast }) {
   const [audience, setAudience] = useState('designer')
   const [selectedBaseId, setSelectedBaseId] = useState(() => bases[0].id)
   const [selectedStopIndex, setSelectedStopIndex] = useState(0)
+
+  // Commit the Palette Builder hand-off. Effects only run for a committed tree,
+  // so the slot empties exactly once — a remount or a second visit inherits nothing.
+  useEffect(() => {
+    const carried = readTintDraft()
+    if (carried) toast?.(`Opened ${carried.colors[0]} from your palette`)
+    consumeTintDraft()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const labels = useMemo(() => stepLabels(stepMode, includeEnds), [stepMode, includeEnds])
   const dense = labels.length > 24 // thin bars — hide per-cell text, keep hover titles

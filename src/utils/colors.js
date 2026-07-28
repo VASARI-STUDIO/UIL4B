@@ -549,19 +549,46 @@ export function autoTonalFromSeed(hex) {
   ]
 }
 
+// Warm / cool anchors for the temperature lens, and the fraction of the way a
+// colour travels toward one at full slider travel.
+const TEMP_WARM_HUE = 30
+const TEMP_COOL_HUE = 210
+const TEMP_MAX_PULL = 0.5
+const DEG = Math.PI / 180
+
 // Non-destructive global adjust lens. Hue rotate / chroma scale / tone shift /
 // temperature bias over a base palette -> new array. Identity (returns input)
 // when every field is 0, so exports stay untouched until a slider moves.
+//
+// NOTE FOR CALLERS: this is a pure derivation, base -> displayed. Persist the
+// BASE colours and the slider values; persisting the RESULT plus the sliders
+// means the next load re-applies the lens to an already-adjusted palette and
+// the adjustment compounds on every save/reload cycle.
 export function applyAdjust(baseColors, adj) {
   if (!adj || (adj.h === 0 && adj.s === 0 && adj.b === 0 && adj.temp === 0)) return baseColors
   return baseColors.map(hex => {
     try {
       let [h, c, t] = hexToHct(hex)
       h = (((h + adj.h) % 360) + 360) % 360
+      // Temperature pulls each colour toward a warm (30°) or cool (210°) anchor.
+      // Done as a vector blend in the hue plane, NOT as a shortest-arc hue
+      // rotation: with a raw arc, two hues either side of the anchor's opposite
+      // resolve to OPPOSITE directions, so a palette of near-identical blues
+      // would split — one heading green, its neighbour purple — on a single
+      // nudge of the "warmer" slider, and at exactly ±180° the direction is
+      // arbitrary. Blending the (a,b) vectors is continuous everywhere: a colour
+      // near the anchor's opposite loses chroma and passes through neutral on
+      // its way round, exactly like a photographic warming filter. Away from
+      // that opposite the resulting hue matches the arc form, so the slider's
+      // everyday behaviour is unchanged.
       if (adj.temp !== 0) {
-        const target = adj.temp > 0 ? 30 : 210
-        const diff = ((target - h + 540) % 360) - 180
-        h = (((h + diff * (Math.abs(adj.temp) / 100) * 0.5) % 360) + 360) % 360
+        const anchor = (adj.temp > 0 ? TEMP_WARM_HUE : TEMP_COOL_HUE) * DEG
+        const pull = (Math.abs(adj.temp) / 100) * TEMP_MAX_PULL
+        const rad = h * DEG
+        const a = c * (Math.cos(rad) * (1 - pull) + Math.cos(anchor) * pull)
+        const b = c * (Math.sin(rad) * (1 - pull) + Math.sin(anchor) * pull)
+        h = (((Math.atan2(b, a) / DEG) % 360) + 360) % 360
+        c = Math.hypot(a, b)
       }
       c = Math.max(0, c * (1 + adj.s / 100))
       // adj.b is the "Tone" slider (±100). Halved → ±50 tone steps so full travel
