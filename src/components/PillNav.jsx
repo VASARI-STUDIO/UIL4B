@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { UIKIT_GUIDE_KEY } from './UIKitGuide'
 import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { ADMIN_EMAILS } from '../utils/constants'
@@ -276,6 +277,7 @@ function PromoMock({ section }) {
 
 export default function PillNav() {
   const { user, userProfile, logout, knownAccounts, switchAccount } = useAuth()
+  const { openLogin } = useLoginPrompt()
   const { isPro } = useSubscription()
   const { theme, setTheme } = useTheme()
   const location = useLocation()
@@ -303,6 +305,9 @@ export default function PillNav() {
   const [ctaReady, setCtaReady] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [switchingUid, setSwitchingUid] = useState(null)
+  const [switchStatus, setSwitchStatus] = useState('')
+  const switchLockRef = useRef(false)
   const navRef = useRef(null)
   const menuRef = useRef(null)
   const sheetRef = useRef(null)
@@ -489,13 +494,55 @@ export default function PillNav() {
   // Other accounts previously signed in on this device (display data only —
   // switching re-authenticates through Firebase, see AuthContext).
   const otherAccounts = (knownAccounts || []).filter((a) => a.uid !== user?.uid)
+  const closeAccountMenuAndRestoreFocus = () => {
+    setMenu(null)
+    requestAnimationFrame(() => accountBtnRef.current?.focus())
+  }
   const onSwitchAccount = async (acct) => {
-    closeAll()
+    if (switchLockRef.current) return
+    switchLockRef.current = true
+    setSwitchingUid(acct.uid)
+    setSwitchStatus(`Opening sign-in for ${acct.email || 'the selected account'}…`)
+    try {
     const res = await switchAccount(acct)
-    if (res?.needsLogin) {
-      // Password account, or the Google popup was dismissed — finish on /login
-      // with the email prefilled and return the user here afterwards.
-      navigate('/login', { state: { email: res.email, from: location.pathname } })
+    if (res.outcome === 'requiresPassword') {
+      // Password providers use the same in-place prompt, locked to this account.
+      setSwitchStatus(`Enter the password for ${res.email}. Your current session stays active until sign-in succeeds.`)
+      const switchedUser = await openLogin({
+        force: true,
+        free: false,
+        email: res.email,
+        lockEmail: true,
+        mode: 'switch',
+        reason: `switch to ${res.email}`,
+      })
+      if (switchedUser?.uid === acct.uid) {
+        setSwitchStatus(`Switched to ${acct.email}.`)
+        closeAccountMenuAndRestoreFocus()
+      } else if (switchedUser) {
+        setSwitchStatus(`Signed in as ${switchedUser.email || 'the account you selected'}.`)
+        closeAccountMenuAndRestoreFocus()
+      } else {
+        setSwitchStatus('Account switch cancelled. Your current session is still active.')
+      }
+    } else if (res.outcome === 'switched') {
+      setSwitchStatus(`Switched to ${acct.email || 'the selected account'}.`)
+      closeAccountMenuAndRestoreFocus()
+    } else if (res.outcome === 'cancelled') {
+      setSwitchStatus('Account switch cancelled. Your current session is still active.')
+    } else if (res.outcome === 'popupBlocked') {
+      setSwitchStatus('Your browser blocked the sign-in popup. Allow popups, then choose the account again.')
+    } else if (res.outcome === 'selectedDifferentAccount') {
+      setSwitchStatus(`Signed in as ${res.actualUser?.email || 'the account you selected'}.`)
+      closeAccountMenuAndRestoreFocus()
+    } else {
+      setSwitchStatus(res.message || 'Could not switch accounts. Your current session is still active.')
+    }
+    } catch {
+      setSwitchStatus('Could not switch accounts. Check your connection and try again.')
+    } finally {
+      switchLockRef.current = false
+      setSwitchingUid(null)
     }
   }
 
@@ -692,18 +739,31 @@ export default function PillNav() {
                           <div className="pnav-pop-sep" />
                           <p className="pnav-pop-head">Switch account</p>
                           {otherAccounts.map((acct) => (
-                            <button key={acct.uid} type="button" className="pnav-pop-item pnav-pop-acct" role="menuitem" onClick={() => onSwitchAccount(acct)}>
+                            <button
+                              key={acct.uid}
+                              type="button"
+                              className="pnav-pop-item pnav-pop-acct"
+                              role="menuitem"
+                              onClick={() => onSwitchAccount(acct)}
+                              disabled={!!switchingUid}
+                              aria-busy={switchingUid === acct.uid}
+                            >
                               {acct.photoURL ? (
                                 <img className="pnav-pop-acct-avatar" src={acct.photoURL} alt="" referrerPolicy="no-referrer" />
                               ) : (
                                 <span className="pnav-pop-acct-avatar" aria-hidden="true">{initials(acct, acct)}</span>
                               )}
                               <span className="pnav-pop-acct-text">
-                                <span className="pnav-pop-acct-name">{acct.displayName || acct.email.split('@')[0] || 'Account'}</span>
+                                <span className="pnav-pop-acct-name">
+                                  {switchingUid === acct.uid ? 'Switching…' : (acct.displayName || acct.email.split('@')[0] || 'Account')}
+                                </span>
                                 {acct.email && <span className="pnav-pop-acct-email">{acct.email}</span>}
                               </span>
                             </button>
                           ))}
+                          {switchStatus && (
+                            <p className="pnav-switch-status" role="status" aria-live="polite">{switchStatus}</p>
+                          )}
                         </>
                       )}
                       <div className="pnav-pop-sep" />
