@@ -1,0 +1,86 @@
+name: CI
+
+# Runs the project's real quality gates — the same commands documented in
+# docs/reference/build-and-verify.md, run the same way. No secrets required:
+# everything below runs offline against a throwaway "demo-uil4b" Firebase
+# project and a local Playwright-driven preview server.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gates:
+    name: Lint, build, unit tests, Firestore rules tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Firestore emulator jar is compiled for Java 11+, and firebase-tools 15
+      # requires 21+. Set this explicitly rather than relying on the runner's
+      # default JDK — do not remove this step.
+      - name: Set up JDK 21 (required by the Firestore emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 0 errors required. ~34 pre-existing advisory warnings (react-hooks
+      # set-state-in-effect / preserve-manual-memoization) are expected and
+      # do not fail this step — only lint errors do.
+      - name: Lint (eslint)
+        run: npx eslint .
+
+      - name: Build (vite)
+        run: npx vite build
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      # Spins up the Firestore emulator against the demo-uil4b project (no
+      # real credentials, never touches production data) and runs the
+      # security-rules suite, including the entitlement-lock regression tests.
+      - name: Firestore security rules tests (emulator)
+        run: npm run test:rules
+
+  browser-acceptance:
+    name: User-simulation acceptance suite (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (vite)
+        run: npx vite build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # Starts `vite preview` itself (see playwright.config.js) and walks the
+      # production build with persona-driven flows. No secrets or external
+      # services required.
+      - name: User-simulation acceptance tests
+        run: npm run test:users

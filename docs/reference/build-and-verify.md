@@ -3,6 +3,30 @@
 > Reference doc for UIL4B. Linked from `CLAUDE.md`. This is the quality gate —
 > nothing ships without it.
 
+## CI
+
+`.github/workflows/ci.yml` runs on every pull request targeting `main` and on
+every push to `main`. It is the automated version of the same gate documented
+below — same commands, same order, no secrets required (everything runs
+offline against a throwaway `demo-uil4b` Firebase project and a local preview
+server):
+
+1. `npm ci`
+2. `npx eslint .` — fails the job on errors; the pre-existing advisory
+   warnings (below) do not fail it.
+3. `npx vite build`
+4. `npm run test:unit`
+5. `npm run test:rules` (Firestore emulator, via `actions/setup-java` pinned
+   to Temurin 21 — see the JDK note below)
+
+A second job, `browser-acceptance`, builds the app, installs Playwright's
+Chromium via `npx playwright install --with-deps chromium`, and runs
+`npm run test:users` (the 91-test user-simulation acceptance suite) the same
+way — no secrets, no external services.
+
+If a gate goes red in CI, treat it exactly like a red local build: NO-GO, fix
+the root cause, don't route around it.
+
 ## Commands
 
 ```bash
@@ -18,6 +42,21 @@ compiled for Java 11+, and firebase-tools 15 requires 21+). It runs against a
 throwaway `demo-uil4b` project, so it never touches production data. Any edit to
 `firestore.rules` MUST pass it before the rules are published in the Firebase
 console — the console publish, not a deploy, is what makes rules live.
+
+CI sets this explicitly with `actions/setup-java` (Temurin 21) rather than
+relying on the runner's default JDK — that implicit-dependency failure mode is
+exactly what this doc exists to prevent. Locally, the default JDK on the
+founder's machine is 1.8, which fails with `UnsupportedClassVersionError`
+unless a JRE 21 is prefixed onto `PATH` for the command, e.g.:
+
+```bash
+export PATH="/c/Users/dylan/.lunarclient/jre/d093c370fc8eaa3e6743d7f61fb633adac4344f2/zulu21.48.17-ca-jre21.0.10-win_x64/bin:$PATH"
+npm run test:rules
+```
+
+If that JRE path is missing (moved, reinstalled, different machine), install
+any Temurin/Zulu **JDK 21+** and point `PATH` at its `bin` directory the same
+way.
 
 ## Verify-First Workflow
 
@@ -47,9 +86,11 @@ Founder rule (2026-06-30): **don't over-route.** The build/lint gate is cheap
 (local, zero model cost); the multi-agent review gate is not. So:
 
 - **After each change** → run the **simple check**: `npx vite build` +
-  `npx eslint .`. Baseline: **0 errors**; the only warnings are pre-existing
-  `set-state-in-effect` hints (~30) — match the current count, don't add new ones
-  and don't "fix" the existing ones.
+  `npx eslint .`. Baseline: **0 errors**; 34 pre-existing advisory warnings
+  (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
+  `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`) —
+  match the current count, don't add new ones and don't "fix" the existing
+  ones. CI enforces the same rule: it fails on lint **errors** only.
 - **After a cluster of related changes** → run **one combined code-review + qa**
   over the whole batch, then merge. Not a fresh review per micro-edit.
 - **Security-sensitive code is never batched away.** Anything touching `/api`,
