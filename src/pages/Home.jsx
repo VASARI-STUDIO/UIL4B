@@ -1,11 +1,10 @@
 import { lazy, Suspense, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import CreatePreview from '../components/CreatePreview'
-import NavIcon from '../components/NavIcon'
+import HomeWorkbench from '../components/HomeWorkbench'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
-import { LEARN_GROUPS, LIVE_PREVIEW_GROUPS } from '../data/toolTree'
+import { HOME_FAMILY_LABEL, HOME_SATELLITES, HOME_WORKBENCH_TABS, LEARN_GROUPS } from '../data/toolTree'
 
 // The real Export dialog, lazy-loaded so its (and its focus-trap's) code only
 // ships when a visitor actually asks to see the export formats.
@@ -62,17 +61,20 @@ export default function Home() {
   const rootRef = useRef(null)
   useHomeMotion(rootRef)
   const [exportOpen, setExportOpen] = useState(false)
-  const [activePreviewId, setActivePreviewId] = useState(LIVE_PREVIEW_GROUPS[0].id)
 
   return (
     <div className="home" ref={rootRef}>
       <PillNav />
 
       <main id="main" tabIndex={-1}>
-      {/* ── Hero ── */}
+      {/* ── Hero ──
+          Source order is the reading order and never changes: copy, then the
+          eight live tool links, then the workbench. On wide screens the links
+          are *placed* around the copy — that irregularity is the honest breadth
+          of the toolset, not decoration — and they resolve into four workbench
+          modes below. Nothing in this hero depends on GSAP to be readable. */}
       <div className="home-workspace-intro">
       <header className="home-hero">
-        <div className="home-orbit-rings" aria-hidden="true"><i /><i /><i /></div>
         <div className="home-hero-core">
           <p className="home-hero-kicker">
             <span className="home-hero-kicker-dot" aria-hidden="true" />
@@ -91,45 +93,44 @@ export default function Home() {
               Start building free
               <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
             </Link>
-            <a className="ui-pill ui-pill-out ui-pill-lg" href="#create">Explore the workspace</a>
+            <a className="ui-pill ui-pill-out ui-pill-lg" href="#workbench">Explore the workspace</a>
           </div>
           <p className="home-hero-hint">No credit card · No setup · Your first system stays free</p>
         </div>
-        <ul className="home-workspace-bridge" aria-label="Choose a live workspace preview">
-          {LIVE_PREVIEW_GROUPS.map((group) => (
-            <li key={group.id} data-hue={group.hue} data-preview-id={group.id}>
-              <button
-                type="button"
-                className="home-workspace-bridge-tab"
-                aria-pressed={activePreviewId === group.id}
-                aria-controls="home-preview-panel"
-                onClick={() => setActivePreviewId(group.id)}
-              >
-                <NavIcon id={group.id} />
-                <span>{group.previewLabel}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+
+        <nav className="hsat" aria-labelledby="hsat-title">
+          <h2 className="sr-only" id="hsat-title">Eight tools that are live today</h2>
+          <ul className="hsat-list">
+            {HOME_SATELLITES.map((sat) => (
+              <li className="hsat-item" key={sat.id} data-hue={sat.hue}>
+                <Link
+                  className="hsat-link"
+                  to={sat.route}
+                  data-satellite={sat.id}
+                  data-family={sat.family}
+                  aria-describedby={`hsat-fam-${sat.family}`}
+                >
+                  <span className="hsat-label">{sat.label}</span>
+                  <span className="hsat-family" aria-hidden="true">{HOME_FAMILY_LABEL[sat.family]}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {/* One description per workbench family, referenced by every satellite
+              in it. Assistive technology hears the eight-into-four relationship;
+              sighted users read the same thing in the family chip. */}
+          <div className="sr-only">
+            {HOME_WORKBENCH_TABS.map((tab) => (
+              <span id={`hsat-fam-${tab.id}`} key={tab.id}>
+                Works in the {tab.label} mode of the workbench below.
+              </span>
+            ))}
+          </div>
+        </nav>
       </header>
 
-      {/* ── Create: the live browser graphic, sat directly under the hero ── */}
-      <section className="home-showcase" id="create">
-        <div className="home-container">
-          <div className="home-stage-shell" data-reveal="media">
-            <div className="home-stage-meta">
-              <span className="home-stage-status">
-                <i aria-hidden="true" />
-                Interactive workspace preview
-              </span>
-              <span className="home-stage-meta-note">Switch tabs · try the live controls</span>
-            </div>
-            <div className="home-stage">
-              <CreatePreview activeId={activePreviewId} onActiveChange={setActivePreviewId} />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── The calm half: eight tools, four ways of working ── */}
+      <HomeWorkbench />
       </div>
 
       {/* ── Validate ── */}

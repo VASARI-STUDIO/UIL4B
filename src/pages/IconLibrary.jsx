@@ -14,6 +14,7 @@ import ColorPickerPop from '../components/ColorPickerPop'
 import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
+import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 
 const API_LIMIT = 999
 
@@ -532,11 +533,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return null
   }, [icon, pasted])
 
-  // Seed controls from a re-opened custom's saved values.
-  const [size, setSize] = useState(() => (icon?.custom && icon.size) || 48)
+  // Seed controls from a re-opened custom's saved values, then from a validated
+  // homepage draft (`draftSize` / `draftStroke` — bounded values, nothing else),
+  // then from the defaults.
+  const [size, setSize] = useState(() => (icon?.custom && icon.size) || icon?.draftSize || 48)
   const [color, setColor] = useState(() => (icon?.custom && icon.color) || '')
   // A saved custom keeps its own stroke; anything else opens at the sticky width.
-  const [stroke, setStroke] = useState(() => (icon?.custom && icon.stroke) || readStickyStroke())
+  const [stroke, setStroke] = useState(() => (icon?.custom && icon.stroke) || icon?.draftStroke || readStickyStroke())
   const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke))
   const [cap, setCap] = useState(() => (icon?.custom && icon.cap) || 'round')
   const [join, setJoin] = useState(() => (icon?.custom && icon.join) || 'round')
@@ -1288,7 +1291,25 @@ export default function IconLibrary({ onCopy, embedded }) {
   const [pack, setPack] = useState('')
   const [group, setGroup] = useState(null)   // active cross-pack collection, or null
   const [source, setSource] = useState('all')  // all | group | pack | custom | search
-  const [selected, setSelected] = useState(null)
+  // An ephemeral draft handed over from the homepage icon preview. Read during
+  // render and re-validated HERE before anything is applied, so a tampered,
+  // stale or already-consumed record simply opens the normal editor state
+  // instead. The draft only preselects an icon, size and stroke; authentication,
+  // free limits and Pro checks below remain the sole authority over what may be
+  // done with it. The commit effect further down empties the slot exactly once,
+  // so a reload or a second visit inherits nothing.
+  const [selected, setSelected] = useState(() => {
+    const draft = validateIconDraft(readIconDraft())
+    if (!draft) return null
+    return {
+      id: `${draft.pack}:${draft.name}`,
+      pack: draft.pack,
+      name: draft.name,
+      cdn: true,
+      draftSize: draft.size,
+      draftStroke: draft.stroke,
+    }
+  })
   const [addMode, setAddMode] = useState(false)
   const [recents, setRecents] = useState(() => getRecentIcons())
   const timer = useRef(null)
@@ -1552,6 +1573,9 @@ export default function IconLibrary({ onCopy, embedded }) {
         renderLocal(q, packFilter)
       })
   }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos])
+
+  // Consume the homepage draft on commit — see the `selected` initialiser above.
+  useEffect(() => { consumeIconDraft() }, [])
 
   // Initial load: all packs, so the grid shows catalogue breadth on first paint.
   useEffect(() => {

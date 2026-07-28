@@ -300,8 +300,8 @@ export default function PillNav() {
   const [sheetSection, setSheetSection] = useState('create') // expanded accordion
   const [scrolled, setScrolled] = useState(false)
   // Sales pages hide the signed-out "Start for Free" pill until the visitor has
-  // scrolled down to section 2 (#create); routes without that section show it
-  // straight away.
+  // scrolled down to section 2 (the homepage mini-workbench, #workbench; older
+  // sales sections use #create); routes without that section show it straight away.
   const [ctaReady, setCtaReady] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -350,7 +350,7 @@ export default function PillNav() {
   useEffect(() => {
     const onScroll = () => {
       setScrolled(window.scrollY > 12)
-      const sec = document.getElementById('create')
+      const sec = document.getElementById('workbench') || document.getElementById('create')
       setCtaReady(!sec || window.scrollY + window.innerHeight * 0.6 >= sec.offsetTop)
     }
     onScroll()

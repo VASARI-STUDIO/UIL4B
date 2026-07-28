@@ -56,7 +56,7 @@ test.describe('first-time visitor', () => {
       fb.note('improve', 'No pricing link reachable from the landing page — going direct.')
       await go(page, '/plans')
     }
-    await expect(page.getByRole('heading', { level: 1, name: /Simple, honest pricing/ })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: /More room when your workflow grows/ })).toBeVisible()
     await expect(page.locator('.sub-tier', { hasText: 'Free' }).first()).toContainText('$0')
   })
 
