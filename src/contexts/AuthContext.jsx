@@ -16,8 +16,9 @@ import {
   reauthenticateWithCredential,
   sendPasswordResetEmail,
 } from 'firebase/auth'
-import { auth as firebaseAuth, googleProvider, db } from '../utils/firebase'
+import { auth as firebaseAuth, db } from '../utils/firebase'
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
+import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 
 const AuthContext = createContext()
 const PROFILE_CACHE_KEY = 'vs-profile-cache'
@@ -65,7 +66,15 @@ function removeCachedProfile(uid) {
 function getKnownAccounts() {
   try {
     const list = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '[]')
-    return Array.isArray(list) ? list : []
+    if (!Array.isArray(list)) return []
+    const normalised = list
+      .filter((account) => account && typeof account.uid === 'string')
+      .map((account) => {
+        const providerIds = accountProviderIds(account)
+        return { ...account, providerIds, provider: providerIds[0] || 'password' }
+      })
+    if (JSON.stringify(normalised) !== JSON.stringify(list)) persistKnownAccounts(normalised)
+    return normalised
   } catch { return [] }
 }
 
@@ -104,17 +113,21 @@ export function AuthProvider({ children }) {
   // /onboarding exactly once without ever bouncing a returning user (AUDIT-A1).
   const [pendingOnboarding, setPendingOnboarding] = useState(false)
   const profileRef = useRef(null)
+  const authEpochRef = useRef(0)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(firebaseAuth, (fbUser) => {
+      const authEpoch = ++authEpochRef.current
       if (fbUser) {
+        const expectedUid = fbUser.uid
         setFirebaseUser(fbUser)
         setKnownAccounts(upsertKnownAccount({
           uid: fbUser.uid,
           email: fbUser.email || '',
           displayName: fbUser.displayName || '',
           photoURL: fbUser.photoURL || '',
-          provider: fbUser.providerData?.[0]?.providerId || 'password',
+          providerIds: accountProviderIds(fbUser),
+          provider: accountProviderIds(fbUser)[0] || 'password',
           lastUsed: Date.now(),
         }))
 
@@ -133,6 +146,7 @@ export function AuthProvider({ children }) {
         // background and merge it in once it arrives.
         setLoading(false)
         loadProfileFromFirestore(fbUser.uid).then((fsProfile) => {
+          if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)) return
           if (fsProfile) {
             const merged = { ...initial, ...fsProfile, email: fbUser.email || fsProfile.email }
             setProfile(merged)
@@ -144,6 +158,7 @@ export function AuthProvider({ children }) {
               try { localStorage.setItem('vs-onboarded', '1') } catch {}
             }
           } else {
+            if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)) return
             setCachedProfile(fbUser.uid, initial)
             saveProfileToFirestore(fbUser.uid, initial)
           }
@@ -172,7 +187,7 @@ export function AuthProvider({ children }) {
   } : null
 
   const login = useCallback(async (email, password) => {
-    await signInWithEmailAndPassword(firebaseAuth, email, password)
+    return signInWithEmailAndPassword(firebaseAuth, email, password)
   }, [])
 
   const signup = useCallback(async (email, password, displayName) => {
@@ -184,7 +199,7 @@ export function AuthProvider({ children }) {
     setCachedProfile(cred.user.uid, p)
     saveProfileToFirestore(cred.user.uid, p)
     setPendingOnboarding(true)
-    return cred.user
+    return cred
   }, [])
 
   const clearPendingOnboarding = useCallback(() => setPendingOnboarding(false), [])
@@ -199,9 +214,12 @@ export function AuthProvider({ children }) {
 
   const loginWithGoogle = useCallback(async () => {
     try {
-      const result = await signInWithPopup(firebaseAuth, googleProvider)
+      const provider = new GoogleAuthProvider()
+      provider.setCustomParameters({ prompt: 'select_account' })
+      const result = await signInWithPopup(firebaseAuth, provider)
       try { if (getAdditionalUserInfo(result)?.isNewUser) setPendingOnboarding(true) } catch { /* ignore */ }
       try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
+      return result
     } catch (err) {
       if (err?.code === 'auth/configuration-not-found' || err?.code === 'auth/invalid-api-key' || err?.code === 'auth/api-key-not-valid') {
         throw { code: 'auth/google-unavailable' }
@@ -216,29 +234,31 @@ export function AuthProvider({ children }) {
     const result = await signInWithCredential(firebaseAuth, credential)
     try { if (getAdditionalUserInfo(result)?.isNewUser) setPendingOnboarding(true) } catch { /* ignore */ }
     try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
+    return result
   }, [])
 
-  // Switch to another known account. Firebase holds a single session, so a
-  // switch is always sign-out + re-authenticate — we never store credentials.
-  // Google accounts re-auth through a popup pre-selected via login_hint; for
-  // password accounts the caller sends the user to /login with the email
-  // prefilled ({ needsLogin: true }).
+  // Switch to another known account without pre-emptively clearing the active
+  // session. Google login_hint is only a hint, so the returned Firebase identity
+  // is compared with the requested uid and reported honestly to the caller.
   const switchAccount = useCallback(async (target) => {
-    if (!target?.uid || target.uid === firebaseAuth.currentUser?.uid) return { switched: false }
-    await signOut(firebaseAuth)
-    if (target.provider === 'google.com') {
-      try {
-        const provider = new GoogleAuthProvider()
-        if (target.email) provider.setCustomParameters({ login_hint: target.email })
-        await signInWithPopup(firebaseAuth, provider)
-        try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
-        return { switched: true }
-      } catch {
-        // Popup closed or blocked — fall through to the manual login page.
-        return { switched: false, needsLogin: true, email: target.email }
-      }
+    if (!target?.uid) return authSwitchOutcome('error', { firebaseCode: 'auth/invalid-switch-target' })
+    if (target.uid === firebaseAuth.currentUser?.uid) {
+      return authSwitchOutcome('switched', { credential: null, user: firebaseAuth.currentUser })
     }
-    return { switched: false, needsLogin: true, email: target.email }
+    const providerIds = accountProviderIds(target)
+    if (!providerIds.includes('google.com')) {
+      return authSwitchOutcome('requiresPassword', { email: target.email || '', uid: target.uid })
+    }
+    try {
+      const provider = new GoogleAuthProvider()
+      if (target.email) provider.setCustomParameters({ login_hint: target.email })
+      const credential = await signInWithPopup(firebaseAuth, provider)
+      try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
+      return accountSelectionOutcome(credential, target.uid)
+    } catch (error) {
+        // Popup closed or blocked — fall through to the manual login page.
+      return authSwitchOutcome(error, { email: target.email || '', uid: target.uid })
+    }
   }, [])
 
   const removeKnownAccount = useCallback((uid) => {
@@ -293,7 +313,7 @@ export function AuthProvider({ children }) {
 
   const deleteAccount = useCallback(async (password) => {
     if (!firebaseUser) return
-    if (firebaseUser.providerData?.[0]?.providerId !== 'google.com') {
+    if (!accountProviderIds(firebaseUser).includes('google.com')) {
       await reauthenticate(password)
     }
     const uid = firebaseUser.uid
