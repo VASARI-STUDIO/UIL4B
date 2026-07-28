@@ -44,6 +44,56 @@ const overflowOf = (page) => page.evaluate(
   () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
 )
 
+// Records every programmatic window.scrollTo so a test can prove HOW the page
+// moved (instant vs smooth), not just where it ended up. Lenis owns the scroll
+// when motion is on, so this only sees the app's own calls.
+async function spyOnScrollTo(page) {
+  await page.addInitScript(() => {
+    window.__scrollCalls = []
+    const native = window.scrollTo.bind(window)
+    window.scrollTo = (...args) => {
+      const opts = args[0]
+      if (opts && typeof opts === 'object') {
+        window.__scrollCalls.push({ top: opts.top || 0, behavior: opts.behavior || 'auto' })
+      } else {
+        window.__scrollCalls.push({ top: args[1] || 0, behavior: 'auto' })
+      }
+      return native(...args)
+    }
+  })
+}
+
+const scrollCalls = (page) => page.evaluate(() => window.__scrollCalls || [])
+
+// Where the converter's queue region sits relative to the fixed PillNav and the
+// viewport, plus what holds focus.
+const converterView = (page) => page.evaluate(() => {
+  const box = (sel) => {
+    const el = document.querySelector(sel)
+    if (!el) return null
+    const r = el.getBoundingClientRect()
+    return { top: r.top, bottom: r.bottom, height: r.height }
+  }
+  const queue = document.querySelector('.fc-queue')
+  return {
+    scrollY: Math.round(window.scrollY),
+    viewport: window.innerHeight,
+    navBottom: document.querySelector('.pnav')?.getBoundingClientRect().bottom ?? 0,
+    queue: box('.fc-queue'),
+    card: box('.fc-card'),
+    drop: box('.fc-drop'),
+    focusedQueue: !!queue && document.activeElement === queue,
+    focusLabel: document.activeElement?.getAttribute('aria-label') || null,
+  }
+})
+
+// Drive the homepage Image panel's "Try your image" hand-off.
+async function handOffImages(page, files) {
+  await page.locator('.hw-tab[data-tab="image"]').click()
+  await page.locator('.hw-body input[type="file"]').setInputFiles(files)
+  await page.waitForURL('**/file-converter')
+}
+
 test.describe('homepage: eight tools, four ways of working', () => {
   test.use({ reducedMotion: 'reduce' })
 
@@ -537,6 +587,92 @@ test.describe('homepage: eight tools, four ways of working', () => {
     await go(page, '/icons')
     await expect(page.locator('.ic').first()).toBeVisible({ timeout: 15000 })
     await expect(page.locator('.icust')).toHaveCount(0)
+  })
+
+  test('11a · a hand-off lands looking at the uploaded images, not the drop zone', async ({ page }) => {
+    // Motion ON: this is the smooth-scroll path (Lenis owns the position), which
+    // the reduced-motion tests below cannot exercise.
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.addInitScript(() => {
+      localStorage.setItem('vs-appearance', JSON.stringify({
+        rounding: 'default', density: 'cozy', reducedMotion: false,
+      }))
+    })
+    watch(page, PERSONA)
+    await go(page, '/')
+    await handOffImages(page, [png('one.png'), png('two.png')])
+    await expect(page.locator('.fc-card')).toHaveCount(2)
+
+    // The viewport actually moved off the top, and settled.
+    await expect.poll(
+      async () => (await converterView(page)).scrollY,
+      { timeout: 10000 },
+    ).toBeGreaterThan(0)
+    let view = await converterView(page)
+    await expect.poll(async () => {
+      const next = await converterView(page)
+      const settled = next.scrollY === view.scrollY
+      view = next
+      return settled
+    }, { timeout: 10000 }).toBe(true)
+
+    // The heading of the region is clear of the fixed bar, not under it.
+    expect(view.queue.top, 'queue hidden beneath the sticky nav').toBeGreaterThanOrEqual(view.navBottom - 1)
+    // And the first uploaded image is fully on screen.
+    expect(view.card.top).toBeGreaterThanOrEqual(view.navBottom - 1)
+    expect(view.card.bottom).toBeLessThanOrEqual(view.viewport)
+
+    // Assistive tech is told where the viewport went: focus is on the named region.
+    expect(view.focusedQueue, 'focus did not move to the queue region').toBe(true)
+    expect(view.focusLabel).toContain('2 images')
+
+    // The drop zone is still there, above, and still reachable for more files.
+    expect(view.drop.height).toBeGreaterThan(0)
+    await page.locator('.fc-drop').scrollIntoViewIfNeeded()
+    const back = await converterView(page)
+    expect(back.drop.bottom).toBeGreaterThan(back.navBottom)
+    expect(back.drop.top).toBeLessThanOrEqual(back.viewport)
+  })
+
+  test('11b · reduced motion jumps instantly, and never smooth-scrolls', async ({ page }) => {
+    await reducedMotion(page)
+    await spyOnScrollTo(page)
+    watch(page, 'visitor who asked the OS to reduce motion')
+    await go(page, '/')
+    await handOffImages(page, [png('one.png')])
+    await expect(page.locator('.fc-card')).toHaveCount(1)
+
+    await expect.poll(async () => (await converterView(page)).scrollY, { timeout: 5000 }).toBeGreaterThan(0)
+    const calls = await scrollCalls(page)
+    // Reduced motion never instantiates Lenis, so the reveal goes through
+    // window.scrollTo — and must ask for an instant jump.
+    expect(calls.every((c) => c.behavior !== 'smooth'), JSON.stringify(calls)).toBe(true)
+    const reveal = calls.filter((c) => c.top > 0)
+    expect(reveal.length, 'exactly one reveal scroll').toBe(1)
+    expect(reveal[0].behavior).toBe('auto')
+
+    const view = await converterView(page)
+    expect(view.queue.top).toBeGreaterThanOrEqual(view.navBottom - 1)
+    expect(view.card.bottom).toBeLessThanOrEqual(view.viewport)
+  })
+
+  test('11c · a direct visit and a manual upload never move the viewport', async ({ page }) => {
+    await reducedMotion(page)
+    await spyOnScrollTo(page)
+    watch(page, 'visitor arriving at the converter directly')
+
+    await go(page, '/file-converter')
+    await expect(page.locator('.fc-drop')).toBeVisible()
+    expect((await converterView(page)).scrollY, 'a direct visit auto-scrolled').toBe(0)
+
+    // Uploading by hand is the visitor's own action, at the drop zone they are
+    // already looking at — it must not yank the page anywhere.
+    await page.locator('.fc-drop input[type="file"]').setInputFiles([png('one.png'), png('two.png')])
+    await expect(page.locator('.fc-card')).toHaveCount(2)
+    // Longer than the reveal's own frame budget, so a late scroll would be caught.
+    await page.waitForTimeout(800)
+    expect((await converterView(page)).scrollY, 'a manual upload scrolled').toBe(0)
+    expect((await scrollCalls(page)).filter((c) => c.top > 0), 'a manual upload scrolled').toEqual([])
   })
 
   test('16 · offline: no catalogue or remote image calls, and every panel still works', async ({ page }) => {
