@@ -41,10 +41,15 @@ tool, Discover and Learn routes are eligible.
 
 **Reply:** `prerender yes` · `prerender defer` · or `prerender no`.
 
-## 4. Set the lifetime tier direction
+## 4. Set the lifetime tier direction — RESOLVED 2026-07-28: `lifetime build`
 
-No lifetime price or entitlement exists. Shipping it requires one-time Stripe
-checkout, webhook persistence and plan resolution; creating a dashboard price
-before that work would let a customer pay without receiving Pro.
+Built and shipped in #184. One-time checkout, webhook persistence, refund and
+dispute revocation, and plan resolution are all live, and the One-off tab
+degrades honestly until a price exists.
 
-**Reply:** `lifetime build` · `lifetime defer` · or `lifetime remove`.
+**Still open — an owner action, not a decision.** The Stripe price must not be
+created until the pre-flight in [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md) §2·PRE is
+done: publish `firestore.rules`, and subscribe the webhook to
+`charge.dispute.*` and `checkout.session.async_payment_succeeded`. Creating the
+price first would let a customer pay while dispute revocation silently never
+fires.

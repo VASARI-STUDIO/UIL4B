@@ -18,7 +18,7 @@ export const APP_CONDITION = [
   { id: 'discover', label: 'Discover surface', value: 'Queued · 20%', status: 'watch', detail: 'Gradient Gallery is live; broader galleries remain backlog' },
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
   { id: 'design-system', label: 'Design system', value: 'v2.7 shipped', status: 'good', detail: 'Shared shell, controls, CTA and footer patterns are live' },
-  { id: 'phase', label: 'Current phase', value: 'Homepage + account/billing reliability', status: 'watch', detail: 'Homepage proof, account-switch reliability and Plans/lifetime HVZ work are active' },
+  { id: 'phase', label: 'Current phase', value: 'Owner validation after the homepage + billing batch', status: 'watch', detail: 'Homepage proof, account-switch and Plans/lifetime shipped (#183–#185); Firestore rules must be PUBLISHED and the lifetime webhook events configured before the Stripe lifetime price is created' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -37,27 +37,27 @@ export const PIPELINE_PROCESSES = [
     id: 'homepage-chaos-to-calm',
     name: 'Homepage chaos → calm proof',
     area: 'Product',
-    stage: 'in-progress',
-    progress: 10,
-    summary: 'Founder-approved build spec: eight stable live-tool links resolve into four honest mini-workbench tabs, with static fallback and bounded handoffs.',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'Shipped in #185. Eight stable satellite links resolve into four honest workbench tabs; motion is decoration only and the static composition is the finished page. All 17 acceptance tests executed; homepage initial JS fell 0.49 KB gzip and the 19.1 MB unused 4K references became 173 KB thumbnails.',
     updated: '2026-07-28',
   },
   {
     id: 'account-switch-reliability',
     name: 'Account-switch reliability',
     area: 'Account',
-    stage: 'in-progress',
-    progress: 0,
-    summary: 'Founder-requested reliability pass is active; completion awaits implementation and focused account-state verification.',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'Shipped in #183. Root cause was signing out before authenticating the target account; the session now survives until the new credential commits. Real Google OAuth popup behaviour still needs one manual founder pass.',
     updated: '2026-07-28',
   },
   {
     id: 'plans-lifetime-build',
     name: 'Plans redesign + lifetime billing',
     area: 'Billing',
-    stage: 'in-progress',
-    progress: 0,
-    summary: 'Founder-requested Plans and lifetime-billing build is active inside the billing/auth human-validation zone; no completion is claimed.',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'Shipped in #184 with security review PASS. Premium Plus removed, One-off tab added and degrading honestly until a Stripe price exists. Closed a live privilege escalation (client-writable entitlement fields), refunded-entitlement re-grants and missing chargeback revocation. Owner must PUBLISH firestore.rules and configure the lifetime webhook events before creating the price.',
     updated: '2026-07-28',
   },
   {
@@ -146,9 +146,9 @@ export const PIPELINE_PROCESSES = [
 // ── Next-to-do queue (prioritised) ──────────────────────────────────────────
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
-  { id: 'homepage-chaos-to-calm', title: 'Build the approved homepage chaos → calm experience', priority: 'P0', effort: 'L', area: 'Product', status: 'doing', note: 'Implement docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md exactly: eight stable satellite links, four tabs, static motion fallback, one-time image handoff, validated icon draft and full responsive/performance acceptance.' },
-  { id: 'account-switch-reliability', title: 'Complete the account-switch reliability pass', priority: 'P1', effort: 'M', area: 'Account', status: 'doing', note: 'Founder-requested active batch: verify add/switch/remove, stale-session and return-path behaviour before claiming completion.' },
-  { id: 'plans-lifetime-build', title: 'Build the Plans redesign and lifetime billing path', priority: 'P0', effort: 'L', area: 'Billing', status: 'doing', note: 'Founder-requested active HVZ batch: implement and validate the Plans experience, one-time checkout, durable entitlement and recovery paths without bypassing billing/auth review.' },
+  { id: 'ci-quality-gates', title: 'Add CI running lint, build, unit and Firestore rules tests', priority: 'P0', effort: 'S', area: 'Quality', status: 'todo', note: 'The repo has no workflows — .github holds only secret_scanning.yml — so nothing runs the 24 rules tests that pin the entitlement lock, and it could silently regress. Runners need JDK 21+ for the Firestore emulator; the local default JDK is 1.8.' },
+  { id: 'account-delete-cascade', title: 'Delete accounts through a server-side cascade', priority: 'P1', effort: 'M', area: 'Account', status: 'todo', note: 'deleteAccount now removes the auth user before the Firestore doc, so a failed second step can orphan a users/{uid} record holding email and display name. An Admin-SDK route should delete auth user, profile and sync data atomically.' },
+  { id: 'homepage-field-metrics', title: 'Measure homepage field metrics on a throttled profile', priority: 'P2', effort: 'S', area: 'Performance', status: 'todo', note: 'HOMEPAGE-CHAOS-TO-CALM §11 targets LCP ≤ 2.5s, CLS ≤ 0.05 and INP ≤ 200ms on Slow-4G with 4x CPU. Structural preconditions shipped in #185 but the numbers were never traced. Also covers 200% zoom, forced-colours and screen-reader passes from §10.' },
   { id: 'account-menu-arrow-nav', title: 'Add arrow-key navigation to the account menu', priority: 'P1', effort: 'S', area: 'Accessibility', status: 'todo', note: 'Complete the menu keyboard contract: roving focus, Home/End, Escape focus restoration and assistive-technology semantics.' },
   { id: 'global-failure-states', title: 'Add global 404 and offline states', priority: 'P1', effort: 'M', area: 'Quality', status: 'todo', note: 'Replace wildcard-to-home recovery with a branded 404 and add one app-level offline signal with retry guidance for network-dependent workflows.' },
   { id: 'font-gallery-readiness', title: 'Prepare Font Gallery for activation', priority: 'P2', effort: 'M', area: 'Performance', status: 'todo', note: 'Deferred until the route is activated: remove featured-card FOUT, reserve metrics, and complete keyboard/dialog accessibility before flipping the Soon state.' },
