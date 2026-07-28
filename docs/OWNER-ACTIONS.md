@@ -65,6 +65,26 @@ every row below:
 | `invoice.payment_failed` / `invoice.paid` | The "payment failed" banner never appears or never clears. |
 | `customer.subscription.trial_will_end` | No trial-ending notice. |
 
+#### What a refund actually does to access (support needs this)
+
+`api/stripe-webhook.js` revokes on a **full** refund only — the check is
+`amount_refunded >= amount`. Consequences, in plain terms:
+
+- **Full refund → Pro is removed.** The customer drops to Free.
+- **Partial / goodwill refund → Pro stays active.** Refunding, say, half the
+  one-off price as a gesture does **not** take access away. That is deliberate
+  (a partial refund is not "the sale is off"), but it means *"refund them a bit
+  to say sorry"* silently costs you the whole entitlement. If the intent is to
+  end the sale, refund it **in full**.
+- **Refunding to settle a chargeback is final.** Once a charge is refunded, the
+  entitlement stays revoked even if the dispute later closes in your favour —
+  the buyer would otherwise keep both the money and Pro. If you win a dispute
+  after refunding and still want the customer to have Pro, that is a manual
+  restore (or have them repurchase); the webhook will not do it. Look for
+  `won dispute did NOT restore access` in the Vercel logs.
+- **Re-granting is never automatic.** A refunded session can never re-grant on a
+  webhook re-delivery; only a genuine new purchase restores access.
+
 **Verify before going live (2 min):** on the endpoint page, use **Send test
 event** for `checkout.session.async_payment_succeeded` and
 `charge.dispute.created`, then confirm each returns **200** in the endpoint's

@@ -1,10 +1,12 @@
 import { adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
 import {
+  disputeRestoreDecision,
   lifetimeEntitlementFromSession,
   lifetimeGrantDecision,
   lifetimeGrantHealth,
   retrieveSessionWithCharge,
+  revocationUpdate,
 } from './_lib/billing.js'
 
 export const config = { api: { bodyParser: false } }
@@ -179,18 +181,14 @@ async function revokeByPaymentIntent(stripe, {
     const snap = await tx.get(ref)
     const entitlement = snap.data()?.lifetimeEntitlement
     if (!entitlement || entitlement.paymentIntentId !== paymentIntentId) return false
-    if (entitlement.revokedAt && entitlement.active === false) return true // already revoked
-    const now = Date.now()
+    // An already-revoked entitlement is still re-written when a NEWER reason
+    // arrives (a refund settling an open dispute, say), so the record always
+    // names the most recent thing that happened to the money. Only a delivery
+    // that says nothing new skips the write.
+    const { changed, fields } = revocationUpdate(entitlement, { reason, chargeId, disputeId })
+    if (!changed) return true // already recorded
     tx.set(ref, {
-      lifetimeEntitlement: {
-        ...entitlement,
-        active: false,
-        revokedAt: now,
-        revokedReason: reason,
-        refundedChargeId: chargeId || entitlement.refundedChargeId || null,
-        disputeId: disputeId || entitlement.disputeId || null,
-        updatedAt: now,
-      },
+      lifetimeEntitlement: { ...entitlement, ...fields },
     }, { merge: true })
     return true
   })
@@ -212,16 +210,35 @@ async function restoreAfterDisputeWon(stripe, dispute) {
     return false
   }
 
+  // The dispute payload carries no refund information, so the charge itself is
+  // the only thing that can prove the money is actually ours. Without this read,
+  // a merchant who refunds to settle a chargeback and then wins it anyway hands
+  // the customer their money AND permanent Pro.
+  const chargeId = typeof dispute?.charge === 'string' ? dispute.charge : dispute?.charge?.id || null
+  let charge = null
+  if (chargeId) {
+    try {
+      charge = await stripe.charges.retrieve(chargeId)
+    } catch (err) {
+      console.error('stripe-webhook: could not read the charge behind a won dispute — access not restored', {
+        uid, disputeId: dispute?.id, chargeId, error: err?.message,
+      })
+      return false
+    }
+  }
+
   const db = adminDb()
   const ref = db.collection('users').doc(uid)
+  let refusal = null
   const restored = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref)
     const entitlement = snap.data()?.lifetimeEntitlement
     if (!entitlement || entitlement.paymentIntentId !== paymentIntentId) return false
-    if (entitlement.active === true) return false
-    // Only a dispute-driven revocation is reversible here. A refund revocation
-    // (or any other reason) stays put — the money did not come back.
-    if (!String(entitlement.revokedReason || '').startsWith('dispute')) return false
+    const decision = disputeRestoreDecision(entitlement, charge, dispute?.id || null)
+    if (!decision.ok) {
+      refusal = decision.reason
+      return false
+    }
     const now = Date.now()
     tx.set(ref, {
       lifetimeEntitlement: {
@@ -235,7 +252,15 @@ async function restoreAfterDisputeWon(stripe, dispute) {
     }, { merge: true })
     return true
   })
-  if (restored) console.warn('stripe-webhook: lifetime entitlement restored after a won dispute', { uid, paymentIntentId })
+  if (restored) {
+    console.warn('stripe-webhook: lifetime entitlement restored after a won dispute', { uid, paymentIntentId })
+  } else if (refusal && refusal !== 'already_active') {
+    // A won dispute that does NOT restore access is a support case (the buyer
+    // stays on Free after we kept the money), so it must be visible in the log.
+    console.error('stripe-webhook: won dispute did NOT restore access', {
+      uid, disputeId: dispute?.id, chargeId, paymentIntentId, reason: refusal,
+    })
+  }
   return restored
 }
 

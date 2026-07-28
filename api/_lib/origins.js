@@ -24,7 +24,14 @@ export function allowedOrigins() {
 
 // Resolves the request's origin against the allowlist, falling back to the
 // canonical production origin rather than trusting the header.
+//
+// The match is EXACT. A prefix test would accept `https://uil4b.com.evil.com`
+// for the `https://uil4b.com` entry — harmless while this returns the
+// allowlisted constant rather than the caller's string, but not a property
+// worth depending on. An Origin header is scheme + host + optional port with no
+// path, and the referer fallback strips the path, so every real allowlisted
+// origin still matches.
 export function resolveOrigin(req) {
   const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
-  return allowedOrigins().find((o) => rawOrigin?.startsWith(o)) || DEFAULT_ORIGIN
+  return allowedOrigins().find((o) => o === rawOrigin) || DEFAULT_ORIGIN
 }

@@ -56,6 +56,67 @@ export function lifetimeGrantHealth(session) {
   return { ok: true, reason: null, charge }
 }
 
+// Builds the entitlement fields a revocation writes, given what is already on
+// the user document. Pure so it can be unit-tested without Firestore.
+//
+// A re-revocation keeps the ORIGINAL revokedAt — that is when access actually
+// ended — but always adopts the newest reason and ids. The record has to
+// describe the most recent thing that happened to the money, because
+// disputeRestoreDecision reads revokedReason to decide whether access may ever
+// come back: a refund landing after a dispute MUST overwrite 'dispute_created'
+// rather than be swallowed as "already revoked", or winning the dispute later
+// would hand a refunded customer permanent Pro.
+//
+// `changed: false` means the document already says exactly this, so the caller
+// can skip the write and stay idempotent under webhook re-delivery.
+export function revocationUpdate(entitlement, { reason, chargeId = null, disputeId = null }, now = Date.now()) {
+  const fields = {
+    active: false,
+    revokedAt: entitlement?.revokedAt || now,
+    revokedReason: reason,
+    refundedChargeId: chargeId || entitlement?.refundedChargeId || null,
+    disputeId: disputeId || entitlement?.disputeId || null,
+    updatedAt: now,
+  }
+  const alreadyRecorded = entitlement?.active === false
+    && !!entitlement?.revokedAt
+    && entitlement.revokedReason === fields.revokedReason
+    && (entitlement.refundedChargeId || null) === fields.refundedChargeId
+    && (entitlement.disputeId || null) === fields.disputeId
+  return { changed: !alreadyRecorded, fields }
+}
+
+// Decides whether a dispute closed in our favour may restore access. Pure so it
+// can be unit-tested without Firestore or Stripe.
+//
+// The dispute payload says nothing about refunds, so the caller must retrieve
+// the charge and pass it here. Without that, this sequence gives away Pro for
+// free: dispute opened (revoked) → merchant refunds to settle → dispute closed
+// 'won' → restored. The customer has their money AND their access.
+export function disputeRestoreDecision(entitlement, charge, disputeId = null) {
+  if (!entitlement) return { ok: false, reason: 'no_entitlement' }
+  if (entitlement.active === true) return { ok: false, reason: 'already_active' }
+  // Only a dispute-driven revocation is reversible here. A refund revocation
+  // (or any other reason) stays put — that money did not come back.
+  if (!String(entitlement.revokedReason || '').startsWith('dispute')) {
+    return { ok: false, reason: 'not_revoked_for_a_dispute' }
+  }
+  // A second, still-open dispute overwrites disputeId when it revokes, so an
+  // older dispute closing in our favour must not undo the newer revocation.
+  if (disputeId && entitlement.disputeId && entitlement.disputeId !== disputeId) {
+    return { ok: false, reason: 'revoked_for_a_different_dispute' }
+  }
+  if (!charge) return { ok: false, reason: 'charge_unavailable' }
+  // `charge.disputed` is a historical marker: it records that a dispute happened
+  // and is not reliably cleared when one closes, so demanding it be false could
+  // mean a won dispute never restores access. This path is only reached from
+  // charge.dispute.closed/won for THIS dispute — already matched above — so the
+  // flag is the very condition being resolved. Every other cleanliness signal
+  // chargeIsClean checks (refunded, amount_refunded) still has to hold.
+  if (!chargeIsClean({ ...charge, disputed: false })) return { ok: false, reason: 'charge_refunded' }
+  return { ok: true, reason: null }
+}
+
 export function lifetimeEntitlementFromSession(session, grantedAt = Date.now()) {
   if (!isPaidLifetimeSession(session)) return null
   return {

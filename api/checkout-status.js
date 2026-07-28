@@ -49,14 +49,23 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    // Only let a user read their own checkout session. Both checks are
-    // unconditional: a session with no firebaseUid metadata is not ours to
-    // disclose, so a missing value fails rather than being waved through.
+    // Only let a user read their own checkout session.
+    //
+    // `metadata.firebaseUid` is the ownership proof, and it is unconditional: it
+    // is stamped server-side when the session is created (api/create-checkout.js)
+    // and was never reachable by a client, so a session with no firebaseUid — or
+    // someone else's — is not ours to disclose.
+    //
+    // `stripeCustomerId` is a WEAKER signal: it lives on a document the user is
+    // allowed to delete (firestore.rules `allow delete: if isOwner()`), and a
+    // self-deleted document used to 403 a paying customer out of their own
+    // session with no recovery but founder intervention. So its absence no
+    // longer blocks — but when it is present the session's customer must agree.
     const userDoc = await adminDb().collection('users').doc(uid).get()
     const userData = userDoc.exists ? userDoc.data() : {}
     const customerId = userData?.stripeCustomerId || null
     const sessionCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null
-    if (!customerId || sessionCustomerId !== customerId || session.metadata?.firebaseUid !== uid) {
+    if (session.metadata?.firebaseUid !== uid || (customerId && sessionCustomerId !== customerId)) {
       return res.status(403).json({ error: 'Session does not belong to this account' })
     }
 
@@ -73,7 +82,11 @@ export default async function handler(req, res) {
     if (!entitlementActive) {
       const health = lifetimeGrantHealth(session)
       const candidate = health.ok ? lifetimeEntitlementFromSession(session) : null
-      if (candidate && candidate.customerId === customerId) {
+      // The customer comparison is a defence-in-depth repeat of the 403 above,
+      // and like it, only applies when a stored customer id exists. Ownership
+      // here rests on the session's server-stamped firebaseUid, not on a field
+      // the client can delete.
+      if (candidate && (!customerId || candidate.customerId === customerId)) {
         const db = adminDb()
         const ref = db.collection('users').doc(uid)
         entitlementActive = await db.runTransaction(async (tx) => {

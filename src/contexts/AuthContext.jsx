@@ -370,12 +370,18 @@ export function AuthProvider({ children }) {
       await reauthenticate(password)
     }
     const uid = firebaseUser.uid
-    try { await deleteDoc(doc(db, 'users', uid)) } catch {}
+    // Delete the auth account FIRST, and only clean up on success. deleteUser
+    // can throw (auth/requires-recent-login — and the Google branch above does
+    // not reauthenticate at all), so deleting the user document first would
+    // leave a live, still-signed-in account whose Pro entitlement had already
+    // been erased. Losing paid access to a failed delete is far worse than an
+    // orphaned document, and the thrown error still reaches the Settings UI.
+    await deleteUser(firebaseUser)
+    try { await deleteDoc(doc(db, 'users', uid)) } catch { /* account already gone; the document is orphaned, not live */ }
     removeCachedProfile(uid)
     const remaining = getKnownAccounts().filter((a) => a.uid !== uid)
     persistKnownAccounts(remaining)
     setKnownAccounts(remaining)
-    await deleteUser(firebaseUser)
   }, [firebaseUser])
 
   return (
