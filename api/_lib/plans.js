@@ -38,6 +38,10 @@ export function planForSubscription(subscription) {
   return PLANS.pro
 }
 
+export function hasLifetimeEntitlement(entitlement) {
+  return entitlement?.active === true && !entitlement.revokedAt
+}
+
 // Founder/admin accounts get Pro entitlements without a Stripe subscription so
 // the team can dog-food paid features. The email is read from a verified
 // Firebase ID token on the server, so a non-admin can't spoof their way in.
@@ -51,8 +55,9 @@ export function isAdminEmail(email) {
 // Resolve the effective plan for a request: admins are always Pro; everyone
 // else falls back to their real subscription. Prefer this over
 // planForSubscription in any authenticated endpoint that gates on plan.
-export function planForUser({ subscription, email } = {}) {
+export function planForUser({ subscription, lifetimeEntitlement, email } = {}) {
   if (isAdminEmail(email)) return PLANS.pro
+  if (hasLifetimeEntitlement(lifetimeEntitlement)) return PLANS.pro
   return planForSubscription(subscription)
 }
 

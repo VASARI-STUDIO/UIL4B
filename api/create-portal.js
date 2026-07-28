@@ -1,5 +1,7 @@
 import { adminAuth, adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
+import { failRequest } from './_lib/http.js'
+import { resolveOrigin } from './_lib/origins.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -33,9 +35,41 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No subscription found' })
     }
 
-    const ALLOWED_ORIGINS = ['https://uil4b.vercel.app', 'https://uil4b.com', 'https://www.uil4b.com', 'http://localhost:5173']
-    const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
-    const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
+    // `stripeCustomerId` lived on a client-writable document until the
+    // firestore.rules lock, so the stored value alone is not proof of ownership.
+    // Stripe's own copy of the customer is: its firebaseUid metadata was written
+    // by this server at create-checkout time and has never been client-reachable.
+    // Without this, a stale or tampered id could open someone else's billing
+    // portal — full card details, invoices and cancellation rights.
+    let customer
+    try {
+      customer = await stripe.customers.retrieve(customerId)
+    } catch (err) {
+      return failRequest(res, {
+        status: 400,
+        scope: 'create-portal customer lookup',
+        message: 'We could not open your billing portal. Please contact support with the reference below.',
+        err,
+        context: { uid, customerId },
+      })
+    }
+    const customerUid = customer?.deleted ? null : customer?.metadata?.firebaseUid || null
+    if (customerUid !== uid) {
+      // `missing_metadata` = a legacy or hand-made Stripe customer, fixable by
+      // adding metadata firebaseUid=<uid> on the customer in the Stripe
+      // dashboard. `uid_mismatch` = the stored id points at someone else's
+      // customer, which is the attack this check exists for.
+      console.error('create-portal: refused — Stripe customer does not belong to this account', {
+        uid,
+        customerId,
+        customerUid,
+        deleted: !!customer?.deleted,
+        cause: customer?.deleted ? 'customer_deleted' : (customerUid ? 'uid_mismatch' : 'missing_metadata'),
+      })
+      return res.status(403).json({ error: 'This billing account is not linked to your login. Please contact support.' })
+    }
+
+    const origin = resolveOrigin(req)
 
     const params = {
       customer: customerId,
@@ -76,7 +110,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ url: session.url })
   } catch (err) {
-    console.error('create-portal failed:', err)
-    return res.status(500).json({ error: err?.message || 'Could not open billing portal' })
+    return failRequest(res, {
+      status: 500,
+      scope: 'create-portal',
+      message: 'Could not open the billing portal. Please try again, or contact support with the reference below.',
+      err,
+      context: { uid },
+    })
   }
 }
