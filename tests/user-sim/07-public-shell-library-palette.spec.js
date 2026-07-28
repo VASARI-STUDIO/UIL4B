@@ -113,21 +113,29 @@ test.describe('public UI quality release', () => {
     await expect.poll(() => new URL(page.url()).pathname).toBe('/emoji')
     await expect(page.getByRole('tab', { name: /Emoji/ })).toBeFocused()
 
+    // The scenario is "already using the page, then the connection drops", so the
+    // page must be fully settled first. On a cold CI runner the /emoji panel's
+    // lazy chunk can still be in flight, and cutting the network mid-fetch tests
+    // chunk loading rather than the offline banner.
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(/Live library connected/)).toBeVisible()
+
     await context.setOffline(true)
-    // Re-dispatch while polling. The /emoji panel is a lazy chunk, so on a slow
-    // runner it can mount AFTER a single offline event fires and never hear it —
-    // and Playwright's setOffline does not reliably flip navigator.onLine, so the
-    // fresh mount reads back online. Re-firing until the banner appears tests the
-    // real behaviour (go offline while using the page) without depending on
-    // chunk-load timing.
+    // Re-dispatch while polling: Playwright's setOffline does not reliably flip
+    // navigator.onLine, and a single synthetic event can land before the listener
+    // is attached. Re-firing exercises the real behaviour without binding the
+    // assertion to load timing.
     const offlineBanner = page.getByText(/Offline · built-in assets remain available/)
     await expect.poll(async () => {
       await dispatchWindowEvent(page, 'offline')
       return offlineBanner.isVisible()
     }, { timeout: 15000 }).toBe(true)
+
     await context.setOffline(false)
-    await dispatchWindowEvent(page, 'online')
-    await expect(page.getByText(/Live library connected/)).toBeVisible()
+    await expect.poll(async () => {
+      await dispatchWindowEvent(page, 'online')
+      return page.getByText(/Live library connected/).isVisible()
+    }, { timeout: 15000 }).toBe(true)
   })
 
   test('Palette Reset then edit then Undo restores the latest mutation before the pre-reset state', async ({ page }) => {
