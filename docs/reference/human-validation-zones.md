@@ -29,6 +29,8 @@ Only proceed once the user (Dylan) approves.
 | `src/contexts/SubscriptionContext.jsx` | Plan resolution + checkout flow. |
 | `src/utils/stripeClient.js` | Client-side Stripe wiring. |
 | `api/_lib/stripe.js`, `api/_lib/pricing.js`, `api/_lib/plans.js` | Pricing/plan source of truth. |
+| `api/_lib/billing.js` | One-off ("lifetime") entitlement grant/revoke guards. |
+| `firestore.rules` | Decides what a client may write to `users/{uid}` — including the entitlement fields the server reads to grant Pro. **Never widen the `users` write rule.** Covered by `npm run test:rules`; run it before publishing. |
 
 ## Auth / Login
 

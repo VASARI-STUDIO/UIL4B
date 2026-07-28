@@ -9,7 +9,15 @@
 npx vite build          # MUST pass before any commit
 npx vite --port 5173    # dev server
 npx eslint .            # MUST be clean (0 errors) before shipping
+npm run test:unit       # pure logic (auth switching, billing guards)
+npm run test:rules      # Firestore security rules, on the local emulator
 ```
+
+**`test:rules` needs a JDK 21+ on `PATH`** (the Firestore emulator jar is
+compiled for Java 11+, and firebase-tools 15 requires 21+). It runs against a
+throwaway `demo-uil4b` project, so it never touches production data. Any edit to
+`firestore.rules` MUST pass it before the rules are published in the Firebase
+console — the console publish, not a deploy, is what makes rules live.
 
 ## Verify-First Workflow
 

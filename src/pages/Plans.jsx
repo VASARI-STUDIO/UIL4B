@@ -1,264 +1,271 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
-import { useProPrice } from '../hooks/usePrices'
-import { FREE_SAVE_LIMITS } from '../contexts/SubscriptionContext'
+import { FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
+import { refreshPrices, useProPrice } from '../hooks/usePrices'
 import SystemCTA from '../components/SystemCTA'
+
+const BILLING_OPTIONS = [
+  { id: 'monthly', label: 'Monthly' },
+  { id: 'yearly', label: 'Yearly' },
+  { id: 'lifetime', label: 'One-off' },
+]
 
 function Check() {
   return (
-    <svg className="sub-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="sub-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   )
 }
 
-// Small tier glyphs — a light visual anchor in each card head, matching the
-// app's stroked-icon style.
-function TierIcon({ kind }) {
-  const p = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
-  if (kind === 'pro') return <svg {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
-  if (kind === 'plus') return <svg {...p}><path d="M3 8l4 3 5-7 5 7 4-3-2 12H5L3 8Z" /></svg>
-  return <svg {...p}><path d="M12 2 3 7l9 5 9-5-9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 17 9 5 9-5" /></svg>
+function TierIcon({ pro = false }) {
+  const props = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
+  return pro
+    ? <svg {...props}><path d="m13 2-9 12h8l-1 8 9-12h-8l1-8Z" /></svg>
+    : <svg {...props}><path d="M12 2 3 7l9 5 9-5-9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 17 9 5 9-5" /></svg>
 }
-
-const PRICE_COMPARISONS = [
-  { emoji: '☕', text: 'less than 2 coffees a month' },
-  { emoji: '🥤', text: 'less than one smoothie a month' },
-  { emoji: '🎬', text: 'less than most streaming services' },
-  { emoji: '🍔', text: 'less than one lunch out' },
-  { emoji: '🅿️', text: 'less than 2 hours of city parking' },
-  { emoji: '🍺', text: 'less than one pint at the pub' },
-  { emoji: '🚗', text: 'less than one short Uber ride' },
-  { emoji: '🎟️', text: 'less than one movie ticket' },
-]
 
 const FAQ = [
   {
-    q: 'Do I need a card to use the free plan?',
-    a: 'No. Free is genuinely free — no card, no trial clock. Every core design tool, unlimited palettes, scales and exports, plus 40 AI generations a day.',
+    q: 'Do I need a card to use Free?',
+    a: 'No. Free has no card requirement or trial clock. It includes the core toolkit, 40 AI actions per day, and a practical save allowance.',
   },
   {
-    q: 'What counts as an “AI generation”?',
-    a: 'Any single AI action — an alt-text write-up, an image prompt, or a landing-page draft. Free gives you 40 a day; Pro raises that to 1,000 and uses higher-quality models.',
+    q: 'What changes on Pro?',
+    a: 'Pro raises AI actions from 40 to 1,000 per day, removes the project and custom-icon save caps, unlocks advanced colour controls, and adds full design JSON export.',
   },
   {
-    q: 'Can I cancel anytime?',
-    a: 'Yes. Manage or cancel your plan from Settings in one click. If you cancel, Pro stays active until the end of the period you already paid for.',
+    q: 'How does yearly billing work?',
+    a: 'The yearly subscription starts with a 7-day free trial. The live saving is calculated from the current monthly and yearly Stripe prices.',
   },
   {
-    q: 'Is the yearly free trial really free?',
-    a: 'Yes — the yearly plan starts with a 7-day free trial. You won’t be charged today, and you can cancel before it ends at no cost.',
+    q: 'What is the One-off option?',
+    a: 'One payment grants durable Pro access to this account. Checkout remains disabled until an active one-off Stripe price is available for your currency.',
   },
 ]
 
 export default function Plans() {
   const { user } = useAuth()
   const { isPro, loading: subLoading } = useSubscription()
+  const location = useLocation()
   const [billing, setBilling] = useState('yearly')
-  const proPrice = useProPrice()
-  const [coffeeIdx, setCoffeeIdx] = useState(0)
   const [openFaq, setOpenFaq] = useState(null)
+  const tabRefs = useRef([])
+  const price = useProPrice()
 
-  useEffect(() => {
-    const timer = setInterval(() => setCoffeeIdx(i => (i + 1) % PRICE_COMPARISONS.length), 4000)
-    return () => clearInterval(timer)
-  }, [])
+  const selectTab = (index) => {
+    const next = BILLING_OPTIONS[(index + BILLING_OPTIONS.length) % BILLING_OPTIONS.length]
+    setBilling(next.id)
+    tabRefs.current[(index + BILLING_OPTIONS.length) % BILLING_OPTIONS.length]?.focus()
+  }
+  const onTabKeyDown = (event, index) => {
+    if (event.key === 'ArrowRight') { event.preventDefault(); selectTab(index + 1) }
+    else if (event.key === 'ArrowLeft') { event.preventDefault(); selectTab(index - 1) }
+    else if (event.key === 'Home') { event.preventDefault(); selectTab(0) }
+    else if (event.key === 'End') { event.preventDefault(); selectTab(BILLING_OPTIONS.length - 1) }
+  }
 
+  const amount = billing === 'monthly' ? price.monthly
+    : billing === 'yearly' ? price.yearlyTotal
+      : price.lifetime
+  const cadence = billing === 'monthly' ? 'per month'
+    : billing === 'yearly' ? 'per year'
+      : 'one payment'
   const checkoutHref = `/checkout?plan=${billing}`
-  // Signed-out users bounce through login, then land straight on checkout with
-  // the plan they picked preserved.
+  const signInFrom = `${location.pathname}${location.search || ''}`
   const proTo = user ? checkoutHref : '/login'
-  const proState = user ? undefined : { from: checkoutHref }
+  const proState = user ? undefined : { from: checkoutHref, returnTo: signInFrom }
+  // Only claim a tab is unavailable once the price service has actually
+  // answered — otherwise the first paint accuses the One-off tab of being
+  // disabled while the fetch is still in flight.
+  const priceServiceDown = price.loaded && !price.serviceAvailable
+  const lifetimeUnavailable = billing === 'lifetime' && price.loaded && !price.availability.lifetime
+  const priceState = !price.loaded ? 'Checking live price…'
+    : priceServiceDown ? (amount
+      ? `Live pricing is unreachable · showing the canonical ${price.currencyLabel} amount`
+      : 'Live pricing is unreachable · no price can be shown right now')
+      : price.source[billing] === 'live' ? `${price.currencyLabel} live price`
+        : billing === 'lifetime' ? `${price.currencyLabel} canonical price · checkout not active`
+          : `${price.currencyLabel} guide price · confirmed at checkout`
 
   return (
     <div className="sec plans-page">
-      <div className="sec-h">
-        <div className="sec-h-eyebrow">Pricing</div>
-        <h1>Simple, honest <em>pricing</em>.</h1>
-        <p>One product, one subscription. Start free forever — upgrade to Pro only when you need more AI. No hidden tiers, no per-seat maths.</p>
+      <div className="sec-h plans-hero">
+        <div className="sec-h-eyebrow">Plans</div>
+        <h1>More room when your <em>workflow grows</em>.</h1>
+        <p>Start with the complete core toolkit. Choose a subscription or one-off Pro access when you need higher limits and advanced handoff controls.</p>
       </div>
 
       {isPro && (
         <div className="plans-pro-banner">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
-          <span>You’re on <strong>UIL4B Pro</strong> — thank you for supporting the project. <Link to="/settings" state={{ section: 'support' }}>Manage your plan →</Link></span>
+          <TierIcon pro />
+          <span>Your account has <strong>UIL4B Pro</strong> access. <Link to="/settings" state={{ section: 'support' }}>View account details →</Link></span>
         </div>
       )}
 
-      <div className="sub-billing-toggle" role="tablist" aria-label="Billing interval">
-        <button role="tab" aria-selected={billing === 'monthly'} className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
-        <button role="tab" aria-selected={billing === 'yearly'} className={billing === 'yearly' ? 'active' : ''} onClick={() => setBilling('yearly')}>
-          Yearly {proPrice.savingsPct > 0 && <span className="sub-save">Save {proPrice.savingsPct}%</span>}
-        </button>
+      <div className="sub-billing-toggle" role="tablist" aria-label="Choose how to pay for Pro">
+        {BILLING_OPTIONS.map((option, index) => (
+          <button
+            key={option.id}
+            ref={(element) => { tabRefs.current[index] = element }}
+            id={`plans-tab-${option.id}`}
+            type="button"
+            role="tab"
+            aria-selected={billing === option.id}
+            aria-controls="plans-pro-panel"
+            tabIndex={billing === option.id ? 0 : -1}
+            className={billing === option.id ? 'active' : ''}
+            onClick={() => setBilling(option.id)}
+            onKeyDown={(event) => onTabKeyDown(event, index)}
+          >
+            {option.label}
+            {option.id === 'yearly' && price.loaded && price.savingsPct > 0 && (
+              <span className="sub-save">Save {price.savingsPct}%</span>
+            )}
+          </button>
+        ))}
       </div>
 
       <div className="sub-tiers plans-tiers">
-        {/* Free */}
-        <div className="sub-tier">
+        <article className="sub-tier plans-free-card">
           <div className="sub-tier-head">
-            <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon kind="free" /></span><div className="sub-tier-name">Free</div></div>
+            <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon /></span><div className="sub-tier-name">Free</div></div>
             <div className="sub-tier-price"><span className="sub-tier-amount">$0</span><span className="sub-tier-per">forever</span></div>
           </div>
+          <p className="plans-card-intro">A capable everyday workspace with clear, predictable limits.</p>
           <ul className="sub-tier-list">
-            <li><Check /> Every tool, fully usable</li>
-            <li><Check /> 40 AI generations/day · standard models</li>
-            <li><Check /> Save up to {FREE_SAVE_LIMITS.projects} projects &amp; {FREE_SAVE_LIMITS.customIcons} custom icons</li>
-            <li><Check /> Basic export: CSS tokens (small UIL4B credit)</li>
-            <li><Check /> Community support</li>
+            <li><Check /> 40 AI actions each day</li>
+            <li><Check /> Save {FREE_SAVE_LIMITS.projects} projects and {FREE_SAVE_LIMITS.customIcons} custom icons</li>
+            <li><Check /> Core colour, type, icon and image tools</li>
+            <li><Check /> Standard CSS and palette exports</li>
           </ul>
-          {user ? (
-            <button className="btn sub-tier-btn" disabled>{isPro ? 'Included in Pro' : 'Your current plan'}</button>
-          ) : (
-            <Link className="btn sub-tier-btn" to="/login">Get started free</Link>
-          )}
+          {user
+            ? <button className="btn sub-tier-btn" disabled>{isPro ? 'Included with Pro' : 'Current plan'}</button>
+            : <Link className="btn sub-tier-btn" to="/login">Start on Free</Link>}
           <div className="sub-tier-foot">No card required</div>
-        </div>
+        </article>
 
-        {/* Pro */}
-        <div className="sub-tier sub-tier-pro">
-          <span className="sub-tier-flag">Most popular</span>
+        <article
+          id="plans-pro-panel"
+          className="sub-tier sub-tier-pro"
+          role="tabpanel"
+          aria-labelledby={`plans-tab-${billing}`}
+        >
           <div className="sub-tier-head">
-            <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon kind="pro" /></span><div className="sub-tier-name">Pro</div></div>
-            <div className="sub-tier-price">
-              <span className="sub-tier-amount">{billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly}</span>
-              <span className="sub-tier-per">{billing === 'yearly' ? 'per year' : 'per month'}</span>
+            <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon pro /></span><div className="sub-tier-name">Pro</div></div>
+            <div className="sub-tier-price plans-price-slot" aria-live="polite">
+              <span className={`sub-tier-amount${!price.loaded ? ' is-loading' : ''}`}>
+                {!price.loaded ? '—' : amount || 'Unavailable'}
+              </span>
+              <span className="sub-tier-per">{cadence}</span>
             </div>
-            <div className="sub-tier-sub">{billing === 'yearly' ? `AUD · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? `, save ${proPrice.savingsPct}%` : ''} · 7-day free trial` : 'AUD · billed monthly'}</div>
+            <div className="sub-tier-sub">{priceState}</div>
+            {billing === 'yearly' && price.loaded && price.yearlyPerMonth && (
+              <div className="plans-price-detail">{price.yearlyPerMonth}/month · 7-day free trial</div>
+            )}
+            {billing === 'lifetime' && (
+              <div className="plans-price-detail">Durable Pro access for this account · no subscription</div>
+            )}
+            {priceServiceDown && (
+              <button type="button" className="btn btn-s plans-price-retry" onClick={() => refreshPrices()}>
+                Retry live pricing
+              </button>
+            )}
           </div>
-          <ul className="sub-tier-list">
-            <li><Check /> <strong>Everything in Free — with the limits removed</strong></li>
-            <li><Check /> 1,000 AI generations/day · higher-quality models</li>
-            <li><Check /> Cloud-synced projects · unlimited saves &amp; collections</li>
-            <li><Check /> Every export format: HTML system · JSON · Tailwind · asset bundle</li>
-            <li><Check /> No UIL4B branding on exports</li>
-            <li><Check /> Advanced &ldquo;extra&rdquo; edit tools</li>
-            <li><Check /> Priority support</li>
-          </ul>
+
+          <p className="plans-card-intro plans-pro-intro">Everything in Free, plus the daily capacity, colour depth and handoff exports a full system build needs.</p>
+
+          <div className="plans-outcomes" aria-label="Verified Pro outcomes">
+            <section className="plans-outcome-group">
+              <h2>More capacity</h2>
+              <div className="plans-outcome-metrics">
+                <div><strong>1,000</strong><span>AI actions per day, up from 40 on Free</span></div>
+                <div><strong>Unlimited</strong><span>saved projects and custom icons, up from {FREE_SAVE_LIMITS.projects} and {FREE_SAVE_LIMITS.customIcons} on Free</span></div>
+              </div>
+            </section>
+            <section className="plans-outcome-group">
+              <h2>Deeper colour control</h2>
+              <p>Advanced harmonies, HCT editing, expanded palettes and gated colour-system controls.</p>
+            </section>
+            <section className="plans-outcome-group">
+              <h2>Cleaner handoff</h2>
+              <p>Full design JSON export and watermark-free palette export where that Pro export is supported.</p>
+            </section>
+          </div>
+
           {isPro ? (
-            <Link className="btn sub-tier-btn" to="/settings" state={{ section: 'support' }}>Manage plan</Link>
+            <Link className="btn sub-tier-btn" to="/settings" state={{ section: 'support' }}>View account details</Link>
+          ) : lifetimeUnavailable ? (
+            <button
+              type="button"
+              className="btn btn-accent sub-tier-btn"
+              aria-disabled="true"
+              aria-describedby="lifetime-unavailable"
+            >
+              One-off not available yet
+            </button>
           ) : (
             <Link
               className="btn btn-accent sub-tier-btn"
               to={proTo}
               state={proState}
-              aria-disabled={subLoading}
+              aria-disabled={subLoading || !price.loaded}
+              onClick={(event) => { if (subLoading || !price.loaded) event.preventDefault() }}
             >
-              {billing === 'yearly' ? 'Start 7-day free trial' : `Upgrade — ${proPrice.monthly}/mo`}
+              {billing === 'yearly' ? 'Start 7-day free trial' : billing === 'lifetime' ? 'Buy Pro once' : 'Choose monthly Pro'}
             </Link>
           )}
-          <div className="sub-tier-foot">Secure checkout via Stripe · cancel anytime</div>
-          <div className="plans-compare">
-            <span aria-hidden="true">{PRICE_COMPARISONS[coffeeIdx].emoji}</span> That&apos;s {PRICE_COMPARISONS[coffeeIdx].text}
-          </div>
-        </div>
-
-        {/* Premium Plus — coming soon */}
-        <div className="sub-tier plans-tier-soon">
-          <span className="sub-tier-flag plans-flag-soon">Coming Soon</span>
-          <div className="sub-tier-head">
-            <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon kind="plus" /></span><div className="sub-tier-name">Premium Plus</div></div>
-            <div className="sub-tier-price"><span className="sub-tier-amount">—</span><span className="sub-tier-per">TBA</span></div>
-          </div>
-          <ul className="sub-tier-list">
-            <li><Check /> Everything in Pro</li>
-            <li><Check /> Unlimited AI generations</li>
-            <li><Check /> Team collaboration</li>
-            <li><Check /> Custom branding on exports</li>
-            <li><Check /> White-label option</li>
-            <li><Check /> Dedicated support</li>
-          </ul>
-          <button className="btn sub-tier-btn" disabled>Coming soon</button>
-        </div>
+          {lifetimeUnavailable && (
+            <p id="lifetime-unavailable" className="plans-unavailable-note">No payment will be started until the live one-off price is active for {price.currencyLabel}. Monthly and Yearly are unaffected.</p>
+          )}
+          {!lifetimeUnavailable && <div className="sub-tier-foot">Secure checkout by Stripe</div>}
+        </article>
       </div>
 
-      {/* Anchor / bundling line + at-a-glance comparison table */}
-      <p className="plans-anchor">Everything you&apos;d otherwise buy across <strong>6 separate tools</strong> — one subscription.</p>
       <div className="plans-compare-wrap">
         <table className="plans-compare-table">
-          <caption className="sr-only">Free versus Pro feature comparison</caption>
-          <thead>
-            <tr>
-              <th scope="col">Feature</th>
-              <th scope="col">Free</th>
-              <th scope="col" className="pct-pro">Pro</th>
-            </tr>
-          </thead>
+          <caption className="sr-only">Free and Pro verified limits and capabilities</caption>
+          <thead><tr><th scope="col">Capability</th><th scope="col">Free</th><th scope="col" className="pct-pro">Pro</th></tr></thead>
           <tbody>
-            <tr>
-              <td>Design tools</td>
-              <td>All tools</td>
-              <td className="pct-pro">All tools</td>
-            </tr>
-            <tr>
-              <td>AI generations / day</td>
-              <td>40 · standard</td>
-              <td className="pct-pro">1,000 · better models</td>
-            </tr>
-            <tr>
-              <td>Saves &amp; collections</td>
-              <td>{FREE_SAVE_LIMITS.projects} projects · {FREE_SAVE_LIMITS.customIcons} icons</td>
-              <td className="pct-pro">Cloud-synced, unlimited</td>
-            </tr>
-            <tr>
-              <td>Projects across devices</td>
-              <td className="pct-none">Not included</td>
-              <td className="pct-pro">Included</td>
-            </tr>
-            <tr>
-              <td>Export formats</td>
-              <td>CSS tokens</td>
-              <td className="pct-pro">CSS · HTML · JSON · Tailwind · assets</td>
-            </tr>
-            <tr>
-              <td>UIL4B branding on exports</td>
-              <td>Shown</td>
-              <td className="pct-pro">Removed</td>
-            </tr>
-            <tr>
-              <td>Advanced edit tools</td>
-              <td className="pct-none">Not included</td>
-              <td className="pct-pro">Included</td>
-            </tr>
-            <tr>
-              <td>Support</td>
-              <td>Community</td>
-              <td className="pct-pro">Priority</td>
-            </tr>
+            <tr><td>AI actions per day</td><td>40</td><td className="pct-pro">1,000</td></tr>
+            <tr><td>Saved projects</td><td>{FREE_SAVE_LIMITS.projects}</td><td className="pct-pro">Unlimited</td></tr>
+            <tr><td>Custom icons</td><td>{FREE_SAVE_LIMITS.customIcons}</td><td className="pct-pro">Unlimited</td></tr>
+            <tr><td>Advanced colour controls</td><td>Core controls</td><td className="pct-pro">Unlocked</td></tr>
+            <tr><td>Design JSON export</td><td className="pct-none">Not included</td><td className="pct-pro">Full design JSON</td></tr>
+            <tr><td>Palette export watermark</td><td>UIL4B credit</td><td className="pct-pro">Removed</td></tr>
           </tbody>
         </table>
       </div>
 
-      {/* Reassurance strip */}
       <div className="plans-trust">
-        <span><Check /> Cancel anytime</span>
-        <span><Check /> Secure Stripe checkout</span>
-        <span><Check /> No card for Free</span>
+        <span><Check /> Free needs no card</span>
+        <span><Check /> Subscriptions can be cancelled</span>
+        <span><Check /> One-off is not a subscription</span>
       </div>
 
-      {/* FAQ */}
       <div className="plans-faq">
         <h2 className="plans-faq-h">Questions, answered</h2>
-        {FAQ.map((f, i) => (
-          <div key={f.q} className={`plans-faq-item${openFaq === i ? ' open' : ''}`}>
-            <button className="plans-faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={openFaq === i}>
-              {f.q}
+        {FAQ.map((item, index) => (
+          <div key={item.q} className={`plans-faq-item${openFaq === index ? ' open' : ''}`}>
+            <button className="plans-faq-q" onClick={() => setOpenFaq(openFaq === index ? null : index)} aria-expanded={openFaq === index}>
+              {item.q}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
             </button>
-            {openFaq === i && <div className="plans-faq-a">{f.a}</div>}
+            {openFaq === index && <div className="plans-faq-a">{item.a}</div>}
           </div>
         ))}
       </div>
+
       <SystemCTA
         eyebrow="Start on Free"
-        title="Build first. Upgrade when the handoff grows."
-        description="Every core builder is ready without a card. Pro expands AI, saves and export formats when you need them."
+        title="Build first. Upgrade when your workflow asks for it."
+        description="The core toolkit is ready without a card. Pro adds capacity, advanced colour control and fuller handoff."
         primaryLabel={user ? 'Open the workspace' : 'Start building free'}
         primaryTo={user ? '/color' : '/login'}
-        secondaryLabel="See the colour workflow"
+        secondaryLabel="Explore colour tools"
         secondaryTo="/color"
-        hint="No trial clock on Free · Cancel Pro anytime"
+        hint="No trial clock on Free"
       />
     </div>
   )

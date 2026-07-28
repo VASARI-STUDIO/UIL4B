@@ -1,14 +1,22 @@
 import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
-import { CURRENCY_CODES } from './_lib/pricing.js'
-
-const LOOKUP_KEYS = { monthly: 'uil4b_pro_monthly', yearly: 'uil4b_pro_yearly' }
+import {
+  CURRENCY_CODES,
+  LIFETIME_CURRENCY_CODES,
+  LOOKUP_KEYS,
+  PRICE_ENV_KEYS,
+} from './_lib/pricing.js'
+import { LIFETIME_SKU, parseBillingInterval } from './_lib/billing.js'
+import { planForUser } from './_lib/plans.js'
+import { failRequest } from './_lib/http.js'
+import { resolveOrigin } from './_lib/origins.js'
 
 let priceCache = {}
 
 async function resolvePrice(stripe, interval) {
-  const key = interval === 'yearly' ? 'yearly' : 'monthly'
-  const envPrice = key === 'yearly' ? process.env.STRIPE_PRICE_YEARLY : process.env.STRIPE_PRICE_MONTHLY
+  const key = parseBillingInterval(interval)
+  if (!key) return null
+  const envPrice = process.env[PRICE_ENV_KEYS[key]]
   if (envPrice) return envPrice
   if (priceCache[key]) return priceCache[key]
   const found = await stripe.prices.list({ lookup_keys: [LOOKUP_KEYS[key]], active: true, limit: 1 })
@@ -32,36 +40,57 @@ export default async function handler(req, res) {
 
   const cred = credentialProblem()
   if (cred) {
-    // Logged so the exact credential state is visible in Vercel runtime logs
-    // (the response body carries the same string for the browser console).
-    console.error('create-checkout credential problem:', cred)
-    return res.status(500).json({ error: `Server configuration issue: ${cred}` })
+    // The credential explanation names the env var and the exact failure mode,
+    // so it stays server-side; the browser gets the reference id instead.
+    return failRequest(res, {
+      status: 500,
+      scope: 'create-checkout credential problem',
+      message: 'Payments are temporarily unavailable due to a server configuration issue. No payment was taken.',
+      context: { credential: cred },
+    })
   }
 
   let uid
+  let email
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
+    email = decoded.email || null
   } catch (e) {
     return res.status(401).json({ error: e?.code === 'auth/id-token-expired' ? 'Session expired — please sign in again' : 'Invalid auth token' })
   }
 
   try {
+    const { interval: rawInterval, currency } = req.body || {}
+    const interval = parseBillingInterval(rawInterval)
+    if (!interval) {
+      return res.status(400).json({ error: 'interval must be one of: monthly, yearly, lifetime' })
+    }
     const stripe = getStripeServer()
-
-    const { interval, currency } = req.body || {}
     const isYearly = interval === 'yearly'
+    const isLifetime = interval === 'lifetime'
     const wantCurrency = typeof currency === 'string' && CURRENCY_CODES.includes(currency.toLowerCase())
       ? currency.toLowerCase()
       : null
+    if (isLifetime && wantCurrency && !LIFETIME_CURRENCY_CODES.includes(wantCurrency)) {
+      return res.status(400).json({ error: `One-off checkout is not available in ${wantCurrency.toUpperCase()} yet` })
+    }
     const priceId = await resolvePrice(stripe, interval)
     if (!priceId) {
       console.error('create-checkout: no Stripe price resolved for interval', interval)
-      return res.status(500).json({ error: 'Stripe prices not found. Visit /admin and run Setup Stripe, or set STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY in Vercel.' })
+      return res.status(503).json({ error: `The ${isLifetime ? 'one-off' : interval} price is temporarily unavailable. No payment session was created.` })
     }
 
     const userDoc = await adminDb().collection('users').doc(uid).get()
-    let customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null
+    const userData = userDoc.exists ? userDoc.data() : {}
+    if (planForUser({
+      subscription: userData?.subscription || null,
+      lifetimeEntitlement: userData?.lifetimeEntitlement || null,
+      email,
+    }).id === 'pro') {
+      return res.status(409).json({ error: 'This account already has Pro access. No payment session was created.' })
+    }
+    let customerId = userData?.stripeCustomerId || null
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -74,9 +103,7 @@ export default async function handler(req, res) {
       )
     }
 
-    const ALLOWED_ORIGINS = ['https://uil4b.vercel.app', 'https://uil4b.com', 'https://www.uil4b.com', 'http://localhost:5173']
-    const rawOrigin = req.headers.origin || req.headers.referer?.replace(/\/[^/]*$/, '')
-    const origin = ALLOWED_ORIGINS.find(o => rawOrigin?.startsWith(o)) || 'https://uil4b.vercel.app'
+    const origin = resolveOrigin(req)
 
     const subscriptionData = { metadata: { firebaseUid: uid } }
     if (isYearly) {
@@ -92,10 +119,21 @@ export default async function handler(req, res) {
       // client still consumes the same client_secret via <EmbeddedCheckout>.
       ui_mode: 'embedded_page',
       customer: customerId,
-      mode: 'subscription',
+      mode: isLifetime ? 'payment' : 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-      subscription_data: subscriptionData,
+      metadata: {
+        firebaseUid: uid,
+        billingInterval: interval,
+        ...(isLifetime ? { entitlementSku: LIFETIME_SKU } : {}),
+      },
+    }
+    if (isLifetime) {
+      sessionParams.payment_intent_data = {
+        metadata: { firebaseUid: uid, entitlementSku: LIFETIME_SKU },
+      }
+    } else {
+      sessionParams.subscription_data = subscriptionData
     }
     // Present the customer's local currency (the price carries currency_options
     // for each supported currency). Falls back gracefully if a returning
@@ -114,9 +152,18 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ clientSecret: session.client_secret })
+    return res.status(200).json({
+      clientSecret: session.client_secret,
+      interval,
+      mode: sessionParams.mode,
+    })
   } catch (err) {
-    console.error('create-checkout failed:', err)
-    return res.status(500).json({ error: err?.message || 'Could not create checkout session' })
+    return failRequest(res, {
+      status: 500,
+      scope: 'create-checkout',
+      message: 'Could not start checkout. No payment was taken — please try again, or contact support with the reference below.',
+      err,
+      context: { uid, interval: parseBillingInterval(req.body?.interval) },
+    })
   }
 }
