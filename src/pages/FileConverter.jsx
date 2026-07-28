@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import SnapSlider from '../components/SnapSlider'
+import { getLenis } from '../hooks/useSmoothScroll'
 import {
   DRAFT_FORMATS,
   DRAFT_RESOLUTIONS,
@@ -142,6 +143,51 @@ async function encodeIco(img, iw, ih) {
   return new Blob([out], { type: 'image/x-icon' })
 }
 
+// Reduced motion, mirroring useHomeMotion's source of truth: AppearanceContext
+// writes html[data-reduced-motion] and the app treats that toggle as
+// authoritative (a visitor may deliberately opt back into motion), so only fall
+// back to the OS query when the attribute is missing.
+function prefersReducedMotion() {
+  const attr = document.documentElement.getAttribute('data-reduced-motion')
+  if (attr === 'true') return true
+  if (attr === 'false') return false
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+}
+
+// The PillNav is position:fixed, so anything scrolled to its own offsetTop hides
+// underneath it. Measure the live bar (its height changes at ≤640px, and a
+// chrome-less embed has none at all) and leave one --s-4 of air below it.
+const STICKY_GAP = 16
+
+function stickyTopOffset() {
+  const bar = document.querySelector('.pnav')
+  const h = bar ? bar.getBoundingClientRect().height : 0
+  return h > 0 ? h + STICKY_GAP : 0
+}
+
+// Land the visitor on their own images after a homepage hand-off: focus the
+// queue region (so assistive tech is told the viewport moved and where to) and
+// scroll it clear of the sticky bar. Called only once, only for a hand-off that
+// produced at least one real item.
+function revealQueue(node) {
+  const reduced = prefersReducedMotion()
+  // Never yank focus out of a control the visitor already started using — this
+  // fires a frame after mount, so in practice nothing is focused yet.
+  const active = document.activeElement
+  if (!active || active === document.body || active === document.documentElement) {
+    // preventScroll: the browser's own focus scroll ignores the sticky bar, so
+    // we do the positioning ourselves below.
+    node.focus({ preventScroll: true })
+  }
+  const top = Math.max(0, node.getBoundingClientRect().top + window.scrollY - stickyTopOffset())
+  // Lenis owns the scroll position whenever smooth scrolling is on; a raw
+  // window.scrollTo would desync its virtual position (same rule as App's
+  // route-change reset). Reduced motion never instantiates it.
+  const lenis = getLenis()
+  if (lenis) lenis.scrollTo(top, reduced ? { immediate: true } : undefined)
+  else window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' })
+}
+
 function triggerDownload(blobOrUrl, filename) {
   const url = typeof blobOrUrl === 'string' ? blobOrUrl : URL.createObjectURL(blobOrUrl)
   const a = document.createElement('a')
@@ -260,6 +306,9 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   const [jpegBg, setJpegBg] = useState('#ffffff') // fill behind transparency (JPEG has no alpha)
   const [busy, setBusy] = useState(false)
   const [zipping, setZipping] = useState(false)
+  // The region holding the uploaded items + their output settings — the thing a
+  // hand-off visitor actually came to look at.
+  const queueRef = useRef(null)
 
   // Revoke all object URLs on unmount. Read the latest items through a ref —
   // an empty-deps cleanup would close over the first render's empty array,
@@ -273,10 +322,12 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     })
   }, [])
 
+  // Returns how many files were actually queued, so a caller can tell an
+  // accepted batch from a wholly rejected one.
   const addFiles = useCallback((files) => {
     const arr = Array.from(files)
     const imgs = arr.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp|avif|ico)$/i.test(f.name))
-    if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images'); return }
+    if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images'); return 0 }
     const big = imgs.find(f => f.size > LARGE_FILE_BYTES)
     if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`)
     const next = imgs.map(f => ({
@@ -288,11 +339,36 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       error: null,
     }))
     setItems(prev => [...prev, ...next])
+    return imgs.length
   }, [toast])
 
-  // Seed from the dashboard quick-upload hand-off exactly once on mount.
+  // Seed from the hand-off exactly once on mount, then land the visitor on their
+  // own images. They already did the "upload" on the homepage, so the drop zone
+  // is the one thing they don't need to look at.
+  //
+  // This ONLY runs for a hand-off arrival. A direct visit, a reload, a Back/
+  // Forward return and every manual drop/browse upload have no initialFiles and
+  // never move the viewport. A hand-off whose files all fail validation queues
+  // nothing, so we leave the visitor at the top with the toast — never scrolled
+  // to an empty queue.
   useEffect(() => {
-    if (initialFiles?.length) addFiles(initialFiles)
+    if (!initialFiles?.length) return undefined
+    if (!addFiles(initialFiles)) return undefined
+    // The queue only exists after the seeding commit, and its cards need real
+    // height before scrolling to them means anything. Wait for a laid-out node
+    // rather than guessing a delay, and give up rather than spin forever.
+    let raf = 0
+    let frames = 0
+    const whenLaidOut = () => {
+      const node = queueRef.current
+      if ((!node || node.getBoundingClientRect().height < 1) && frames++ < 30) {
+        raf = requestAnimationFrame(whenLaidOut)
+        return
+      }
+      if (node) revealQueue(node)
+    }
+    raf = requestAnimationFrame(whenLaidOut)
+    return () => cancelAnimationFrame(raf)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -448,127 +524,132 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       </div>
 
       {items.length > 0 && (
-        <div className="sub">
-          <div className="sl">Output Settings</div>
-          <div className="fc-settings">
-            <div>
-              <div className="seg-label">Output Format</div>
-              <select value={format} onChange={e => setFormat(e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
-                {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
-              {fmt.ico && <div className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</div>}
-            </div>
-            {format === 'image/jpeg' && (
+        <section
+          className="fc-queue"
+          ref={queueRef}
+          tabIndex={-1}
+          aria-label={`Your ${items.length} image${items.length > 1 ? 's' : ''} and output settings`}
+        >
+          <div className="sub">
+            <div className="sl">Output Settings</div>
+            <div className="fc-settings">
               <div>
-                <div className="seg-label">Background</div>
-                <input
-                  type="color"
-                  value={jpegBg}
-                  onChange={e => setJpegBg(e.target.value)}
-                  disabled={busy}
-                  className="fc-bg-pick"
-                  aria-label="JPEG background colour"
-                />
-                <div className="fc-note">fills transparency — JPEG has no alpha</div>
-              </div>
-            )}
-            <div className="fc-field-grow">
-              <div className="seg-label">Quality</div>
-              <div className="row">
-                <SnapSlider
-                  min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
-                  snaps={QUALITY_SNAPS} unit="%"
-                  onChange={setQuality}
-                  disabled={busy || !fmt.lossy}
-                  ariaLabel="Output quality"
-                />
-              </div>
-              {!fmt.lossy && <div className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</div>}
-            </div>
-            {!fmt.ico && (
-              <div>
-                <div className="seg-label">Max Dimension</div>
-                <select value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
-                  <option value={0}>Keep original</option>
-                  <option value={3840}>3840 px</option>
-                  <option value={1920}>1920 px</option>
-                  <option value={1200}>1200 px</option>
-                  <option value={800}>800 px</option>
+                <div className="seg-label">Output Format</div>
+                <select value={format} onChange={e => setFormat(e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
+                  {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </select>
+                {fmt.ico && <div className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</div>}
               </div>
-            )}
-            {!fmt.ico && (
-              <div>
-                <div className="seg-label">Export Scale</div>
-                <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} style={{ maxWidth: 100 }} aria-label="Export render scale">
-                  {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-
-          <div className="fc-actions">
-            <button className="btn btn-accent" onClick={convertAll} disabled={busy}>
-              {busy ? 'Converting…' : `Convert ${items.length} image${items.length > 1 ? 's' : ''}`}
-            </button>
-            {readyCount > 0 && (
-              <button className="btn" onClick={downloadAll} disabled={zipping}>
-                {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
-              </button>
-            )}
-            <button className="btn" onClick={clearAll} disabled={busy}>Clear</button>
-          </div>
-          {busy && items.length > 1 && (
-            <div className="fc-progress" style={{ marginTop: 10 }}>
-              <div className="fc-progress-bar" style={{ width: `${Math.round((convertProgress.done / convertProgress.total) * 100)}%` }} />
-            </div>
-          )}
-          {batchDelta && (
-            <div style={{ fontSize: 12, color: 'var(--t1)', marginTop: 10 }}>
-              {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
-              <span style={{ color: batchDelta.color, fontWeight: 600 }}> • {batchDelta.label}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {items.length > 0 && (
-        <div className="sub">
-          <div className="img-grid">
-            {items.map(it => (
-              <div key={it.id} className="card fc-card">
-                <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>×</button>
-                <div className="fc-thumb">
-                  <img src={(it.out && !it.out.noPreview && it.out.url) || it.srcUrl} alt={it.name} />
+              {format === 'image/jpeg' && (
+                <div>
+                  <div className="seg-label">Background</div>
+                  <input
+                    type="color"
+                    value={jpegBg}
+                    onChange={e => setJpegBg(e.target.value)}
+                    disabled={busy}
+                    className="fc-bg-pick"
+                    aria-label="JPEG background colour"
+                  />
+                  <div className="fc-note">fills transparency — JPEG has no alpha</div>
                 </div>
-                <div className="fc-name" title={it.name}>{it.name}</div>
-                {it.error ? (
-                  <div style={{ fontSize: 10, color: 'var(--err)' }}>{it.error}</div>
-                ) : it.out ? (
-                  <>
-                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {it.out.note || `${it.out.w}×${it.out.h}`}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
-                      {(() => {
-                        const d = sizeDelta(it.file.size, it.out.bytes)
-                        return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
-                      })()}
-                    </div>
-                    <button className="btn btn-accent fc-dl" onClick={() => downloadOne(it)}>
-                      Download {fmt.label}
-                    </button>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                    {formatBytes(it.file.size)} • not converted
-                  </div>
-                )}
+              )}
+              <div className="fc-field-grow">
+                <div className="seg-label">Quality</div>
+                <div className="row">
+                  <SnapSlider
+                    min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
+                    snaps={QUALITY_SNAPS} unit="%"
+                    onChange={setQuality}
+                    disabled={busy || !fmt.lossy}
+                    ariaLabel="Output quality"
+                  />
+                </div>
+                {!fmt.lossy && <div className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</div>}
               </div>
-            ))}
+              {!fmt.ico && (
+                <div>
+                  <div className="seg-label">Max Dimension</div>
+                  <select value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
+                    <option value={0}>Keep original</option>
+                    <option value={3840}>3840 px</option>
+                    <option value={1920}>1920 px</option>
+                    <option value={1200}>1200 px</option>
+                    <option value={800}>800 px</option>
+                  </select>
+                </div>
+              )}
+              {!fmt.ico && (
+                <div>
+                  <div className="seg-label">Export Scale</div>
+                  <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} style={{ maxWidth: 100 }} aria-label="Export render scale">
+                    {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="fc-actions">
+              <button className="btn btn-accent" onClick={convertAll} disabled={busy}>
+                {busy ? 'Converting…' : `Convert ${items.length} image${items.length > 1 ? 's' : ''}`}
+              </button>
+              {readyCount > 0 && (
+                <button className="btn" onClick={downloadAll} disabled={zipping}>
+                  {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
+                </button>
+              )}
+              <button className="btn" onClick={clearAll} disabled={busy}>Clear</button>
+            </div>
+            {busy && items.length > 1 && (
+              <div className="fc-progress" style={{ marginTop: 10 }}>
+                <div className="fc-progress-bar" style={{ width: `${Math.round((convertProgress.done / convertProgress.total) * 100)}%` }} />
+              </div>
+            )}
+            {batchDelta && (
+              <div style={{ fontSize: 12, color: 'var(--t1)', marginTop: 10 }}>
+                {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
+                <span style={{ color: batchDelta.color, fontWeight: 600 }}> • {batchDelta.label}</span>
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="sub">
+            <div className="img-grid">
+              {items.map(it => (
+                <div key={it.id} className="card fc-card">
+                  <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>×</button>
+                  <div className="fc-thumb">
+                    <img src={(it.out && !it.out.noPreview && it.out.url) || it.srcUrl} alt={it.name} />
+                  </div>
+                  <div className="fc-name" title={it.name}>{it.name}</div>
+                  {it.error ? (
+                    <div style={{ fontSize: 10, color: 'var(--err)' }}>{it.error}</div>
+                  ) : it.out ? (
+                    <>
+                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                        {it.out.note || `${it.out.w}×${it.out.h}`}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                        {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
+                        {(() => {
+                          const d = sizeDelta(it.file.size, it.out.bytes)
+                          return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
+                        })()}
+                      </div>
+                      <button className="btn btn-accent fc-dl" onClick={() => downloadOne(it)}>
+                        Download {fmt.label}
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                      {formatBytes(it.file.size)} • not converted
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
     </>
   )
