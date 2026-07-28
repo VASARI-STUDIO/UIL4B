@@ -10,7 +10,7 @@ description: >-
   is executed by the PM/main thread via GitHub MCP tools (subagents don't have them).
   Read-only — it gates and prepares; it does not merge.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: claude-sonnet-5
 effort: high
 ---
 

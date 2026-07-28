@@ -11,7 +11,7 @@ description: >-
   flags them. Redacts matches and returns a BLOCK/PASS verdict. Read-only, fast,
   zero false-negative tolerance.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: claude-sonnet-5
 effort: high
 ---
 

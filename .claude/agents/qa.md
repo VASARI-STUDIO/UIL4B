@@ -9,7 +9,7 @@ description: >-
   Verifies against the build and lint. Read-only (plus running build/lint) — the
   final gate after engineering, before merge.
 tools: Read, Grep, Glob, Bash, WebFetch
-model: sonnet
+model: claude-sonnet-5
 effort: high
 ---
 
