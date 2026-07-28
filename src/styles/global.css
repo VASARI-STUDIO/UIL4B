@@ -6197,6 +6197,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-tint-chip{width:24px;height:16px;flex-shrink:0;background:var(--plb-rc);border:1px solid var(--border);border-radius:4px}
 .plb-tint-tone{width:30px;flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--t2)}
 .plb-tint-hex{font-family:var(--mono);font-size:11.5px;font-weight:600;text-transform:uppercase;color:var(--t0)}
+.plb-tintopen{width:100%;justify-content:center;margin-top:8px}
 .plb-picker-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .plb-picker-row .snapv{flex:1;min-width:0}
 .plb-picker-label{width:50px;flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
