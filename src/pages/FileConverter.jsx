@@ -1,7 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import SnapSlider from '../components/SnapSlider'
-import { takePendingImages } from '../utils/imageHandoff'
+import {
+  DRAFT_FORMATS,
+  DRAFT_RESOLUTIONS,
+  consumeImageHandoff,
+  describeCompressionLimit,
+  draftToConverterSettings,
+  readImageHandoff,
+} from '../utils/imageHandoff'
 // Self-hosted ffmpeg core (single-threaded). Vite emits these as fingerprinted,
 // same-origin assets — no third-party CDN. `?url` yields just the asset URL, so
 // the ~32 MB wasm is only fetched when a conversion actually runs, not on load.
@@ -148,11 +155,18 @@ function triggerDownload(blobOrUrl, filename) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function FileConverter({ toast }) {
-  // Pick up any files handed off from the dashboard's quick-upload tile. We grab
-  // them once here (takePendingImages clears the buffer) so we can both default
-  // the active tab to Image and seed the image converter with the files.
-  const [pendingImages] = useState(() => takePendingImages())
-  // Image is the default tab; pending hand-off images therefore land on it.
+  // Pick up anything handed over in memory — the dashboard's quick-upload tile
+  // (files only) or the homepage Image panel (files plus an output draft).
+  //
+  // Read during render, consume on commit: React can discard a render and run it
+  // again, so emptying the slot in the initialiser would lose the payload before
+  // the real mount. The commit effect below empties it exactly once, after which
+  // a remount, Back/Forward navigation or a second visit sees nothing. A reload
+  // or a direct visit legitimately finds nothing and shows the normal empty
+  // choose/drop state — no picker is ever opened on mount.
+  const [handoff] = useState(readImageHandoff)
+  useEffect(() => { consumeImageHandoff() }, [])
+  // Image is the default tab; handed-over images therefore land on it.
   const [mode, setMode] = useState('image')
 
   return (
@@ -186,7 +200,7 @@ export default function FileConverter({ toast }) {
         ))}
       </div>
 
-      {mode === 'image' && <ImageConvert toast={toast} initialFiles={pendingImages} />}
+      {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
       {mode === 'gif' && <VideoToGif toast={toast} />}
       {mode === 'frames' && <VideoFrames toast={toast} />}
       {mode === '3d' && <ThreeDComingSoon />}
@@ -234,11 +248,14 @@ function DropZone({ accept, multiple, onFiles, hint, sub }) {
 }
 
 // ── Mode 1: Image format conversion ──────────────────────────────────────────
-function ImageConvert({ toast, initialFiles }) {
+function ImageConvert({ toast, initialFiles, initialDraft }) {
+  // A homepage output draft is applied to the real controls once, on mount, and
+  // then belongs to the visitor — nothing here keeps re-asserting it.
+  const seeded = initialDraft ? draftToConverterSettings(initialDraft) : null
   const [items, setItems] = useState([]) // { id, name, srcUrl, file, out:{blob,url,bytes,w,h} }
-  const [format, setFormat] = useState('image/webp')
-  const [quality, setQuality] = useState(QUALITY_DEFAULT)
-  const [maxDim, setMaxDim] = useState(0) // 0 = keep original size
+  const [format, setFormat] = useState(() => seeded?.format ?? 'image/webp')
+  const [quality, setQuality] = useState(() => seeded?.quality ?? QUALITY_DEFAULT)
+  const [maxDim, setMaxDim] = useState(() => seeded?.maxDim ?? 0) // 0 = keep original size
   const [renderScale, setRenderScale] = useState(1) // @1x / @2x export
   const [jpegBg, setJpegBg] = useState('#ffffff') // fill behind transparency (JPEG has no alpha)
   const [busy, setBusy] = useState(false)
@@ -362,6 +379,19 @@ function ImageConvert({ toast, initialFiles }) {
 
   const fmt = OUTPUT_FORMATS.find(f => f.id === format)
 
+  // What a homepage output draft actually became here. Stated explicitly rather
+  // than applied silently — including the part this converter cannot honour, so
+  // "Lossless" is never implied where only a quality setting exists.
+  const draftFormat = initialDraft && DRAFT_FORMATS.find(f => f.id === initialDraft.format)
+  const draftNotice = initialDraft && {
+    applied: [
+      draftFormat?.label || initialDraft.format,
+      DRAFT_RESOLUTIONS.find(r => r.id === initialDraft.resolution)?.detail || 'source size',
+      draftFormat?.lossless ? 'lossless' : `quality ${seeded.quality}%`,
+    ].join(' · '),
+    limit: describeCompressionLimit(initialDraft.format, initialDraft.compression),
+  }
+
   const downloadOne = useCallback((item) => {
     if (!item.out) return
     const base = item.name.replace(/\.[^.]+$/, '')
@@ -409,6 +439,12 @@ function ImageConvert({ toast, initialFiles }) {
           hint="Drop images here or click to browse"
           sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
         />
+        {draftNotice && (
+          <div className="fc-draft-note" role="status">
+            <strong>Output settings from your homepage draft: {draftNotice.applied}.</strong>
+            {draftNotice.limit ? ` ${draftNotice.limit}` : ' Change any of them below before converting.'}
+          </div>
+        )}
       </div>
 
       {items.length > 0 && (

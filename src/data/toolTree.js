@@ -102,18 +102,43 @@ export const CREATE_GROUPS = [
   },
 ]
 
-// Homepage workspace previews are a deliberately small live subset of Create.
-// Keep this derived from CREATE_GROUPS so the hero bridge, preview tabs and their
-// destinations inherit the same labels/routes as the canonical tool tree.
-const HOME_PREVIEW_META = {
-  colour: { previewLabel: 'Colour', previewHome: '/color' },
-  icons: { previewLabel: 'Icons', previewHome: '/icons' },
-  imagery: { previewLabel: 'Imagery', previewHome: '/file-converter' },
-}
+// ── Homepage: two deliberately separate models ──────────────────────────────
+// The hero shows EIGHT live tools; the mini-workbench below it has FOUR task
+// modes. They are not one-to-one — Semantic, Tint and Contrast stay direct tool
+// links, and File Converter and Aspect & Resolution both belong to the Image
+// mode. Keeping the two models apart is the point of the section: it is what
+// makes "eight tools, four ways of working" legible instead of decorative.
+//
+// `family` is the workbench mode a satellite belongs to (used for the hover /
+// focus hint and for the decorative convergence). It never selects a tab and
+// never changes an href.
 
-export const LIVE_PREVIEW_GROUPS = CREATE_GROUPS
-  .filter((group) => Object.hasOwn(HOME_PREVIEW_META, group.id))
-  .map((group) => ({ ...group, ...HOME_PREVIEW_META[group.id] }))
+export const HOME_WORKBENCH_TABS = [
+  { id: 'palette', label: 'Palette', hue: 'colour' },
+  { id: 'gradient', label: 'Gradient', hue: 'colour' },
+  { id: 'image', label: 'Image', hue: 'imagery' },
+  { id: 'icon', label: 'Icon', hue: 'icons' },
+]
+
+// Source order IS the reading order (and the ≤768px list order). The authored,
+// deterministic wide-screen offsets live in global.css as `.hsat-item:nth-child()`
+// rules — they are presentation, never data, and are never randomised per load.
+// `zone` documents the intended wide-screen placement so the CSS and this table
+// can be checked against each other.
+export const HOME_SATELLITES = [
+  { id: 'palette', label: 'Palette', route: '/color/palette', family: 'palette', hue: 'colour', zone: 'upper left' },
+  { id: 'semantic', label: 'Semantic', route: '/color/semantic', family: 'palette', hue: 'colour', zone: 'left' },
+  { id: 'tint', label: 'Tint', route: '/color/tint', family: 'palette', hue: 'colour', zone: 'lower left' },
+  { id: 'gradient', label: 'Gradient Generator', route: '/color/gradient', family: 'gradient', hue: 'colour', zone: 'upper right' },
+  { id: 'contrast', label: 'Contrast', route: '/color/contrast', family: 'palette', hue: 'colour', zone: 'right' },
+  { id: 'icons', label: 'Icon Library', route: '/icons', family: 'icon', hue: 'icons', zone: 'outer right' },
+  { id: 'file-converter', label: 'File Converter', route: '/file-converter', family: 'image', hue: 'imagery', zone: 'lower right' },
+  { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', family: 'image', hue: 'imagery', zone: 'lower outer edge' },
+]
+
+// Family id → the workbench tab it resolves into. Used for the satellite's
+// family hint and the decorative convergence; it never selects a tab.
+export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) => [t.id, t.label]))
 
 // Discover + Learn are landing shells in Phase 1: most menu entries route to the
 // surface landing (which owns the honest "coming soon" messaging), so there are
