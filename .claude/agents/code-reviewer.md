@@ -8,7 +8,7 @@ description: >-
   brand-design skill for user-facing diffs, but leaves full security, secret,
   and functional QA gates to their specialist agents.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: claude-sonnet-5
 effort: high
 ---
 

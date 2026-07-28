@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "setup:stripe": "node scripts/setup-stripe.js",
+    "test:unit": "node --test \"tests/unit/**/*.test.js\"",
     "test:users": "playwright test",
     "test:users:report": "node tests/user-sim/summarize.js"
   },
