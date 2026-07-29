@@ -664,7 +664,7 @@ export default function PillNav() {
                   tabIndex={ctaReady ? undefined : -1}
                   aria-hidden={ctaReady ? undefined : 'true'}
                 >
-                  Start for Free
+                  <span className="pnav-cta-i">Start for Free</span>
                 </Link>
               </>
             )}
