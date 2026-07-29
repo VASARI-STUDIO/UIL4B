@@ -308,7 +308,13 @@ function AnimatedNumber({ value, suffix = '', duration = 1600 }) {
 
   useEffect(() => {
     const el = ref.current
-    if (!el || typeof IntersectionObserver === 'undefined') { setDisplay(value); return }
+    // Reduced motion: the count-up is rAF-driven, so the CSS reduced-motion
+    // overrides can't reach it — land on the final figure immediately instead.
+    // AppearanceContext's html[data-reduced-motion] toggle is authoritative; the
+    // OS query is only the fallback (same rule as useHomeMotion.js).
+    const rmAttr = document.documentElement.getAttribute('data-reduced-motion')
+    const reduce = rmAttr === 'true' || (rmAttr !== 'false' && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false))
+    if (!el || reduce || typeof IntersectionObserver === 'undefined') { setDisplay(value); return }
     const obs = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting || started.current) return
       started.current = true
