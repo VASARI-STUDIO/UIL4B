@@ -246,18 +246,25 @@ function handleProblem(raw) {
   return null
 }
 
-// Perceptual midpoint of two colours (shortest hue arc in HCT) — what the
-// click-between-columns insert produces. HSL mix if the solver throws.
-function midColor(a, b) {
+// Perceptual interpolation between two colours along the shortest hue arc in
+// HCT, at ratio t (0 = a, 1 = b) — what the click-between-columns insert(s)
+// produce. HSL mix if the solver throws. Shared by the single midpoint insert
+// and the "insert N between" batch menu so there is one interpolation path.
+function stepColor(a, b, t) {
   try {
     const [h1, c1, t1] = hexToHct(a)
     const [h2, c2, t2] = hexToHct(b)
     const d = ((h2 - h1 + 540) % 360) - 180
-    const hex = hctToHex((((h1 + d / 2) % 360) + 360) % 360, (c1 + c2) / 2, (t1 + t2) / 2)
+    const hex = hctToHex((((h1 + d * t) % 360) + 360) % 360, c1 + (c2 - c1) * t, t1 + (t2 - t1) * t)
     return normaliseHex(hex) || a
   } catch {
-    return normaliseHex(mixHex(a, b, 0.5)) || a
+    return normaliseHex(mixHex(a, b, t)) || a
   }
+}
+
+// Perceptual midpoint of two colours — the plain (single-insert) case of stepColor.
+function midColor(a, b) {
+  return stepColor(a, b, 0.5)
 }
 
 // Shared palettes arrive as /color/palette?c=4338E0,7C6CF0,… — parse or null.
@@ -755,7 +762,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const skipVarInvalidate = useRef(false)
   const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
-  const [ctxMenu, setCtxMenu] = useState(null)     // { i, x, y } right-click menu
+  const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const [preview, setPreview] = useState(null)     // { mode, tab, compare } modal
   const [saveName, setSaveName] = useState('')
   const [submitName, setSubmitName] = useState('')
@@ -791,10 +798,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // Drag-reorder plumbing + the grow-in animation slot for inserted colours.
   const dragFrom = useRef(null)
   const [overIdx, setOverIdx] = useState(null)
-  const [animIdx, setAnimIdx] = useState(null)
+  const [animIdx, setAnimIdx] = useState(null) // Set<number> of columns mid grow-in, or null
   const animTimer = useRef(null)
+  // Accepts a single index (the everyday single-insert path) or an array of
+  // indices (the batch "insert N between" menu) so every newly-spliced slot
+  // gets the same grow-in animation in one go.
   const flashIn = (i) => {
-    setAnimIdx(i)
+    setAnimIdx(new Set(Array.isArray(i) ? i : [i]))
     clearTimeout(animTimer.current)
     animTimer.current = setTimeout(() => setAnimIdx(null), 450)
   }
@@ -1075,6 +1085,35 @@ export default function PaletteBuilder({ onCopy, toast }) {
     insertAt(colors.length, normaliseHex(hslToHex((h + 40) % 360, 62, 58)) || DEFAULT_SEED)
   }
   const insertBetween = (i) => insertAt(i + 1, midColor(colors[i], colors[Math.min(i + 1, colors.length - 1)]))
+
+  // Batch insert for the gap right-click menu — computes and splices all `n`
+  // evenly-spaced steps in ONE pass. Deliberately NOT a loop over insertAt:
+  // insertAt reads colors.length from the render closure and would re-check a
+  // stale length on each call, and would re-mid the ORIGINAL pair each time
+  // instead of producing evenly-spaced steps between the two neighbours.
+  // Enforces both caps itself rather than relying on insertAt.
+  const insertBetweenMany = (i, n) => {
+    const hardRoom = HARD_MAX - colors.length
+    if (n > hardRoom) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return }
+    const ceiling = isPro ? HARD_MAX : PRO_MAX
+    const room = ceiling - colors.length
+    if (n > room) {
+      openProModal({ eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+      return
+    }
+    const a = colors[i]
+    const b = colors[Math.min(i + 1, colors.length - 1)]
+    const at = i + 1
+    const steps = Array.from({ length: n }, (_, k) => stepColor(a, b, (k + 1) / (n + 1)))
+    setColors(prev => { const next = [...prev]; next.splice(at, 0, ...steps); return next })
+    setLocked(prev => {
+      const next = new Set()
+      prev.forEach(k => next.add(k >= at ? k + n : k))
+      return next
+    })
+    flashIn(Array.from({ length: n }, (_, k) => at + k))
+    setLiveMsg(`${n} colour${n === 1 ? '' : 's'} added`)
+  }
 
   const setColorAt = (i, hex) => {
     setColors(prev => prev.map((c, k) => (k === i ? hex : c)))
@@ -2024,7 +2063,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
             'plb-col',
             isLocked && 'plb-col--locked',
             isSplit && 'plb-col--split',
-            animIdx === i && 'plb-col--in',
+            animIdx?.has(i) && 'plb-col--in',
             outIdx === i && 'plb-col--out',
             overIdx === i && dragFrom.current != null && 'plb-col--over',
           ].filter(Boolean).join(' ')
@@ -2048,7 +2087,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               onContextMenu={(e) => {
                 e.preventDefault()
                 setTintsIdx(null); setPickerIdx(null)
-                setCtxMenu({ i, x: e.clientX, y: e.clientY })
+                setCtxMenu({ kind: 'swatch', i, x: e.clientX, y: e.clientY })
               }}
               onDragOver={(e) => {
                 if (dragFrom.current == null) return
@@ -2170,9 +2209,32 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 <button
                   type="button"
                   className="plb-gap"
-                  aria-label={`Insert a colour between position ${i + 1} and ${i + 2}`}
-                  title="Insert a colour here"
+                  aria-label={`Insert a colour between position ${i + 1} and ${i + 2} — right-click, or open the menu key, to insert more than one`}
+                  title="Insert a colour here — right-click for more"
                   onClick={() => insertBetween(i)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    setTintsIdx(null); setPickerIdx(null)
+                    // A real right-click carries the pointer position; a
+                    // keyboard-triggered contextmenu event (Menu key /
+                    // Shift+F10) typically reports (0,0) or detail 0 — anchor
+                    // to the button itself instead of the viewport corner.
+                    const synthetic = (e.clientX === 0 && e.clientY === 0) || e.detail === 0
+                    const pos = synthetic
+                      ? (() => { const r = e.currentTarget.getBoundingClientRect(); return { x: r.left, y: r.bottom } })()
+                      : { x: e.clientX, y: e.clientY }
+                    setCtxMenu({ kind: 'gap', i, ...pos })
+                  }}
+                  onKeyDown={(e) => {
+                    // Explicit fallback for the Menu key / Shift+F10 in case
+                    // the browser doesn't dispatch a native contextmenu event
+                    // from the keyboard — keeps this reachable without a mouse.
+                    if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return
+                    e.preventDefault()
+                    setTintsIdx(null); setPickerIdx(null)
+                    const r = e.currentTarget.getBoundingClientRect()
+                    setCtxMenu({ kind: 'gap', i, x: r.left, y: r.bottom })
+                  }}
                 >
                   <span className="plb-gap-dot"><IcoPlus size={13} /></span>
                 </button>
@@ -2187,7 +2249,47 @@ export default function PaletteBuilder({ onCopy, toast }) {
       </div>
 
       {/* ── Right-click menu ── */}
-      {ctxMenu && (
+      {ctxMenu && ctxMenu.kind === 'gap' && (
+        <div className="plb-pop plb-ctx" role="menu" aria-label="Insert colours" ref={ctxPosRef(ctxMenu.x, ctxMenu.y)}>
+          {(() => {
+            const ceiling = isPro ? HARD_MAX : PRO_MAX
+            const room = ceiling - colors.length
+            const hardRoom = HARD_MAX - colors.length
+            const counts = [1, 2, 3, 4].filter(n => n <= hardRoom)
+            if (counts.length === 0) {
+              return (
+                <div className="plb-ctx-item plb-ctx-item--muted" role="menuitem" aria-disabled="true">
+                  Palette is full at {HARD_MAX} colours
+                </div>
+              )
+            }
+            return counts.map(n => {
+              const gated = n > room
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  role="menuitem"
+                  className="plb-ctx-item"
+                  onClick={() => {
+                    const at = ctxMenu.i
+                    setCtxMenu(null)
+                    if (gated) {
+                      openProModal({ eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+                      return
+                    }
+                    insertBetweenMany(at, n)
+                  }}
+                >
+                  <IcoPlus size={15} /> Insert {n} colour{n === 1 ? '' : 's'}
+                  {gated && <span className="plb-ctx-pro">Pro</span>}
+                </button>
+              )
+            })
+          })()}
+        </div>
+      )}
+      {ctxMenu && ctxMenu.kind !== 'gap' && (
         <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxPosRef(ctxMenu.x, ctxMenu.y)}>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoCopy /> Copy hex</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); setCtxMenu(null) }}><IcoShuffle /> Use as seed</button>
