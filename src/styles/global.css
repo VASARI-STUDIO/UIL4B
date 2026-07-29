@@ -124,7 +124,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .profile-menu-upgrade{justify-content:center;font-weight:700;color:var(--accent-fg);background:var(--accent);margin:2px 0 6px;padding:11px 12px;box-shadow:0 4px 14px -6px var(--accent-glow);transition:background var(--t),box-shadow var(--t),transform var(--dur-2) var(--ease-out)}
 .profile-menu-upgrade svg{color:var(--accent-fg)}
 .profile-menu-upgrade:hover{background:var(--accent-strong);box-shadow:0 6px 18px -6px var(--accent-glow);transform:translateY(-1px)}
-.profile-menu-upgrade:active{transform:translateY(0)}
+.profile-menu-upgrade:active{transform:translateY(0);transition-duration:var(--dur-1)}
 /* Pro members see a quiet, left-aligned "Manage subscription" row instead. */
 .profile-menu-upgrade.is-pro{justify-content:flex-start;font-weight:500;color:var(--t0);background:none;margin:0;padding:9px 12px;box-shadow:none}
 .profile-menu-upgrade.is-pro svg{color:var(--t2)}
@@ -352,7 +352,8 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .cs-pb-tools{position:absolute;top:6px;left:6px;right:6px;display:flex;align-items:center;gap:4px;opacity:0;transform:translateY(-4px);transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .cs-pb-swatch:hover .cs-pb-tools,
 .cs-pb-swatch:focus-within .cs-pb-tools{opacity:1;transform:none}
-.cs-pb-tool{width:24px;height:24px;display:grid;place-items:center;border:none;border-radius:50%;cursor:pointer;color:#fff;background:color-mix(in srgb,#000 42%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:background var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+/* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
+.cs-pb-tool{width:24px;height:24px;display:grid;place-items:center;border:none;border-radius:50%;cursor:pointer;color:#fff;background:color-mix(in srgb,#000 42%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:background var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--ease-standard)}
 .cs-pb-tool:hover{background:color-mix(in srgb,#000 58%,transparent)}
 .cs-pb-tool:active{transform:scale(.92)}
 .cs-pb-tool:focus-visible{outline:2px solid var(--accent-fg);outline-offset:1px}
@@ -4796,7 +4797,8 @@ html.lenis,html.lenis body{height:auto}
 .ig-rail-clear svg{width:11px;height:11px}
 .ig-rail-track{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .ig-rail-track::-webkit-scrollbar{display:none}
-.ig-rail-item{position:relative;flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+/* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
+.ig-rail-item{position:relative;flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-1) var(--ease-out)}
 .ig-rail-item:hover{border-color:var(--bh);background:var(--bg-2)}
 .ig-rail-item:active{transform:scale(.94)}
 .ig-rail-item img,.ig-rail-item svg{width:24px;height:24px}
