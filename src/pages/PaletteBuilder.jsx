@@ -1681,7 +1681,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               title="Pull colours from an image"
               onClick={() => { const n = !imgOpen; closeAllMenus(); setImgOpen(n) }}
             >
-              <IcoImage /><span className="plb-lbl">Image</span>
+              <IcoImage /><span className="plb-lbl"><span className="plb-lbl-i">Image</span></span>
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="plb-file" onChange={onImageFile} aria-hidden="true" tabIndex={-1} />
             {imgOpen && (
@@ -1758,7 +1758,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               title="Explore — community palettes, variations and brand systems"
               onClick={() => { const n = !galleryOpen; closeAllMenus(); setGalleryOpen(n) }}
             >
-              <IcoExplore /><span className="plb-lbl">Explore</span>
+              <IcoExplore /><span className="plb-lbl"><span className="plb-lbl-i">Explore</span></span>
             </button>
             {galleryOpen && (
               <div className="plb-menu plb-menu--left plb-galpopup" role="dialog" aria-label="Colour gallery" data-lenis-prevent>
@@ -1855,7 +1855,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
           </div>
 
           <button type="button" className="btn btn-s plb-icobtn" title="Preview the palette on a UI mockup" onClick={() => setPreview({ mode: 'light', tab: 'ui', compare: null })}>
-            <IcoEye /><span className="plb-lbl">Preview</span>
+            <IcoEye /><span className="plb-lbl"><span className="plb-lbl-i">Preview</span></span>
           </button>
           <button
             type="button"
@@ -1867,7 +1867,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               setShowContrast(v => !v)
             }}
           >
-            <IcoContrast /><span className="plb-lbl">Contrast</span>{!isPro && <IcoLock open={false} size={12} />}
+            <IcoContrast /><span className="plb-lbl"><span className="plb-lbl-i">Contrast</span></span>{!isPro && <IcoLock open={false} size={12} />}
           </button>
           <div className="plb-menuwrap">
             <button
@@ -1908,17 +1908,17 @@ export default function PaletteBuilder({ onCopy, toast }) {
             title="Open this palette in the Gradient Generator"
             onClick={openInGradient}
           >
-            <IcoGradient /><span className="plb-lbl">Gradient</span>
+            <IcoGradient /><span className="plb-lbl"><span className="plb-lbl-i">Gradient</span></span>
           </button>
           <button type="button" className="btn btn-s" onClick={() => setDsbOpen(true)} title="Design System Builder — coming soon"><IcoSliders /> Design System Builder</button>
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
           <button type="button" className="btn btn-s plb-icobtn" onClick={undoPalette} disabled={!canUndo} title="Undo the last palette change">
-            <IcoUndo /><span className="plb-lbl">Undo</span>
+            <IcoUndo /><span className="plb-lbl"><span className="plb-lbl-i">Undo</span></span>
           </button>
           <button type="button" className="btn btn-s plb-icobtn" onClick={resetPalette} title="Reset every palette control to its default">
-            <IcoReset /><span className="plb-lbl">Reset</span>
+            <IcoReset /><span className="plb-lbl"><span className="plb-lbl-i">Reset</span></span>
           </button>
           <div className="plb-menuwrap">
             <button
@@ -1929,7 +1929,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               title="Palette history — jump back to any board you've had"
               onClick={() => { const n = !histOpen; closeAllMenus(); setHistOpen(n) }}
             >
-              <IcoHistory /><span className="plb-lbl">History</span>
+              <IcoHistory /><span className="plb-lbl"><span className="plb-lbl-i">History</span></span>
             </button>
             {histOpen && (
               <div className="plb-menu plb-histmenu" role="menu" aria-label="Palette history" data-lenis-prevent>
@@ -1995,7 +1995,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 const n = !saveOpen; closeAllMenus(); setSaveOpen(n)
               }}
             >
-              <IcoBookmark /><span className="plb-lbl">Save / export</span>
+              <IcoBookmark /><span className="plb-lbl"><span className="plb-lbl-i">Save / export</span></span>
             </button>
             {saveOpen && (
               <div className="plb-menu plb-menu--left plb-savemenu" role="dialog" aria-label="Save, share and export this palette" data-lenis-prevent>
