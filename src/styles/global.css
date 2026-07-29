@@ -6214,6 +6214,9 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-ctx-item--danger{color:#D64545}
 .plb-ctx-item--danger:hover{background:color-mix(in srgb,#D64545 10%,transparent);color:#D64545}
 .plb-ctx-sep{height:1px;margin:5px 4px;background:var(--border)}
+.plb-ctx-item--muted{color:var(--t3);cursor:default}
+.plb-ctx-item--muted:hover{background:none;color:var(--t3)}
+.plb-ctx-pro{margin-left:auto;padding:1px 6px;font-size:9px;font-weight:800;letter-spacing:.04em;color:var(--brand);border:1px solid var(--brand);border-radius:var(--radius-pill)}
 
 /* Preview modal + mini UI scene painted from --pv-* role props */
 .plb-modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px);background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
