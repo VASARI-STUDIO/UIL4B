@@ -4,7 +4,7 @@ _The **read-first** doc: current direction + a live status snapshot, with the
 detail split out so a session reads only the slice it needs. Update the snapshot
 **in place** — no dated copies, no parallel backlog._
 
-_Last updated: 2026-07-29 · current `main`: `4add069`._
+_Last updated: 2026-07-29 · current `main`: `549c6c6`._
 
 ---
 
@@ -48,7 +48,18 @@ rules and the Playwright user-simulation suite; and the founder-reported colour
 defect run — non-compounding adjust sliders and correct antipode warming (#190),
 the height-capped gradient inspector (#191), a Saturation slider that responds
 across its whole range (#192) and right-click-to-insert-N-colours on the
-between-colours plus (#193).
+between-colours plus (#193). Then the readiness housekeeping: pipeline/build-plan
+reconciliation (#194), the rewritten owner checklist (#195) and a verified
+dead-code sweep removing 6 unrouted pages, 7 unreferenced components and their
+orphaned CSS — 3,284 deletions, zero insertions (#196).
+
+**Ship decision:** the honest go/no-go now lives in
+[`V1-READINESS.md`](V1-READINESS.md). Short version — **NO-GO today**, on one
+hard blocker (`firestore.rules` is hardened in the repo but **unpublished**, so
+paid entitlements are not server-enforced) and three soft ones (the analytics
+environment guard, per-route canonical/OG tags, and instrumenting the upgrade
+gate). The last two are small non-HVZ slices; the first is a founder console
+action.
 
 The broader rebuild remains live: Create/Discover/Learn mega-menus, public
 `/plans`, visual `/sitemap`, live Stripe-backed price display, Settings, account
@@ -97,6 +108,7 @@ changes) stay explicit in the pipeline and owner list.
 | [`build-plan/HOMEPAGE-CHAOS-TO-CALM.md`](build-plan/HOMEPAGE-CHAOS-TO-CALM.md) | touching the homepage hero/workbench — the shipped acceptance contract |
 | [`build-plan/tool-tree.md`](build-plan/tool-tree.md) | building/placing a tool or touching nav — the CREATE/DISCOVER/LEARN tree, site structure, reusable-code inventory, the 12-function cap |
 | [`build-plan/roadmap.md`](build-plan/roadmap.md) | needing history/what's-next — rebuild detail, phases, the cluster A–G log, known bugs, deferred backlog |
+| [`V1-READINESS.md`](V1-READINESS.md) | deciding whether to ship — the honest go/no-go per surface, with every claim tagged verified / reported / unverified |
 | [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md) | anything the founder must do (Stripe prices, keys, infra) |
 | [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md) | founder calls not already in an active HVZ build: free caps, community architecture and SEO prerender |
 

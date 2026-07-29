@@ -19,7 +19,7 @@ export const APP_CONDITION = [
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
   { id: 'design-system', label: 'Design system', value: 'v2.7 shipped', status: 'good', detail: 'Shared shell, controls, CTA and footer patterns are live' },
   { id: 'ci', label: 'CI gates', value: 'Green on every PR', status: 'good', detail: 'Lint, build, unit, Firestore rules and the Playwright acceptance suite run on every pull request since #188' },
-  { id: 'phase', label: 'Current phase', value: 'V1 readiness — polish, then review', status: 'watch', detail: 'Founder-reported colour-tool defects are closing (#190–#193); the layout/motion/typography passes and the V1 readiness review remain. Firestore rules must still be PUBLISHED and the lifetime webhook events configured before the Stripe lifetime price is created' },
+  { id: 'phase', label: 'Current phase', value: 'V1 readiness — polish, then review', status: 'watch', detail: 'Founder-reported colour-tool defects closed (#190–#193) and the dead-code sweep shipped (#196). The readiness review is written up in docs/V1-READINESS.md and returns NO-GO: firestore.rules is hardened but still UNPUBLISHED, so paid entitlements are not server-enforced. The layout/motion/typography passes and the QA pass remain' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -59,6 +59,24 @@ export const PIPELINE_PROCESSES = [
     stage: 'in-progress',
     progress: 60,
     summary: 'One page-gutter scale and one z-index ladder replace ad-hoc padding and stacking values, fixing the toolbar shifting on hover. Remaining: sweep the last ad-hoc z-index values, fix the Community gallery popover stacking and the 961–999px Palette Builder toolbar break, then document the ladder.',
+    updated: '2026-07-29',
+  },
+  {
+    id: 'v1-readiness-review',
+    name: 'V1 readiness review',
+    area: 'Release',
+    stage: 'in-progress',
+    progress: 80,
+    summary: 'Security, code, SEO and analytics passes are complete and written up in docs/V1-READINESS.md; the QA responsive/theme/keyboard/contrast pass is the last one outstanding. Verdict so far is NO-GO — one hard blocker (firestore.rules hardened but UNPUBLISHED, so paid entitlements are not server-enforced) and three soft ones (analytics environment guard, per-route canonical/OG tags, upgrade-gate instrumentation).',
+    updated: '2026-07-29',
+  },
+  {
+    id: 'dead-code-sweep',
+    name: 'Dead-code sweep',
+    area: 'Codebase health',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'Shipped in #196. Removed 6 unrouted pages, 7 unreferenced components and their orphaned CSS — 3,284 deletions, zero insertions. Every file was confirmed unreferenced across src/ and tests/ first; the lazily-imported tool pages a naive grep misses were explicitly checked and kept. ESLint warnings fell 34 → 32.',
     updated: '2026-07-29',
   },
   {
