@@ -18,7 +18,8 @@ export const APP_CONDITION = [
   { id: 'discover', label: 'Discover surface', value: 'Queued · 20%', status: 'watch', detail: 'Gradient Gallery is live; broader galleries remain backlog' },
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
   { id: 'design-system', label: 'Design system', value: 'v2.7 shipped', status: 'good', detail: 'Shared shell, controls, CTA and footer patterns are live' },
-  { id: 'phase', label: 'Current phase', value: 'Owner validation after the homepage + billing batch', status: 'watch', detail: 'Homepage proof, account-switch and Plans/lifetime shipped (#183–#185); Firestore rules must be PUBLISHED and the lifetime webhook events configured before the Stripe lifetime price is created' },
+  { id: 'ci', label: 'CI gates', value: 'Green on every PR', status: 'good', detail: 'Lint, build, unit, Firestore rules and the Playwright acceptance suite run on every pull request since #188' },
+  { id: 'phase', label: 'Current phase', value: 'V1 readiness — polish, then review', status: 'watch', detail: 'Founder-reported colour-tool defects are closing (#190–#193); the layout/motion/typography passes and the V1 readiness review remain. Firestore rules must still be PUBLISHED and the lifetime webhook events configured before the Stripe lifetime price is created' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -33,6 +34,33 @@ export const PIPELINE_STAGES = [
 // ── Active processes / workstreams ──────────────────────────────────────────
 // stage: one of PIPELINE_STAGES ids · progress: 0–100
 export const PIPELINE_PROCESSES = [
+  {
+    id: 'colour-tool-defects',
+    name: 'Founder-reported colour-tool defects',
+    area: 'Product',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'Shipped in #190–#193. The adjust sliders no longer compound, warming crosses the hue antipode correctly, the gradient inspector caps to the canvas height, the Saturation slider responds across its whole range, and right-clicking the between-colours plus inserts several colours at once within the plan caps.',
+    updated: '2026-07-29',
+  },
+  {
+    id: 'ci-quality-gates',
+    name: 'Quality gates in CI',
+    area: 'Quality',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'Shipped in #188. Every pull request now runs lint, build, the unit suite, the Firestore rules tests that pin the entitlement lock, and the Playwright user-simulation suite. #189 removed the flaky offline-banner test that reddened the first run.',
+    updated: '2026-07-29',
+  },
+  {
+    id: 'design-system-scales',
+    name: 'Page-gutter and layering scales',
+    area: 'Design system',
+    stage: 'in-progress',
+    progress: 60,
+    summary: 'One page-gutter scale and one z-index ladder replace ad-hoc padding and stacking values, fixing the toolbar shifting on hover. Remaining: sweep the last ad-hoc z-index values, fix the Community gallery popover stacking and the 961–999px Palette Builder toolbar break, then document the ladder.',
+    updated: '2026-07-29',
+  },
   {
     id: 'homepage-chaos-to-calm',
     name: 'Homepage chaos → calm proof',
@@ -146,7 +174,6 @@ export const PIPELINE_PROCESSES = [
 // ── Next-to-do queue (prioritised) ──────────────────────────────────────────
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
-  { id: 'ci-quality-gates', title: 'Add CI running lint, build, unit and Firestore rules tests', priority: 'P0', effort: 'S', area: 'Quality', status: 'todo', note: 'The repo has no workflows — .github holds only secret_scanning.yml — so nothing runs the 24 rules tests that pin the entitlement lock, and it could silently regress. Runners need JDK 21+ for the Firestore emulator; the local default JDK is 1.8.' },
   { id: 'account-delete-cascade', title: 'Delete accounts through a server-side cascade', priority: 'P1', effort: 'M', area: 'Account', status: 'todo', note: 'deleteAccount now removes the auth user before the Firestore doc, so a failed second step can orphan a users/{uid} record holding email and display name. An Admin-SDK route should delete auth user, profile and sync data atomically.' },
   { id: 'homepage-field-metrics', title: 'Measure homepage field metrics on a throttled profile', priority: 'P2', effort: 'S', area: 'Performance', status: 'todo', note: 'HOMEPAGE-CHAOS-TO-CALM §11 targets LCP ≤ 2.5s, CLS ≤ 0.05 and INP ≤ 200ms on Slow-4G with 4x CPU. Structural preconditions shipped in #185 but the numbers were never traced. Also covers 200% zoom, forced-colours and screen-reader passes from §10.' },
   { id: 'account-menu-arrow-nav', title: 'Add arrow-key navigation to the account menu', priority: 'P1', effort: 'S', area: 'Accessibility', status: 'todo', note: 'Complete the menu keyboard contract: roving focus, Home/End, Escape focus restoration and assistive-technology semantics.' },
