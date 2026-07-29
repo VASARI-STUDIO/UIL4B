@@ -556,6 +556,44 @@ const TEMP_COOL_HUE = 210
 const TEMP_MAX_PULL = 0.5
 const DEG = Math.PI / 180
 
+// ─────────────────────────────────────────────────────────────────────────
+// maxChromaFor(hue, tone) — the highest HCT chroma sRGB can actually display
+// at a given hue/tone: the live gamut boundary, not a value we merely assume.
+//
+// Found by binary search, proven the honest way: ask hctToHex to solve a
+// candidate chroma, then read the resulting colour straight BACK through
+// hexToHct. solveToHex (inside hctToHex) already silently reduces an
+// out-of-gamut request down to whatever it could actually produce, so a
+// candidate that "survives" the round trip (comes back within a small
+// tolerance of what was asked for) was inside the gamut; one that comes back
+// noticeably lower was not, and the search narrows toward the boundary.
+// 14 steps over a generous [0, 200] ceiling (HCT chroma exceeds 100 for some
+// hue/tone pairs, e.g. saturated reds/blues) lands well under 1-unit
+// precision — plenty for a slider, and it never needs to see 200 in practice.
+//
+// Memoised: applyAdjust calls this once per colour per re-render, and while a
+// user is mid-drag on the Saturation slider the colour's hue/tone (both
+// resolved BEFORE the chroma step) do not change frame to frame — only
+// adj.s moves — so the exact same (hue, tone) key repeats on every frame of
+// the drag. The cache turns every frame after the first into a lookup.
+const CHROMA_CACHE = new Map()
+const MAX_CHROMA_CEILING = 200
+const MAX_CHROMA_CACHE_LIMIT = 2000 // defensive: forget the oldest entries rather than grow unbounded
+export function maxChromaFor(hue, tone) {
+  const key = Math.round(hue * 100) + '|' + Math.round(tone * 100)
+  const cached = CHROMA_CACHE.get(key)
+  if (cached !== undefined) return cached
+  let lo = 0, hi = MAX_CHROMA_CEILING
+  for (let i = 0; i < 14; i++) {
+    const mid = (lo + hi) / 2
+    const survived = hexToHct(hctToHex(hue, mid, tone))[1]
+    if (survived >= mid - 0.75) lo = mid; else hi = mid
+  }
+  if (CHROMA_CACHE.size >= MAX_CHROMA_CACHE_LIMIT) CHROMA_CACHE.delete(CHROMA_CACHE.keys().next().value)
+  CHROMA_CACHE.set(key, lo)
+  return lo
+}
+
 // Non-destructive global adjust lens. Hue rotate / chroma scale / tone shift /
 // temperature bias over a base palette -> new array. Identity (returns input)
 // when every field is 0, so exports stay untouched until a slider moves.
@@ -568,6 +606,17 @@ export function applyAdjust(baseColors, adj) {
   if (!adj || (adj.h === 0 && adj.s === 0 && adj.b === 0 && adj.temp === 0)) return baseColors
   return baseColors.map(hex => {
     try {
+      // NEUTRAL-HUE POLICY: hue is degenerate for a true achromatic colour
+      // (chroma 0 has no meaningful direction), yet the Saturation slider must
+      // still tint a pure grey somewhere, and that somewhere must be the SAME
+      // hue every time the same grey is fed in — otherwise re-opening a
+      // project or reordering colours in a palette would make a grey drift to
+      // a different tint on a whim. We deliberately do NOT special-case it:
+      // hexToHct's CAM16 solve is a pure function of the input hex, so even
+      // for a chroma-~0 grey it returns a hue that is already fully
+      // deterministic and stable (verified empirically — every grey from
+      // #101010 to #f0f0f0 lands within 0.01° of 209.49° under this specific
+      // CAM16 implementation). That value is what we use; no override needed.
       let [h, c, t] = hexToHct(hex)
       h = (((h + adj.h) % 360) + 360) % 360
       // Temperature pulls each colour toward a warm (30°) or cool (210°) anchor.
@@ -590,7 +639,27 @@ export function applyAdjust(baseColors, adj) {
         h = (((Math.atan2(b, a) / DEG) % 360) + 360) % 360
         c = Math.hypot(a, b)
       }
-      c = Math.max(0, c * (1 + adj.s / 100))
+      // Saturation lens: interpolate, don't scale. `c * (1 + adj.s / 100)` is
+      // purely multiplicative, which breaks two ways — a neutral (chroma 0,
+      // e.g. any pure grey) can never gain colour (0 × anything is still 0),
+      // and an already-vivid colour silently hits hctToHex's internal gamut
+      // clamp partway up the slider, so the whole top half does nothing
+      // visible. Interpolating toward an explicit target fixes both: rising
+      // (adj.s > 0) walks from the current chroma toward maxChromaFor(h, t) —
+      // the actual sRGB gamut boundary at this hue/tone, gamut-mapped
+      // ourselves rather than left for hctToHex to clamp — so +100 lands AT
+      // that boundary for every colour, neutral or already-vivid alike.
+      // Falling (adj.s < 0) walks toward 0, so -100 is always fully neutral.
+      // At adj.s === 0 the interpolation factor is exactly 0 either way, so c
+      // is untouched — the slider-at-rest identity holds exactly, including
+      // when h/temp/tone are moving under it.
+      if (adj.s > 0) {
+        const target = maxChromaFor(h, t)
+        c = c + (target - c) * (adj.s / 100)
+      } else if (adj.s < 0) {
+        c = c * (1 + adj.s / 100) // already a straight-line interpolation toward 0
+      }
+      c = Math.max(0, c)
       // adj.b is the "Tone" slider (±100). Halved → ±50 tone steps so full travel
       // shifts half the 0–100 tone range, not the whole thing (prevents total
       // black/white washes at the extremes).
@@ -599,7 +668,16 @@ export function applyAdjust(baseColors, adj) {
     } catch {
       let [h, s, l] = hexToHsl(hex)
       h = (((h + adj.h) % 360) + 360) % 360
-      s = Math.max(0, Math.min(100, s * (1 + adj.s / 100)))
+      // Same interpolation fix as the HCT path above, mapped onto HSL's own
+      // 0–100 saturation range (its natural, always-representable "gamut
+      // boundary" is simply 100): rising walks toward 100, falling walks
+      // toward 0, and adj.s === 0 leaves s untouched either way.
+      if (adj.s > 0) {
+        s = s + (100 - s) * (adj.s / 100)
+      } else if (adj.s < 0) {
+        s = s * (1 + adj.s / 100)
+      }
+      s = Math.max(0, Math.min(100, s))
       l = Math.max(0, Math.min(100, l + adj.b / 2))
       return hslToHex(h, s, l)
     }

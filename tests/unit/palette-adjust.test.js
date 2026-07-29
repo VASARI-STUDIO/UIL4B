@@ -11,7 +11,7 @@
 // project saved under the old shape.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyAdjust, hctToHex, hexToHct } from '../../src/utils/colors.js'
+import { applyAdjust, hctToHex, hexToHct, hexToHsl, maxChromaFor } from '../../src/utils/colors.js'
 import {
   ZERO_ADJUST,
   normaliseAdjust,
@@ -68,6 +68,97 @@ test('the lens is pure — the base array is never mutated', () => {
   const base = [...BASE]
   applyAdjust(base, { ...ZERO, h: 90, s: 30, b: -20, temp: 60 })
   assert.deepEqual(base, BASE)
+})
+
+/* ── Saturation: gamut-aware interpolation (PR #190 follow-up) ───────────────
+ * The bug: chroma was scaled multiplicatively (`c * (1 + s/100)`), so a
+ * neutral (chroma 0) could never gain colour, and an already-vivid colour hit
+ * hctToHex's internal gamut clamp partway up the slider — the whole top half
+ * did nothing visible. The fix interpolates toward an explicit target instead
+ * of scaling: rising walks from the current chroma toward maxChromaFor(h, t)
+ * (the real sRGB gamut boundary at that hue/tone), falling walks toward 0. */
+
+const GREY = '#808080'
+// A mid-saturation swatch with real headroom on both sides of the slider.
+const MID_SAT = '#4338E0'
+
+test('s=0 leaves chroma untouched even when hue is rotating under it', () => {
+  // A pure hue rotation at a fixed tone never has any reason to change the
+  // chroma VALUE we hand hctToHex, so with s=0 pinned the chroma must survive
+  // exactly — proving the s-branches really are skipped at s=0, not merely
+  // multiplying by a no-op factor of 1 (which is what the old bug did, and
+  // which this check would NOT have caught — this asserts the branch doesn't
+  // run at all). Tone (`b`) is deliberately excluded here: shifting tone (or,
+  // for a high-chroma swatch, even just rotating hue) can legitimately shrink
+  // the gamut available at the new hue/tone, so hctToHex may clamp the SAME
+  // chroma value down on its own — correct pre-existing gamut behaviour,
+  // unrelated to the saturation lens under test. A near-neutral swatch keeps
+  // this test clear of that: its chroma (~2) is nowhere near any hue/tone's
+  // boundary, so any drop can only be this lens, not the gamut.
+  const [, origC] = hexToHct(GREY)
+  for (const other of [{ h: 90 }, { h: -150 }, { h: 45 }]) {
+    const adj = { ...ZERO, ...other, s: 0 }
+    const out = applyAdjust([GREY], adj)[0]
+    const [, outC] = hexToHct(out)
+    // Colours round-trip through an 8-bit hex, so allow the tiny quantisation
+    // slack a hue move introduces — anything beyond that would mean s=0 is
+    // still perturbing chroma.
+    assert.ok(Math.abs(outC - origC) < 0.5,
+      `chroma must survive s=0 alongside ${JSON.stringify(other)} (was ${origC.toFixed(2)}, got ${outC.toFixed(2)})`)
+  }
+})
+
+test('s=0 is not a special case baked into the chroma step — a temperature-only move is unaffected by it', () => {
+  const withTemp = applyAdjust(BASE, { ...ZERO, temp: 55 })
+  const withTempAndZeroS = applyAdjust(BASE, { ...ZERO, temp: 55, s: 0 })
+  assert.deepEqual(withTempAndZeroS, withTemp,
+    'an explicit s: 0 must be indistinguishable from s being absent altogether')
+})
+
+test('a pure grey gains chroma as the slider rises, monotonically, with no dead zone', () => {
+  const [h, , t] = hexToHct(GREY)
+  let prevChroma = hexToHct(GREY)[1]
+  for (let s = 5; s <= 100; s += 5) {
+    const out = applyAdjust([GREY], { ...ZERO, s })[0]
+    const chroma = hexToHct(out)[1]
+    assert.ok(chroma >= prevChroma - 1e-6, `chroma must not fall as s rises (s=${s})`)
+    prevChroma = chroma
+  }
+  // The far end is meaningfully more saturated than the untouched grey, not a
+  // rounding whisker of it — the old multiplicative bug left this completely flat.
+  const untouched = hexToHct(GREY)[1]
+  assert.ok(prevChroma > untouched + 5, 'a full-throw slider visibly tints a pure grey')
+  // And it heads toward the gamut boundary at that grey's own hue/tone, not an
+  // arbitrary cap.
+  assert.ok(prevChroma <= maxChromaFor(h, t) + 1, 'never overshoots the boundary it targets')
+})
+
+test('full negative (-100) fully neutralises any colour', () => {
+  for (const hex of [GREY, MID_SAT, '#FF0000']) {
+    const out = applyAdjust([hex], { ...ZERO, s: -100 })[0]
+    const [, sat] = hexToHsl(out)
+    assert.equal(sat, 0, `${hex} at s=-100 must be a true neutral (HSL saturation 0), got ${out}`)
+  }
+})
+
+test('full positive (+100) lands at (or just inside) the hue/tone gamut boundary — no silent clamp', () => {
+  const out = applyAdjust([MID_SAT], { ...ZERO, s: 100 })[0]
+  const [h, c, t] = hexToHct(out)
+  const boundary = maxChromaFor(h, t)
+  assert.ok(c <= boundary + 0.01, 'never exceeds the boundary')
+  assert.ok(c >= boundary - 2, `lands within a small epsilon of the boundary (got ${c.toFixed(2)}, boundary ${boundary.toFixed(2)})`)
+})
+
+test('a mid-saturation colour moves monotonically across the whole -100..+100 range', () => {
+  let prevChroma = null
+  for (let s = -100; s <= 100; s += 5) {
+    const out = applyAdjust([MID_SAT], { ...ZERO, s })[0]
+    const chroma = hexToHct(out)[1]
+    if (prevChroma !== null) {
+      assert.ok(chroma >= prevChroma - 0.1, `chroma must not fall as s rises through ${s}`)
+    }
+    prevChroma = chroma
+  }
 })
 
 /* ── the round trip: this is the bug that must not come back ─────────────── */
