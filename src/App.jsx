@@ -9,6 +9,7 @@ import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
+import { updateRouteMeta } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { LoginPromptProvider, useLoginPrompt } from './contexts/LoginPromptContext'
 import { ProModalProvider } from './contexts/ProModalContext'
@@ -268,11 +269,16 @@ function AppInner() {
       '/file-converter': 'Convert files between formats directly in your browser. Fast, private, client-side processing.',
     }
 
-    document.title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
+    const title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
+    const description = PAGE_DESCRIPTIONS[location.pathname] || DEFAULT_DESCRIPTION
+    document.title = title
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc) {
-      metaDesc.setAttribute('content', PAGE_DESCRIPTIONS[location.pathname] || DEFAULT_DESCRIPTION)
+      metaDesc.setAttribute('content', description)
     }
+    // Canonical, og:*/twitter:* and the soon-route robots directive all track
+    // the same title/description this route already computed (AUDIT B3).
+    updateRouteMeta({ pathname: location.pathname, title, description })
   }, [location.pathname])
 
   // The sales / landing page is the public homepage. It renders full-screen with
