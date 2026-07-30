@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  applyAdjust, autoTonalFromSeed, autoTonalPalette, contrastRatio, derivePreviewRoles,
-  generateHarmony, hctToHex, hexToHct, hexToHsl, hslToHex, mixHex, simCvd,
-  textColorForBg, tonalRamp,
+  adjustTrackGradients, applyAdjust, autoTonalFromSeed, autoTonalPalette, contrastRatio,
+  derivePreviewRoles, generateHarmony, hctToHex, hexToHct, hexToHsl, hslToHex, maxChromaFor,
+  mixHex, simCvd, textColorForBg, tonalRamp,
 } from '../utils/colors'
 import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
 import { BRAND_PALETTES } from '../data/brandPalettes'
@@ -30,6 +30,7 @@ import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '.
 // Studio (utils/colors.js), so palettes built here match the studio's output.
 
 const DEFAULT_SEED = '#4338E0'
+const SESSION_SEED_KEY = 'vs-palette-session-seed'
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 const PRO_MAX = 8   // free ceiling on TOTAL columns — free palettes can hold up to 8
 const HARD_MAX = 10 // absolute ceiling so the board never becomes slivers
@@ -78,6 +79,28 @@ const ADJUST_FIELDS = [
 const TINT_TONES = [95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
 const HANDLE_KEY = 'vs-community-handle'            // the user's chosen social name
+
+function randomPaletteSeed() {
+  let hue = Math.floor(Math.random() * 360)
+  try {
+    const values = new Uint16Array(1)
+    globalThis.crypto?.getRandomValues?.(values)
+    hue = values[0] % 360
+  } catch { /* Math.random fallback above */ }
+  return normaliseHex(hctToHex(hue, 64, 54)) || DEFAULT_SEED
+}
+
+function sessionSeed() {
+  try {
+    const remembered = normaliseHex(sessionStorage.getItem(SESSION_SEED_KEY))
+    if (remembered) return remembered
+    const fresh = randomPaletteSeed()
+    sessionStorage.setItem(SESSION_SEED_KEY, fresh)
+    return fresh
+  } catch {
+    return randomPaletteSeed()
+  }
+}
 
 // Palette history (toolbar History menu): a rolling local log of the boards the
 // user has worked through, so an accidental randomise is never destructive.
@@ -413,6 +436,8 @@ const IcoLock = ({ open, size }) => (
 const IcoSwap = () => (
   <Ico><path d="M8 3 4 7l4 4" /><path d="M4 7h16" /><path d="m16 21 4-4-4-4" /><path d="M20 17H4" /></Ico>
 )
+const IcoArrowLeft = () => <Ico><path d="m15 18-6-6 6-6" /></Ico>
+const IcoArrowRight = () => <Ico><path d="m9 18 6-6-6-6" /></Ico>
 const IcoCopy = () => (
   <Ico><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></Ico>
 )
@@ -523,13 +548,26 @@ function HctPicker({ hex, label, onChange, onClose }) {
   })
   const [draft, setDraft] = useState(hex)
 
-  const emit = (next) => {
-    setHct(next)
+  const emit = (requested) => {
+    const next = {
+      h: ((requested.h % 360) + 360) % 360,
+      c: Math.max(0, Math.min(requested.c, maxChromaFor(requested.h, requested.t))),
+      t: Math.max(0, Math.min(100, requested.t)),
+    }
     let out
     try { out = hctToHex(next.h, next.c, next.t) }
     catch { out = hslToHex(next.h, Math.min(100, next.c), Math.min(95, Math.max(5, next.t))) }
     const norm = normaliseHex(out)
-    if (norm) { setDraft(norm); onChange(norm) }
+    if (norm) {
+      let actual = next
+      try {
+        const [h, c, t] = hexToHct(norm)
+        if ([h, c, t].every(Number.isFinite)) actual = { h: Math.round(h), c: Math.round(c), t: Math.round(t) }
+      } catch { /* keep the clamped request */ }
+      setHct(actual)
+      setDraft(norm)
+      onChange(norm)
+    }
   }
   const commitDraft = () => {
     const norm = normaliseHex(draft)
@@ -546,11 +584,17 @@ function HctPicker({ hex, label, onChange, onClose }) {
     <div className="plb-pop plb-picker" role="dialog" aria-label={`Edit ${label} in HCT`}>
       <div className="plb-pop-head">
         <span className="plb-pop-title">Edit — HCT</span>
+        <span className="plb-help">
+          <button type="button" className="plb-help-btn" aria-describedby="plb-hct-help">?</button>
+          <span id="plb-hct-help" className="plb-help-tip" role="tooltip">
+            Hue chooses the colour family, Chroma controls colourfulness, and Tone sets perceptual lightness from 0 (black) to 100 (white).
+          </span>
+        </span>
         <button type="button" className="plb-pop-x" aria-label="Close editor" onClick={onClose}><IcoX /></button>
       </div>
       {[
-        { key: 'h', label: 'Hue', min: 0, max: 360, unit: '°', snaps: [0, 90, 180, 270], snapRadius: 6 },
-        { key: 'c', label: 'Chroma', min: 0, max: 130, unit: '', snaps: [] },
+        { key: 'h', label: 'Hue', min: 0, max: 359, unit: '°', snaps: [90, 180, 270], snapRadius: 6 },
+        { key: 'c', label: 'Chroma', min: 0, max: Math.max(1, Math.round(maxChromaFor(hct.h, hct.t))), unit: '', snaps: [] },
         { key: 't', label: 'Tone', min: 0, max: 100, unit: '', snaps: [50], snapRadius: 3 },
       ].map(f => (
         <div className="plb-picker-row" key={f.key}>
@@ -590,8 +634,35 @@ function HctPicker({ hex, label, onChange, onClose }) {
 // context, so "will this actually ship?" gets answered for UI, brand and
 // graphic work — not just a dashboard. ──
 
+const PREVIEW_SCENES = {
+  ui: [
+    { name: 'Analytics dashboard', head: 'Weekly overview', sub: 'Live product metrics and a primary action' },
+    { name: 'Commerce checkout', head: 'Review your order', sub: 'Summary, totals and payment hierarchy' },
+    { name: 'Project workspace', head: 'Launch checklist', sub: 'Tasks, progress and team activity' },
+    { name: 'Account settings', head: 'Profile settings', sub: 'Forms, helper copy and saved state' },
+    { name: 'Support inbox', head: 'Customer inbox', sub: 'Conversation list and response actions' },
+    { name: 'Finance overview', head: 'Account balance', sub: 'Transactions, status and transfer action' },
+  ],
+  brand: [
+    { name: 'Product launch', kicker: 'Introducing', head: 'Design that\nfeels inevitable', sub: 'A focused product launch with primary and secondary actions.' },
+    { name: 'Architecture studio', kicker: 'Selected practice', head: 'Built for\nlasting use', sub: 'An editorial studio page with confident colour restraint.' },
+    { name: 'Creative portfolio', kicker: 'New collection', head: 'Work with\na clear point', sub: 'A portfolio introduction supported by a compact project index.' },
+    { name: 'Conference', kicker: 'Brisbane · October', head: 'Systems in\npractice', sub: 'An event page balancing schedule, venue and registration.' },
+    { name: 'Independent journal', kicker: 'Issue sixteen', head: 'Ideas worth\nkeeping', sub: 'An editorial cover with a clear reading path and subscription action.' },
+    { name: 'Hospitality', kicker: 'Open this season', head: 'Stay close\nto the coast', sub: 'A destination page using the palette for calm orientation.' },
+  ],
+  graphic: [
+    { name: 'Editorial poster', kicker: 'Vol. 04 — Colour', head: 'FORM\n& HUE', sub: 'Type, shape and colour working as one composed system.' },
+    { name: 'Album cover', kicker: 'Recorded live', head: 'NIGHT\nSIGNAL', sub: 'A compact cover system with a legible release hierarchy.' },
+    { name: 'Campaign', kicker: 'City series 02', head: 'MOVE\nWITH IT', sub: 'A public campaign balancing impact with readable details.' },
+    { name: 'Packaging', kicker: 'Batch No. 18', head: 'FIELD\nNOTES', sub: 'A packaging face with product, variant and provenance cues.' },
+    { name: 'Magazine cover', kicker: 'Spring edition', head: 'NEW\nGROUND', sub: 'A cover composition built for title, feature and issue data.' },
+    { name: 'Social launch', kicker: 'Available Friday', head: 'MAKE\nSPACE', sub: 'A campaign tile that preserves the message at small sizes.' },
+  ],
+}
+
 // UI — a product dashboard (nav, KPI cards, data bars, CTA).
-function PreviewUI({ colors }) {
+function PreviewUI({ colors, scene }) {
   return (
     <>
       <aside className="plb-pv-side">
@@ -602,8 +673,8 @@ function PreviewUI({ colors }) {
         <span className="plb-pv-navline" />
       </aside>
       <div className="plb-pv-main">
-        <div className="plb-pv-h">Weekly overview</div>
-        <div className="plb-pv-p">Your palette mapped to real UI roles</div>
+        <div className="plb-pv-h">{scene.head}</div>
+        <div className="plb-pv-p">{scene.sub}</div>
         <div className="plb-pv-cards">
           <div className="plb-pv-card"><span className="plb-pv-k">Views</span><span className="plb-pv-n">4,821</span></div>
           <div className="plb-pv-card"><span className="plb-pv-k">Saves</span><span className="plb-pv-n plb-pv-n--accent">312</span></div>
@@ -622,7 +693,7 @@ function PreviewUI({ colors }) {
 
 // Brand — a marketing landing hero (wordmark, headline, primary + ghost CTAs,
 // brand-colour chip row).
-function PreviewBrand({ colors }) {
+function PreviewBrand({ colors, scene }) {
   return (
     <div className="plb-pvb">
       <div className="plb-pvb-nav">
@@ -635,9 +706,9 @@ function PreviewBrand({ colors }) {
         <span className="plb-pvb-navcta">Sign up</span>
       </div>
       <div className="plb-pvb-hero">
-        <span className="plb-pvb-eyebrow">Introducing</span>
-        <div className="plb-pvb-head">Design that<br />feels inevitable</div>
-        <div className="plb-pvb-sub">A brand system built from your exact palette — every role in place.</div>
+        <span className="plb-pvb-eyebrow">{scene.kicker}</span>
+        <div className="plb-pvb-head">{scene.head.split('\n').map((line, i) => <span key={line}>{i > 0 && <br />}{line}</span>)}</div>
+        <div className="plb-pvb-sub">{scene.sub}</div>
         <div className="plb-pvb-btns">
           <span className="plb-pvb-btn plb-pvb-btn--primary">Get started</span>
           <span className="plb-pvb-btn plb-pvb-btn--ghost">Learn more</span>
@@ -654,7 +725,7 @@ function PreviewBrand({ colors }) {
 
 // Graphic Design — an editorial poster (display type, geometric shapes, a full
 // palette gradient bar, swatch caption).
-function PreviewGraphic({ colors }) {
+function PreviewGraphic({ colors, scene }) {
   return (
     <div className="plb-pvg">
       <div className="plb-pvg-shapes" aria-hidden="true">
@@ -663,9 +734,9 @@ function PreviewGraphic({ colors }) {
         <span className="plb-pvg-tri" ref={barRef(colors[3] || colors[0])} />
       </div>
       <div className="plb-pvg-body">
-        <span className="plb-pvg-kicker">Vol. 04 — Colour</span>
-        <div className="plb-pvg-title">FORM<br />&amp; HUE</div>
-        <div className="plb-pvg-lead">Type, shape and colour working as one composed system.</div>
+        <span className="plb-pvg-kicker">{scene.kicker}</span>
+        <div className="plb-pvg-title">{scene.head.split('\n').map((line, i) => <span key={line}>{i > 0 && <br />}{line}</span>)}</div>
+        <div className="plb-pvg-lead">{scene.sub}</div>
       </div>
       <div className="plb-pvg-swatches">
         {colors.slice(0, 8).map((c, i) => (
@@ -676,15 +747,15 @@ function PreviewGraphic({ colors }) {
   )
 }
 
-function PreviewScene({ colors, mode, title, tab = 'ui' }) {
+function PreviewScene({ colors, mode, title, tab = 'ui', scene = PREVIEW_SCENES[tab][0], variant = 0 }) {
   const roles = derivePreviewRoles(colors, { mode })
   return (
     <div className="plb-pvwrap">
       {title && <div className="plb-pv-name">{title}</div>}
-      <div className={`plb-pv plb-pv--${tab}`} ref={pvRef(roles)} aria-hidden="true">
-        {tab === 'brand' ? <PreviewBrand colors={colors} />
-          : tab === 'graphic' ? <PreviewGraphic colors={colors} />
-            : <PreviewUI colors={colors} />}
+      <div className={`plb-pv plb-pv--${tab} plb-pv--v${variant}`} ref={pvRef(roles)} aria-hidden="true">
+        {tab === 'brand' ? <PreviewBrand colors={colors} scene={scene} />
+          : tab === 'graphic' ? <PreviewGraphic colors={colors} scene={scene} />
+            : <PreviewUI colors={colors} scene={scene} />}
       </div>
     </div>
   )
@@ -714,15 +785,19 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // base colours and the sliders that produced them.
   const [queryColors] = useState(colorsFromQuery)
   const [saved] = useState(() => readSavedPalette(design?.palette, HARD_MAX))
+  const [initial] = useState(() => {
+    if (queryColors) return { colors: queryColors, seed: queryColors[0], adjust: ZERO_ADJUST }
+    if (saved) return { colors: saved.colors, seed: saved.colors[0], adjust: saved.adjust }
+    const firstSeed = sessionSeed()
+    return { colors: generateHarmony(firstSeed, 'analogous'), seed: firstSeed, adjust: ZERO_ADJUST }
+  })
 
   // Colours are the source of truth (positional: index 0–4 = the five ROLES,
   // beyond = ALTERNATIVE n). They stay the RAW base: the adjust lens never
   // writes back into them. Seed + harmony act as a generator over the unlocked
   // slots; a shared ?c= link or a carried-in project wins first paint.
-  const [colors, setColors] = useState(() =>
-    queryColors || saved?.colors || generateHarmony(DEFAULT_SEED, 'analogous')
-  )
-  const [seed, setSeed] = useState(() => queryColors?.[0] || design?.palette?.base || DEFAULT_SEED)
+  const [colors, setColors] = useState(initial.colors)
+  const [seed, setSeed] = useState(initial.seed)
   const [seedInput, setSeedInput] = useState(seed)
   const [harmony, setHarmony] = useState(() =>
     (HARMONIES.some(h => h.id === design?.palette?.harmony) ? design.palette.harmony : 'analogous')
@@ -730,7 +805,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
   // A shared link carries finished colours, so it opens with the sliders at zero
   // rather than re-applying whatever lens was last left on this device.
-  const [adjust, setAdjust] = useState(() => (queryColors ? ZERO_ADJUST : saved?.adjust || ZERO_ADJUST))
+  const [adjust, setAdjust] = useState(initial.adjust)
   const [vision, setVision] = useState('normal')
   const [showContrast, setShowContrast] = useState(false)
   const [liveMsg, setLiveMsg] = useState('')
@@ -762,6 +837,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const skipVarInvalidate = useRef(false)
   const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
+  const [swapIdx, setSwapIdx] = useState(null)     // column with the directional swap chooser open
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const [preview, setPreview] = useState(null)     // { mode, tab, compare } modal
   const [saveName, setSaveName] = useState('')
@@ -820,6 +896,23 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // the adjusted values, and the board shows the vision-simulated version.
   const adjusted = useMemo(() => applyAdjust(colors, adjust), [colors, adjust])
   const paletteScore = useMemo(() => scorePalette(adjusted), [adjusted])
+
+  // Per-column derivations that are NOT the swatch itself. tonalRamp is six
+  // CAM16 solves per colour, so on a full 10-colour board that is 60 solves —
+  // three times the cost of the whole adjust lens — and it was being redone on
+  // every frame of every slider drag. Deferring it hands React permission to
+  // drop the mini-ramps to a lower priority while the user is scrubbing: the
+  // swatch colour and hex readout still track the slider frame for frame, and
+  // the ramps catch up the moment the drag settles.
+  const deferredAdjusted = useDeferredValue(adjusted)
+  const columnMeta = useMemo(
+    () => deferredAdjusted.map(c => ({ ramp: tonalRamp(c), contrast: contrastPair(c) })),
+    [deferredAdjusted],
+  )
+
+  // Coloured slider tracks — see adjustTrackGradients. Keyed on the BASE
+  // palette only, never on `adjust`, so dragging a slider never rebuilds them.
+  const trackGradients = useMemo(() => adjustTrackGradients(colors), [colors])
   const variations = useMemo(() => (varBase ? paletteVariations(varBase) : []), [varBase])
 
   // Any genuine change to the palette (manual edit, randomise, harmony change,
@@ -955,10 +1048,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
   }, [])
   const anyPopover = saveOpen || harmOpen || visionOpen || imgOpen
     || galleryOpen || histOpen
-    || tintsIdx != null || pickerIdx != null || ctxMenu != null || preview != null
+    || tintsIdx != null || pickerIdx != null || swapIdx != null || ctxMenu != null || preview != null
   useEffect(() => {
     if (!anyPopover) return
-    const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
+    const closePops = () => { setTintsIdx(null); setPickerIdx(null); setSwapIdx(null); setCtxMenu(null) }
     const onDown = (e) => {
       if (!e.target.closest('.plb-menuwrap')) closeAllMenus()
       if (!e.target.closest('.plb-pop')) closePops()
@@ -1008,11 +1101,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
     })
   }
 
-  // ⇄ swaps a column with its right neighbour (the last swaps left) — the
-  // quick way to re-assign roles, since roles are positional. Locks follow.
-  const swapCols = (i) => {
-    const j = i === colors.length - 1 ? i - 1 : i + 1
-    if (j < 0 || j === i) return
+  // Swap in the direction explicitly chosen by the user. Roles are positional,
+  // locks travel with their colours, and swapping across position zero updates
+  // the visible seed so the toolbar never describes a different first swatch.
+  const swapCols = (i, direction) => {
+    const j = direction === 'left' ? i - 1 : i + 1
+    if (j < 0 || j >= colors.length || j === i) return
+    const nextFirst = i === 0 ? colors[j] : j === 0 ? colors[i] : null
     setColors(prev => { const n = [...prev]; [n[i], n[j]] = [n[j], n[i]]; return n })
     setLocked(prev => {
       const next = new Set(prev)
@@ -1022,6 +1117,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
       if (b) next.add(i)
       return next
     })
+    if (nextFirst) { setSeed(nextFirst); setSeedInput(nextFirst) }
+    setSwapIdx(null)
+    setLiveMsg(`Colour swapped ${direction}`)
   }
 
   // Drag-reorder: full splice move (not a swap) so the whole row shifts the
@@ -1288,6 +1386,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     importedSigRef.current = null
     setTintsIdx(null)
     setPickerIdx(null)
+    setSwapIdx(null)
     setCtxMenu(null)
     setPreview(null)
     setVarBase(null)
@@ -1857,18 +1956,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <button type="button" className="btn btn-s plb-icobtn" title="Preview the palette on a UI mockup" onClick={() => setPreview({ mode: 'light', tab: 'ui', compare: null })}>
             <IcoEye /><span className="plb-lbl"><span className="plb-lbl-i">Preview</span></span>
           </button>
-          <button
-            type="button"
-            className={showContrast ? 'btn btn-s plb-icobtn plb-tgl plb-tgl--on' : 'btn btn-s plb-icobtn plb-tgl'}
-            aria-pressed={showContrast}
-            title={isPro ? 'Show WCAG contrast on every colour — light and dark text' : 'Pro — WCAG contrast on every colour, light and dark text'}
-            onClick={() => {
-              if (!isPro) { openProModal({ eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' }); return }
-              setShowContrast(v => !v)
-            }}
-          >
-            <IcoContrast /><span className="plb-lbl"><span className="plb-lbl-i">Contrast</span></span>{!isPro && <IcoLock open={false} size={12} />}
-          </button>
           <div className="plb-menuwrap">
             <button
               type="button"
@@ -2055,8 +2142,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
           const isSplit = vision !== 'normal'
           const sim = isSplit ? simCvd(c, vision) : c
           const ink = textColorForBg(sim)
-          const contrast = contrastPair(c)
-          const ramp = tonalRamp(c)
+          // Deferred (see columnMeta): during a drag these lag the swatch by a
+          // frame or two rather than re-solving CAM16 for every column. The
+          // fallback covers the render where a colour has just been added and
+          // the deferred palette is still one shorter.
+          const meta = columnMeta[i]
+          const contrast = meta ? meta.contrast : contrastPair(c)
+          const ramp = meta ? meta.ramp : tonalRamp(c)
           const role = i < ROLES.length ? ROLES[i] : `ALTERNATIVE ${i - ROLES.length + 1}`
           const isLocked = locked.has(i)
           const colClass = [
@@ -2129,8 +2221,35 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 >
                   <IcoSliders />
                 </button>
+                <button
+                  type="button"
+                  className={showContrast ? 'plb-tool plb-tool--on' : 'plb-tool'}
+                  aria-pressed={showContrast}
+                  title={isPro ? 'Show WCAG contrast for this palette' : 'Show WCAG contrast — Pro'}
+                  aria-label={`Show contrast guidance for ${role}`}
+                  onClick={() => {
+                    if (!isPro) {
+                      openProModal({ eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })
+                      return
+                    }
+                    setShowContrast(v => !v)
+                  }}
+                >
+                  <IcoContrast />
+                </button>
                 {adjusted.length > 1 && (
-                  <button type="button" className="plb-tool" title="Swap with the next column" aria-label={`Swap ${role} with the next column`} onClick={() => swapCols(i)}>
+                  <button
+                    type="button"
+                    className={swapIdx === i ? 'plb-tool plb-tool--on' : 'plb-tool'}
+                    title="Choose a swap direction"
+                    aria-label={`Choose a direction to swap ${role}`}
+                    aria-haspopup="menu"
+                    aria-expanded={swapIdx === i}
+                    onClick={() => {
+                      setTintsIdx(null); setPickerIdx(null); setCtxMenu(null)
+                      setSwapIdx(current => current === i ? null : i)
+                    }}
+                  >
                     <IcoSwap />
                   </button>
                 )}
@@ -2143,6 +2262,21 @@ export default function PaletteBuilder({ onCopy, toast }) {
                   </button>
                 )}
               </div>
+
+              {swapIdx === i && (
+                <div className="plb-pop plb-swappop" role="menu" aria-label={`Swap ${role}`}>
+                  {i > 0 && (
+                    <button type="button" role="menuitem" className="plb-swapdir" onClick={() => swapCols(i, 'left')}>
+                      <IcoArrowLeft /> Swap left
+                    </button>
+                  )}
+                  {i < colors.length - 1 && (
+                    <button type="button" role="menuitem" className="plb-swapdir" onClick={() => swapCols(i, 'right')}>
+                      Swap right <IcoArrowRight />
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="plb-ramp" role="group" aria-label={`Tonal ramp of ${adjusted[i]} — click to view all tints`}>
                 {ramp.map((rc, k) => (
@@ -2214,6 +2348,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                   onClick={() => insertBetween(i)}
                   onContextMenu={(e) => {
                     e.preventDefault()
+                    e.stopPropagation()
                     setTintsIdx(null); setPickerIdx(null)
                     // A real right-click carries the pointer position; a
                     // keyboard-triggered contextmenu event (Menu key /
@@ -2316,7 +2451,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
           aria-label="Palette preview"
           onPointerDown={(e) => { if (e.target === e.currentTarget) setPreview(null) }}
         >
-          <div className="plb-modal-card">
+          <div className={preview.compare ? 'plb-modal-card' : 'plb-modal-card plb-modal-card--previews'}>
             <div className="plb-modal-head">
               <span className="plb-pop-title">{preview.compare ? 'Compare palettes' : 'Preview'}</span>
               <div className="plb-modal-tabs" role="tablist" aria-label="Preview context">
@@ -2348,22 +2483,46 @@ export default function PaletteBuilder({ onCopy, toast }) {
               </div>
               <button type="button" className="plb-pop-x" aria-label="Close preview" onClick={() => setPreview(null)}><IcoX /></button>
             </div>
-            <div className={preview.compare ? 'plb-modal-body plb-modal-body--split' : 'plb-modal-body'}>
-              <PreviewScene
-                colors={adjusted}
-                mode={preview.mode}
-                tab={preview.tab}
-                title={preview.compare ? `Current — score ${paletteScore}` : undefined}
-              />
-              {preview.compare && (
+            {preview.compare ? (
+              <div className="plb-modal-body plb-modal-body--split">
+                <PreviewScene
+                  colors={adjusted}
+                  mode={preview.mode}
+                  tab={preview.tab}
+                  title={`Current — score ${paletteScore}`}
+                />
                 <PreviewScene
                   colors={preview.compare.colors}
                   mode={preview.mode}
                   tab={preview.tab}
                   title={`${preview.compare.label}${preview.compare.score != null ? ` — score ${preview.compare.score}` : ''}`}
                 />
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="plb-preview-grid" aria-label={`${preview.tab} preview scenes`}>
+                {PREVIEW_SCENES[preview.tab].map((scene, index) => {
+                  const gated = !isPro && index >= 3
+                  return (
+                    <article className={gated ? 'plb-preview-item plb-preview-item--locked' : 'plb-preview-item'} key={scene.name}>
+                      <div className="plb-preview-label">
+                        <strong>{scene.name}</strong>
+                        {gated && <span><IcoLock open={false} size={11} /> Pro</span>}
+                      </div>
+                      <PreviewScene colors={adjusted} mode={preview.mode} tab={preview.tab} scene={scene} variant={index} />
+                      {gated && (
+                        <button
+                          type="button"
+                          className="plb-preview-gate"
+                          onClick={() => openProModal({ eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
+                        >
+                          <IcoLock open={false} size={13} /> Unlock preview
+                        </button>
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
+            )}
             {preview.compare && (
               <div className="plb-modal-actions">
                 <button
@@ -2494,23 +2653,32 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
       {/* ── Global adjust ── */}
       <footer className="plb-adjust" aria-label="Global palette adjustments">
-        {ADJUST_FIELDS.map(f => (
-          <div className="plb-adjust-field" key={f.key}>
-            <label className="plb-adjust-label" htmlFor={`plb-${f.key}`}>{f.label}</label>
-            <SnapSlider
-              id={`plb-${f.key}`}
-              min={f.min}
-              max={f.max}
-              value={adjust[f.key]}
-              defaultValue={0}
-              snaps={f.snaps}
-              snapRadius={f.snapRadius}
-              unit={f.unit}
-              onChange={(v) => setAdjust(prev => ({ ...prev, [f.key]: v }))}
-              ariaLabel={`${f.label} adjustment`}
-            />
-          </div>
-        ))}
+        {/* One grid for all four fields, with each field as display:contents, so
+            the LABEL columns size to their own text while the TRACK columns are
+            equal `1fr` siblings of one grid. That is what makes every track the
+            same length no matter how much longer "Temperature" is than "Hue" —
+            a per-field flex row cannot do it, because each row divides its own
+            width. See .plb-adjust-fields in global.css. */}
+        <div className="plb-adjust-fields">
+          {ADJUST_FIELDS.map(f => (
+            <div className="plb-adjust-field" key={f.key}>
+              <label className="plb-adjust-label" htmlFor={`plb-${f.key}`}>{f.label}</label>
+              <SnapSlider
+                id={`plb-${f.key}`}
+                min={f.min}
+                max={f.max}
+                value={adjust[f.key]}
+                defaultValue={0}
+                snaps={f.snaps}
+                snapRadius={f.snapRadius}
+                unit={f.unit}
+                trackGradient={trackGradients?.[f.key] || null}
+                onChange={(v) => setAdjust(prev => ({ ...prev, [f.key]: v }))}
+                ariaLabel={`${f.label} adjustment`}
+              />
+            </div>
+          ))}
+        </div>
         {adjustDirty && (
           <button type="button" className="btn btn-s btn-ghost" onClick={() => setAdjust(ZERO_ADJUST)}>Reset</button>
         )}

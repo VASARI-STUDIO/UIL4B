@@ -2146,8 +2146,8 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 }
 
 /* Shared in-app footer */
-.app-footer{padding:var(--s-8) clamp(20px,4vw,48px) var(--s-5);border-top:1px solid var(--border);background:var(--bg-1)}
-.app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);max-width:1200px;margin:0 auto}
+.app-footer{padding:var(--s-8) var(--page-inline) var(--s-5);border-top:1px solid var(--border);background:var(--bg-1)}
+.app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--serif);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
 .app-footer-tagline{max-width:42ch;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
@@ -4191,7 +4191,9 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --fs-h3:1.5rem;--fs-h4:1.25rem;--fs-h5:1.0625rem;
   --fs-lede:clamp(1.0625rem,calc(0.96rem + 0.45vw),1.3125rem);
   --fs-body:1rem;--fs-body-s:0.875rem;--fs-caption:0.8125rem;--fs-micro:0.6875rem;
-  --nav-h:60px;--nav-top:0px;--nav-clear:calc(var(--nav-top) + var(--nav-h) + 8px)
+  --nav-h:60px;--nav-top:0px;--nav-clear:calc(var(--nav-top) + var(--nav-h) + 8px);
+  --page-gutter:20px;--page-content-max:1440px;
+  --page-inline:max(var(--page-gutter),calc((100% - var(--page-content-max))/2 + var(--page-gutter)))
 }
 
 /* ── Foundry light values (overrides the earlier [data-theme="light"] block;
@@ -4345,7 +4347,7 @@ html.lenis,html.lenis body{height:auto}
    width-capped and centred so ultra-wide screens don't fling the clusters apart. */
 /* 1fr auto 1fr keeps the three section menus dead-centre in the bar; the
    logo+search and actions clusters flex within the equal side columns. */
-.pnav-inner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;height:100%;max-width:1440px;margin:0 auto;padding:0 20px}
+.pnav-inner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;height:100%;width:100%;margin:0 auto;padding:0 var(--page-inline)}
 .pnav-lead{display:flex;align-items:center;gap:18px;min-width:0;justify-self:start}
 .pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
@@ -4691,6 +4693,25 @@ html.lenis,html.lenis body{height:auto}
 .snapv-value:disabled{cursor:not-allowed;opacity:.6}
 .snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
 .snapv-input::-webkit-outer-spin-button,.snapv-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+/* ── Coloured track (opt-in: only when SnapSlider is given a trackGradient) ──
+   The track previews what the slider does to the current palette, so the user
+   can see where to put the handle instead of guessing. Everything here is
+   scoped to .snapv--grad, so every other SnapSlider keeps the platform track
+   and its accent-color fill untouched.
+   The handle is deliberately theme-INDEPENDENT: the surface behind it is
+   palette colour, not a UI surface, so a token that flips with the theme would
+   disappear against half the palettes. A white core inside a near-black ring
+   inside a white halo reads on any hue at any lightness, in either theme. */
+.snapv--grad input[type="range"]{-webkit-appearance:none;appearance:none;height:14px;border-radius:var(--radius-pill);background:var(--snapv-track,var(--bg-3));background-repeat:no-repeat;border:1px solid var(--border);outline:none;cursor:pointer;accent-color:auto}
+.snapv--grad input[type="range"]::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:transparent}
+.snapv--grad input[type="range"]::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:transparent}
+.snapv--grad input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-2px;border-radius:50%;background:#fff;border:2px solid #16181C;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 1px 3px rgba(0,0,0,.45);cursor:grab}
+.snapv--grad input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid #16181C;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 1px 3px rgba(0,0,0,.45);cursor:grab}
+.snapv--grad input[type="range"]:active::-webkit-slider-thumb{cursor:grabbing}
+.snapv--grad input[type="range"]:active::-moz-range-thumb{cursor:grabbing}
+/* Focus ring sits outside the track so it never competes with the gradient. */
+.snapv--grad input[type="range"]:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.snapv--grad input[type="range"]:disabled{opacity:.5;cursor:not-allowed}
 .icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
 .icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .icust-seg button:hover{color:var(--t0)}
@@ -4890,7 +4911,7 @@ html.lenis,html.lenis body{height:auto}
 /* The in-tool left rail is retired — navigation lives entirely in the PillNav
    mega-menus, so the shell is a single full-width content column. */
 .rail-shell{display:grid;grid-template-columns:1fr;min-height:100vh;padding-top:var(--nav-clear)}
-.rail-content{min-width:0;padding:24px clamp(20px,4vw,48px) var(--s-9)}
+.rail-content{min-width:0;padding:24px var(--page-gutter) var(--s-9)}
 /* Library toolbars live inside the content column: clear the floating nav when
    they stick, and re-bleed to the content gutter. */
 .rail-content .pl-toolbar{top:var(--nav-clear);margin-left:calc(-1 * clamp(20px,4vw,48px));margin-right:calc(-1 * clamp(20px,4vw,48px));padding-left:clamp(20px,4vw,48px);padding-right:clamp(20px,4vw,48px)}
@@ -5407,6 +5428,10 @@ html.lenis,html.lenis body{height:auto}
 /* ─── Tint Scale Generator (/color/tint) — tt- ─── */
 .tt-page{min-width:0;padding-bottom:var(--s-4)}
 .tt-hero{margin-bottom:var(--s-5)}
+.tt-back{display:inline-flex;align-items:center;gap:7px;margin-bottom:var(--s-4);font-size:12px;font-weight:650;color:var(--t1);text-decoration:none}
+.tt-back span{transition:transform var(--dur-2) var(--ease-standard)}
+.tt-back:hover{color:var(--brand);text-decoration:none}
+.tt-back:hover span{transform:translateX(-3px)}
 .tt-hero-copy{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,560px);gap:var(--s-8);align-items:end}
 .tt-hero h1{margin:0;font-family:var(--serif);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
 .tt-hero-copy>p{max-width:600px;margin:0 0 4px;font-size:15px;line-height:1.65;color:var(--t1)}
@@ -5558,6 +5583,7 @@ html.lenis,html.lenis body{height:auto}
   .tt-output,.tt-config{grid-column:auto;grid-row:auto}
 }
 @media(max-width:768px){
+  :root{--page-gutter:12px}
   .tt-audience{grid-template-columns:1fr}
   .tt-audience-tab+.tt-audience-tab{border-left:0;border-top:1px solid var(--border)}
   .tt-status{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -5660,10 +5686,10 @@ html.lenis,html.lenis body{height:auto}
    padding (24px / clamp(20px,4vw,48px) / var(--s-9)) so the board runs
    edge-to-edge under the pill nav. Column/ramp colours arrive as custom
    props (--plb-c / --plb-ink / --plb-rc) set via callback refs. */
-.plb{display:flex;flex-direction:column;min-height:calc(100vh - var(--nav-clear));margin:-24px calc(-1*clamp(20px,4vw,48px)) calc(-1*var(--s-9))}
+.plb{display:flex;flex-direction:column;min-height:calc(100vh - var(--nav-top) - var(--nav-h));margin:calc(-24px - var(--nav-clear) + var(--nav-top) + var(--nav-h)) calc(-1*var(--page-gutter)) calc(-1*var(--s-9))}
 /* Horizontal padding mirrors .pnav-inner (20px gutter, 1440px centred cap) so
    the toolbar's content edge lines up with the pill nav's at every width. */
-.plb-toolbar{position:sticky;top:var(--nav-clear);z-index:30;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:nowrap;padding:10px max(20px,calc((100% - 1440px)/2 + 20px));background:var(--bg-0);border-bottom:1px solid var(--border)}
+.plb-toolbar{position:sticky;top:calc(var(--nav-top) + var(--nav-h));z-index:30;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:nowrap;padding:10px var(--page-inline);background:var(--bg-0);border-bottom:1px solid var(--border)}
 /* The toolbar is a single line, always — it never wraps to a second row. Groups
    stay on one line; the title group may shrink (min-width:0) so its controls give
    way before the action group ever drops below it. Popovers open absolutely from
@@ -5677,7 +5703,8 @@ html.lenis,html.lenis body{height:auto}
    trigger sits at the left edge of the toolbar (default .cpk-pop is right:0). */
 .plb-seedpick{flex:0 0 auto}
 .plb-seedpick .cpk-pop{left:0;right:auto}
-.plb-hexfield{width:96px;padding:8px 10px;font-family:var(--mono);font-size:13px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);transition:border-color var(--t)}
+.plb-toolbar .btn-s,.plb-seedpick .cpk-trigger,.plb-hexfield{height:36px;min-height:36px;border-radius:var(--radius-s)}
+.plb-hexfield{width:96px;padding:0 10px;font-family:var(--mono);font-size:13px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);transition:border-color var(--t)}
 .plb-hexfield:focus{outline:none;border-color:var(--brand)}
 .plb-hexfield--bad{border-color:#D64545}
 /* System + Vision toolbar triggers ride on .btn btn-s; these only add the
@@ -5833,6 +5860,13 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-picker-chip{width:28px;height:28px;flex-shrink:0;background:var(--plb-rc);border:1px solid var(--border);border-radius:8px}
 .plb-picker-hex{flex:1;min-width:0;padding:7px 9px;font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
 .plb-picker-hex:focus{outline:none;border-color:var(--brand)}
+.plb-help{position:relative;display:inline-flex;margin-left:auto}
+.plb-help-btn{display:grid;place-items:center;width:24px;height:24px;padding:0;font-family:var(--mono);font-size:11px;font-weight:750;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:50%;cursor:help}
+.plb-help-tip{position:absolute;right:-34px;bottom:calc(100% + 8px);z-index:3;width:218px;padding:9px 10px;font-size:11px;font-weight:500;line-height:1.45;color:var(--t1);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-s);opacity:0;transform:translateY(4px);pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-entrance)}
+.plb-help:hover .plb-help-tip,.plb-help:focus-within .plb-help-tip{opacity:1;transform:none}
+.plb-swappop{position:absolute;top:58px;left:50%;z-index:46;display:flex;gap:4px;width:max-content;padding:5px;transform:translateX(-50%)}
+.plb-swapdir{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:32px;padding:6px 9px;font-size:11px;font-weight:650;color:var(--t1);background:transparent;border:0;border-radius:var(--radius-xs);cursor:pointer;white-space:nowrap}
+.plb-swapdir:hover,.plb-swapdir:focus-visible{color:var(--t0);background:var(--bg-2)}
 
 /* Custom right-click menu (fixed, viewport-clamped via --plb-mx/--plb-my) */
 .plb-ctx{position:fixed;left:var(--plb-mx);top:var(--plb-my);z-index:80;min-width:192px;padding:6px}
@@ -5849,6 +5883,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 /* Preview modal + mini UI scene painted from --pv-* role props */
 .plb-modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px);background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .plb-modal-card{width:min(960px,100%);max-height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:clamp(14px,2.5vw,22px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+.plb-modal-card--previews{width:min(1180px,100%)}
 .plb-modal-head{display:flex;align-items:center;gap:12px}
 .plb-modal-head .plb-pop-title{font-size:14px;margin-right:auto}
 .plb-modal-modes{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
@@ -5858,6 +5893,31 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-modal-body{display:grid;grid-template-columns:1fr;gap:14px}
 .plb-modal-body--split{grid-template-columns:1fr 1fr}
 .plb-modal-actions{display:flex;justify-content:flex-end}
+.plb-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.plb-preview-item{position:relative;min-width:0;padding:12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius)}
+.plb-preview-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.plb-preview-label strong{font-size:12px;font-weight:700;color:var(--t0)}
+.plb-preview-label span{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--brand)}
+.plb-preview-grid .plb-pv{min-height:260px}
+.plb-preview-item--locked .plb-pv{opacity:.62}
+.plb-preview-gate{position:absolute;right:22px;bottom:22px;z-index:2;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-s);cursor:pointer}
+.plb-preview-gate:hover{color:var(--brand);border-color:var(--brand)}
+.plb-pv--v1 .plb-pv-side{order:2;border-right:0;border-left:1px solid var(--pv-border)}
+.plb-pv--v2 .plb-pv-cards{grid-template-columns:1fr 1fr}
+.plb-pv--v2 .plb-pv-card:last-child{grid-column:1/-1}
+.plb-pv--v3 .plb-pv-bars{order:-1;margin-top:0}
+.plb-pv--v4 .plb-pv-side{width:78px}
+.plb-pv--v4 .plb-pv-main{padding:22px}
+.plb-pv--v5 .plb-pv-cards{grid-template-columns:1fr}
+.plb-pv--brand.plb-pv--v1 .plb-pvb-hero,.plb-pv--brand.plb-pv--v4 .plb-pvb-hero{align-items:flex-start;text-align:left}
+.plb-pv--brand.plb-pv--v2 .plb-pvb-nav{background:var(--pv-primary)}
+.plb-pv--brand.plb-pv--v3 .plb-pvb-hero{justify-content:flex-end}
+.plb-pv--brand.plb-pv--v5 .plb-pvb-head{font-size:36px}
+.plb-pv--graphic.plb-pv--v1 .plb-pvg-circle{right:auto;left:-24px}
+.plb-pv--graphic.plb-pv--v2 .plb-pvg-square{right:auto;left:44px;bottom:42px;transform:rotate(45deg)}
+.plb-pv--graphic.plb-pv--v3 .plb-pvg-body{text-align:right}
+.plb-pv--graphic.plb-pv--v4 .plb-pvg-tri{left:auto;right:32px}
+.plb-pv--graphic.plb-pv--v5 .plb-pvg-title{font-size:54px}
 /* Submit-to-community popup (Wave 5) */
 .plb-submitcard{width:min(440px,100%)}
 .plb-submit-strip{display:flex;height:56px;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
@@ -5878,30 +5938,17 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
 .plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .plb-dsb-link:hover{border-color:var(--brand);color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)}
-/* ── Icon toolbar buttons that reveal their label INLINE on hover/focus
-   (Coolors-style): the icon stays put and its label expands to the right,
-   growing max-width from 0. Only the button itself widens rightward, so the
-   hovered button's own left edge never moves — the hover target stays stable;
-   buttons to its right slide over, which is the intended reveal. The icon-
-   button group is pinned flex-wrap:nowrap (below) so an expanding label can
-   never bump a neighbour onto a second line (the old wrap-flash, bug #106).
-   The button's own open menu (aria-expanded) also holds its label open. We do
-   NOT expand every label on menu focus-within — that mounted-menu-wide reflow
-   was the lag. On touch there's no hover, so the mobile block pins the label
-   inline. Reduced-motion users get the reveal without the width tween. */
-.plb-icobtn{gap:0;position:relative}
-/* Icon button label slides out on hover/focus: the text glides in from behind
-   the icon (translateX) while its track widens, for one smooth reveal rather
-   than a hard pop. The track is grid-template-columns 0fr→1fr, never max-width —
-   a max-width ceiling is wider than the real label, so the tail of the easing
-   curve plays with nothing left to move and the reveal snaps. The label span is
-   the grid container and .plb-lbl-i is its only track item, so buttons that add
-   a third child (e.g. the Contrast lock icon) are unaffected.
-   See css-conventions.md → Motion. */
-.plb-icobtn .plb-lbl{display:grid;grid-template-columns:0fr;opacity:0;margin-left:0;transform:translateX(-8px);transition:grid-template-columns var(--dur-3) var(--ease-entrance),transform var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard),margin-left var(--dur-3) var(--ease-entrance)}
+/* Icon controls keep a fixed footprint. Their labels reveal in a small overlay
+   beside the button, so no sibling shifts and the toolbar can never grow taller
+   or wider while the pointer is moving across it. */
+.plb-icobtn{position:relative;isolation:isolate;width:36px;min-width:36px;padding-inline:0;justify-content:center;gap:0}
+.plb-icobtn:hover,.plb-icobtn:focus-visible,.plb-icobtn[aria-expanded="true"]{z-index:4}
+.plb-icobtn .plb-lbl{position:absolute;top:50%;left:calc(100% - 5px);display:grid;grid-template-columns:0fr;align-items:center;min-height:30px;padding:0;opacity:0;color:var(--t0);background:var(--card);border:1px solid transparent;border-radius:var(--radius-s);box-shadow:none;transform:translate(-8px,-50%);pointer-events:none;transition:grid-template-columns var(--dur-3) var(--ease-entrance),transform var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard),padding var(--dur-3) var(--ease-entrance),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
 .plb-icobtn .plb-lbl-i{overflow:hidden;min-width:0;white-space:nowrap}
-.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{grid-template-columns:1fr;opacity:1;margin-left:7px;transform:translateX(0)}
-@media(prefers-reduced-motion:reduce){.plb-icobtn .plb-lbl{transform:none;transition:opacity var(--dur-2) var(--ease-standard)}}
+.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{grid-template-columns:1fr;padding:0 9px;opacity:1;border-color:var(--border);box-shadow:var(--shadow-s);transform:translate(0,-50%)}
+.plb-icobtn.btn-accent .plb-lbl{color:var(--accent-fg);background:var(--brand)}
+.plb-toolbar-sep+.plb-menuwrap .plb-icobtn .plb-lbl{right:calc(100% - 5px);left:auto;transform:translate(8px,-50%)}
+.plb-toolbar-sep+.plb-menuwrap .plb-icobtn:hover .plb-lbl,.plb-toolbar-sep+.plb-menuwrap .plb-icobtn:focus-visible .plb-lbl,.plb-toolbar-sep+.plb-menuwrap .plb-icobtn[aria-expanded="true"] .plb-lbl{transform:translate(0,-50%)}
 
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
 .plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
@@ -6005,10 +6052,42 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-add-dot{display:flex;align-items:center;justify-content:center;width:40px;height:40px;color:inherit;background:var(--bg-2);border:1px dashed var(--border);border-radius:999px;transition:all var(--t)}
 .plb-add:hover .plb-add-dot{background:var(--card);border-style:solid}
 /* ── Global adjust bar ── */
-.plb-adjust{position:sticky;bottom:0;z-index:30;display:flex;align-items:center;gap:12px clamp(12px,2.5vw,28px);flex-wrap:wrap;padding:12px clamp(16px,3vw,28px);background:var(--bg-0);border-top:1px solid var(--border)}
-.plb-adjust-field{display:flex;align-items:center;gap:10px;flex:1 1 180px;min-width:170px}
-.plb-adjust-field .snapv{flex:1;min-width:0}
-.plb-adjust-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);flex-shrink:0}
+.plb-adjust{position:sticky;bottom:0;z-index:30;display:flex;align-items:center;gap:12px clamp(12px,2.5vw,28px);flex-wrap:wrap;padding:12px var(--page-inline);background:var(--bg-0);border-top:1px solid var(--border)}
+/* EQUAL TRACKS (the "tone and temperature sliders are a different size" bug).
+   The four fields share ONE grid and each field is display:contents, so the
+   grid's real children are label,slider,label,slider… Each label column is
+   `auto` (it takes exactly its own text — "Hue" stays narrow, "Temperature"
+   stays wide) and each slider column is `minmax(0,1fr)`. Free space is split
+   equally between the fr columns, so every TRACK is the same length however
+   long its label is. The old layout gave each field an equal FLEX width and
+   let the label eat into it from the inside, which is why a 24px label left a
+   205px track and an 86px label left a 143px one.
+   minmax(0,…) not 1fr: a bare 1fr floors at the content's min-width, which
+   would let one field's readout make its column wider than its siblings. */
+.plb-adjust-fields{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,auto minmax(0,1fr));align-items:center;gap:12px 10px}
+.plb-adjust-field{display:contents}
+.plb-adjust-field .snapv{min-width:0}
+.plb-adjust-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
+/* The label↔track gap is the grid gap; the wider gap BETWEEN pairs is this
+   margin, which lands inside the (auto) label column and so never eats into a
+   track. Only fields that are not first in their ROW get it, hence the
+   per-breakpoint reset — the row length changes with the column count. */
+.plb-adjust-field:not(:first-child) .plb-adjust-label{margin-left:clamp(8px,1.6vw,20px)}
+/* Fixed readout width: "0°" and "-180°" are different widths, and a readout
+   that grows would shorten its own track. Fixing it keeps all four equal at
+   every value, not just at rest. */
+.plb-adjust .snapv-value,.plb-adjust .snapv-input{flex:0 0 56px;width:56px;min-width:0}
+/* Two pairs per row, then one, so the tracks never squeeze to a stub. Tracks
+   stay equal across rows — every fr column in the grid gets the same width. */
+@media(max-width:1180px){
+  .plb-adjust-fields{grid-template-columns:repeat(2,auto minmax(0,1fr))}
+  .plb-adjust-field:not(:first-child) .plb-adjust-label{margin-left:0}
+  .plb-adjust-field:nth-child(even) .plb-adjust-label{margin-left:clamp(8px,1.6vw,20px)}
+}
+@media(max-width:560px){
+  .plb-adjust-fields{grid-template-columns:auto minmax(0,1fr)}
+  .plb-adjust-field .plb-adjust-label{margin-left:0}
+}
 .plb-copycss{margin-left:auto;white-space:nowrap}
 /* Mid-band (tablet-ish): the toolbar stays one row, but the action group holds a
    fixed ~885px of controls that won't shrink, so between the mobile stack (≤768)
@@ -6060,7 +6139,8 @@ button.plb-varrow:hover{background:var(--bg-2)}
   /* Touch has no hover, so pin every toolbar-icon label open (un-clamp the
      desktop max-width:0) — the ribbon is horizontally swipeable, so labels
      always showing beside their icon is fine here. */
-  .plb-icobtn .plb-lbl{grid-template-columns:1fr;opacity:1;margin-left:7px;transform:none;transition:none;font-size:inherit;font-weight:inherit;color:inherit;pointer-events:auto}
+  .plb-icobtn{width:auto;min-width:0;padding-inline:12px;gap:0}
+  .plb-icobtn .plb-lbl{position:static;grid-template-columns:1fr;min-height:0;margin-left:7px;padding:0;opacity:1;transform:none;transition:none;font-size:inherit;font-weight:inherit;color:inherit;background:transparent;border:0;border-radius:0;box-shadow:none;pointer-events:auto}
   .plb-icobtn .plb-lbl-i{overflow:visible}
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
@@ -6075,6 +6155,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-add{flex-direction:row;flex-basis:52px;border-left:none;border-top:1px dashed var(--border)}
   .plb-add:hover{flex-basis:52px}
   .plb-modal-body--split{grid-template-columns:1fr}
+  .plb-preview-grid{grid-template-columns:1fr}
   .plb-modal-head{flex-wrap:wrap}
   .plb-modal-head .plb-pop-title{flex:1 1 auto}
   .plb-modal-tabs{order:3;flex:1 1 100%;justify-content:center}
@@ -6082,6 +6163,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-pvb-head{font-size:24px}
   .plb-pvg-title{font-size:36px}
   .plb-tintpop,.plb-picker{left:12px;right:12px;width:auto;transform:none;bottom:auto;top:calc(100% + 4px);z-index:46}
+  .plb-swappop{top:calc(100% + 4px)}
   .plb-copycss{margin-left:0;width:100%}
 }
 @keyframes plb-sheet-up{from{transform:translateY(100%)}to{transform:none}}
