@@ -5261,6 +5261,7 @@ html.lenis,html.lenis body{height:auto}
   .hw-pal{height:126px}
   .hw-icon-split,.hw-img-split,.hw-type-split{grid-template-columns:1fr}
   .hw-type-side .hw-fields{flex-direction:column}
+  .hw-type-side .hw-field-grow{flex:none}
   .hw-fields{gap:10px}
   .hw-field,.hw-select,.hw-input{width:100%}
   .hw-input-hex{width:auto;flex:1 1 auto;min-width:0}
