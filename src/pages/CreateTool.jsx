@@ -43,6 +43,15 @@ const ContrastChecker = lazy(() => import('./ContrastChecker'))
 const FileConverter = lazy(() => import('./FileConverter'))
 const RatioCalculator = lazy(() => import('./RatioCalculator'))
 
+// Typography — three standalone tools on one Google Fonts catalogue. Gallery
+// browses it, Font Pair suggests and previews combinations, Type Scale turns a
+// base size and a ratio into shippable tokens. They hand state to each other
+// through the versioned in-memory slots in utils/typeHandoff.js, so moving
+// between them never opens an empty tool.
+const FontGallery = lazy(() => import('./FontGallery'))
+const FontMatcher = lazy(() => import('./FontMatcher'))
+const TypeScale = lazy(() => import('./TypeScale'))
+
 // Route → the component that is actually built. A Create route absent from this
 // map still renders the 🤫 state even if its group is flagged live — a safe
 // fallback that can never mount a half-finished screen.
@@ -56,6 +65,9 @@ const LIVE_TOOLS = {
   '/emoji': IconEmojiLibrary,
   '/file-converter': FileConverter,
   '/ratio': RatioCalculator,
+  '/fontgallery': FontGallery,
+  '/fontpairs': FontMatcher,
+  '/typescale': TypeScale,
 }
 
 // Match toolTree's own path handling (lowercase, strip query/hash, drop trailing

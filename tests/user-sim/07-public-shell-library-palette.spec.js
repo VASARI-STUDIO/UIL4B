@@ -99,7 +99,10 @@ test.describe('public UI quality release', () => {
     )
     expect(contained, 'Compact footer content should not overflow its mobile column').toBe(true)
     await expect(footer.getByRole('link', { name: 'Plans', exact: true })).toBeVisible()
-    await expect(footer.getByLabel('Typography — coming soon')).toBeVisible()
+    // Typography went live: the footer now links it for real, and straight to
+    // the Font Gallery rather than the redirect-only /typography category home.
+    await expect(footer.getByRole('link', { name: 'Typography', exact: true })).toBeVisible()
+    await expect(footer.locator('a[href="/fontgallery"]')).toHaveCount(1)
     await expect(footer.locator('a[href="/typography"]')).toHaveCount(0)
   })
 

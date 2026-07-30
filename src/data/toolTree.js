@@ -51,14 +51,14 @@ export const CREATE_GROUPS = [
     hue: 'type',
     home: '/typography',
     desc: 'Pair fonts and build scales that hold up.',
-    soon: true,
+    soon: false,
     // ⚠️ A tool is only `soon: false` when its route is in CreateTool's
     // LIVE_TOOLS map — otherwise the route renders the 🤫 workshop state and
     // the nav must dim it. Keep the two in sync.
     tools: [
-      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', soon: true },
-      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', soon: true },
-      { id: 'type-scale', label: 'Type Scale', route: '/typescale', soon: true },
+      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', soon: false },
+      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', soon: false },
+      { id: 'type-scale', label: 'Type Scale', route: '/typescale', soon: false },
     ],
   },
   {
@@ -195,9 +195,9 @@ const CREATE_MENU = [
   [{
     label: 'Type & UI',
     tools: [
-      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', icon: 'type', hue: 'type', soon: true },
-      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', icon: 'font-pair', hue: 'type', soon: true },
-      { id: 'type-scale', label: 'Type Scale', route: '/typescale', icon: 'typography', hue: 'type', soon: true },
+      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', icon: 'type', hue: 'type', soon: false },
+      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', icon: 'font-pair', hue: 'type', soon: false },
+      { id: 'type-scale', label: 'Type Scale', route: '/typescale', icon: 'typography', hue: 'type', soon: false },
       { id: 'component-designer', label: 'Component Designer', route: '/ui-builder', icon: 'component', hue: 'component', soon: true },
       { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', icon: 'box-shadow', hue: 'component', soon: true },
       { id: 'auto-builder', label: 'Auto-Builder', route: '/auto-builder', icon: 'auto', hue: 'component', soon: true },
