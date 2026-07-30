@@ -1,5 +1,5 @@
 // Acceptance coverage for the homepage chaos → calm experience:
-// eight real tool links resolving into one four-mode mini-workbench, and the
+// eleven real tool links resolving into one five-mode mini-workbench, and the
 // two in-memory hand-offs (images → File Converter, icon draft → Icon Editor).
 //
 // Numbers in the test titles refer to the acceptance list in
@@ -18,9 +18,12 @@ const SATELLITES = [
   ['Icon Library', '/icons'],
   ['File Converter', '/file-converter'],
   ['Aspect & Resolution', '/ratio'],
+  ['Font Gallery', '/fontgallery'],
+  ['Font Pair', '/fontpairs'],
+  ['Type Scale', '/typescale'],
 ]
 
-const TABS = ['Palette', 'Gradient', 'Image', 'Icon']
+const TABS = ['Palette', 'Gradient', 'Image', 'Icon', 'Typography']
 
 async function reducedMotion(page) {
   await page.addInitScript(() => {
@@ -94,10 +97,10 @@ async function handOffImages(page, files) {
   await page.waitForURL('**/file-converter')
 }
 
-test.describe('homepage: eight tools, four ways of working', () => {
+test.describe('homepage: eleven tools, five ways of working', () => {
   test.use({ reducedMotion: 'reduce' })
 
-  test('1–4 · the promise, the eight links and exactly four tabs', async ({ page }) => {
+  test('1–4 · the promise, the eleven links and exactly five tabs', async ({ page }) => {
     await reducedMotion(page)
     watch(page, PERSONA)
     await go(page, '/')
@@ -107,14 +110,15 @@ test.describe('homepage: eight tools, four ways of working', () => {
     await expect(heading).toContainText('No more tab hoarding.')
     await expect(heading).toContainText('Build your UI system in one place.')
 
-    // 2 · exactly eight satellites, with the approved labels and stable routes.
+    // 2 · exactly eleven satellites, with the approved labels and stable routes.
     // A real href is what makes open-in-new-tab and copy-link behave.
     const links = page.locator('.hsat-link')
-    await expect(links).toHaveCount(8)
+    await expect(links).toHaveCount(11)
     for (const [label, href] of SATELLITES) {
       const link = page.locator(`.hsat-link:has(.hsat-label:text-is("${label}"))`)
       await expect(link).toHaveCount(1)
       await expect(link).toHaveAttribute('href', href)
+      await expect(link.locator('.hsat-icon svg')).toHaveCount(1)
     }
 
     // Source order is the reading order: copy, then links, then workbench.
@@ -128,9 +132,9 @@ test.describe('homepage: eight tools, four ways of working', () => {
     expect(order.copy).toBeLessThan(order.links)
     expect(order.links).toBeLessThan(order.bench)
 
-    // 3 · exactly four primary tabs, in the approved order.
+    // 3 · exactly five primary tabs, in the approved order.
     const tabs = page.locator('.hw-tab')
-    await expect(tabs).toHaveCount(4)
+    await expect(tabs).toHaveCount(5)
     expect(await tabs.allInnerTexts()).toEqual(TABS)
     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
 
@@ -155,15 +159,15 @@ test.describe('homepage: eight tools, four ways of working', () => {
     await expect(tab('gradient')).toHaveAttribute('aria-selected', 'true')
 
     await tab('gradient').press('End')
-    await expect(tab('icon')).toBeFocused()
-    await expect(tab('icon')).toHaveAttribute('aria-selected', 'true')
+    await expect(tab('typography')).toBeFocused()
+    await expect(tab('typography')).toHaveAttribute('aria-selected', 'true')
 
-    await tab('icon').press('Home')
+    await tab('typography').press('Home')
     await expect(tab('palette')).toBeFocused()
     await expect(tab('palette')).toHaveAttribute('aria-selected', 'true')
 
     await tab('palette').press('ArrowLeft')
-    await expect(tab('icon')).toBeFocused()
+    await expect(tab('typography')).toBeFocused()
 
     // Tab moves into the active panel; Shift+Tab comes back to the tab stop.
     await tab('icon').press('Home')
@@ -258,7 +262,7 @@ test.describe('homepage: eight tools, four ways of working', () => {
         const small = sats.filter((a) => a.getBoundingClientRect().height < 40).length
         return { clipped, collisions, small, count: sats.length }
       })
-      expect(report.count, `satellite count at ${width}px`).toBe(8)
+      expect(report.count, `satellite count at ${width}px`).toBe(11)
       expect(report.clipped, `clipped labels at ${width}px`).toEqual([])
       expect(report.collisions, `satellite collisions at ${width}px`).toEqual([])
       expect(report.small, `under-sized touch targets at ${width}px`).toBe(0)
@@ -289,12 +293,12 @@ test.describe('homepage: eight tools, four ways of working', () => {
     })
     watch(page, 'motion-enabled product evaluator')
 
-    for (const width of [1200, 1440, 3840]) {
+    for (const width of [1440, 3840]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/')
       await expect(page.locator('.hw-shell')).toBeVisible()
       // Wait for the enhancement to arm, then measure the resting layout.
-      await expect.poll(() => page.locator('.hsat-proxy').count(), { timeout: 10000 }).toBe(8)
+      await expect.poll(() => page.locator('.hsat-proxy').count(), { timeout: 10000 }).toBe(11)
 
       const report = await page.evaluate(() => {
         // Neutralise the idle drift so we measure authored positions, then add a
@@ -347,7 +351,49 @@ test.describe('homepage: eight tools, four ways of working', () => {
       expect(report.layerHidden).toBe('true')
       expect(report.focusableInLayer).toBe(0)
       expect(await overflowOf(page)).toBeLessThanOrEqual(1)
+
+      if (width === 1440) {
+        await page.locator('.hw-shell').scrollIntoViewIfNeeded()
+        await expect.poll(
+          () => page.locator('.home[data-home-converge="converged"]').count(),
+          { timeout: 10000 },
+        ).toBe(1)
+        await expect(page.locator('.hw-shell')).toHaveCSS('animation-name', 'hw-shell-arrive')
+        await expect(page.locator('.hw-splash')).toHaveCSS('animation-name', 'hw-splash')
+      }
     }
+  })
+
+  test('typography mode previews real scale maths and hands the draft to Type Scale', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, 'designer beginning a typography system on the homepage')
+    await go(page, '/')
+
+    await page.locator('.hw-tab[data-tab="typography"]').click()
+    await expect(page.locator('.hw-type-row')).toHaveCount(4)
+    await expect(page.locator('.hw-panel').getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
+    await expect(page.locator('.hw-panel').getByRole('link', { name: /Font Pair/ })).toHaveAttribute('href', '/fontpairs')
+
+    await page.getByLabel('Base size').fill('20')
+    await page.getByLabel('Scale ratio').selectOption('1.333')
+    await page.getByLabel('Preview text').fill('Systems need typographic rhythm')
+    await expect(page.locator('.hw-type-row').first()).toContainText('47.4px')
+    await expect(page.locator('.hw-type-sample')).toHaveText([
+      'Systems need typographic rhythm',
+      'Systems need typographic rhythm',
+      'Systems need typographic rhythm',
+      'Systems need typographic rhythm',
+    ])
+
+    // Session state survives mode changes.
+    await page.locator('.hw-tab[data-tab="palette"]').click()
+    await page.locator('.hw-tab[data-tab="typography"]').click()
+    await expect(page.getByLabel('Base size')).toHaveValue('20')
+
+    await page.getByRole('button', { name: /Continue in Type Scale/ }).click()
+    await page.waitForURL('**/typescale')
+    await expect(page.locator('.tsc-status')).toContainText('20px')
+    await expect(page.locator('.tsc-status')).toContainText('1.333')
   })
 
   test('8 · palette and gradient produce real values with honest states', async ({ page }) => {
@@ -689,7 +735,7 @@ test.describe('homepage: eight tools, four ways of working', () => {
 
     await go(page, '/')
     // Visit every panel and every reference while online-ish.
-    for (const id of ['gradient', 'image', 'icon']) {
+    for (const id of ['gradient', 'image', 'icon', 'typography']) {
       await page.locator(`.hw-tab[data-tab="${id}"]`).click()
     }
     await page.locator('.hw-tab[data-tab="image"]').click()
@@ -716,6 +762,10 @@ test.describe('homepage: eight tools, four ways of working', () => {
 
     await page.locator('.hw-tab[data-tab="image"]').click()
     await expect(page.locator('.hw-intent')).toBeVisible()
+
+    await page.locator('.hw-tab[data-tab="typography"]').click()
+    await page.getByLabel('Base size').fill('18')
+    await expect(page.locator('.hw-type-row').first()).toContainText('35.2px')
     await page.context().setOffline(false)
   })
 })

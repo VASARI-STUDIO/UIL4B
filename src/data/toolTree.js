@@ -103,21 +103,23 @@ export const CREATE_GROUPS = [
 ]
 
 // ── Homepage: two deliberately separate models ──────────────────────────────
-// The hero shows EIGHT live tools; the mini-workbench below it has FOUR task
+// The hero shows ELEVEN live tools; the mini-workbench below it has FIVE task
 // modes. They are not one-to-one — Semantic, Tint and Contrast stay direct tool
-// links, and File Converter and Aspect & Resolution both belong to the Image
-// mode. Keeping the two models apart is the point of the section: it is what
-// makes "eight tools, four ways of working" legible instead of decorative.
+// links, both media tools belong to Image, and the three typography tools resolve
+// into one Typography mode. Keeping the two models apart is the point of the
+// section: it makes the scattered-to-system relationship legible instead of
+// decorative.
 //
 // `family` is the workbench mode a satellite belongs to (used for the hover /
 // focus hint and for the decorative convergence). It never selects a tab and
 // never changes an href.
 
 export const HOME_WORKBENCH_TABS = [
-  { id: 'palette', label: 'Palette', hue: 'colour' },
-  { id: 'gradient', label: 'Gradient', hue: 'colour' },
-  { id: 'image', label: 'Image', hue: 'imagery' },
-  { id: 'icon', label: 'Icon', hue: 'icons' },
+  { id: 'palette', label: 'Palette', hue: 'colour', icon: 'palette' },
+  { id: 'gradient', label: 'Gradient', hue: 'colour', icon: 'gradient' },
+  { id: 'image', label: 'Image', hue: 'imagery', icon: 'imagery' },
+  { id: 'icon', label: 'Icon', hue: 'icons', icon: 'icons' },
+  { id: 'typography', label: 'Typography', hue: 'type', icon: 'typography' },
 ]
 
 // Source order IS the reading order (and the ≤768px list order). The authored,
@@ -126,14 +128,17 @@ export const HOME_WORKBENCH_TABS = [
 // `zone` documents the intended wide-screen placement so the CSS and this table
 // can be checked against each other.
 export const HOME_SATELLITES = [
-  { id: 'palette', label: 'Palette', route: '/color/palette', family: 'palette', hue: 'colour', zone: 'upper left' },
-  { id: 'semantic', label: 'Semantic', route: '/color/semantic', family: 'palette', hue: 'colour', zone: 'left' },
-  { id: 'tint', label: 'Tint', route: '/color/tint', family: 'palette', hue: 'colour', zone: 'lower left' },
-  { id: 'gradient', label: 'Gradient Generator', route: '/color/gradient', family: 'gradient', hue: 'colour', zone: 'upper right' },
-  { id: 'contrast', label: 'Contrast', route: '/color/contrast', family: 'palette', hue: 'colour', zone: 'right' },
-  { id: 'icons', label: 'Icon Library', route: '/icons', family: 'icon', hue: 'icons', zone: 'outer right' },
-  { id: 'file-converter', label: 'File Converter', route: '/file-converter', family: 'image', hue: 'imagery', zone: 'lower right' },
-  { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', family: 'image', hue: 'imagery', zone: 'lower outer edge' },
+  { id: 'palette', label: 'Palette', route: '/color/palette', family: 'palette', hue: 'colour', icon: 'palette', zone: 'upper left' },
+  { id: 'semantic', label: 'Semantic', route: '/color/semantic', family: 'palette', hue: 'colour', icon: 'semantic', zone: 'left' },
+  { id: 'tint', label: 'Tint', route: '/color/tint', family: 'palette', hue: 'colour', icon: 'tint', zone: 'lower left' },
+  { id: 'gradient', label: 'Gradient Generator', route: '/color/gradient', family: 'gradient', hue: 'colour', icon: 'gradient', zone: 'upper right' },
+  { id: 'contrast', label: 'Contrast', route: '/color/contrast', family: 'palette', hue: 'colour', icon: 'contrast', zone: 'right' },
+  { id: 'icons', label: 'Icon Library', route: '/icons', family: 'icon', hue: 'icons', icon: 'icons', zone: 'outer right' },
+  { id: 'file-converter', label: 'File Converter', route: '/file-converter', family: 'image', hue: 'imagery', icon: 'imagery', zone: 'lower right' },
+  { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', family: 'image', hue: 'imagery', icon: 'ratio', zone: 'lower outer edge' },
+  { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', family: 'typography', hue: 'type', icon: 'type', zone: 'upper inner left' },
+  { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', family: 'typography', hue: 'type', icon: 'font-pair', zone: 'upper inner right' },
+  { id: 'type-scale', label: 'Type Scale', route: '/typescale', family: 'typography', hue: 'type', icon: 'typography', zone: 'upper centre' },
 ]
 
 // Family id → the workbench tab it resolves into. Used for the satellite's

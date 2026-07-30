@@ -5041,7 +5041,10 @@ html.lenis,html.lenis body{height:auto}
 .hsat-item:nth-child(5){right:1%;top:38%}     /* Contrast · right */
 .hsat-item:nth-child(6){right:5%;top:64%}     /* Icon Library · outer right */
 .hsat-item:nth-child(7){right:16%;top:88%}    /* File Converter · lower right */
-.hsat-item:nth-child(8){left:15%;top:90%}     /* Aspect & Resolution · lower outer edge */
+.hsat-item:nth-child(8){left:0;top:90%}       /* Aspect & Resolution · lower outer edge */
+.hsat-item:nth-child(9){left:19%;top:1%}      /* Font Gallery · upper inner left */
+.hsat-item:nth-child(10){right:25%;top:1%}    /* Font Pair · upper inner right */
+.hsat-item:nth-child(11){left:44%;top:1%}     /* Type Scale · upper centre */
 /* Small authored tilts — enough irregularity to read as real breadth, never
    enough to hurt legibility or the hit area. */
 .hsat-item:nth-child(1) .hsat-link{transform:rotate(-2.5deg)}
@@ -5052,9 +5055,16 @@ html.lenis,html.lenis body{height:auto}
 .hsat-item:nth-child(6) .hsat-link{transform:rotate(1.5deg)}
 .hsat-item:nth-child(7) .hsat-link{transform:rotate(-2.25deg)}
 .hsat-item:nth-child(8) .hsat-link{transform:rotate(1.75deg)}
-.hsat-link{display:flex;flex-direction:column;gap:1px;min-height:44px;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-l);background:color-mix(in srgb,var(--bg-1) 97%,transparent);box-shadow:var(--shadow-s);text-decoration:none;backdrop-filter:blur(10px);transition:border-color var(--t),background var(--t),box-shadow var(--t)}
+.hsat-item:nth-child(9) .hsat-link{transform:rotate(1.5deg)}
+.hsat-item:nth-child(10) .hsat-link{transform:rotate(-1.75deg)}
+.hsat-item:nth-child(11) .hsat-link{transform:rotate(.75deg)}
+.hsat-link{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:9px;min-height:46px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-l);background:color-mix(in srgb,var(--bg-1) 97%,transparent);box-shadow:var(--shadow-s);text-decoration:none;backdrop-filter:blur(10px);transition:border-color var(--t),background var(--t),box-shadow var(--t)}
 .hsat-link:hover{border-color:color-mix(in srgb,var(--hue,var(--accent)) 50%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 8%,var(--bg-1));box-shadow:var(--shadow-m);text-decoration:none}
 .hsat-link:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:3px}
+.hsat-icon{display:grid;place-items:center;width:28px;height:28px;border:1px solid color-mix(in srgb,var(--hue,var(--accent)) 28%,var(--border));border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 8%,var(--bg-1));color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));transition:background var(--t),border-color var(--t)}
+.hsat-icon svg{width:17px;height:17px}
+.hsat-link:hover .hsat-icon,.hsat-link:focus-visible .hsat-icon{border-color:color-mix(in srgb,var(--hue,var(--accent)) 48%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 15%,var(--bg-1))}
+.hsat-copy{display:flex;min-width:0;flex-direction:column;gap:1px}
 .hsat-label{font-size:var(--fs-caption);font-weight:640;line-height:1.3;color:var(--t0);white-space:nowrap}
 .hsat-family{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.08em;text-transform:uppercase;line-height:1.3;color:var(--t2);white-space:nowrap}
 .hsat-family::before{content:"→ "}
@@ -5064,7 +5074,8 @@ html.lenis,html.lenis body{height:auto}
    loaded on a wide screen, and removed on teardown — nothing here is ever a
    control, and nothing the visitor needs waits on it. */
 .hsat-proxy-layer{position:absolute;inset:0;z-index:5;pointer-events:none}
-.hsat-proxy{position:absolute;display:flex;align-items:center;justify-content:center;padding:0 10px;border-radius:var(--radius-l);border:1px solid color-mix(in srgb,var(--hue,var(--accent)) 45%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 16%,var(--bg-1));color:var(--hue,var(--accent));font-family:var(--font);font-size:var(--fs-micro);font-weight:650;white-space:nowrap;opacity:0;will-change:transform,opacity}
+.hsat-proxy{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 9px;border-radius:var(--radius-l);border:1px solid color-mix(in srgb,var(--hue,var(--accent)) 45%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 16%,var(--bg-1));color:var(--hue,var(--accent));font-family:var(--font);font-size:var(--fs-micro);font-weight:650;white-space:nowrap;opacity:0;will-change:transform,opacity}
+.hsat-proxy svg{width:15px;height:15px;flex:0 0 auto}
 .home-hero-kicker{display:inline-flex;align-items:center;gap:9px;margin:0 auto var(--s-5);padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-1) 88%,transparent);box-shadow:var(--shadow-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:var(--t1);backdrop-filter:blur(10px)}
 .home-hero-kicker-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 12%,transparent)}
 .home-hero-h1{font-size:var(--fs-display);font-weight:720;letter-spacing:-.044em;line-height:.98;color:var(--t0);text-wrap:balance}
@@ -5104,21 +5115,36 @@ html.lenis,html.lenis body{height:auto}
 .hw-head .home-eyebrow{justify-content:center}
 .hw-head .home-h2{font-size:var(--fs-h2)}
 .hw-head .home-lede{margin-inline:auto;font-size:var(--fs-body)}
-.hw-shell{position:relative;max-width:920px;margin:0 auto;border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1);box-shadow:var(--shadow-m);overflow:hidden}
+.hw-shell{position:relative;max-width:920px;margin:0 auto;scroll-margin-top:calc(var(--nav-clear) + var(--s-2));border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1);box-shadow:var(--shadow-m);overflow:hidden}
 /* The "arrival" beat: a single decorative pulse as the last proxy lands. It is
    a ::after on an already-visible shell, so it can never gate the workbench. */
 .hw-shell::after{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;opacity:0}
+.home[data-home-converge="converged"] .hw-shell{animation:hw-shell-arrive var(--dur-6) var(--ease-entrance) 1}
 .home[data-home-converge="converged"] .hw-shell::after{animation:hw-arrive var(--dur-6) var(--ease-entrance) 1}
+.home[data-home-converge="converged"] .hw-splash{animation:hw-splash var(--dur-6) var(--ease-entrance) 1}
+@keyframes hw-shell-arrive{
+  from{opacity:.72;transform:translateY(14px) scale(.985)}
+  to{opacity:1;transform:none}
+}
 @keyframes hw-arrive{
   from{opacity:1;box-shadow:0 0 0 0 color-mix(in srgb,var(--hue,var(--accent)) 55%,transparent)}
   to{opacity:0;box-shadow:0 0 0 22px color-mix(in srgb,var(--hue,var(--accent)) 0%,transparent)}
+}
+.hw-splash{position:absolute;z-index:4;left:50%;top:52px;width:30px;height:30px;border:1px solid var(--hue,var(--accent));border-radius:50%;opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.2)}
+.hw-splash::before,.hw-splash::after{content:"";position:absolute;inset:50% auto auto 50%;width:46px;height:1px;background:var(--hue,var(--accent));transform:translate(-50%,-50%)}
+.hw-splash::after{transform:translate(-50%,-50%) rotate(90deg)}
+@keyframes hw-splash{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
+  28%{opacity:.7}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}
 }
 
 /* Tabs — the active one lifts onto the panel surface, so selection is carried
    by shape and border as well as colour. */
 .hw-tabs{display:flex;gap:2px;padding:8px 8px 0;background:var(--bg-2);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
 .hw-tabs::-webkit-scrollbar{display:none}
-.hw-tab{position:relative;flex:0 0 auto;min-width:104px;height:44px;padding:0 14px;border:1px solid transparent;border-bottom:none;border-radius:var(--radius-l) var(--radius-l) 0 0;background:none;color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;white-space:nowrap;transition:color var(--t),background var(--t)}
+.hw-tab{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:1 1 0;min-width:118px;height:44px;padding:0 12px;border:1px solid transparent;border-bottom:none;border-radius:var(--radius-l) var(--radius-l) 0 0;background:none;color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;white-space:nowrap;transition:color var(--t),background var(--t)}
+.hw-tab-icon{width:16px;height:16px;flex:0 0 auto}
 .hw-tab:hover{color:var(--t0);background:color-mix(in srgb,var(--bg-1) 62%,transparent)}
 .hw-tab:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:-3px}
 .hw-tab[data-active="true"]{background:var(--bg-1);border-color:var(--border);color:var(--t0)}
@@ -5209,10 +5235,32 @@ html.lenis,html.lenis body{height:auto}
 .hw-icon-cell:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:2px}
 .hw-icon-cell[aria-pressed="true"]{color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));border-color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 10%,var(--bg-1));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--hue,var(--accent)) 40%,transparent)}
 
+/* 5 · Typography */
+.hw-type-split{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(270px,.82fr);gap:18px;align-items:start}
+.hw-type-preview{min-width:0;padding:16px 18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0);overflow:hidden}
+.hw-type-row{display:flex;min-width:0;flex-direction:column;gap:3px;padding:10px 0;border-top:1px solid var(--border)}
+.hw-type-row:first-child{padding-top:0;border-top:0}
+.hw-type-row:last-child{padding-bottom:0}
+.hw-type-meta{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+.hw-type-sample{display:block;max-width:100%;font-size:var(--hw-type-size);font-weight:650;line-height:1.08;letter-spacing:-.025em;color:var(--t0);overflow-wrap:anywhere}
+.hw-type-side{display:flex;min-width:0;flex-direction:column;gap:12px}
+.hw-type-side .hw-fields{flex-wrap:nowrap}
+.hw-type-tools{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.hw-type-tool{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:54px;padding:8px 11px;border:0;border-top:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--t),color var(--t)}
+.hw-type-tool:first-child{border-top:0}
+.hw-type-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
+.hw-type-tool:focus-visible{position:relative;z-index:1;outline:2px solid var(--hue,var(--accent));outline-offset:-2px}
+.hw-type-tool:disabled{opacity:.55;cursor:not-allowed}
+.hw-type-tool svg{width:18px;height:18px;color:var(--hue,var(--accent))}
+.hw-type-tool>span:nth-child(2){display:flex;min-width:0;flex-direction:column}
+.hw-type-tool strong{font-size:var(--fs-body-s);font-weight:650;color:var(--t0)}
+.hw-type-tool small{font-size:var(--fs-caption);line-height:1.35;color:var(--t2)}
+
 @media (max-width:640px){
   .hw-panel{padding:16px}
   .hw-pal{height:126px}
-  .hw-icon-split,.hw-img-split{grid-template-columns:1fr}
+  .hw-icon-split,.hw-img-split,.hw-type-split{grid-template-columns:1fr}
+  .hw-type-side .hw-fields{flex-direction:column}
   .hw-fields{gap:10px}
   .hw-field,.hw-select,.hw-input{width:100%}
   .hw-input-hex{width:auto;flex:1 1 auto;min-width:0}
@@ -5332,14 +5380,14 @@ html.lenis,html.lenis body{height:auto}
   .surface-grid{grid-template-columns:repeat(2,1fr)}
 }
 /* ── Satellites: the calm static arrangement ─────────────────────────────────
-   At or below 1180px, and whenever motion is reduced, the hero copy no longer
+   At or below 1280px, and whenever motion is reduced, the hero copy no longer
    has a collision-free centre at every zoom and font size — so the field becomes
    a plain, source-ordered grid directly under the copy rather than a squeezed
    desktop composition. The `!important` transform resets matter: an orientation
    change or a resize past the breakpoint must never leave a stale GSAP transform
    behind. Keep this breakpoint in step with the matchMedia guard in
    useHomeMotion.js — the authored field and its proxies belong together. */
-@media(max-width:1180px){
+@media(max-width:1280px){
   .hsat{position:static;inset:auto;margin:var(--s-6) auto 0;padding:0;pointer-events:auto}
   .home-hero{min-height:auto}
   .home-hero-core{margin-top:0}
@@ -5359,7 +5407,9 @@ html.lenis,html.lenis body{height:auto}
 :where(html[data-reduced-motion="true"]) .hsat-item{position:static;transform:none!important}
 :where(html[data-reduced-motion="true"]) .hsat-link{height:100%;transform:none!important;backdrop-filter:none}
 :where(html[data-reduced-motion="true"]) .hsat-proxy-layer{display:none}
-:where(html[data-reduced-motion="true"]) .hw-shell::after{animation:none!important}
+:where(html[data-reduced-motion="true"]) .hw-shell,
+:where(html[data-reduced-motion="true"]) .hw-shell::after,
+:where(html[data-reduced-motion="true"]) .hw-splash{animation:none!important}
 @media(prefers-reduced-motion:reduce){
   :where(html:not([data-reduced-motion="false"])) .home-hero{min-height:auto}
   :where(html:not([data-reduced-motion="false"])) .home-hero-core{margin-top:0}
@@ -5368,7 +5418,9 @@ html.lenis,html.lenis body{height:auto}
   :where(html:not([data-reduced-motion="false"])) .hsat-item{position:static;transform:none!important}
   :where(html:not([data-reduced-motion="false"])) .hsat-link{height:100%;transform:none!important;backdrop-filter:none}
   :where(html:not([data-reduced-motion="false"])) .hsat-proxy-layer{display:none}
-  :where(html:not([data-reduced-motion="false"])) .hw-shell::after{animation:none!important}
+  :where(html:not([data-reduced-motion="false"])) .hw-shell,
+  :where(html:not([data-reduced-motion="false"])) .hw-shell::after,
+  :where(html:not([data-reduced-motion="false"])) .hw-splash{animation:none!important}
 }
 @media(max-width:768px){
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
