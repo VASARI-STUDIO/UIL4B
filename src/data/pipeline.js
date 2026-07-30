@@ -19,7 +19,7 @@ export const APP_CONDITION = [
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
   { id: 'design-system', label: 'Design system', value: 'v2.7 shipped', status: 'good', detail: 'Shared shell, controls, CTA and footer patterns are live' },
   { id: 'ci', label: 'CI gates', value: 'Green on every PR', status: 'good', detail: 'Lint, build, unit, Firestore rules and the Playwright acceptance suite run on every pull request since #188' },
-  { id: 'phase', label: 'Current phase', value: 'V1 readiness — polish, then review', status: 'watch', detail: 'Founder-reported colour-tool defects closed (#190–#193) and the dead-code sweep shipped (#196). The readiness review is written up in docs/V1-READINESS.md and returns NO-GO: firestore.rules is hardened but still UNPUBLISHED, so paid entitlements are not server-enforced. The layout/motion/typography passes and the QA pass remain' },
+  { id: 'phase', label: 'Current phase', value: 'V1 readiness — polish, then review', status: 'watch', detail: 'Founder-reported colour-tool defects closed (#190–#193), the dead-code sweep shipped (#196), and the founder confirmed the hardened firestore.rules are published. The layout/typography passes and the final QA reconciliation remain' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -76,8 +76,8 @@ export const PIPELINE_PROCESSES = [
     area: 'Release',
     stage: 'in-progress',
     progress: 80,
-    summary: 'Security, code, SEO and analytics passes are complete and written up in docs/V1-READINESS.md; the QA responsive/theme/keyboard/contrast pass is the last one outstanding. Verdict so far is NO-GO — one hard blocker (firestore.rules hardened but UNPUBLISHED, so paid entitlements are not server-enforced) and three soft ones (analytics environment guard, per-route canonical/OG tags, upgrade-gate instrumentation).',
-    updated: '2026-07-29',
+    summary: 'Security, code, SEO and analytics passes are complete and written up in docs/V1-READINESS.md; the QA responsive/theme/keyboard/contrast pass is the last one outstanding. The founder confirmed the hardened firestore.rules are published, removing the entitlement-enforcement blocker; the readiness verdict still needs reconciliation against the remaining soft items.',
+    updated: '2026-07-31',
   },
   {
     id: 'dead-code-sweep',
@@ -112,8 +112,8 @@ export const PIPELINE_PROCESSES = [
     area: 'Billing',
     stage: 'shipped',
     progress: 100,
-    summary: 'Shipped in #184 with security review PASS. Premium Plus removed, One-off tab added and degrading honestly until a Stripe price exists. Closed a live privilege escalation (client-writable entitlement fields), refunded-entitlement re-grants and missing chargeback revocation. Owner must PUBLISH firestore.rules and configure the lifetime webhook events before creating the price.',
-    updated: '2026-07-28',
+    summary: 'Shipped in #184 with security review PASS. Premium Plus removed, One-off tab added and degrading honestly until a Stripe price exists. Closed a live privilege escalation (client-writable entitlement fields), refunded-entitlement re-grants and missing chargeback revocation. The founder confirmed firestore.rules are published; lifetime webhook events still need configuration before creating the price.',
+    updated: '2026-07-31',
   },
   {
     id: 'public-ui-premium',
