@@ -7,6 +7,12 @@ const LS_KEY = 'vs-gf-catalog'
 
 let cache = null
 let cacheTimestamp = 0
+// Where the catalog currently in `cache` actually came from. The typography
+// tools surface this verbatim, so a degraded catalog is never presented as the
+// real one: 'live' (Google or the /api/fonts proxy answered this session),
+// 'cache' (a fresh localStorage copy from an earlier session) or 'fallback'
+// (the bundled list — the tool still works, but the catalog is short and stale).
+let cacheSource = 'fallback'
 
 function transformFont(item, index) {
   const numericWeights = item.variants
@@ -34,7 +40,15 @@ function transformFont(item, index) {
 //   2. /api/fonts serverless proxy (works without any client key)
 //   3. Bundled FALLBACK_FONTS so the font tools never render empty
 // Successful fetches are cached in localStorage for a day.
-async function getRawFonts() {
+async function getRawFonts({ force = false } = {}) {
+  if (force) {
+    cache = null
+    cacheTimestamp = 0
+    cacheSource = 'fallback'
+    // A retry must genuinely re-fetch: a stale localStorage copy would answer
+    // instantly and make the Retry button look broken.
+    try { localStorage.removeItem(LS_KEY) } catch {}
+  }
   if (cache && Date.now() - cacheTimestamp < CACHE_TTL) return cache
 
   try {
@@ -42,6 +56,7 @@ async function getRawFonts() {
     if (stored && Array.isArray(stored.fonts) && stored.fonts.length && Date.now() - stored.t < CACHE_TTL) {
       cache = stored.fonts
       cacheTimestamp = stored.t
+      cacheSource = 'cache'
       return cache
     }
   } catch {}
@@ -72,6 +87,7 @@ async function getRawFonts() {
   if (fonts) {
     cache = fonts
     cacheTimestamp = Date.now()
+    cacheSource = 'live'
     try { localStorage.setItem(LS_KEY, JSON.stringify({ t: cacheTimestamp, fonts })) } catch {}
     return cache
   }
@@ -81,45 +97,25 @@ async function getRawFonts() {
   // so a transient network failure recovers quickly.
   cache = FALLBACK_FONTS
   cacheTimestamp = Date.now() - CACHE_TTL + 5 * 60 * 1000
+  cacheSource = 'fallback'
   return cache
 }
 
-export async function fetchFonts() {
-  return getRawFonts()
-}
-
-export async function searchFonts(query = '', opts = {}) {
-  const { category, sort = 'popularity', limit } = opts
-  let fonts = await getRawFonts()
-
-  if (query) {
-    const q = query.toLowerCase()
-    fonts = fonts.filter(f => f.family.toLowerCase().includes(q))
+// The catalog PLUS an honest account of where it came from — the three
+// typography tools all render this, so a degraded (bundled-fallback) catalog
+// shows a visible notice and a working Retry instead of quietly pretending the
+// whole of Google Fonts loaded. `force: true` drops both caches so the retry is
+// a real network attempt. Never rejects: the bundled list is always a valid
+// answer, and `source` is what tells the caller the difference.
+export async function fetchFontCatalog({ force = false } = {}) {
+  try {
+    const fonts = await getRawFonts({ force })
+    return { fonts, source: cacheSource }
+  } catch {
+    // getRawFonts already swallows fetch failures, so reaching here means
+    // something genuinely unexpected broke (a hostile localStorage shim, say).
+    return { fonts: FALLBACK_FONTS, source: 'fallback' }
   }
-
-  if (category) {
-    const cat = category.toLowerCase()
-    fonts = fonts.filter(f => f.category === cat)
-  }
-
-  if (sort === 'alphabetical') {
-    fonts = [...fonts].sort((a, b) => a.family.localeCompare(b.family))
-  } else if (sort === 'trending') {
-    // Trending approximation: popular fonts with many variants suggest active maintenance
-    fonts = [...fonts].sort((a, b) => {
-      const scoreA = (1 / (a.popularity + 1)) * (a.variants.length / 10)
-      const scoreB = (1 / (b.popularity + 1)) * (b.variants.length / 10)
-      return scoreB - scoreA
-    })
-  }
-
-  if (limit) fonts = fonts.slice(0, limit)
-  return fonts
-}
-
-export async function getFontCategories() {
-  const fonts = await getRawFonts()
-  return [...new Set(fonts.map(f => f.category))]
 }
 
 // family -> { link, weights:Set<number>, status:'pending'|'loaded'|'error', ready:Promise<void> }
@@ -197,13 +193,6 @@ export async function reloadFont(family) {
   if (existing) existing.link.remove()
   const entry = injectFontLink(family, weights, Date.now())
   await entry.ready
-}
-
-export function unloadFont(family) {
-  const entry = loadedFonts.get(family)
-  if (!entry) return
-  entry.link.remove()
-  loadedFonts.delete(family)
 }
 
 // Has the css2 <link> for this family fired a genuine `error` (network failure
@@ -307,30 +296,55 @@ export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } 
   }
 }
 
+// Which body categories earn a look under a heading of each category, and WHY.
+// The reason is shown next to every suggestion — a pairing tool that can't say
+// why it suggested something is a random-font button with extra steps.
 const PAIRING_RULES = {
-  serif: ['sans-serif'],
-  'sans-serif': ['serif', 'display'],
-  display: ['sans-serif'],
-  handwriting: ['sans-serif', 'serif'],
-  monospace: ['sans-serif']
+  serif: [
+    ['sans-serif', 'A neutral sans under a serif headline is the classic editorial split — maximum contrast, zero competition.'],
+    ['monospace', 'Mono body copy keeps a serif headline literary while signalling something technical underneath.'],
+  ],
+  'sans-serif': [
+    ['serif', 'A serif body warms up a geometric headline and makes long-form reading easier.'],
+    ['sans-serif', 'Same-genre pairing — lean on a clear weight and size jump to keep the hierarchy obvious.'],
+  ],
+  display: [
+    ['sans-serif', 'Display faces carry the personality; a plain sans body keeps the page readable.'],
+    ['serif', 'A restrained serif body gives an expressive display headline somewhere calm to land.'],
+  ],
+  handwriting: [
+    ['sans-serif', 'Script headlines need a completely neutral body or the page starts shouting.'],
+    ['serif', 'A quiet serif body steadies a handwritten headline without flattening it.'],
+  ],
+  monospace: [
+    ['sans-serif', 'A humanist sans body offsets the fixed rhythm of a mono headline.'],
+    ['serif', 'A serif body adds warmth beneath the mechanical feel of monospace.'],
+  ],
 }
 
-export async function generatePairings(font) {
+// Rank body candidates for a heading face. Returns
+// `[{ font, reason, score }]`, best first, so callers can show the suggestion
+// AND its rationale. Scored on popularity (a well-known face is a safer body
+// choice) plus variant richness (a body face needs weights to build hierarchy).
+export async function suggestPairings(font, { limit = 6 } = {}) {
   const fonts = await getRawFonts()
-  const targets = PAIRING_RULES[font.category] || ['sans-serif']
+  const rules = PAIRING_RULES[font?.category] || PAIRING_RULES['sans-serif']
+  const reasonFor = Object.fromEntries(rules)
+  const targets = rules.map(([cat]) => cat)
 
-  const candidates = fonts.filter(
-    f => f.family !== font.family && targets.includes(f.category)
-  )
-
-  // Score by popularity and variant richness for versatility
-  const scored = candidates.map(f => ({
-    font: f,
-    score: (1 / (f.popularity + 1)) + (f.variants.length / 20)
-  }))
+  const scored = fonts
+    .filter(f => f.family !== font?.family && targets.includes(f.category))
+    .map(f => ({
+      font: f,
+      reason: reasonFor[f.category],
+      // Category order is a preference, not a hard filter — the first listed
+      // target keeps a small edge so the canonical pairing leads the list.
+      score: (1 / (f.popularity + 1)) + (f.variants.length / 20)
+        + (f.category === targets[0] ? 0.05 : 0),
+    }))
 
   scored.sort((a, b) => b.score - a.score)
-  return scored.slice(0, 6).map(s => s.font)
+  return scored.slice(0, limit)
 }
 
 export function getFontImportUrl(families) {
@@ -345,4 +359,33 @@ export function getFontImportUrl(families) {
 
 export function getFontCSSRule(family, fallback = 'sans-serif') {
   return `'${family}', ${fallback}`
+}
+
+// The generic family a Google category should degrade to. Shared so the gallery,
+// the pairing tool and the type scale all fall back to the same shape of letter
+// while a face is still in flight.
+const GENERIC_FOR = {
+  serif: 'serif',
+  'sans-serif': 'sans-serif',
+  display: 'cursive',
+  handwriting: 'cursive',
+  monospace: 'monospace',
+}
+
+/** Full CSS font stack for a catalog entry, e.g. `'Lora', serif`. */
+export function fontStack(font) {
+  if (!font?.family) return 'var(--font)'
+  return getFontCSSRule(font.family, GENERIC_FOR[font.category] || 'sans-serif')
+}
+
+/** The weight a catalog entry should use for headings — 700 when it ships one. */
+export function headingWeight(font) {
+  if (!font?.variants?.length) return 700
+  return font.variants.includes(700) ? 700 : font.variants[font.variants.length - 1]
+}
+
+/** The weight a catalog entry should use for body copy — 400 when it ships one. */
+export function bodyWeight(font) {
+  if (!font?.variants?.length) return 400
+  return font.variants.includes(400) ? 400 : font.variants[0]
 }
