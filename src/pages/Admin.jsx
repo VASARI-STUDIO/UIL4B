@@ -1810,9 +1810,9 @@ export default function Admin({ toast }) {
                   {[
                     { label: 'Firebase Auth configured', ok: true, note: 'Enable Email/Password + Google providers in Firebase Console' },
                     { label: 'Firestore database created', ok: true, note: 'Set region to australia-southeast1 (Sydney) in Firebase Console' },
-                    { label: 'Firestore security rules deployed', ok: false, note: 'Deploy firestore.rules from repo root via Firebase CLI' },
+                    { label: 'Firestore security rules published', ok: true, note: 'Founder-confirmed 31 Jul 2026; re-test and republish after any rules change' },
                     { label: 'Email notifications', ok: false, note: 'Set RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL env vars in Vercel' },
-                    { label: 'Google Sheets sync', ok: !!import.meta.env.VITE_SHEETS_ENABLED, note: 'Set GOOGLE_SHEETS_WEBHOOK_URL in Vercel — see docs/google-sheets-setup.md' },
+                    { label: 'Google Sheets sync', ok: !!import.meta.env.VITE_SHEETS_ENABLED, note: 'Optional legacy mirror — configure the server-only Sheets webhook variables in Vercel' },
                     { label: 'Custom domain', ok: true, note: 'uil4b.com configured' },
                   ].map((item, i) => (
                     <div key={i} className="adm-check-row">

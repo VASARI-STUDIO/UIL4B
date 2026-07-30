@@ -1,125 +1,137 @@
-# UIL4B — Build Plan (hub)
+# UIL4B — Build Plan
 
-_The **read-first** doc: current direction + a live status snapshot, with the
-detail split out so a session reads only the slice it needs. Update the snapshot
-**in place** — no dated copies, no parallel backlog._
+_Read this first. It is the lean current-state hub: product direction, what is
+live, what is being built, and what still blocks a confident release. Update it
+in place—do not create dated copies or parallel backlogs._
 
-_Last updated: 2026-07-29 · current `main`: `549c6c6`._
+_Last updated: 2026-07-31 · current `main`: `fe29f77`._
 
----
+## Direction
 
-## The direction (founder, 2026-07-02)
+UIL4B is the operating workspace for building connected UI systems. Keep the
+working product infrastructure (Firebase, Stripe, AI providers and reusable tool
+logic), while the interface follows one coherent light-first design language:
+clear sales-page structure, continuous Create workbenches, restrained motion and
+consistent controls. The three product surfaces remain:
 
-Full ground-up rebuild in a fresh design direction. We **keep the work
-environment** (APIs, Auth, Stripe, Firebase — all already wired) and **reuse tool
-components**, but **remove all prior design styling** and start from a clean
-canvas. Look inherited from the **Mobbin** homepage (sales-page structure) + a
-**Coolors-style** tools footer (mega-menu pattern), light mode, Awwwards-grade
-micro-animations throughout. **Three surfaces, three nav dropdowns:** **Create**
-(build) · **Discover** (browse) · **Learn** (understand). Dashboard is removed;
-Home is a sales page. Product principle throughout: **users must understand what
-the app is ASAP — confused shoppers have empty carts.**
+- **Create** — build, validate and export.
+- **Discover** — browse community systems and curated resources.
+- **Learn** — understand the methods behind the tools.
 
-Full rebuild detail (the two "not-ready" systems, phases, cluster-by-cluster log)
-→ [`build-plan/roadmap.md`](build-plan/roadmap.md).
+The homepage is a sales page with a working mini-workspace, not a dashboard.
+Users should understand what the product does immediately.
 
----
+## Current state
 
-## Status snapshot (2026-07-29)
+**Healthy on `main`:** production build and CI gates; the premium public shell;
+the connected homepage workbench; Palette, Semantic, Tint, Gradient and Contrast
+tools; Icon + Emoji; File Converter; Projects; Plans and one-off billing support;
+per-route canonical/social metadata and `noindex` for Soon routes (#198); and the
+shared motion-token pass (#199).
 
-**Release-branch health:** production build green · ESLint 0 errors. Advisory
-warnings remain a separately tracked baseline; do not add new ones.
+**Firestore rules:** the founder confirmed on 2026-07-31 that the hardened
+`firestore.rules` are published. The former publication release blocker is
+closed. This confirmation does **not** prove that Firebase Storage is enabled,
+`storage.rules` is published, the admin custom claim is set, or every
+production-only Firebase path has been exercised.
 
-**Live on `main`:** **v2.7 shipped at `1e7fbdd`.** It includes the premium
-public shell; refined Palette, Gradient, Tint and Semantic workflows; the
-resilient Icon + Emoji library command surface; shared CTA/footer patterns; the
-retired UI Colour redirect; and the founder's accessible public owner treatment.
-The homepage bridge in `1e7fbdd` connects the hero controls to the real living
-workspace preview rather than presenting a detached mock-up.
+**Surface truth:** Create is the primary live surface. Discover is intentionally
+partial—Gradient Gallery is live and the wider gallery/community build remains.
+Learn remains an honest coming-soon surface until scoped content routes ship.
 
-`d210a0d` also shipped the reconciled public router/navigation/metadata/sitemap
-contract and the static social-share card. Their release verification passed
-**79/79**; neither remains an active backlog item.
+## Active approved batch
 
-**Since then, on `main`:** the homepage chaos → calm hero and live mini-workbench
-(#185) with its converter hand-off fix (#187); **CI quality gates on every pull
-request** (#188, flake removed in #189) running lint, build, unit, Firestore
-rules and the Playwright user-simulation suite; and the founder-reported colour
-defect run — non-compounding adjust sliders and correct antipode warming (#190),
-the height-capped gradient inspector (#191), a Saturation slider that responds
-across its whole range (#192) and right-click-to-insert-N-colours on the
-between-colours plus (#193). Then the readiness housekeeping: pipeline/build-plan
-reconciliation (#194), the rewritten owner checklist (#195) and a verified
-dead-code sweep removing 6 unrouted pages, 7 unreferenced components and their
-orphaned CSS — 3,284 deletions, zero insertions (#196).
+Work is sequenced as four connected slices:
 
-**Ship decision:** the honest go/no-go now lives in
-[`V1-READINESS.md`](V1-READINESS.md). Short version — **NO-GO today**, on one
-hard blocker (`firestore.rules` is hardened in the repo but **unpublished**, so
-paid entitlements are not server-enforced) and three soft ones (the analytics
-environment guard, per-route canonical/OG tags, and instrumenting the upgrade
-gate). The last two are small non-HVZ slices; the first is a founder console
-action.
+1. **Typography activation + homepage integration**
+   - Activate Font Gallery, Font Pair Finder and Type Scale on the current design
+     system.
+   - Add Typography as the fifth homepage mini-workspace tab.
+   - Give the floating tabs meaningful icons, merge them into the workbench, then
+     reveal the mini-workspace with a restrained splash animation.
+   - Preserve loading/fallback font behaviour, keyboard operation and reduced
+     motion.
 
-The broader rebuild remains live: Create/Discover/Learn mega-menus, public
-`/plans`, visual `/sitemap`, live Stripe-backed price display, Settings, account
-and Admin surfaces. `/color` is the colour-system landing; its five live tools
-remain scoped to `/color/*`. Discover is intentionally partial: Gradient Gallery
-is live and the wider gallery workstream is queued at 20%. Learn remains a
-coming-soon shell; dormant article files are not treated as published content.
+2. **Palette/Tint consistency and defect pass**
+   - Close the nav/toolbar/footer gutter gaps and keep toolbar height stable.
+   - Make hover reveals smooth without layout shifts.
+   - Ensure the initial random seed, HEX input and first swatch always match.
+   - Unify swatch, input and button sizing; align Temperature with the other
+     sliders and make slider tracks communicate their operation/default.
+   - Repair HCT editing and explain HCT in-context.
+   - Add directional swap choice, multi-insert context menu, Palette ↔ Tint
+     navigation and consistent shells across every colour tool.
+   - Move Contrast out of the command bar and into accessible swatch hover/focus
+     actions.
 
-**Active approved batch: V1 readiness.** Polish first, then review. In flight:
-one **page-gutter scale** and one **z-index ladder** replacing ad-hoc padding and
-stacking values (which fixed the toolbar shifting on hover), plus the Palette
-Builder popover-stacking and 961–999px toolbar-break fixes. Queued behind it: a
-**motion pass** (canonical easing/duration tokens; icon-button reveals move off
-`max-width` onto `grid-template-columns`), **Palette Builder preview mockups**
-(six realistic scenes per tab, extras Pro-gated and visibly locked), and
-**Typography** — `FontGallery`, `FontMatcher` and `TypeScale` rebuilt on the
-current design system as three standalone tools and routed. Then the readiness
-review: QA, code, security, SEO and analytics passes, a rewritten owner checklist
-and an honest go/no-go per surface.
+3. **High-fidelity colour-system previews**
+   - Replace placeholder preview tiles with realistic light/dark interface scenes.
+   - Show buttons, alerts, forms, cards, text and backgrounds using the active
+     system; extra scenes may be visibly Pro-gated.
 
-The homepage [chaos → calm experience](build-plan/HOMEPAGE-CHAOS-TO-CALM.md)
-shipped in #185 and is no longer an active batch; its remaining open item is the
-throttled field-metrics trace (LCP/CLS/INP, 200% zoom, forced colours).
+4. **UI System Mode (premium)**
+   - Generate Brand, Success, Warning, Error, Information and brand-tinted Neutral
+     scales from 100–900, with the selected brand colour as 500.
+   - Use a perceptual colour model (OKLCH/HCT/HSL—not direct HEX arithmetic) and
+     keep lightness progression even.
+   - Provide per-shade editing/copy, reset/regenerate, export, light/dark component
+     previews, WCAG AA/AAA results and black/white text recommendations.
+   - Free users may preview the generated system; editing/export remains the
+     initial premium boundary. The boundary can move later without redesigning
+     the feature.
 
-**Still open from earlier batches:** account-switch reliability shipped in #183
-but still needs one manual founder pass against the real Google OAuth popup, and
-the Plans/lifetime-billing build (#184) remains inside its human-validation zone
-— **not** claimed complete: the entitlement fix only takes effect once the
-founder **publishes** `firestore.rules`. The remaining queue starts with
-account-menu keyboard completion, global 404/offline states and the server-side
-account-deletion cascade. Discover
-and Learn remain separate queued workstreams. Font Gallery FOUT and
-accessibility are deferred until that route is activated. Owner/HVZ blocks
-(OpenRouter key, Stripe retention and live checkout QA, Firebase critical-path
-changes) stay explicit in the pipeline and owner list.
+Each slice must pass the build/lint gate and focused rendered verification before
+it is called complete. `src/data/pipeline.js` owns the detailed execution queue;
+`src/data/moduleBoard.js` owns per-module status.
 
-**Known bugs & deferred backlog** → [`build-plan/roadmap.md`](build-plan/roadmap.md).
+## Founder decisions now resolved
 
----
-
-## The map (read only what you need)
-
-| Read this | When |
+| Decision | Current direction |
 |---|---|
-| **this hub** | every session — direction + what's live + what's next |
-| [`build-plan/HOMEPAGE-CHAOS-TO-CALM.md`](build-plan/HOMEPAGE-CHAOS-TO-CALM.md) | touching the homepage hero/workbench — the shipped acceptance contract |
-| [`build-plan/tool-tree.md`](build-plan/tool-tree.md) | building/placing a tool or touching nav — the CREATE/DISCOVER/LEARN tree, site structure, reusable-code inventory, the 12-function cap |
-| [`build-plan/roadmap.md`](build-plan/roadmap.md) | needing history/what's-next — rebuild detail, phases, the cluster A–G log, known bugs, deferred backlog |
-| [`V1-READINESS.md`](V1-READINESS.md) | deciding whether to ship — the honest go/no-go per surface, with every claim tagged verified / reported / unverified |
-| [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md) | anything the founder must do (Stripe prices, keys, infra) |
-| [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md) | founder calls not already in an active HVZ build: free caps, community architecture and SEO prerender |
+| Free save caps | **Keep 3 saved projects / 8 custom icons.** |
+| Community architecture | **Firebase:** Firestore + Storage, transactional lowercased handle registry and moderation state. |
+| Public SEO rendering | **Prerender public routes.** Define an explicit eligible-route matrix; Soon/auth/admin routes must not be emitted as public content. |
+| Homepage typography | Add Typography as the fifth mini-workspace tab and activate its three tools. |
+| UI System Mode | Build the functional premium mode now; allow a free generated preview with Pro editing/export. |
 
-**How work ships:** `research → design → engineer → code-review + security-review →
-secret-scan → qa → ship`. One PR per slice → squash-merge to `main` → realign the
-branch. The PM (main thread) never writes product code — it routes, runs the
-verify gate, reads diffs, writes docs, and merges. Detail lives in the reference
-docs, not here: [`project-manager.md`](reference/project-manager.md) ·
-[`build-and-verify.md`](reference/build-and-verify.md) ·
-[`git-workflow.md`](reference/git-workflow.md) ·
-[`human-validation-zones.md`](reference/human-validation-zones.md).
+The only unresolved founder call is the subscription-chargeback policy in
+[`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md).
 
-_When state changes, update the snapshot above in place — it is the contract with
-the next PM._
+## Release gaps and durable backlog
+
+The published Firestore rules and #198 remove two former blockers. A final GO
+still requires the current UI batch and a fresh combined QA/review pass. Keep
+these gaps visible:
+
+- add a dev/preview guard around Firestore aggregate analytics;
+- instrument the canonical upgrade gate and activation events;
+- complete account-menu arrow navigation, branded 404 and global offline states;
+- move account deletion to a server-side cascade;
+- build the Firebase community backend and publish/verify its Storage rules;
+- implement the approved public-route prerender matrix;
+- measure homepage LCP/CLS/INP on a throttled profile and test 200% zoom,
+  forced colours and screen-reader flow;
+- manually verify real Google account switching, live Stripe
+  checkout/abandon/return/retry and actual Search Console indexation;
+- complete Discover galleries and the Learn content library.
+
+No document should claim that unrun production, custom-claim, Storage, payment or
+load/concurrency checks passed.
+
+## Canonical map
+
+| Source | Owns |
+|---|---|
+| **This file** | current direction, active batch, resolved product calls and release gaps |
+| [`build-plan/tool-tree.md`](build-plan/tool-tree.md) | stable Create/Discover/Learn structure, routes and reusable-tool inventory |
+| [`build-plan/HOMEPAGE-CHAOS-TO-CALM.md`](build-plan/HOMEPAGE-CHAOS-TO-CALM.md) | homepage workbench acceptance contract and remaining field-metrics checks |
+| [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md) | unresolved founder-only console, credential and live-service checks |
+| [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md) | unresolved founder decisions plus the compact resolved-decision record |
+| `src/data/pipeline.js` | execution order, workstream progress and blockers |
+| `src/data/moduleBoard.js` | per-module product status |
+
+Delivery process and safety boundaries live in
+[`reference/project-manager.md`](reference/project-manager.md),
+[`reference/build-and-verify.md`](reference/build-and-verify.md),
+[`reference/git-workflow.md`](reference/git-workflow.md) and
+[`reference/human-validation-zones.md`](reference/human-validation-zones.md).
