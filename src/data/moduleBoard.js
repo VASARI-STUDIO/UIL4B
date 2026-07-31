@@ -267,8 +267,8 @@ export const MODULE_BOARD = [
     name: 'Landing & Help',
     area: 'Content',
     status: 'live',
-    health: 'good',
-    summary: 'Premium public sales system with product-led demonstrations and consistent closing actions.',
+    health: 'watch',
+    summary: 'Premium public sales system with product-led demonstrations and feedback/help submission paths that still need abuse hardening and owner notification configuration.',
     recentChanges: [
       'Home, Colour, Surface and Plans now share a meaningful beams-style closing CTA',
       'Public footer and shell hierarchy aligned across sales and product entry pages',
@@ -276,17 +276,19 @@ export const MODULE_BOARD = [
       'Help centre: quick-action cards + searchable FAQ + 4-type contact form (HELP-01/02/03)',
     ],
     nextSteps: [
+      'Add server-enforced abuse controls to unauthenticated /api/support without removing legitimate logged-out help',
+      'Owner: configure and test RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL if feedback/support email notification is wanted',
       'A/B test hero copy once traffic grows',
     ],
-    updated: '2026-07-25',
+    updated: '2026-07-31',
   },
   {
     id: 'auth',
     name: 'Auth / Login',
     area: 'Infra',
     status: 'live',
-    health: 'good',
-    summary: 'Firebase auth with inline gates, Google OAuth, smart onboarding skip.',
+    health: 'watch',
+    summary: 'Firebase auth with inline gates and Google OAuth; onboarding routes fresh signups but completion truth and live resume/exit QA remain incomplete.',
     recentChanges: [
       'Login returns users to their original page after sign-in (location.state.from)',
       'Inline auth gate keeps user on page and returns them (AUTH-01)',
@@ -294,9 +296,11 @@ export const MODULE_BOARD = [
       'Skip onboarding for returning users via Firestore profile sync (AUTH-03)',
     ],
     nextSteps: [
+      'Reconcile in-memory pending signup, localStorage and Firestore onboarding completion without bouncing legacy users',
+      'Run live Firebase fresh/returning, abandon/return, resume-target and finish/skip QA',
       'Validation zone — changes require explicit owner approval',
     ],
-    updated: '2026-06-17',
+    updated: '2026-07-31',
   },
   {
     id: 'payments',
@@ -313,10 +317,10 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Owner: create retention coupon + enable cancellation in Stripe Customer Portal config',
       'Owner/HVZ: validate production checkout abandon, return and retry separately',
+      'Add event-id dedupe and ordering guards before treating webhook retries/out-of-order delivery as safe',
       'Validation zone — never modify webhook/checkout without owner approval',
-      'Wire up email notifications (RESEND_API_KEY) for billing events',
     ],
-    updated: '2026-07-28',
+    updated: '2026-07-31',
   },
   {
     id: 'ai-backend',

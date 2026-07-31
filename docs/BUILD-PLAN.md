@@ -105,8 +105,19 @@ these gaps visible:
 
 - add a dev/preview guard around Firestore aggregate analytics;
 - instrument the canonical upgrade gate and activation events;
+- reconcile onboarding completion truth: the one-shot in-memory new-account flag
+  routes a fresh sign-up, but a user who abandons onboarding and later returns
+  directly to `/home` or a deep link is not re-routed; `/` checks localStorage
+  while profile hydration separately checks Firestore. Fresh/returning signup,
+  resume-target and finish/skip exits still need live Firebase QA;
 - complete account-menu arrow navigation, branded 404 and global offline states;
 - move account deletion to a server-side cascade;
+- make Stripe webhook processing idempotent and order-aware. Signatures are
+  verified, but processed `event.id` values and event ordering are not persisted,
+  so retries and older subscription events are not explicitly rejected;
+- protect unauthenticated `/api/support` from automated cost abuse. It currently
+  has no authentication, rate limit or bot challenge and one request can attempt
+  a Firestore write, optional Sheets append and optional Resend email;
 - build the Firebase community backend and publish/verify its Storage rules;
 - implement the approved public-route prerender matrix;
 - measure homepage LCP/CLS/INP on a throttled profile and test 200% zoom,

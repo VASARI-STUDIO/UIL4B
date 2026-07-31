@@ -28,6 +28,7 @@ payment/auth flows.
 | P1 | Firebase login email | Confirm `dylanjacob1100@gmail.com` is the founder login used by the admin/server allowlists. If it is wrong, authorize one coordinated HVZ change rather than editing a single copy. |
 | P1 | Live Stripe product/prices and Vercel price env vars | Confirm the intended monthly/yearly ladder and whether the lifetime price should now be created. One-off billing code is shipped; create/advertise the lifetime price only after the webhook pre-flight above passes. |
 | P1 | Stripe Customer Portal | Create/confirm the `RETAIN50` coupon (50% for 3 months), enable cancellation and select the retention offer. |
+| P2 | Vercel feedback/support environment variables | If email notification is wanted, set both `RESEND_API_KEY` and `SUPPORT_NOTIFY_EMAIL`, redeploy, submit test feedback and confirm one notification arrives. This integration is for feedback/support submissions—not billing events. |
 | P2 | Google Cloud credential restrictions | Restrict the public Google Fonts key to the UIL4B/preview referrers and the Web Fonts API. |
 
 ## Manual release checks
@@ -36,6 +37,9 @@ These require real external accounts or production dashboards:
 
 - Switch between two real Google accounts and confirm the old session remains
   intact until the new credential commits.
+- With live Firebase, exercise fresh email/Google signup, returning login,
+  onboarding abandon then `/home` and a deep link, resume-target consumption,
+  and every finish/skip exit. These paths have not received a complete live pass.
 - Complete, abandon, return to and retry a live Stripe checkout; confirm UIL4B
   and Stripe converge in each case.
 - Inspect Google Search Console for real indexation after #198, then repeat after
