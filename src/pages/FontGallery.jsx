@@ -1,7 +1,44 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { fetchFonts, loadFont, reloadFont, getFontCSSRule, generatePairings, verifyFontLoaded } from '../utils/googleFonts'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
+import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
+import {
+  bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont,
+  suggestPairings, verifyFontLoaded,
+} from '../utils/googleFonts'
+import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
+
+// Font Gallery — the standalone /fontgallery page. Browse the Google Fonts
+// catalogue, read a specimen, then carry the choice into Font Pair or Type
+// Scale. This is the entry point of the typography suite, so it is the one that
+// has to survive a bad network gracefully.
+//
+// Three things this rebuild fixes, all logged as `font-gallery-readiness` in
+// src/data/pipeline.js before the route was activated:
+//
+//   1. FEATURED FOUT. The featured cards render display-size text, so swapping
+//      a fallback face for the real one was a glaring reflow of the most
+//      prominent thing on the page. They now render a skeleton in the exact
+//      reserved box until verifyFontLoaded confirms the face is painting, and
+//      only then reveal the words. No fallback text ever paints, so there is no
+//      flash to see — and no invisible-text gap either, because the skeleton is
+//      a visible placeholder rather than hidden text.
+//
+//   2. RESERVED METRICS. Every preview box has a fixed height and its text is
+//      clipped, so a family whose metrics differ wildly from the fallback
+//      cannot change a card's height. The grid geometry is settled at first
+//      paint and never moves as faces stream in.
+//
+//   3. KEYBOARD + DIALOG ACCESSIBILITY. Cards are real buttons. The detail and
+//      compare overlays are `role="dialog" aria-modal="true"` with a focus
+//      trap, Escape to close, and focus returned to the card that opened them.
+//
+// Murphy's law: the catalogue degrades to the bundled list with a visible
+// notice and a working retry (useFontCatalog); an individual face that is
+// blocked is reported per-font in the detail dialog with its own retry, and
+// never silently rendered as a system fallback pretending to be the real thing.
 
 const CATS = [
   { id: 'all', label: 'All' },
@@ -12,27 +49,25 @@ const CATS = [
   { id: 'monospace', label: 'Mono' },
 ]
 
-const FALLBACK = { 'serif': 'serif', 'sans-serif': 'sans-serif', 'display': 'cursive', 'handwriting': 'cursive', 'monospace': 'monospace' }
-const css = (f) => getFontCSSRule(f.family, FALLBACK[f.category] || 'sans-serif')
-const hw = (f) => f.variants.includes(700) ? 700 : f.variants[f.variants.length - 1] || 400
+const SORTS = [
+  { id: 'popularity', label: 'Popular' },
+  { id: 'alphabetical', label: 'A–Z' },
+  { id: 'weights', label: 'Most weights' },
+]
 
+// Curated shortlist for the featured strip. Any family missing from the loaded
+// catalogue (very likely on the bundled fallback list) is simply dropped, so
+// the strip is always short rather than broken.
 const FEATURED = [
   { family: 'Playfair Display', phrase: 'Beauty in every serif', tag: 'Editorial' },
-  { family: 'Space Grotesk', phrase: 'Clean, geometric, modern', tag: 'UI' },
-  { family: 'DM Serif Display', phrase: 'Bold statements', tag: 'Display' },
+  { family: 'Space Grotesk', phrase: 'Clean, geometric, modern', tag: 'Interface' },
   { family: 'Inter', phrase: 'The workhorse of the web', tag: 'Interface' },
-  { family: 'Outfit', phrase: 'Friendly & versatile', tag: 'Modern' },
   { family: 'Fraunces', phrase: 'Soft serif character', tag: 'Variable' },
-  { family: 'Sora', phrase: 'Geometric precision', tag: 'Sans Serif' },
-  { family: 'Crimson Pro', phrase: 'Elegant body text', tag: 'Reading' },
-  { family: 'Manrope', phrase: 'Open & approachable', tag: 'Geometric' },
-  { family: 'Bricolage Grotesque', phrase: 'Expressive grotesk', tag: 'Display' },
-  { family: 'Cormorant Garamond', phrase: 'Classical refinement', tag: 'Serif' },
+  { family: 'Outfit', phrase: 'Friendly and versatile', tag: 'Modern' },
   { family: 'JetBrains Mono', phrase: '0Oo 1Il {}();', tag: 'Code' },
 ]
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-
 const SIZES = [
   { label: 'Display', px: 64 },
   { label: 'H1', px: 48 },
@@ -41,96 +76,221 @@ const SIZES = [
   { label: 'Body', px: 16 },
   { label: 'Small', px: 13 },
 ]
+const PAGE_SIZE = 48
+const MAX_COMPARE = 3
 
-function GalleryCard({ font, onSelect, index, inCompare, onToggleCompare }) {
-  const [loaded, setLoaded] = useState(false)
+// Set CSS custom properties on a node — the no-inline-styles route for values
+// that are genuinely per-item (a family, a weight, a size).
+function varsRef(vars) {
+  return (el) => {
+    if (!el) return
+    for (const key of Object.keys(vars)) el.style.setProperty(key, vars[key])
+  }
+}
+
+// Wait until a family is genuinely painting before revealing text in it.
+// Returns true only on a confirmed 'ok'; 'unknown' and 'failed' both keep the
+// placeholder up, because both mean "don't show this yet".
+function useFontReady(font, weight, { defer = true } = {}) {
+  const [ready, setReady] = useState(false)
   const ref = useRef(null)
 
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
+    if (!font) return undefined
     let cancelled = false
+    setReady(false)
+
+    const start = () => {
+      loadFont(font.family, [weight, bodyWeight(font)])
+      verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
+        if (!cancelled && status === 'ok') setReady(true)
+      })
+    }
+
+    if (!defer) { start(); return () => { cancelled = true } }
+
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') { start(); return () => { cancelled = true } }
+
     const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        obs.disconnect()
-        // Load the two weights the card actually renders (regular + heading)
-        // so the preview never falls back to a synthesised face.
-        const reg = font.variants.includes(400) ? 400 : font.variants[0]
-        loadFont(font.family, [reg, hw(font)])
-        // Only swap the card to the real typeface once the file has actually
-        // arrived — otherwise a blocked/slow font would render a misleading
-        // fallback. If it never loads, the card keeps the neutral system face.
-        // Verify at the regular weight we requested, not the heading weight, so
-        // a synthesised bold can't read as "not loaded".
-        verifyFontLoaded(font.family, reg).then(status => {
-          if (!cancelled && status === 'ok') setLoaded(true)
-        })
-      }
+      if (!entry.isIntersecting) return
+      obs.disconnect()
+      start()
     }, { rootMargin: '200px' })
     obs.observe(el)
     return () => { cancelled = true; obs.disconnect() }
-  }, [font])
+  }, [font, weight, defer])
 
-  const isWide = index % 7 === 0
+  return [ready, ref]
+}
+
+// Shared dialog plumbing: focus trap, Escape, background scroll lock and focus
+// restoration. Every overlay in this tool goes through it, so none of them can
+// drift out of the keyboard contract.
+function useModal(onClose) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const opener = document.activeElement
+    const node = ref.current
+    document.body.style.overflow = 'hidden'
+
+    const focusables = () => Array.from(
+      node?.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') || [],
+    ).filter(el => el.offsetParent !== null || el === document.activeElement)
+
+    // Focus the dialog itself rather than its first control: a screen reader
+    // then announces the dialog's label before its contents, and the close
+    // button is one Tab away instead of already selected.
+    node?.focus()
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); onClose(); return }
+      if (e.key !== 'Tab') return
+      const list = focusables()
+      if (!list.length) { e.preventDefault(); node?.focus(); return }
+      const first = list[0]
+      const last = list[list.length - 1]
+      const active = document.activeElement
+      if (e.shiftKey && (active === first || active === node)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus() }
+    }
+
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('keydown', onKey, true)
+      document.body.style.overflow = ''
+      if (opener && typeof opener.focus === 'function') opener.focus()
+    }
+  }, [onClose])
+
+  return ref
+}
+
+function CloseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+/* ── Featured card ─────────────────────────────────────────────────────────── */
+
+function FeaturedCard({ font, onOpen }) {
+  const weight = headingWeight(font)
+  const [ready, ref] = useFontReady(font, weight, { defer: false })
 
   return (
-    <div
+    <button
+      type="button"
       ref={ref}
-      className={`fg-card${isWide ? ' fg-card-wide' : ''}${inCompare ? ' fg-card-comparing' : ''}`}
-      onClick={() => onSelect(font)}
+      className="fg-feat-card"
+      onClick={() => onOpen(font)}
+      aria-label={`Open the ${font.family} specimen`}
     >
+      <span className="fg-feat-tag">{font.tag}</span>
+      <span
+        className={ready ? 'fg-feat-text' : 'fg-feat-text fg-feat-text--pending'}
+        ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw': String(weight) })}
+        aria-hidden={!ready}
+      >
+        {ready ? font.phrase : null}
+        {!ready && <span className="fg-skel fg-skel-a" /> }
+        {!ready && <span className="fg-skel fg-skel-b" /> }
+      </span>
+      <span className="fg-feat-info">
+        <span className="fg-feat-name">{font.family}</span>
+        <span className="fg-feat-cat">{font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</span>
+      </span>
+    </button>
+  )
+}
+
+/* ── Grid card ─────────────────────────────────────────────────────────────── */
+
+function GalleryCard({ font, onOpen, inCompare, onToggleCompare }) {
+  const heading = headingWeight(font)
+  const body = bodyWeight(font)
+  const [ready, ref] = useFontReady(font, heading)
+
+  return (
+    <li className={inCompare ? 'fg-card fg-card--comparing' : 'fg-card'} ref={ref}>
       <button
         type="button"
-        className={`fg-card-compare${inCompare ? ' active' : ''}`}
-        onClick={(e) => { e.stopPropagation(); onToggleCompare(font) }}
-        title={inCompare ? 'Remove from comparison' : 'Add to comparison'}
-        aria-pressed={inCompare}
+        className="fg-card-open"
+        onClick={() => onOpen(font)}
+        aria-label={`Open the ${font.family} specimen — ${font.category}, ${font.variants.length} weights`}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Both preview boxes have a reserved height and clip their text, so a
+            face arriving with different metrics can never resize the card. */}
+        <span
+          className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
+          ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body) })}
+          aria-hidden={!ready}
+        >
+          {ready ? (
+            <>
+              <span className="fg-card-sample">{font.family.length <= 18 ? font.family : 'Aa Bb Cc'}</span>
+              <span className="fg-card-pangram">{PANGRAM}</span>
+            </>
+          ) : (
+            <>
+              <span className="fg-card-skeleton fg-card-skeleton--sample" />
+              <span className="fg-card-skeleton fg-card-skeleton--body" />
+            </>
+          )}
+        </span>
+        <span className="fg-card-meta">
+          <span className="fg-card-name">{font.family}</span>
+          <span className="fg-card-info">{font.category} · {font.variants.length}w</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        className={inCompare ? 'fg-card-compare fg-card-compare--on' : 'fg-card-compare'}
+        onClick={() => onToggleCompare(font)}
+        aria-pressed={inCompare}
+        aria-label={inCompare ? `Remove ${font.family} from the comparison` : `Add ${font.family} to the comparison`}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           {inCompare
             ? <polyline points="20 6 9 17 4 12" />
             : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
         </svg>
       </button>
-      <div className="fg-card-preview" style={{ fontFamily: loaded ? css(font) : 'var(--font)' }}>
-        <span className="fg-card-sample" style={{ fontWeight: hw(font) }}>
-          {font.family.length <= 18 ? font.family : 'Aa'}
-        </span>
-        <span className="fg-card-pangram" style={{ fontWeight: font.variants.includes(400) ? 400 : font.variants[0] }}>
-          {PANGRAM}
-        </span>
-      </div>
-      <div className="fg-card-meta">
-        <span className="fg-card-name">{font.family}</span>
-        <span className="fg-card-info">{font.category} · {font.variants.length}w</span>
-      </div>
-    </div>
+    </li>
   )
 }
 
-function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
-  const [text, setText] = useState(PANGRAM)
+/* ── Compare dialog ────────────────────────────────────────────────────────── */
+
+function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
+  const ref = useModal(onClose)
+  const [text, setText] = useState('')
   const [size, setSize] = useState(40)
-  const [weight, setWeight] = useState(700)
 
   useEffect(() => {
-    fonts.forEach(f => loadFont(f.family, f.variants))
+    fonts.forEach(f => loadFont(f.family, [headingWeight(f), bodyWeight(f)]))
   }, [fonts])
 
-  const weightFor = () => weight
-
   return (
-    <div className="fg-detail-overlay" onClick={onClose}>
-      <div className="fg-compare" onClick={e => e.stopPropagation()}>
+    <div className="fg-overlay" onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div
+        className="fg-compare"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fg-compare-title"
+        tabIndex={-1}
+        ref={ref}
+      >
         <div className="fg-compare-head">
           <div>
-            <div className="fg-detail-label">Compare</div>
-            <h2 className="fg-compare-title">{fonts.length} typefaces, side by side</h2>
+            <span className="fg-detail-label">Compare</span>
+            <h2 className="fg-compare-title" id="fg-compare-title">{fonts.length} typefaces, side by side</h2>
           </div>
-          <button className="fg-detail-close fg-compare-close" onClick={onClose} aria-label="Close comparison">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+          <button type="button" className="fg-detail-close fg-compare-close" onClick={onClose} aria-label="Close the comparison">
+            <CloseIcon />
           </button>
         </div>
 
@@ -140,172 +300,187 @@ function CompareView({ fonts, onClose, onRemove, onSelect, onCopy }) {
             type="text"
             value={text}
             placeholder="Type to preview…"
+            maxLength={60}
+            aria-label="Comparison preview text"
             onChange={e => setText(e.target.value)}
           />
           <div className="fg-compare-control">
+            <label htmlFor="fg-compare-size">Size</label>
+            <input
+              id="fg-compare-size"
+              type="range"
+              min="14"
+              max="88"
+              value={size}
+              onChange={e => setSize(+e.target.value)}
+            />
             <span>{size}px</span>
-            <input type="range" min="12" max="96" value={size} onChange={e => setSize(+e.target.value)} />
-          </div>
-          <div className="fg-compare-control">
-            <span>{weight}</span>
-            <input type="range" min="100" max="900" step="100" value={weight} onChange={e => setWeight(+e.target.value)} />
           </div>
         </div>
 
-        <div className="fg-compare-cols" style={{ gridTemplateColumns: `repeat(${fonts.length}, minmax(220px, 1fr))` }}>
-          {fonts.map(font => {
-            const fam = css(font)
-            return (
-              <div key={font.family} className="fg-compare-col">
-                <div className="fg-compare-col-head">
-                  <button className="fg-compare-col-name" onClick={() => onSelect(font)} title="Open details">
-                    {font.family}
-                  </button>
-                  <button className="fg-compare-col-remove" onClick={() => onRemove(font)} title="Remove" aria-label="Remove from comparison">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="fg-compare-meta">{font.category} · {font.variants.length} weight{font.variants.length !== 1 ? 's' : ''}</div>
-                <div className="fg-compare-sample" style={{ fontFamily: fam, fontSize: size, fontWeight: weightFor(font) }}>
-                  {text || PANGRAM}
-                </div>
-                <div className="fg-compare-charset" style={{ fontFamily: fam, fontWeight: weightFor(font) }}>
-                  <div>AaBbCcDd</div>
-                  <div>0123456789</div>
-                </div>
+        <div className="fg-compare-cols">
+          {fonts.map(font => (
+            <div
+              key={font.family}
+              className="fg-compare-col"
+              ref={varsRef({
+                '--fg-ff': fontStack(font),
+                '--fg-fw-h': String(headingWeight(font)),
+                '--fg-fw-b': String(bodyWeight(font)),
+                '--fg-size': `${size}px`,
+              })}
+            >
+              <div className="fg-compare-col-head">
+                <button type="button" className="fg-compare-col-name" onClick={() => onOpen(font)}>
+                  {font.family}
+                </button>
                 <button
-                  className="fg-compare-copy"
-                  onClick={() => {
-                    const url = `https://fonts.googleapis.com/css2?family=${font.family.replace(/ /g, '+')}:wght@${font.variants.join(';')}&display=swap`
-                    if (onCopy) onCopy(url)
-                  }}
+                  type="button"
+                  className="fg-compare-col-remove"
+                  onClick={() => onRemove(font)}
+                  aria-label={`Remove ${font.family} from the comparison`}
                 >
-                  Copy import
+                  <CloseIcon />
                 </button>
               </div>
-            )
-          })}
+              <div className="fg-compare-meta">{font.category} · {font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</div>
+              <div className="fg-compare-sample">{text.trim() || PANGRAM}</div>
+              <div className="fg-compare-charset">
+                <div>AaBbCcDd</div>
+                <div>0123456789</div>
+              </div>
+              <button
+                type="button"
+                className="fg-compare-copy"
+                onClick={() => {
+                  trackFontCopy(font.family)
+                  onCopy?.(getFontImportUrl([{ family: font.family, weights: font.variants.slice(0, 4) }]))
+                }}
+              >
+                Copy import
+              </button>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   )
 }
 
-function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
+/* ── Detail dialog ─────────────────────────────────────────────────────────── */
+
+function DetailDialog({ font, onClose, onCopy, onCompare, inCompare, onSendToPair, onSendToScale }) {
+  const ref = useModal(onClose)
   const [loadState, setLoadState] = useState('checking')
+  const [weight, setWeight] = useState(() => headingWeight(font))
   const [pairings, setPairings] = useState([])
-  const [previewWeight, setPreviewWeight] = useState(() => hw(font))
 
   useEffect(() => {
-    loadFont(font.family, font.variants)
     let cancelled = false
     setLoadState('checking')
-    // Verify at the regular base weight (not the heading weight) and carry the
-    // status union straight through: 'ok' | 'unknown' (still loading) | 'failed'
-    // (the stylesheet genuinely errored — only then do we mention a blocker).
-    const reg = font.variants.includes(400) ? 400 : font.variants[0]
-    verifyFontLoaded(font.family, reg).then(status => {
+    loadFont(font.family, font.variants)
+    verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
       if (!cancelled) setLoadState(status)
     })
     return () => { cancelled = true }
   }, [font])
 
-  // Curated pairing suggestions for this typeface, preloaded for the preview.
   useEffect(() => {
     let cancelled = false
-    generatePairings(font).then(list => {
+    suggestPairings(font, { limit: 3 }).then(list => {
       if (cancelled) return
-      const top = list.slice(0, 4)
-      top.forEach(f => loadFont(f.family, [f.variants.includes(400) ? 400 : f.variants[0]]))
-      setPairings(top)
+      list.forEach(s => loadFont(s.font.family, [bodyWeight(s.font)]))
+      setPairings(list)
     })
     return () => { cancelled = true }
   }, [font])
 
-  const fam = css(font)
+  const retryFont = () => {
+    setLoadState('checking')
+    reloadFont(font.family).then(() =>
+      verifyFontLoaded(font.family, bodyWeight(font)).then(setLoadState),
+    )
+  }
+
+  const fam = fontStack(font)
+
   return (
-    <div className="fg-detail-overlay" onClick={onClose}>
-      <div className="fg-detail" onClick={e => e.stopPropagation()}>
-        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+    <div className="fg-overlay" onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div
+        className="fg-detail"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fg-detail-title"
+        tabIndex={-1}
+        ref={ref}
+      >
+        <button type="button" className="fg-detail-close" onClick={onClose} aria-label={`Close the ${font.family} specimen`}>
+          <CloseIcon />
         </button>
 
         {loadState === 'unknown' && (
           <div className="fg-loading-note" role="status">
             <span className="fg-loading-note-spinner" aria-hidden="true" />
-            <span>Still loading this preview&hellip; showing a fallback until {font.family} arrives.</span>
+            <span>Still loading this preview — showing a fallback face until {font.family} arrives.</span>
           </div>
         )}
 
         {loadState === 'failed' && (
-          <div className="fg-blocked-banner" role="alert">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="typ-notice" role="status">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <div>
-              <strong>This font couldn&rsquo;t load, so a fallback is shown.</strong>
+              <strong>{font.family} couldn&rsquo;t load, so a fallback is shown.</strong>
               <span>
-                The request to <code>fonts.googleapis.com</code> was blocked — usually a privacy or
-                ad-blocking extension, or an offline connection. Allow Google Fonts for this site (or
-                reconnect) to preview {font.family} accurately. This is preview-only; copied imports and
-                exports are unaffected.
+                The stylesheet or font file did not become usable. A privacy extension, dropped
+                connection or unavailable font-loading feature can cause this. The import URL and
+                CSS you copy below are unaffected.
               </span>
-              <button
-                type="button"
-                className="fg-blocked-retry"
-                onClick={() => {
-                  setLoadState('checking')
-                  const reg = font.variants.includes(400) ? 400 : font.variants[0]
-                  // Cache-bust so a genuinely re-attempted fetch isn't served the
-                  // failed response from cache, then re-verify.
-                  reloadFont(font.family).then(() =>
-                    verifyFontLoaded(font.family, reg).then(status => setLoadState(status))
-                  )
-                }}
-              >Retry</button>
+              <button type="button" className="typ-notice-retry" onClick={retryFont}>Retry this font</button>
             </div>
           </div>
         )}
 
-        <div className="fg-detail-hero" style={{ fontFamily: fam, fontWeight: previewWeight }}>
+        <h2
+          className="fg-detail-hero"
+          id="fg-detail-title"
+          ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(weight) })}
+        >
           {font.family}
-        </div>
+        </h2>
 
         <div className="fg-detail-tags">
           <span className="fg-tag">{font.category}</span>
-          <span className="fg-tag">{font.variants.length} weight{font.variants.length !== 1 ? 's' : ''}</span>
-          {font.subsets?.length > 0 && <span className="fg-tag">{font.subsets.length} subset{font.subsets.length !== 1 ? 's' : ''}</span>}
+          <span className="fg-tag">{font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</span>
+          {font.subsets?.length > 0 && <span className="fg-tag">{font.subsets.length} subset{font.subsets.length === 1 ? '' : 's'}</span>}
         </div>
 
         <div className="fg-detail-section">
-          <div className="fg-detail-label">Weight</div>
+          <label className="fg-detail-label" htmlFor="fg-detail-weight">Weight</label>
           <div className="fg-weight-slider-row">
             <input
+              id="fg-detail-weight"
               type="range"
               min={Math.min(...font.variants)}
               max={Math.max(...font.variants)}
-              step={1}
-              value={previewWeight}
-              onChange={e => setPreviewWeight(+e.target.value)}
-              list={`wt-${font.family.replace(/\s/g, '-')}`}
+              step={100}
+              value={weight}
+              onChange={e => setWeight(+e.target.value)}
             />
-            <span className="fg-weight-slider-val">{previewWeight}</span>
-            <datalist id={`wt-${font.family.replace(/\s/g, '-')}`}>
-              {font.variants.map(w => <option key={w} value={w} />)}
-            </datalist>
+            <span className="fg-weight-slider-val">{weight}</span>
           </div>
         </div>
 
         <div className="fg-detail-section">
-          <div className="fg-detail-label">Type Scale</div>
+          <div className="fg-detail-label">Type scale</div>
           {SIZES.map(s => (
             <div key={s.label} className="fg-scale-row">
               <span className="fg-scale-label">{s.label}<br /><span>{s.px}px</span></span>
-              <span className="fg-scale-text" style={{ fontFamily: fam, fontSize: s.px, fontWeight: previewWeight }}>
+              <span
+                className="fg-scale-text"
+                ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(weight), '--fg-size': `${s.px}px` })}
+              >
                 {PANGRAM}
               </span>
             </div>
@@ -313,11 +488,11 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
         </div>
 
         <div className="fg-detail-section">
-          <div className="fg-detail-label">All Weights</div>
+          <div className="fg-detail-label">All weights</div>
           <div className="fg-weights-grid">
             {font.variants.map(w => (
               <div key={w} className="fg-weight-card">
-                <div className="fg-weight-sample" style={{ fontFamily: fam, fontWeight: w }}>Ag</div>
+                <div className="fg-weight-sample" ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(w) })}>Ag</div>
                 <div className="fg-weight-num">{w}</div>
               </div>
             ))}
@@ -325,87 +500,77 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
         </div>
 
         <div className="fg-detail-section">
-          <div className="fg-detail-label">Character Set</div>
-          <div className="fg-charset" style={{ fontFamily: fam, fontWeight: previewWeight }}>
+          <div className="fg-detail-label">Character set</div>
+          <div className="fg-charset" ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(weight) })}>
             <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
             <div>abcdefghijklmnopqrstuvwxyz</div>
-            <div>0123456789 !@#$%^&*()+-=</div>
-          </div>
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Paragraph</div>
-          <div className="fg-paragraph" style={{ fontFamily: fam }}>
-            <p style={{ fontWeight: previewWeight, fontSize: 28, lineHeight: 1.2, marginBottom: 16 }}>The fundamentals of great typography</p>
-            <p style={{ fontWeight: font.variants.includes(400) ? 400 : font.variants[0], fontSize: 16, lineHeight: 1.75 }}>
-              Typography is the art and technique of arranging type to make written language legible, readable, and appealing when displayed. The arrangement of type involves selecting typefaces, point sizes, line lengths, line-spacing, and letter-spacing, and adjusting the space between pairs of letters. Good typography enhances readability and creates visual hierarchy.
-            </p>
+            <div>0123456789 !@#$%^&amp;*()+-=</div>
           </div>
         </div>
 
         {pairings.length > 0 && (
           <div className="fg-detail-section">
             <div className="fg-detail-label">Pairs well with</div>
-            <p className="fg-pair-hint">Common combinations — preview {font.family} as the heading over each body face.</p>
             <div className="fg-pair-grid">
-              {pairings.map(pair => {
-                const pairFam = css(pair)
-                const pairBodyWeight = pair.variants.includes(400) ? 400 : pair.variants[0]
-                return (
-                  <div key={pair.family} className="fg-pair-card">
-                    <div className="fg-pair-preview">
-                      <span className="fg-pair-heading" style={{ fontFamily: fam, fontWeight: hw(font) }}>{font.family}</span>
-                      <span className="fg-pair-body" style={{ fontFamily: pairFam, fontWeight: pairBodyWeight }}>
-                        {pair.family} keeps body copy clean and readable beneath the headline.
-                      </span>
-                    </div>
-                    <div className="fg-pair-foot">
-                      <span className="fg-pair-name">{pair.family}</span>
-                      <button
-                        type="button"
-                        className="fg-pair-apply"
-                        onClick={() => { onApply?.(font, 'heading'); onApply?.(pair, 'body') }}
-                        title={`Use ${font.family} for headings and ${pair.family} for body`}
-                      >
-                        Apply pair
-                      </button>
-                    </div>
+              {pairings.map(({ font: pair, reason }) => (
+                <div
+                  key={pair.family}
+                  className="fg-pair-card"
+                  ref={varsRef({
+                    '--fg-ff': fam,
+                    '--fg-fw-h': String(headingWeight(font)),
+                    '--fg-pair-ff': fontStack(pair),
+                    '--fg-pair-fw': String(bodyWeight(pair)),
+                  })}
+                >
+                  <div className="fg-pair-preview">
+                    <span className="fg-pair-heading">{font.family}</span>
+                    <span className="fg-pair-body">{pair.family} keeps the body copy readable underneath.</span>
                   </div>
-                )
-              })}
+                  <p className="fg-pair-reason">{reason}</p>
+                  <div className="fg-pair-foot">
+                    <span className="fg-pair-name">{pair.family}</span>
+                    <button type="button" className="fg-pair-apply" onClick={() => onSendToPair(font, pair)}>
+                      Open in Font Pair
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
         <div className="fg-detail-section">
-          <div className="fg-detail-label">Add to your kit</div>
+          <div className="fg-detail-label">Take it further</div>
           <div className="fg-detail-apply">
-            <button className="btn" onClick={() => onApply?.(font, 'heading')}>Use as primary (headings)</button>
-            <button className="btn" onClick={() => onApply?.(font, 'body')}>Use as secondary (body)</button>
+            <button type="button" className="fg-detail-btn fg-detail-btn--primary" onClick={() => onSendToPair(font, null)}>
+              Find a pairing &rarr;
+            </button>
+            <button type="button" className="fg-detail-btn" onClick={() => onSendToScale(font)}>
+              Build a type scale &rarr;
+            </button>
           </div>
         </div>
 
         <div className="fg-detail-actions">
-          <button className="btn btn-accent" onClick={() => onCompare?.(font)}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {inCompare
-                ? <polyline points="20 6 9 17 4 12" />
-                : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
-            </svg>
-            {inCompare ? 'Added to compare' : 'Compare'}
+          <button type="button" className="fg-detail-btn" onClick={() => onCompare(font)} aria-pressed={inCompare}>
+            {inCompare ? 'In comparison' : 'Add to comparison'}
           </button>
-          <button className="btn" onClick={() => {
-            const url = `https://fonts.googleapis.com/css2?family=${font.family.replace(/ /g, '+')}:wght@${font.variants.join(';')}&display=swap`
-            trackFontCopy(font.family)
-            if (onCopy) onCopy(url)
-          }}>
-            Copy Import URL
+          <button
+            type="button"
+            className="fg-detail-btn"
+            onClick={() => {
+              trackFontCopy(font.family)
+              onCopy?.(getFontImportUrl([{ family: font.family, weights: font.variants.slice(0, 4) }]))
+            }}
+          >
+            Copy import URL
           </button>
           <a
             href={`https://fonts.google.com/specimen/${font.family.replace(/ /g, '+')}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn"
+            className="fg-detail-btn"
           >
             View on Google Fonts
           </a>
@@ -415,30 +580,68 @@ function FontDetail({ font, onClose, onCopy, onCompare, onApply, inCompare }) {
   )
 }
 
+/* ── Page ──────────────────────────────────────────────────────────────────── */
+
 export default function FontGallery({ onCopy, toast }) {
+  const navigate = useNavigate()
   const { setFonts } = useProject()
-  const [allFonts, setAllFonts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [category, setCategory] = useState('all')
-  // Preselect a font when arrived via /fontgallery?font=Family (e.g. the
-  // dashboard's Font of the Day) by seeding the search with that family.
+  const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
+
+  // Arriving via /fontgallery?font=Family (e.g. a deep link) seeds the search
+  // so the family is already on screen rather than buried in the grid.
   const [query, setQuery] = useState(() => {
     try { return new URLSearchParams(window.location.search).get('font') || '' } catch { return '' }
   })
+  const [category, setCategory] = useState('all')
+  const [sort, setSort] = useState('popularity')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
   const [showCompare, setShowCompare] = useState(false)
-  const MAX_COMPARE = 2
-  const PAGE_SIZE = 48
+  const sentinelRef = useRef(null)
 
   const compareIds = useMemo(() => new Set(compare.map(f => f.family)), [compare])
 
+  const featured = useMemo(() => {
+    if (!catalog.length) return []
+    return FEATURED
+      .map(f => {
+        const match = catalog.find(c => c.family === f.family)
+        return match ? { ...match, phrase: f.phrase, tag: f.tag } : null
+      })
+      .filter(Boolean)
+  }, [catalog])
+
+  const filtered = useMemo(() => {
+    let out = catalog
+    const q = query.trim().toLowerCase()
+    if (q) out = out.filter(f => f.family.toLowerCase().includes(q))
+    if (category !== 'all') out = out.filter(f => f.category === category)
+    if (sort === 'alphabetical') out = [...out].sort((a, b) => a.family.localeCompare(b.family))
+    else if (sort === 'weights') out = [...out].sort((a, b) => b.variants.length - a.variants.length)
+    return out
+  }, [catalog, query, category, sort])
+
+  const paged = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page])
+  const hasMore = paged.length < filtered.length
+
+  useEffect(() => { setPage(1) }, [query, category, sort])
+
+  // Infinite scroll, with an explicit button underneath as the keyboard route —
+  // an observer alone strands anyone who never scrolls with a pointer.
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasMore) return undefined
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) setPage(p => p + 1)
+    }, { rootMargin: '400px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [hasMore, paged.length])
+
   const toggleCompare = useCallback((font) => {
     setCompare(prev => {
-      if (prev.some(f => f.family === font.family)) {
-        return prev.filter(f => f.family !== font.family)
-      }
+      if (prev.some(f => f.family === font.family)) return prev.filter(f => f.family !== font.family)
       if (prev.length >= MAX_COMPARE) {
         toast?.(`You can compare ${MAX_COMPARE} fonts at a time — remove one first`)
         return prev
@@ -447,214 +650,208 @@ export default function FontGallery({ onCopy, toast }) {
     })
   }, [toast])
 
-  // From the detail modal: add the font to the comparison and return to the gallery.
   const compareFromDetail = useCallback((font) => {
-    const already = compare.some(f => f.family === font.family)
-    if (!already && compare.length >= MAX_COMPARE) {
-      toast?.(`You can compare ${MAX_COMPARE} fonts at a time — remove one first`)
-      return
+    toggleCompare(font)
+    setSelected(null)
+  }, [toggleCompare])
+
+  // Hand-offs. Both carry the CURRENT selection into the destination, so the
+  // next tool never opens empty, and both also write the choice into the
+  // project kit so a reload keeps it.
+  const sendToPair = useCallback((heading, body) => {
+    const draft = {
+      heading: { family: heading.family, weight: headingWeight(heading), category: heading.category },
+      body: body ? { family: body.family, weight: bodyWeight(body), category: body.category } : null,
     }
-    if (!already) setCompare(prev => [...prev, font])
-    setSelected(null)
-  }, [compare, toast])
-
-  // Apply a gallery font straight into the active design (heading or body role).
-  const applyFont = useCallback((font, role) => {
-    const weight = role === 'heading' ? hw(font) : (font.variants.includes(400) ? 400 : font.variants[0])
-    loadFont(font.family, font.variants)
-    setFonts({ [role]: { family: font.family, weight, category: font.category } })
-    toast?.(`${font.family} set as ${role === 'heading' ? 'heading' : 'body'} font`)
-    // Close the detail popup so the choice feels committed and returns focus to the gallery.
-    setSelected(null)
-  }, [setFonts, toast])
-  const observerRef = useRef(null)
-  const sentinelRef = useRef(null)
-
-  useEffect(() => {
-    fetchFonts().then(fonts => {
-      setAllFonts(fonts)
-      setLoading(false)
+    setFonts({
+      heading: draft.heading,
+      ...(draft.body ? { body: draft.body } : {}),
     })
-  }, [])
+    if (!setPairDraft(draft)) { toast?.('Couldn’t carry that selection over — try again.'); return }
+    setSelected(null)
+    navigate('/fontpairs')
+  }, [navigate, setFonts, toast])
 
-  const featured = useMemo(() => {
-    if (!allFonts.length) return []
-    return FEATURED.map(f => {
-      const font = allFonts.find(af => af.family === f.family)
-      return font ? { ...font, phrase: f.phrase, tag: f.tag } : null
-    }).filter(Boolean)
-  }, [allFonts])
-
-  useEffect(() => {
-    featured.forEach(f => loadFont(f.family, f.variants.slice(0, 3)))
-  }, [featured])
-
-  const filtered = useMemo(() => {
-    let result = allFonts
-    if (query) {
-      const q = query.toLowerCase()
-      result = result.filter(f => f.family.toLowerCase().includes(q))
+  const sendToScale = useCallback((font) => {
+    const draft = {
+      heading: { family: font.family, weight: headingWeight(font), category: font.category },
+      body: { family: font.family, weight: bodyWeight(font), category: font.category },
     }
-    if (category !== 'all') {
-      result = result.filter(f => f.category === category)
-    }
-    return result
-  }, [allFonts, query, category])
+    setFonts(draft)
+    if (!setScaleDraft(draft)) { toast?.('Couldn’t carry that selection over — try again.'); return }
+    setSelected(null)
+    navigate('/typescale')
+  }, [navigate, setFonts, toast])
 
-  const paged = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page])
-  const hasMore = paged.length < filtered.length
-
-  useEffect(() => { setPage(1) }, [query, category])
-
-  useEffect(() => {
-    if (!sentinelRef.current) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && hasMore) setPage(p => p + 1)
-    }, { rootMargin: '400px' })
-    obs.observe(sentinelRef.current)
-    observerRef.current = obs
-    return () => obs.disconnect()
-  }, [hasMore, paged.length])
-
-  useEffect(() => {
-    if (selected || showCompare) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => { document.body.style.overflow = '' }
-  }, [selected, showCompare])
-
-  if (loading) {
+  if (status === 'loading') {
     return (
-      <div className="sec">
-        <div style={{ padding: 80, textAlign: 'center' }}>
-          <div className="fg-loader" />
-          <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 16 }}>Loading fonts...</div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!allFonts.length) {
-    return (
-      <div className="sec">
-        <div style={{ padding: 80, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 16 }}>No fonts to show — check your connection and refresh.</div>
-          <button className="btn" onClick={() => window.location.reload()}>Refresh</button>
-        </div>
+      <div className="sec fg-page">
+        <FontCatalogLoading label="Opening the Font Gallery" />
       </div>
     )
   }
 
   return (
     <div className="sec fg-page">
-      {/* Hero */}
-      <div className="fg-hero">
-        <div className="fg-hero-eyebrow">Typography</div>
-        <h1 className="fg-hero-title">Font Gallery</h1>
-        <p className="fg-hero-sub">
-          Explore {allFonts.length.toLocaleString()} typefaces from Google Fonts.
-          Find the perfect font for your next project.
-        </p>
-      </div>
-
-      {/* Featured */}
-      <div className="fg-featured">
-        <div className="fg-section-label">Featured Typefaces</div>
-        <div className="fg-featured-grid">
-          {featured.map((font, i) => (
-            <div
-              key={font.family}
-              className={`fg-feat-card${i < 2 ? ' fg-feat-large' : ''}`}
-              onClick={() => setSelected(font)}
-            >
-              <div className="fg-feat-tag">{font.tag}</div>
-              <div className="fg-feat-text" style={{ fontFamily: css(font), fontWeight: hw(font) }}>
-                {i < 2 ? font.phrase : font.family}
-              </div>
-              <div className="fg-feat-info">
-                <span className="fg-feat-name">{font.family}</span>
-                <span className="fg-feat-cat">{font.variants.length} weight{font.variants.length !== 1 ? 's' : ''}</span>
-              </div>
-            </div>
-          ))}
+      <header className="fg-hero">
+        <div className="sec-h-eyebrow">Typography system workspace</div>
+        <div className="fg-hero-copy">
+          <h1>Font Gallery</h1>
+          <p>
+            Browse {catalog.length.toLocaleString()} families from Google Fonts, read a
+            full specimen, then carry your choice straight into a pairing or a type scale.
+          </p>
         </div>
-      </div>
+      </header>
 
-      {/* Filters */}
+      <FontCatalogNotice
+        online={online}
+        degraded={degraded}
+        onRetry={retry}
+        retrying={retrying}
+        count={catalog.length}
+      />
+
+      {featured.length > 0 && (
+        <section className="fg-featured" aria-labelledby="fg-featured-title">
+          <h2 className="fg-section-label" id="fg-featured-title">Featured typefaces</h2>
+          <div className="fg-featured-grid">
+            {featured.map(font => (
+              <FeaturedCard key={font.family} font={font} onOpen={setSelected} />
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="fg-filters">
-        <div className="fg-filter-cats">
+        <div className="fg-filter-cats" role="group" aria-label="Filter by category">
           {CATS.map(c => (
             <button
               key={c.id}
-              className={`fg-cat-pill${category === c.id ? ' active' : ''}`}
+              type="button"
+              className={category === c.id ? 'fg-cat-pill fg-cat-pill--on' : 'fg-cat-pill'}
+              aria-pressed={category === c.id}
               onClick={() => setCategory(c.id)}
             >
               {c.label}
             </button>
           ))}
         </div>
-        <div className="fg-search">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search fonts..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-          />
+        <div className="fg-filter-right">
+          <div className="fg-sort" role="group" aria-label="Sort families">
+            {SORTS.map(s => (
+              <button
+                key={s.id}
+                type="button"
+                className={sort === s.id ? 'fg-sort-btn fg-sort-btn--on' : 'fg-sort-btn'}
+                aria-pressed={sort === s.id}
+                onClick={() => setSort(s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <div className="fg-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Search families…"
+              value={query}
+              spellCheck="false"
+              aria-label="Search font families"
+              onChange={e => setQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="fg-count">
-        {filtered.length.toLocaleString()} font{filtered.length !== 1 ? 's' : ''}
-        {category !== 'all' && ` in ${CATS.find(c => c.id === category)?.label}`}
-      </div>
+      <p className="fg-count" aria-live="polite">
+        {filtered.length.toLocaleString()} famil{filtered.length === 1 ? 'y' : 'ies'}
+        {category !== 'all' ? ` in ${CATS.find(c => c.id === category)?.label}` : ''}
+        {query.trim() ? ` matching “${query.trim()}”` : ''}
+      </p>
 
-      {/* Gallery grid */}
-      <div className="fg-grid">
-        {paged.map((font, i) => (
-          <GalleryCard
-            key={font.family}
-            font={font}
-            index={i}
-            onSelect={setSelected}
-            inCompare={compareIds.has(font.family)}
-            onToggleCompare={toggleCompare}
-          />
-        ))}
-      </div>
+      {filtered.length === 0 ? (
+        <div className="fg-empty" role="status">
+          <strong>Nothing matches that yet.</strong>
+          <span>
+            {query.trim()
+              ? `No family in the loaded catalogue contains “${query.trim()}”.`
+              : 'No family in the loaded catalogue is in this category.'}
+            {' '}Clear the filters to see everything again.
+          </span>
+          <button
+            type="button"
+            className="typ-picker-clear"
+            onClick={() => { setQuery(''); setCategory('all') }}
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : (
+        <>
+          <ul className="fg-grid">
+            {paged.map(font => (
+              <GalleryCard
+                key={font.family}
+                font={font}
+                onOpen={setSelected}
+                inCompare={compareIds.has(font.family)}
+                onToggleCompare={toggleCompare}
+              />
+            ))}
+          </ul>
 
-      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+          {hasMore && (
+            <>
+              <div ref={sentinelRef} className="fg-sentinel" aria-hidden="true" />
+              <div className="fg-more">
+                <button type="button" className="fg-more-btn" onClick={() => setPage(p => p + 1)}>
+                  Show more families ({(filtered.length - paged.length).toLocaleString()} left)
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
 
-      {/* Compare tray */}
       {compare.length > 0 && !showCompare && (
         <div className="fg-compare-tray">
           <div className="fg-compare-tray-chips">
             <span className="fg-compare-tray-label">Comparing</span>
             {compare.map(f => (
-              <button key={f.family} className="fg-compare-chip" onClick={() => toggleCompare(f)} title="Remove">
+              <button
+                key={f.family}
+                type="button"
+                className="fg-compare-chip"
+                onClick={() => toggleCompare(f)}
+                aria-label={`Remove ${f.family} from the comparison`}
+              >
                 {f.family}
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             ))}
           </div>
           <div className="fg-compare-tray-actions">
-            <button className="btn btn-s" onClick={() => setCompare([])}>Clear</button>
-            <button className="btn btn-accent btn-s" onClick={() => setShowCompare(true)} disabled={compare.length < 2}>
+            <button type="button" className="fg-more-btn" onClick={() => setCompare([])}>Clear</button>
+            <button
+              type="button"
+              className="fg-more-btn fg-more-btn--primary"
+              onClick={() => setShowCompare(true)}
+              disabled={compare.length < 2}
+            >
               Compare {compare.length}
             </button>
           </div>
         </div>
       )}
 
-      {/* Compare view */}
-      {showCompare && compare.length > 0 && (
-        <CompareView
+      {showCompare && compare.length >= 2 && (
+        <CompareDialog
           fonts={compare}
           onClose={() => setShowCompare(false)}
           onRemove={(f) => {
@@ -662,22 +859,34 @@ export default function FontGallery({ onCopy, toast }) {
             setCompare(next)
             if (next.length < 2) setShowCompare(false)
           }}
-          onSelect={(f) => { setShowCompare(false); setSelected(f) }}
+          onOpen={(f) => { setShowCompare(false); setSelected(f) }}
           onCopy={onCopy}
         />
       )}
 
-      {/* Detail modal */}
       {selected && (
-        <FontDetail
+        <DetailDialog
           font={selected}
           onClose={() => setSelected(null)}
           onCopy={onCopy}
           onCompare={compareFromDetail}
-          onApply={applyFont}
           inCompare={compareIds.has(selected.family)}
+          onSendToPair={sendToPair}
+          onSendToScale={sendToScale}
         />
       )}
+
+      <nav className="fg-more-nav" aria-label="More typography tools">
+        <div>
+          <span className="fg-more-kicker">Continue your typography system</span>
+          <strong>Found a family? Give it a partner and a set of sizes.</strong>
+        </div>
+        <div className="fg-more-links">
+          <NavLink to="/fontpairs" className="fg-more-link">Pair two families &rarr;</NavLink>
+          <NavLink to="/typescale" className="fg-more-link">Build a type scale &rarr;</NavLink>
+          <NavLink to="/color/palette" className="fg-more-link">Build a colour palette &rarr;</NavLink>
+        </div>
+      </nav>
     </div>
   )
 }

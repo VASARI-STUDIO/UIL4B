@@ -37,6 +37,7 @@ function isKnownGsiDocumentNoise(page, text, location, gsiRequested) {
   const documentLevel = (location.lineNumber || 0) === 0
     && (location.columnNumber || 0) === 0
     && location.url === page.url()
+  if (text === 'Error retrieving a token.') return documentLevel
   if (text === 'The request has been aborted.') return documentLevel
   if (!/Provider's accounts list is empty/i.test(text)) return false
   return documentLevel || /\[GSI_LOGGER\]|\bFedCM\b/i.test(text)
@@ -69,6 +70,10 @@ export function watch(page, persona) {
     if (msg.type() !== 'error') return
     const location = msg.location() || {}
     const url = location.url || ''
+    const deliberateMotionAbort = persona === 'visitor whose motion chunk never arrives'
+      && /ERR_FAILED/.test(msg.text())
+      && /assets\/(?:gsap|ScrollTrigger)-/.test(url)
+    if (deliberateMotionAbort) return
     if (isExpectedNoise(msg.text(), url)) return
     if (isKnownGsiDocumentNoise(page, msg.text(), location, gsiRequested)) return
     const source = url

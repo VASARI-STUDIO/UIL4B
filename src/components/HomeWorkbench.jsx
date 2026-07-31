@@ -20,12 +20,14 @@ import {
   resetIconDraft,
   setIconDraft,
 } from '../utils/iconHandoff'
+import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
 import { HOME_WORKBENCH_TABS } from '../data/toolTree'
+import NavIcon from './NavIcon'
 
-// The homepage mini-workbench: four task modes over one persistent panel.
+// The homepage mini-workbench: five task modes over one persistent panel.
 //
-// This is the "calm" half of the hero's chaos → calm story. Eight real tool
-// links sit above it; four ways of *working* sit here. Every panel is a limited
+// This is the "calm" half of the hero's chaos → calm story. Eleven real tool
+// links sit above it; five ways of *working* sit here. Every panel is a limited
 // but genuine interaction — real generated values, real editable inputs, real
 // hand-offs into the full tools — and every panel names where Continue goes
 // before you press it.
@@ -35,7 +37,7 @@ import { HOME_WORKBENCH_TABS } from '../data/toolTree'
 //   · the Image panel produces an output DRAFT, never a finished conversion;
 //   · the Icon panel edits a preview, never a stored custom icon.
 //
-// All four panels' state lives here, so switching tabs keeps a visitor's edits
+// All five panels' state lives here, so switching tabs keeps a visitor's edits
 // for the session. A reload deliberately returns to safe defaults — no
 // persistence is added just to make a preview survive.
 
@@ -746,6 +748,196 @@ function IconPanel({ state, onChange, announce }) {
   )
 }
 
+/* ── 5 · Typography ─────────────────────────────────────────────────────── */
+
+const TYPE_RATIOS = [
+  { value: 1.2, label: 'Minor third · 1.2' },
+  { value: 1.25, label: 'Major third · 1.25' },
+  { value: 1.333, label: 'Perfect fourth · 1.333' },
+]
+
+const DEFAULT_TYPE_STATE = {
+  base: 16,
+  ratio: 1.25,
+  sample: 'Build interfaces that hold up.',
+}
+
+const TYPE_STEPS = [
+  { label: 'Display', exponent: 3 },
+  { label: 'Heading', exponent: 2 },
+  { label: 'Body', exponent: 0 },
+  { label: 'Caption', exponent: -1 },
+]
+
+function TypographyPanel({ state, onChange, announce }) {
+  const navigate = useNavigate()
+  const [error, setError] = useState('')
+  const [opening, setOpening] = useState(false)
+  const [baseDraft, setBaseDraft] = useState(() => String(state.base))
+  const lockRef = useRef(false)
+
+  const patch = (next) => {
+    setError('')
+    onChange({ ...state, ...next })
+  }
+
+  const commitBase = () => {
+    const raw = baseDraft.trim()
+    const numeric = Number(raw)
+    const next = raw && Number.isFinite(numeric)
+      ? Math.min(40, Math.max(8, numeric))
+      : state.base
+    setBaseDraft(String(next))
+    if (next !== state.base) patch({ base: next })
+    return next
+  }
+
+  const openScale = () => {
+    if (lockRef.current) return
+    lockRef.current = true
+    setOpening(true)
+    const base = commitBase()
+    const staged = setScaleDraft({
+      scale: { base, ratio: state.ratio },
+    })
+    if (!staged) {
+      lockRef.current = false
+      setOpening(false)
+      setError('That type scale could not be handed over. Check the base size and ratio, then try again.')
+      return
+    }
+    announce(`Opening a ${base}px type scale in the Type Scale Generator.`)
+    try {
+      navigate('/typescale')
+    } catch {
+      resetScaleDraft()
+      lockRef.current = false
+      setOpening(false)
+      setError('Opening the Type Scale Generator failed. Your preview is unchanged — try again.')
+    }
+  }
+
+  return (
+    <div className="hw-body">
+      <div className="hw-type-split">
+        <div className="hw-type-preview" aria-label="Live type scale preview">
+          {TYPE_STEPS.map((step) => {
+            const size = Math.round(state.base * Math.pow(state.ratio, step.exponent) * 10) / 10
+            return (
+              <div className="hw-type-row" key={step.label}>
+                <span className="hw-type-meta">{step.label} · {size}px</span>
+                <span
+                  className="hw-type-sample"
+                  ref={(node) => node?.style.setProperty('--hw-type-size', `${size}px`)}
+                >
+                  {state.sample}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="hw-type-side">
+          <div className="hw-fields">
+            <div className="hw-field">
+              <label className="hw-label" htmlFor="hw-type-base">Base size</label>
+              <input
+                id="hw-type-base"
+                className="hw-input"
+                type="number"
+                min="8"
+                max="40"
+                step="1"
+                value={baseDraft}
+                onChange={(event) => {
+                  const raw = event.target.value
+                  setBaseDraft(raw)
+                  const numeric = Number(raw)
+                  // Preserve an empty/partial draft for keyboard replacement,
+                  // while valid complete values continue to update the preview.
+                  if (raw.trim() && Number.isFinite(numeric) && numeric >= 8 && numeric <= 40) {
+                    patch({ base: numeric })
+                  }
+                }}
+                onBlur={commitBase}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    commitBase()
+                    event.currentTarget.blur()
+                  }
+                }}
+              />
+            </div>
+            <div className="hw-field hw-field-grow">
+              <label className="hw-label" htmlFor="hw-type-ratio">Scale ratio</label>
+              <select
+                id="hw-type-ratio"
+                className="hw-select"
+                value={state.ratio}
+                onChange={(event) => patch({ ratio: Number(event.target.value) })}
+              >
+                {TYPE_RATIOS.map((ratio) => (
+                  <option key={ratio.value} value={ratio.value}>{ratio.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="hw-field">
+            <label className="hw-label" htmlFor="hw-type-sample">Preview text</label>
+            <input
+              id="hw-type-sample"
+              className="hw-input"
+              type="text"
+              value={state.sample}
+              onChange={(event) => patch({ sample: event.target.value })}
+            />
+          </div>
+
+          <nav className="hw-type-tools" aria-label="Typography tools">
+            <Link className="hw-type-tool" to="/fontgallery">
+              <NavIcon id="type" />
+              <span><strong>Font Gallery</strong><small>Browse and compare families</small></span>
+              <span aria-hidden="true">→</span>
+            </Link>
+            <Link className="hw-type-tool" to="/fontpairs">
+              <NavIcon id="font-pair" />
+              <span><strong>Font Pair</strong><small>Build a reasoned pairing</small></span>
+              <span aria-hidden="true">→</span>
+            </Link>
+            <button type="button" className="hw-type-tool" onClick={openScale} disabled={opening}>
+              <NavIcon id="typography" />
+              <span><strong>Type Scale</strong><small>Continue with this live scale</small></span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <p className="hw-note">
+        This preview calculates real sizes from your base and ratio. It does not save a font kit;
+        the full tools handle family selection, pair reasoning and developer exports.
+      </p>
+
+      {error && <p className="hw-alert" role="alert">{error}</p>}
+
+      <div className="hw-foot">
+        <button
+          type="button"
+          className="hw-continue hw-continue-go"
+          disabled={opening}
+          onClick={openScale}
+        >
+          {opening ? 'Opening Type Scale…' : 'Continue in Type Scale'}
+          <span aria-hidden="true">→</span>
+        </button>
+        <span className="hw-foot-note">Carries the {state.base}px base and {state.ratio} ratio once.</span>
+      </div>
+    </div>
+  )
+}
+
 /* ── the workbench ───────────────────────────────────────────────────────── */
 
 export default function HomeWorkbench() {
@@ -759,6 +951,7 @@ export default function HomeWorkbench() {
   const [gradient, setGradient] = useState(DEFAULT_GRADIENT)
   const [image, setImage] = useState(DEFAULT_IMAGE_STATE)
   const [icon, setIcon] = useState(DEFAULT_ICON_STATE)
+  const [typography, setTypography] = useState(DEFAULT_TYPE_STATE)
 
   const announce = useCallback((message) => setStatus(message), [])
 
@@ -802,7 +995,8 @@ export default function HomeWorkbench() {
                 onClick={() => setActive(tab.id)}
                 onKeyDown={(event) => onTabKeyDown(event, index)}
               >
-                {tab.label}
+                <NavIcon id={tab.icon} className="hw-tab-icon" />
+                <span>{tab.label}</span>
               </button>
             ))}
           </div>
@@ -825,9 +1019,13 @@ export default function HomeWorkbench() {
             {active === 'icon' && (
               <IconPanel state={icon} onChange={setIcon} announce={announce} />
             )}
+            {active === 'typography' && (
+              <TypographyPanel state={typography} onChange={setTypography} announce={announce} />
+            )}
           </div>
 
           <p className="sr-only" role="status" aria-live="polite">{status}</p>
+          <span className="hw-splash" aria-hidden="true" />
         </div>
       </div>
     </section>
