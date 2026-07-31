@@ -54,6 +54,7 @@ Work is sequenced as four connected slices:
      motion.
 
 2. **Palette/Tint consistency and defect pass**
+   - **Implemented on the release branch; combined QA remains.**
    - Close the nav/toolbar/footer gutter gaps and keep toolbar height stable.
    - Make hover reveals smooth without layout shifts.
    - Ensure the initial random seed, HEX input and first swatch always match.
@@ -66,11 +67,13 @@ Work is sequenced as four connected slices:
      actions.
 
 3. **High-fidelity colour-system previews**
+   - **Implemented on the release branch; combined QA remains.**
    - Replace placeholder preview tiles with realistic light/dark interface scenes.
    - Show buttons, alerts, forms, cards, text and backgrounds using the active
      system; extra scenes may be visibly Pro-gated.
 
 4. **UI System Mode (premium)**
+   - **Implemented on the release branch; combined QA remains.**
    - Generate Brand, Success, Warning, Error, Information and brand-tinted Neutral
      scales from 100–900, with the selected brand colour as 500.
    - Use a perceptual colour model (OKLCH/HCT/HSL—not direct HEX arithmetic) and
@@ -100,9 +103,10 @@ The only unresolved founder call is the subscription-chargeback policy in
 
 ## Release gaps and durable backlog
 
-The published Firestore rules and #198 remove two former blockers. A final GO
-still requires the current UI batch and a fresh combined QA/review pass. Keep
-these gaps visible:
+The published Firestore rules and #198 remove two former blockers. The approved
+Typography, Palette/Tint, preview and UI System slices are integrated on the
+v2.8 release branch; a final GO still requires its combined release gate. Keep
+these durable gaps visible after that gate:
 
 - add a dev/preview guard around Firestore aggregate analytics;
 - instrument the canonical upgrade gate and activation events;
