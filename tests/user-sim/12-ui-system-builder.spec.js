@@ -16,8 +16,9 @@ test.describe('UI System Builder', () => {
     })
   })
 
-  test('entry is in-place and Back restores the ordinary Palette draft exactly', async ({ page }) => {
+  test('Space belongs to UI controls and Back restores the ordinary Palette draft exactly', async ({ page, context }) => {
     watch(page, 'designer evaluating UI mode without committing it')
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await go(page, '/color/palette')
     const seed = await page.getByRole('textbox', { name: 'Seed colour hex' }).inputValue()
     const palette = await page.locator('.plb-col .plb-hex').allTextContents()
@@ -25,6 +26,15 @@ test.describe('UI System Builder', () => {
     await page.getByRole('button', { name: 'Open UI System Pro mode' }).click()
     await expect(page.getByRole('heading', { name: 'UI System Builder' })).toBeVisible()
     await expect(page.getByRole('gridcell', { name: new RegExp(`Brand 500, ${seed}`) })).toBeVisible()
+
+    const brand500 = page.getByRole('gridcell', { name: new RegExp(`Brand 500, ${seed}`) })
+    await brand500.focus()
+    await page.keyboard.press('Space')
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(seed)
+    await page.getByRole('button', { name: 'Dark', exact: true }).focus()
+    await page.keyboard.press('Space')
+    await expect(page.locator('.uis-lab-canvas')).toHaveCount(1)
+    await expect(page.locator('.uis-lab-canvas')).toHaveAttribute('data-theme', 'dark')
 
     await page.getByRole('button', { name: 'Back to palette' }).click()
     await expect(page.getByRole('textbox', { name: 'Seed colour hex' })).toHaveValue(seed)
@@ -79,6 +89,7 @@ test.describe('UI System Builder', () => {
     await expect(page.getByRole('dialog', { name: 'Rebalance the complete UI system' })).toBeVisible()
     await page.getByRole('button', { name: 'Close', exact: true }).click()
 
+    await page.getByRole('gridcell', { name: /Brand 600/ }).click()
     await page.getByRole('button', { name: /Edit shade/ }).click()
     await expect(page.getByRole('dialog', { name: 'Fine-tune individual UI shades' })).toBeVisible()
     await page.getByRole('button', { name: 'Close', exact: true }).click()
@@ -106,6 +117,33 @@ test.describe('UI System Builder', () => {
     const mappedPairs = await page.locator('.uis-role-pairs p').allTextContents()
     expect(mappedPairs.length).toBeGreaterThan(10)
     expect(mappedPairs.every(text => /[4-9]\.\d{2}:1|1\d\.\d{2}:1|2\d\.\d{2}:1/.test(text))).toBe(true)
+  })
+
+  test('new compact controls retain at least 44 by 44 CSS-pixel touch targets', async ({ page }) => {
+    watch(page, 'touch user operating the UI system controls')
+    await enter(page)
+
+    const sizes = await page.locator([
+      '.uis-back',
+      '.uis-choice',
+      '.uis-command-actions .btn',
+      '.uis-segmented button',
+      '.uis-scene-tab',
+      '.uis-help-button',
+      '.uis-export-actions .btn',
+      '.uis-detail-ident .btn',
+      '.uis-seed-picker',
+    ].join(',')).evaluateAll(elements => elements.map(element => ({
+      name: element.textContent?.trim() || element.getAttribute('aria-label'),
+      width: element.getBoundingClientRect().width,
+      height: element.getBoundingClientRect().height,
+    })))
+    for (const control of sizes) {
+      expect(control.height, `${control.name} target height`).toBeGreaterThanOrEqual(44)
+      if (control.name === 'What is HCT?' || control.name === 'Choose UI system brand colour') {
+        expect(control.width, `${control.name} target width`).toBeGreaterThanOrEqual(44)
+      }
+    }
   })
 
   test('Apply Brand scale is the only explicit hand-back and preserves Brand 500 as the seed', async ({ page }) => {

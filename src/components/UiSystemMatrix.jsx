@@ -28,6 +28,7 @@ export default function UiSystemMatrix({ system, onCopy, onEdit }) {
 
   const selectedGroup = system.groups[active.row] || system.groups[0]
   const selected = selectedGroup.shades[active.column] || selectedGroup.shades[4]
+  const selectedIsSeed = selectedGroup.id === 'brand' && selected.step === 500
 
   const copyShade = useCallback((group, item, row, column) => {
     setActive({ row, column })
@@ -163,7 +164,7 @@ export default function UiSystemMatrix({ system, onCopy, onEdit }) {
             Copy HEX
           </button>
           <button type="button" className="btn btn-s btn-ghost" onClick={() => onEdit(selectedGroup, selected)}>
-            Edit shade <span className="uis-pro-label">Pro</span>
+            {selectedIsSeed ? 'Edit via Brand seed' : 'Edit shade'} <span className="uis-pro-label">Pro</span>
           </button>
         </div>
 

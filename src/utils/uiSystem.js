@@ -191,7 +191,12 @@ export function createUiSystem(seed, options = {}) {
   if (!normalizedSeed) throw new Error('Enter a valid six-digit HEX colour.')
   const seedHct = roundHct(hexToHct(normalizedSeed))
   const neutralTinted = options.neutralTinted !== false
-  const overrides = options.overrides || {}
+  // Brand 500 is the system source of truth, not an independently editable
+  // scale cell. Ignore stale or tampered overrides so roles and exports can
+  // never contradict `system.seed`.
+  const overrides = Object.fromEntries(
+    Object.entries(options.overrides || {}).filter(([key]) => key !== 'brand-500'),
+  )
   const definitions = [
     {
       id: 'brand',

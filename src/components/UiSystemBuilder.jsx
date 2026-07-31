@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import UiShadeEditor from './UiShadeEditor'
 import UiSystemLab from './UiSystemLab'
 import UiSystemMatrix from './UiSystemMatrix'
@@ -48,6 +48,7 @@ export default function UiSystemBuilder({
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [editing, setEditing] = useState(null)
+  const seedInputRef = useRef(null)
 
   const canEdit = isPro && !entitlementLoading
 
@@ -107,10 +108,20 @@ export default function UiSystemBuilder({
 
   const editShade = (group, item) => {
     if (!canEdit) return gate('edit')
+    if (group.id === 'brand' && item.step === 500) {
+      setMessage('Brand 500 is the system seed. Edit it from the Brand 500 field.')
+      seedInputRef.current?.focus()
+      return
+    }
     setEditing({ group, item })
   }
 
   const saveShade = hex => {
+    if (editing.group.id === 'brand' && editing.item.step === 500) {
+      commitSeed(hex)
+      setEditing(null)
+      return
+    }
     const key = `${editing.group.id}-${editing.item.step}`
     const nextOverrides = { ...overrides, [key]: hex }
     if (rebuild(systemSeed, neutralTinted, nextOverrides)) {
@@ -119,12 +130,12 @@ export default function UiSystemBuilder({
     }
   }
 
-  const exportSystem = format => {
+  const exportSystem = async format => {
     if (!canEdit) return gate('export')
     const exports = uiSystemExports(system)
-    onCopy?.(exports[format])
     const label = format === 'dtcg' ? 'DTCG JSON' : format === 'tailwind' ? 'Tailwind config' : 'CSS variables'
-    setMessage(`${label} copied.`)
+    const copied = await onCopy?.(exports[format])
+    setMessage(copied === false ? `${label} could not be copied. Try again or check clipboard access.` : `${label} copied.`)
   }
 
   const applyBrand = () => {
@@ -166,6 +177,7 @@ export default function UiSystemBuilder({
             onChange={event => commitSeed(event.target.value)}
           />
           <input
+            ref={seedInputRef}
             id="uis-seed"
             className={error ? 'uis-seed-hex uis-seed-hex--error' : 'uis-seed-hex'}
             type="text"

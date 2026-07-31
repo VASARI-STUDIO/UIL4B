@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import SnapSlider from './SnapSlider'
 import { hctToHex, hexToHct } from '../utils/colors'
 import { normaliseHex } from '../utils/paletteAdjust'
@@ -25,6 +25,8 @@ function fieldGradient(key, request) {
 }
 
 export default function UiShadeEditor({ group, item, onClose, onSave }) {
+  const dialogRef = useRef(null)
+  const closeRef = useRef(onClose)
   const [request, setRequest] = useState(() => ({ ...item.achieved }))
   const [draft, setDraft] = useState(item.hex)
   const [error, setError] = useState('')
@@ -46,6 +48,47 @@ export default function UiShadeEditor({ group, item, onClose, onSave }) {
     c: fieldGradient('c', request),
     t: fieldGradient('t', request),
   }), [request])
+
+  useEffect(() => {
+    closeRef.current = onClose
+  }, [onClose])
+
+  useEffect(() => {
+    const previous = document.activeElement
+    const dialog = dialogRef.current
+    const focusable = () => [...dialog.querySelectorAll(
+      'button:not([disabled]),input:not([disabled]),[href],[tabindex]:not([tabindex="-1"])',
+    )].filter(element => !element.hidden)
+    requestAnimationFrame(() => (dialog.querySelector('#uis-edit-h') || focusable()[0] || dialog).focus())
+    const onKeyDown = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeRef.current()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const items = focusable()
+      if (!items.length) {
+        event.preventDefault()
+        dialog.focus()
+        return
+      }
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    dialog.addEventListener('keydown', onKeyDown)
+    return () => {
+      dialog.removeEventListener('keydown', onKeyDown)
+      requestAnimationFrame(() => previous?.focus?.())
+    }
+  }, [])
 
   const setField = (key, value) => {
     setError('')
@@ -77,7 +120,7 @@ export default function UiShadeEditor({ group, item, onClose, onSave }) {
 
   return (
     <div className="uis-editor-layer" onPointerDown={event => { if (event.target === event.currentTarget) onClose() }}>
-      <div className="uis-editor" role="dialog" aria-modal="true" aria-labelledby="uis-editor-title">
+      <div ref={dialogRef} className="uis-editor" role="dialog" aria-modal="true" aria-labelledby="uis-editor-title" tabIndex="-1">
         <div className="uis-editor-head">
           <div>
             <p className="uis-kicker">Individual override</p>

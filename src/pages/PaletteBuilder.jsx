@@ -5,7 +5,7 @@ import ColorPickerPop from '../components/ColorPickerPop'
 import UiSystemBuilder from '../components/UiSystemBuilder'
 import {
   adjustTrackGradients, applyAdjust, autoTonalFromSeed, autoTonalPalette, contrastRatio,
-  derivePreviewRoles, generateHarmony, hctToHex, hexToHct, hexToHsl, hslToHex, maxChromaFor,
+  derivePreviewRoles, generateHarmony, hctToHex, hexToHct, hexToHsl, hslToHex,
   mixHex, simCvd, textColorForBg, tonalRamp,
 } from '../utils/colors'
 import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
@@ -538,8 +538,8 @@ const VisionGlyph = ({ id, size = 14 }) => <Ico size={size}>{VISION_GLYPHS[id] |
 // ── HctPicker — per-column Hue·Chroma·Tone editor (the M3 space the whole
 // engine runs in), plus a hex field. Edits the RAW colour; the global adjust
 // lens still applies on top, same as every other way of setting a colour. ──
-function HctPicker({ hex, label, onChange, onClose }) {
-  const [hct, setHct] = useState(() => {
+export function HctPicker({ hex, label, onChange, onClose }) {
+  const [requested, setRequested] = useState(() => {
     try {
       const [h, c, t] = hexToHct(hex)
       if ([h, c, t].every(Number.isFinite)) return { h: Math.round(h), c: Math.round(c), t: Math.round(t) }
@@ -547,13 +547,14 @@ function HctPicker({ hex, label, onChange, onClose }) {
     const [h, s, l] = hexToHsl(hex)
     return { h: Math.round(h), c: Math.round(s * 0.6), t: Math.round(l) }
   })
+  const [achieved, setAchieved] = useState(requested)
   const [draft, setDraft] = useState(hex)
 
-  const emit = (requested) => {
+  const emit = (request) => {
     const next = {
-      h: ((requested.h % 360) + 360) % 360,
-      c: Math.max(0, Math.min(requested.c, maxChromaFor(requested.h, requested.t))),
-      t: Math.max(0, Math.min(100, requested.t)),
+      h: ((request.h % 360) + 360) % 360,
+      c: Math.max(0, Math.min(150, request.c)),
+      t: Math.max(0, Math.min(100, request.t)),
     }
     let out
     try { out = hctToHex(next.h, next.c, next.t) }
@@ -565,7 +566,8 @@ function HctPicker({ hex, label, onChange, onClose }) {
         const [h, c, t] = hexToHct(norm)
         if ([h, c, t].every(Number.isFinite)) actual = { h: Math.round(h), c: Math.round(c), t: Math.round(t) }
       } catch { /* keep the clamped request */ }
-      setHct(actual)
+      setRequested(next)
+      setAchieved(actual)
       setDraft(norm)
       onChange(norm)
     }
@@ -577,9 +579,14 @@ function HctPicker({ hex, label, onChange, onClose }) {
     onChange(norm)
     try {
       const [h, c, t] = hexToHct(norm)
-      if ([h, c, t].every(Number.isFinite)) setHct({ h: Math.round(h), c: Math.round(c), t: Math.round(t) })
+      if ([h, c, t].every(Number.isFinite)) {
+        const actual = { h: Math.round(h), c: Math.round(c), t: Math.round(t) }
+        setRequested(actual)
+        setAchieved(actual)
+      }
     } catch { /* keep slider state */ }
   }
+  const limited = requested.c - achieved.c > 1.5 || Math.abs(requested.t - achieved.t) > 1.2
 
   return (
     <div className="plb-pop plb-picker" role="dialog" aria-label={`Edit ${label} in HCT`}>
@@ -595,7 +602,7 @@ function HctPicker({ hex, label, onChange, onClose }) {
       </div>
       {[
         { key: 'h', label: 'Hue', min: 0, max: 359, unit: '°', snaps: [90, 180, 270], snapRadius: 6 },
-        { key: 'c', label: 'Chroma', min: 0, max: Math.max(1, Math.round(maxChromaFor(hct.h, hct.t))), unit: '', snaps: [] },
+        { key: 'c', label: 'Chroma', min: 0, max: 150, unit: '', snaps: [50, 100] },
         { key: 't', label: 'Tone', min: 0, max: 100, unit: '', snaps: [50], snapRadius: 3 },
       ].map(f => (
         <div className="plb-picker-row" key={f.key}>
@@ -603,15 +610,20 @@ function HctPicker({ hex, label, onChange, onClose }) {
           <SnapSlider
             min={f.min}
             max={f.max}
-            value={hct[f.key]}
+            value={requested[f.key]}
             snaps={f.snaps}
             snapRadius={f.snapRadius}
             unit={f.unit}
-            onChange={(v) => emit({ ...hct, [f.key]: Math.round(v) })}
+            onChange={(v) => emit({ ...requested, [f.key]: Math.round(v) })}
             ariaLabel={`${f.label} of ${label}`}
           />
         </div>
       ))}
+      <div className="plb-picker-evidence" aria-live="polite">
+        <span>Requested H {requested.h}Â° Â· C {requested.c} Â· T {requested.t}</span>
+        <span>Achieved H {achieved.h}Â° Â· C {achieved.c} Â· T {achieved.t}</span>
+        {limited && <strong>Display gamut limited; controls retain your requested HCT.</strong>}
+      </div>
       <div className="plb-picker-hexrow">
         <span className="plb-picker-chip" ref={barRef(hex)} aria-hidden="true" />
         <input
@@ -664,6 +676,47 @@ const PREVIEW_SCENES = {
 
 // UI — a product dashboard (nav, KPI cards, data bars, CTA).
 function PreviewUI({ colors, scene }) {
+  if (scene.name === 'Commerce checkout') {
+    return (
+      <div className="plb-pv-authored plb-pv-checkout">
+        <main><small>Payment</small><div className="plb-pv-h">{scene.head}</div><div className="plb-pv-field">Card number <b>•••• 4242</b></div><div className="plb-pv-field">Delivery <b>Standard · $8</b></div></main>
+        <aside><strong>Order summary</strong><p>Canvas field bag <b>$84</b></p><p>Studio notebook <b>$18</b></p><dl><dt>Total</dt><dd>$110</dd></dl><span className="plb-pv-cta">Pay securely</span></aside>
+      </div>
+    )
+  }
+  if (scene.name === 'Project workspace') {
+    return (
+      <div className="plb-pv-authored plb-pv-workspace">
+        <header><div><small>Project workspace</small><div className="plb-pv-h">{scene.head}</div></div><span className="plb-pv-cta">Add task</span></header>
+        <div className="plb-pv-board-cols"><section><strong>To do · 3</strong><p>Audit empty states</p><p>Write release notes</p></section><section><strong>In progress · 2</strong><p>Token migration</p><p>Mobile QA</p></section><section><strong>Review · 4</strong><p>Checkout states</p><p>Contrast pass</p></section></div>
+      </div>
+    )
+  }
+  if (scene.name === 'Account settings') {
+    return (
+      <div className="plb-pv-authored plb-pv-settings">
+        <nav><strong>Settings</strong><span className="is-active">Profile</span><span>Security</span><span>Notifications</span></nav>
+        <form><small>Account settings</small><div className="plb-pv-h">{scene.head}</div><label>Display name <i>Maya Chen</i></label><label>Email address <i>maya@example.com</i></label><label className="plb-pv-toggle">Weekly summary <b /></label><span className="plb-pv-cta">Save changes</span></form>
+      </div>
+    )
+  }
+  if (scene.name === 'Support inbox') {
+    return (
+      <div className="plb-pv-authored plb-pv-inbox">
+        <aside><strong>Inbox <b>12</b></strong><p className="is-active">Unable to export tokens<small>Jamie · 4m</small></p><p>Billing receipt<small>Amir · 22m</small></p><p>Team invitation<small>Rina · 1h</small></p></aside>
+        <main><small>Customer inbox</small><div className="plb-pv-h">Unable to export tokens</div><p className="plb-pv-message">The JSON export is not reaching my clipboard. Can you help me recover it?</p><div className="plb-pv-reply">Write a reply… <span>Send</span></div></main>
+      </div>
+    )
+  }
+  if (scene.name === 'Finance overview') {
+    return (
+      <div className="plb-pv-authored plb-pv-finance">
+        <header><div><small>Available balance</small><div className="plb-pv-h">$24,840.60</div></div><span className="plb-pv-cta">Transfer</span></header>
+        <div className="plb-pv-finance-chart">{colors.slice(0, 7).map((color, index) => <i key={color + index} ref={barRef(color)} />)}</div>
+        <section><strong>Recent transactions</strong><p><span>UIL4B Pro</span><b>−$24.00</b></p><p><span>Client deposit</span><b>+$4,800.00</b></p><p><span>Cloud hosting</span><b>−$86.40</b></p></section>
+      </div>
+    )
+  }
   return (
     <>
       <aside className="plb-pv-side">
@@ -695,6 +748,46 @@ function PreviewUI({ colors, scene }) {
 // Brand — a marketing landing hero (wordmark, headline, primary + ghost CTAs,
 // brand-colour chip row).
 function PreviewBrand({ colors, scene }) {
+  if (scene.name === 'Architecture studio') {
+    return (
+      <div className="plb-pvb plb-pvb-architecture">
+        <header><strong>ATELIER 07</strong><span>Work · Practice · Contact</span></header>
+        <main><div><span className="plb-pvb-eyebrow">{scene.kicker}</span><div className="plb-pvb-head">Courtyard House</div><p>{scene.sub}</p></div><figure><i ref={barRef(colors[1] || colors[0])} /><figcaption>Brisbane · 2026</figcaption></figure></main>
+      </div>
+    )
+  }
+  if (scene.name === 'Creative portfolio') {
+    return (
+      <div className="plb-pvb plb-pvb-portfolio">
+        <header><strong>NOA / DESIGN</strong><span>Selected work 2024–26</span></header>
+        <div><aside><span className="plb-pvb-eyebrow">{scene.kicker}</span><div className="plb-pvb-head">{scene.head.replace('\n', ' ')}</div></aside><ol><li><b>01</b> Field Supply <small>Identity</small></li><li><b>02</b> Common Ground <small>Digital</small></li><li><b>03</b> Form Journal <small>Editorial</small></li></ol></div>
+      </div>
+    )
+  }
+  if (scene.name === 'Conference') {
+    return (
+      <div className="plb-pvb plb-pvb-conference">
+        <header><strong>UIL4B / LIVE</strong><span>{scene.kicker}</span></header>
+        <main><div className="plb-pvb-head">{scene.head.replace('\n', ' ')}</div><p>{scene.sub}</p><div className="plb-pvb-schedule"><span><b>09:00</b> Opening keynote</span><span><b>11:30</b> Colour systems</span><span><b>14:00</b> Shipping critique</span></div><span className="plb-pvb-btn plb-pvb-btn--primary">Register</span></main>
+      </div>
+    )
+  }
+  if (scene.name === 'Independent journal') {
+    return (
+      <div className="plb-pvb plb-pvb-journal">
+        <header><strong>FORM / JOURNAL</strong><span>{scene.kicker}</span></header>
+        <main><article><span className="plb-pvb-eyebrow">Cover story</span><div className="plb-pvb-head">{scene.head.replace('\n', ' ')}</div><p>{scene.sub}</p></article><aside><strong>Inside this issue</strong><p>01 · Designing for repair</p><p>02 · The patient interface</p><p>03 · Tools that last</p></aside></main>
+      </div>
+    )
+  }
+  if (scene.name === 'Hospitality') {
+    return (
+      <div className="plb-pvb plb-pvb-hospitality">
+        <header><strong>TIDELINE HOUSE</strong><span>Stay · Dine · Explore</span></header>
+        <main><span className="plb-pvb-eyebrow">{scene.kicker}</span><div className="plb-pvb-head">{scene.head.replace('\n', ' ')}</div><p>{scene.sub}</p><div className="plb-pvb-booking"><span>Check in <b>14 Aug</b></span><span>Guests <b>2 adults</b></span><span className="plb-pvb-btn plb-pvb-btn--primary">Check rooms</span></div></main>
+      </div>
+    )
+  }
   return (
     <div className="plb-pvb">
       <div className="plb-pvb-nav">
@@ -727,6 +820,49 @@ function PreviewBrand({ colors, scene }) {
 // Graphic Design — an editorial poster (display type, geometric shapes, a full
 // palette gradient bar, swatch caption).
 function PreviewGraphic({ colors, scene }) {
+  if (scene.name === 'Album cover') {
+    return (
+      <div className="plb-pvg plb-pvg-album">
+        <div className="plb-pvg-disc" ref={barRef(colors[1] || colors[0])}><i /></div>
+        <div><span className="plb-pvg-kicker">{scene.kicker}</span><div className="plb-pvg-title">{scene.head.replace('\n', ' ')}</div><ol><li>Signal One <b>03:42</b></li><li>Afterimage <b>04:18</b></li><li>Night Drive <b>05:01</b></li></ol></div>
+      </div>
+    )
+  }
+  if (scene.name === 'Campaign') {
+    return (
+      <div className="plb-pvg plb-pvg-campaign">
+        <header><span>{scene.kicker}</span><b>PUBLIC MOTION</b></header>
+        <div className="plb-pvg-title">{scene.head.replace('\n', ' ')}</div><p>{scene.sub}</p>
+        <footer><strong>FORTITUDE VALLEY → WEST END</strong><span>Every 12 minutes · 06:00–23:30</span></footer>
+      </div>
+    )
+  }
+  if (scene.name === 'Packaging') {
+    return (
+      <div className="plb-pvg plb-pvg-package">
+        <div className="plb-pvg-pack-face"><span>{scene.kicker}</span><div className="plb-pvg-title">{scene.head.replace('\n', ' ')}</div><p>Native botanical infusion</p><b>80 g / 24 serves</b></div>
+        <aside><strong>ORIGIN</strong><p>Grown and packed on Yugambeh Country.</p><strong>NOTES</strong><p>Lemon myrtle · roasted wattleseed</p></aside>
+      </div>
+    )
+  }
+  if (scene.name === 'Magazine cover') {
+    return (
+      <div className="plb-pvg plb-pvg-magazine">
+        <header><strong>GROUND</strong><span>{scene.kicker}</span></header>
+        <div className="plb-pvg-title">{scene.head.replace('\n', ' ')}</div>
+        <aside><p>How smaller studios are reshaping public space</p><p>Materials with a second life</p><p>Brisbane’s quiet architecture</p></aside>
+      </div>
+    )
+  }
+  if (scene.name === 'Social launch') {
+    return (
+      <div className="plb-pvg plb-pvg-social">
+        <header><strong>@uil4b</strong><span>1 / 3</span></header>
+        <main><span className="plb-pvg-kicker">{scene.kicker}</span><div className="plb-pvg-title">{scene.head.replace('\n', ' ')}</div><p>{scene.sub}</p></main>
+        <footer><span>#designsystems #colour</span><strong>Save for Friday →</strong></footer>
+      </div>
+    )
+  }
   return (
     <div className="plb-pvg">
       <div className="plb-pvg-shapes" aria-hidden="true">
@@ -753,7 +889,7 @@ function PreviewScene({ colors, mode, title, tab = 'ui', scene = PREVIEW_SCENES[
   return (
     <div className="plb-pvwrap">
       {title && <div className="plb-pv-name">{title}</div>}
-      <div className={`plb-pv plb-pv--${tab} plb-pv--v${variant}`} ref={pvRef(roles)} aria-hidden="true">
+      <div className={`plb-pv plb-pv--${tab} plb-pv--v${variant}`} ref={pvRef(roles)} role="group" aria-label={`${scene.name} palette preview`} data-preview-scene={scene.name}>
         {tab === 'brand' ? <PreviewBrand colors={colors} scene={scene} />
           : tab === 'graphic' ? <PreviewGraphic colors={colors} scene={scene} />
             : <PreviewUI colors={colors} scene={scene} />}
@@ -1024,19 +1160,24 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setLiveMsg('Palette randomised')
   }, [harmony, locked, toast, resolveSystem])
 
-  // Spacebar = randomise (never while typing in a field or with a modal open).
+  const anyPopover = saveOpen || harmOpen || visionOpen || imgOpen
+    || galleryOpen || histOpen
+    || tintsIdx != null || pickerIdx != null || swapIdx != null || ctxMenu != null || preview != null
+
+  // Spacebar = randomise only from the idle Palette canvas. Buttons, links,
+  // popovers and the in-place UI System own Space for activation or copy.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.code !== 'Space') return
-      const tag = e.target.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return
-      if (preview) return
+      if (e.code !== 'Space' || e.defaultPrevented || e.repeat || uiMode || anyPopover) return
+      if (document.querySelector('[aria-modal="true"]')) return
+      const target = e.target instanceof Element ? e.target : null
+      if (target?.closest('input,textarea,select,button,a,summary,[contenteditable="true"],[role="button"],[role="menuitem"],[role="option"],[role="tab"],[role="gridcell"]')) return
       e.preventDefault()
       randomize()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [randomize, preview])
+  }, [randomize, uiMode, anyPopover])
 
   // One dismiss layer for every popover: outside pointerdown or Escape closes
   // toolbar menus (anything not inside a .plb-menuwrap) and board popovers
@@ -1046,9 +1187,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const closeAllMenus = useCallback(() => {
     setSaveOpen(false); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
   }, [])
-  const anyPopover = saveOpen || harmOpen || visionOpen || imgOpen
-    || galleryOpen || histOpen
-    || tintsIdx != null || pickerIdx != null || swapIdx != null || ctxMenu != null || preview != null
   useEffect(() => {
     if (!anyPopover) return
     const closePops = () => { setTintsIdx(null); setPickerIdx(null); setSwapIdx(null); setCtxMenu(null) }
@@ -1812,6 +1950,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
             <button
               type="button"
               className="btn btn-s plb-icobtn"
+              aria-label="Image"
               aria-expanded={imgOpen}
               title="Pull colours from an image"
               onClick={() => { const n = !imgOpen; closeAllMenus(); setImgOpen(n) }}
@@ -1888,6 +2027,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
             <button
               type="button"
               className="btn btn-s plb-icobtn"
+              aria-label="Explore"
               aria-expanded={galleryOpen}
               aria-haspopup="dialog"
               title="Explore — community palettes, variations and brand systems"
@@ -1989,7 +2129,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
             )}
           </div>
 
-          <button type="button" className="btn btn-s plb-icobtn" title="Preview the palette on a UI mockup" onClick={() => setPreview({ mode: 'light', tab: 'ui', compare: null })}>
+          <button type="button" className="btn btn-s plb-icobtn" aria-label="Preview" title="Preview the palette on a UI mockup" onClick={() => setPreview({ mode: 'light', tab: 'ui', compare: null })}>
             <IcoEye /><span className="plb-lbl"><span className="plb-lbl-i">Preview</span></span>
           </button>
           <div className="plb-menuwrap">
@@ -2028,6 +2168,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <button
             type="button"
             className="btn btn-s plb-icobtn"
+            aria-label="Gradient"
             title="Open this palette in the Gradient Generator"
             onClick={openInGradient}
           >
@@ -2037,16 +2178,17 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
-          <button type="button" className="btn btn-s plb-icobtn" onClick={undoPalette} disabled={!canUndo} title="Undo the last palette change">
+          <button type="button" className="btn btn-s plb-icobtn" aria-label="Undo" onClick={undoPalette} disabled={!canUndo} title="Undo the last palette change">
             <IcoUndo /><span className="plb-lbl"><span className="plb-lbl-i">Undo</span></span>
           </button>
-          <button type="button" className="btn btn-s plb-icobtn" onClick={resetPalette} title="Reset every palette control to its default">
+          <button type="button" className="btn btn-s plb-icobtn" aria-label="Reset" onClick={resetPalette} title="Reset every palette control to its default">
             <IcoReset /><span className="plb-lbl"><span className="plb-lbl-i">Reset</span></span>
           </button>
           <div className="plb-menuwrap">
             <button
               type="button"
               className="btn btn-s plb-icobtn"
+              aria-label="History"
               aria-expanded={histOpen}
               aria-haspopup="menu"
               title="Palette history — jump back to any board you've had"
@@ -2107,6 +2249,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
             <button
               type="button"
               className="btn btn-s btn-accent plb-icobtn"
+              aria-label="Save / export"
               aria-expanded={saveOpen}
               aria-haspopup="dialog"
               title="Save, share or export this palette"

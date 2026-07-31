@@ -144,6 +144,27 @@ test('18 · individual overrides are exact and progression failures are warned',
   assert.deepEqual(roundHct(overridden.groups[0].shades[0].hex), overridden.groups[0].shades[0].achieved)
 })
 
+test('19 · Brand 500 remains the exact seed through overrides and every export', () => {
+  const guarded = createUiSystem(SEED, {
+    overrides: {
+      'brand-100': '#111111',
+      'brand-500': '#FF0000',
+      'brand-900': '#EEEEEE',
+      'success-500': '#00FF00',
+    },
+  })
+  const brand500 = guarded.groups.find(group => group.id === 'brand').shades.find(shade => shade.step === 500)
+  assert.equal(guarded.seed, SEED)
+  assert.equal(brand500.hex, SEED)
+  assert.equal(brand500.override, false)
+
+  const { css, dtcg, tailwind } = uiSystemExports(guarded)
+  assert.match(css, new RegExp(`--ui-brand-500: ${SEED}`))
+  assert.equal(JSON.parse(dtcg).color.brand['500'].$value, SEED)
+  assert.match(tailwind, new RegExp(`"500": "${SEED}"`))
+  assert.doesNotMatch(css, /--ui-brand-500: #FF0000/)
+})
+
 function roundHct(hex) {
   const [h, c, t] = hexToHct(hex)
   return {

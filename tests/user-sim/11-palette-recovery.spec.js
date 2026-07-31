@@ -66,6 +66,19 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await page.waitForTimeout(800)
     const preview = page.getByRole('button', { name: 'Preview' })
     const next = page.getByRole('button', { name: 'Gradient' })
+    const collapsedLabel = await preview.locator('.plb-lbl').evaluate(element => {
+      const style = getComputedStyle(element)
+      return {
+        visibility: style.visibility,
+        opacity: style.opacity,
+        borderWidth: style.borderTopWidth,
+        clipPath: style.clipPath,
+      }
+    })
+    expect(collapsedLabel.visibility).toBe('hidden')
+    expect(collapsedLabel.opacity).toBe('0')
+    expect(collapsedLabel.borderWidth).toBe('0px')
+    expect(collapsedLabel.clipPath).not.toBe('none')
     const before = await page.evaluate(() => ({
       toolbar: document.querySelector('.plb-toolbar').getBoundingClientRect().toJSON(),
       next: document.querySelector('[title="Open this palette in the Gradient Generator"]').getBoundingClientRect().toJSON(),
@@ -79,6 +92,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     expect(after.toolbar.height).toBe(before.toolbar.height)
     expect(after.toolbar.width).toBe(before.toolbar.width)
     expect(after.next.x).toBe(before.next.x)
+    await expect(preview.locator('.plb-lbl')).toHaveCSS('visibility', 'visible')
     await expect(next).toBeVisible()
 
     await page.locator('.app-footer').scrollIntoViewIfNeeded()
@@ -107,6 +121,27 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     }
   })
 
+  test('Space activates interactive Palette controls without invoking the global randomise shortcut', async ({ page }) => {
+    watch(page, 'keyboard designer using controls, popovers and modals')
+    await go(page, '/color/palette')
+    await expect(page.locator('.plb-col .plb-hex')).toHaveCount(5)
+    const before = await page.locator('.plb-col .plb-hex').allTextContents()
+
+    const previewButton = page.getByRole('button', { name: 'Preview' })
+    await previewButton.focus()
+    await page.keyboard.press('Space')
+    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
+    await page.getByRole('button', { name: 'Dark', exact: true }).focus()
+    await page.keyboard.press('Space')
+    await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    const close = page.getByRole('button', { name: 'Close preview' })
+    await close.focus()
+    await page.keyboard.press('Space')
+    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toHaveCount(0)
+
+    expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
+  })
+
   test('swap direction, right-click insertion and preview gating are explicit', async ({ page }) => {
     watch(page, 'keyboard-and-pointer palette editor')
     await go(page, '/color/palette')
@@ -130,9 +165,20 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(page.locator('.plb-preview-item')).toHaveCount(6)
     await expect(page.locator('.plb-preview-item--locked')).toHaveCount(3)
     await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(3)
+    await expect(page.locator('[data-preview-scene="Commerce checkout"]')).toContainText('Order summary')
+    await expect(page.locator('[data-preview-scene="Account settings"]')).toContainText('Email address')
+    await expect(page.locator('[data-preview-scene="Support inbox"]')).toContainText('Unable to export tokens')
+    await expect(page.locator('[data-preview-scene="Finance overview"]')).toContainText('Recent transactions')
     await page.getByRole('tab', { name: 'Brand' }).click()
     await expect(page.locator('.plb-preview-item')).toHaveCount(6)
     await expect(page.locator('.plb-preview-item--locked')).toHaveCount(3)
+    await expect(page.locator('[data-preview-scene="Architecture studio"]')).toContainText('Courtyard House')
+    await expect(page.locator('[data-preview-scene="Conference"]')).toContainText('Opening keynote')
+    await expect(page.locator('[data-preview-scene="Hospitality"]')).toContainText('Check rooms')
+    await page.getByRole('tab', { name: 'Graphic Design' }).click()
+    await expect(page.locator('[data-preview-scene="Album cover"]')).toContainText('Signal One')
+    await expect(page.locator('[data-preview-scene="Packaging"]')).toContainText('ORIGIN')
+    await expect(page.locator('[data-preview-scene="Magazine cover"]')).toContainText('Brisbane')
     await page.getByRole('button', { name: 'Dark', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
   })
