@@ -4,6 +4,10 @@ The operating workspace for UI system creation — build, organize, validate, an
 
 The product is organised around three surfaces: **Create** (build), **Discover** (browse community + curated external resources), and **Learn** (understand). See [`docs/reference/positioning.md`](docs/reference/positioning.md) for the canonical story.
 
+Current direction, active work and release gaps live in
+[`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md). Do not use historical commits or
+closed audit prose as a parallel backlog.
+
 **Live:** [uil4b.com](https://www.uil4b.com)
 
 ## Tools
@@ -113,11 +117,15 @@ Server-side (Vercel, no prefix):
 | `OPENROUTER_MODEL` | Optional OpenRouter model override (default `deepseek/deepseek-chat`) |
 | `GEMINI_API_KEY` | AI generation — fallback backend |
 | `RESEND_API_KEY` / `SUPPORT_NOTIFY_EMAIL` | Feedback email notifications (optional) |
-| `GOOGLE_SHEETS_WEBHOOK_URL` | Feedback → Google Sheets sync (optional, see `docs/google-sheets-setup.md`) |
+| `GOOGLE_SHEETS_WEBHOOK_URL` / `GOOGLE_SHEETS_WEBHOOK_SECRET` | Optional legacy feedback mirror to an owner-managed Apps Script endpoint |
 
 ## Deploy
 
-Deployed on Vercel — push to `main` and Vercel builds and deploys automatically. Firestore security rules live in `firestore.rules` and are deployed separately via the Firebase CLI:
+Deployed on Vercel—merges to `main` deploy automatically. Firestore security
+rules live in `firestore.rules` and are published separately from the web
+deployment. The founder confirmed the current hardened rules were published on
+2026-07-31; future rule changes still require the emulator test and an explicit
+publish:
 
 ```bash
 firebase deploy --only firestore:rules

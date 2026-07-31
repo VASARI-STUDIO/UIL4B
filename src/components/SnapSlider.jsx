@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 /*
  * SnapSlider — range input with magnetic snap points, double-click reset,
@@ -13,7 +13,34 @@ import { useEffect, useRef, useState } from 'react'
  * - Clicking the value text swaps it for a number input clamped to
  *   [inputMin ?? min, inputMax ?? max] — this is how values beyond the
  *   track range (e.g. 1024px icon size on a 12–128 track) are entered.
+ * - `trackGradient` paints a CSS gradient along the track so it previews what
+ *   the slider does (see PaletteBuilder's adjust bar). Purely additive: with
+ *   no gradient supplied the input keeps the plain platform track every other
+ *   caller already renders — the gradient styling hangs off `.snapv--grad`,
+ *   which is only applied when a gradient is present. Snap ticks are drawn on
+ *   top of the gradient from `snaps`, so the reference marks survive whatever
+ *   colour lands underneath them.
  */
+
+// Snap ticks as a background layer: a dark-light-dark 3px mark, which stays
+// visible against any track colour in either theme without relying on a token
+// that flips with the theme (the track underneath is palette colour, not
+// surface colour, so a theme-aware tick would vanish half the time).
+function tickLayers(snaps, min, max) {
+  if (!snaps.length || !(max > min)) return ''
+  return snaps
+    .filter(s => s > min && s < max)
+    .map(s => {
+      const p = ((s - min) / (max - min)) * 100
+      return 'linear-gradient(90deg,'
+        + `transparent calc(${p}% - 2px),rgba(0,0,0,.45) calc(${p}% - 2px),`
+        + `rgba(0,0,0,.45) calc(${p}% - 1px),rgba(255,255,255,.92) calc(${p}% - 1px),`
+        + `rgba(255,255,255,.92) calc(${p}% + 1px),rgba(0,0,0,.45) calc(${p}% + 1px),`
+        + `rgba(0,0,0,.45) calc(${p}% + 2px),transparent calc(${p}% + 2px))`
+    })
+    .join(',')
+}
+
 export default function SnapSlider({
   id,
   min,
@@ -31,6 +58,7 @@ export default function SnapSlider({
   ariaLabel,
   disabled = false,
   className = '',
+  trackGradient = null,
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -67,8 +95,22 @@ export default function SnapSlider({
   // render the thumb pinned at max rather than clamping the real value.
   const trackValue = Math.min(max, Math.max(min, value))
 
+  // The caller memoises the gradient, and the stable callback keeps React from
+  // detaching and reattaching the ref during unrelated value-only drag frames.
+  const track = trackGradient
+    ? [tickLayers(snaps, min, max), trackGradient].filter(Boolean).join(',')
+    : null
+  const trackRef = useCallback((el) => {
+    if (!el) return
+    if (track) el.style.setProperty('--snapv-track', track)
+    else el.style.removeProperty('--snapv-track')
+  }, [track])
+
   return (
-    <span className={`snapv${className ? ` ${className}` : ''}`}>
+    <span
+      className={`snapv${trackGradient ? ' snapv--grad' : ''}${className ? ` ${className}` : ''}`}
+      ref={trackRef}
+    >
       <input
         id={id}
         type="range"

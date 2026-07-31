@@ -12,7 +12,11 @@ export const UIKIT_GUIDE_KEY = 'vs-uikit-guide'
 // <UIKitGuide step="..."> so it knows where it sits and where to send the user next.
 export const UIKIT_STEPS = [
   { id: 'color', path: '/color', label: 'Colours', blurb: 'Pick your palette' },
-  { id: 'fonts', path: '/fonts', label: 'Fonts', blurb: 'Pick your fonts' },
+  // /fontpairs, not the old /fonts — that path was never routed, so this step
+  // used to fall through the router's wildcard and land the guide on the
+  // homepage. The pairing tool is the right destination anyway: it is where
+  // both roles get chosen at once.
+  { id: 'fonts', path: '/fontpairs', label: 'Fonts', blurb: 'Pick your fonts' },
   { id: 'typescale', path: '/typescale', label: 'Type scale', blurb: 'Set your sizes' },
   { id: 'icons', path: '/icons', label: 'Icons', blurb: 'Choose icons' },
 ]

@@ -71,7 +71,8 @@ export default async function handler(req, res) {
   }
 
   // Append to a Google Sheet via an Apps Script web app (optional).
-  // Set GOOGLE_SHEETS_WEBHOOK_URL in Vercel to enable. See docs/google-sheets-setup.md.
+  // Optional legacy mirror: set the server-only GOOGLE_SHEETS_WEBHOOK_URL and
+  // GOOGLE_SHEETS_WEBHOOK_SECRET in Vercel to enable.
   const sheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL
   if (sheetsWebhook) {
     try {

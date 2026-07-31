@@ -11,6 +11,11 @@
   <url><loc>https://www.uil4b.com/color/gradient</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
   <url><loc>https://www.uil4b.com/color/contrast</loc><priority>0.8</priority><changefreq>monthly</changefreq><lastmod>2026-07-28</lastmod></url>
 
+  <!-- Live typography tools -->
+  <url><loc>https://www.uil4b.com/fontgallery</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-30</lastmod></url>
+  <url><loc>https://www.uil4b.com/fontpairs</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-30</lastmod></url>
+  <url><loc>https://www.uil4b.com/typescale</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-30</lastmod></url>
+
   <!-- Live asset tools -->
   <url><loc>https://www.uil4b.com/icons</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
   <url><loc>https://www.uil4b.com/emoji</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-07-28</lastmod></url>

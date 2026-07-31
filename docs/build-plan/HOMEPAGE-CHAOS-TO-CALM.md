@@ -2,6 +2,8 @@
 
 > **Build-ready founder-approved specification · 2026-07-28**
 >
+> **Typography extension approved · 2026-07-31**
+>
 > Scope: the public homepage hero and the live mini-workbench immediately below
 > it. This document is the acceptance contract for implementation. It does not
 > reopen the wider homepage, navigation, pricing, Discover, Learn, authentication
@@ -22,7 +24,7 @@ product.
 
 **Observable response:** the first view may feel busy because it shows the real
 breadth of work; the next view must feel ordered, usable and calm. A reviewer
-should be able to say what the eight live tools are, why they resolve into four
+should be able to say what the eleven live tools are, why they resolve into five
 workbench modes, and where every action goes.
 
 ## 2. Evidence and diagnosis
@@ -30,7 +32,7 @@ workbench modes, and where every action goes.
 - The current hero already owns the approved headline and places a working
   preview directly beneath it.
 - The current preview model derives three category tabs from the Create tree.
-  That model cannot express eight honest tool links resolving into exactly four
+  That model cannot express eleven honest tool links resolving into exactly five
   task-focused tabs. Hero satellites and workbench tabs therefore need separate
   data contracts.
 - `useHomeMotion` already loads GSAP dynamically and has reduced-motion and
@@ -46,17 +48,17 @@ workbench modes, and where every action goes.
 
 1. Keep the existing H1 theme and wording:
    **“No more tab hoarding. Build your UI system in one place.”**
-2. Show exactly eight live hero satellites:
+2. Show exactly eleven live hero satellites:
    Palette, Semantic, Tint, Gradient Generator, Contrast, Icon Library,
-   File Converter, Aspect & Resolution.
+   File Converter, Aspect & Resolution, Font Gallery, Font Pair and Type Scale.
 3. Every satellite is a real semantic link with a stable destination. Motion,
    hover and preview state must not change its `href`.
 4. The satellites may look deliberately irregular on wide screens, but their
    convergence is decorative. It resolves into a calm mini-workbench.
-5. The workbench has exactly four persistent tabs, in this order:
-   **Palette, Gradient, Image, Icon**.
+5. The workbench has exactly five persistent tabs, in this order:
+   **Palette, Gradient, Image, Icon, Typography**.
 6. Satellites and tabs are not one-to-one. Semantic, Tint and Contrast remain
-   direct tool links; they do not become extra tabs.
+   direct tool links; the three typography tools resolve into Typography.
 7. The Image panel has exactly three built-in reference sub-tabs:
    **Architecture, People, Nature**.
 8. Image output intent defaults to **4K · WebP · Lossless**.
@@ -81,12 +83,12 @@ Keep this order in both the visual layout and accessible document:
    - one concrete supporting sentence naming real work;
    - existing primary conversion action and workspace-exploration action;
    - honest free-plan qualifier.
-3. A labelled `nav`/list of the eight live tool links.
+3. A labelled `nav`/list of the eleven live tool links.
 4. The mini-workbench section, directly adjacent to the hero:
    - short “Live workspace” eyebrow;
    - visible heading: **“Turn scattered tools into one working surface.”**
    - one sentence explaining that the preview is limited and interactive;
-   - four-tab list;
+   - five-tab list;
    - one persistent tab panel region;
    - one panel-specific continuation action.
 5. Existing lower homepage narrative.
@@ -107,13 +109,17 @@ workbench.
 | Icon Library | `/icons` | Icon | outer right |
 | File Converter | `/file-converter` | Image | lower right |
 | Aspect & Resolution | `/ratio` | Image | lower outer edge |
+| Font Gallery | `/fontgallery` | Typography | upper inner left |
+| Font Pair | `/fontpairs` | Typography | upper inner right |
+| Type Scale | `/typescale` | Typography | upper centre |
 
 The positions are authored and deterministic, not randomised per load. Apparent
 disorder comes from varied offsets and paths, not from collisions, unreadable
 rotation or changing order. The H1, supporting copy and CTAs retain a clear
 reading area. Satellite labels are never truncated.
 
-Use anchors for the eight destinations. Hover or focus may identify the
+Use anchors for the eleven destinations. Each link carries a recognisable line
+icon as a visual orientation cue. Hover or focus may identify the
 corresponding workbench family, but must not select a tab, navigate, rewrite the
 URL or make another link unavailable.
 
@@ -121,16 +127,19 @@ URL or make another link unavailable.
 
 The large-screen enhancement tells one causal story:
 
-1. At rest, the eight tool links surround but do not obstruct the hero.
+1. At rest, the eleven tool links surround but do not obstruct the hero.
 2. As the workbench approaches, aria-hidden visual proxies travel along short,
    controlled paths toward their mapped family tab.
 3. Multiple colour satellites resolve toward Palette; both media satellites
-   resolve toward Image. This visibly explains why eight tools do not create
-   eight tabs.
+   resolve toward Image; and all three typography satellites resolve toward
+   Typography. This visibly explains why eleven tools do not create eleven tabs.
 4. The proxies fade as the already-present workbench becomes the clear focus.
    The real links stay untouched in the document and naturally leave the
    viewport with the hero.
-5. Scrolling upward may reverse the decorative sequence. Do not pin the user,
+5. Once the proxies have completed their merge, the workbench receives one
+   restrained settle/splash beat. It must communicate arrival without hiding,
+   delaying or disabling the already-usable static workbench.
+6. Scrolling upward may reverse the decorative sequence. Do not pin the user,
    hijack scrolling or delay access to the workbench.
 
 Only decorative proxies may depend on GSAP. Do not transform a focused anchor
@@ -233,18 +242,31 @@ The panel is an **output draft**, not a completed conversion.
   sole authority. The homepage handoff cannot set plan, entitlement, save or
   quota state.
 
+### Typography
+
+- Show a bounded live scale preview calculated from an editable base size and
+  named ratio; custom preview text updates every step.
+- Keep Font Gallery, Font Pair and Type Scale visibly available as three honest
+  tool destinations inside the mode.
+- “Continue in Type Scale” carries only the current base and ratio through the
+  versioned in-memory typography handoff. It does not save a kit, choose a paid
+  capability or persist through reload.
+- The preview uses local/system typography and makes no Google Fonts catalogue
+  request. Full family browsing, pairing rationale and exports remain in the
+  standalone tools.
+
 ## 8. State and failure matrix
 
 | State | Required behaviour |
 |---|---|
-| Static/GSAP unavailable | Headline, eight links, four tabs and active panel are visible and usable; no blank gap or stranded hidden class. |
+| Static/GSAP unavailable | Headline, eleven links, five tabs and active panel are visible and usable; no blank gap or stranded hidden class. |
 | Reduced motion | No convergence, parallax, magnetic CTA or animated panel remount. Use the calm static layout. |
 | Loading reference thumbnail | Reserve its aspect ratio; show a neutral local placeholder without moving controls. |
 | Reference image error | Keep its label and settings; explain preview unavailability and allow another reference or upload. |
 | Empty picker/cancel | Stay on the Image panel with the existing draft untouched. |
 | Invalid upload | Stay home, retain the draft, identify supported image input and allow retry. |
 | Handoff/navigation error | Stay home, retain the selected files only in memory, re-enable the action and explain retry. |
-| Offline | Hero, bundled references, palette, gradient and icon preview continue locally; internal navigation does not hang. |
+| Offline | Hero, bundled references, palette, gradient, icon and typography previews continue locally; internal navigation does not hang. |
 | Clipboard denied | Keep visible text and announce that it can be selected manually. |
 | Invalid icon draft | Do not navigate with it; restore the last valid preview or disable Continue with an explanation. |
 | Repeated activation | Guard handoff/Continue while navigation is pending; one activation produces one transfer. |
@@ -259,12 +281,12 @@ The experience must hold from 320px to 4K and at browser zoom.
 - **Small laptop/tablet:** reduce offsets and path distance. If the hero copy no
   longer has a collision-free centre, switch to the static satellite layout
   rather than squeezing the desktop composition.
-- **768px and below:** no convergence. Present the eight links as a calm,
+- **768px and below:** no convergence. Present the eleven links as a calm,
   source-ordered compact grid/list below the copy, followed immediately by the
   workbench.
 - **480px and below:** controls stack, labels remain complete and touch targets
-  do not overlap. The four workbench tabs remain one tablist; allow contained
-  horizontal scrolling only if all four cannot fit at 320px.
+  do not overlap. The five workbench tabs remain one tablist; allow contained
+  horizontal scrolling only if all five cannot fit at 320px.
 - **320px floor:** no page-level horizontal overflow. Output selectors and
   continuation actions remain reachable without precision gestures.
 - **4K ceiling:** do not scale satellites, copy or controls indefinitely; preserve
@@ -275,13 +297,13 @@ stale motion transforms or a hidden/focused control.
 
 ## 10. Accessibility contract
 
-- The visual “chaos” never changes source order. Hero copy precedes the eight
+- The visual “chaos” never changes source order. Hero copy precedes the eleven
   links, which precede the workbench.
 - Decorative rings, paths, proxies and trails are `aria-hidden` and
   non-focusable.
 - Satellite links have unique names and visible focus. The longer Gradient and
   Aspect labels remain available to assistive technology and sighted users.
-- The four primary tabs and three Image sub-tabs each follow the ARIA tabs
+- The five primary tabs and three Image sub-tabs each follow the ARIA tabs
   keyboard pattern without nesting interactive controls inside a tab.
 - Panel errors use `role="alert"` only when action is required; copy/status
   confirmations use a polite live region.
@@ -294,8 +316,8 @@ stale motion transforms or a hidden/focused control.
 
 ## 11. Performance budgets
 
-- Add no new runtime dependency and no homepage call to a remote image or icon
-  catalogue.
+- Add no new runtime dependency and no homepage call to a remote image, icon or
+  font catalogue.
 - Record the pre-change production bundle. The implementation may add at most
   **12 KB gzip** to homepage initial executable JavaScript; heavier panel logic
   must be lazy and user-triggered.
@@ -323,6 +345,8 @@ Use the existing analytics path only if events are added. Keep them aggregate:
 - `home_image_picker_open` and `home_image_handoff` — selected count and broad
   size/type buckets only; do not infer or record cancel;
 - `home_icon_continue` — allowlisted icon id and option buckets;
+- `home_typography_change` and `home_typography_continue` — base/ratio option
+  buckets only, never custom preview text;
 - `home_handoff_fallback` — absent, invalid or already-consumed handoff.
 
 Never send filename, MIME metadata finer than a broad image family, image
@@ -330,10 +354,10 @@ content, object URL, exact dimensions, SVG markup or entitlement data.
 
 ## 13. Implementation boundaries
 
-Expected future implementation touchpoints are `Home.jsx`,
-`CreatePreview.jsx`, `toolTree.js`, `useHomeMotion.js`, `imageHandoff.js`,
+Expected implementation touchpoints are `Home.jsx`, `HomeWorkbench.jsx`,
+`toolTree.js`, `useHomeMotion.js`, `imageHandoff.js`, `typeHandoff.js`,
 `FileConverter.jsx`, `IconLibrary.jsx`, `global.css` and focused Playwright
-coverage. Keep the hero-satellite model separate from the four-tab model.
+coverage. Keep the hero-satellite model separate from the five-tab model.
 
 Do not change auth, `SubscriptionContext`, Stripe, plan constants or API routes.
 Do not add persistence merely to make a homepage preview survive reload.
@@ -343,9 +367,9 @@ Do not add persistence merely to make a homepage preview survive reload.
 The batch is accepted only when all of these pass:
 
 1. H1 retains both approved sentences.
-2. Exactly eight satellite anchors render with the labels/routes in §5; open in
+2. Exactly eleven satellite anchors render with the labels/routes in §5; open in
    new tab and copied-link behaviour use those same routes.
-3. Exactly four primary tabs render, in the approved order. Arrow, Home, End,
+3. Exactly five primary tabs render, in the approved order. Arrow, Home, End,
    Tab and Shift+Tab follow the tabs pattern.
 4. Semantic, Tint, Contrast, File Converter and Aspect & Resolution do not
    appear as extra primary tabs.
@@ -374,7 +398,9 @@ The batch is accepted only when all of these pass:
     stale draft data is ignored/rejected and grants no capability.
 16. Offline mode makes no Iconify/Logo.dev/reference-image requests and leaves
     every local panel usable.
-17. Production build and zero-error lint pass; focused homepage, handoff,
+17. Typography base, ratio and preview text produce real scale values; its three
+    routes are truthful; the Type Scale handoff transfers the base and ratio once.
+18. Production build and zero-error lint pass; focused homepage, handoff,
     accessibility and responsive tests pass; the budgets in §11 are reported.
 
 ## 15. Anti-slop review
@@ -383,8 +409,8 @@ Target verdict: **Distinctive and coherent**.
 
 Reject the implementation if any of these are true:
 
-- the eight tools become interchangeable floating cards or orbiting decoration;
-- motion is the only explanation of the eight-to-four relationship;
+- the eleven tools become interchangeable floating cards or orbiting decoration;
+- motion is the only explanation of the eleven-to-five relationship;
 - fake dashboards, notifications, metrics, exports or user activity are added;
 - “4K · WebP · Lossless” is presented as a completed conversion on the homepage;
 - the composition stacks glow, glass, blur, oversized copy and motion as a
@@ -393,7 +419,7 @@ Reject the implementation if any of these are true:
   replace the concrete tool and output language;
 - mobile becomes a shrunken version of the chaotic desktop scene;
 - removing the UIL4B logo leaves a stock SaaS hero rather than a recognisable
-  progression from eight real tools to one working surface.
+  progression from eleven real tools to one working surface.
 
 Final review questions:
 
