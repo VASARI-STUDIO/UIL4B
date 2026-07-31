@@ -1652,7 +1652,7 @@ export default function Admin({ toast }) {
                 <div className="adm-card-body">
                   <div className="adm-empty">No aggregate data yet.</div>
                   <p style={{ fontSize: 11, color: 'var(--t3)', textAlign: 'center', margin: '6px 0 0' }}>
-                    Counts appear once signed-in users browse. If this stays empty, the <span className="mono">analytics-daily</span> Firestore rules may still need publishing.
+                    Counts appear once signed-in users browse. If this stays empty, verify signed-in events reach <span className="mono">analytics-daily</span>, confirm which environments are allowed to write, and test the published live rules on the intended write/admin-read paths.
                   </p>
                 </div>
               </div>
