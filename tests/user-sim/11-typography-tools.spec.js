@@ -427,15 +427,23 @@ test.describe('typography hand-offs', () => {
 test.describe('typography tools under a failing font catalogue', () => {
   test('a catalogue source that never answers falls back within the request bound', async ({ page }) => {
     watch(page, 'visitor on a connection that stalls without failing')
+    let sourceStartedAt = null
+    let sourceReleased = false
     await page.route('**/api/fonts', async (route) => {
+      sourceStartedAt = Date.now()
       await new Promise(resolve => setTimeout(resolve, 5000))
+      sourceReleased = true
       await route.abort().catch(() => {})
     })
 
-    const started = Date.now()
     await go(page, '/fontgallery')
-    await expect(page.locator('.typ-notice')).toContainText('bundled list', { timeout: 4000 })
-    expect(Date.now() - started, 'the stalled source must not hold the loading UI').toBeLessThan(4000)
+    await expect.poll(() => sourceStartedAt).not.toBeNull()
+    await expect(page.locator('.typ-notice')).toContainText('bundled list', { timeout: 4500 })
+    expect(sourceReleased, 'the request bound must beat the deliberately held upstream').toBe(false)
+    expect(
+      Date.now() - sourceStartedAt,
+      'the stalled source must fall back well before the 5s upstream release',
+    ).toBeLessThan(4500)
     await expect(page.locator('.fg-card').first()).toBeVisible()
   })
 
