@@ -1,4 +1,5 @@
 import { FALLBACK_FONTS } from '../data/fallbackFonts'
+import { detectCanvasFontRendered } from './fontDetection'
 
 const API_KEY = import.meta.env.VITE_GOOGLE_FONTS_API_KEY || ''
 const API_URL = `https://www.googleapis.com/webfonts/v1/webfonts?key=${API_KEY}&sort=popularity`
@@ -151,7 +152,8 @@ export async function fetchFontCatalog({ force = false, signal } = {}) {
 // `status`/`ready` make detection event-driven: verifyFontLoaded can wait for the
 // actual stylesheet request to settle and, crucially, tell a genuine
 // network/extension block (the <link> firing `error`) apart from "the face just
-// hasn't arrived yet". A real `error` is the ONLY reliable "actually failed" signal.
+// hasn't arrived yet". A real `error` is authoritative; a settled link alone is
+// never accepted as proof that the requested binary face became usable.
 const loadedFonts = new Map()
 
 // Build and inject the css2 <link> for a family at the given weights, wiring its
@@ -238,41 +240,22 @@ function linkErrored(family) {
 // generic for monospace, serif and sans-serif. A loaded target differs from
 // all three. An unloaded target falls through and matches all three. Mixed
 // evidence is inconclusive and must not reveal fallback text as a real face.
-const FONT_PROBE = 'mmmmmwwwwwlli0O'
-const GENERIC_BASELINES = ['monospace', 'serif', 'sans-serif']
-
 function canvasFontRendered(family, weight) {
   if (typeof document === 'undefined' || !document.createElement) return null
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext && canvas.getContext('2d')
   if (!ctx) return null // No 2D context — can't measure; let caller decide.
-  const size = '72px'
-
-  let differences = 0
-  for (const generic of GENERIC_BASELINES) {
-    ctx.font = `${weight} ${size} ${generic}`
-    const baselineWidth = ctx.measureText(FONT_PROBE).width
-    ctx.font = `${weight} ${size} "${family}", ${generic}`
-    const targetWidth = ctx.measureText(FONT_PROBE).width
-    // A meaningful difference (>0.5px guards sub-pixel rounding).
-    if (Math.abs(targetWidth - baselineWidth) > 0.5) differences += 1
-  }
-  // Only a difference against every baseline is a positive.
-  if (differences === GENERIC_BASELINES.length) return true
-  if (differences === 0) return false
-  return null
+  return detectCanvasFontRendered(ctx, family, weight)
 }
 
 // Verify a font actually rendered rather than silently falling back to a system
 // face. Returns a Promise resolving to one of:
-//   'ok'      — the family is rendering (or the environment can't tell us
-//               otherwise: no Font Loading API, no canvas, an unexpected error).
-//   'failed'  — the css2 <link> fired a genuine `error` (network failure or a
-//               content/privacy blocker intercepting fonts.googleapis.com). The
-//               ONLY status that should ever surface a "blocked" message.
-//   'unknown' — the face isn't measurable yet but nothing actually errored
-//               (slow network / first paint). Caller should show a neutral
-//               "still loading" state, NEVER accuse a blocker.
+//   'ok'      — the family is confirmed rendering by FontFaceSet or unanimous
+//               multi-baseline canvas evidence.
+//   'failed'  — the stylesheet errored, or it settled without any confirmed
+//               usable face. The caller should show an honest fallback + retry.
+//   'unknown' — rendering cannot be inspected because there is no browser DOM
+//               (SSR). Caller must not claim either success or failure.
 //
 // Detection is event-driven (it leans on the <link>'s load/error events via
 // loadedFonts) and ALWAYS awaits document.fonts.ready before any negative
@@ -281,7 +264,7 @@ function canvasFontRendered(family, weight) {
 // 400), not a heading weight: document.fonts.check('700 …') is false for a
 // synthesised bold even when the regular face loaded fine.
 export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } = {}) {
-  if (typeof document === 'undefined') return 'ok'
+  if (typeof document === 'undefined') return 'unknown'
   const entry = loadedFonts.get(family)
   if (entry?.status === 'pending') {
     await Promise.race([
@@ -292,9 +275,11 @@ export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } 
   if (linkErrored(family)) return 'failed'
 
   if (!document.fonts || !document.fonts.load) {
-    // Without the Font Loading API, a settled stylesheet is the best positive
-    // available. A pending request remains unknown so fallback text is hidden.
-    return entry?.status === 'pending' ? 'unknown' : 'ok'
+    // A settled stylesheet is not proof that its binary face arrived. Canvas
+    // is the only remaining positive; false or inconclusive evidence must keep
+    // fallback text from masquerading as the requested family.
+    const rendered = canvasFontRendered(family, weight)
+    return rendered === true && !linkErrored(family) ? 'ok' : 'failed'
   }
   const spec = `${weight} 16px "${family}"`
   try {
@@ -303,7 +288,11 @@ export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } 
     const timed = new Promise(resolve => setTimeout(() => resolve('timeout'), timeout))
     const result = await Promise.race([loadPromise, timed])
 
-    // Positive signals are trusted immediately — don't fall through to negate.
+    // A genuine stylesheet error wins even if FontFaceSet retained a stale face
+    // with the same family name from an earlier request.
+    if (linkErrored(family)) return 'failed'
+
+    // Positive FontFaceSet signals are trusted immediately.
     if (Array.isArray(result) && result.length > 0) return 'ok'
     if (document.fonts.check(spec)) return 'ok'
 
@@ -314,22 +303,27 @@ export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } 
         document.fonts.ready.catch(() => {}),
         new Promise(resolve => setTimeout(resolve, 500)),
       ])
+      if (linkErrored(family)) return 'failed'
       if (document.fonts.check(spec)) return 'ok'
     }
 
     // Confident positive from canvas → rendering.
     if (linkErrored(family)) return 'failed'
     const rendered = canvasFontRendered(family, weight)
-    if (rendered === true) return 'ok'
+    if (rendered === true && !linkErrored(family)) return 'ok'
 
-    // Negative or unknowable. Only call it a failure if the <link> ACTUALLY
-    // errored (a real block); otherwise it's just not here yet → 'unknown'.
+    // Negative or inconclusive evidence after the bounded wait is a truthful
+    // fallback/error state, never permission to reveal the generic fallback.
     if (linkErrored(family)) return 'failed'
-    return rendered === false ? 'unknown' : 'ok'
+    return 'failed'
   } catch {
-    // On any unexpected error, bias away from accusing a blocker.
-    if (document.fonts.check(spec)) return 'ok'
-    return linkErrored(family) ? 'failed' : 'ok'
+    // Unexpected API failures still require a positive rendering signal.
+    try {
+      if (!linkErrored(family) && document.fonts.check(spec)) return 'ok'
+    } catch {}
+    if (linkErrored(family)) return 'failed'
+    const rendered = canvasFontRendered(family, weight)
+    return rendered === true && !linkErrored(family) ? 'ok' : 'failed'
   }
 }
 

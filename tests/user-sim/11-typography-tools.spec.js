@@ -12,6 +12,42 @@
 import { test, expect } from '@playwright/test'
 import { go, watch } from './helpers.js'
 
+async function installFontEvidenceMock(page, { fontApi, mode }) {
+  await page.addInitScript(({ exposeFontApi, initialMode }) => {
+    window.__fontEvidenceMode = initialMode
+    if (exposeFontApi) {
+      Object.defineProperty(document, 'fonts', {
+        configurable: true,
+        value: {
+          load: async () => [],
+          check: () => false,
+          ready: Promise.resolve(),
+        },
+      })
+    } else {
+      Object.defineProperty(document, 'fonts', { configurable: true, value: undefined })
+    }
+
+    const originalGetContext = HTMLCanvasElement.prototype.getContext
+    HTMLCanvasElement.prototype.getContext = function getContext(type, ...args) {
+      if (type !== '2d') return originalGetContext.call(this, type, ...args)
+      return {
+        font: '',
+        measureText() {
+          const generic = this.font.includes('monospace')
+            ? 'monospace'
+            : this.font.includes('sans-serif') ? 'sans-serif' : 'serif'
+          const baseline = { monospace: 100, serif: 110, 'sans-serif': 120 }[generic]
+          const target = this.font.includes('"Lora"')
+          const differs = window.__fontEvidenceMode === 'loaded'
+            || (window.__fontEvidenceMode === 'mixed' && generic === 'monospace')
+          return { width: baseline + (target && differs ? 20 : 0) }
+        },
+      }
+    }
+  }, { exposeFontApi: fontApi, initialMode: mode })
+}
+
 test.describe('Type Scale Generator', () => {
   test('a designer generates a scale from a base size and a ratio', async ({ page }) => {
     watch(page, 'designer building a type scale')
@@ -310,6 +346,48 @@ test.describe('Font Gallery', () => {
     await dialog.getByRole('button', { name: 'Retry this font' }).click()
     await expect(dialog.locator('.typ-notice')).toHaveCount(0)
     await expect(dialog.getByRole('heading', { name: 'Lora' })).toBeVisible()
+  })
+
+  test('inconclusive multi-baseline evidence never reveals a fallback specimen as loaded', async ({ page }) => {
+    watch(page, 'designer whose browser reports mixed font metrics')
+    await installFontEvidenceMock(page, { fontApi: true, mode: 'mixed' })
+    await page.route('**/api/fonts', route => route.fulfill({ json: loraCatalog }))
+    await page.route(/https:\/\/fonts\.googleapis\.com\/css2\?family=Lora/, route => (
+      route.fulfill({ contentType: 'text/css', body: '/* stylesheet settled */' })
+    ))
+
+    await go(page, '/fontgallery')
+    const preview = page.locator('.fg-card-preview').first()
+    await expect(preview).toHaveClass(/fg-card-preview--pending/)
+    await expect(preview.locator('.fg-card-sample')).toHaveCount(0)
+    await page.locator('.fg-card-open').first().click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.locator('.typ-notice')).toContainText('fallback is shown')
+
+    await page.evaluate(() => { window.__fontEvidenceMode = 'loaded' })
+    await dialog.getByRole('button', { name: 'Retry this font' }).click()
+    await expect(dialog.locator('.typ-notice')).toHaveCount(0)
+  })
+
+  test('without document.fonts a settled stylesheet still needs canvas proof and can retry', async ({ page }) => {
+    watch(page, 'designer whose browser has no Font Loading API')
+    await installFontEvidenceMock(page, { fontApi: false, mode: 'fallback' })
+    await page.route('**/api/fonts', route => route.fulfill({ json: loraCatalog }))
+    await page.route(/https:\/\/fonts\.googleapis\.com\/css2\?family=Lora/, route => (
+      route.fulfill({ contentType: 'text/css', body: '/* binary intentionally missing */' })
+    ))
+
+    await go(page, '/fontgallery')
+    const preview = page.locator('.fg-card-preview').first()
+    await expect(preview).toHaveClass(/fg-card-preview--pending/)
+    await expect(preview.locator('.fg-card-sample')).toHaveCount(0)
+    await page.locator('.fg-card-open').first().click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.locator('.typ-notice')).toContainText('font file did not become usable')
+
+    await page.evaluate(() => { window.__fontEvidenceMode = 'loaded' })
+    await dialog.getByRole('button', { name: 'Retry this font' }).click()
+    await expect(dialog.locator('.typ-notice')).toHaveCount(0)
   })
 })
 

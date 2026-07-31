@@ -433,9 +433,9 @@ function DetailDialog({ font, onClose, onCopy, onCompare, inCompare, onSendToPai
             <div>
               <strong>{font.family} couldn&rsquo;t load, so a fallback is shown.</strong>
               <span>
-                The request to <code>fonts.googleapis.com</code> was blocked — usually a privacy or
-                ad-blocking extension, or a dropped connection. This affects the preview only; the
-                import URL and CSS you copy below are unaffected.
+                The stylesheet or font file did not become usable. A privacy extension, dropped
+                connection or unavailable font-loading feature can cause this. The import URL and
+                CSS you copy below are unaffected.
               </span>
               <button type="button" className="typ-notice-retry" onClick={retryFont}>Retry this font</button>
             </div>
