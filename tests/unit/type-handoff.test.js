@@ -7,10 +7,15 @@ import assert from 'node:assert/strict'
 import {
   TYPE_HANDOFF_VERSION,
   buildPairDraft,
+  buildScaleDraft,
   consumePairDraft,
+  consumeScaleDraft,
   readPairDraft,
+  readScaleDraft,
   resetPairDraft,
+  resetScaleDraft,
   setPairDraft,
+  setScaleDraft,
   validatePairDraft,
 } from '../../src/utils/typeHandoff.js'
 
@@ -71,6 +76,20 @@ test('a scale rides along only when both numbers are usable, and is clamped', ()
 
   const clamped = buildPairDraft({ heading: { family: 'Inter' }, scale: { base: 900, ratio: 99 } })
   assert.deepEqual(clamped.scale, { base: 40, ratio: 3 })
+})
+
+test('a complete scale can travel alone and is consumed exactly once', () => {
+  resetScaleDraft()
+  assert.equal(buildScaleDraft({ scale: { base: 19 } }), null)
+  assert.equal(buildScaleDraft({ scale: { ratio: 1.333 } }), null)
+  assert.deepEqual(buildScaleDraft({ scale: { base: 19, ratio: 1.333 } }), {
+    version: TYPE_HANDOFF_VERSION,
+    scale: { base: 19, ratio: 1.333 },
+  })
+  assert.equal(setScaleDraft({ scale: { base: 19, ratio: 1.333 } }), true)
+  assert.deepEqual(readScaleDraft().scale, { base: 19, ratio: 1.333 })
+  consumeScaleDraft()
+  assert.equal(readScaleDraft(), null)
 })
 
 test('a draft from a different version is never delivered', () => {

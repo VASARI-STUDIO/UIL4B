@@ -22,6 +22,7 @@ export function useFontCatalog() {
   const [retrying, setRetrying] = useState(false)
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false)
   const alive = useRef(true)
+  const request = useRef(null)
   // Mirrors `source` so the online listener can branch on it without taking it
   // as a dependency (which would re-subscribe on every catalog change) and
   // without running a side effect inside a setState updater.
@@ -29,13 +30,20 @@ export function useFontCatalog() {
 
   useEffect(() => {
     alive.current = true
-    return () => { alive.current = false }
+    return () => {
+      alive.current = false
+      request.current?.abort()
+    }
   }, [])
 
   const load = useCallback(async (force) => {
+    request.current?.abort()
+    const controller = new AbortController()
+    request.current = controller
     if (force) setRetrying(true)
-    const { fonts: list, source: src } = await fetchFontCatalog({ force })
-    if (!alive.current) return
+    const { fonts: list, source: src } = await fetchFontCatalog({ force, signal: controller.signal })
+    if (!alive.current || request.current !== controller) return
+    request.current = null
     sourceRef.current = src
     setFonts(list)
     setSource(src)

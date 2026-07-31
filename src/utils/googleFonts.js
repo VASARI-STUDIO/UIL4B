@@ -4,6 +4,7 @@ const API_KEY = import.meta.env.VITE_GOOGLE_FONTS_API_KEY || ''
 const API_URL = `https://www.googleapis.com/webfonts/v1/webfonts?key=${API_KEY}&sort=popularity`
 const CACHE_TTL = 24 * 60 * 60 * 1000
 const LS_KEY = 'vs-gf-catalog'
+export const FONT_CATALOG_SOURCE_TIMEOUT_MS = 2000
 
 let cache = null
 let cacheTimestamp = 0
@@ -40,7 +41,33 @@ function transformFont(item, index) {
 //   2. /api/fonts serverless proxy (works without any client key)
 //   3. Bundled FALLBACK_FONTS so the font tools never render empty
 // Successful fetches are cached in localStorage for a day.
-async function getRawFonts({ force = false } = {}) {
+function throwIfAborted(signal) {
+  if (!signal?.aborted) return
+  const error = new Error('Font catalogue request cancelled')
+  error.name = 'AbortError'
+  throw error
+}
+
+// Bound each upstream independently. A proxy or API endpoint that accepts the
+// connection but never answers must not leave every typography tool loading.
+async function requestCatalogJson(url, { signal, timeout = FONT_CATALOG_SOURCE_TIMEOUT_MS } = {}) {
+  throwIfAborted(signal)
+  const controller = new AbortController()
+  const cancel = () => controller.abort()
+  signal?.addEventListener('abort', cancel, { once: true })
+  const timer = setTimeout(cancel, timeout)
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    if (!response.ok) return null
+    return await response.json()
+  } finally {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', cancel)
+  }
+}
+
+async function getRawFonts({ force = false, signal } = {}) {
+  throwIfAborted(signal)
   if (force) {
     cache = null
     cacheTimestamp = 0
@@ -65,23 +92,25 @@ async function getRawFonts({ force = false } = {}) {
 
   if (API_KEY) {
     try {
-      const res = await fetch(API_URL)
-      if (res.ok) {
-        const data = await res.json()
+      const data = await requestCatalogJson(API_URL, { signal })
+      if (data) {
         const items = (data.items || []).map(transformFont)
         if (items.length) fonts = items
       }
-    } catch {}
+    } catch {
+      throwIfAborted(signal)
+    }
   }
 
   if (!fonts) {
     try {
-      const res = await fetch('/api/fonts')
-      if (res.ok) {
-        const data = await res.json()
+      const data = await requestCatalogJson('/api/fonts', { signal })
+      if (data) {
         if (Array.isArray(data.fonts) && data.fonts.length) fonts = data.fonts
       }
-    } catch {}
+    } catch {
+      throwIfAborted(signal)
+    }
   }
 
   if (fonts) {
@@ -107,9 +136,9 @@ async function getRawFonts({ force = false } = {}) {
 // whole of Google Fonts loaded. `force: true` drops both caches so the retry is
 // a real network attempt. Never rejects: the bundled list is always a valid
 // answer, and `source` is what tells the caller the difference.
-export async function fetchFontCatalog({ force = false } = {}) {
+export async function fetchFontCatalog({ force = false, signal } = {}) {
   try {
-    const fonts = await getRawFonts({ force })
+    const fonts = await getRawFonts({ force, signal })
     return { fonts, source: cacheSource }
   } catch {
     // getRawFonts already swallows fetch failures, so reaching here means

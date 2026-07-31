@@ -367,6 +367,21 @@ test.describe('homepage: eleven tools, five ways of working', () => {
   test('typography mode previews real scale maths and hands the draft to Type Scale', async ({ page }) => {
     await reducedMotion(page)
     watch(page, 'designer beginning a typography system on the homepage')
+    await page.addInitScript(() => {
+      localStorage.setItem('vs-current-design', JSON.stringify({
+        fonts: {
+          heading: { family: 'Merriweather', weight: 700, category: 'serif' },
+          body: { family: 'Lora', weight: 400, category: 'serif' },
+        },
+        typeScale: {
+          base: 15,
+          ratio: 1.2,
+          lineHeight: 1.5,
+          headingSpacing: 0,
+          bodySpacing: 0,
+        },
+      }))
+    })
     await go(page, '/')
 
     await page.locator('.hw-tab[data-tab="typography"]').click()
@@ -374,7 +389,16 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.locator('.hw-panel').getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
     await expect(page.locator('.hw-panel').getByRole('link', { name: /Font Pair/ })).toHaveAttribute('href', '/fontpairs')
 
-    await page.getByLabel('Base size').fill('20')
+    // Real key entry must allow the native number input to become empty while
+    // replacing its value; the committed draft is validated on blur.
+    const baseInput = page.getByLabel('Base size')
+    await baseInput.focus()
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Backspace')
+    await expect(baseInput).toHaveValue('')
+    await page.keyboard.type('20')
+    await page.keyboard.press('Tab')
+    await expect(baseInput).toHaveValue('20')
     await page.getByLabel('Scale ratio').selectOption('1.333')
     await page.getByLabel('Preview text').fill('Systems need typographic rhythm')
     await expect(page.locator('.hw-type-row').first()).toContainText('47.4px')
@@ -394,6 +418,9 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await page.waitForURL('**/typescale')
     await expect(page.locator('.tsc-status')).toContainText('20px')
     await expect(page.locator('.tsc-status')).toContainText('1.333')
+    // The homepage carries scale maths only: saved family choices survive.
+    await expect(page.getByLabel('Heading family', { exact: true })).toHaveValue('Merriweather')
+    await expect(page.getByLabel('Body family', { exact: true })).toHaveValue('Lora')
   })
 
   test('8 · palette and gradient produce real values with honest states', async ({ page }) => {

@@ -245,6 +245,20 @@ test.describe('typography hand-offs', () => {
 })
 
 test.describe('typography tools under a failing font catalogue', () => {
+  test('a catalogue source that never answers falls back within the request bound', async ({ page }) => {
+    watch(page, 'visitor on a connection that stalls without failing')
+    await page.route('**/api/fonts', async (route) => {
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      await route.abort().catch(() => {})
+    })
+
+    const started = Date.now()
+    await go(page, '/fontgallery')
+    await expect(page.locator('.typ-notice')).toContainText('bundled list', { timeout: 4000 })
+    expect(Date.now() - started, 'the stalled source must not hold the loading UI').toBeLessThan(4000)
+    await expect(page.locator('.fg-card').first()).toBeVisible()
+  })
+
   test('a blocked catalogue degrades visibly and still lets the tools work', async ({ page }) => {
     watch(page, 'visitor behind a content blocker')
     await go(page, '/fontgallery')
@@ -278,4 +292,36 @@ test.describe('typography tools under a failing font catalogue', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('online')))
     await expect(page.locator('.tsc-row').first()).toBeVisible()
   })
+})
+
+test('coarse-pointer typography controls expose 44px hit targets', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+  watch(page, 'mobile designer using touch controls')
+  const expectTarget = async (locator, label) => {
+    const box = await locator.boundingBox()
+    expect(box, `${label} should have a rendered box`).not.toBeNull()
+    expect(box.width, `${label} width`).toBeGreaterThanOrEqual(44)
+    expect(box.height, `${label} height`).toBeGreaterThanOrEqual(44)
+  }
+
+  await go(page, '/fontgallery')
+  await expect(page.locator('.fg-card').first()).toBeVisible()
+  await expectTarget(page.locator('.fg-card-compare').first(), 'Font Gallery compare')
+  await expectTarget(page.locator('.fg-sort-btn').first(), 'Font Gallery sort')
+  await page.locator('.fg-card-compare').first().click()
+  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery clear')
+
+  await go(page, '/fontpairs')
+  await expect(page.locator('.fpr-card').first()).toBeVisible()
+  await expectTarget(page.locator('.fpr-card-apply').first(), 'Font Pair apply')
+
+  await go(page, '/typescale')
+  await expect(page.locator('.tsc-width-btn').first()).toBeVisible()
+  await expectTarget(page.locator('.tsc-width-btn').first(), 'Type Scale width')
+  await context.close()
 })

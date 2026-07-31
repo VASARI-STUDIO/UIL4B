@@ -37,7 +37,7 @@ import NavIcon from './NavIcon'
 //   · the Image panel produces an output DRAFT, never a finished conversion;
 //   · the Icon panel edits a preview, never a stored custom icon.
 //
-// All four panels' state lives here, so switching tabs keeps a visitor's edits
+// All five panels' state lives here, so switching tabs keeps a visitor's edits
 // for the session. A reload deliberately returns to safe defaults — no
 // persistence is added just to make a preview survive.
 
@@ -773,6 +773,7 @@ function TypographyPanel({ state, onChange, announce }) {
   const navigate = useNavigate()
   const [error, setError] = useState('')
   const [opening, setOpening] = useState(false)
+  const [baseDraft, setBaseDraft] = useState(() => String(state.base))
   const lockRef = useRef(false)
 
   const patch = (next) => {
@@ -780,14 +781,24 @@ function TypographyPanel({ state, onChange, announce }) {
     onChange({ ...state, ...next })
   }
 
+  const commitBase = () => {
+    const raw = baseDraft.trim()
+    const numeric = Number(raw)
+    const next = raw && Number.isFinite(numeric)
+      ? Math.min(40, Math.max(8, numeric))
+      : state.base
+    setBaseDraft(String(next))
+    if (next !== state.base) patch({ base: next })
+    return next
+  }
+
   const openScale = () => {
     if (lockRef.current) return
     lockRef.current = true
     setOpening(true)
+    const base = commitBase()
     const staged = setScaleDraft({
-      heading: { family: 'Inter', weight: 700, category: 'sans-serif' },
-      body: { family: 'Inter', weight: 400, category: 'sans-serif' },
-      scale: { base: state.base, ratio: state.ratio },
+      scale: { base, ratio: state.ratio },
     })
     if (!staged) {
       lockRef.current = false
@@ -795,7 +806,7 @@ function TypographyPanel({ state, onChange, announce }) {
       setError('That type scale could not be handed over. Check the base size and ratio, then try again.')
       return
     }
-    announce(`Opening a ${state.base}px type scale in the Type Scale Generator.`)
+    announce(`Opening a ${base}px type scale in the Type Scale Generator.`)
     try {
       navigate('/typescale')
     } catch {
@@ -837,10 +848,24 @@ function TypographyPanel({ state, onChange, announce }) {
                 min="8"
                 max="40"
                 step="1"
-                value={state.base}
+                value={baseDraft}
                 onChange={(event) => {
-                  const next = Number(event.target.value)
-                  if (Number.isFinite(next) && next >= 8 && next <= 40) patch({ base: next })
+                  const raw = event.target.value
+                  setBaseDraft(raw)
+                  const numeric = Number(raw)
+                  // Preserve an empty/partial draft for keyboard replacement,
+                  // while valid complete values continue to update the preview.
+                  if (raw.trim() && Number.isFinite(numeric) && numeric >= 8 && numeric <= 40) {
+                    patch({ base: numeric })
+                  }
+                }}
+                onBlur={commitBase}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    commitBase()
+                    event.currentTarget.blur()
+                  }
                 }}
               />
             </div>

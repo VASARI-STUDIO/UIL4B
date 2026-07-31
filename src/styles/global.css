@@ -5024,7 +5024,7 @@ html.lenis,html.lenis body{height:auto}
 .home-workspace-intro{position:relative;isolation:isolate}
 .home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:720px;margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-9)) 24px var(--s-8)}
 .home-hero-core{position:relative;z-index:2;max-width:790px;margin:70px auto 0}
-/* ── Hero satellites: the eight tools that are live today ────────────────────
+/* ── Hero satellites: the eleven tools that are live today ──────────────────
    Source order is the reading order and never changes. On wide screens the
    items are PLACED (authored offsets below, deterministic — never randomised)
    so the breadth of the toolset is visible around a collision-free centre
@@ -6886,4 +6886,11 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .tsc-row-meta{flex-direction:row;flex-basis:auto;gap:8px;flex-wrap:wrap}
   .tsc-width-btn{font-size:10px;padding:7px 6px}
   .tsc-more-links{align-items:flex-start;flex-direction:column;gap:12px}
+}
+
+/* Coarse pointers need a 44px target even when the compact visual treatment is
+   useful on small screens. These are the typography controls QA identified. */
+@media(pointer:coarse){
+  .fg-card-compare{width:44px;height:44px;top:8px;right:8px;opacity:1}
+  .fg-sort-btn,.fg-more-btn,.fg-compare-chip,.fpr-card-apply,.tsc-width-btn{min-height:44px}
 }

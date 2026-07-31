@@ -63,23 +63,23 @@ function cleanNumber(raw, min, max) {
   return Math.min(max, Math.max(min, n))
 }
 
-// A draft is useful when it names at least ONE role. Both roles are optional
-// individually — the gallery can hand over a heading alone, and the destination
-// keeps its own default for whatever is missing.
+// A draft is useful when it names at least ONE role OR carries a complete scale.
+// Roles are optional individually — the homepage can hand over only base/ratio
+// and let Type Scale keep the user's saved families.
 function validate(draft) {
   if (!draft || typeof draft !== 'object') return null
   if (draft.version !== TYPE_HANDOFF_VERSION) return null
   const heading = cleanRole(draft.heading)
   const body = cleanRole(draft.body)
-  if (!heading && !body) return null
+  const base = cleanNumber(draft.scale?.base, BASE_MIN, BASE_MAX)
+  const ratio = cleanNumber(draft.scale?.ratio, RATIO_MIN, RATIO_MAX)
+  const scale = base != null && ratio != null ? { base, ratio } : null
+  if (!heading && !body && !scale) return null
 
   const out = { version: TYPE_HANDOFF_VERSION }
   if (heading) out.heading = heading
   if (body) out.body = body
-
-  const base = cleanNumber(draft.scale?.base, BASE_MIN, BASE_MAX)
-  const ratio = cleanNumber(draft.scale?.ratio, RATIO_MIN, RATIO_MAX)
-  if (base != null && ratio != null) out.scale = { base, ratio }
+  if (scale) out.scale = scale
 
   return out
 }
