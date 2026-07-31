@@ -755,7 +755,8 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     const remote = []
     page.on('request', (request) => {
       const url = request.url()
-      if (!url.startsWith('http://localhost:4174') && !url.startsWith('data:') && !url.startsWith('blob:')) {
+      const hostname = url.startsWith('http') ? new URL(url).hostname : ''
+      if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !url.startsWith('data:') && !url.startsWith('blob:')) {
         remote.push(url)
       }
     })
