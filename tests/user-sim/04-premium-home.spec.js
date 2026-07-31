@@ -55,16 +55,16 @@ test.describe('premium homepage', () => {
     await expect(heading).toContainText('Build your UI system in one place.')
     await expect(page.getByText('The operating workspace for UI systems')).toBeVisible()
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
-    await expect(page.getByText(/Typography and component tooling are coming next/)).toBeVisible()
+    await expect(page.getByText(/Component tooling is coming next/)).toBeVisible()
     await expect(page.locator('.home-export-soon')).toHaveCount(5)
 
-    // Eight live tools above; four ways of working below. The relationship is
+    // Eleven live tools above; five ways of working below. The relationship is
     // the page's argument, so both counts are regression-guarded here.
-    await expect(page.locator('.hsat-link')).toHaveCount(8)
+    await expect(page.locator('.hsat-link')).toHaveCount(11)
     const workbench = page.locator('.hw-shell')
     await workbench.scrollIntoViewIfNeeded()
     await expect(workbench).toBeVisible()
-    await expect(page.locator('.hw-tab')).toHaveCount(4)
+    await expect(page.locator('.hw-tab')).toHaveCount(5)
     await expect(page.getByRole('link', { name: /Continue in Palette Builder/ }))
       .toHaveAttribute('href', '/color/palette')
 
@@ -82,7 +82,7 @@ test.describe('premium homepage', () => {
 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Start building free' }).first()).toBeVisible()
-    await expect(page.locator('.hsat-link')).toHaveCount(8)
+    await expect(page.locator('.hsat-link')).toHaveCount(11)
     const satellitePosition = await page.locator('.hsat').evaluate(
       (element) => getComputedStyle(element).position,
     )

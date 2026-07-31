@@ -14,12 +14,12 @@ export const APP_CONDITION = [
   { id: 'build', label: 'Build', value: 'Passing', status: 'good', detail: 'vite build clean' },
   { id: 'lint', label: 'Lint', value: '0 errors', status: 'good', detail: 'Advisory warnings tracked separately' },
   { id: 'functions', label: 'Serverless fns', value: '11 / 12', status: 'watch', detail: '1 slot free — consolidate before adding' },
-  { id: 'create', label: 'Create surface', value: 'Live', status: 'good', detail: 'Core colour, library and imagery workflows are shipped' },
+  { id: 'create', label: 'Create surface', value: 'Live', status: 'good', detail: 'Colour, typography, library and imagery workflows are shipped; UI Component Builder and AI Studio remain in the workshop' },
   { id: 'discover', label: 'Discover surface', value: 'Queued · 20%', status: 'watch', detail: 'Gradient Gallery is live; broader galleries remain backlog' },
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
   { id: 'design-system', label: 'Design system', value: 'v2.7 shipped', status: 'good', detail: 'Shared shell, controls, CTA and footer patterns are live' },
   { id: 'ci', label: 'CI gates', value: 'Green on every PR', status: 'good', detail: 'Lint, build, unit, Firestore rules and the Playwright acceptance suite run on every pull request since #188' },
-  { id: 'phase', label: 'Current phase', value: 'V1 readiness — polish, then review', status: 'watch', detail: 'Founder-reported colour-tool defects closed (#190–#193) and the dead-code sweep shipped (#196). The readiness review is written up in docs/V1-READINESS.md and returns NO-GO: firestore.rules is hardened but still UNPUBLISHED, so paid entitlements are not server-enforced. The layout/motion/typography passes and the QA pass remain' },
+  { id: 'phase', label: 'Current phase', value: 'V1 readiness — polish, then review', status: 'watch', detail: 'Founder-reported colour-tool defects closed (#190–#193), the dead-code sweep shipped (#196), and the founder confirmed the hardened firestore.rules are published. The layout/typography passes and the final QA reconciliation remain' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -53,6 +53,15 @@ export const PIPELINE_PROCESSES = [
     updated: '2026-07-29',
   },
   {
+    id: 'typography-tools',
+    name: 'Typography tools activation',
+    area: 'Product',
+    stage: 'review',
+    progress: 90,
+    summary: 'Type Scale (/typescale), Font Pair (/fontpairs) and Font Gallery (/fontgallery) are rebuilt on the current design system, routed through CreateTool and flipped out of the Soon state in the tool tree, the visual sitemap and the crawler sitemap. Three standalone tools on one Google Fonts catalogue, wired to each other through a versioned in-memory hand-off (utils/typeHandoff.js) so no tool ever opens empty. The catalogue degrades to the bundled list with a visible notice and a working retry, and reconnecting reloads it automatically. The font-gallery-readiness items are closed: featured cards render a skeleton until the face is verified (no FOUT), every preview box has reserved height so cards cannot shift as faces stream in, cards are real buttons, and both overlays are focus-trapped dialogs with Escape and focus restoration.',
+    updated: '2026-07-30',
+  },
+  {
     id: 'design-system-scales',
     name: 'Page-gutter and layering scales',
     area: 'Design system',
@@ -67,8 +76,8 @@ export const PIPELINE_PROCESSES = [
     area: 'Release',
     stage: 'in-progress',
     progress: 80,
-    summary: 'Security, code, SEO and analytics passes are complete and written up in docs/V1-READINESS.md; the QA responsive/theme/keyboard/contrast pass is the last one outstanding. Verdict so far is NO-GO — one hard blocker (firestore.rules hardened but UNPUBLISHED, so paid entitlements are not server-enforced) and three soft ones (analytics environment guard, per-route canonical/OG tags, upgrade-gate instrumentation).',
-    updated: '2026-07-29',
+    summary: 'Security, code, SEO and analytics passes are complete and written up in docs/V1-READINESS.md; the QA responsive/theme/keyboard/contrast pass is the last one outstanding. The founder confirmed the hardened firestore.rules are published, removing the entitlement-enforcement blocker; the readiness verdict still needs reconciliation against the remaining soft items.',
+    updated: '2026-07-31',
   },
   {
     id: 'dead-code-sweep',
@@ -103,8 +112,8 @@ export const PIPELINE_PROCESSES = [
     area: 'Billing',
     stage: 'shipped',
     progress: 100,
-    summary: 'Shipped in #184 with security review PASS. Premium Plus removed, One-off tab added and degrading honestly until a Stripe price exists. Closed a live privilege escalation (client-writable entitlement fields), refunded-entitlement re-grants and missing chargeback revocation. Owner must PUBLISH firestore.rules and configure the lifetime webhook events before creating the price.',
-    updated: '2026-07-28',
+    summary: 'Shipped in #184 with security review PASS. Premium Plus removed, One-off tab added and degrading honestly until a Stripe price exists. Closed a live privilege escalation (client-writable entitlement fields), refunded-entitlement re-grants and missing chargeback revocation. The founder confirmed firestore.rules are published; lifetime webhook events still need configuration before creating the price.',
+    updated: '2026-07-31',
   },
   {
     id: 'public-ui-premium',
@@ -196,7 +205,6 @@ export const NEXT_TODO = [
   { id: 'homepage-field-metrics', title: 'Measure homepage field metrics on a throttled profile', priority: 'P2', effort: 'S', area: 'Performance', status: 'todo', note: 'HOMEPAGE-CHAOS-TO-CALM §11 targets LCP ≤ 2.5s, CLS ≤ 0.05 and INP ≤ 200ms on Slow-4G with 4x CPU. Structural preconditions shipped in #185 but the numbers were never traced. Also covers 200% zoom, forced-colours and screen-reader passes from §10.' },
   { id: 'account-menu-arrow-nav', title: 'Add arrow-key navigation to the account menu', priority: 'P1', effort: 'S', area: 'Accessibility', status: 'todo', note: 'Complete the menu keyboard contract: roving focus, Home/End, Escape focus restoration and assistive-technology semantics.' },
   { id: 'global-failure-states', title: 'Add global 404 and offline states', priority: 'P1', effort: 'M', area: 'Quality', status: 'todo', note: 'Replace wildcard-to-home recovery with a branded 404 and add one app-level offline signal with retry guidance for network-dependent workflows.' },
-  { id: 'font-gallery-readiness', title: 'Prepare Font Gallery for activation', priority: 'P2', effort: 'M', area: 'Performance', status: 'todo', note: 'Deferred until the route is activated: remove featured-card FOUT, reserve metrics, and complete keyboard/dialog accessibility before flipping the Soon state.' },
   { id: 'firebase-critical-path', title: 'Defer Firebase off the public critical path', priority: 'P1', effort: 'L', area: 'Performance', status: 'blocked', note: 'Performance/HVZ block: requires an approved auth-loading design and owner validation before changing Firebase initialization or authenticated routing.' },
   { id: 'openrouter-production-key', title: 'Add the production OpenRouter key', priority: 'P1', effort: 'S', area: 'Infra', status: 'blocked', note: 'Owner action: production Firebase credential and Gemini are healthy; OPENROUTER_API_KEY remains missing, so Gemini currently carries the AI path.' },
   { id: 'stripe-checkout-live-qa', title: 'Run live Stripe checkout return/retry QA', priority: 'P1', effort: 'M', area: 'Quality', status: 'blocked', note: 'Owner/HVZ validation on production checkout, abandon, return and retry flows; separate from retention coupon configuration.' },

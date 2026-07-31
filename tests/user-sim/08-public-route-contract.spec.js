@@ -29,9 +29,6 @@ const EXPECTED_CRAWLER_ROUTES = [
 
 const RETIRED_OR_THIN_ROUTES = [
   '/color/ui',
-  '/fontpairs',
-  '/fontgallery',
-  '/typescale',
   '/box-shadow',
   '/ui-builder',
   '/auto-builder',
@@ -90,9 +87,17 @@ test.describe('public route contract', () => {
     await expect(learn.locator('[data-soon="true"]')).toHaveCount(LEARN_GROUPS.length)
     await expect(learn.locator('a')).toHaveCount(0)
 
-    const stagedTypeScale = page.locator('.smap-link[data-route="/typescale"]')
-    await expect(stagedTypeScale).toHaveAttribute('data-soon', 'true')
-    await expect(stagedTypeScale.locator('a')).toHaveCount(0)
+    // A Create tool still in the workshop stays non-actionable on the map…
+    const stagedBoxShadow = page.locator('.smap-link[data-route="/box-shadow"]')
+    await expect(stagedBoxShadow).toHaveAttribute('data-soon', 'true')
+    await expect(stagedBoxShadow.locator('a')).toHaveCount(0)
+
+    // …while the three typography tools that just shipped are real links.
+    for (const route of ['/fontgallery', '/fontpairs', '/typescale']) {
+      const live = page.locator(`.smap-link[data-route="${route}"]`)
+      await expect(live).not.toHaveAttribute('data-soon', 'true')
+      await expect(live.locator('a')).toHaveAttribute('href', route)
+    }
   })
 
   test('retired UI Colour redirects to the live colour landing without re-entering the tool dispatcher', async ({ page }) => {
