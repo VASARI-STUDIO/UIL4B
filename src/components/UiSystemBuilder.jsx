@@ -27,6 +27,10 @@ const PRO_COPY = {
     title: 'Open every applied UI scene',
     subtitle: 'Pro previews the generated roles in Product Workspace, Settings, Commerce, Documentation and Mobile App layouts.',
   },
+  apply: {
+    title: 'Apply a complete Brand scale',
+    subtitle: 'Pro can transfer all nine Brand shades into the editable Palette while keeping Brand 500 as its first swatch and seed.',
+  },
 }
 
 export default function UiSystemBuilder({
@@ -139,8 +143,21 @@ export default function UiSystemBuilder({
   }
 
   const applyBrand = () => {
-    onApplyBrand(system.groups[0].shades.map(item => item.hex))
+    if (!canEdit) return gate('apply')
+    const shades = system.groups[0].shades
+    const seedShade = shades.find(item => item.step === 500)
+    const orderedPalette = [
+      seedShade,
+      ...shades.filter(item => item.step !== 500),
+    ].filter(Boolean).map(item => item.hex)
+    const applied = onApplyBrand?.(orderedPalette)
+    if (applied === false) {
+      setMessage('The Brand scale could not be applied to Palette.')
+      return false
+    }
+    setMessage('Brand 500 and the remaining Brand scale applied to Palette.')
     toast?.('Brand scale applied to Palette')
+    return true
   }
 
   return (
@@ -225,7 +242,9 @@ export default function UiSystemBuilder({
         <div className="uis-command-actions">
           <button type="button" className="btn btn-s btn-ghost" onClick={rebalance}>Regenerate / rebalance</button>
           <button type="button" className="btn btn-s btn-ghost" onClick={reset}>Reset</button>
-          <button type="button" className="btn btn-s" onClick={applyBrand}>Apply Brand scale to palette</button>
+          <button type="button" className="btn btn-s" onClick={applyBrand}>
+            Apply Brand scale to palette <span className="uis-pro-label">Pro</span>
+          </button>
         </div>
       </section>
 

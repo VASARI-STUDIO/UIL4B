@@ -227,9 +227,19 @@ function GalleryCard({ font, onOpen, inCompare, onToggleCompare }) {
         <span
           className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
           ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body) })}
+          aria-hidden={!ready}
         >
-          <span className="fg-card-sample">{font.family.length <= 18 ? font.family : 'Aa Bb Cc'}</span>
-          <span className="fg-card-pangram">{PANGRAM}</span>
+          {ready ? (
+            <>
+              <span className="fg-card-sample">{font.family.length <= 18 ? font.family : 'Aa Bb Cc'}</span>
+              <span className="fg-card-pangram">{PANGRAM}</span>
+            </>
+          ) : (
+            <>
+              <span className="fg-card-skeleton fg-card-skeleton--sample" />
+              <span className="fg-card-skeleton fg-card-skeleton--body" />
+            </>
+          )}
         </span>
         <span className="fg-card-meta">
           <span className="fg-card-name">{font.family}</span>

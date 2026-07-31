@@ -30,10 +30,12 @@ export default function UiSystemMatrix({ system, onCopy, onEdit }) {
   const selected = selectedGroup.shades[active.column] || selectedGroup.shades[4]
   const selectedIsSeed = selectedGroup.id === 'brand' && selected.step === 500
 
-  const copyShade = useCallback((group, item, row, column) => {
+  const copyShade = useCallback(async (group, item, row, column) => {
     setActive({ row, column })
-    onCopy?.(item.hex)
-    setMessage(`${group.label} ${item.step}, ${item.hex}, copied.`)
+    const copied = await onCopy?.(item.hex)
+    setMessage(copied === true
+      ? `${group.label} ${item.step}, ${item.hex}, copied.`
+      : `${group.label} ${item.step}, ${item.hex}, could not be copied. Check clipboard access and try again.`)
   }, [onCopy])
 
   const focusCell = useCallback((row, column) => {

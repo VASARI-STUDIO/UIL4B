@@ -123,6 +123,11 @@ passed. Final review/PR hand-off remains. Keep these durable gaps visible:
 - protect unauthenticated `/api/support` from automated cost abuse. It currently
   has no authentication, rate limit or bot challenge and one request can attempt
   a Firestore write, optional Sheets append and optional Resend email;
+- remove the committed access check from the AI diagnostic endpoint before a
+  production release. Require verified administrator authentication, or keep a
+  server-only `DIAG_CODE` and disable the endpoint in production. The endpoint
+  remains unchanged in this batch and must be treated as an information-
+  disclosure risk until that server-side control ships;
 - build the Firebase community backend and publish/verify its Storage rules;
 - implement the approved public-route prerender matrix;
 - measure homepage LCP/CLS/INP on a throttled profile and test 200% zoom,

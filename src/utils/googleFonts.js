@@ -200,17 +200,20 @@ export function loadFont(family, weights = [400]) {
   const existing = loadedFonts.get(family)
   if (existing) {
     // Already covers everything we need — nothing to do.
-    if (requested.every(w => existing.weights.has(w))) return
+    if (requested.every(w => existing.weights.has(w))) {
+      return existing.ready.then(() => existing.status)
+    }
     // Otherwise upgrade the link to the union of weights so previews aren't
     // forced to synthesise (faux-bold) a weight that was never downloaded.
     requested.forEach(w => existing.weights.add(w))
     const all = [...existing.weights].sort((a, b) => a - b)
     existing.link.remove()
-    injectFontLink(family, all, null)
-    return
+    const upgraded = injectFontLink(family, all, null)
+    return upgraded.ready.then(() => upgraded.status)
   }
 
-  injectFontLink(family, requested, null)
+  const entry = injectFontLink(family, requested, null)
+  return entry.ready.then(() => entry.status)
 }
 
 // Force a fresh fetch of a family's stylesheet, bypassing the HTTP cache, and
@@ -231,14 +234,10 @@ function linkErrored(family) {
   return loadedFonts.get(family)?.status === 'error'
 }
 
-// Canvas text-width comparison — the authoritative FOUT/font-load detection
-// technique. Measures a probe string in the TARGET family ALONE against each
-// generic baseline measured separately. If the target's width differs from a
-// baseline, the web font is genuinely rendering; if it matches every generic
-// baseline, the face never loaded. Measuring the family alone (not a
-// "family, generic" list) matters: Canvas `ctx.font` is the CSS `font`
-// shorthand, which rejects a multi-family value outright — so a list value
-// silently keeps the previous font and makes the measurement meaningless.
+// Multi-baseline font detection: compare `"Target", generic` with that same
+// generic for monospace, serif and sans-serif. A loaded target differs from
+// all three. An unloaded target falls through and matches all three. Mixed
+// evidence is inconclusive and must not reveal fallback text as a real face.
 const FONT_PROBE = 'mmmmmwwwwwlli0O'
 const GENERIC_BASELINES = ['monospace', 'serif', 'sans-serif']
 
@@ -249,22 +248,19 @@ function canvasFontRendered(family, weight) {
   if (!ctx) return null // No 2D context — can't measure; let caller decide.
   const size = '72px'
 
-  // Width of the target family rendered on its own. If the assignment is
-  // rejected (e.g. an exotic family name), ctx.font won't reflect it; the
-  // baseline comparison below still holds because a non-applied family falls
-  // back to whatever ctx.font was, which won't match all three generics.
-  ctx.font = `${weight} ${size} "${family}"`
-  const familyWidth = ctx.measureText(FONT_PROBE).width
-
+  let differences = 0
   for (const generic of GENERIC_BASELINES) {
     ctx.font = `${weight} ${size} ${generic}`
     const baselineWidth = ctx.measureText(FONT_PROBE).width
-    // A meaningful difference (>0.5px guards sub-pixel rounding) against ANY
-    // baseline means the target family is the one being painted.
-    if (Math.abs(familyWidth - baselineWidth) > 0.5) return true
+    ctx.font = `${weight} ${size} "${family}", ${generic}`
+    const targetWidth = ctx.measureText(FONT_PROBE).width
+    // A meaningful difference (>0.5px guards sub-pixel rounding).
+    if (Math.abs(targetWidth - baselineWidth) > 0.5) differences += 1
   }
-  // Identical to every generic baseline → the web font did not load.
-  return false
+  // Only a difference against every baseline is a positive.
+  if (differences === GENERIC_BASELINES.length) return true
+  if (differences === 0) return false
+  return null
 }
 
 // Verify a font actually rendered rather than silently falling back to a system
@@ -285,9 +281,20 @@ function canvasFontRendered(family, weight) {
 // 400), not a heading weight: document.fonts.check('700 …') is false for a
 // synthesised bold even when the regular face loaded fine.
 export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } = {}) {
-  if (typeof document === 'undefined' || !document.fonts || !document.fonts.load) {
-    // No Font Loading API — assume success and let the browser fall back.
-    return 'ok'
+  if (typeof document === 'undefined') return 'ok'
+  const entry = loadedFonts.get(family)
+  if (entry?.status === 'pending') {
+    await Promise.race([
+      entry.ready,
+      new Promise(resolve => setTimeout(resolve, timeout)),
+    ])
+  }
+  if (linkErrored(family)) return 'failed'
+
+  if (!document.fonts || !document.fonts.load) {
+    // Without the Font Loading API, a settled stylesheet is the best positive
+    // available. A pending request remains unknown so fallback text is hidden.
+    return entry?.status === 'pending' ? 'unknown' : 'ok'
   }
   const spec = `${weight} 16px "${family}"`
   try {
@@ -311,6 +318,7 @@ export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } 
     }
 
     // Confident positive from canvas → rendering.
+    if (linkErrored(family)) return 'failed'
     const rendered = canvasFontRendered(family, weight)
     if (rendered === true) return 'ok'
 

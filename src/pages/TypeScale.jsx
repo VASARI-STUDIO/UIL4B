@@ -8,6 +8,7 @@ import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont } from '../utils/googleFonts'
 import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
+import { fitTypePreviewSize, typePreviewNeedsFitting } from '../utils/typeScalePreview'
 
 // Type Scale Generator — the standalone /typescale page. One base size and one
 // ratio generate a whole modular scale, previewed in a real article and handed
@@ -187,6 +188,7 @@ export default function TypeScale({ onCopy, toast }) {
     }
     return out
   }, [base, ratio, up, down, rounding, headingW, bodyW, headingTrack, bodyTrack, lineHeight])
+  const previewIsFitted = typePreviewNeedsFitting(steps)
 
   // Persist from the handlers rather than an effect: an effect that writes on
   // every slider tick both fights the context's own debounce and trips the
@@ -447,6 +449,11 @@ export default function TypeScale({ onCopy, toast }) {
             className={activeWidth.px ? 'tsc-ladder tsc-ladder--clamped' : 'tsc-ladder'}
             ref={varsRef({ ...previewVars, '--tsc-w': activeWidth.px ? `${activeWidth.px}px` : '100%' })}
           >
+            {previewIsFitted && (
+              <p className="tsc-fit-note" role="status">
+                Preview sizes are fitted between 8px and 96px to keep the workspace usable. Labels and exports retain the exact scale.
+              </p>
+            )}
             {steps.map(s => (
               <button
                 key={s.name}
@@ -462,7 +469,7 @@ export default function TypeScale({ onCopy, toast }) {
                 </span>
                 <span
                   className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
-                  ref={varsRef({ '--tsc-fs': `${s.px}px` })}
+                  ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.px)}px` })}
                 >
                   {PANGRAM}
                 </span>
@@ -511,22 +518,22 @@ export default function TypeScale({ onCopy, toast }) {
               {audience === 'designer' ? (
                 <article className="tsc-article" ref={varsRef(previewVars)}>
                   <span className="tsc-article-eyebrow">Article preview</span>
-                  <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${steps.find(s => s.exp === Math.min(up, 4))?.px || steps[0].px}px` })}>
+                  <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.px || steps[0].px, { max: 72 })}px` })}>
                     A scale you can defend in a review
                   </h3>
-                  <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${steps.find(s => s.exp === 1)?.px || base}px` })}>
+                  <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.px || base, { max: 28 })}px` })}>
                     Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
                     hand-picked, so the rhythm holds when the page grows.
                   </p>
-                  <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${steps.find(s => s.exp === 2)?.px || base}px` })}>
+                  <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.px || base, { max: 48 })}px` })}>
                     Where the jumps matter
                   </h4>
-                  <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${base}px` })}>
+                  <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(base, { max: 24 })}px` })}>
                     A ratio that looks elegant in isolation can flatten a page: if the step between
                     body copy and a subheading is too small, the hierarchy stops doing its job.
                     Read this paragraph at each preview width before you copy the tokens.
                   </p>
-                  <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${steps.find(s => s.exp === -1)?.px || base}px` })}>
+                  <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.px || base, { max: 18 })}px` })}>
                     Captions and helper text live down here — check they are still comfortably legible.
                   </p>
                 </article>

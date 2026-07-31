@@ -113,6 +113,19 @@ test.describe('UI System Pro acceptance fixture', () => {
     await expect(page.getByRole('tab', { name: 'Mobile App' })).toBeFocused()
   })
 
+  test('Pro applies nine shades with Brand 500 first so the palette seed invariant is preserved', async ({ page }) => {
+    watch(page, 'Pro designer applying a complete Brand scale')
+    await openPro(page)
+
+    const brand500 = (await page.getByRole('gridcell', { name: /Brand 500/ }).getAttribute('aria-label'))
+      .match(/#[0-9A-F]{6}/)[0]
+    await page.getByRole('button', { name: 'Apply Brand scale to palette' }).click()
+    const applied = (await page.locator('#fixture-apply-status').innerText()).split(',')
+    expect(applied).toHaveLength(9)
+    expect(applied[0]).toBe(brand500)
+    expect(new Set(applied).size).toBe(9)
+  })
+
   test('CSS, DTCG and Tailwind exports are real clipboard payloads with denial recovery', async ({ page, context }) => {
     watch(page, 'Pro developer exporting a complete UI token handoff')
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
@@ -142,5 +155,8 @@ test.describe('UI System Pro acceptance fixture', () => {
     await page.getByRole('button', { name: 'Copy CSS' }).click()
     await expect(page.locator('#fixture-copy-status')).toHaveText('Failed to copy')
     await expect(page.getByText(/CSS variables could not be copied/)).toBeAttached()
+
+    await page.getByRole('gridcell', { name: /Brand 500/ }).click()
+    await expect(page.locator('.uis-section .sr-only')).toContainText(/could not be copied/)
   })
 })

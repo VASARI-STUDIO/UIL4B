@@ -1806,6 +1806,9 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
    from the pangram and the "reserved metrics" promise would only half hold. */
 .fg-card-preview{display:flex;flex-direction:column;gap:10px;height:132px;padding:22px 20px 10px;overflow:hidden;font-family:var(--fg-ff)}
 .fg-card-preview--pending{font-family:var(--font)}
+.fg-card-skeleton{display:block;flex:0 0 auto;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;animation:fg-shimmer 1.4s linear infinite}
+.fg-card-skeleton--sample{width:76%;height:52px}
+.fg-card-skeleton--body{width:92%;height:38px}
 .fg-card-sample{display:block;flex:0 0 auto;height:52px;font-size:42px;line-height:52px;letter-spacing:-.02em;color:var(--t0);font-weight:var(--fg-fw-h);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fg-card-pangram{display:-webkit-box;flex:0 0 auto;height:38px;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;line-height:19px;font-weight:var(--fg-fw-b);color:var(--t1)}
 .fg-card-meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:auto;padding:10px 20px 13px;border-top:1px solid var(--border)}
@@ -7374,6 +7377,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .tsc-width-btn:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
 .tsc-ladder{display:flex;flex-direction:column;width:100%;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
 .tsc-ladder--clamped{max-width:var(--tsc-w);margin-inline:auto}
+.tsc-fit-note{margin:0;padding:10px 16px;font-size:11px;line-height:1.45;color:var(--t1);background:var(--brand-bg);border-bottom:1px solid color-mix(in srgb,var(--brand) 22%,var(--border))}
 .tsc-row{display:flex;align-items:baseline;gap:16px;width:100%;padding:14px 16px;text-align:left;background:transparent;border:0;cursor:pointer;transition:background var(--t)}
 .tsc-row+.tsc-row{border-top:1px solid var(--border)}
 .tsc-row:hover{background:var(--hvr)}

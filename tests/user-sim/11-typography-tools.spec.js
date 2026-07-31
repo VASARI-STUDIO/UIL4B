@@ -89,6 +89,31 @@ test.describe('Type Scale Generator', () => {
     )
     expect(overflowed, 'Type Scale should not create horizontal page overflow at 320px').toBe(false)
   })
+
+  test('extreme 40px, ratio 3, nine-step tokens stay exact while the preview is fitted', async ({ page }) => {
+    watch(page, 'designer stress-testing an extreme modular scale')
+    await go(page, '/typescale')
+
+    await page.getByLabel('Scale ratio').selectOption('custom')
+    await page.locator('#tsc-custom + .snapv-value').click()
+    await page.getByRole('spinbutton', { name: /Custom scale ratio/ }).fill('3')
+    await page.getByRole('spinbutton', { name: /Custom scale ratio/ }).press('Enter')
+    await page.locator('#tsc-base + .snapv-value').click()
+    await page.getByRole('spinbutton', { name: /Base font size/ }).fill('40')
+    await page.getByRole('spinbutton', { name: /Base font size/ }).press('Enter')
+    await page.getByLabel('Number of steps above the base size').fill('9')
+
+    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('787320px')
+    await expect(page.locator('.tsc-fit-note')).toContainText('Labels and exports retain the exact scale')
+    const rendered = parseFloat(await page.locator('.tsc-row-text').first().evaluate(
+      element => getComputedStyle(element).fontSize,
+    ))
+    expect(rendered).toBeLessThanOrEqual(96)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(10000)
+
+    await page.getByRole('button', { name: 'Developer handoff' }).click()
+    await expect(page.locator('#tsc-export')).toContainText('--text-8xl: 49207.5rem; /* 787320px */')
+  })
 })
 
 test.describe('Font Pair', () => {
@@ -143,6 +168,16 @@ test.describe('Font Pair', () => {
 })
 
 test.describe('Font Gallery', () => {
+  const loraCatalog = {
+    fonts: [{
+      family: 'Lora',
+      category: 'serif',
+      variants: [400, 700],
+      subsets: ['latin'],
+      popularity: 0,
+    }],
+  }
+
   test('a designer browses, filters and opens a specimen', async ({ page }) => {
     watch(page, 'designer looking for a typeface')
     await go(page, '/fontgallery')
@@ -204,10 +239,77 @@ test.describe('Font Gallery', () => {
     )
     expect(new Set(heights).size, 'every gallery card must be the same reserved height').toBe(1)
 
-    const boxes = await page.locator('.fg-card-sample').evaluateAll(
+    const boxes = await page.locator('.fg-card-preview > :first-child').evaluateAll(
       (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
     )
     expect(new Set(boxes).size, 'the sample line must keep a fixed box whatever face lands in it').toBe(1)
+  })
+
+  test('a held stylesheet keeps skeletons visible until the face registers, then reveals without FOUT', async ({ page }) => {
+    watch(page, 'designer on a font stylesheet that is slow but succeeds')
+    await page.addInitScript(() => {
+      window.__fontFaceReady = false
+      Object.defineProperty(document, 'fonts', {
+        configurable: true,
+        value: {
+          load: async () => window.__fontFaceReady ? [{}] : [],
+          check: () => window.__fontFaceReady,
+          ready: Promise.resolve(),
+        },
+      })
+    })
+    await page.route('**/api/fonts', route => route.fulfill({ json: loraCatalog }))
+    let releaseStylesheet
+    const stylesheetGate = new Promise(resolve => { releaseStylesheet = resolve })
+    await page.route(/https:\/\/fonts\.googleapis\.com\/css2\?family=Lora/, async route => {
+      await stylesheetGate
+      await route.fulfill({ contentType: 'text/css', body: '/* registered by the test FontFaceSet */' })
+    })
+
+    await go(page, '/fontgallery')
+    const preview = page.locator('.fg-card-preview').first()
+    await expect(preview).toHaveClass(/fg-card-preview--pending/)
+    await expect(preview.locator('.fg-card-sample')).toHaveCount(0)
+    await page.waitForTimeout(300)
+    await expect(preview).toHaveClass(/fg-card-preview--pending/)
+
+    await page.evaluate(() => { window.__fontFaceReady = true })
+    releaseStylesheet()
+    await expect(preview).not.toHaveClass(/fg-card-preview--pending/)
+    await expect(preview.locator('.fg-card-sample')).toHaveText('Lora')
+  })
+
+  test('a blocked stylesheet reports fallback and a successful retry clears the failure', async ({ page }) => {
+    watch(page, 'designer recovering a font after a content blocker is paused')
+    await page.addInitScript(() => {
+      window.__fontFaceReady = false
+      Object.defineProperty(document, 'fonts', {
+        configurable: true,
+        value: {
+          load: async () => window.__fontFaceReady ? [{}] : [],
+          check: () => window.__fontFaceReady,
+          ready: Promise.resolve(),
+        },
+      })
+    })
+    await page.route('**/api/fonts', route => route.fulfill({ json: loraCatalog }))
+    let blocked = true
+    await page.route('https://fonts.googleapis.com/css2**', route => (
+      blocked
+        ? route.abort('blockedbyclient')
+        : route.fulfill({ contentType: 'text/css', body: '/* retry success */' })
+    ))
+
+    await go(page, '/fontgallery')
+    await page.locator('.fg-card-open').first().click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.locator('.typ-notice')).toContainText('fallback is shown')
+
+    blocked = false
+    await page.evaluate(() => { window.__fontFaceReady = true })
+    await dialog.getByRole('button', { name: 'Retry this font' }).click()
+    await expect(dialog.locator('.typ-notice')).toHaveCount(0)
+    await expect(dialog.getByRole('heading', { name: 'Lora' })).toBeVisible()
   })
 })
 

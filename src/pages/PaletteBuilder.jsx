@@ -1844,17 +1844,26 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const activeVision = VISION_MODES.find(([id]) => id === vision) || VISION_MODES[0]
 
   const applyUiBrandScale = scale => {
+    if (entitlementLoading || !isPro) {
+      openProModal({
+        eyebrow: 'UI System · Pro',
+        title: 'Apply a complete Brand scale',
+        subtitle: 'Pro can transfer all nine Brand shades into the editable Palette while keeping Brand 500 as its first swatch and seed.',
+      })
+      return false
+    }
     const next = scale.map(normaliseHex).filter(Boolean).slice(0, HARD_MAX)
-    if (next.length !== 9) return
+    if (next.length !== 9) return false
     setColors(next)
-    setSeed(next[4])
-    setSeedInput(next[4])
+    setSeed(next[0])
+    setSeedInput(next[0])
     setHarmony('custom')
     setLocked(new Set())
     setAdjust(ZERO_ADJUST)
     setImportedGalleryId(null)
-    setLiveMsg('Brand 100 through 900 applied to Palette.')
+    setLiveMsg('Brand 500 and the remaining Brand scale applied to Palette.')
     setUiMode(false)
+    return true
   }
 
   if (uiMode) {

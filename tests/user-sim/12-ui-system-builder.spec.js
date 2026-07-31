@@ -146,17 +146,18 @@ test.describe('UI System Builder', () => {
     }
   })
 
-  test('Apply Brand scale is the only explicit hand-back and preserves Brand 500 as the seed', async ({ page }) => {
-    watch(page, 'designer committing a generated scale to Palette')
-    await enter(page)
-
-    const brand = await page.locator('#uis-row-brand .uis-cell').evaluateAll(elements => elements.map(
-      element => element.getAttribute('aria-label').match(/#[0-9A-F]{6}/)[0],
-    ))
+  test('free preview cannot apply nine editable Brand shades or bypass the palette cap', async ({ page }) => {
+    watch(page, 'free designer reaching the Pro hand-back boundary')
+    await go(page, '/color/palette')
+    await expect(page.locator('.plb-col .plb-hex').first()).toBeVisible()
+    const original = await page.locator('.plb-col .plb-hex').allTextContents()
+    await page.getByRole('button', { name: 'Build UI system' }).click()
     await page.getByRole('button', { name: 'Apply Brand scale to palette' }).click()
-    await expect(page.locator('.plb-col .plb-hex')).toHaveCount(9)
-    expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(brand)
-    await expect(page.getByRole('textbox', { name: 'Seed colour hex' })).toHaveValue(brand[4])
+    await expect(page.getByRole('dialog', { name: 'Apply a complete Brand scale' })).toBeVisible()
+    await page.getByRole('button', { name: 'Close', exact: true }).click()
+    await page.getByRole('button', { name: 'Back to palette' }).click()
+    expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(original)
+    expect(original.length).toBeLessThanOrEqual(8)
   })
 
   for (const width of [1440, 800, 720, 640, 380]) {
