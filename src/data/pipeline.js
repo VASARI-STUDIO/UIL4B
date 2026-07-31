@@ -17,9 +17,9 @@ export const APP_CONDITION = [
   { id: 'create', label: 'Create surface', value: 'Live', status: 'good', detail: 'Colour, typography, library and imagery workflows are shipped; UI Component Builder and AI Studio remain in the workshop' },
   { id: 'discover', label: 'Discover surface', value: 'Queued · 20%', status: 'watch', detail: 'Gradient Gallery is live; broader galleries remain backlog' },
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
-  { id: 'design-system', label: 'Design system', value: 'v2.8 release candidate', status: 'watch', detail: 'Typography, Palette/Tint consistency, authored previews and UI System Mode are integrated for the release gate' },
+  { id: 'design-system', label: 'Design system', value: 'v2.8 release candidate', status: 'watch', detail: 'Typography, Palette/Tint consistency, authored previews and UI System Mode are integrated and the local release gate passed' },
   { id: 'ci', label: 'CI gates', value: 'Green on every PR', status: 'good', detail: 'Lint, build, unit, Firestore rules and the Playwright acceptance suite run on every pull request since #188' },
-  { id: 'phase', label: 'Current phase', value: 'v2.8 integrated release gate', status: 'watch', detail: 'Firestore rules are founder-confirmed published and the approved Typography, Palette/Tint, high-fidelity preview and UI System Mode slices are integrated. The combined local gate and review hand-off remain' },
+  { id: 'phase', label: 'Current phase', value: 'v2.8 final review + PR hand-off', status: 'watch', detail: 'Firestore rules are founder-confirmed published; the approved Typography, Palette/Tint, high-fidelity preview and UI System Mode slices are integrated; and the local build, lint, unit, rules and 140-test browser gate passed' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -39,8 +39,8 @@ export const PIPELINE_PROCESSES = [
     name: 'Typography activation + homepage integration',
     area: 'Product',
     stage: 'review',
-    progress: 95,
-    summary: 'Font Gallery, Font Pair Finder and Type Scale are rebuilt on the current design system and routed as live Create tools. The homepage now has a fifth Typography workbench tab, meaningful satellite icons and a reduced-motion-safe merge/splash sequence. The tools share one resilient Google Fonts catalogue and a versioned in-memory hand-off; final combined release QA remains.',
+    progress: 100,
+    summary: 'Font Gallery, Font Pair Finder and Type Scale are rebuilt on the current design system and routed as live Create tools. The homepage now has a fifth Typography workbench tab, meaningful satellite icons and a reduced-motion-safe merge/splash sequence. The tools share one resilient Google Fonts catalogue and a versioned in-memory hand-off; the integrated local release gate passed.',
     updated: '2026-07-31',
   },
   {
@@ -48,8 +48,8 @@ export const PIPELINE_PROCESSES = [
     name: 'Palette/Tint consistency + defect pass',
     area: 'Product',
     stage: 'review',
-    progress: 95,
-    summary: 'The integrated Palette/Tint pass closes gutters, toolbar layout shifts, initial seed/swatch mismatch, control sizing, Temperature and HCT behaviour, directional swap, accessible per-swatch contrast, multi-insert context menus and Palette ↔ Tint continuity. Combined release QA remains.',
+    progress: 100,
+    summary: 'The integrated Palette/Tint pass closes gutters, toolbar layout shifts, initial seed/swatch mismatch, control sizing, Temperature and HCT behaviour, directional swap, accessible per-swatch contrast, multi-insert context menus and Palette ↔ Tint continuity. The integrated local release gate passed.',
     updated: '2026-07-31',
   },
   {
@@ -57,8 +57,8 @@ export const PIPELINE_PROCESSES = [
     name: 'Premium UI System Mode',
     area: 'Product',
     stage: 'review',
-    progress: 95,
-    summary: 'The integrated mode builds perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one 500 seed, with shade editing/copy, WCAG guidance, light/dark labs, five applied scenes and CSS/DTCG/Tailwind exports. Free users can preview the full system; editing, expanded scenes and export remain Pro-gated.',
+    progress: 100,
+    summary: 'The integrated mode builds perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one 500 seed, with shade editing/copy, WCAG guidance, light/dark labs, five applied scenes and CSS/DTCG/Tailwind exports. Free users can preview the full system; editing, expanded scenes and export remain Pro-gated. The integrated local release gate passed.',
     updated: '2026-07-31',
   },
   {
@@ -66,8 +66,8 @@ export const PIPELINE_PROCESSES = [
     name: 'High-fidelity colour previews',
     area: 'Product',
     stage: 'review',
-    progress: 95,
-    summary: 'The Palette preview now applies the active colours to authored UI, brand and graphic scenes rather than generic placeholders, with additional scenes visibly Pro-gated. Combined release QA remains.',
+    progress: 100,
+    summary: 'The Palette preview now applies the active colours to authored UI, brand and graphic scenes rather than generic placeholders, with additional scenes visibly Pro-gated. The integrated local release gate passed.',
     updated: '2026-07-31',
   },
   {
@@ -101,9 +101,9 @@ export const PIPELINE_PROCESSES = [
     id: 'release-readiness-review',
     name: 'Release readiness review',
     area: 'Release',
-    stage: 'in-progress',
-    progress: 85,
-    summary: 'The former Firestore-rules blocker is founder-confirmed closed and per-route canonical/social/noindex metadata shipped in #198. Remaining release work is the active UI batch, analytics environment guard, upgrade/activation instrumentation and a fresh combined responsive/theme/keyboard/contrast QA pass.',
+    stage: 'review',
+    progress: 95,
+    summary: 'The former Firestore-rules blocker is founder-confirmed closed, per-route metadata shipped in #198 and the integrated v2.8 local gate passed. Final review/PR hand-off remains; analytics environment guards, upgrade/activation instrumentation and live external checks stay explicit follow-up work.',
     updated: '2026-07-31',
   },
   {
@@ -119,10 +119,10 @@ export const PIPELINE_PROCESSES = [
     id: 'homepage-chaos-to-calm',
     name: 'Homepage chaos → calm proof',
     area: 'Product',
-    stage: 'shipped',
+    stage: 'review',
     progress: 100,
-    summary: 'Shipped in #185. Eight stable satellite links resolve into four honest workbench tabs; motion is decoration only and the static composition is the finished page. All 17 acceptance tests executed; homepage initial JS fell 0.49 KB gzip and the 19.1 MB unused 4K references became 173 KB thumbnails.',
-    updated: '2026-07-28',
+    summary: 'The base experience shipped in #185. The v2.8 extension now presents eleven stable tool links resolving into five honest workbench modes, including Typography, with icon-led satellites and a reduced-motion-safe merge/splash. The integrated local release gate passed.',
+    updated: '2026-07-31',
   },
   {
     id: 'account-switch-reliability',
@@ -237,10 +237,7 @@ export const PIPELINE_PROCESSES = [
 // ── Next-to-do queue (prioritised) ──────────────────────────────────────────
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
-  { id: 'typography-activation', title: 'Complete combined QA for Typography and its fifth homepage tab', priority: 'P0', effort: 'M', area: 'Product', status: 'review', note: 'Implementation is integrated: verify the three live routes, shared font catalogue and hand-off, satellite icons, keyboard behaviour, responsive layouts and reduced-motion-safe merge/splash sequence as part of the release batch.' },
-  { id: 'palette-consistency', title: 'Complete combined QA for the Palette/Tint consistency pass', priority: 'P0', effort: 'M', area: 'Product', status: 'review', note: 'Implementation is integrated: verify gutters, stable toolbar reveals, matched random seed/swatch, control sizing, Temperature/HCT, directional swap, multi-insert, contrast-on-swatch and Palette ↔ Tint continuity.' },
-  { id: 'ui-system-mode', title: 'Complete combined QA for premium UI System Mode', priority: 'P0', effort: 'M', area: 'Product', status: 'review', note: 'Implementation is integrated: verify deterministic perceptual scales, accessibility evidence, shade editing, free preview, Pro scenes/exports, offline behaviour and clipboard recovery.' },
-  { id: 'colour-hifi-previews', title: 'Complete combined QA for authored colour previews', priority: 'P1', effort: 'S', area: 'Product', status: 'review', note: 'Implementation is integrated: verify the active palette reaches every UI, brand and graphic scene and that additional scenes remain visibly Pro-gated.' },
+  { id: 'v2-8-release-handoff', title: 'Complete final review and PR hand-off for v2.8', priority: 'P0', effort: 'S', area: 'Release', status: 'review', note: 'The integrated local build, lint, 107-unit, 24-rules and 140-browser-test gate passed. Complete the remaining reviewer hand-off, then open and merge the PR through the PM.' },
   { id: 'analytics-env-guard', title: 'Keep dev/preview traffic out of production aggregates', priority: 'P1', effort: 'S', area: 'Analytics', status: 'todo', note: 'The same Firebase project is used across environments; guard aggregate writes before treating Admin totals as production truth.' },
   { id: 'upgrade-activation-events', title: 'Instrument the canonical upgrade gate and activation actions', priority: 'P1', effort: 'M', area: 'Analytics', status: 'todo', note: 'Track openProModal once with a gate id and wire meaningful first-value actions so upgrade and activation can be measured.' },
   { id: 'onboarding-completion-truth', title: 'Reconcile onboarding completion and resume truth', priority: 'P1', effort: 'M', area: 'Account', status: 'blocked', note: 'HVZ design required: the one-shot pendingOnboarding flag routes fresh signup, but abandoning then returning directly to /home or a deep link is not re-routed. Root routing checks vs-onboarded in localStorage while profile hydration separately checks Firestore. Avoid bouncing legacy users with no completedAt; then run live Firebase fresh/returning/resume/finish/skip QA.' },

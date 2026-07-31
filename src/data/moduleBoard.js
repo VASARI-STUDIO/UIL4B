@@ -13,7 +13,7 @@ export const MODULE_BOARD = [
     area: 'Color',
     status: 'live',
     health: 'watch',
-    summary: 'Connected colour-system workspace with the Palette/Tint consistency pass, authored preview scenes and premium UI System Mode implemented; combined release QA remains.',
+    summary: 'Connected colour-system workspace with the Palette/Tint consistency pass, authored preview scenes and premium UI System Mode implemented; the integrated local release gate passed.',
     recentChanges: [
       'Added UI System Mode with perceptual six-group 100–900 scales, WCAG evidence, light/dark labs, applied scenes and gated exports',
       'Rebuilt Palette previews as authored UI, brand and graphic scenes with visible Pro boundaries',
@@ -31,7 +31,7 @@ export const MODULE_BOARD = [
       'Reworked color info popup: tabbed UI + OKLCH + CVD sim (CS-05)',
     ],
     nextSteps: [
-      'Complete the combined responsive, keyboard, contrast, entitlement and offline release QA',
+      'Complete final review and PR hand-off for the integrated v2.8 release',
       'Keep deterministic colour generation and free/Pro boundaries in continuous unit and user-simulation coverage',
       'Add ASE + PDF export when export parity returns to scope',
     ],
@@ -43,7 +43,7 @@ export const MODULE_BOARD = [
     area: 'Type',
     status: 'live',
     health: 'watch',
-    summary: 'Font Gallery, Font Pair Finder and Type Scale are live Create tools on the current shell and Typography is the fifth homepage mini-workspace mode; combined release QA remains.',
+    summary: 'Font Gallery, Font Pair Finder and Type Scale are live Create tools on the current shell and Typography is the fifth homepage mini-workspace mode; the integrated local release gate passed.',
     recentChanges: [
       'Activated all three typography routes with one resilient Google Fonts catalogue and versioned in-memory hand-offs',
       'Added Typography to the homepage workbench with icon-led satellites and reduced-motion-safe merge/splash choreography',
@@ -52,7 +52,7 @@ export const MODULE_BOARD = [
       'Brand-blue accent applied to primary/accent buttons (NAV-06)',
     ],
     nextSteps: [
-      'Complete the combined responsive, keyboard, fallback and reduced-motion release QA',
+      'Complete final review and PR hand-off for the integrated v2.8 release',
       'Keep the catalogue fallback and cross-tool hand-off in continuous user-simulation coverage',
     ],
     updated: '2026-07-31',
@@ -221,7 +221,7 @@ export const MODULE_BOARD = [
       'Footer rebuilt around clear Create, Discover, Learn and company pathways',
     ],
     nextSteps: [
-      'Complete combined release QA for the fifth Typography homepage mode',
+      'Complete final review and PR hand-off for the fifth Typography homepage mode',
       'Keep public link, metadata and sitemap truth in continuous route QA',
       'Prerender the approved eligible public-route matrix without emitting Soon/auth/admin pages',
     ],

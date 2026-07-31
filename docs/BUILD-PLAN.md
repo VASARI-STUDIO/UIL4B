@@ -44,7 +44,7 @@ Learn remains an honest coming-soon surface until scoped content routes ship.
 Work is sequenced as four connected slices:
 
 1. **Typography activation + homepage integration**
-   - **Implemented on the release branch; combined QA remains.**
+   - **Implemented; the integrated local release gate passed.**
    - Activate Font Gallery, Font Pair Finder and Type Scale on the current design
      system.
    - Add Typography as the fifth homepage mini-workspace tab.
@@ -54,7 +54,7 @@ Work is sequenced as four connected slices:
      motion.
 
 2. **Palette/Tint consistency and defect pass**
-   - **Implemented on the release branch; combined QA remains.**
+   - **Implemented; the integrated local release gate passed.**
    - Close the nav/toolbar/footer gutter gaps and keep toolbar height stable.
    - Make hover reveals smooth without layout shifts.
    - Ensure the initial random seed, HEX input and first swatch always match.
@@ -67,13 +67,13 @@ Work is sequenced as four connected slices:
      actions.
 
 3. **High-fidelity colour-system previews**
-   - **Implemented on the release branch; combined QA remains.**
+   - **Implemented; the integrated local release gate passed.**
    - Replace placeholder preview tiles with realistic light/dark interface scenes.
    - Show buttons, alerts, forms, cards, text and backgrounds using the active
      system; extra scenes may be visibly Pro-gated.
 
 4. **UI System Mode (premium)**
-   - **Implemented on the release branch; combined QA remains.**
+   - **Implemented; the integrated local release gate passed.**
    - Generate Brand, Success, Warning, Error, Information and brand-tinted Neutral
      scales from 100–900, with the selected brand colour as 500.
    - Use a perceptual colour model (OKLCH/HCT/HSL—not direct HEX arithmetic) and
@@ -105,8 +105,8 @@ The only unresolved founder call is the subscription-chargeback policy in
 
 The published Firestore rules and #198 remove two former blockers. The approved
 Typography, Palette/Tint, preview and UI System slices are integrated on the
-v2.8 release branch; a final GO still requires its combined release gate. Keep
-these durable gaps visible after that gate:
+v2.8 release branch and its local build, lint, unit, rules and browser gates
+passed. Final review/PR hand-off remains. Keep these durable gaps visible:
 
 - add a dev/preview guard around Firestore aggregate analytics;
 - instrument the canonical upgrade gate and activation events;
