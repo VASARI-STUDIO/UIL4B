@@ -17,7 +17,7 @@ engagement, not just storage.
 
 | Surface | Verb | Job |
 |---|---|---|
-| **Tools / Workspace** | create | generate, check, build, export |
+| **Create** | create | generate, check, build, export |
 | **Discover** | browse | find, save, remix, submit, get inspired |
 | **Learn** | understand | guides, principles, improvement |
 
@@ -106,7 +106,7 @@ Upvote/downvote · Comment/feedback · Report · Request similar.
 
 ## Gradient routing decision
 
-- **Gradient Generator → Tools** (`/tools/gradient-generator`): create, edit,
+- **Gradient Generator → Create** (`/color/gradient`): create, edit,
   copy CSS, export, browse presets, use community gradients, save.
 - **Gradient Library → Discover** (`/discover/gradients`): browse community +
   external gradient inspiration, save, remix, like, submit, **Use in Gradient
@@ -133,6 +133,10 @@ featured · personalised recommendations · community voting.
 
 ## Security & integrity notes (for engineering)
 
+- **Architecture is decided (2026-07-31): Firebase.** Use Firestore + Storage,
+  a transactional lowercased handle registry and explicit moderation state.
+  Storage activation and `storage.rules` publication remain owner-verified
+  prerequisites; do not treat the architecture decision as proof they are live.
 - External links are user/curator-supplied URLs → render with
   `rel="noopener noreferrer nofollow"` `target="_blank"`; validate/normalise
   the URL; never auto-fetch arbitrary external URLs server-side (SSRF surface).

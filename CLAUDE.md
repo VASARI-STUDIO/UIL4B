@@ -9,9 +9,9 @@ AI with Gemini fallback.
 
 > Lean index. Canonical story → [`positioning.md`](docs/reference/positioning.md).
 > **Taking over / new to the project?** Read
-> [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) first — a lean hub: current direction +
-> a live status snapshot, linking out to the tool tree, roadmap, and how work is
-> routed. Read only the sub-file you need.
+> [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) first — the lean current-state hub,
+> linking only to the stable tool tree, homepage contract and owner/decision
+> queues. Read only the sub-file you need.
 
 ---
 
@@ -97,11 +97,14 @@ Read the relevant one before working in that area.
   any brand-facing design, implementation, or review.
 
 **State & planning (canonical map):**
-[`BUILD-PLAN.md`](docs/BUILD-PLAN.md) owns direction + the compact live snapshot;
-`src/data/pipeline.js` owns execution order, blocks and current workstreams;
-`src/data/moduleBoard.js` owns per-module status; [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md)
-owns founder-only dashboard/credential work; [`DECISIONS-NEEDED.md`](docs/DECISIONS-NEEDED.md)
-owns only unresolved founder calls. [`docs/build-plan/`](docs/build-plan) retains
-the stable tool tree + roadmap; [`docs/audit/`](docs/audit) is closed evidence,
-never a competing backlog. Subagent roster:
+[`BUILD-PLAN.md`](docs/BUILD-PLAN.md) owns direction, current truth, the active
+batch and release gaps; `src/data/pipeline.js` owns execution order, blocks and
+workstream progress; `src/data/moduleBoard.js` owns per-module status;
+[`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) owns unresolved founder-only
+dashboard/credential work; [`DECISIONS-NEEDED.md`](docs/DECISIONS-NEEDED.md)
+owns unresolved founder calls plus the compact resolved-decision record.
+[`docs/build-plan/tool-tree.md`](docs/build-plan/tool-tree.md) and
+[`docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md`](docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md)
+are the retained stable implementation references. Git history is the archive;
+do not create parallel historical planning docs. Subagent roster:
 [`.claude/agents/README.md`](.claude/agents/README.md).

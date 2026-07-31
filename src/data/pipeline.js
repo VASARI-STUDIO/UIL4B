@@ -19,7 +19,7 @@ export const APP_CONDITION = [
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
   { id: 'design-system', label: 'Design system', value: 'v2.7 shipped', status: 'good', detail: 'Shared shell, controls, CTA and footer patterns are live' },
   { id: 'ci', label: 'CI gates', value: 'Green on every PR', status: 'good', detail: 'Lint, build, unit, Firestore rules and the Playwright acceptance suite run on every pull request since #188' },
-  { id: 'phase', label: 'Current phase', value: 'V1 readiness — polish, then review', status: 'watch', detail: 'Founder-reported colour-tool defects closed (#190–#193), the dead-code sweep shipped (#196), and the founder confirmed the hardened firestore.rules are published. The layout/typography passes and the final QA reconciliation remain' },
+  { id: 'phase', label: 'Current phase', value: 'Colour-system build + release review', status: 'watch', detail: 'Firestore rules are founder-confirmed published, per-route metadata shipped in #198, and Typography activation/home integration is implemented for this release. Palette/Tint consistency, high-fidelity previews and premium UI System Mode remain in active remediation before the combined QA/review pass' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -34,6 +34,42 @@ export const PIPELINE_STAGES = [
 // ── Active processes / workstreams ──────────────────────────────────────────
 // stage: one of PIPELINE_STAGES ids · progress: 0–100
 export const PIPELINE_PROCESSES = [
+  {
+    id: 'typography-activation',
+    name: 'Typography activation + homepage integration',
+    area: 'Product',
+    stage: 'review',
+    progress: 95,
+    summary: 'Font Gallery, Font Pair Finder and Type Scale are rebuilt on the current design system and routed as live Create tools. The homepage now has a fifth Typography workbench tab, meaningful satellite icons and a reduced-motion-safe merge/splash sequence. The tools share one resilient Google Fonts catalogue and a versioned in-memory hand-off; final combined release QA remains.',
+    updated: '2026-07-31',
+  },
+  {
+    id: 'palette-consistency',
+    name: 'Palette/Tint consistency + defect pass',
+    area: 'Product',
+    stage: 'in-progress',
+    progress: 35,
+    summary: 'Fix gutters, toolbar layout shifts, initial seed/swatch mismatch, control sizing, Temperature and HCT behaviour, swap direction, accessible swatch contrast controls, multi-insert context menu and Palette ↔ Tint continuity.',
+    updated: '2026-07-31',
+  },
+  {
+    id: 'ui-system-mode',
+    name: 'Premium UI System Mode',
+    area: 'Product',
+    stage: 'backlog',
+    progress: 10,
+    summary: 'Build perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one 500 seed, with editing/copy/export, WCAG guidance and realistic light/dark component previews. Free users may preview; editing/export starts Pro-gated.',
+    updated: '2026-07-31',
+  },
+  {
+    id: 'colour-hifi-previews',
+    name: 'High-fidelity colour previews',
+    area: 'Product',
+    stage: 'backlog',
+    progress: 10,
+    summary: 'Replace placeholder preview tiles with realistic light/dark interface scenes using the active palette; additional scenes may be visibly Pro-gated.',
+    updated: '2026-07-31',
+  },
   {
     id: 'colour-tool-defects',
     name: 'Founder-reported colour-tool defects',
@@ -53,15 +89,6 @@ export const PIPELINE_PROCESSES = [
     updated: '2026-07-29',
   },
   {
-    id: 'typography-tools',
-    name: 'Typography tools activation',
-    area: 'Product',
-    stage: 'review',
-    progress: 90,
-    summary: 'Type Scale (/typescale), Font Pair (/fontpairs) and Font Gallery (/fontgallery) are rebuilt on the current design system, routed through CreateTool and flipped out of the Soon state in the tool tree, the visual sitemap and the crawler sitemap. Three standalone tools on one Google Fonts catalogue, wired to each other through a versioned in-memory hand-off (utils/typeHandoff.js) so no tool ever opens empty. The catalogue degrades to the bundled list with a visible notice and a working retry, and reconnecting reloads it automatically. The font-gallery-readiness items are closed: featured cards render a skeleton until the face is verified (no FOUT), every preview box has reserved height so cards cannot shift as faces stream in, cards are real buttons, and both overlays are focus-trapped dialogs with Escape and focus restoration.',
-    updated: '2026-07-30',
-  },
-  {
     id: 'design-system-scales',
     name: 'Page-gutter and layering scales',
     area: 'Design system',
@@ -71,12 +98,12 @@ export const PIPELINE_PROCESSES = [
     updated: '2026-07-29',
   },
   {
-    id: 'v1-readiness-review',
-    name: 'V1 readiness review',
+    id: 'release-readiness-review',
+    name: 'Release readiness review',
     area: 'Release',
     stage: 'in-progress',
-    progress: 80,
-    summary: 'Security, code, SEO and analytics passes are complete and written up in docs/V1-READINESS.md; the QA responsive/theme/keyboard/contrast pass is the last one outstanding. The founder confirmed the hardened firestore.rules are published, removing the entitlement-enforcement blocker; the readiness verdict still needs reconciliation against the remaining soft items.',
+    progress: 85,
+    summary: 'The former Firestore-rules blocker is founder-confirmed closed and per-route canonical/social/noindex metadata shipped in #198. Remaining release work is the active UI batch, analytics environment guard, upgrade/activation instrumentation and a fresh combined responsive/theme/keyboard/contrast QA pass.',
     updated: '2026-07-31',
   },
   {
@@ -112,7 +139,7 @@ export const PIPELINE_PROCESSES = [
     area: 'Billing',
     stage: 'shipped',
     progress: 100,
-    summary: 'Shipped in #184 with security review PASS. Premium Plus removed, One-off tab added and degrading honestly until a Stripe price exists. Closed a live privilege escalation (client-writable entitlement fields), refunded-entitlement re-grants and missing chargeback revocation. The founder confirmed firestore.rules are published; lifetime webhook events still need configuration before creating the price.',
+    summary: 'Shipped in #184 with security review PASS. Premium Plus was removed, One-off was added and degrades honestly until a Stripe price exists. Firestore rules are now founder-confirmed published; the owner must still verify webhook event subscriptions before creating the lifetime price. Subscription-chargeback handling remains a separate founder decision.',
     updated: '2026-07-31',
   },
   {
@@ -148,8 +175,8 @@ export const PIPELINE_PROCESSES = [
     area: 'Quality',
     stage: 'shipped',
     progress: 100,
-    summary: 'Router, public navigation, metadata and sitemap truth shipped to main in d210a0d and passed the 79/79 release suite.',
-    updated: '2026-07-28',
+    summary: 'Router/navigation/sitemap truth shipped in d210a0d; per-route canonical, Open Graph/Twitter metadata and noindex for Soon routes followed in #198.',
+    updated: '2026-07-31',
   },
   {
     id: 'static-og-card',
@@ -183,9 +210,18 @@ export const PIPELINE_PROCESSES = [
     name: 'Community publishing backend',
     area: 'Product',
     stage: 'backlog',
-    progress: 10,
-    summary: 'Durable media publishing and server-enforced palette-handle uniqueness need one approved community architecture.',
-    updated: '2026-07-28',
+    progress: 15,
+    summary: 'Founder chose Firebase. Build Firestore + Storage publishing, a transactional lowercased handle registry and moderation state; Storage activation/rules remain owner-verified work.',
+    updated: '2026-07-31',
+  },
+  {
+    id: 'public-route-prerender',
+    name: 'Public-route prerendering',
+    area: 'Growth',
+    stage: 'backlog',
+    progress: 5,
+    summary: 'Founder approved prerendering. Define an explicit eligible public-route matrix and emit crawlable content without prerendering Soon, auth or admin routes.',
+    updated: '2026-07-31',
   },
   {
     id: 'billing-config',
@@ -201,6 +237,15 @@ export const PIPELINE_PROCESSES = [
 // ── Next-to-do queue (prioritised) ──────────────────────────────────────────
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
+  { id: 'typography-activation', title: 'Complete combined QA for Typography and its fifth homepage tab', priority: 'P0', effort: 'M', area: 'Product', status: 'review', note: 'Implementation is integrated: verify the three live routes, shared font catalogue and hand-off, satellite icons, keyboard behaviour, responsive layouts and reduced-motion-safe merge/splash sequence as part of the release batch.' },
+  { id: 'palette-consistency', title: 'Finish the Palette/Tint defect and consistency pass', priority: 'P0', effort: 'L', area: 'Product', status: 'doing', note: 'Includes gutters, toolbar reflow, matched random seed/swatch, control sizing, Temperature/HCT, swap direction, context insertion, contrast-on-swatch and Palette ↔ Tint continuity.' },
+  { id: 'ui-system-mode', title: 'Build premium UI System Mode', priority: 'P1', effort: 'L', area: 'Product', status: 'todo', note: 'Perceptual 100–900 functional UI scales, accessibility guidance, editing/export and realistic light/dark components; preview remains visible to Free.' },
+  { id: 'colour-hifi-previews', title: 'Build high-fidelity light/dark colour previews', priority: 'P1', effort: 'L', area: 'Product', status: 'todo', note: 'Use the generated system in realistic buttons, alerts, inputs, cards, text and backgrounds; no generic placeholder mockups.' },
+  { id: 'analytics-env-guard', title: 'Keep dev/preview traffic out of production aggregates', priority: 'P1', effort: 'S', area: 'Analytics', status: 'todo', note: 'The same Firebase project is used across environments; guard aggregate writes before treating Admin totals as production truth.' },
+  { id: 'upgrade-activation-events', title: 'Instrument the canonical upgrade gate and activation actions', priority: 'P1', effort: 'M', area: 'Analytics', status: 'todo', note: 'Track openProModal once with a gate id and wire meaningful first-value actions so upgrade and activation can be measured.' },
+  { id: 'onboarding-completion-truth', title: 'Reconcile onboarding completion and resume truth', priority: 'P1', effort: 'M', area: 'Account', status: 'blocked', note: 'HVZ design required: the one-shot pendingOnboarding flag routes fresh signup, but abandoning then returning directly to /home or a deep link is not re-routed. Root routing checks vs-onboarded in localStorage while profile hydration separately checks Firestore. Avoid bouncing legacy users with no completedAt; then run live Firebase fresh/returning/resume/finish/skip QA.' },
+  { id: 'stripe-webhook-ordering', title: 'Add Stripe webhook event dedupe and ordering guards', priority: 'P1', effort: 'M', area: 'Billing', status: 'blocked', note: 'HVZ/security slice: signatures are verified, but processed event.id values and event ordering are not stored. Make retries idempotent and prevent an older subscription update from overwriting newer deletion/revocation state.' },
+  { id: 'support-abuse-hardening', title: 'Rate-limit and abuse-protect /api/support', priority: 'P1', effort: 'M', area: 'Security', status: 'todo', note: 'The public endpoint has no auth, rate limit or bot challenge; one unauthenticated request can attempt a Firestore write, optional Sheets append and optional Resend email. Preserve legitimate logged-out support while adding server-enforced abuse controls and security review.' },
   { id: 'account-delete-cascade', title: 'Delete accounts through a server-side cascade', priority: 'P1', effort: 'M', area: 'Account', status: 'todo', note: 'deleteAccount now removes the auth user before the Firestore doc, so a failed second step can orphan a users/{uid} record holding email and display name. An Admin-SDK route should delete auth user, profile and sync data atomically.' },
   { id: 'homepage-field-metrics', title: 'Measure homepage field metrics on a throttled profile', priority: 'P2', effort: 'S', area: 'Performance', status: 'todo', note: 'HOMEPAGE-CHAOS-TO-CALM §11 targets LCP ≤ 2.5s, CLS ≤ 0.05 and INP ≤ 200ms on Slow-4G with 4x CPU. Structural preconditions shipped in #185 but the numbers were never traced. Also covers 200% zoom, forced-colours and screen-reader passes from §10.' },
   { id: 'account-menu-arrow-nav', title: 'Add arrow-key navigation to the account menu', priority: 'P1', effort: 'S', area: 'Accessibility', status: 'todo', note: 'Complete the menu keyboard contract: roving focus, Home/End, Escape focus restoration and assistive-technology semantics.' },
@@ -211,5 +256,7 @@ export const NEXT_TODO = [
   { id: 'stripe-retention-config', title: 'Configure Stripe retention and cancellation', priority: 'P1', effort: 'S', area: 'Infra', status: 'blocked', note: 'Owner action: create RETAIN50 and enable cancellation/retention in the Stripe Customer Portal; checkout code is already live.' },
   { id: 'discover-buildout', title: 'Build Discover galleries', priority: 'P1', effort: 'L', area: 'Product', status: 'todo', note: 'Queued at 20% after canonical-route truth; Gradient Gallery is live and the broader gallery scope remains intentionally deferred.' },
   { id: 'learn-content', title: 'Build the Learn content library', priority: 'P2', effort: 'L', area: 'Content', status: 'todo', note: 'Information architecture exists; articles and learning journeys remain. Homepage Soon Learn cards should be non-navigable preview states until scoped article destinations ship, then link to those destinations instead of looping generically to /learn.' },
-  { id: 'community-backend', title: 'Choose and build the community publishing backend', priority: 'P1', effort: 'L', area: 'Product', status: 'blocked', note: 'Founder decision first: durable media/submission storage and server-enforced palette-handle uniqueness must ship as one coherent architecture.' },
+  { id: 'community-backend', title: 'Build the Firebase community publishing backend', priority: 'P1', effort: 'L', area: 'Product', status: 'todo', note: 'Architecture is decided: Firestore + Storage, transactional lowercased handle registry and moderation state. Do not consume a new serverless slot without reconciling the 12-function ceiling.' },
+  { id: 'public-route-prerender', title: 'Prerender eligible public routes', priority: 'P1', effort: 'L', area: 'Growth', status: 'todo', note: 'Founder approved prerendering. Define the route matrix first; exclude Soon, authenticated and admin routes and retain canonical/noindex truth.' },
+  { id: 'ai-diagnostic-env', title: 'Move the AI diagnostic code to a server environment variable', priority: 'P2', effort: 'S', area: 'Security', status: 'todo', note: 'The diagnostic reveals only key presence, not values, but its access code is currently a committed literal. This touches /api and requires the normal security gate.' },
 ]

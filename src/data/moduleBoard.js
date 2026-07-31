@@ -12,8 +12,8 @@ export const MODULE_BOARD = [
     name: 'Color Studio',
     area: 'Color',
     status: 'live',
-    health: 'good',
-    summary: 'Connected colour-system workspace with production export, comparison and recovery paths.',
+    health: 'watch',
+    summary: 'Connected colour-system workspace with production export and recovery paths; an approved consistency/defect pass and premium UI System Mode are in progress.',
     recentChanges: [
       'Palette Builder gained full reset with immediate Undo and a clearer Save / export action hierarchy',
       'Gradient, tint and semantic-colour workbenches received responsive workflow and UI-quality passes',
@@ -28,28 +28,31 @@ export const MODULE_BOARD = [
       'Reworked color info popup: tabbed UI + OKLCH + CVD sim (CS-05)',
     ],
     nextSteps: [
-      'Keep colour routes in the continuous canonical-route and slow-network QA matrix',
+      'Finish the Palette/Tint consistency, HCT, slider, swap and toolbar defect pass',
+      'Build premium UI System Mode with perceptual 100–900 scales and WCAG guidance',
+      'Replace placeholder previews with realistic light/dark interface scenes',
       'Add ASE + PDF export when export parity returns to scope',
     ],
-    updated: '2026-07-28',
+    updated: '2026-07-31',
   },
   {
     id: 'typography',
     name: 'Typography / Font Pair Finder',
     area: 'Type',
-    status: 'planned',
+    status: 'in-progress',
     health: 'watch',
-    summary: 'Reusable typography tools exist in code but remain behind public Soon states.',
+    summary: 'Font Gallery, Font Pair Finder and Type Scale are being activated on the current shell and integrated as the fifth homepage mini-workspace tab.',
     recentChanges: [
+      'Typography activation and homepage integration approved by the founder',
       'Font copy events wired into admin design analytics',
       'Brand-blue accent applied to primary/accent buttons (NAV-06)',
     ],
     nextSteps: [
-      'Surface "most copied fonts" trends back into the picker UI',
-      'Add pairing presets sourced from real brand systems',
-      'Complete Font Gallery FOUT and keyboard/dialog readiness before activation',
+      'Complete Font Gallery FOUT/fallback and keyboard/dialog readiness',
+      'Verify Font Pair Finder and Type Scale in the shared tool shell',
+      'Add icon-led floating tabs and reduced-motion-safe merge/splash choreography on Home',
     ],
-    updated: '2026-07-28',
+    updated: '2026-07-31',
   },
   {
     id: 'ai-image-prompt',
@@ -145,7 +148,7 @@ export const MODULE_BOARD = [
     area: 'Community',
     status: 'live',
     health: 'watch',
-    summary: 'Local-first public sharing hub; durable media publishing still needs backend hardening.',
+    summary: 'Public sharing hub moving from local-first storage to the founder-approved Firebase publishing architecture.',
     recentChanges: [
       'Founder contributions now render publicly as Dylan Coleman 👑 with an accessible gold owner treatment',
       'Palette submissions preserve public identity without storing email or other PII',
@@ -154,11 +157,12 @@ export const MODULE_BOARD = [
       'Media drop zone moved to top of submit form (COM-03)',
     ],
     nextSteps: [
-      'COM-01/02/03 still need a proper backend for media at scale (COM-05)',
-      'Enforce unique palette community handles in the same backend architecture',
+      'Build Firestore + Storage publishing with moderation state',
+      'Enforce unique lowercased palette handles transactionally',
+      'Owner: enable Storage, publish storage.rules and verify scoped writes',
       'Engagement plan: gamified submissions, weekly featured prompt, Discord, profiles (COM-04)',
     ],
-    updated: '2026-07-28',
+    updated: '2026-07-31',
   },
   {
     id: 'projects',
@@ -194,10 +198,11 @@ export const MODULE_BOARD = [
       'Confirm dialogs on delete actions (GOV-02)',
     ],
     nextSteps: [
-      'Owner: publish firestore.rules to populate the aggregate panel',
+      'Owner: verify aggregate analytics and Feedback reads after the published Firestore rules',
+      'Do not assume the admin custom claim exists; resolve any permission-denied result explicitly',
       'Add export/print for board view',
     ],
-    updated: '2026-06-17',
+    updated: '2026-07-31',
   },
   {
     id: 'public-shell',
@@ -213,9 +218,11 @@ export const MODULE_BOARD = [
       'Footer rebuilt around clear Create, Discover, Learn and company pathways',
     ],
     nextSteps: [
+      'Integrate Typography as the fifth homepage mini-workspace tab',
       'Keep public link, metadata and sitemap truth in continuous route QA',
+      'Prerender the approved eligible public-route matrix without emitting Soon/auth/admin pages',
     ],
-    updated: '2026-07-28',
+    updated: '2026-07-31',
   },
   {
     id: 'documentation',
@@ -260,8 +267,8 @@ export const MODULE_BOARD = [
     name: 'Landing & Help',
     area: 'Content',
     status: 'live',
-    health: 'good',
-    summary: 'Premium public sales system with product-led demonstrations and consistent closing actions.',
+    health: 'watch',
+    summary: 'Premium public sales system with product-led demonstrations and feedback/help submission paths that still need abuse hardening and owner notification configuration.',
     recentChanges: [
       'Home, Colour, Surface and Plans now share a meaningful beams-style closing CTA',
       'Public footer and shell hierarchy aligned across sales and product entry pages',
@@ -269,17 +276,19 @@ export const MODULE_BOARD = [
       'Help centre: quick-action cards + searchable FAQ + 4-type contact form (HELP-01/02/03)',
     ],
     nextSteps: [
+      'Add server-enforced abuse controls to unauthenticated /api/support without removing legitimate logged-out help',
+      'Owner: configure and test RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL if feedback/support email notification is wanted',
       'A/B test hero copy once traffic grows',
     ],
-    updated: '2026-07-25',
+    updated: '2026-07-31',
   },
   {
     id: 'auth',
     name: 'Auth / Login',
     area: 'Infra',
     status: 'live',
-    health: 'good',
-    summary: 'Firebase auth with inline gates, Google OAuth, smart onboarding skip.',
+    health: 'watch',
+    summary: 'Firebase auth with inline gates and Google OAuth; onboarding routes fresh signups but completion truth and live resume/exit QA remain incomplete.',
     recentChanges: [
       'Login returns users to their original page after sign-in (location.state.from)',
       'Inline auth gate keeps user on page and returns them (AUTH-01)',
@@ -287,9 +296,11 @@ export const MODULE_BOARD = [
       'Skip onboarding for returning users via Firestore profile sync (AUTH-03)',
     ],
     nextSteps: [
+      'Reconcile in-memory pending signup, localStorage and Firestore onboarding completion without bouncing legacy users',
+      'Run live Firebase fresh/returning, abandon/return, resume-target and finish/skip QA',
       'Validation zone — changes require explicit owner approval',
     ],
-    updated: '2026-06-17',
+    updated: '2026-07-31',
   },
   {
     id: 'payments',
@@ -306,10 +317,10 @@ export const MODULE_BOARD = [
     nextSteps: [
       'Owner: create retention coupon + enable cancellation in Stripe Customer Portal config',
       'Owner/HVZ: validate production checkout abandon, return and retry separately',
+      'Add event-id dedupe and ordering guards before treating webhook retries/out-of-order delivery as safe',
       'Validation zone — never modify webhook/checkout without owner approval',
-      'Wire up email notifications (RESEND_API_KEY) for billing events',
     ],
-    updated: '2026-07-28',
+    updated: '2026-07-31',
   },
   {
     id: 'ai-backend',
@@ -372,6 +383,9 @@ export const MODULE_BOARD = [
     health: 'good',
     summary: 'Verify-first delivery with a single current plan, honest pipeline and explicit release gates.',
     recentChanges: [
+      'Consolidated current truth into one lean Build Plan and removed closed duplicate planning/audit documents',
+      'Recorded the founder decisions to keep 3/8 free caps, use Firebase for Community and prerender eligible public routes',
+      'Closed the stale Firestore-rules publication blocker on founder confirmation while keeping Storage/custom-claim/live-flow checks open',
       'Reconciled the public UI release across BUILD-PLAN, pipeline, module board, README and changelog',
       'Closed stale PR #151 as superseded by the shipped v2.7 release and current Admin history',
       'Closed historical task lists and removed generated caches/logs from the working tree',
@@ -381,10 +395,10 @@ export const MODULE_BOARD = [
       'User testing + subagent-team plans documented (GOV-04/05)',
     ],
     nextSteps: [
-      'Keep the canonical pipeline, owner actions and decision list reconciled after each shipped slice',
+      'Keep the Build Plan, pipeline, owner actions and decision list reconciled after each shipped slice',
       'Require build, lint and focused route verification before every merge',
     ],
-    updated: '2026-07-28',
+    updated: '2026-07-31',
   },
 ]
 
