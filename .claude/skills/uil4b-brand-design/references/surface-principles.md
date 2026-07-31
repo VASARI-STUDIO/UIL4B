@@ -66,11 +66,13 @@ same job, object, and expected outcome within the first product view?
 - The hero and live preview should read as one continuous interaction. When a
   hero control duplicates a preview-tab action, both controls must share state
   and remain usable without motion. In the approved 2026-07-28 chaos-to-calm
-  variant below, the eight satellites are stable route links rather than
+  variant below, the live satellites are stable route links rather than
   duplicate tab controls; only aria-hidden visual proxies converge.
 - Homepage preview navigation represents only capabilities that work now.
-  Typography and component tooling may be named as coming next, but must not
-  appear as interactive live-preview tabs.
+  **Canonical — founder direction, 2026-07-31:** the activated Font Gallery,
+  Font Pair and Type Scale tools resolve into a fifth Typography preview mode.
+  Component tooling remains named as coming next and must not appear as a live
+  preview tab until its real route is activated.
 - Prefer honest workflow evidence—real controls, measured output, keyboard
   behavior, recovery states—over detached capability-stat strips.
 - Do not insert an abstract manifesto caption between the promise and its proof.
@@ -83,15 +85,15 @@ hero and its immediately adjacent mini-workbench only.**
 - **Trigger:** review of the shipped connected hero/workspace bridge and approval
   of a stronger “No more tab hoarding” experience.
 - **Observed direction:** show the real breadth of live tools as deliberate visual
-  chaos, then resolve that breadth into a calm working surface. Eight named tool
-  destinations remain honest links; they do not become eight preview tabs.
+  chaos, then resolve that breadth into a calm working surface. Eleven named tool
+  destinations remain honest links; they do not become eleven preview tabs.
 - **Interpretation:** the recognisable idea is not floating objects or orbit
   motion by itself. It is the causal change from scattered, independently useful
   tools to a smaller set of coherent working modes. This is a homepage narrative,
   not permission to make app surfaces chaotic.
 - **Decision:** the hero may use an irregular authored arrangement of honest live
   tool links when their semantics and destinations remain stable. Decorative
-  motion may visually group them into four workbench modes, but core copy, links
+  motion may visually group them into five workbench modes, but core copy, links
   and controls must remain available without the motion system.
 - **Decision:** the calm workbench is persistent product proof, not a screenshot
   or capability carousel. Preview interactions stay bounded and hand off to the

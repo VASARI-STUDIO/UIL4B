@@ -4,6 +4,30 @@ All notable changes to UIL4B.
 
 ---
 
+## v2.8.0 — Typography & UI System Release (2026-07-31)
+
+### Typography & Homepage
+- Activated Font Gallery, Font Pair Finder and Type Scale as three live, connected Create tools with a shared resilient Google Fonts catalogue
+- Added Typography as the fifth homepage mini-workspace mode, with icon-led tool satellites and a reduced-motion-safe merge and splash sequence
+- Added versioned in-memory hand-offs between the homepage and typography tools, plus loading, fallback, retry, keyboard and dialog coverage
+
+### Palette & Tint
+- Reconciled Palette Builder gutters and control sizing, removed toolbar height shifts, matched the initial random seed to the first swatch and kept Palette ↔ Tint navigation explicit
+- Improved Temperature and other slider tracks, repaired requested-versus-achieved HCT editing, moved contrast guidance to each swatch and added directional swap and multi-insert menus
+- Replaced generic preview placeholders with authored UI, brand and graphic scenes, while keeping additional preview scenes visibly Pro-gated
+
+### UI System Mode
+- Added deterministic perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from a user-selected 500 seed
+- Added per-shade editing and copy, WCAG AA/AAA evidence, black/white text recommendations, light/dark component labs and five applied interface scenes
+- Kept complete generated-system previews visible to Free users while Pro gates editing, expanded scenes and CSS, DTCG and Tailwind exports
+
+### Project Truth & Quality
+- Consolidated current planning, owner actions and founder decisions into the canonical Build Plan, removing duplicate and closed audit/setup documents
+- Recorded the founder decisions to retain the 3-project/8-icon free caps, use Firebase for Community and prerender eligible public routes
+- Recorded the founder-confirmed Firestore rules publication while keeping Storage, custom-claim, live auth/payment and other external checks explicitly open
+
+---
+
 ## v2.7.0 — Public UI Quality Release (2026-07-25)
 
 ### Public Shell

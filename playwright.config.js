@@ -9,6 +9,8 @@ import { defineConfig } from '@playwright/test'
 // exists, otherwise fall back to Playwright's own resolution.
 const PINNED_CHROMIUM = '/opt/pw-browsers/chromium'
 const executablePath = fs.existsSync(PINNED_CHROMIUM) ? PINNED_CHROMIUM : undefined
+const previewPort = Number(process.env.PLAYWRIGHT_PORT || 4174)
+const previewUrl = `http://127.0.0.1:${previewPort}`
 
 export default defineConfig({
   testDir: 'tests/user-sim',
@@ -23,7 +25,7 @@ export default defineConfig({
     ['json', { outputFile: 'tests/user-sim/report/results.json' }],
   ],
   use: {
-    baseURL: 'http://localhost:4174',
+    baseURL: previewUrl,
     viewport: { width: 1440, height: 900 },
     launchOptions: {
       executablePath,
@@ -31,9 +33,9 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: 'npx vite preview --port 4174 --strictPort',
-    url: 'http://localhost:4174',
-    reuseExistingServer: true,
+    command: `npx vite preview --host 127.0.0.1 --port ${previewPort} --strictPort`,
+    url: previewUrl,
+    reuseExistingServer: false,
     timeout: 60000,
   },
 })

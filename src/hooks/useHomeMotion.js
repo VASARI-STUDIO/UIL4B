@@ -39,7 +39,7 @@ function revealAll(scope) {
 // the chunk ever fails to load, we reveal everything and fall back to native
 // scroll, so content is never stuck.
 //
-// PROGRESSIVE-ENHANCEMENT RULE, non-negotiable: the eight satellite links and the
+// PROGRESSIVE-ENHANCEMENT RULE, non-negotiable: the eleven satellite links and the
 // whole mini-workbench are never hidden, faded, `inert`ed or opacity-gated by
 // this file. The only thing that depends on GSAP is a layer of decorative,
 // aria-hidden, non-focusable proxies that is CREATED here and destroyed on
@@ -97,10 +97,10 @@ export function useHomeMotion(scopeRef) {
           //    themselves keep their layout position and hit area; only a small
           //    idle offset moves, so nothing collides and no label is clipped. ──
           const satellites = gsap.utils.toArray('.hsat-item')
-          // Must match the `max-width:1180px` static-field breakpoint in
+          // Must match the `max-width:1280px` static-field breakpoint in
           // global.css: below it the field is a plain grid and neither the idle
           // drift nor the convergence proxies apply.
-          const wide = window.matchMedia?.('(min-width: 1181px)').matches
+          const wide = window.matchMedia?.('(min-width: 1281px)').matches
           if (wide && satellites.length) {
             satellites.forEach((item, i) => {
               gsap.to(item, {
@@ -116,7 +116,7 @@ export function useHomeMotion(scopeRef) {
           }
 
           // ── Convergence: the causal story, told with throwaway objects. ──
-          //    Eight tools; four modes. A decorative chip peels off each tool
+          //    Eleven tools; five modes. A decorative chip peels off each tool
           //    link and travels to the workbench tab it belongs to — the three
           //    extra colour tools all land on Palette, both media tools land on
           //    Image — then fades as the workbench takes focus. Everything below
@@ -134,7 +134,12 @@ export function useHomeMotion(scopeRef) {
               const el = document.createElement('span')
               el.className = 'hsat-proxy'
               el.dataset.family = anchor.dataset.family || ''
-              el.textContent = anchor.querySelector('.hsat-label')?.textContent || ''
+              const icon = anchor.querySelector('.hsat-icon svg')?.cloneNode(true)
+              if (icon) el.appendChild(icon)
+              const label = document.createElement('span')
+              label.className = 'hsat-proxy-label'
+              label.textContent = anchor.querySelector('.hsat-label')?.textContent || ''
+              el.appendChild(label)
               const hue = anchor.closest('.hsat-item')?.dataset.hue
               if (hue) el.dataset.hue = hue
               layer.appendChild(el)
@@ -173,7 +178,10 @@ export function useHomeMotion(scopeRef) {
                 invalidateOnRefresh: true,
                 onRefresh: place,
                 onUpdate: ({ progress }) => {
-                  const next = progress >= 0.82
+                  // Wait until the proxies have completed their travel and fade:
+                  // the shell's restrained splash must read as the result of the
+                  // merge, not as a competing animation.
+                  const next = progress >= 0.96
                   if (next === converged) return
                   converged = next
                   // Decorative only: the workbench is already visible and usable

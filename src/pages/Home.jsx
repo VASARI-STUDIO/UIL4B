@@ -2,6 +2,7 @@ import { lazy, Suspense, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
+import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
 import { HOME_FAMILY_LABEL, HOME_SATELLITES, HOME_WORKBENCH_TABS, LEARN_GROUPS } from '../data/toolTree'
@@ -69,9 +70,9 @@ export default function Home() {
       <main id="main" tabIndex={-1}>
       {/* ── Hero ──
           Source order is the reading order and never changes: copy, then the
-          eight live tool links, then the workbench. On wide screens the links
+          eleven live tool links, then the workbench. On wide screens the links
           are *placed* around the copy — that irregularity is the honest breadth
-          of the toolset, not decoration — and they resolve into four workbench
+          of the toolset, not decoration — and they resolve into five workbench
           modes below. Nothing in this hero depends on GSAP to be readable. */}
       <div className="home-workspace-intro">
       <header className="home-hero">
@@ -85,8 +86,8 @@ export default function Home() {
             <span className="home-hero-line home-hero-line--accent"><span className="home-hero-line-in">Build your UI system in one place.</span></span>
           </h1>
           <p className="home-hero-sub">
-            Build, validate and hand off live colour systems, icons and imagery in one
-            workspace. Typography and component tooling are coming next.
+            Build, validate and hand off live colour systems, typography, icons and
+            imagery in one workspace. Component tooling is coming next.
           </p>
           <div className="home-hero-cta">
             <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
@@ -99,7 +100,7 @@ export default function Home() {
         </div>
 
         <nav className="hsat" aria-labelledby="hsat-title">
-          <h2 className="sr-only" id="hsat-title">Eight tools that are live today</h2>
+          <h2 className="sr-only" id="hsat-title">Eleven tools that are live today</h2>
           <ul className="hsat-list">
             {HOME_SATELLITES.map((sat) => (
               <li className="hsat-item" key={sat.id} data-hue={sat.hue}>
@@ -110,14 +111,19 @@ export default function Home() {
                   data-family={sat.family}
                   aria-describedby={`hsat-fam-${sat.family}`}
                 >
-                  <span className="hsat-label">{sat.label}</span>
-                  <span className="hsat-family" aria-hidden="true">{HOME_FAMILY_LABEL[sat.family]}</span>
+                  <span className="hsat-icon" aria-hidden="true">
+                    <NavIcon id={sat.icon} />
+                  </span>
+                  <span className="hsat-copy">
+                    <span className="hsat-label">{sat.label}</span>
+                    <span className="hsat-family" aria-hidden="true">{HOME_FAMILY_LABEL[sat.family]}</span>
+                  </span>
                 </Link>
               </li>
             ))}
           </ul>
           {/* One description per workbench family, referenced by every satellite
-              in it. Assistive technology hears the eight-into-four relationship;
+              in it. Assistive technology hears the eleven-into-five relationship;
               sighted users read the same thing in the family chip. */}
           <div className="sr-only">
             {HOME_WORKBENCH_TABS.map((tab) => (
@@ -129,7 +135,7 @@ export default function Home() {
         </nav>
       </header>
 
-      {/* ── The calm half: eight tools, four ways of working ── */}
+      {/* ── The calm half: eleven tools, five ways of working ── */}
       <HomeWorkbench />
       </div>
 

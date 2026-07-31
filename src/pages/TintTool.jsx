@@ -280,6 +280,9 @@ export default function TintTool({ onCopy, toast }) {
   return (
     <div className="sec tt-page">
       <header className="tt-hero">
+        <NavLink to="/color/palette" className="tt-back" aria-label="Back to Palette Builder">
+          <span aria-hidden="true">←</span> Palette Builder
+        </NavLink>
         <div className="sec-h-eyebrow">Colour system workspace</div>
         <div className="tt-hero-copy">
           <h1>Tint Scale Generator</h1>

@@ -5,7 +5,10 @@ const FOOTER_GROUPS = [
     label: 'Create',
     links: [
       ['/color', 'Colour systems'],
-      ['/typography', 'Typography', true],
+      // Straight to the Font Gallery rather than /typography: the category home
+      // has no screen of its own and only redirects here, so linking it would
+      // spend a navigation to arrive at the same place.
+      ['/fontgallery', 'Typography'],
       ['/icons', 'Icons & emoji'],
       ['/imagery', 'Imagery'],
     ],

@@ -20,15 +20,21 @@ test('canonicalUrl strips query, hash and trailing slash, keeps the bare root', 
 })
 
 test('isSoonRoute is true only for a Create tool/category still in the workshop', () => {
-  // /fontgallery's tool + its group (`type`) both carry soon: true.
-  assert.equal(isSoonRoute('/fontgallery'), true)
-  // /typography is the `type` group's still-building category home.
-  assert.equal(isSoonRoute('/typography'), true)
+  // /box-shadow's tool + its group (`component`) both carry soon: true.
+  assert.equal(isSoonRoute('/box-shadow'), true)
+  // /ui-builder-cat is the `component` group's still-building category home.
+  assert.equal(isSoonRoute('/ui-builder-cat'), true)
 })
 
 test('isSoonRoute is false for shipped Create tools and non-Create routes', () => {
   assert.equal(isSoonRoute('/color/palette'), false)
   assert.equal(isSoonRoute('/icons'), false)
+  // The three typography tools went live together — the group and all three
+  // tools flipped to soon: false, so none of them may be marked noindex.
+  assert.equal(isSoonRoute('/typescale'), false)
+  assert.equal(isSoonRoute('/fontpairs'), false)
+  assert.equal(isSoonRoute('/fontgallery'), false)
+  assert.equal(isSoonRoute('/typography'), false)
   assert.equal(isSoonRoute('/settings'), false)
   assert.equal(isSoonRoute('/plans'), false)
   assert.equal(isSoonRoute('/'), false)
