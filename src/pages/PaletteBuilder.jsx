@@ -2,6 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { Link, useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
+import UiSystemBuilder from '../components/UiSystemBuilder'
 import {
   adjustTrackGradients, applyAdjust, autoTonalFromSeed, autoTonalPalette, contrastRatio,
   derivePreviewRoles, generateHarmony, hctToHex, hexToHct, hexToHsl, hslToHex, maxChromaFor,
@@ -763,7 +764,7 @@ function PreviewScene({ colors, mode, title, tab = 'ui', scene = PREVIEW_SCENES[
 
 export default function PaletteBuilder({ onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
-  const { isPro } = useSubscription()
+  const { isPro, loading: entitlementLoading } = useSubscription()
   const { openProModal } = useProModal()
   const { requireLogin } = useLoginPrompt()
   const { user } = useAuth()
@@ -851,10 +852,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
   })
   const [handleInput, setHandleInput] = useState('')
   const [handleErr, setHandleErr] = useState('')
-  // Design System Builder (Wave 6 item 23): replaces the old "Studio" link with a
-  // coming-soon popup — long-term this becomes the guided walkthrough across the
-  // individual colour tools.
-  const [dsbOpen, setDsbOpen] = useState(false)
+  // UI System mode leaves every ordinary Palette state value mounted and
+  // untouched until the user explicitly applies its Brand scale back.
+  const [uiMode, setUiMode] = useState(false)
   // Combined community-gallery popup (Discover hand-in): one large popup with
   // Community / Variations / Brands tabs, applying a pick straight onto the board.
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -1705,6 +1705,36 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const activeHarmony = HARMONIES.find(h => h.id === harmony) || HARMONIES[0]
   const activeVision = VISION_MODES.find(([id]) => id === vision) || VISION_MODES[0]
 
+  const applyUiBrandScale = scale => {
+    const next = scale.map(normaliseHex).filter(Boolean).slice(0, HARD_MAX)
+    if (next.length !== 9) return
+    setColors(next)
+    setSeed(next[4])
+    setSeedInput(next[4])
+    setHarmony('custom')
+    setLocked(new Set())
+    setAdjust(ZERO_ADJUST)
+    setImportedGalleryId(null)
+    setLiveMsg('Brand 100 through 900 applied to Palette.')
+    setUiMode(false)
+  }
+
+  if (uiMode) {
+    return (
+      <div className="plb plb--ui-system">
+        <UiSystemBuilder
+          initialSeed={seed}
+          isPro={isPro}
+          entitlementLoading={entitlementLoading}
+          onBack={() => setUiMode(false)}
+          onApplyBrand={applyUiBrandScale}
+          onCopy={onCopy}
+          toast={toast}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="plb">
       <p className="sr-only" aria-live="polite">{liveMsg}</p>
@@ -1712,7 +1742,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
       {/* ── Toolbar ── */}
       <header className="plb-toolbar">
         <div className="plb-toolbar-group">
-          <h1 className="plb-title">Palette Builder</h1>
+          <div className="plb-mode-switch">
+            <h1 className="plb-title">Palette</h1>
+            <span aria-hidden="true">/</span>
+            <button type="button" aria-label="Open UI System Pro mode" onClick={() => setUiMode(true)}>
+              UI System <span>Pro</span>
+            </button>
+          </div>
           <div className="plb-seedpick">
             <ColorPickerPop
               value={seed}
@@ -1997,7 +2033,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
           >
             <IcoGradient /><span className="plb-lbl"><span className="plb-lbl-i">Gradient</span></span>
           </button>
-          <button type="button" className="btn btn-s" onClick={() => setDsbOpen(true)} title="Design System Builder — coming soon"><IcoSliders /> Design System Builder</button>
+          <button type="button" className="btn btn-s" onClick={() => setUiMode(true)} title="Build a complete UI colour system from Brand 500"><IcoSliders /> Build UI system</button>
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
@@ -2612,41 +2648,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 </div>
               </>
             )}
-          </div>
-        </div>
-      )}
-
-      {dsbOpen && (
-        <div
-          className="plb-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Design System Builder"
-          onPointerDown={(e) => { if (e.target === e.currentTarget) setDsbOpen(false) }}
-        >
-          <div className="plb-modal-card plb-dsbcard">
-            <div className="plb-modal-head">
-              <span className="plb-pop-title">Design System Builder</span>
-              <button type="button" className="plb-pop-x" aria-label="Close" onClick={() => setDsbOpen(false)}><IcoX /></button>
-            </div>
-            <div className="plb-dsb-body">
-              <div className="plb-dsb-emoji" aria-hidden="true">🤫</div>
-              <p className="plb-dsb-lede">
-                A guided walkthrough that carries you across every colour tool — palette,
-                semantic roles, tints, gradients and contrast — into one finished system.
-              </p>
-              <p className="plb-dsb-sub">It&rsquo;s on the way. For now, jump straight into any of the tools it will connect:</p>
-              <nav className="plb-dsb-links" aria-label="Colour tools">
-                <Link className="plb-dsb-link" to="/color/palette" onClick={() => setDsbOpen(false)}>Palette</Link>
-                <Link className="plb-dsb-link" to="/color/semantic" onClick={() => setDsbOpen(false)}>Semantic Colour</Link>
-                <Link className="plb-dsb-link" to="/color/tint" onClick={() => setDsbOpen(false)}>Tint</Link>
-                <Link className="plb-dsb-link" to="/color/gradient" onClick={() => setDsbOpen(false)}>Gradient</Link>
-                <Link className="plb-dsb-link" to="/color/contrast" onClick={() => setDsbOpen(false)}>Contrast Checker</Link>
-              </nav>
-            </div>
-            <div className="plb-modal-actions">
-              <button type="button" className="btn btn-s btn-accent" onClick={() => setDsbOpen(false)}>Got it</button>
-            </div>
           </div>
         </div>
       )}

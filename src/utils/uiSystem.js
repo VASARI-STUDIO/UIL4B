@@ -217,7 +217,19 @@ export function createUiSystem(seed, options = {}) {
     },
   ]
   const groups = definitions.map(definition => makeGroup(definition, overrides))
-  const warnings = groups.flatMap(group => group.warnings)
+  const warnings = []
+  const rangeGroups = groups.filter(group => group.warnings.some(item => /limited perceived-tone range/i.test(item)))
+  const gamutGroups = groups.filter(group => group.shades.some(shade => shade.limited))
+  const overrideGroups = groups.filter(group => group.shades.some(shade => shade.override) && group.warnings.length)
+  if (rangeGroups.length) {
+    warnings.push(`Limited tone range in ${rangeGroups.map(group => group.label).join(', ')}; affected cells are marked for review.`)
+  }
+  if (gamutGroups.length) {
+    warnings.push(`Limited display gamut in ${gamutGroups.map(group => group.label).join(', ')}; requested and achieved HCT are shown on marked shades.`)
+  }
+  if (overrideGroups.length) {
+    warnings.push(`Overrides need review in ${overrideGroups.map(group => group.label).join(', ')} before export.`)
+  }
   if (seedHct.t <= 1 || seedHct.t >= 99) {
     warnings.unshift('Brand 500 is at the end of the tone range. The exact seed is preserved, so adjacent shades have limited separation.')
   }
@@ -230,7 +242,7 @@ export function createUiSystem(seed, options = {}) {
     neutralTinted,
     groups,
     schemes,
-    warnings: [...new Set(warnings)],
+    warnings,
     hasOverrides: Object.keys(overrides).length > 0,
   }
 }
