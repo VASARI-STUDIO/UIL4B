@@ -11,7 +11,7 @@
 // project saved under the old shape.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyAdjust, hctToHex, hexToHct, hexToHsl, maxChromaFor } from '../../src/utils/colors.js'
+import { adjustTrackGradients, applyAdjust, hctToHex, hexToHct, hexToHsl, maxChromaFor } from '../../src/utils/colors.js'
 import {
   ZERO_ADJUST,
   normaliseAdjust,
@@ -158,6 +158,27 @@ test('a mid-saturation colour moves monotonically across the whole -100..+100 ra
       assert.ok(chroma >= prevChroma - 0.1, `chroma must not fall as s rises through ${s}`)
     }
     prevChroma = chroma
+  }
+})
+
+test('tone and saturation share the gamut boundary at the shifted tone', () => {
+  for (const toneShift of [-80, -40, 40, 80]) {
+    const out = applyAdjust([MID_SAT], { ...ZERO, s: 100, b: toneShift })[0]
+    const [h, c, tone] = hexToHct(out)
+    const boundary = maxChromaFor(h, tone)
+    assert.ok(c <= boundary + 0.01, `tone shift ${toneShift} stayed inside its rendered gamut`)
+    assert.ok(c >= boundary - 2.5, `tone shift ${toneShift} still reaches the available chroma`)
+  }
+})
+
+test('adjustment tracks preview all four real lens operations', () => {
+  const tracks = adjustTrackGradients(BASE)
+  assert.deepEqual(Object.keys(tracks), ['h', 's', 'b', 'temp'])
+  for (const [key, gradient] of Object.entries(tracks)) {
+    assert.match(gradient, /^linear-gradient\(90deg,/)
+    assert.equal((gradient.match(/#[0-9A-F]{6}/gi) || []).length, 9, `${key} exposes nine real colour stops`)
+    assert.match(gradient, /0\.00%/)
+    assert.match(gradient, /100\.00%/)
   }
 })
 
