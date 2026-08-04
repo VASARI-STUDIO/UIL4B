@@ -4,6 +4,20 @@ All notable changes to UIL4B.
 
 ---
 
+## Unreleased — Palette & Gradient founder batch
+
+### Palette Builder
+- Made each global-adjust slider handle a lens onto its own track: the dot's centre now shows the colour that position represents, sampled from the same stop list that paints the gradient, inside opposed white/near-black rings that stay visible against any track colour in either theme
+- Fixed hovering a toolbar icon button revealing an empty pill instead of its label — the absolutely positioned reveal label had an indefinite inline size, so the `0fr → 1fr` track resolved to `0px`
+- Made Randomise respect the selected colour system; Monochromatic was routed to the tonal engine, which puts one role on a sibling hue, so a mono shuffle returned two hues
+
+### Gradient Generator
+- Adding a stop is now one press-and-drag gesture: the handle is created on pointer-down, stays visible and enlarged throughout the drag, shows a live position readout, and takes focus so the arrow keys nudge it straight away
+- Added `touch-action:none` to the stop rail and handles so a touch drag moves the stop instead of being claimed by the page scroller
+- Added "Submit for review" — a gradient can be queued for the gradient library on the existing local-first submission pattern, shown as pending (never published) in the gallery, and withdrawable
+
+---
+
 ## v2.8.0 — Typography & UI System Release (2026-07-31)
 
 ### Typography & Homepage

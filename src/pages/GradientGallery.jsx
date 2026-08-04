@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import GradientGalleryGrid from '../components/discover/GradientGalleryGrid'
-import { GALLERY_GRADIENTS, GRADIENT_TAGS } from '../data/gradientGallery'
+import { GALLERY_GRADIENTS, GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
+import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
 
 // /discover/gradients — the curated gradient gallery. A designgradients-style
 // browse surface over the local static set (src/data/gradientGallery.js):
@@ -16,6 +17,10 @@ export default function GradientGallery({ toast }) {
   const [rawQuery, setRawQuery] = useState('')
   const [tag, setTag] = useState('all')
   const [type, setType] = useState('all')
+  // Gradients this browser has queued for review. They are deliberately kept
+  // OUT of the browse grid: they are not in the library, and showing them there
+  // would imply they had been published. See utils/gradientSubmissions.js.
+  const [submissions, setSubmissions] = useState(readGradientSubmissions)
   const query = rawQuery.trim().toLowerCase()
 
   const visible = useMemo(() => GALLERY_GRADIENTS.filter(g => {
@@ -45,6 +50,42 @@ export default function GradientGallery({ toast }) {
           Open the Gradient Generator
         </Link>
       </header>
+
+      {submissions.length > 0 && (
+        <section className="grg-queue" aria-labelledby="grg-queue-heading">
+          <div className="section-h">
+            <h2 id="grg-queue-heading">Your submissions</h2>
+            <span className="meta">Queued for review — not published</span>
+          </div>
+          <p className="grg-queue-note">
+            These are held on this browser while shared publishing is built. A reviewer has
+            to approve a gradient before it joins the library above, so nothing here is live yet.
+          </p>
+          <ul className="grg-queue-list">
+            {submissions.map(s => (
+              <li key={s.id} className="grg-queue-item">
+                <span className="grg-queue-swatch" style={{ background: gradientCss(s.type, s.angle, s.stops) }} aria-hidden="true" />
+                <span className="grg-queue-id">
+                  <strong>{s.name}</strong>
+                  <span className="meta">{s.type} · {s.stops.length} stops · by {s.author}</span>
+                </span>
+                <span className="grg-queue-status">Pending review</span>
+                <Link className="btn btn-s btn-ghost" to={gradientToolUrl({ ...s, name: s.name })}>Open</Link>
+                <button
+                  type="button"
+                  className="btn btn-s btn-ghost"
+                  onClick={() => {
+                    setSubmissions(withdrawGradientSubmission(s.id))
+                    toast?.('Submission withdrawn')
+                  }}
+                >
+                  Withdraw
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Toolbar — search joins the tag + type filters (AND semantics) */}
       <div className="grg-toolbar">

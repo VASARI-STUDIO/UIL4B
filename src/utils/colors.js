@@ -549,6 +549,23 @@ export function autoTonalFromSeed(hex) {
   ]
 }
 
+// randomSystemPalette(system) — Randomise, run through the SELECTED colour
+// system. This is the single place the "which engine does a shuffle use?"
+// decision is made, and it is deliberately not clever: only the tonal 'auto'
+// system uses the tonal engine; EVERY named harmony (monochromatic included)
+// goes through generateHarmony, which is what keeps a mono shuffle on one hue.
+//
+// The seed lands in confident brand territory rather than muddy mid-tones:
+// high chroma (48–92 — the HCT solver gamut-clamps per hue, so pale hues like
+// yellow settle lower on their own) at tone 46–60, the band where a primary
+// reads well on both light and dark surfaces. Throws if the HCT solver fails,
+// so the caller can fall back.
+export function randomSystemPalette(system) {
+  if (system === 'auto') return autoTonalPalette()
+  const seedHex = hctToHex(Math.random() * 360, 48 + Math.random() * 44, 46 + Math.random() * 14)
+  return generateHarmony(seedHex, system)
+}
+
 // Warm / cool anchors for the temperature lens, and the fraction of the way a
 // colour travels toward one at full slider travel.
 export const TEMP_WARM_HUE = 30
@@ -723,26 +740,90 @@ function mostVividHex(baseColors) {
   return best
 }
 
-export function adjustTrackGradients(baseColors) {
+// The slider range each track spans. These MUST match PaletteBuilder's
+// ADJUST_FIELDS min/max — the track is a picture of the slider, so a mismatch
+// would put the gradient and the handle on different scales.
+export const ADJUST_TRACK_RANGES = {
+  h: [-180, 180],       // the hue sweep, as this palette travels it
+  s: [-100, 100],       // fully neutral → the gamut boundary at this hue/tone
+  b: [-100, 100],       // dark → light
+  temp: [-100, 100],    // the 210° cool anchor → neutral → the 30° warm anchor
+}
+
+// adjustTrackStops(baseColors) — the raw material both the painted track AND
+// the slider handle's centre are built from. Keeping ONE stop list means the
+// dot can never disagree with the bar it sits on: they are literally the same
+// nine colours, read two different ways.
+export function adjustTrackStops(baseColors) {
   const rep = mostVividHex(baseColors)
   if (!rep) return null
-  const ramp = (key, min, max) => {
+  const out = {}
+  for (const key of Object.keys(ADJUST_TRACK_RANGES)) {
+    const [min, max] = ADJUST_TRACK_RANGES[key]
     const stops = []
     for (let i = 0; i < ADJUST_TRACK_STOPS; i++) {
       const pos = i / (ADJUST_TRACK_STOPS - 1)
       const adj = { h: 0, s: 0, b: 0, temp: 0, [key]: min + (max - min) * pos }
       let hex = rep
       try { hex = applyAdjust([rep], adj)[0] || rep } catch { hex = rep }
-      stops.push(`${hex} ${(pos * 100).toFixed(2)}%`)
+      stops.push({ hex, pos })
     }
-    return `linear-gradient(90deg,${stops.join(',')})`
+    out[key] = { min, max, stops }
   }
-  return {
-    h: ramp('h', -180, 180),        // the hue sweep, as this palette travels it
-    s: ramp('s', -100, 100),        // fully neutral → the gamut boundary at this hue/tone
-    b: ramp('b', -100, 100),        // dark → light
-    temp: ramp('temp', -100, 100),  // the 210° cool anchor → neutral → the 30° warm anchor
+  return out
+}
+
+// The painted CSS for a stop set. Split out so a caller that already holds the
+// stops (to sample handle colours from them) never rebuilds them just to get
+// the gradient — the two views stay guaranteed-identical because they are one
+// list read twice.
+export function adjustTrackGradientsFromStops(tracks) {
+  if (!tracks) return null
+  const out = {}
+  for (const key of Object.keys(tracks)) {
+    const stops = tracks[key].stops.map(s => `${s.hex} ${(s.pos * 100).toFixed(2)}%`)
+    out[key] = `linear-gradient(90deg,${stops.join(',')})`
   }
+  return out
+}
+
+export function adjustTrackGradients(baseColors) {
+  return adjustTrackGradientsFromStops(adjustTrackStops(baseColors))
+}
+
+// sampleAdjustTrack(track, value) — the exact colour the painted track shows at
+// `value`. A CSS linear-gradient interpolates in sRGB between the two stops
+// that bracket a point, so this does precisely that (mixHex is an sRGB lerp).
+// That is what lets the slider handle be a LENS onto the bar rather than a
+// second, independently-computed opinion about it.
+export function sampleAdjustTrack(track, value) {
+  const stops = track?.stops
+  if (!Array.isArray(stops) || !stops.length) return null
+  const span = track.max - track.min
+  const n = Number(value)
+  const t = span > 0
+    ? Math.min(1, Math.max(0, ((Number.isFinite(n) ? n : 0) - track.min) / span))
+    : 0
+  for (let i = 1; i < stops.length; i++) {
+    const lo = stops[i - 1], hi = stops[i]
+    if (t <= hi.pos) {
+      const gap = hi.pos - lo.pos
+      const local = gap > 0 ? (t - lo.pos) / gap : 0
+      return mixHex(lo.hex, hi.hex, local).toUpperCase()
+    }
+  }
+  return stops[stops.length - 1].hex.toUpperCase()
+}
+
+// The four handle colours for a live lens — one sample per track, so every
+// slider dot reads the colour its own position represents.
+export function adjustHandleColors(tracks, adj) {
+  if (!tracks) return null
+  const out = {}
+  for (const key of Object.keys(tracks)) {
+    out[key] = sampleAdjustTrack(tracks[key], adj?.[key] ?? 0)
+  }
+  return out
 }
 export function fixForeground(fg, bg, targetRatio) {
   const fgHsl = hexToHsl(fg)
