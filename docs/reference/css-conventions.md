@@ -117,6 +117,17 @@ container, buttons with extra children beside the label are unaffected.
 If the collapsing element has horizontal padding, animate `padding` alongside the
 track: a `border-box` element cannot narrow past its own padding.
 
+**If the reveal element is `position:absolute`, add `width:max-content`.** An
+absolutely positioned box with only `left` (or only `right`) set has an *auto*,
+shrink-to-fit inline size — which is indefinite, so `1fr` has no free space to
+claim and resolves to **`0px`**. The pill animates open around nothing and the
+label never appears; `visibility`, `opacity` and `clip-path` all flip correctly,
+which is what makes it look like a styling bug rather than a sizing one. This is
+exactly what broke Palette Builder's `.plb-icobtn .plb-lbl` after #199.
+`width:max-content` makes the inline size definite so the track resolves to the
+real text width; `0fr` still collapses to zero because the inner item carries
+`overflow:hidden;min-width:0`.
+
 #### Reduced-motion contract
 
 Reduced motion means **near-instant, not merely fast**. Both the app-level

@@ -6149,7 +6149,17 @@ button.plb-varrow:hover{background:var(--bg-2)}
    or wider while the pointer is moving across it. */
 .plb-icobtn{position:relative;isolation:isolate;width:36px;min-width:36px;padding-inline:0;justify-content:center;gap:0}
 .plb-icobtn:hover,.plb-icobtn:focus-visible,.plb-icobtn[aria-expanded="true"]{z-index:4}
-.plb-icobtn .plb-lbl{position:absolute;top:50%;left:calc(100% - 5px);display:grid;visibility:hidden;grid-template-columns:0fr;align-items:center;min-height:30px;padding:0;opacity:0;color:var(--t0);background:var(--card);border:0 solid transparent;border-radius:var(--radius-s);box-shadow:none;clip-path:inset(0 100% 0 0);transform:translate(-8px,-50%);pointer-events:none;transition:grid-template-columns var(--dur-3) var(--ease-entrance),clip-path var(--dur-3) var(--ease-entrance),transform var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard),padding var(--dur-3) var(--ease-entrance),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-3)}
+/* The reveal label is the css-conventions 0fr→1fr pattern, but ABSOLUTELY
+   positioned — and that needs one extra declaration the in-flow version does
+   not. An abspos box with only `left` set has an auto (shrink-to-fit) inline
+   size, which is indefinite, so `1fr` has no free space to claim and resolves
+   to 0px: the pill animated open around NOTHING and hovering an icon button
+   showed a blank chip instead of its label. `width:max-content` makes the
+   inline size definite, so the fr track resolves to the real text width — the
+   whole easing curve still plays across the actual content, exactly as the
+   convention intends. `0fr` still collapses to 0 because .plb-lbl-i carries
+   overflow:hidden;min-width:0. */
+.plb-icobtn .plb-lbl{position:absolute;top:50%;left:calc(100% - 5px);display:grid;visibility:hidden;grid-template-columns:0fr;width:max-content;align-items:center;min-height:30px;padding:0;opacity:0;color:var(--t0);background:var(--card);border:0 solid transparent;border-radius:var(--radius-s);box-shadow:none;clip-path:inset(0 100% 0 0);transform:translate(-8px,-50%);pointer-events:none;transition:grid-template-columns var(--dur-3) var(--ease-entrance),clip-path var(--dur-3) var(--ease-entrance),transform var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard),padding var(--dur-3) var(--ease-entrance),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-3)}
 .plb-icobtn .plb-lbl-i{overflow:hidden;min-width:0;white-space:nowrap}
 .plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{visibility:visible;grid-template-columns:1fr;padding:0 9px;opacity:1;border-width:1px;border-color:var(--border);box-shadow:var(--shadow-s);clip-path:inset(0);transform:translate(0,-50%);transition-delay:0s}
 .plb-icobtn.btn-accent .plb-lbl{color:var(--accent-fg);background:var(--brand)}
