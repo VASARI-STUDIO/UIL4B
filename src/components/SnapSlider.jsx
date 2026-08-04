@@ -20,6 +20,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  *   which is only applied when a gradient is present. Snap ticks are drawn on
  *   top of the gradient from `snaps`, so the reference marks survive whatever
  *   colour lands underneath them.
+ * - `handleColor` makes the CENTRE of the thumb a window onto the track colour
+ *   at the thumb's own position, so the dot reads as a lens on the bar rather
+ *   than a white disc covering it. The caller must derive it from the SAME
+ *   stops it built `trackGradient` from (see colors.js adjustTrackStops /
+ *   sampleAdjustTrack) — that is what makes disagreement impossible. Ignored
+ *   without a gradient: a plain platform slider has no track colour to show.
  */
 
 // Snap ticks as a background layer: a dark-light-dark 3px mark, which stays
@@ -59,6 +65,7 @@ export default function SnapSlider({
   disabled = false,
   className = '',
   trackGradient = null,
+  handleColor = null,
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -95,16 +102,27 @@ export default function SnapSlider({
   // render the thumb pinned at max rather than clamping the real value.
   const trackValue = Math.min(max, Math.max(min, value))
 
-  // The caller memoises the gradient, and the stable callback keeps React from
-  // detaching and reattaching the ref during unrelated value-only drag frames.
+  // The caller memoises the gradient, so `track` is stable across value-only
+  // drag frames. `lens` deliberately is NOT — it tracks the handle, so it moves
+  // every frame of a drag. Re-running the ref costs two function calls and no
+  // DOM churn; the custom properties are written on the element rather than as
+  // an inline `style` attribute, per the CSS conventions.
   const track = trackGradient
     ? [tickLayers(snaps, min, max), trackGradient].filter(Boolean).join(',')
+    : null
+  // The lens colour only means anything on a painted track, so it is tied to
+  // the gradient: no gradient, no custom thumb, and every other consumer of
+  // SnapSlider keeps the platform thumb it has today.
+  const lens = trackGradient && typeof handleColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(handleColor)
+    ? handleColor
     : null
   const trackRef = useCallback((el) => {
     if (!el) return
     if (track) el.style.setProperty('--snapv-track', track)
     else el.style.removeProperty('--snapv-track')
-  }, [track])
+    if (lens) el.style.setProperty('--snapv-handle', lens)
+    else el.style.removeProperty('--snapv-handle')
+  }, [track, lens])
 
   return (
     <span

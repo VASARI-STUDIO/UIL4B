@@ -4736,19 +4736,30 @@ html.lenis,html.lenis body{height:auto}
    can see where to put the handle instead of guessing. Everything here is
    scoped to .snapv--grad, so every other SnapSlider keeps the platform track
    and its accent-color fill untouched.
-   The handle is deliberately theme-INDEPENDENT: the surface behind it is
+   The handle is a LENS, not a lid: its centre is --snapv-handle, the colour the
+   track itself paints at that exact position (SnapSlider derives it from the
+   same stops as the gradient), so the dot shows the colour that position means.
+   Without a handle colour it falls back to the old white core, so any other
+   coloured-track caller is unaffected.
+   The rings are deliberately theme-INDEPENDENT: the surface behind them is
    palette colour, not a UI surface, so a token that flips with the theme would
-   disappear against half the palettes. A white core inside a near-black ring
-   inside a white halo reads on any hue at any lightness, in either theme. */
+   disappear against half the palettes. Two opposed rings — white immediately
+   around the core, near-black just outside it — mean at least one always
+   contrasts, whether the track under the handle is white, black or anything
+   between, in either theme. */
 .snapv--grad input[type="range"]{-webkit-appearance:none;appearance:none;height:14px;border-radius:var(--radius-pill);background:var(--snapv-track,var(--bg-3));background-repeat:no-repeat;border:1px solid var(--border);outline:none;cursor:pointer;accent-color:auto}
 .snapv--grad input[type="range"]::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:transparent}
 .snapv--grad input[type="range"]::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:transparent}
-.snapv--grad input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-2px;border-radius:50%;background:#fff;border:2px solid #16181C;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 1px 3px rgba(0,0,0,.45);cursor:grab}
-.snapv--grad input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid #16181C;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 1px 3px rgba(0,0,0,.45);cursor:grab}
+.snapv--grad input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-2px;border-radius:50%;background:var(--snapv-handle,#fff);border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 1px 3px rgba(0,0,0,.45);cursor:grab}
+.snapv--grad input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--snapv-handle,#fff);border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 1px 3px rgba(0,0,0,.45);cursor:grab}
 .snapv--grad input[type="range"]:active::-webkit-slider-thumb{cursor:grabbing}
 .snapv--grad input[type="range"]:active::-moz-range-thumb{cursor:grabbing}
-/* Focus ring sits outside the track so it never competes with the gradient. */
+/* Focus: a ring outside the track so it never competes with the gradient, plus
+   an accent ring on the thumb itself sitting OUTSIDE the near-black ring, so
+   which handle has focus stays readable over any track colour. */
 .snapv--grad input[type="range"]:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.snapv--grad input[type="range"]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--accent),0 1px 3px rgba(0,0,0,.45)}
+.snapv--grad input[type="range"]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--accent),0 1px 3px rgba(0,0,0,.45)}
 .snapv--grad input[type="range"]:disabled{opacity:.5;cursor:not-allowed}
 .icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
 .icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
