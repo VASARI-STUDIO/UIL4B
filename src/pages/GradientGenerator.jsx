@@ -8,6 +8,8 @@ import ShuffleIcon from '../components/ShuffleIcon'
 import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
+import { appendGradientSubmission, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
+import { useAuth } from '../contexts/AuthContext'
 
 // ── Gradient Generator ──
 // The standalone /color/gradient tool: build any linear / radial / conic
@@ -183,6 +185,83 @@ function StopPositionInput({ value, label, disabled, onCommit }) {
   )
 }
 
+// Upload glyph for the "Submit for review" action.
+const IcoSubmit = ({ size = 15 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v13" />
+  </svg>
+)
+
+// Submit-for-review modal for the gradient library. Same shape and the same
+// `ui-modal` chrome the Community Hub's design submission already uses, on the
+// same local-first storage pattern — this adds no backend and publishes nothing.
+// The note is the honest part: the gradient is QUEUED, not live.
+function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
+  const [form, setForm] = useState({ name: gradient.name || '', author: authorName || '', note: '' })
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const submit = () => {
+    if (busy) return                                   // double-submit guard
+    if (!form.name.trim()) return setError('Give your gradient a name.')
+    setBusy(true)
+    const ok = onSubmit({
+      name: form.name.trim(),
+      author: form.author.trim(),
+      note: form.note.trim(),
+    })
+    if (!ok) { setBusy(false); setError('That gradient could not be queued. Try again.') }
+  }
+
+  return (
+    <div className="ui-modal-overlay" onClick={onClose} role="presentation">
+      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a gradient for review">
+        <div className="ui-modal-head">
+          <h2 className="ui-modal-title">Submit for review</h2>
+          <button className="ui-modal-x" onClick={onClose} aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
+        <div className="ui-modal-body">
+          <div className="ggn-submit-preview" style={{ background: gradient.css }} aria-hidden="true" />
+          <div className="ui-form">
+            <label className="ui-field">
+              <span>Name</span>
+              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Harbour Dusk" maxLength={60} />
+            </label>
+            <label className="ui-field">
+              <span>Author</span>
+              <input type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Your name (optional)" maxLength={40} />
+            </label>
+            <label className="ui-field">
+              <span>Note for the reviewer</span>
+              <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Where it works well (optional)" maxLength={200} />
+            </label>
+            {error && <div className="ui-modal-err" role="alert">{error}</div>}
+            <p className="ui-modal-note">
+              Your gradient is queued for review on this browser — it is <strong>not published</strong>.
+              Shared publishing to the gradient library isn’t live yet, so nothing appears in the
+              gallery until a reviewer approves it. You can withdraw it any time from the gallery.
+            </p>
+          </div>
+          <div className="ui-modal-actions ui-modal-actions--row">
+            <button className="btn" onClick={onClose}>Cancel</button>
+            <button className="btn btn-accent" onClick={submit} disabled={busy}>
+              {busy ? 'Queueing…' : 'Queue for review'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Padlock glyph — open shackle when unlocked, closed when locked — so a locked
 // control reads at a glance. Stroke-based to match the other ggn icons.
 const IcoLock = ({ size = 13, open = false }) => (
@@ -211,6 +290,7 @@ const LockBtn = ({ on, onClick, label, className = '' }) => (
 
 export default function GradientGenerator({ onCopy, toast }) {
   const { design, setGradient, projects } = useProject()
+  const { user, userProfile } = useAuth()
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -253,9 +333,21 @@ export default function GradientGenerator({ onCopy, toast }) {
   // them. Per-stop colour+position locks live on the stop objects (`.locked`).
   const [locks, setLocks] = useState({ type: false, angle: false, count: false })
 
+  // The stop currently being dragged (index, or null). Drives the live position
+  // readout on the handle so a fine adjustment is read, not guessed.
+  const [dragIdx, setDragIdx] = useState(null)
+
+  // Submit-for-review (gradient library). Local-first queue only — see
+  // utils/gradientSubmissions.js.
+  const [submitOpen, setSubmitOpen] = useState(false)
+
   const barRef = useRef(null)
   const dialRef = useRef(null)
-  const suppressBarClickRef = useRef(false) // set during a stop drag so the drag-ending click doesn't add a stop
+  // Handle elements by stop index, so a stop added by pressing the rail can be
+  // focused the moment it renders — that is what makes the arrow keys work on it
+  // straight away instead of only after the user hunts it down and clicks it.
+  const handleEls = useRef(new Map())
+  const focusStopRef = useRef(null)
 
   const css = gradientCss(type, angle, stops)
 
@@ -352,13 +444,17 @@ export default function GradientGenerator({ onCopy, toast }) {
 
   // Insert a stop at a given position (0–100), blending the colour from the two
   // stops it lands between. Used by both the "+ Stop" button (midpoint) and a
-  // click on the preview bar (exact position). Focuses the new stop.
+  // press on the preview rail (exact position). Returns the new stop's index —
+  // the rail hands it straight to a drag so one gesture creates AND positions
+  // it — or null when nothing was added. Also queues focus onto the new handle
+  // so the arrow keys nudge it without a hunt for it first.
   const addStopAt = useCallback((pct) => {
-    if (!guardEdit()) return
+    if (!guardEdit()) return null
     if (stops.length >= MAX_STOPS) {
       toast?.(`A gradient can contain up to ${MAX_STOPS} stops`)
-      return
+      return null
     }
+    const idx = stops.length // appended below, so this is the new stop's index
     setStops(prev => {
       const sorted = [...prev].sort((a, b) => a.position - b.position)
       let lo = sorted[0], hi = sorted[sorted.length - 1]
@@ -370,7 +466,9 @@ export default function GradientGenerator({ onCopy, toast }) {
       const next = [...prev, { color: mixHex(lo.color, hi.color, t), position: Math.round(pct) }]
       return next
     })
-    setActiveStop(stops.length) // the appended stop
+    setActiveStop(idx)
+    focusStopRef.current = idx
+    return idx
   }, [stops.length, guardEdit, toast])
 
   const addStop = useCallback(() => {
@@ -521,40 +619,79 @@ export default function GradientGenerator({ onCopy, toast }) {
     }
   }, [exportCode, onCopy, toast])
 
-  // ── Drag: stop handles on the preview bar ──
-  const dragStop = useCallback((e, idx) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!guardEdit()) return
+  // Queue the current gradient for review. Local-first, exactly like the
+  // Community Hub's design submission: it lands in this browser's queue with a
+  // 'pending' status and is not published anywhere. Returns false if the
+  // gradient could not be stored, so the modal can say so rather than lie.
+  const submitForReview = useCallback((fields) => {
+    const record = sanitizeGradientSubmission({
+      id: `g${Date.now()}`,
+      ...fields,
+      authorEmail: user?.email,
+      type,
+      angle: Math.round(angle),
+      stops: stops.map(s => ({ color: s.color, position: Math.round(s.position) })),
+      status: 'pending',
+      submittedAt: Date.now(),
+    })
+    if (!record) return false
+    appendGradientSubmission(record)
+    setSubmitOpen(false)
+    toast?.('Gradient queued for review — nothing is published yet')
+    return true
+  }, [angle, stops, type, toast, user?.email])
+
+  // ── Drag: stop handles on the preview rail ──
+  // One drag session, shared by "grab an existing handle" and "press the rail to
+  // create one", so a newly added stop is immediately draggable in the SAME
+  // gesture. Pointer events are bound to the window, so the drag survives the
+  // pointer leaving the rail; `dragIdx` state keeps the handle marked live so
+  // its position readout stays on screen for the whole drag.
+  const beginStopDrag = useCallback((idx) => {
     setActiveStop(idx)
+    setDragIdx(idx)
     const move = (ev) => {
-      suppressBarClickRef.current = true // a real drag happened → swallow the click that ends it
       const rect = barRef.current?.getBoundingClientRect()
-      if (!rect) return
+      if (!rect || !rect.width) return
+      if (ev.cancelable) ev.preventDefault() // no text selection / touch scroll mid-drag
       const pct = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100))
       updateStop(idx, { position: Math.round(pct) })
     }
     const up = () => {
+      setDragIdx(null)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
     }
-    window.addEventListener('pointermove', move)
+    window.addEventListener('pointermove', move, { passive: false })
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
-  }, [updateStop, guardEdit])
+  }, [updateStop])
 
-  // Click an empty part of the bar to drop a stop right where you click. Clicks
-  // that land on a handle (its own button, incl. the click that ends a drag)
-  // bubble up here too, so ignore them — those move a stop, they don't add one.
-  const barClick = useCallback((e) => {
-    if (suppressBarClickRef.current) { suppressBarClickRef.current = false; return }
-    if (e.target.closest('.ggn-handle')) return
+  const dragStop = useCallback((e, idx) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!guardEdit()) return
+    beginStopDrag(idx)
+  }, [beginStopDrag, guardEdit])
+
+  // Press empty rail to drop a stop right where you press — on POINTERDOWN, not
+  // on the click that ends the gesture. That is the whole fix: the handle exists
+  // and is visible from the first frame, and the same press continues straight
+  // into a drag, so fine-tuning is one gesture instead of click-then-find-it.
+  // Presses that land on a handle are the handle's own gesture (it stops
+  // propagation), so they never reach here.
+  const railPointerDown = useCallback((e) => {
+    if (e.button != null && e.button > 0) return
+    if (e.target.closest?.('.ggn-handle')) return
     const rect = barRef.current?.getBoundingClientRect()
-    if (!rect) return
+    if (!rect || !rect.width) return
+    if (e.cancelable) e.preventDefault()
     const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
-    addStopAt(pct)
-  }, [addStopAt])
+    const idx = addStopAt(pct)
+    if (idx == null) return
+    beginStopDrag(idx)
+  }, [addStopAt, beginStopDrag])
 
   // ── Drag: the angle dial ──
   const angleActive = type !== 'Radial'
@@ -579,6 +716,15 @@ export default function GradientGenerator({ onCopy, toast }) {
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
   }, [angleActive, guardEdit])
+
+  // Focus a freshly added handle once it exists in the DOM. Keyed on the stop
+  // count so it fires exactly on the render that added one.
+  useEffect(() => {
+    const idx = focusStopRef.current
+    if (idx == null) return
+    focusStopRef.current = null
+    handleEls.current.get(idx)?.focus({ preventScroll: true })
+  }, [stops.length])
 
   const sortedForBar = [...stops.map((s, i) => ({ ...s, i }))].sort((a, b) => a.position - b.position)
 
@@ -618,6 +764,14 @@ export default function GradientGenerator({ onCopy, toast }) {
             <ShuffleIcon size={15} /> From palette
           </button>
           <button type="button" className="ggn-btn ggn-btn-ghost" onClick={reset}>Reset</button>
+          <button
+            type="button"
+            className="ggn-btn ggn-btn-ghost"
+            onClick={() => setSubmitOpen(true)}
+            title="Submit this gradient for review for the gradient library"
+          >
+            <IcoSubmit size={15} /> Submit for review
+          </button>
         </div>
       </header>
 
@@ -648,17 +802,21 @@ export default function GradientGenerator({ onCopy, toast }) {
             <div
               className="ggn-bar"
               ref={barRef}
-              onClick={barClick}
-              title="Click to add a stop"
+              onPointerDown={railPointerDown}
+              title="Press the rail to add a stop, then drag to place it"
               role="group"
-              aria-label="Gradient stop rail. Click empty space to add a stop."
+              aria-label="Gradient stop rail. Press empty space to add a stop and drag to place it."
             >
               <div className="ggn-bar-track" style={{ background: `linear-gradient(90deg, ${[...stops].sort((a, b) => a.position - b.position).map(s => `${s.color} ${Math.round(s.position)}%`).join(', ')})` }} />
               {sortedForBar.map(s => (
                 <button
                   key={s.i}
                   type="button"
-                  className={`ggn-handle${activeStop === s.i ? ' is-active' : ''}${s.locked ? ' is-locked' : ''}`}
+                  ref={(el) => {
+                    if (el) handleEls.current.set(s.i, el)
+                    else handleEls.current.delete(s.i)
+                  }}
+                  className={`ggn-handle${activeStop === s.i ? ' is-active' : ''}${dragIdx === s.i ? ' is-dragging' : ''}${s.locked ? ' is-locked' : ''}`}
                   style={{ left: `${s.position}%`, '--h-color': s.color }}
                   onPointerDown={(e) => dragStop(e, s.i)}
                   onFocus={() => setActiveStop(s.i)}
@@ -681,13 +839,17 @@ export default function GradientGenerator({ onCopy, toast }) {
                     }
                   }}
                   aria-label={`Gradient stop ${s.i + 1} at ${Math.round(s.position)}%${s.locked ? ', locked' : ''}`}
-                />
+                >
+                  {/* Live position, shown while dragging or keyboard-focused, so
+                      a fine adjustment is read off the handle rather than guessed. */}
+                  <span className="ggn-handle-val" aria-hidden="true">{Math.round(s.position)}%</span>
+                </button>
               ))}
             </div>
             <p className="ggn-preview-hint">
               {editLocked
                 ? 'Editing gallery gradients is a Pro feature — Reset or Random to start a free, editable gradient.'
-                : 'Drag or arrow a handle to move it · Shift + arrow moves 10% · click the rail to add'}
+                : 'Press the rail to add a stop and drag to place it · drag or arrow a handle to move it · Shift + arrow moves 10%'}
             </p>
           </div>
         </section>
@@ -886,6 +1048,15 @@ export default function GradientGenerator({ onCopy, toast }) {
           ))}
         </div>
       </section>
+
+      {submitOpen && (
+        <SubmitGradientModal
+          gradient={{ css, name: '' }}
+          authorName={userProfile?.displayName || user?.displayName || ''}
+          onClose={() => setSubmitOpen(false)}
+          onSubmit={submitForReview}
+        />
+      )}
     </div>
   )
 }

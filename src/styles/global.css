@@ -4736,19 +4736,30 @@ html.lenis,html.lenis body{height:auto}
    can see where to put the handle instead of guessing. Everything here is
    scoped to .snapv--grad, so every other SnapSlider keeps the platform track
    and its accent-color fill untouched.
-   The handle is deliberately theme-INDEPENDENT: the surface behind it is
+   The handle is a LENS, not a lid: its centre is --snapv-handle, the colour the
+   track itself paints at that exact position (SnapSlider derives it from the
+   same stops as the gradient), so the dot shows the colour that position means.
+   Without a handle colour it falls back to the old white core, so any other
+   coloured-track caller is unaffected.
+   The rings are deliberately theme-INDEPENDENT: the surface behind them is
    palette colour, not a UI surface, so a token that flips with the theme would
-   disappear against half the palettes. A white core inside a near-black ring
-   inside a white halo reads on any hue at any lightness, in either theme. */
+   disappear against half the palettes. Two opposed rings — white immediately
+   around the core, near-black just outside it — mean at least one always
+   contrasts, whether the track under the handle is white, black or anything
+   between, in either theme. */
 .snapv--grad input[type="range"]{-webkit-appearance:none;appearance:none;height:14px;border-radius:var(--radius-pill);background:var(--snapv-track,var(--bg-3));background-repeat:no-repeat;border:1px solid var(--border);outline:none;cursor:pointer;accent-color:auto}
 .snapv--grad input[type="range"]::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:transparent}
 .snapv--grad input[type="range"]::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:transparent}
-.snapv--grad input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-2px;border-radius:50%;background:#fff;border:2px solid #16181C;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 1px 3px rgba(0,0,0,.45);cursor:grab}
-.snapv--grad input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid #16181C;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 1px 3px rgba(0,0,0,.45);cursor:grab}
+.snapv--grad input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-2px;border-radius:50%;background:var(--snapv-handle,#fff);border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 1px 3px rgba(0,0,0,.45);cursor:grab}
+.snapv--grad input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--snapv-handle,#fff);border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 1px 3px rgba(0,0,0,.45);cursor:grab}
 .snapv--grad input[type="range"]:active::-webkit-slider-thumb{cursor:grabbing}
 .snapv--grad input[type="range"]:active::-moz-range-thumb{cursor:grabbing}
-/* Focus ring sits outside the track so it never competes with the gradient. */
+/* Focus: a ring outside the track so it never competes with the gradient, plus
+   an accent ring on the thumb itself sitting OUTSIDE the near-black ring, so
+   which handle has focus stays readable over any track colour. */
 .snapv--grad input[type="range"]:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.snapv--grad input[type="range"]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--accent),0 1px 3px rgba(0,0,0,.45)}
+.snapv--grad input[type="range"]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--accent),0 1px 3px rgba(0,0,0,.45)}
 .snapv--grad input[type="range"]:disabled{opacity:.5;cursor:not-allowed}
 .icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
 .icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
@@ -6138,7 +6149,17 @@ button.plb-varrow:hover{background:var(--bg-2)}
    or wider while the pointer is moving across it. */
 .plb-icobtn{position:relative;isolation:isolate;width:36px;min-width:36px;padding-inline:0;justify-content:center;gap:0}
 .plb-icobtn:hover,.plb-icobtn:focus-visible,.plb-icobtn[aria-expanded="true"]{z-index:4}
-.plb-icobtn .plb-lbl{position:absolute;top:50%;left:calc(100% - 5px);display:grid;visibility:hidden;grid-template-columns:0fr;align-items:center;min-height:30px;padding:0;opacity:0;color:var(--t0);background:var(--card);border:0 solid transparent;border-radius:var(--radius-s);box-shadow:none;clip-path:inset(0 100% 0 0);transform:translate(-8px,-50%);pointer-events:none;transition:grid-template-columns var(--dur-3) var(--ease-entrance),clip-path var(--dur-3) var(--ease-entrance),transform var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard),padding var(--dur-3) var(--ease-entrance),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-3)}
+/* The reveal label is the css-conventions 0fr→1fr pattern, but ABSOLUTELY
+   positioned — and that needs one extra declaration the in-flow version does
+   not. An abspos box with only `left` set has an auto (shrink-to-fit) inline
+   size, which is indefinite, so `1fr` has no free space to claim and resolves
+   to 0px: the pill animated open around NOTHING and hovering an icon button
+   showed a blank chip instead of its label. `width:max-content` makes the
+   inline size definite, so the fr track resolves to the real text width — the
+   whole easing curve still plays across the actual content, exactly as the
+   convention intends. `0fr` still collapses to 0 because .plb-lbl-i carries
+   overflow:hidden;min-width:0. */
+.plb-icobtn .plb-lbl{position:absolute;top:50%;left:calc(100% - 5px);display:grid;visibility:hidden;grid-template-columns:0fr;width:max-content;align-items:center;min-height:30px;padding:0;opacity:0;color:var(--t0);background:var(--card);border:0 solid transparent;border-radius:var(--radius-s);box-shadow:none;clip-path:inset(0 100% 0 0);transform:translate(-8px,-50%);pointer-events:none;transition:grid-template-columns var(--dur-3) var(--ease-entrance),clip-path var(--dur-3) var(--ease-entrance),transform var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard),padding var(--dur-3) var(--ease-entrance),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-3)}
 .plb-icobtn .plb-lbl-i{overflow:hidden;min-width:0;white-space:nowrap}
 .plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{visibility:visible;grid-template-columns:1fr;padding:0 9px;opacity:1;border-width:1px;border-color:var(--border);box-shadow:var(--shadow-s);clip-path:inset(0);transform:translate(0,-50%);transition-delay:0s}
 .plb-icobtn.btn-accent .plb-lbl{color:var(--accent-fg);background:var(--brand)}
@@ -6917,12 +6938,20 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-pill{font-size:11px;font-weight:600;color:#fff;background:rgba(10,11,13,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);padding:5px 11px;border-radius:var(--radius-pill)}
 .ggn-preview-hint{margin:9px 2px 0;font-size:12px;line-height:1.4;color:var(--ggn-t2)}
 /* Stops bar overlaid at the bottom of the preview */
-.ggn-bar{position:absolute;left:16px;right:16px;bottom:16px;height:26px;z-index:2;cursor:copy}
+/* touch-action:none is load-bearing, not tidiness: without it a touch drag on
+   the rail is claimed by the page scroller and the stop never moves. */
+.ggn-bar{position:absolute;left:16px;right:16px;bottom:16px;height:26px;z-index:2;cursor:copy;touch-action:none;-webkit-user-select:none;user-select:none}
 .ggn-bar-track{position:absolute;inset:0;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.28);box-shadow:0 2px 8px rgba(0,0,0,.4)}
-.ggn-handle{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:var(--h-color,#fff);border:2px solid #fff;transform:translate(-50%,-50%);cursor:grab;padding:0;box-shadow:0 1px 4px rgba(0,0,0,.5);transition:box-shadow var(--t),transform var(--t)}
+.ggn-handle{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:var(--h-color,#fff);border:2px solid #fff;transform:translate(-50%,-50%);cursor:grab;padding:0;box-shadow:0 1px 4px rgba(0,0,0,.5);touch-action:none;transition:box-shadow var(--t),transform var(--t)}
 .ggn-handle:hover{transform:translate(-50%,-50%) scale(1.12)}
 .ggn-handle.is-active{box-shadow:0 0 0 3px rgba(255,255,255,.35),0 1px 4px rgba(0,0,0,.5)}
-.ggn-handle:active{cursor:grabbing}
+.ggn-handle:active,.ggn-handle.is-dragging{cursor:grabbing}
+/* A handle being dragged is lifted above its neighbours and held enlarged, so
+   it stays legible under the finger for the whole gesture. */
+.ggn-handle.is-dragging{z-index:3;transform:translate(-50%,-50%) scale(1.2);box-shadow:0 0 0 3px rgba(255,255,255,.55),0 2px 8px rgba(0,0,0,.55)}
+/* Live position readout — only while dragging or keyboard-focused. */
+.ggn-handle-val{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);padding:3px 7px;border-radius:var(--radius-xs);background:rgba(10,11,13,.86);border:1px solid rgba(255,255,255,.22);color:#fff;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;line-height:1;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-1)}
+.ggn-handle.is-dragging .ggn-handle-val,.ggn-handle:focus-visible .ggn-handle-val{opacity:1;visibility:visible;transition-delay:0s}
 /* Control panel */
 .ggn-panel{background:var(--ggn-panel);border:1px solid var(--ggn-line);border-radius:var(--radius-l);padding:18px}
 .ggn-field{margin-bottom:18px}
@@ -7178,6 +7207,23 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .grg-open{display:inline-flex;align-items:center;gap:5px;font-family:var(--font);font-size:var(--fs-micro);font-weight:700;letter-spacing:.02em;color:var(--brand);background:none;border:none;padding:6px 4px;cursor:pointer;text-decoration:none;transition:gap var(--dur-2) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .grg-open:hover{gap:8px;color:var(--brand-soft)}
 .grg-empty{margin-top:8px}
+/* Submissions queue — deliberately styled as a LIST, not as gallery cards, so
+   a pending gradient never reads as one that has been published. */
+.grg-queue{margin-top:32px;padding:16px;border:1px dashed var(--border);border-radius:var(--radius-l);background:var(--bg-1)}
+.grg-queue-note{margin:6px 0 14px;max-width:70ch;font-size:var(--fs-caption);color:var(--t2)}
+.grg-queue-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.grg-queue-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.grg-queue-swatch{flex:0 0 auto;width:56px;height:32px;border-radius:var(--radius-s);border:1px solid var(--border)}
+.grg-queue-id{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
+.grg-queue-id strong{font-size:13px;font-weight:650;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grg-queue-status{flex:0 0 auto;padding:4px 9px;border-radius:var(--radius-pill);background:var(--warn);color:#0B0D10;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.03em}
+@media(max-width:640px){
+  .grg-queue-item{flex-wrap:wrap}
+  .grg-queue-id{flex:1 1 100%;order:2}
+  .grg-queue-status{order:1}
+}
+/* Gradient preview at the top of the submit-for-review modal. */
+.ggn-submit-preview{height:88px;margin-bottom:var(--s-4);border-radius:var(--radius);border:1px solid var(--border)}
 @media(max-width:820px){
   .grg-search{flex:1 1 100%}
   .grg-chips{flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto}

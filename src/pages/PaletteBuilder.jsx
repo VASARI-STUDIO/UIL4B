@@ -4,9 +4,10 @@ import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import UiSystemBuilder from '../components/UiSystemBuilder'
 import {
-  adjustTrackGradients, applyAdjust, autoTonalFromSeed, autoTonalPalette, contrastRatio,
-  derivePreviewRoles, generateHarmony, hctToHex, hexToHct, hexToHsl, hslToHex,
-  mixHex, simCvd, textColorForBg, tonalRamp,
+  adjustHandleColors, adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
+  autoTonalFromSeed, contrastRatio, derivePreviewRoles, generateHarmony, hctToHex,
+  hexToHct, hexToHsl, hslToHex, mixHex, randomSystemPalette, simCvd, textColorForBg,
+  tonalRamp,
 } from '../utils/colors'
 import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
 import { BRAND_PALETTES } from '../data/brandPalettes'
@@ -1046,9 +1047,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
     [deferredAdjusted],
   )
 
-  // Coloured slider tracks — see adjustTrackGradients. Keyed on the BASE
-  // palette only, never on `adjust`, so dragging a slider never rebuilds them.
-  const trackGradients = useMemo(() => adjustTrackGradients(colors), [colors])
+  // Coloured slider tracks — see adjustTrackStops. Keyed on the BASE palette
+  // only, never on `adjust`, so dragging a slider never rebuilds them.
+  const trackStops = useMemo(() => adjustTrackStops(colors), [colors])
+  const trackGradients = useMemo(() => adjustTrackGradientsFromStops(trackStops), [trackStops])
+  // …and the handle lens: the colour the track above paints at each slider's
+  // CURRENT position, sampled from those very stops. It follows the drag, which
+  // is the whole point — the dot is a window onto the bar, not a lid over it.
+  const handleColors = useMemo(() => adjustHandleColors(trackStops, adjust), [trackStops, adjust])
   const variations = useMemo(() => (varBase ? paletteVariations(varBase) : []), [varBase])
 
   // Any genuine change to the palette (manual edit, randomise, harmony change,
@@ -1124,10 +1130,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
     regen(seed, h.id)
   }
 
-  // Randomise — harmony-aware: the tonal Auto engine when a tonal system is
-  // active, otherwise a fresh random seed run through the CURRENT harmony, so
-  // randomise explores the system you chose instead of discarding it. Locked
-  // colours always survive; HSL fallback if the HCT solver ever throws.
+  // Randomise — system-aware: a fresh seed run through the CURRENT colour
+  // system, so randomise explores the system you chose instead of discarding
+  // it. The engine choice lives in randomSystemPalette (utils/colors.js) —
+  // 'monochromatic' used to be routed to the tonal engine here, which puts the
+  // SECONDARY role on a sibling hue, so a mono shuffle came back with two hues.
+  // Only 'auto' is tonal now. Locked colours always survive; HSL fallback if
+  // the HCT solver ever throws.
   const randomize = useCallback(() => {
     // Same free-system guard as regen: a free user randomising from a paid/brand
     // system gets a free system instead, and the UI snaps to match.
@@ -1135,16 +1144,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     if (sys !== harmony) setHarmony(sys)
     let fresh
     try {
-      if (sys === 'auto' || sys === 'monochromatic') {
-        fresh = autoTonalPalette()
-      } else {
-        // Seed in confident brand territory, not muddy mid-tones: request high
-        // chroma (48–92 — the HCT solver gamut-clamps per hue, so pale hues like
-        // yellow settle lower automatically) at tone 46–60, the band where a
-        // primary reads well on both light and dark surfaces.
-        const seedHex = hctToHex(Math.random() * 360, 48 + Math.random() * 44, 46 + Math.random() * 14)
-        fresh = generateHarmony(seedHex, sys)
-      }
+      fresh = randomSystemPalette(sys)
       fresh = fresh.map(c => normaliseHex(c)).filter(Boolean)
       if (fresh.length < ROLES.length) throw new Error('palette invalid')
     } catch {
@@ -2826,6 +2826,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 snapRadius={f.snapRadius}
                 unit={f.unit}
                 trackGradient={trackGradients?.[f.key] || null}
+                handleColor={handleColors?.[f.key] || null}
                 onChange={(v) => setAdjust(prev => ({ ...prev, [f.key]: v }))}
                 ariaLabel={`${f.label} adjustment`}
               />

@@ -11,7 +11,18 @@
 // project saved under the old shape.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { adjustTrackGradients, applyAdjust, hctToHex, hexToHct, hexToHsl, maxChromaFor } from '../../src/utils/colors.js'
+import {
+  ADJUST_TRACK_STOPS,
+  adjustHandleColors,
+  adjustTrackGradients,
+  adjustTrackStops,
+  applyAdjust,
+  hctToHex,
+  hexToHct,
+  hexToHsl,
+  maxChromaFor,
+  sampleAdjustTrack,
+} from '../../src/utils/colors.js'
 import {
   ZERO_ADJUST,
   normaliseAdjust,
@@ -180,6 +191,85 @@ test('adjustment tracks preview all four real lens operations', () => {
     assert.match(gradient, /0\.00%/)
     assert.match(gradient, /100\.00%/)
   }
+})
+
+/* ── the slider handle is a LENS onto its own track ───────────────────────────
+ * REGRESSION GUARD: the handle used to be a solid white disc sitting ON the
+ * coloured track, hiding the very colour the position represents. It now shows
+ * the track's colour at its own position. The only way that can never drift
+ * from the bar is for both to come out of ONE stop list, so these tests assert
+ * the two views agree by construction — not merely that they look similar. */
+
+test('the painted gradient and the handle sample read the SAME stop list', () => {
+  const tracks = adjustTrackStops(BASE)
+  const gradients = adjustTrackGradients(BASE)
+  assert.deepEqual(Object.keys(tracks), ['h', 's', 'b', 'temp'])
+  for (const key of Object.keys(tracks)) {
+    // Every stop the sampler can return is a stop the CSS actually paints.
+    for (const stop of tracks[key].stops) {
+      assert.ok(gradients[key].includes(stop.hex), `${key} track paints ${stop.hex}`)
+    }
+    assert.equal(tracks[key].stops.length, ADJUST_TRACK_STOPS)
+  }
+})
+
+test('sampling a track AT a stop returns exactly that stop — the dot cannot disagree with the bar', () => {
+  const tracks = adjustTrackStops(BASE)
+  for (const key of Object.keys(tracks)) {
+    const { min, max, stops } = tracks[key]
+    for (const stop of stops) {
+      const value = min + (max - min) * stop.pos
+      assert.equal(sampleAdjustTrack(tracks[key], value), stop.hex.toUpperCase(),
+        `${key} at ${value} must be the very colour painted there`)
+    }
+  }
+})
+
+test('between stops the handle interpolates exactly as the CSS gradient does', () => {
+  const tracks = adjustTrackStops(BASE)
+  const track = tracks.b
+  const [a, b] = track.stops
+  const midValue = track.min + (track.max - track.min) * ((a.pos + b.pos) / 2)
+  const got = sampleAdjustTrack(track, midValue)
+  const ch = (hex, i) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16)
+  for (let i = 0; i < 3; i++) {
+    const expected = Math.round((ch(a.hex, i) + ch(b.hex, i)) / 2)
+    assert.ok(Math.abs(ch(got, i) - expected) <= 1,
+      `channel ${i}: sRGB midpoint of the two bracketing stops (got ${got})`)
+  }
+})
+
+test('the handle colour tracks the slider, and a zeroed lens sits on the track centre', () => {
+  const tracks = adjustTrackStops(BASE)
+  const centre = adjustHandleColors(tracks, ZERO)
+  const mid = Math.floor(ADJUST_TRACK_STOPS / 2)
+  for (const key of Object.keys(tracks)) {
+    // Every track is symmetric around 0, so a zero lens lands on the middle stop.
+    assert.equal(centre[key], tracks[key].stops[mid].hex.toUpperCase())
+  }
+  // …and moving a slider moves its own dot, without disturbing the other three.
+  const moved = adjustHandleColors(tracks, { ...ZERO, b: 100 })
+  assert.notEqual(moved.b, centre.b, 'the tone dot follows the tone slider')
+  assert.equal(moved.b, tracks.b.stops[ADJUST_TRACK_STOPS - 1].hex.toUpperCase())
+  for (const key of ['h', 's', 'temp']) assert.equal(moved[key], centre[key])
+})
+
+test('an out-of-range or junk slider value still lands on a real track colour', () => {
+  const tracks = adjustTrackStops(BASE)
+  const ends = [tracks.h.stops[0].hex.toUpperCase(), tracks.h.stops[ADJUST_TRACK_STOPS - 1].hex.toUpperCase()]
+  assert.equal(sampleAdjustTrack(tracks.h, -9999), ends[0])
+  assert.equal(sampleAdjustTrack(tracks.h, 9999), ends[1])
+  assert.equal(sampleAdjustTrack(tracks.h, NaN), sampleAdjustTrack(tracks.h, 0))
+  assert.equal(sampleAdjustTrack(tracks.h, undefined), sampleAdjustTrack(tracks.h, 0))
+})
+
+test('a palette with no usable colours yields no track and no handle, never a broken one', () => {
+  assert.equal(adjustTrackStops([]), null)
+  assert.equal(adjustTrackStops(['nope']), null)
+  assert.equal(adjustTrackGradients([]), null)
+  assert.equal(adjustHandleColors(null, ZERO), null)
+  assert.equal(sampleAdjustTrack(null, 0), null)
+  assert.equal(sampleAdjustTrack({ min: 0, max: 1, stops: [] }, 0), null)
 })
 
 /* ── the round trip: this is the bug that must not come back ─────────────── */
