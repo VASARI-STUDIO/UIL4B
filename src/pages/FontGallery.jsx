@@ -8,6 +8,7 @@ import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont,
   suggestPairings, verifyFontLoaded,
 } from '../utils/googleFonts'
+import { filterGalleryTypefaces } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 
 // Font Gallery — the standalone /fontgallery page. Browse the Google Fonts
@@ -18,13 +19,9 @@ import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 // Three things this rebuild fixes, all logged as `font-gallery-readiness` in
 // src/data/pipeline.js before the route was activated:
 //
-//   1. FEATURED FOUT. The featured cards render display-size text, so swapping
-//      a fallback face for the real one was a glaring reflow of the most
-//      prominent thing on the page. They now render a skeleton in the exact
-//      reserved box until verifyFontLoaded confirms the face is painting, and
-//      only then reveal the words. No fallback text ever paints, so there is no
-//      flash to see — and no invisible-text gap either, because the skeleton is
-//      a visible placeholder rather than hidden text.
+//   1. PREVIEW FOUT. Each catalogue row renders a skeleton in the exact reserved
+//      box until verifyFontLoaded confirms the face is painting. No fallback
+//      text ever masquerades as the selected family.
 //
 //   2. RESERVED METRICS. Every preview box has a fixed height and its text is
 //      clipped, so a family whose metrics differ wildly from the fallback
@@ -46,25 +43,12 @@ const CATS = [
   { id: 'serif', label: 'Serif' },
   { id: 'display', label: 'Display' },
   { id: 'handwriting', label: 'Script' },
-  { id: 'monospace', label: 'Mono' },
 ]
 
 const SORTS = [
   { id: 'popularity', label: 'Popular' },
   { id: 'alphabetical', label: 'A–Z' },
   { id: 'weights', label: 'Most weights' },
-]
-
-// Curated shortlist for the featured strip. Any family missing from the loaded
-// catalogue (very likely on the bundled fallback list) is simply dropped, so
-// the strip is always short rather than broken.
-const FEATURED = [
-  { family: 'Playfair Display', phrase: 'Beauty in every serif', tag: 'Editorial' },
-  { family: 'Space Grotesk', phrase: 'Clean, geometric, modern', tag: 'Interface' },
-  { family: 'Inter', phrase: 'The workhorse of the web', tag: 'Interface' },
-  { family: 'Fraunces', phrase: 'Soft serif character', tag: 'Variable' },
-  { family: 'Outfit', phrase: 'Friendly and versatile', tag: 'Modern' },
-  { family: 'JetBrains Mono', phrase: '0Oo 1Il {}();', tag: 'Code' },
 ]
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
@@ -175,55 +159,22 @@ function CloseIcon() {
   )
 }
 
-/* ── Featured card ─────────────────────────────────────────────────────────── */
+/* ── Catalogue row ────────────────────────────────────────────────────────── */
 
-function FeaturedCard({ font, onOpen }) {
-  const weight = headingWeight(font)
-  const [ready, ref] = useFontReady(font, weight, { defer: false })
-
-  return (
-    <button
-      type="button"
-      ref={ref}
-      className="fg-feat-card"
-      onClick={() => onOpen(font)}
-      aria-label={`Open the ${font.family} specimen`}
-    >
-      <span className="fg-feat-tag">{font.tag}</span>
-      <span
-        className={ready ? 'fg-feat-text' : 'fg-feat-text fg-feat-text--pending'}
-        ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw': String(weight) })}
-        aria-hidden={!ready}
-      >
-        {ready ? font.phrase : null}
-        {!ready && <span className="fg-skel fg-skel-a" /> }
-        {!ready && <span className="fg-skel fg-skel-b" /> }
-      </span>
-      <span className="fg-feat-info">
-        <span className="fg-feat-name">{font.family}</span>
-        <span className="fg-feat-cat">{font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</span>
-      </span>
-    </button>
-  )
-}
-
-/* ── Grid card ─────────────────────────────────────────────────────────────── */
-
-function GalleryCard({ font, onOpen, inCompare, onToggleCompare, previewText, previewSize, viewMode }) {
+function GalleryCard({ font, index, onOpen, inCompare, onToggleCompare, previewText, previewSize }) {
   const heading = headingWeight(font)
   const body = bodyWeight(font)
   const [ready, ref] = useFontReady(font, heading)
 
   return (
-    <li className={`${inCompare ? 'fg-card fg-card--comparing' : 'fg-card'} fg-card--${viewMode}`} ref={ref}>
+    <li className={inCompare ? 'fg-card fg-card--comparing' : 'fg-card'} ref={ref}>
       <button
         type="button"
         className="fg-card-open"
         onClick={() => onOpen(font)}
         aria-label={`Open the ${font.family} specimen — ${font.category}, ${font.variants.length} weights`}
       >
-        {/* Both preview boxes have a reserved height and clip their text, so a
-            face arriving with different metrics can never resize the card. */}
+        <span className="fg-card-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
         <span
           className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
           ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body), '--fg-card-size': `${previewSize}px` })}
@@ -231,7 +182,7 @@ function GalleryCard({ font, onOpen, inCompare, onToggleCompare, previewText, pr
         >
           {ready ? (
             <>
-              <span className="fg-card-sample">{previewText.trim() || (font.family.length <= 18 ? font.family : 'Aa Bb Cc')}</span>
+              <span className="fg-card-sample">{previewText.trim() || font.family}</span>
               <span className="fg-card-pangram">{previewText.trim() || PANGRAM}</span>
             </>
           ) : (
@@ -596,7 +547,6 @@ export default function FontGallery({ onCopy, toast }) {
   const [sort, setSort] = useState('popularity')
   const [previewText, setPreviewText] = useState('')
   const [previewSize, setPreviewSize] = useState(52)
-  const [viewMode, setViewMode] = useState('grid')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
@@ -605,25 +555,17 @@ export default function FontGallery({ onCopy, toast }) {
 
   const compareIds = useMemo(() => new Set(compare.map(f => f.family)), [compare])
 
-  const featured = useMemo(() => {
-    if (!catalog.length) return []
-    return FEATURED
-      .map(f => {
-        const match = catalog.find(c => c.family === f.family)
-        return match ? { ...match, phrase: f.phrase, tag: f.tag } : null
-      })
-      .filter(Boolean)
-  }, [catalog])
+  const galleryCatalog = useMemo(() => filterGalleryTypefaces(catalog), [catalog])
 
   const filtered = useMemo(() => {
-    let out = catalog
+    let out = galleryCatalog
     const q = query.trim().toLowerCase()
     if (q) out = out.filter(f => f.family.toLowerCase().includes(q))
     if (category !== 'all') out = out.filter(f => f.category === category)
     if (sort === 'alphabetical') out = [...out].sort((a, b) => a.family.localeCompare(b.family))
     else if (sort === 'weights') out = [...out].sort((a, b) => b.variants.length - a.variants.length)
     return out
-  }, [catalog, query, category, sort])
+  }, [galleryCatalog, query, category, sort])
 
   const paged = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page])
   const hasMore = paged.length < filtered.length
@@ -709,8 +651,8 @@ export default function FontGallery({ onCopy, toast }) {
               compare families side by side, then take the winner into a real pairing.
             </p>
             <div className="fg-hero-stats" aria-label="Gallery summary">
-              <span><strong>{catalog.length.toLocaleString()}</strong> families</span>
-              <span><strong>6</strong> classifications</span>
+              <span><strong>{galleryCatalog.length.toLocaleString()}</strong> text families</span>
+              <span><strong>4</strong> classifications</span>
               <span><strong>1</strong> clean handoff</span>
             </div>
           </div>
@@ -722,7 +664,7 @@ export default function FontGallery({ onCopy, toast }) {
         degraded={degraded}
         onRetry={retry}
         retrying={retrying}
-        count={catalog.length}
+        count={galleryCatalog.length}
       />
 
       <section className="fg-command" aria-label="Font preview controls">
@@ -754,26 +696,7 @@ export default function FontGallery({ onCopy, toast }) {
           <input type="range" min="34" max="72" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
           <strong>{previewSize}px</strong>
         </label>
-        <div className="fg-command-view" role="group" aria-label="Gallery view">
-          <button type="button" className={viewMode === 'grid' ? 'is-active' : ''} aria-pressed={viewMode === 'grid'} onClick={() => setViewMode('grid')} aria-label="Grid view">
-            <span aria-hidden="true">⊞</span>
-          </button>
-          <button type="button" className={viewMode === 'list' ? 'is-active' : ''} aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} aria-label="List view">
-            <span aria-hidden="true">☷</span>
-          </button>
-        </div>
       </section>
-
-      {featured.length > 0 && (
-        <section className="fg-featured" aria-labelledby="fg-featured-title">
-          <h2 className="fg-section-label" id="fg-featured-title">Featured typefaces</h2>
-          <div className="fg-featured-grid">
-            {featured.map(font => (
-              <FeaturedCard key={font.family} font={font} onOpen={setSelected} />
-            ))}
-          </div>
-        </section>
-      )}
 
       <div className="fg-filters">
         <div className="fg-filter-cats" role="group" aria-label="Filter by category">
@@ -831,17 +754,17 @@ export default function FontGallery({ onCopy, toast }) {
         </div>
       ) : (
         <>
-          <ul className={`fg-grid fg-grid--${viewMode}`}>
-            {paged.map(font => (
+          <ul className="fg-grid">
+            {paged.map((font, index) => (
               <GalleryCard
                 key={font.family}
                 font={font}
+                index={index}
                 onOpen={setSelected}
                 inCompare={compareIds.has(font.family)}
                 onToggleCompare={toggleCompare}
                 previewText={previewText}
                 previewSize={previewSize}
-                viewMode={viewMode}
               />
             ))}
           </ul>

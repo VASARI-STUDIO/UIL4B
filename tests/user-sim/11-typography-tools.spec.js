@@ -225,9 +225,11 @@ test.describe('Font Gallery', () => {
 
     await page.getByLabel('Preview text').fill('Make the words the interface')
     await expect(page.getByLabel('Preview text')).toHaveValue('Make the words the interface')
-    await page.getByRole('button', { name: 'List view' }).click()
-    await expect(page.locator('.fg-grid')).toHaveClass(/fg-grid--list/)
-    await page.getByRole('button', { name: 'Grid view' }).click()
+    const rows = page.locator('.fg-card')
+    const firstRow = await rows.nth(0).boundingBox()
+    const secondRow = await rows.nth(1).boundingBox()
+    expect(Math.abs(firstRow.x - secondRow.x), 'each typeface should begin on the same full-width line').toBeLessThan(2)
+    expect(secondRow.y, 'the next typeface should render below the first').toBeGreaterThan(firstRow.y + firstRow.height - 2)
 
     await page.getByRole('button', { name: 'Serif', exact: true }).click()
     await expect(page.locator('.fg-count')).toContainText('in Serif')
@@ -245,6 +247,24 @@ test.describe('Font Gallery', () => {
     await expect(dialog).toHaveAttribute('aria-modal', 'true')
     await expect(dialog.getByRole('heading', { name: 'Lora' })).toBeVisible()
     await expect(dialog.getByText('Character set')).toBeVisible()
+  })
+
+  test('code, emoji, icon and symbol families never enter the gallery', async ({ page }) => {
+    watch(page, 'designer browsing a text-only type catalogue')
+    await page.route('**/api/fonts', route => route.fulfill({ json: {
+      fonts: [
+        ...loraCatalog.fonts,
+        { family: 'JetBrains Mono', category: 'monospace', variants: [400], subsets: ['latin'] },
+        { family: 'Noto Color Emoji', category: 'sans-serif', variants: [400], subsets: ['emoji'] },
+        { family: 'Material Symbols Rounded', category: 'display', variants: [400], subsets: ['symbols'] },
+        { family: 'Libre Barcode 39', category: 'display', variants: [400], subsets: ['latin'] },
+      ],
+    } }))
+
+    await go(page, '/fontgallery')
+    await expect(page.locator('.fg-card')).toHaveCount(1)
+    await expect(page.locator('.fg-card-name')).toHaveText('Lora')
+    await expect(page.getByRole('button', { name: 'Mono', exact: true })).toHaveCount(0)
   })
 
   test('a search that matches nothing shows a real empty state with a way out', async ({ page }) => {
