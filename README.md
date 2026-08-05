@@ -12,41 +12,45 @@ closed audit prose as a parallel backlog.
 
 ## Tools
 
+The canonical structure, routes and Soon-vs-live status live in
+[`docs/build-plan/tool-tree.md`](docs/build-plan/tool-tree.md). This is the short
+public summary.
+
 ### Colour
 
-- **Colour System** — Connected Palette, Semantic Colour, Tint, Gradient and Contrast tools with recovery paths, UI previews and production-ready exports
+- **Colour System** — connected Palette, Semantic Colour, Tint, Gradient and Contrast tools at `/color/*`, with recovery paths, UI previews and production-ready exports
+- **UI System Mode** — perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one brand seed, with WCAG evidence and CSS / DTCG / Tailwind export. Free users preview the generated system; editing, expanded scenes and export are Pro
 
 ### Typography
 
-- **Font Gallery** — Visual gallery to browse, preview, compare, and copy Google Fonts
-- **Font Pair Finder** — Curated heading + body font pairings from Google Fonts
-- **Type Scale** — Modular scale calculator with 6 ratio presets and CSS export
+- **Font Gallery** — browse, preview, compare and copy Google Fonts
+- **Font Pair Finder** — curated heading + body pairings from Google Fonts
+- **Type Scale** — modular scale calculator with ratio presets and CSS export
 
 ### Imagery
 
-- **Icon Library** — Search and customise Iconify packs with copy, save and project workflows
-- **Emoji Library** — Browse, filter and copy emojis by category from the same resilient library surface
-- **Image Converter** — Convert, compress, and resize images locally (WebP, PNG, JPEG, AVIF)
-- **Alt Text Generator** — Batch-generate accessible alt text for images using AI
-- **Video to Frames** — Extract individual frames from video files with format, quality, and scale controls; batch download as ZIP
+- **Icon Library** — search and customise Iconify packs with copy, save and project workflows
+- **Emoji Library** — browse, filter and copy emojis from the same library surface
+- **File Converter** — convert, compress and resize images locally, and extract frames from video with batch ZIP download. The former separate `/imgconvert` and `/video-frames` tools are merged here and now redirect to it
+- **Alt Text Generator** — batch-generate accessible alt text for images using AI
+- **Aspect & Resolution Calculator** — canonical ratio names with device and screen presets
 
 ### UI Builder
 
-- **Component Designer** — Design buttons, cards, inputs, badges, toggles, tables, and tabs with live previews, shared design tokens, guided step-by-step mode, and CSS export
-- **Box Shadow Generator** — Layered CSS box shadows with live preview
+- **Component Designer** — buttons, cards, inputs, badges, toggles, tables and tabs with live previews, shared design tokens, guided step-by-step mode and CSS export
+- **Box Shadow Generator** — layered CSS box shadows with live preview
 
-### Documentation & Reference
+### Discover & Learn
 
-- **Prompt Library** — Personal + community AI prompt library with Pro-gated community prompts, popular/new sorting, and contributor submissions (+25 AI generations for approved prompts)
-- **Design Principles** — Visual hierarchy, cognitive load, micro interactions, and brand psychology
-- **Social & Marketing** — Content pillars, posting cadence, caption templates, growth tactics
-- **Discover** (External Resources + Community) — the emerging community & external-resource hub: curated external tools and inspiration sites alongside community-shared systems, each linking back to the relevant UIL4B tool. Replaces the old "Library" framing — see [`docs/reference/discover.md`](docs/reference/discover.md)
+- **Prompt Library** — personal + community AI prompt library with Pro-gated community prompts, popular/new sorting, and contributor submissions (+25 AI generations for approved prompts)
+- **Discover** — the community & external-resource hub. The Gradient Gallery is live; the wider galleries are still being built. Replaces the old "Library" framing — see [`docs/reference/discover.md`](docs/reference/discover.md)
+- **Learn** — an honest coming-soon surface. The information architecture and routes exist; the articles do not yet, and the old `/docs-*` URLs redirect to `/learn`
 
 ## Features
 
 - **Product-led home** — Connected-system hero with an interactive Create preview, clear tool pathways and shared public calls to action
 - **Projects** — Save palettes, fonts, and designs to named projects with archive/restore and type-to-confirm deletion; auto-created default project on first sign-in
-- **Pro Subscription** — Stripe Embedded Checkout (monthly/yearly with 7-day trial), customer portal for billing management, cancellation retention flow with tailored offers
+- **Pro Subscription** — Stripe Embedded Checkout (monthly/yearly with 7-day trial), customer portal for billing management, cancellation retention flow with tailored offers. One-off ("lifetime") billing support is built and degrades honestly until the founder creates the live Stripe price; the retention coupon and portal cancellation flow are still owner configuration
 - **Command Palette** — `Cmd/Ctrl + K` to search and jump to any tool
 - **Dark / Light Theme** — System-aware with manual toggle, CSS custom property theming
 - **Internationalisation** — 10 locales with browser auto-detection: English (AU), English (US), Deutsch, Español, Français, Italiano, Português, 日本語, 中文, 한국어
@@ -70,8 +74,12 @@ closed audit prose as a parallel backlog.
 
 ## Project Structure
 
+Canonical detail (pages, contexts, the `/api` function budget) lives in
+[`docs/reference/architecture.md`](docs/reference/architecture.md).
+
 ```
 api/                  Vercel serverless functions (Stripe, support, admin verification)
+api/_lib/             Shared server helpers — not counted against the function limit
 src/
 ├── components/       Sidebar, TopBar, Toast, CommandPalette, GoogleOneTap
 ├── contexts/         Auth, Theme, Appearance, I18n, Project, Workspace, Subscription, Export
@@ -83,7 +91,11 @@ src/
 ├── utils/            Colour math, Firebase config, analytics, Stripe client, constants
 ├── App.jsx           Route definitions
 └── main.jsx          Provider tree and entry point
-firestore.rules       Firestore security rules (deploy via Firebase CLI)
+tests/
+├── unit/             Pure-logic tests (node --test)
+├── rules/            Firestore security-rules tests (needs the emulator + JDK 21)
+└── user-sim/         Playwright user-simulation acceptance suite
+firestore.rules       Firestore security rules (published from the Firebase console)
 ```
 
 ## Getting Started
@@ -94,6 +106,19 @@ npm run dev        # http://localhost:5173
 npm run build      # Production build to dist/
 npm run preview    # Preview production build
 ```
+
+### Verify
+
+```bash
+npx eslint .       # must report 0 errors
+npx vite build
+npm run test:unit
+npm run test:users # Playwright acceptance suite (builds first)
+```
+
+Current expected counts for each gate are in
+[`docs/reference/build-and-verify.md`](docs/reference/build-and-verify.md) —
+that file is the only place they are recorded.
 
 ### Environment Variables
 
@@ -121,11 +146,10 @@ Server-side (Vercel, no prefix):
 
 ## Deploy
 
-Deployed on Vercel—merges to `main` deploy automatically. Firestore security
+Deployed on Vercel — merges to `main` deploy automatically. Firestore security
 rules live in `firestore.rules` and are published separately from the web
-deployment. The founder confirmed the current hardened rules were published on
-2026-07-31; future rule changes still require the emulator test and an explicit
-publish:
+deployment. The founder has confirmed the current hardened rules are published.
+Future rule changes still require `npm run test:rules` and an explicit publish:
 
 ```bash
 firebase deploy --only firestore:rules
