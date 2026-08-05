@@ -310,40 +310,29 @@ test.describe('Gradient Generator · adding and fine-tuning a stop', () => {
 /* ── 5 · Submitting a gradient degrades honestly ──────────────────────────── */
 
 test.describe('Gradient Generator · submit for review', () => {
-  test('a submitted gradient is queued for review, and says so', async ({ page }) => {
-    watch(page, 'designer sharing a gradient')
+  test('a signed-out creator is asked to sign in before the review form exists', async ({ page }) => {
+    watch(page, 'signed-out designer sharing a gradient')
     await go(page, '/color/gradient')
 
-    await page.getByRole('button', { name: 'Submit for review' }).click()
-    const modal = page.getByRole('dialog', { name: 'Submit a gradient for review' })
-    await expect(modal).toBeVisible()
-    // The honesty contract: the user is told it is queued, not published.
-    await expect(modal.getByText(/not published/i)).toBeVisible()
-
-    await modal.getByRole('textbox').first().fill('Harbour Dusk')
-    await modal.getByRole('button', { name: 'Queue for review' }).click()
-    await expect(modal).toBeHidden()
-
-    // It appears in the gallery as PENDING, never as a library gradient.
-    await go(page, '/discover/gradients')
-    const queue = page.getByRole('region', { name: 'Your submissions' })
-      .or(page.locator('.grg-queue'))
-    await expect(queue.first()).toBeVisible()
-    await expect(page.getByText('Harbour Dusk')).toBeVisible()
-    await expect(page.locator('.grg-queue-status')).toHaveText('Pending review')
-
-    // …and it can be withdrawn again.
-    await page.getByRole('button', { name: 'Withdraw' }).click()
-    await expect(page.locator('.grg-queue')).toHaveCount(0)
+    const submit = page.getByRole('button', { name: 'Submit for review' })
+    await submit.click()
+    const login = page.getByRole('dialog', { name: /log in to continue/i })
+    await expect(login).toBeVisible()
+    await expect(login).toContainText('submit a gradient to the community library')
+    await expect(login).toContainText('reviewed before it appears')
+    await expect(page.getByRole('dialog', { name: 'Submit a gradient for review' })).toHaveCount(0)
   })
 
-  test('a submission without a name is refused rather than stored blank', async ({ page }) => {
-    watch(page, 'designer in a hurry')
+  test('dismissing the sign-in gate queues nothing and returns focus to submit', async ({ page }) => {
+    watch(page, 'designer dismissing community sign-in')
     await go(page, '/color/gradient')
-    await page.getByRole('button', { name: 'Submit for review' }).click()
-    const modal = page.getByRole('dialog', { name: 'Submit a gradient for review' })
-    await modal.getByRole('button', { name: 'Queue for review' }).click()
-    await expect(modal.getByRole('alert')).toHaveText('Give your gradient a name.')
-    await expect(modal).toBeVisible()
+    const submit = page.getByRole('button', { name: 'Submit for review' })
+    await submit.click()
+    await page.keyboard.press('Escape')
+
+    await expect(page.getByRole('dialog', { name: /log in to continue/i })).toBeHidden()
+    await expect(submit).toBeFocused()
+    await expect(page.getByRole('dialog', { name: 'Submit a gradient for review' })).toHaveCount(0)
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('vs-gradient-submissions'))).toBeNull()
   })
 })

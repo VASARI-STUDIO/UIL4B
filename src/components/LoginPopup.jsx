@@ -16,7 +16,12 @@ function GoogleIcon() {
 // Single-click sign-in. Opened over the current page (never navigates to
 // /login) so the user resumes exactly where they were on success. Composes the
 // existing HVZ auth functions — it does not touch AuthContext itself.
-export default function LoginPopup({ reason, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, onSuccess, onDismiss }) {
+//
+// `reasons` is optional: a short list of plain-language answers to "why do I
+// need an account for this?". Callers that pass nothing render exactly as
+// before. Used by the community submission gate, where the honest answer
+// (attribution, moderation, withdrawal) is the whole reason we ask up front.
+export default function LoginPopup({ reason, reasons, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, onSuccess, onDismiss }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
   const [isSignup, setIsSignup] = useState(false)
@@ -122,6 +127,11 @@ export default function LoginPopup({ reason, free = true, initialEmail = '', loc
     setLoading(false)
   }
 
+  // Only shown on the first (sign-in / sign-up) step — a password reset or an
+  // account switch is a different job and the list would just be noise there.
+  const whyList = Array.isArray(reasons) ? reasons.filter(r => typeof r === 'string' && r.trim()) : []
+  const showWhy = whyList.length > 0 && !resetMode && !passwordOnly
+
   const title = resetMode ? (t('auth.resetPassword') || 'Reset your password')
     : isSignup ? (t('auth.createAccount') || 'Create your free account')
       : passwordOnly ? 'Switch account'
@@ -135,6 +145,7 @@ export default function LoginPopup({ reason, free = true, initialEmail = '', loc
         role="dialog"
         aria-modal="true"
         aria-labelledby="ui-login-title"
+        aria-describedby={showWhy ? 'ui-login-why' : undefined}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="ui-modal-head">
@@ -150,6 +161,14 @@ export default function LoginPopup({ reason, free = true, initialEmail = '', loc
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
               <span>You must log in to {reason} — don’t worry, it’s still free.</span>
             </p>
+          )}
+          {showWhy && (
+            <div className="ui-login-why" id="ui-login-why">
+              <p className="ui-login-why-h">Why we ask first</p>
+              <ul className="ui-login-why-list">
+                {whyList.map(item => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
           )}
           {passwordOnly && (
             <p className="ui-login-note">

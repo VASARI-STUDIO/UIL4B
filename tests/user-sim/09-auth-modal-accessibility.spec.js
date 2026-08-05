@@ -40,3 +40,23 @@ test('dismissing an in-place auth prompt restores its persistent opener', async 
   await expect(dialog).toBeHidden()
   await expect(save).toBeFocused()
 })
+
+test('community submission entry points explain sign-in before showing a form', async ({ page }) => {
+  watch(page, 'signed-out creator trying to contribute')
+  await go(page, '/community')
+
+  const submit = page.getByRole('button', { name: 'Submit design' })
+  await submit.click()
+
+  const dialog = page.getByRole('dialog', { name: /log in to continue/i })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('Why we ask first')).toBeVisible()
+  await expect(dialog).toContainText('credited to you')
+  await expect(dialog).toContainText('reviewed before it appears')
+  await expect(dialog).toContainText('withdraw anything')
+  await expect(page.getByRole('dialog', { name: 'Submit a design' })).toHaveCount(0)
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(submit).toBeFocused()
+})

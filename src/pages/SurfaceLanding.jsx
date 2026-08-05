@@ -34,6 +34,11 @@ const SURFACES = {
     mapLede: 'From a studio in Brisbane to design hubs on every continent — UIL4B is made for the way people build interfaces the world over.',
     hue: 'imagery',
     groups: DISCOVER_GROUPS,
+    primaryLabel: 'Browse palettes',
+    primaryTo: '/discover/palettes',
+    secondaryLabel: 'Explore fonts',
+    secondaryTo: '/fontgallery',
+    hint: 'Three curated libraries are ready now — palettes, gradients and fonts.',
   },
   learn: {
     eyebrow: 'Learn',
@@ -52,6 +57,11 @@ const SURFACES = {
     mapLede: 'Built in Brisbane for a community that spans every continent — practical craft that travels as far as your work does.',
     hue: 'ai',
     groups: LEARN_GROUPS,
+    primaryLabel: 'Start building',
+    primaryTo: '/color',
+    secondaryLabel: 'Back to home',
+    secondaryTo: '/home',
+    hint: 'Learn is coming soon — here’s what’s on the way.',
   },
 }
 
@@ -73,15 +83,15 @@ export default function SurfaceLanding({ surface }) {
         <h1 className="home-hero-h1">{s.title}</h1>
         <p className="home-hero-sub">{s.lede}</p>
         <div className="home-hero-cta">
-          <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/color">
-            Start building
+          <Link className="ui-pill ui-pill-ink ui-pill-lg" to={s.primaryTo}>
+            {s.primaryLabel}
             <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
           </Link>
-          <Link className="ui-pill ui-pill-out ui-pill-lg" to="/home">
-            Back to home
+          <Link className="ui-pill ui-pill-out ui-pill-lg" to={s.secondaryTo}>
+            {s.secondaryLabel}
           </Link>
         </div>
-        <p className="home-hero-hint">{s.eyebrow} is coming soon — here&rsquo;s what&rsquo;s on the way.</p>
+        <p className="home-hero-hint">{s.hint}</p>
       </header>
 
       {/* ── Value pillars: why this surface is worth it ── */}
@@ -107,7 +117,7 @@ export default function SurfaceLanding({ surface }) {
       <section className="home-section">
         <div className="home-container">
           <div className="home-head home-head-center" data-reveal>
-            <span className="home-eyebrow">On the way</span>
+            <span className="home-eyebrow">{surface === 'discover' ? 'Live libraries & roadmap' : 'On the way'}</span>
             <h2 className="home-h2">{s.sectionTitle}</h2>
             <p className="home-lede">{s.sectionLede}</p>
           </div>

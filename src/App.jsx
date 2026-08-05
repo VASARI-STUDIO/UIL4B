@@ -43,6 +43,7 @@ const HelpCentre = lazy(() => import('./pages/HelpCentre'))
 const InfoCentre = lazy(() => import('./pages/InfoCentre'))
 const SeoInspector = lazy(() => import('./pages/SeoInspector'))
 const GradientGallery = lazy(() => import('./pages/GradientGallery'))
+const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 
 // Create tool routes come straight from the single tool-tree source, so adding a
 // tool never needs a hand-edited <Route>. These paths — plus /discover and
@@ -195,6 +196,7 @@ function AppInner() {
       '/icons-emoji': 'UI L4B | Icons & Emoji',
       '/discover': 'UI L4B | Discover',
       '/discover/gradients': 'UI L4B | Gradient Library',
+      '/discover/palettes': 'UI L4B | Palette Library',
       '/learn': 'UI L4B | Learn',
       '/alt-text': 'UI L4B | Alt Text Generator',
       '/ai-prompt': 'UI L4B | AI Image Prompt Generator',
@@ -241,6 +243,7 @@ function AppInner() {
       '/icons-emoji': 'Search 200,000+ icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
       '/discover': 'Discover the best external design resources — gradients, palettes, fonts, components and inspiration — with a one-tap hand-off into the UI L4B tools that use them.',
       '/discover/gradients': 'A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.',
+      '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
       '/learn': 'Understand the why behind good interfaces — design principles, theme systems, and practical guides for UI foundations that hold up. The Learn library is on the way.',
       '/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
       '/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
@@ -364,6 +367,7 @@ function AppInner() {
               {/* Curated gradient gallery — copy CSS or hand a gradient to the
                   Gradient Generator (?gs= scheme). Renders inside the app-shell. */}
               <Route path="/discover/gradients" element={<GradientGallery toast={toast} />} />
+              <Route path="/discover/palettes" element={<PaletteGallery toast={toast} />} />
 
               {/* Account, billing, legal and system pages — rendered inside the
                   PillNav app-shell (the wrapper return below). */}

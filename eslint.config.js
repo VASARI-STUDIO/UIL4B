@@ -8,7 +8,7 @@ export default defineConfig([
   // dist: build output. public: static assets served verbatim by Vite (e.g.
   // icons-data.js is loaded as a plain browser <script> from index.html, so its
   // top-level vars are runtime globals, not dead code — and it is never bundled).
-  globalIgnores(['dist', 'public']),
+  globalIgnores(['dist', 'public', '.claude/worktrees/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

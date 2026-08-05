@@ -50,6 +50,21 @@ function crawlerPaths(xml) {
 }
 
 test.describe('public route contract', () => {
+  test('Discover exposes the live palette, gradient and font libraries', async ({ page }) => {
+    watch(page, 'designer browsing the live Discover catalogue')
+    await go(page, '/discover')
+
+    await expect(page.getByRole('link', { name: /Palette Library/ })).toHaveAttribute('href', '/discover/palettes')
+    await expect(page.getByRole('link', { name: /Gradient Gallery/ })).toHaveAttribute('href', '/discover/gradients')
+    await expect(page.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
+
+    await go(page, '/discover/palettes')
+    await expect(page.getByRole('heading', { level: 1, name: 'Palette Library' })).toBeVisible()
+    await expect(page.locator('.pgal-card')).toHaveCount(32)
+    await page.getByPlaceholder('Search by name or hex…').fill('Midnight Teal')
+    await expect(page.locator('.pgal-card')).toHaveCount(1)
+  })
+
   test('crawler sitemap contains every live canonical route and no staged or redirect destination', async ({ request }) => {
     const response = await request.get('/sitemap.xml')
     expect(response.ok()).toBe(true)
@@ -73,11 +88,19 @@ test.describe('public route contract', () => {
     await go(page, '/sitemap')
 
     const discover = page.locator('[data-sitemap-section="discover"]')
-    await expect(discover).toContainText('1 live · more coming')
+    await expect(discover).toContainText(`${DISCOVER_GROUPS.filter((group) => !group.soon).length} live · more coming`)
 
     const gradient = discover.locator('[data-route="/discover/gradients"]')
     await expect(gradient).not.toHaveAttribute('data-soon')
     await expect(gradient.getByRole('link', { name: /Gradient Gallery/ })).toHaveAttribute('href', '/discover/gradients')
+
+    const palettes = discover.locator('[data-route="/discover/palettes"]')
+    await expect(palettes).not.toHaveAttribute('data-soon')
+    await expect(palettes.getByRole('link', { name: /Palette Library/ })).toHaveAttribute('href', '/discover/palettes')
+
+    const fonts = discover.locator('[data-route="/fontgallery"]')
+    await expect(fonts).not.toHaveAttribute('data-soon')
+    await expect(fonts.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
 
     const stagedDiscover = discover.locator('[data-soon="true"]')
     await expect(stagedDiscover).toHaveCount(DISCOVER_GROUPS.filter((group) => group.soon).length)
@@ -94,7 +117,7 @@ test.describe('public route contract', () => {
 
     // …while the three typography tools that just shipped are real links.
     for (const route of ['/fontgallery', '/fontpairs', '/typescale']) {
-      const live = page.locator(`.smap-link[data-route="${route}"]`)
+      const live = page.locator(`.smap-link[data-route="${route}"]`).first()
       await expect(live).not.toHaveAttribute('data-soon', 'true')
       await expect(live.locator('a')).toHaveAttribute('href', route)
     }

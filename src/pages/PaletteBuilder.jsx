@@ -19,6 +19,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
+import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
 // colours and the slider values are persisted separately.
@@ -899,12 +900,18 @@ function PreviewScene({ colors, mode, title, tab = 'ui', scene = PREVIEW_SCENES[
   )
 }
 
+// Community submission surface name for the sign-in gate (utils/submitIntent).
+const SUBMIT_SURFACE = 'palette'
+
 export default function PaletteBuilder({ onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { isPro, loading: entitlementLoading } = useSubscription()
   const { openProModal } = useProModal()
   const { requireLogin } = useLoginPrompt()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  // Stable primitive so the community-gate effect doesn't re-run on every
+  // AuthContext render (it rebuilds the `user` object each time).
+  const uid = user?.uid || null
   const ownerHandle = getOwnerHandle(user?.email)
 
   // A free user can only ever run a free system through the generator. Paid
@@ -1772,15 +1779,39 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   // Open the submit popup. Community actions require a login (Wave-1 "still
   // free" popup) — on success we prefill a themed name to nudge the user, then
-  // the popup handles the handle gate + final submit.
-  const openSubmit = async () => {
-    const user = await requireLogin('submit this palette to the community', { free: true })
-    if (!user) return
+  // the popup handles the handle gate + final submit. The submission form is
+  // never rendered for a signed-out user; the sign-in prompt comes first and
+  // says plainly why an account is needed.
+  const openSubmitForm = useCallback(() => {
+    consumeSubmitIntent()
     setSaveOpen(false)
     setSubmitErr('')
     setSubmitName(n => n.trim() || randomPaletteName(adjusted))
     setSubmitOpen(true)
-  }
+  }, [adjusted])
+
+  const openSubmit = useCallback(async () => {
+    // Auth still resolving — we know neither answer, so show neither prompt.
+    if (authLoading) return
+    if (!uid) {
+      setSubmitIntent(SUBMIT_SURFACE)
+      const signedIn = await requireLogin('submit this palette to the community', {
+        free: true,
+        reasons: COMMUNITY_SUBMIT_REASONS,
+      })
+      if (!signedIn) { resetSubmitIntent(); return }
+    }
+    openSubmitForm()
+  }, [authLoading, uid, requireLogin, openSubmitForm])
+
+  // Resume the intent when signing in remounted this surface — the awaited
+  // handler above would have been discarded with the old tree. In-memory only:
+  // a full page reload finds nothing and the page opens normally.
+  useEffect(() => {
+    if (authLoading || !uid) return
+    if (!hasSubmitIntent(SUBMIT_SURFACE)) return
+    openSubmitForm()
+  }, [authLoading, uid, openSubmitForm])
 
   // Save the one-time community handle after the profanity/evasion filter.
   // NOTE: uniqueness is only checked against handles seen on THIS device — the
@@ -2314,7 +2345,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
                 <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
                 <div className="plb-menu-sub">Community</div>
-                <button type="button" className="plb-menu-item" onClick={openSubmit}><IcoUsers /> Submit to the community…</button>
+                <button
+                  type="button"
+                  className="plb-menu-item"
+                  onClick={openSubmit}
+                  disabled={authLoading}
+                  aria-busy={authLoading || undefined}
+                  title={authLoading ? 'Checking your account…' : undefined}
+                ><IcoUsers /> Submit to the community…</button>
               </div>
             )}
           </div>
@@ -2726,8 +2764,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
         </div>
       )}
 
-      {/* ── Submit-to-community popup (Wave 5 items 20–22) ── */}
-      {submitOpen && (
+      {/* ── Submit-to-community popup (Wave 5 items 20–22) ──
+          Only ever mounted for a signed-in user — see openSubmit above. */}
+      {submitOpen && uid && (
         <div
           className="plb-modal"
           role="dialog"

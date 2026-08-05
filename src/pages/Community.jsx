@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { COMMUNITY_DESIGNS, COMMUNITY_CATEGORIES } from '../data/communityDesigns'
 import CommunityCard from '../components/discover/CommunityCard'
 import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import { readCommunitySubmissions, writeCommunitySubmissions } from '../utils/communitySubmissions'
+import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 
 // Community Hub — browse, save, and submit design inspiration. Saves drive the
 // ranking. Baseline save counts are illustrative for now; the heart toggle and
@@ -94,9 +96,15 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
   )
 }
 
+const SUBMIT_SURFACE = 'community'
+
 export default function Community({ toast }) {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, loading: authLoading } = useAuth()
+  const { requireLogin } = useLoginPrompt()
   const owner = getOwnerHandle(user?.email)
+  // A stable primitive, so the gate effects below don't re-run on every render
+  // of AuthContext (which rebuilds the `user` object each time).
+  const uid = user?.uid || null
   const [saves, setSaves] = useState(loadSaves)
   const [submissions, setSubmissions] = useState(loadSubmissions)
   const [filter, setFilter] = useState('All')
@@ -134,10 +142,49 @@ export default function Community({ toast }) {
   }, [all, filter, sort, effectiveCount, saves])
 
   const handleSubmit = (item) => {
+    // Defence in depth: the form is only mounted for a signed-in user, but a
+    // sign-out mid-flow must not slip a submission through.
+    if (!uid) { setSubmitOpen(false); return }
     setSubmissions(prev => [item, ...prev])
     setSubmitOpen(false)
     if (toast) toast('Design submitted')
   }
+
+  // Ask a signed-out user to sign in BEFORE the submission form exists — the
+  // form is never mounted for them, so nobody fills one in and only then
+  // discovers they need an account.
+  //
+  // While auth is still resolving we know neither answer, so we show neither:
+  // the trigger stays disabled rather than flashing a sign-in dialog at someone
+  // who turns out to be signed in already.
+  // The single place the submission form is opened. Both the gate below and the
+  // post-sign-in resume go through it, so there is exactly one path to a form.
+  const openSubmitForm = useCallback(() => {
+    consumeSubmitIntent()
+    setSubmitOpen(true)
+  }, [])
+
+  const openSubmit = useCallback(async () => {
+    if (authLoading) return
+    if (!uid) {
+      setSubmitIntent(SUBMIT_SURFACE)
+      const signedIn = await requireLogin('submit a design to the community', {
+        free: true,
+        reasons: COMMUNITY_SUBMIT_REASONS,
+      })
+      if (!signedIn) { resetSubmitIntent(); return }
+    }
+    openSubmitForm()
+  }, [authLoading, uid, requireLogin, openSubmitForm])
+
+  // Resume the intent when signing in remounted this surface — the awaited
+  // handler above would have been discarded with the old tree. In-memory only:
+  // a full page reload finds nothing and the page just opens normally.
+  useEffect(() => {
+    if (authLoading || !uid) return
+    if (!hasSubmitIntent(SUBMIT_SURFACE)) return
+    openSubmitForm()
+  }, [authLoading, uid, openSubmitForm])
 
   return (
     <div className="ch-wrap">
@@ -146,7 +193,13 @@ export default function Community({ toast }) {
           <h1 className="ch-title">Community Hub</h1>
           <p className="ch-sub">Browse design inspiration from the community, save your favourites, and submit your own. Ranked by saves.</p>
         </div>
-        <button className="btn btn-accent ch-submit-btn" onClick={() => setSubmitOpen(true)}>
+        <button
+          className="btn btn-accent ch-submit-btn"
+          onClick={openSubmit}
+          disabled={authLoading}
+          aria-busy={authLoading || undefined}
+          title={authLoading ? 'Checking your account…' : 'Submit a design to the community'}
+        >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Submit design
         </button>
@@ -178,7 +231,9 @@ export default function Community({ toast }) {
         </div>
       )}
 
-      {submitOpen && (
+      {/* Only ever mounted for a signed-in user — a sign-out mid-flow closes it
+          rather than leaving a form nobody can submit. */}
+      {submitOpen && uid && (
         <SubmitModal
           onClose={() => setSubmitOpen(false)}
           onSubmit={handleSubmit}

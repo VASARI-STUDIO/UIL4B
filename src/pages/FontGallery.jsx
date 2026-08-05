@@ -209,13 +209,13 @@ function FeaturedCard({ font, onOpen }) {
 
 /* ── Grid card ─────────────────────────────────────────────────────────────── */
 
-function GalleryCard({ font, onOpen, inCompare, onToggleCompare }) {
+function GalleryCard({ font, onOpen, inCompare, onToggleCompare, previewText, previewSize, viewMode }) {
   const heading = headingWeight(font)
   const body = bodyWeight(font)
   const [ready, ref] = useFontReady(font, heading)
 
   return (
-    <li className={inCompare ? 'fg-card fg-card--comparing' : 'fg-card'} ref={ref}>
+    <li className={`${inCompare ? 'fg-card fg-card--comparing' : 'fg-card'} fg-card--${viewMode}`} ref={ref}>
       <button
         type="button"
         className="fg-card-open"
@@ -226,13 +226,13 @@ function GalleryCard({ font, onOpen, inCompare, onToggleCompare }) {
             face arriving with different metrics can never resize the card. */}
         <span
           className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
-          ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body) })}
+          ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body), '--fg-card-size': `${previewSize}px` })}
           aria-hidden={!ready}
         >
           {ready ? (
             <>
-              <span className="fg-card-sample">{font.family.length <= 18 ? font.family : 'Aa Bb Cc'}</span>
-              <span className="fg-card-pangram">{PANGRAM}</span>
+              <span className="fg-card-sample">{previewText.trim() || (font.family.length <= 18 ? font.family : 'Aa Bb Cc')}</span>
+              <span className="fg-card-pangram">{previewText.trim() || PANGRAM}</span>
             </>
           ) : (
             <>
@@ -594,6 +594,9 @@ export default function FontGallery({ onCopy, toast }) {
   })
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState('popularity')
+  const [previewText, setPreviewText] = useState('')
+  const [previewSize, setPreviewSize] = useState(52)
+  const [viewMode, setViewMode] = useState('grid')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
@@ -693,14 +696,24 @@ export default function FontGallery({ onCopy, toast }) {
 
   return (
     <div className="sec fg-page">
-      <header className="fg-hero">
-        <div className="sec-h-eyebrow">Typography system workspace</div>
+      <header className="fg-hero fg-hero--premium">
+        <div className="fg-hero-topline">
+          <span className="sec-h-eyebrow">Discover / Typography</span>
+          <NavLink to="/fontpairs" className="fg-hero-pair-link">Build a font pair <span aria-hidden="true">↗</span></NavLink>
+        </div>
         <div className="fg-hero-copy">
-          <h1>Font Gallery</h1>
-          <p>
-            Browse {catalog.length.toLocaleString()} families from Google Fonts, read a
-            full specimen, then carry your choice straight into a pairing or a type scale.
-          </p>
+          <h1>Font<br />Gallery</h1>
+          <div className="fg-hero-intro">
+            <p>
+              A live catalogue for choosing type with confidence. Test your own words,
+              compare families side by side, then take the winner into a real pairing.
+            </p>
+            <div className="fg-hero-stats" aria-label="Gallery summary">
+              <span><strong>{catalog.length.toLocaleString()}</strong> families</span>
+              <span><strong>6</strong> classifications</span>
+              <span><strong>1</strong> clean handoff</span>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -711,6 +724,45 @@ export default function FontGallery({ onCopy, toast }) {
         retrying={retrying}
         count={catalog.length}
       />
+
+      <section className="fg-command" aria-label="Font preview controls">
+        <label className="fg-command-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Search families…"
+            value={query}
+            spellCheck="false"
+            aria-label="Search font families"
+            onChange={e => setQuery(e.target.value)}
+          />
+        </label>
+        <label className="fg-command-text">
+          <span>Preview text</span>
+          <input
+            value={previewText}
+            maxLength={72}
+            spellCheck="false"
+            placeholder="Type something beautiful…"
+            onChange={e => setPreviewText(e.target.value)}
+          />
+        </label>
+        <label className="fg-command-size">
+          <span>Size</span>
+          <input type="range" min="34" max="72" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
+          <strong>{previewSize}px</strong>
+        </label>
+        <div className="fg-command-view" role="group" aria-label="Gallery view">
+          <button type="button" className={viewMode === 'grid' ? 'is-active' : ''} aria-pressed={viewMode === 'grid'} onClick={() => setViewMode('grid')} aria-label="Grid view">
+            <span aria-hidden="true">⊞</span>
+          </button>
+          <button type="button" className={viewMode === 'list' ? 'is-active' : ''} aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} aria-label="List view">
+            <span aria-hidden="true">☷</span>
+          </button>
+        </div>
+      </section>
 
       {featured.length > 0 && (
         <section className="fg-featured" aria-labelledby="fg-featured-title">
@@ -751,19 +803,6 @@ export default function FontGallery({ onCopy, toast }) {
               </button>
             ))}
           </div>
-          <div className="fg-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="search"
-              placeholder="Search families…"
-              value={query}
-              spellCheck="false"
-              aria-label="Search font families"
-              onChange={e => setQuery(e.target.value)}
-            />
-          </div>
         </div>
       </div>
 
@@ -792,7 +831,7 @@ export default function FontGallery({ onCopy, toast }) {
         </div>
       ) : (
         <>
-          <ul className="fg-grid">
+          <ul className={`fg-grid fg-grid--${viewMode}`}>
             {paged.map(font => (
               <GalleryCard
                 key={font.family}
@@ -800,6 +839,9 @@ export default function FontGallery({ onCopy, toast }) {
                 onOpen={setSelected}
                 inCompare={compareIds.has(font.family)}
                 onToggleCompare={toggleCompare}
+                previewText={previewText}
+                previewSize={previewSize}
+                viewMode={viewMode}
               />
             ))}
           </ul>

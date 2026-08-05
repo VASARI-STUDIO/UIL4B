@@ -2,7 +2,9 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 import { TAG_CATEGORIES, FREE_PROMPT_LIMIT } from '../data/promptCategories'
 import { getPrompts, setPromptsStore, getSavedIds, setSavedIdsStore, parseTags } from '../utils/promptStore'
@@ -11,9 +13,15 @@ import PromptModal from '../components/prompt/PromptModal'
 import AddPromptPanel from '../components/prompt/AddPromptPanel'
 import SubmitPromptPanel from '../components/prompt/SubmitPromptPanel'
 
+// Community submission surface name for the sign-in gate (utils/submitIntent).
+const SUBMIT_SURFACE = 'prompt'
+
 export default function PromptLibrary({ onCopy, toast }) {
   const { t } = useI18n()
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, loading: authLoading } = useAuth()
+  const { requireLogin } = useLoginPrompt()
+  // Stable primitive so the gate effect doesn't re-run on every AuthContext render.
+  const uid = user?.uid || null
   const { isPro } = useSubscription()
   const [prompts, setPrompts] = useState(getPrompts)
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -81,6 +89,40 @@ export default function PromptLibrary({ onCopy, toast }) {
   }, [onCopy])
 
   const switchTab = (next) => { setTab(next); setActiveCategory(null); setSearch('') }
+
+  // Community submission gate. The panel is only ever mounted for a signed-in
+  // user, so a signed-out visitor is asked to sign in first instead of typing a
+  // prompt they cannot post. Auth still resolving = neither answer is known, so
+  // the trigger waits rather than flashing the wrong prompt. For a signed-in
+  // user this is exactly the old toggle.
+  // The single place the submission panel is opened. Both the gate below and the
+  // post-sign-in resume go through it, so there is exactly one path to a form.
+  const openSubmitPanel = useCallback(() => {
+    consumeSubmitIntent()
+    setSubmitOpen(true)
+  }, [])
+
+  const openSubmit = useCallback(async () => {
+    if (authLoading) return
+    if (submitOpen) { setSubmitOpen(false); return }
+    if (!uid) {
+      setSubmitIntent(SUBMIT_SURFACE)
+      const signedIn = await requireLogin('submit a prompt to the community', {
+        free: true,
+        reasons: COMMUNITY_SUBMIT_REASONS,
+      })
+      if (!signedIn) { resetSubmitIntent(); return }
+    }
+    openSubmitPanel()
+  }, [authLoading, submitOpen, uid, requireLogin, openSubmitPanel])
+
+  // Resume the intent when signing in remounted this surface. In-memory only —
+  // a full page reload finds nothing and the page opens normally.
+  useEffect(() => {
+    if (authLoading || !uid) return
+    if (!hasSubmitIntent(SUBMIT_SURFACE)) return
+    openSubmitPanel()
+  }, [authLoading, uid, openSubmitPanel])
 
   const isCommunity = tab === 'community'
   const sortedCommunity = useMemo(() => {
@@ -174,8 +216,15 @@ export default function PromptLibrary({ onCopy, toast }) {
           </>
         )}
 
-        {isCommunity && user && (
-          <button className="btn pl-add-btn" onClick={() => setSubmitOpen(!submitOpen)}>
+        {isCommunity && (
+          <button
+            className="btn pl-add-btn"
+            onClick={openSubmit}
+            disabled={authLoading}
+            aria-busy={authLoading || undefined}
+            aria-expanded={submitOpen}
+            title={authLoading ? 'Checking your account…' : 'Submit a prompt to the community'}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
             </svg>
@@ -198,8 +247,8 @@ export default function PromptLibrary({ onCopy, toast }) {
         <AddPromptPanel open={addOpen} onClose={() => setAddOpen(false)} onAdd={addPrompt} toast={toast} t={t} />
       )}
 
-      {/* Submit to community panel */}
-      {isCommunity && submitOpen && (
+      {/* Submit to community panel — signed-in only; see openSubmit above. */}
+      {isCommunity && submitOpen && uid && (
         <SubmitPromptPanel onClose={() => setSubmitOpen(false)} user={user} userProfile={userProfile} toast={toast} />
       )}
 
