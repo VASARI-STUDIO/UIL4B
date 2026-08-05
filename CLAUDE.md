@@ -2,10 +2,13 @@
 
 UIL4B is the **operating workspace for UI system creation** — build, organize,
 validate, and export interface foundations without tab-hopping. One product, one
-account, one Stripe subscription, three surfaces: **Workspace** (currently
-labelled Create in parts of the product), **Discover**, and **Learn**. React 19
-SPA (Vite + Vercel); Firebase Auth + Firestore; Stripe subscriptions; OpenRouter
-AI with Gemini fallback.
+account, one Stripe subscription, three surfaces: **Create**, **Discover**, and
+**Learn**. React 19 SPA (Vite + Vercel); Firebase Auth + Firestore; Stripe
+subscriptions; OpenRouter AI with Gemini fallback.
+
+> The user-facing surface label is **Create** everywhere in the shipped nav.
+> "Workspace" survives only as an internal code name (`WorkspaceContext`) and in
+> the strategy framing in `positioning.md`. Don't reintroduce it in UI copy.
 
 > Lean index. Canonical story → [`positioning.md`](docs/reference/positioning.md).
 > **Taking over / new to the project?** Read
@@ -96,15 +99,26 @@ Read the relevant one before working in that area.
   product identity, product/sales continuity, and anti-slop quality bar. Read for
   any brand-facing design, implementation, or review.
 
-**State & planning (canonical map):**
-[`BUILD-PLAN.md`](docs/BUILD-PLAN.md) owns direction, current truth, the active
-batch and release gaps; `src/data/pipeline.js` owns execution order, blocks and
-workstream progress; `src/data/moduleBoard.js` owns per-module status;
-[`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) owns unresolved founder-only
-dashboard/credential work; [`DECISIONS-NEEDED.md`](docs/DECISIONS-NEEDED.md)
-owns unresolved founder calls plus the compact resolved-decision record.
-[`docs/build-plan/tool-tree.md`](docs/build-plan/tool-tree.md) and
-[`docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md`](docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md)
-are the retained stable implementation references. Git history is the archive;
-do not create parallel historical planning docs. Subagent roster:
+**State & planning (canonical map).** One home per fact — read it, don't copy it:
+
+| Fact | Canonical home |
+|---|---|
+| Direction, what shipped, where open work is tracked | [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) |
+| **Every gate baseline number** (lint warnings, test counts) | [`build-and-verify.md`](docs/reference/build-and-verify.md) |
+| Founder decisions, open and resolved | [`DECISIONS-NEEDED.md`](docs/DECISIONS-NEEDED.md) |
+| Founder-only console / credential / live-service work | [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) |
+| Execution order, blockers, known-unfixed bugs | `src/data/pipeline.js` |
+| Per-module product status | `src/data/moduleBoard.js` |
+| Shipped release history | [`CHANGELOG.md`](CHANGELOG.md) |
+| Tool structure, routes, Soon-vs-live | [`tool-tree.md`](docs/build-plan/tool-tree.md) |
+| Homepage acceptance contract | [`HOMEPAGE-CHAOS-TO-CALM.md`](docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md) |
+
+If a fact appears in two places, the table above wins and the other copy is a
+bug — delete it and link instead. Git history is the archive; do not create
+parallel historical planning docs. Subagent roster:
 [`.claude/agents/README.md`](.claude/agents/README.md).
+
+**Sourcing rule.** Never write that the founder approved, confirmed, decided or
+published something unless you can point at where that is recorded — this table,
+a commit, or a PR. If you can't source it, write what is verifiable or mark it
+UNVERIFIED. Do not smooth over uncertainty.

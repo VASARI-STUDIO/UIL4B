@@ -44,7 +44,12 @@ changed Workspace→Create.)
 
 ## Contexts (`src/contexts/`)
 
-All 8 providers — wrap order matters, check `App.jsx` before reordering:
+Ten providers in two tiers — wrap order matters, so check both files before
+reordering.
+
+**Eight in `main.jsx`**, outermost first: `ThemeProvider` → `AppearanceProvider`
+→ `I18nProvider` → `AuthProvider` → `SubscriptionProvider` → `ProjectProvider`
+→ `WorkspaceProvider` → `ExportProvider`.
 
 | Context | Responsibility |
 |---|---|
@@ -57,30 +62,48 @@ All 8 providers — wrap order matters, check `App.jsx` before reordering:
 | **I18nContext** | Localisation (`src/locales/`). |
 | **ExportContext** | Export / handoff state (top-bar export button). |
 
+**Two in `App.jsx`**, inside `AuthProvider` because they depend on it:
+
+| Context | Responsibility |
+|---|---|
+| **LoginPromptContext** | The login popup rendered over the current page. |
+| **ProModalContext** | The canonical Pro-upgrade modal. |
+
 ## Pages (`src/pages/`)
 
-Route-per-page. Current set (groups, not exhaustive of behaviour):
+Route-per-page. Current set (groups, not exhaustive of behaviour). #196 deleted
+the unrouted pages — `Dashboard`, `CategoryDashboard`, `ExternalResources`,
+`ComingSoon` and `Login` are gone, and their old URLs now redirect.
 
-- **Tools**: ColorStudio, FontMatcher, FontGallery, TypeScale, RatioCalculator,
-  BoxShadowGenerator, EmojiLibrary, IconLibrary, FileConverter, SeoInspector,
-  AltTextGenerator, AiPromptGenerator, PromptLibrary, LandingPromptGenerator,
-  UIBuilder, AutoBuilder, StyleGuide.
-- **Hub / nav**: Landing, Dashboard, CategoryDashboard, Community,
-  ExternalResources, InfoCentre, HelpCentre, Feedback, Settings, Projects,
-  Onboarding, ComingSoon. *(Community + ExternalResources are the seed of the
-  **Discover** surface — see `discover.md`; Projects stays Workspace-private.)*
-- **Docs**: DocsAI, DocsBrand, DocsDesign, DocsMarketing, DocsSEO, DocsSocial,
-  DocsThemes.
-- **Auth / billing**: Login, Checkout, CheckoutReturn.
+- **Colour**: ColorLanding, ColorStudio, PaletteBuilder, TintTool,
+  GradientGenerator, ContrastChecker.
+- **Other tools**: FontGallery, FontMatcher, TypeScale, RatioCalculator,
+  BoxShadowGenerator, IconLibrary, EmojiLibrary, IconEmojiLibrary,
+  FileConverter, SeoInspector, AltTextGenerator, AiPromptGenerator,
+  LandingPromptGenerator, PromptLibrary, UIBuilder, AutoBuilder, StyleGuide.
+- **Shells / hub**: Home, Landing, CreateTool (the honest workshop state for
+  unbuilt routes), SurfaceLanding (Discover + Learn), SiteMap, Community,
+  GradientGallery, InfoCentre, HelpCentre, Feedback, Settings, Projects,
+  Onboarding. *(Community + GradientGallery are the live part of the **Discover**
+  surface — see `discover.md`; Projects stays Workspace-private.)*
+- **Docs (dormant)**: DocsAI, DocsBrand, DocsDesign, DocsMarketing, DocsSEO,
+  DocsSocial, DocsThemes. The components exist but the `/docs-*` routes redirect
+  to `/learn` until the Learn content library ships.
+- **Billing**: Plans, Checkout, CheckoutReturn.
 - **Admin**: Admin (gated by `ADMIN_EMAILS` + session admin code).
 - **Legal**: Privacy, Terms.
 
+There is **no branded 404**: the wildcard route redirects to `/`. That is a known
+gap, tracked as `global-failure-states` in `src/data/pipeline.js`.
+
 ## Components (`src/components/`)
 
-Shared UI: `Sidebar`, `TopBar`, `AppFooter`, `CommandPalette`, `Toast`,
-`AuthGate` ⚠️, `GoogleOneTap` ⚠️, `FeedbackButton` / `FeedbackModal`,
-`UIPreviewModal`, `UIKitGuide`, `CategoryMiniTool`, `DocsTOC`, plus `prompt/`
-and `seo/` subfolders.
+Shared UI: `PillNav`, `Sidebar`, `TopBar`, `AppFooter`, `CommandPalette`,
+`Toast`, `AuthGate` ⚠️, `GoogleOneTap` ⚠️, `LoginPopup`, `ProUpgradeModal`,
+`FeedbackButton` / `FeedbackModal`, `UIPreviewModal`, `UIKitGuide`, `DocsTOC`,
+`HomeWorkbench`, `SnapSlider`, `ColorPickerPop`, `ExportPanel`, `FontPicker`,
+`SystemCTA`, `ShuffleIcon`, the `UiSystem*` builder set, plus `discover/`,
+`prompt/` and `seo/` subfolders. (`CategoryMiniTool` was deleted in #196.)
 
 ## API routes (`/api`) — 12-function limit
 
@@ -99,7 +122,8 @@ stripe-webhook.js   support.js           verify-admin.js
 previews (+ palette-card PNG) for `/p/:code` short links (vercel.json rewrite).
 
 Shared server helpers (NOT counted as functions) live in `api/_lib/`:
-`env.js`, `firebase-admin.js`, `plans.js`, `pricing.js`, `stripe.js`.
+`billing.js`, `env.js`, `firebase-admin.js`, `http.js`, `origins.js`, `plans.js`,
+`pricing.js`, `stripe.js`.
 
 **Before adding an API route:** you are likely at or near the cap. Prefer
 extending an existing route (e.g. action-switch on `req.body`) or moving logic

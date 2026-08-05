@@ -2,9 +2,17 @@
 
 All notable changes to UIL4B.
 
+This file is the canonical shipped-release history. Current direction and open
+work live in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) and
+`src/data/pipeline.js` — don't use this file as a backlog.
+
 ---
 
-## Unreleased — Palette & Gradient founder batch
+## On `main`, not yet version-tagged — Palette & Gradient founder batch (#202)
+
+Merged to `main` at `8f4e5ae` and therefore live via the Vercel auto-deploy.
+`package.json` is still `2.8.0`; cutting the next version number is a release
+decision the founder/release-captain makes, not something this batch assumed.
 
 ### Palette Builder
 - Made each global-adjust slider handle a lens onto its own track: the dot's centre now shows the colour that position represents, sampled from the same stop list that paints the gradient, inside opposed white/near-black rings that stay visible against any track colour in either theme
@@ -19,6 +27,21 @@ All notable changes to UIL4B.
 ---
 
 ## v2.8.0 — Typography & UI System Release (2026-07-31)
+
+Shipped across #196–#200.
+
+### Search, Motion & Housekeeping
+- Added per-route canonical, Open Graph and Twitter metadata, and `noindex,follow`
+  for Soon routes, replacing the single static homepage canonical every route had
+  been emitting (#198)
+- Consolidated every duration and easing onto one motion token scale, converted
+  the hover-reveal labels from `max-width` to `0fr → 1fr` so the whole easing
+  curve plays across the real content width, and made reduced motion near-instant
+  rather than merely fast (#199)
+- Removed 6 unrouted pages, 7 unreferenced components and their orphaned CSS,
+  each confirmed unreferenced before deletion (#196)
+- Stopped tracking `node_modules`, which had been committed as a self-referential
+  symlink that broke `npm ci` on any clone into the same path (#199)
 
 ### Typography & Homepage
 - Activated Font Gallery, Font Pair Finder and Type Scale as three live, connected Create tools with a shared resilient Google Fonts catalogue

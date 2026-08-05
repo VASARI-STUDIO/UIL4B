@@ -1,10 +1,14 @@
 # UIL4B — Decisions Needed
 
-Only unresolved founder product/security calls belong here. Console and
-credential work lives in [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md); execution lives
-in `src/data/pipeline.js`.
+**This is the canonical record of founder product/security decisions** — both the
+open one and the resolved ones. No other document should carry its own copy of
+the resolved table; link here. Console and credential work lives in
+[`OWNER-ACTIONS.md`](OWNER-ACTIONS.md); execution lives in `src/data/pipeline.js`.
 
-_Last reviewed: 2026-07-31._
+_Last reviewed: 2026-08-05._
+
+A row only belongs in **Resolved** when the decision is actually recorded — in
+this table, a commit message, or a PR. Do not add a decision you cannot point at.
 
 ## Open — subscription chargeback policy
 

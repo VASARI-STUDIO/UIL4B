@@ -5,23 +5,39 @@ accounts/cards or explicit Human Validation Zone authority belong here.
 Engineering work belongs in `src/data/pipeline.js`; product calls belong in
 [`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md).
 
-_Last reviewed: 2026-07-31._
+_Last reviewed: 2026-08-05._
 
 ## Confirmed complete
 
-- **`firestore.rules` published** — founder-confirmed 2026-07-31. Do not re-open
-  the old publication blocker.
+- **`firestore.rules` published** — the founder has confirmed this. The
+  privilege-escalation publication blocker is **closed**; do not re-open it.
 
-This confirms only the Firestore rules publication. It does **not** confirm
-Storage activation/rules, custom claims, analytics accuracy or production
-payment/auth flows.
+That confirmation covers the Firestore rules publication and nothing else. It
+does **not** confirm Storage activation or `storage.rules`, the admin custom
+claim, analytics accuracy, or any production payment/auth flow. Those are all
+still open below.
+
+## The four actions currently blocking engineering
+
+These are the items the engineering queue (`src/data/pipeline.js`) records as
+`blocked` on the founder — nothing can move on them without dashboard access:
+
+1. **Production OpenRouter key** — `OPENROUTER_API_KEY` is missing in
+   Production, so Gemini is currently carrying the AI path alone (P1 row below).
+2. **Stripe retention / cancellation configuration** — the `RETAIN50` coupon and
+   the portal cancellation flow (P1 row below).
+3. **Live Stripe checkout QA** — complete, abandon, return and retry against
+   production (Manual release checks below).
+4. **Firebase off the public critical path** — needs an approved auth-loading
+   design and owner validation before Firebase initialisation or authenticated
+   routing changes.
 
 ## Unresolved actions
 
 | Priority | Check before changing | Action / done condition |
 |---|---|---|
 | P0 | Stripe webhook endpoint event list | Subscribe `/api/stripe-webhook` to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, all three `charge.dispute.*` events, subscription create/update/delete, invoice paid/failed and trial-will-end. Send representative test events and confirm HTTP 200 before creating a lifetime price. |
-| P0 | Admin → Feedback after the Firestore rules publish | Verify the panel can read feedback. The rules require `request.auth.token.admin == true`; do not assume the custom claim exists. If it returns `permission-denied`, either set the claim through a controlled Admin SDK action or approve moving the read behind a server-admin route. |
+| P0 | Admin → Feedback now that the Firestore rules are published | Verify the panel can read feedback. The rules require `request.auth.token.admin == true`; no code in `api/` or `src/` sets that custom claim, so do not assume it exists. If it returns `permission-denied`, either set the claim through a controlled Admin SDK action or approve moving the read behind a server-admin route. |
 | P0 | Firebase Console → Storage | Enable Storage and publish `storage.rules` for the approved Firebase community architecture. Verify an authenticated user can write only under `community-media/{uid}/` and public reads behave as intended. |
 | P1 | `https://uil4b.com/api/ai?diag=uil4b-dev-2026` | Add `OPENROUTER_API_KEY` to Production if it still reports missing, redeploy and confirm OpenRouter is available while Gemini remains the fallback. |
 | P1 | Stripe customer metadata | For each legacy paying customer, confirm `metadata.firebaseUid` exists. Back-fill only genuinely missing metadata; investigate—do not overwrite—a mismatched uid. |
@@ -46,6 +62,9 @@ These require real external accounts or production dashboards:
   prerendering ships.
 - Exercise the Admin Feedback panel and aggregate analytics with the published
   Firestore rules; record whether the custom claim and totals are correct.
+
+None of the checks in this section have been run. Record the result next to each
+one when it is — an unticked line means "not attempted", never "passed quietly".
 
 ## Current environment reference
 

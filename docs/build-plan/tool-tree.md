@@ -29,9 +29,10 @@ id is `create` (renamed from the old `workspace`).
 
 Main tools = **large heading** (a *system* with sub-tools built in). Sub-tools =
 **smaller font** beneath, each also getting its **own standalone page** (reused
-components). Colour is client-side (no Vercel function). We currently use
-**11 of 12 serverless functions** — one slot remains, and new concerns should
-consolidate before consuming it.
+components). Colour is client-side (no Vercel function). The serverless function
+budget and the current count are owned by
+[`../reference/architecture.md`](../reference/architecture.md) — check there
+before a new tool consumes a slot.
 
 ### CREATE (build)
 
