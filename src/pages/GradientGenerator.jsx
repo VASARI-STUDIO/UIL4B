@@ -10,6 +10,8 @@ import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 import { appendGradientSubmission, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
 import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 
 // ── Gradient Generator ──
 // The standalone /color/gradient tool: build any linear / radial / conic
@@ -288,9 +290,15 @@ const LockBtn = ({ on, onClick, label, className = '' }) => (
   </button>
 )
 
+// Community submission surface name for the sign-in gate (utils/submitIntent).
+const SUBMIT_SURFACE = 'gradient'
+
 export default function GradientGenerator({ onCopy, toast }) {
   const { design, setGradient, projects } = useProject()
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, loading: authLoading } = useAuth()
+  const { requireLogin } = useLoginPrompt()
+  // Stable primitive so the gate effect doesn't re-run on every AuthContext render.
+  const uid = user?.uid || null
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -623,7 +631,44 @@ export default function GradientGenerator({ onCopy, toast }) {
   // Community Hub's design submission: it lands in this browser's queue with a
   // 'pending' status and is not published anywhere. Returns false if the
   // gradient could not be stored, so the modal can say so rather than lie.
+  // Ask a signed-out user to sign in BEFORE the submission form exists, so
+  // nobody names a gradient and writes a reviewer note only to be told they need
+  // an account. While auth is still resolving we show neither prompt — the
+  // trigger is disabled rather than flashing the wrong dialog.
+  //
+  // The gradient itself lives in ProjectContext (persisted), so signing in never
+  // costs the user their work; the intent slot only remembers that the FORM
+  // should re-open if the sign-in remounted this surface.
+  // The single place the submission form is opened. Both the gate below and the
+  // post-sign-in resume go through it, so there is exactly one path to a form.
+  const openSubmitForm = useCallback(() => {
+    consumeSubmitIntent()
+    setSubmitOpen(true)
+  }, [])
+
+  const openSubmit = useCallback(async () => {
+    if (authLoading) return
+    if (!uid) {
+      setSubmitIntent(SUBMIT_SURFACE)
+      const signedIn = await requireLogin('submit a gradient to the community library', {
+        free: true,
+        reasons: COMMUNITY_SUBMIT_REASONS,
+      })
+      if (!signedIn) { resetSubmitIntent(); return }
+    }
+    openSubmitForm()
+  }, [authLoading, uid, requireLogin, openSubmitForm])
+
+  // Resume the intent when signing in remounted this surface. In-memory only —
+  // a full page reload finds nothing and the tool opens normally.
+  useEffect(() => {
+    if (authLoading || !uid) return
+    if (!hasSubmitIntent(SUBMIT_SURFACE)) return
+    openSubmitForm()
+  }, [authLoading, uid, openSubmitForm])
+
   const submitForReview = useCallback((fields) => {
+    if (!uid) { setSubmitOpen(false); return false }   // defence in depth
     const record = sanitizeGradientSubmission({
       id: `g${Date.now()}`,
       ...fields,
@@ -639,7 +684,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     setSubmitOpen(false)
     toast?.('Gradient queued for review — nothing is published yet')
     return true
-  }, [angle, stops, type, toast, user?.email])
+  }, [angle, stops, type, toast, uid, user?.email])
 
   // ── Drag: stop handles on the preview rail ──
   // One drag session, shared by "grab an existing handle" and "press the rail to
@@ -767,8 +812,12 @@ export default function GradientGenerator({ onCopy, toast }) {
           <button
             type="button"
             className="ggn-btn ggn-btn-ghost"
-            onClick={() => setSubmitOpen(true)}
-            title="Submit this gradient for review for the gradient library"
+            onClick={openSubmit}
+            disabled={authLoading}
+            aria-busy={authLoading || undefined}
+            title={authLoading
+              ? 'Checking your account…'
+              : 'Submit this gradient for review for the gradient library'}
           >
             <IcoSubmit size={15} /> Submit for review
           </button>
@@ -1049,7 +1098,8 @@ export default function GradientGenerator({ onCopy, toast }) {
         </div>
       </section>
 
-      {submitOpen && (
+      {/* Only ever mounted for a signed-in user — see openSubmit above. */}
+      {submitOpen && uid && (
         <SubmitGradientModal
           gradient={{ css, name: '' }}
           authorName={userProfile?.displayName || user?.displayName || ''}

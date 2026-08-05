@@ -159,6 +159,8 @@ test.describe('Font Pair', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: 'Font Pair' })).toBeVisible()
     await expect(page.locator('.fpr-specimen')).toBeVisible()
+    await expect(page.getByRole('link', { name: /Browse the Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
+    await expect(page.getByRole('link', { name: /Select from the Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
 
     const cards = page.locator('.fpr-card')
     await expect(cards).toHaveCount(6)
@@ -220,6 +222,12 @@ test.describe('Font Gallery', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: 'Font Gallery' })).toBeVisible()
     await expect(page.locator('.fg-card')).toHaveCount(48)
+
+    await page.getByLabel('Preview text').fill('Make the words the interface')
+    await expect(page.getByLabel('Preview text')).toHaveValue('Make the words the interface')
+    await page.getByRole('button', { name: 'List view' }).click()
+    await expect(page.locator('.fg-grid')).toHaveClass(/fg-grid--list/)
+    await page.getByRole('button', { name: 'Grid view' }).click()
 
     await page.getByRole('button', { name: 'Serif', exact: true }).click()
     await expect(page.locator('.fg-count')).toContainText('in Serif')

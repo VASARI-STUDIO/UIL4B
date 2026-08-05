@@ -151,9 +151,10 @@ export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) 
 // Gradient Gallery — a real, curated browse surface — which is `soon: false` and
 // links straight to its live page, so it renders as a live card and menu row.
 export const DISCOVER_GROUPS = [
+  { id: 'palette-library', icon: 'palette', label: 'Palette Library', desc: 'Curated colour systems ready to copy, save or open in the Palette Builder.', route: '/discover/palettes', soon: false },
   { id: 'gradient-gallery', label: 'Gradient Gallery', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
+  { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', route: '/fontgallery', soon: false },
   { id: 'inspiration', label: 'Inspiration', desc: 'Community UI systems, Mobbin-style browsing.', route: '/discover', soon: true },
-  { id: 'community-fonts', label: 'Community Fonts', desc: 'Pairings the community actually ships.', route: '/discover', soon: true },
   { id: 'community-prompts', label: 'Community Prompts', desc: 'Proven prompts, submitted and curated.', route: '/discover', soon: true },
   { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab.', route: '/discover', soon: true },
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
@@ -246,7 +247,7 @@ function groupsToMenu(groups, spec) {
     id: g.id,
     label: g.label,
     route: g.route,
-    icon: g.id,
+    icon: g.icon || g.id,
     hue: g.accent ? 'accent' : undefined,
     soon: !!g.soon,
   })
@@ -267,8 +268,8 @@ function groupsToMenu(groups, spec) {
 }
 
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
-  { label: 'Browse', ids: ['gradient-gallery'] },
-  { label: 'Community', ids: ['inspiration', 'community-fonts', 'community-prompts'] },
+  { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery'] },
+  { label: 'Community', ids: ['inspiration', 'community-prompts'] },
   { label: 'Your library', ids: ['curated', 'collections'] },
 ])
 

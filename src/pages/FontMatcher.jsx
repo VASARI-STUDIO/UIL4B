@@ -247,15 +247,29 @@ export default function FontMatcher({ onCopy, toast }) {
 
   return (
     <div className="sec fpr-page">
-      <header className="fpr-hero">
-        <div className="sec-h-eyebrow">Typography system workspace</div>
+      <header className="fpr-hero fpr-hero--premium" ref={varsRef(specimenVars)}>
+        <div className="fpr-hero-topline">
+          <span className="sec-h-eyebrow">Create / Typography</span>
+          <NavLink to="/fontgallery" className="fpr-gallery-link">
+            Browse the Font Gallery <span aria-hidden="true">↗</span>
+          </NavLink>
+        </div>
         <div className="fpr-hero-copy">
-          <h1>Font Pair</h1>
-          <p>
-            Choose a heading face and see which body faces actually work under it —
-            with the reasoning attached. Preview the pair as a real page, then copy
-            the import and the CSS.
-          </p>
+          <div>
+            <h1>Font Pair</h1>
+            <p className="fpr-hero-signature">Aa</p>
+          </div>
+          <div className="fpr-hero-intro">
+            <p>
+              Pair type like a creative director. Choose a voice for the headline,
+              a workhorse for the body, and test the relationship in real layouts.
+            </p>
+            <div className="fpr-hero-pair" aria-label="Current font pair">
+              <span>{headingFont.family}</span>
+              <i aria-hidden="true">+</i>
+              <span>{bodyFont.family}</span>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -436,6 +450,15 @@ export default function FontMatcher({ onCopy, toast }) {
               <p>The heading drives the suggestions; the body is yours to override.</p>
             </div>
           </div>
+
+          <NavLink to="/fontgallery" className="fpr-gallery-callout">
+            <span className="fpr-gallery-callout-mark" aria-hidden="true">Aa</span>
+            <span>
+              <strong>Select from the Font Gallery</strong>
+              <small>Browse live specimens, compare families, then send one back here.</small>
+            </span>
+            <span aria-hidden="true">↗</span>
+          </NavLink>
 
           <FontPicker
             label="Heading family"
