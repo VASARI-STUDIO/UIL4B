@@ -14,6 +14,10 @@ Merged to `main` at `8f4e5ae` and therefore live via the Vercel auto-deploy.
 `package.json` is still `2.8.0`; cutting the next version number is a release
 decision the founder/release-captain makes, not something this batch assumed.
 
+### Font Gallery
+- Rebuilt the catalogue as a single, full-width editorial list with one typeface per line and responsive mobile geometry
+- Removed programming, monospace, emoji, icon, barcode and symbol families from gallery search, counts and category controls
+
 ### Palette Builder
 - Made each global-adjust slider handle a lens onto its own track: the dot's centre now shows the colour that position represents, sampled from the same stop list that paints the gradient, inside opposed white/near-black rings that stay visible against any track colour in either theme
 - Fixed hovering a toolbar icon button revealing an empty pill instead of its label — the absolutely positioned reveal label had an indefinite inline size, so the `0fr → 1fr` track resolved to `0px`
