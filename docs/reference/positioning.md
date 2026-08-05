@@ -37,6 +37,12 @@ architecture — is organised.
 
 ### 1. Workspace — the core
 
+> **Naming note:** this surface ships as **Create** in the product — nav, URLs
+> and copy all say Create. "Workspace" is kept in this document because it is the
+> strategic frame the repositioning was written in, and it survives in code as
+> `WorkspaceContext`. Treat the two as the same surface; use **Create** in
+> anything user-facing.
+
 Where you build interface foundations. Five sub-areas:
 
 - **Foundations** — colour, type, spacing, grid, radius, shadows, motion.

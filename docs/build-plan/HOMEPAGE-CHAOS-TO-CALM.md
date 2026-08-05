@@ -4,6 +4,15 @@
 >
 > **Typography extension approved · 2026-07-31**
 >
+> **Status (2026-08-05): built.** The base experience shipped in #185 and the
+> Typography extension in #200. This document is retained as the **acceptance
+> contract** — the standard the homepage is held to, not an open work item.
+>
+> Two things in it have **not** been run and are tracked as
+> `homepage-field-metrics` in `src/data/pipeline.js`: the §11 field-metric
+> budgets (LCP / CLS / INP on a throttled profile) and the §10 200% zoom,
+> forced-colours and screen-reader passes. Do not read §14 as fully discharged.
+>
 > Scope: the public homepage hero and the live mini-workbench immediately below
 > it. This document is the acceptance contract for implementation. It does not
 > reopen the wider homepage, navigation, pricing, Discover, Learn, authentication

@@ -3,6 +3,27 @@
 > Reference doc for UIL4B. Linked from `CLAUDE.md`. This is the quality gate —
 > nothing ships without it.
 
+## Canonical gate baselines
+
+**This table is the single source of truth for the gate numbers.** No other
+document, comment or commit message should restate them — link here instead.
+Every figure below was produced by running the command in this repository at
+`8f4e5ae` on 2026-08-05; if you change a number here, you must have re-run it.
+
+| Gate | Command | Current baseline |
+|---|---|---|
+| Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
+| Build | `npx vite build` | passes |
+| Unit | `npm run test:unit` | **134 tests, 134 pass** |
+| Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
+| Browser acceptance | `npm run test:users` | **156 tests across 15 spec files** (`npx playwright test --list`) |
+
+The 31 lint warnings are pre-existing and advisory
+(`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
+`react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
+Match the count, don't add new ones, and don't "fix" the existing ones as a
+side effect of unrelated work. CI fails on lint **errors** only.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request targeting `main` and on
@@ -13,7 +34,7 @@ server):
 
 1. `npm ci`
 2. `npx eslint .` — fails the job on errors; the pre-existing advisory
-   warnings (below) do not fail it.
+   warnings (see the baseline table above) do not fail it.
 3. `npx vite build`
 4. `npm run test:unit`
 5. `npm run test:rules` (Firestore emulator, via `actions/setup-java` pinned
@@ -21,8 +42,8 @@ server):
 
 A second job, `browser-acceptance`, builds the app, installs Playwright's
 Chromium via `npx playwright install --with-deps chromium`, and runs
-`npm run test:users` (the 91-test user-simulation acceptance suite) the same
-way — no secrets, no external services.
+`npm run test:users` (the user-simulation acceptance suite — see the baseline
+table for its current size) the same way — no secrets, no external services.
 
 If a gate goes red in CI, treat it exactly like a red local build: NO-GO, fix
 the root cause, don't route around it.
@@ -86,11 +107,7 @@ Founder rule (2026-06-30): **don't over-route.** The build/lint gate is cheap
 (local, zero model cost); the multi-agent review gate is not. So:
 
 - **After each change** → run the **simple check**: `npx vite build` +
-  `npx eslint .`. Baseline: **0 errors**; 34 pre-existing advisory warnings
-  (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
-  `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`) —
-  match the current count, don't add new ones and don't "fix" the existing
-  ones. CI enforces the same rule: it fails on lint **errors** only.
+  `npx eslint .`, against the baselines at the top of this file.
 - **After a cluster of related changes** → run **one combined code-review + qa**
   over the whole batch, then merge. Not a fresh review per micro-edit.
 - **Security-sensitive code is never batched away.** Anything touching `/api`,

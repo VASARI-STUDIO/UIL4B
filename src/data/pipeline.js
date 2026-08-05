@@ -7,6 +7,11 @@
 // single source the tab renders from (no backend, no serverless function).
 //
 // Keep it honest: only list conditions you can verify and tasks that are real.
+//
+// This file owns EXECUTION: order, progress, blockers and known-unfixed bugs.
+// It does not own gate baselines (docs/reference/build-and-verify.md), founder
+// decisions (docs/DECISIONS-NEEDED.md), owner console work (docs/OWNER-ACTIONS.md)
+// or release history (CHANGELOG.md). Link, don't restate — copied numbers drift.
 
 // ── Current app condition ──────────────────────────────────────────────────
 // status: 'good' | 'watch' | 'blocked'
@@ -17,9 +22,9 @@ export const APP_CONDITION = [
   { id: 'create', label: 'Create surface', value: 'Live', status: 'good', detail: 'Colour, typography, library and imagery workflows are shipped; UI Component Builder and AI Studio remain in the workshop' },
   { id: 'discover', label: 'Discover surface', value: 'Queued · 20%', status: 'watch', detail: 'Gradient Gallery is live; broader galleries remain backlog' },
   { id: 'learn', label: 'Learn surface', value: 'Coming soon', status: 'watch', detail: 'Content library not started' },
-  { id: 'design-system', label: 'Design system', value: 'v2.8 release candidate', status: 'watch', detail: 'Typography, Palette/Tint consistency, authored previews and UI System Mode are integrated and the local release gate passed' },
-  { id: 'ci', label: 'CI gates', value: 'Green on every PR', status: 'good', detail: 'Lint, build, unit, Firestore rules and the Playwright acceptance suite run on every pull request since #188' },
-  { id: 'phase', label: 'Current phase', value: 'v2.8 final review + PR hand-off', status: 'watch', detail: 'Firestore rules are founder-confirmed published; the approved Typography, Palette/Tint, high-fidelity preview and UI System Mode slices are integrated; and the local build, lint, unit, rules and 144-test browser gate passed' },
+  { id: 'design-system', label: 'Design system', value: 'v2.8 shipped', status: 'good', detail: 'Typography, Palette/Tint consistency, authored previews and UI System Mode all released in #200' },
+  { id: 'ci', label: 'CI gates', value: 'Green on every PR', status: 'good', detail: 'Lint, build, unit, Firestore rules and the Playwright acceptance suite run on every pull request since #188. Baselines: docs/reference/build-and-verify.md' },
+  { id: 'phase', label: 'Current phase', value: 'Post-v2.8 hardening', status: 'watch', detail: 'v2.8 and the founder bug batch (#202) are on main. The Firestore rules publication blocker is founder-confirmed closed. No approved feature batch is in flight; the queue below is hardening, accessibility, instrumentation and the large unbuilt surfaces' },
 ]
 
 // ── Pipeline stages (left → right flow) ─────────────────────────────────────
@@ -38,37 +43,37 @@ export const PIPELINE_PROCESSES = [
     id: 'typography-activation',
     name: 'Typography activation + homepage integration',
     area: 'Product',
-    stage: 'review',
+    stage: 'shipped',
     progress: 100,
-    summary: 'Font Gallery, Font Pair Finder and Type Scale are rebuilt on the current design system and routed as live Create tools. The homepage now has a fifth Typography workbench tab, meaningful satellite icons and a reduced-motion-safe merge/splash sequence. The tools share one resilient Google Fonts catalogue and a versioned in-memory hand-off; the integrated local release gate passed.',
-    updated: '2026-07-31',
+    summary: 'Shipped in #200 (v2.8). Font Gallery, Font Pair Finder and Type Scale are live Create tools on a shared Google Fonts catalogue, and Typography is the fifth homepage workbench tab. Detail in CHANGELOG.md.',
+    updated: '2026-08-05',
   },
   {
     id: 'palette-consistency',
     name: 'Palette/Tint consistency + defect pass',
     area: 'Product',
-    stage: 'review',
+    stage: 'shipped',
     progress: 100,
-    summary: 'The integrated Palette/Tint pass closes gutters, toolbar layout shifts, initial seed/swatch mismatch, control sizing, Temperature and HCT behaviour, directional swap, accessible per-swatch contrast, multi-insert context menus and Palette ↔ Tint continuity. The integrated local release gate passed.',
-    updated: '2026-07-31',
+    summary: 'Shipped in #200 (v2.8). Gutters, toolbar layout shifts, seed/swatch mismatch, control sizing, Temperature and HCT behaviour, directional swap, per-swatch contrast, multi-insert menus and Palette ↔ Tint continuity. Detail in CHANGELOG.md.',
+    updated: '2026-08-05',
   },
   {
     id: 'ui-system-mode',
     name: 'Premium UI System Mode',
     area: 'Product',
-    stage: 'review',
+    stage: 'shipped',
     progress: 100,
-    summary: 'The integrated mode builds perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one 500 seed, with shade editing/copy, WCAG guidance, light/dark labs, five applied scenes and CSS/DTCG/Tailwind exports. Free users can preview the full system; editing, expanded scenes and export remain Pro-gated. The integrated local release gate passed.',
-    updated: '2026-07-31',
+    summary: 'Shipped in #200 (v2.8). Perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one 500 seed, with WCAG evidence and CSS/DTCG/Tailwind exports. Free users preview; editing, expanded scenes and export are Pro-gated.',
+    updated: '2026-08-05',
   },
   {
     id: 'colour-hifi-previews',
     name: 'High-fidelity colour previews',
     area: 'Product',
-    stage: 'review',
+    stage: 'shipped',
     progress: 100,
-    summary: 'The Palette preview now applies the active colours to authored UI, brand and graphic scenes rather than generic placeholders, with additional scenes visibly Pro-gated. The integrated local release gate passed.',
-    updated: '2026-07-31',
+    summary: 'Shipped in #200 (v2.8). The Palette preview applies the active colours to authored UI, brand and graphic scenes; additional scenes are visibly Pro-gated.',
+    updated: '2026-08-05',
   },
   {
     id: 'colour-tool-defects',
@@ -85,26 +90,26 @@ export const PIPELINE_PROCESSES = [
     area: 'Quality',
     stage: 'shipped',
     progress: 100,
-    summary: 'Shipped in #188. Every pull request now runs lint, build, the unit suite, the Firestore rules tests that pin the entitlement lock, and the Playwright user-simulation suite. #189 removed the flaky offline-banner test that reddened the first run.',
+    summary: 'Shipped in #188. Every pull request now runs lint, build, the unit suite, the Firestore rules tests that pin the entitlement lock, and the Playwright user-simulation suite. #189 removed the flaky offline-banner test that reddened the first run. Baselines: docs/reference/build-and-verify.md.',
     updated: '2026-07-29',
   },
   {
     id: 'design-system-scales',
     name: 'Page-gutter and layering scales',
     area: 'Design system',
-    stage: 'review',
+    stage: 'in-progress',
     progress: 90,
-    summary: 'The shared gutter and layering scales now hold the Palette toolbar stable across hover and the 961–999px transition. The broader Community popover/z-index sweep remains a separate backlog item.',
-    updated: '2026-07-29',
+    summary: 'The shared gutter and layering scales hold the Palette toolbar stable across hover and the 961–999px transition. Still open: the broader Community popover/z-index sweep, and the toolbar action group clipping its hover labels below 961px (see the toolbar-label-clipping item in the queue).',
+    updated: '2026-08-05',
   },
   {
     id: 'release-readiness-review',
     name: 'Release readiness review',
     area: 'Release',
-    stage: 'review',
-    progress: 95,
-    summary: 'The former Firestore-rules blocker is founder-confirmed closed, per-route metadata shipped in #198 and the integrated v2.8 local gate passed. Final review/PR hand-off remains; analytics environment guards, upgrade/activation instrumentation and live external checks stay explicit follow-up work.',
-    updated: '2026-07-31',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'v2.8 shipped in #200 and the founder bug batch in #202. The Firestore-rules publication blocker is founder-confirmed closed and per-route metadata shipped in #198. Analytics environment guards, upgrade/activation instrumentation and the live external checks are tracked as their own queue items, not as an open review.',
+    updated: '2026-08-05',
   },
   {
     id: 'dead-code-sweep',
@@ -112,17 +117,17 @@ export const PIPELINE_PROCESSES = [
     area: 'Codebase health',
     stage: 'shipped',
     progress: 100,
-    summary: 'Shipped in #196. Removed 6 unrouted pages, 7 unreferenced components and their orphaned CSS — 3,284 deletions, zero insertions. Every file was confirmed unreferenced across src/ and tests/ first; the lazily-imported tool pages a naive grep misses were explicitly checked and kept. ESLint warnings fell 34 → 32.',
+    summary: 'Shipped in #196. Removed 6 unrouted pages, 7 unreferenced components and their orphaned CSS — 3,284 deletions, zero insertions. Every file was confirmed unreferenced across src/ and tests/ first; the lazily-imported tool pages a naive grep misses were explicitly checked and kept. ESLint warnings fell 34 → 32 at that commit; the current baseline lives in docs/reference/build-and-verify.md.',
     updated: '2026-07-29',
   },
   {
     id: 'homepage-chaos-to-calm',
     name: 'Homepage chaos → calm proof',
     area: 'Product',
-    stage: 'review',
+    stage: 'shipped',
     progress: 100,
-    summary: 'The base experience shipped in #185. The v2.8 extension now presents eleven stable tool links resolving into five honest workbench modes, including Typography, with icon-led satellites and a reduced-motion-safe merge/splash. The integrated local release gate passed.',
-    updated: '2026-07-31',
+    summary: 'The base experience shipped in #185; the Typography extension shipped in #200. Eleven stable tool links resolve into five honest workbench modes with icon-led satellites and a reduced-motion-safe merge/splash. The field-metric and assistive-technology passes from the acceptance contract are still unrun — see the homepage-field-metrics item in the queue.',
+    updated: '2026-08-05',
   },
   {
     id: 'account-switch-reliability',
@@ -139,8 +144,17 @@ export const PIPELINE_PROCESSES = [
     area: 'Billing',
     stage: 'shipped',
     progress: 100,
-    summary: 'Shipped in #184 with security review PASS. Premium Plus was removed, One-off was added and degrades honestly until a Stripe price exists. Firestore rules are now founder-confirmed published; the owner must still verify webhook event subscriptions before creating the lifetime price. Subscription-chargeback handling remains a separate founder decision.',
-    updated: '2026-07-31',
+    summary: 'Shipped in #184 with security review PASS. Premium Plus was removed, One-off was added and degrades honestly until a Stripe price exists. The Firestore rules are founder-confirmed published, so client-side entitlement escalation is closed; the owner must still verify webhook event subscriptions before creating the lifetime price. Subscription-chargeback handling remains a founder decision (docs/DECISIONS-NEEDED.md).',
+    updated: '2026-08-05',
+  },
+  {
+    id: 'founder-bug-batch',
+    name: 'Founder bug batch — palette + gradient',
+    area: 'Product',
+    stage: 'shipped',
+    progress: 100,
+    summary: 'Shipped in #202. Adjust slider handles became a lens onto their own track, icon-button hover labels lay out at their real width, a gradient stop is created and placed in one press-and-drag gesture, Randomise respects the selected colour system, and a gradient can be submitted for review as an explicitly unpublished local queue entry.',
+    updated: '2026-08-05',
   },
   {
     id: 'public-ui-premium',
@@ -184,8 +198,8 @@ export const PIPELINE_PROCESSES = [
     area: 'Growth',
     stage: 'shipped',
     progress: 100,
-    summary: 'The static public social-share card shipped to main in d210a0d and passed the 79/79 release suite.',
-    updated: '2026-07-28',
+    summary: 'The static public social-share card shipped to main in d210a0d. Per-route share images were explicitly out of scope for #198.',
+    updated: '2026-08-05',
   },
   {
     id: 'discover-buildout',
@@ -237,7 +251,8 @@ export const PIPELINE_PROCESSES = [
 // ── Next-to-do queue (prioritised) ──────────────────────────────────────────
 // priority: 'P0' | 'P1' | 'P2' · effort: 'S' | 'M' | 'L' · status: 'todo' | 'doing' | 'review' | 'blocked'
 export const NEXT_TODO = [
-  { id: 'v2-8-release-handoff', title: 'Complete final review and PR hand-off for v2.8', priority: 'P0', effort: 'S', area: 'Release', status: 'review', note: 'The integrated local build, lint, 108-unit, 24-rules and 144-browser-test gate passed. Complete the remaining reviewer hand-off, then open and merge the PR through the PM.' },
+  { id: 'adjust-slider-keyboard-trap', title: 'Let the adjust sliders leave a snap point by keyboard', priority: 'P0', effort: 'S', area: 'Accessibility', status: 'todo', note: 'Verified accessibility trap, not yet fixed. SnapSlider.jsx routes EVERY change through snapValue(), including keyboard ones: onChange={e => onChange(snapValue(+e.target.value))}. A single arrow press moves the native range input by one step, which is always inside snapRadius, so the value is snapped straight back. Palette Builder is the worst case — Hue snaps at -90/0/90 with radius 8, and Saturation/Tone/Temperature snap at -50/0/50 with radius 6 — so ArrowRight from 0 returns 0 and the snap points become unreachable-to-leave by keyboard. Dragging is unaffected. The same trap applies to every SnapSlider caller (TypeScale, TintTool, FileConverter, the HCT picker). Fix by snapping only pointer-driven changes, or by letting a keyboard step always advance at least one step past the snap.' },
+  { id: 'toolbar-label-clipping', title: 'Stop the Palette toolbar clipping its hover labels below 961px', priority: 'P1', effort: 'S', area: 'Product', status: 'todo', note: 'Founder-reported as label clipping in roughly the 640–980px band; the mechanism in global.css is real and slightly wider than reported. .plb-toolbar-group:last-child becomes a scroll container (overflow-x:auto; overflow-y:hidden) at @media(min-width:769px) and (max-width:960px), and again at max-width:768px. A scroll container clips on BOTH axes. The icon-button reveal label .plb-icobtn .plb-lbl is position:absolute at left:calc(100% - 5px), i.e. outside the button box, so it is clipped inside that group. The dropdowns already have an escape (.plb-menu becomes a fixed bottom sheet at max-width:960px); the hover/focus labels were never given one. Not yet reproduced in a browser this pass — confirm at 700px and 900px before fixing.' },
   { id: 'analytics-env-guard', title: 'Keep dev/preview traffic out of production aggregates', priority: 'P1', effort: 'S', area: 'Analytics', status: 'todo', note: 'The same Firebase project is used across environments; guard aggregate writes before treating Admin totals as production truth.' },
   { id: 'upgrade-activation-events', title: 'Instrument the canonical upgrade gate and activation actions', priority: 'P1', effort: 'M', area: 'Analytics', status: 'todo', note: 'Track openProModal once with a gate id and wire meaningful first-value actions so upgrade and activation can be measured.' },
   { id: 'onboarding-completion-truth', title: 'Reconcile onboarding completion and resume truth', priority: 'P1', effort: 'M', area: 'Account', status: 'blocked', note: 'HVZ design required: the one-shot pendingOnboarding flag routes fresh signup, but abandoning then returning directly to /home or a deep link is not re-routed. Root routing checks vs-onboarded in localStorage while profile hydration separately checks Firestore. Avoid bouncing legacy users with no completedAt; then run live Firebase fresh/returning/resume/finish/skip QA.' },
