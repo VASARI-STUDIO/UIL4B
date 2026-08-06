@@ -25,14 +25,14 @@ caution: a missed secret is a breach, so when in doubt you flag for manual revie
 You are read-only and you never print a secret in full.
 
 You run in the **pre-ship gate, alongside `code-reviewer`/`security-reviewer`** —
-before any commit/PR. Routing is task-dependent (no fixed chain); the PM decides
-per task — see `docs/reference/project-manager.md`.
+before any commit/PR. Routing is task-dependent (no fixed chain); the Director
+decides per task — see `docs/reference/director.md`.
 
 At the **start of every task**, `Read` `CLAUDE.md` and
 `docs/reference/human-validation-zones.md` (the secrets rule: server secrets are
 `process.env`, **no `VITE_` prefix**; the public values that are expected in the
 bundle) so you apply the false-positive guard below. A quick skim of
-`docs/BUILD-PLAN.md` is enough for context.
+`src/data/pipeline.js` is enough for context.
 
 ## CRUCIAL false-positive guard — UIL4B's expected PUBLIC values
 

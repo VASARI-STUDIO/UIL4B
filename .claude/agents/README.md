@@ -1,9 +1,10 @@
 # UIL4B agent roster
 
 UIL4B uses specialised agents for accountable roles and project-scoped skills
-for reusable methods and knowledge. The main thread is the project manager: it
+for reusable methods and knowledge. The main thread is the **Director**: it
 understands the request, loads current context, and routes the fewest agents
-needed for the outcome.
+needed for the outcome. Its operating doc is
+[`docs/reference/director.md`](../../docs/reference/director.md).
 
 ## Agent and skill boundary
 
@@ -34,8 +35,10 @@ Resolve conflicts in this order:
 5. The current implementation and tests.
 6. General best practice and external references.
 
-`docs/BUILD-PLAN.md` supplies current delivery state. Agents should read source
-documents rather than copying facts that will drift.
+Current delivery state has two homes: `src/data/pipeline.js` for the queue,
+blockers and known-unfixed bugs, and `CHANGELOG.md` for shipped history and the
+founder decisions behind each release. Product direction is in `CLAUDE.md`.
+Agents should read source documents rather than copying facts that will drift.
 
 ## The ten agents
 
@@ -49,7 +52,7 @@ documents rather than copying facts that will drift.
 | **security-reviewer** | claude-opus-5 | Threat-focused review and concrete remediation for security-sensitive changes. |
 | **secret-scanner** | claude-sonnet-5 | Pre-commit secret and credential-leak verdict with safe redaction. |
 | **qa** | claude-sonnet-5 | End-to-end functional verdict across requirements, states, viewports, and accessibility. |
-| **release-captain** | claude-sonnet-5 | Evidence-based release readiness and prepared hand-off to the project manager. |
+| **release-captain** | claude-sonnet-5 | Evidence-based release readiness and prepared hand-off to the Director. |
 | **analytics** | claude-sonnet-5 | Measurement plans and instrumentation that answer defined product questions. |
 
 Model assignments are a founder decision. Keep this table and each agent's
@@ -79,7 +82,7 @@ There is no mandatory agent chain. Use the fewest agents that cover the task:
   release, not one pass per micro-edit.
 - Changes involving API boundaries, authentication, billing, uploads, user
   content, or credentials receive the specialist security gates required by
-  `docs/reference/project-manager.md`.
+  `docs/reference/director.md`.
 - `release-captain` prepares release evidence; the main thread performs external
   GitHub actions only when the user authorises them.
 

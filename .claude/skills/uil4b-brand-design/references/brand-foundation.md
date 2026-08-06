@@ -21,7 +21,9 @@ account, and subscription organised into three connected surfaces:
 
 Use `docs/reference/positioning.md` as the canonical source for positioning,
 audience, surface definitions, naming, and current-versus-north-star scope.
-Use `docs/BUILD-PLAN.md` for current delivery state.
+Use `CLAUDE.md` (Direction) for product direction, `src/data/pipeline.js` for the
+current delivery queue and known-unfixed bugs, and `CHANGELOG.md` for what has
+shipped.
 
 ## Identity principles
 

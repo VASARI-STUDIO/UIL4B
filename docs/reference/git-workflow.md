@@ -30,8 +30,8 @@ git push -u origin <branch-name>
 
 - **Via PR only.** Direct push to `main` returns **503**.
 - **Do NOT open a pull request unless the user explicitly asks for one.**
-- The PM (main thread) opens and squash-merges PRs via the GitHub MCP tools;
-  subagents cannot. See `project-manager.md`.
+- The Director (main thread) opens and squash-merges PRs; subagents cannot.
+  See `director.md`.
 
 ## Release gate (when a PR is requested)
 
@@ -44,4 +44,4 @@ Before a PR is prepared, the branch passes the quality gates:
 5. Version + CHANGELOG updated.
 
 The `release-captain` agent drives this and hands a GO/NO-GO + prepared PR
-title/body to the PM, who executes the merge.
+title/body to the Director, who executes the merge.
