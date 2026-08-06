@@ -6126,27 +6126,32 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
 .plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .plb-dsb-link:hover{border-color:var(--brand);color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)}
-/* Icon controls keep a fixed footprint. Their labels reveal in a small overlay
-   beside the button, so no sibling shifts and the toolbar can never grow taller
-   or wider while the pointer is moving across it. */
-.plb-icobtn{position:relative;isolation:isolate;width:36px;min-width:36px;padding-inline:0;justify-content:center;gap:0}
+/* Icon controls are icon-only at rest and EXPAND to hold their own label.
+   The label lives in the button's normal flow, so the BUTTON grows and the
+   text is always inside the button's own box — it never paints over the
+   control beside it. Its siblings are pushed along, which is the honest
+   reading of the gesture: the control got bigger.
+
+   Width comes from the css-conventions 0fr→1fr track (see
+   css-conventions.md → Motion), so the curve runs to the label's REAL text
+   width instead of an invented ceiling — that is what makes --ease-entrance
+   read correctly here. `.plb-lbl-i` carries overflow:hidden;min-width:0 so
+   the 0fr track is allowed to collapse all the way to zero. Padding is
+   animated alongside the track because a border-box element cannot narrow
+   past its own padding.
+
+   (History: this label used to be position:absolute. #202 fixed the sizing
+   half of that — an abspos box with only `left` set has an indefinite inline
+   size, so `1fr` resolved to 0px and the pill opened blank — but it still
+   overlaid its neighbours. In flow, neither fault can recur.)
+
+   Reduced motion is handled by the global clamp at the top of this file,
+   which zeroes transition-duration and -delay on every element. */
+.plb-icobtn{position:relative;isolation:isolate;min-width:36px;padding-inline:10px;justify-content:center;gap:0}
 .plb-icobtn:hover,.plb-icobtn:focus-visible,.plb-icobtn[aria-expanded="true"]{z-index:4}
-/* The reveal label is the css-conventions 0fr→1fr pattern, but ABSOLUTELY
-   positioned — and that needs one extra declaration the in-flow version does
-   not. An abspos box with only `left` set has an auto (shrink-to-fit) inline
-   size, which is indefinite, so `1fr` has no free space to claim and resolves
-   to 0px: the pill animated open around NOTHING and hovering an icon button
-   showed a blank chip instead of its label. `width:max-content` makes the
-   inline size definite, so the fr track resolves to the real text width — the
-   whole easing curve still plays across the actual content, exactly as the
-   convention intends. `0fr` still collapses to 0 because .plb-lbl-i carries
-   overflow:hidden;min-width:0. */
-.plb-icobtn .plb-lbl{position:absolute;top:50%;left:calc(100% - 5px);display:grid;visibility:hidden;grid-template-columns:0fr;width:max-content;align-items:center;min-height:30px;padding:0;opacity:0;color:var(--t0);background:var(--card);border:0 solid transparent;border-radius:var(--radius-s);box-shadow:none;clip-path:inset(0 100% 0 0);transform:translate(-8px,-50%);pointer-events:none;transition:grid-template-columns var(--dur-3) var(--ease-entrance),clip-path var(--dur-3) var(--ease-entrance),transform var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard),padding var(--dur-3) var(--ease-entrance),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-3)}
+.plb-icobtn .plb-lbl{display:grid;grid-template-columns:0fr;align-items:center;min-width:0;padding-left:0;opacity:0;color:inherit;transition:grid-template-columns var(--dur-3) var(--ease-entrance),padding-left var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard)}
 .plb-icobtn .plb-lbl-i{overflow:hidden;min-width:0;white-space:nowrap}
-.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{visibility:visible;grid-template-columns:1fr;padding:0 9px;opacity:1;border-width:1px;border-color:var(--border);box-shadow:var(--shadow-s);clip-path:inset(0);transform:translate(0,-50%);transition-delay:0s}
-.plb-icobtn.btn-accent .plb-lbl{color:var(--accent-fg);background:var(--brand)}
-.plb-toolbar-sep+.plb-menuwrap .plb-icobtn .plb-lbl{right:calc(100% - 5px);left:auto;transform:translate(8px,-50%)}
-.plb-toolbar-sep+.plb-menuwrap .plb-icobtn:hover .plb-lbl,.plb-toolbar-sep+.plb-menuwrap .plb-icobtn:focus-visible .plb-lbl,.plb-toolbar-sep+.plb-menuwrap .plb-icobtn[aria-expanded="true"] .plb-lbl{transform:translate(0,-50%)}
+.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{grid-template-columns:1fr;padding-left:7px;opacity:1}
 
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
 .plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
@@ -6314,6 +6319,34 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-galpopup::before{margin:10px auto 2px}
   .plb-galpopup-head{padding:8px 16px 12px}
   .plb-galpopup-body .pgal-grid{grid-template-columns:1fr}
+  /* …and for the same reason the labels stop being a HOVER reveal here and
+     stay open. Three things converge below 961px: the group is a horizontal
+     scroller, so a reveal that widens its own button fights the scroll
+     position under the pointer; these widths are where touch is likely, and
+     touch has no hover at all; and the reveal is driven by interpolating an
+     `fr` track, which needs free space the shrink-to-fit chain inside a
+     scroll container does not reliably provide — measured: at 900px the track
+     stayed at 0px for the whole transition even though :hover matched and the
+     final value was correct. Pinning them open removes all three at once, and
+     it is what ≤768px already did. */
+  /* `flex:0 0 auto` on the button itself, not only on the group's direct
+     children: four of these buttons sit inside a .plb-menuwrap, so the group's
+     `> *` rule never reached them, and a button that may shrink inside an
+     overflowing scroller is squeezed to its min-width with the label spilling
+     out of it. The group scrolls instead, which is what it is there for. */
+  .plb-icobtn{flex:0 0 auto;min-width:0;padding-inline:12px;gap:7px}
+  /* The collapsible grid is taken out of the box tree entirely rather than
+     pinned to `1fr`. Nothing animates at these widths, so the track buys
+     nothing — and an fr track has to be resolved out of free space that this
+     shrink-to-fit chain inside a scroll container does not reliably have:
+     measured, it settled at 5px for four of the eight buttons at 960px, and
+     `max-content` left the button's own intrinsic width stale across a resize
+     so the text spilled past its right edge. With `display:contents` the label
+     text is simply another flex item of the button, sized by the same rules as
+     the icon beside it, and the button's `gap` provides the spacing the grid's
+     padding used to. */
+  .plb-icobtn .plb-lbl{display:contents}
+  .plb-icobtn .plb-lbl-i{overflow:visible;min-width:max-content}
 }
 @media(max-width:768px){
   /* Toolbar stacks: an identity row (seed/hex/system) above a horizontally
@@ -6334,12 +6367,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
   /* The bottom-sheet dropdown treatment (.plb-menu / .plb-scrolllist /
      .plb-galpopup*) is shared with the mid-band in the @media(max-width:960px)
      block above — only the ≤768-unique rules live here. */
-  /* Touch has no hover, so pin every toolbar-icon label open (un-clamp the
-     desktop max-width:0) — the ribbon is horizontally swipeable, so labels
-     always showing beside their icon is fine here. */
-  .plb-icobtn{width:auto;min-width:0;padding-inline:12px;gap:0}
-  .plb-icobtn .plb-lbl{position:static;visibility:visible;grid-template-columns:1fr;min-height:0;margin-left:7px;padding:0;opacity:1;clip-path:none;transform:none;transition:none;font-size:inherit;font-weight:inherit;color:inherit;background:transparent;border:0;border-radius:0;box-shadow:none;pointer-events:auto}
-  .plb-icobtn .plb-lbl-i{overflow:visible}
+  /* Labels are already pinned open by the max-width:960px block above. */
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
   .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}

@@ -35,7 +35,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(firstHex).toHaveText(initial)
   })
 
-  test('the shell aligns, controls stay level, and hover labels cause no toolbar reflow', async ({ page }) => {
+  test('the shell aligns, controls stay level, and a hover label grows its own button', async ({ page }) => {
     watch(page, 'precision-focused desktop designer')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/color/palette')
@@ -66,33 +66,41 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await page.waitForTimeout(800)
     const preview = page.getByRole('button', { name: 'Preview' })
     const next = page.getByRole('button', { name: 'Gradient' })
+    // The label sits in the button's normal flow (founder batch 2): hovering
+    // EXPANDS the button rather than floating a pill over its neighbour. What
+    // must still hold is that the toolbar stays exactly one line tall and full
+    // width, and that the group is right-anchored so the controls to the right
+    // of the hovered one do not move under the pointer.
     const collapsedLabel = await preview.locator('.plb-lbl').evaluate(element => {
       const style = getComputedStyle(element)
       return {
-        visibility: style.visibility,
+        position: style.position,
         opacity: style.opacity,
-        borderWidth: style.borderTopWidth,
-        clipPath: style.clipPath,
+        width: element.getBoundingClientRect().width,
       }
     })
-    expect(collapsedLabel.visibility).toBe('hidden')
+    expect(collapsedLabel.position).toBe('static')
     expect(collapsedLabel.opacity).toBe('0')
-    expect(collapsedLabel.borderWidth).toBe('0px')
-    expect(collapsedLabel.clipPath).not.toBe('none')
+    expect(collapsedLabel.width).toBeLessThan(1)
     const before = await page.evaluate(() => ({
       toolbar: document.querySelector('.plb-toolbar').getBoundingClientRect().toJSON(),
+      preview: document.querySelector('.plb-icobtn[aria-label="Preview"]').getBoundingClientRect().toJSON(),
       next: document.querySelector('[title="Open this palette in the Gradient Generator"]').getBoundingClientRect().toJSON(),
     }))
     await preview.hover()
-    await page.waitForTimeout(350)
+    await expect.poll(
+      async () => Number(await preview.locator('.plb-lbl').evaluate(el => getComputedStyle(el).opacity)),
+      { timeout: 4000 },
+    ).toBe(1)
     const after = await page.evaluate(() => ({
       toolbar: document.querySelector('.plb-toolbar').getBoundingClientRect().toJSON(),
+      preview: document.querySelector('.plb-icobtn[aria-label="Preview"]').getBoundingClientRect().toJSON(),
       next: document.querySelector('[title="Open this palette in the Gradient Generator"]').getBoundingClientRect().toJSON(),
     }))
-    expect(after.toolbar.height).toBe(before.toolbar.height)
+    expect(after.toolbar.height, 'the toolbar never gains a second row').toBe(before.toolbar.height)
     expect(after.toolbar.width).toBe(before.toolbar.width)
-    expect(after.next.x).toBe(before.next.x)
-    await expect(preview.locator('.plb-lbl')).toHaveCSS('visibility', 'visible')
+    expect(after.preview.width, 'the hovered button holds its own label').toBeGreaterThan(before.preview.width)
+    expect(after.next.x, 'controls to the right of it stay put').toBe(before.next.x)
     await expect(next).toBeVisible()
 
     await page.locator('.app-footer').scrollIntoViewIfNeeded()
