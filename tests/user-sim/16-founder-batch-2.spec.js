@@ -174,3 +174,116 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
     }
   })
 })
+
+/* ── 4 · The adjust sliders are no longer a keyboard trap ─────────────────────
+ * Was: every change went through snapValue(). From a snap point ArrowRight
+ * yielded `snap + step`, inside snapRadius, so it snapped straight back —
+ * forever. A keyboard user could not move these sliders at all. */
+
+test.describe('SnapSlider · keyboard stepping', () => {
+  test('THE TRAP: an arrow key moves the slider off a snap point and it stays there', async ({ page }) => {
+    watch(page, 'keyboard-only designer adjusting a palette')
+    await go(page, '/color/palette')
+
+    const hue = page.getByRole('slider', { name: 'Hue adjustment' })
+    await expect(hue).toBeVisible()
+    await hue.focus()
+    await expect(hue).toBeFocused()
+    await expect(hue, '0 is a snap point on this track').toHaveValue('0')
+
+    await page.keyboard.press('ArrowRight')
+    await expect(hue, 'one step off the snap').toHaveValue('1')
+    // It must STAY moved. The old behaviour re-snapped on the same event, so a
+    // value of 1 never survived to the next frame.
+    await page.waitForTimeout(400)
+    await expect(hue).toHaveValue('1')
+
+    // …and keep going, through the whole snap radius (8° on this track).
+    for (const expected of ['2', '3', '4', '5', '6', '7', '8', '9']) {
+      await page.keyboard.press('ArrowRight')
+      await expect(hue).toHaveValue(expected)
+    }
+    await page.waitForTimeout(300)
+    await expect(hue).toHaveValue('9')
+
+    // The readout the user reads agrees with the track.
+    await expect(page.locator('.plb-adjust .snapv-value').first()).toHaveText('9°')
+  })
+
+  test('Home, End and Page keys behave sensibly', async ({ page }) => {
+    watch(page, 'keyboard-only designer jumping across a track')
+    await go(page, '/color/palette')
+
+    const hue = page.getByRole('slider', { name: 'Hue adjustment' })
+    await hue.focus()
+
+    await page.keyboard.press('End')
+    await expect(hue).toHaveValue('180')
+    await page.keyboard.press('Home')
+    await expect(hue).toHaveValue('-180')
+    await page.keyboard.press('PageUp')
+    await expect(hue, 'a tenth of the range').toHaveValue('-144')
+    await page.keyboard.press('PageDown')
+    await expect(hue).toHaveValue('-180')
+    await page.keyboard.press('ArrowLeft')
+    await expect(hue, 'clamped at the end of the track').toHaveValue('-180')
+  })
+
+  test('a POINTER drag still snaps — magnetism is a pointer affordance', async ({ page }) => {
+    watch(page, 'designer dragging the adjust sliders')
+    await go(page, '/color/palette')
+
+    const hue = page.getByRole('slider', { name: 'Hue adjustment' })
+    await expect(hue).toBeVisible()
+
+    // Drive the input the way a real drag does — pointer down on the track,
+    // then value changes while it is held — rather than by pixel arithmetic,
+    // which would make the assertion depend on the thumb's exact inset. The
+    // MODALITY is the contract that changed, so the modality is what is
+    // asserted: the same value produces a different result depending on
+    // whether a pointer is down.
+    const dragTo = (deg) => hue.evaluate((el, v) => {
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, isPrimary: true }))
+      setValue.call(el, String(v))
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, isPrimary: true }))
+    }, deg)
+
+    // Inside the 8° radius of the 0 snap → pulled onto it.
+    await dragTo(6)
+    await expect(hue, 'a drag near a snap is still magnetic').toHaveValue('0')
+    // Inside the radius of the 90 snap → pulled onto it.
+    await dragTo(86)
+    await expect(hue).toHaveValue('90')
+    // Well clear of every snap → left exactly where it was dropped.
+    await dragTo(40)
+    await expect(hue, 'a drag between snaps stays free').toHaveValue('40')
+
+    // …and the very same value, arrived at by KEYBOARD, is not snapped. This
+    // pair is the whole fix: one input modality is magnetic, the other exact.
+    await hue.focus()
+    await page.keyboard.press('Home')
+    await expect(hue).toHaveValue('-180')
+    for (let i = 0; i < 5; i++) await page.keyboard.press('PageUp')
+    await expect(hue).toHaveValue('0')
+    await page.keyboard.press('ArrowRight')
+    await expect(hue, 'the keyboard leaves the snap it just landed on').toHaveValue('1')
+  })
+
+  test('the fix reaches every SnapSlider, not just the Palette Builder', async ({ page }) => {
+    watch(page, 'keyboard-only designer tuning a tint ramp')
+    // TintTool's hue-shift track snaps every 15° with a 5.4° radius, so it had
+    // exactly the same trap at 0.
+    await go(page, '/color/tint')
+
+    const shift = page.getByRole('slider', { name: /Hue shift/ })
+    await expect(shift).toBeVisible()
+    await shift.focus()
+    await expect(shift).toHaveValue('0')
+    await page.keyboard.press('ArrowRight')
+    await expect(shift).toHaveValue('1')
+    await page.waitForTimeout(350)
+    await expect(shift, 'it stays off the snap here too').toHaveValue('1')
+  })
+})
