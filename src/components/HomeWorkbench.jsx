@@ -21,6 +21,7 @@ import {
   setIconDraft,
 } from '../utils/iconHandoff'
 import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
+import { setBoardDraft } from '../utils/colorHandoff'
 import { HOME_WORKBENCH_TABS } from '../data/toolTree'
 import NavIcon from './NavIcon'
 
@@ -116,6 +117,13 @@ function tabKeyIndex(key, index, length) {
 
 /* ── 1 · Palette ─────────────────────────────────────────────────────────── */
 
+// The colour system the Palette Builder must open on when a visitor continues
+// from here. Auto is the tonal system, and it is the one system that is FREE
+// for everyone — so a signed-out visitor arriving straight off the homepage
+// lands somewhere they can actually work. Without this hand-off the board fell
+// through to its own default, 'analogous', which is paid.
+const HANDOFF_SYSTEM = 'auto'
+
 const L_RAMP = [34, 47, 60, 73, 86]
 
 function makeSwatch(baseHue, i) {
@@ -200,11 +208,18 @@ function PalettePanel({ swatches, onChange, announce }) {
       )}
 
       <div className="hw-foot">
-        <Link className="hw-continue" to="/color/palette">
+        {/* Stays a real <Link> with a real href, so middle-click / open-in-new-tab
+            still work — those start a fresh module instance, which legitimately
+            finds no staged draft and opens the builder in its normal state. */}
+        <Link
+          className="hw-continue"
+          to="/color/palette"
+          onClick={() => setBoardDraft(swatches.map((s) => s.hex), HANDOFF_SYSTEM)}
+        >
           Continue in Palette Builder
           <span aria-hidden="true">→</span>
         </Link>
-        <span className="hw-foot-note">Five swatches here · full ramps, roles and export there.</span>
+        <span className="hw-foot-note">Your five swatches carry over on the free Auto system · full ramps, roles and export there.</span>
       </div>
     </div>
   )
