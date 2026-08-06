@@ -7,20 +7,26 @@
 
 **This table is the single source of truth for the gate numbers.** No other
 document, comment or commit message should restate them — link here instead.
-Every figure below was produced by running the command in this repository at
-`8f4e5ae` on 2026-08-05; if you change a number here, you must have re-run it.
+Every figure below was produced by running the command in this repository on
+the `feat/discover-library-parity` branch on 2026-08-06; if you change a number
+here, you must have re-run it.
 
 | Gate | Command | Current baseline |
 |---|---|---|
-| Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
+| Lint | `npx eslint .` | **0 errors, 33 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **134 tests, 134 pass** |
+| Unit | `npm run test:unit` | **141 tests, 141 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **156 tests across 15 spec files** (`npx playwright test --list`) |
+| Browser acceptance | `npm run test:users` | **167 tests across 16 spec files** (`npx playwright test --list`) |
 
-The 31 lint warnings are pre-existing and advisory
+The 33 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
+The previous figures in this table (31 / 134 / 156) were last measured at
+`8f4e5ae`; `main` moved on without them being re-run. The counts above are a
+fresh measurement. This branch added no lint warnings and no unit tests — the
+only figure it moved is browser acceptance (+8 tests, +1 spec file,
+`15-discover-library-parity.spec.js`).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
 

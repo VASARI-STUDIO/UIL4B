@@ -1079,7 +1079,7 @@ export default function GradientGenerator({ onCopy, toast }) {
             <p>Choose a direction, then make it yours in the canvas.</p>
           </div>
           <Link className="ggn-gal-link" to="/discover/gradients">
-            Browse the gradient gallery <span aria-hidden="true">→</span>
+            Browse the Gradient Library <span aria-hidden="true">→</span>
           </Link>
         </div>
         <div className="ggn-presets">
