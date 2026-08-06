@@ -13,8 +13,8 @@ subscriptions; OpenRouter AI with Gemini fallback.
 > Lean index. Canonical story → [`positioning.md`](docs/reference/positioning.md).
 > **Taking over / new to the project?** Read
 > [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) first — the lean current-state hub,
-> linking only to the stable tool tree, homepage contract and owner/decision
-> queues. Read only the sub-file you need.
+> linking only to the stable tool tree and the owner/decision queues. Read only
+> the sub-file you need.
 
 ---
 
@@ -111,7 +111,7 @@ Read the relevant one before working in that area.
 | Per-module product status | `src/data/moduleBoard.js` |
 | Shipped release history | [`CHANGELOG.md`](CHANGELOG.md) |
 | Tool structure, routes, Soon-vs-live | [`tool-tree.md`](docs/build-plan/tool-tree.md) |
-| Homepage acceptance contract | [`HOMEPAGE-CHAOS-TO-CALM.md`](docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md) |
+| Homepage behaviour contract | `tests/user-sim/10-home-chaos-to-calm.spec.js` (the tests are the contract) |
 
 If a fact appears in two places, the table above wins and the other copy is a
 bug — delete it and link instead. Git history is the archive; do not create
