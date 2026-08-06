@@ -24,7 +24,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
-import { resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
+import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
 // colours and the slider values are persisted separately.
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
@@ -827,16 +827,26 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   // Read the incoming state ONCE, on first mount — the board owns it from then
   // on. `queryColors` is a shared ?c= link (already-final colours, so it lands
-  // with a clean lens); `saved` is the carried-in project, split back into its
-  // base colours and the sliders that produced them.
+  // with a clean lens); `handoff` is the homepage mini-builder's Continue, which
+  // carries BOTH the swatches and the colour system the board must open on;
+  // `saved` is the carried-in project, split back into its base colours and the
+  // sliders that produced them.
+  //
+  // Order matters: an explicit ?c= URL is the strongest statement of intent, a
+  // hand-off is the next (the visitor pressed Continue seconds ago), and the
+  // saved project is the fallback. PEEKED during render and CONSUMED from a
+  // mount effect below — see utils/handoffSlot.js for why that split exists.
   const [queryColors] = useState(colorsFromQuery)
+  const [handoff] = useState(readBoardDraft)
   const [saved] = useState(() => readSavedPalette(design?.palette, HARD_MAX))
   const [initial] = useState(() => {
     if (queryColors) return { colors: queryColors, seed: queryColors[0], adjust: ZERO_ADJUST }
+    if (handoff) return { colors: handoff.colors, seed: handoff.colors[0], adjust: ZERO_ADJUST }
     if (saved) return { colors: saved.colors, seed: saved.colors[0], adjust: saved.adjust }
     const firstSeed = sessionSeed()
     return { colors: generateHarmony(firstSeed, 'analogous'), seed: firstSeed, adjust: ZERO_ADJUST }
   })
+  useEffect(() => { consumeBoardDraft() }, [])
 
   // Colours are the source of truth (positional: index 0–4 = the five ROLES,
   // beyond = ALTERNATIVE n). They stay the RAW base: the adjust lens never
@@ -845,9 +855,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [colors, setColors] = useState(initial.colors)
   const [seed, setSeed] = useState(initial.seed)
   const [seedInput, setSeedInput] = useState(seed)
-  const [harmony, setHarmony] = useState(() =>
-    (HARMONIES.some(h => h.id === design?.palette?.harmony) ? design.palette.harmony : 'analogous')
-  )
+  // A hand-off names the system explicitly and outranks the carried-in project,
+  // because it describes what the visitor just did rather than what this device
+  // last held. The id is validated against HARMONIES here — utils/colorHandoff
+  // deliberately does not know this catalogue — so an unknown id falls through
+  // to the existing behaviour instead of producing a board with no system.
+  const [harmony, setHarmony] = useState(() => {
+    if (handoff && HARMONIES.some(h => h.id === handoff.system)) return handoff.system
+    return HARMONIES.some(h => h.id === design?.palette?.harmony) ? design.palette.harmony : 'analogous'
+  })
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
   // A shared link carries finished colours, so it opens with the sliders at zero
   // rather than re-applying whatever lens was last left on this device.

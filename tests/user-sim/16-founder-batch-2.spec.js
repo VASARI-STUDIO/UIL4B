@@ -175,6 +175,66 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
   })
 })
 
+/* ── 2 · The homepage hand-off lands on the Auto colour system ────────────────
+ * Founder: "make the mini palette builder on the homepage use the auto system
+ * — when you click continue in Palette Builder it's set to analogous."
+ * Was: Continue was a bare <Link> carrying nothing, so the board fell through
+ * to its own default of 'analogous' — a PAID system for a signed-out visitor. */
+
+test.describe('Home mini-builder · Continue in Palette Builder', () => {
+  test('the board opens on Auto, carrying the swatches the visitor generated', async ({ page }) => {
+    watch(page, 'first-time visitor continuing from the homepage')
+    await go(page, '/')
+
+    await page.locator('.hw-tab[data-tab="palette"]').click()
+    const swatches = page.locator('.hw-pal-hex')
+    await expect(swatches).toHaveCount(5)
+    const handedOver = await swatches.allInnerTexts()
+
+    const cont = page.getByRole('link', { name: /Continue in Palette Builder/ })
+    // The link keeps a real href, so open-in-new-tab still works.
+    await expect(cont).toHaveAttribute('href', '/color/palette')
+    await cont.click()
+
+    await page.waitForURL('**/color/palette')
+    await expect(page.locator('.plb-col').first()).toBeVisible()
+
+    // THE regression: the colour system the board lands on.
+    await expect(page.locator('.plb-harm')).toContainText('Auto')
+    await expect(page.locator('.plb-harm')).not.toContainText('Analogous')
+
+    // …and Continue actually continued.
+    expect(await page.locator('.plb-hex').allInnerTexts()).toEqual(handedOver)
+  })
+
+  test('the hand-off does not fire again when the visitor keeps working', async ({ page }) => {
+    watch(page, 'visitor moving between tools after the hand-off')
+    await go(page, '/')
+    await page.locator('.hw-tab[data-tab="palette"]').click()
+    await expect(page.locator('.hw-pal-hex')).toHaveCount(5)
+    await page.getByRole('link', { name: /Continue in Palette Builder/ }).click()
+    await page.waitForURL('**/color/palette')
+    await expect(page.locator('.plb-harm')).toContainText('Auto')
+    const delivered = await page.locator('.plb-hex').allInnerTexts()
+
+    // Edit the board, leave for another tool, come back — all inside the same
+    // module instance, so a slot that had NOT been consumed would re-import the
+    // homepage swatches over the visitor's edit. (The consume-once contract
+    // itself is asserted directly in tests/unit/board-handoff.test.js.)
+    await page.getByRole('button', { name: 'Randomise' }).click()
+    await expect.poll(async () => (await page.locator('.plb-hex').allInnerTexts()).join()).not.toBe(delivered.join())
+    const edited = await page.locator('.plb-hex').allInnerTexts()
+    await page.waitForTimeout(400)   // the debounced write into the shared design
+
+    await page.goBack()              // client-side: back to the homepage
+    await expect(page.locator('.hw-shell')).toBeVisible()
+    await page.goForward()           // …and back onto the board, same module instance
+    await expect(page).toHaveURL(/\/color\/palette/)
+    await expect(page.locator('.plb-col').first()).toBeVisible()
+    expect(await page.locator('.plb-hex').allInnerTexts(), 'the draft was not re-delivered').toEqual(edited)
+  })
+})
+
 /* ── 3 · Column titles describe the colour in the slot ────────────────────────
  * Founder: "when I change the colour system the title of each colour should
  * change based on what is displayed in its slot — for example when I set it to
