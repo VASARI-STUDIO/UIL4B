@@ -331,17 +331,18 @@ export const MODULE_BOARD = [
     area: 'Infra',
     status: 'live',
     health: 'watch',
-    summary: 'Production Firebase verification and Gemini are healthy; the intended OpenRouter primary key is missing.',
+    summary: 'Production Firebase verification and Gemini are healthy. The production OpenRouter key is now set and redeployed; no production request has been verified through the OpenRouter path yet, and a bad key fails over to Gemini silently.',
     recentChanges: [
       'Migrated primary provider DeepSeek → OpenRouter, kept Gemini fallback (DS-01)',
       'Chain-of-thought prompt + tuned sampling (temp 0.75 / top_p 0.9) (DS-02)',
+      'Production OPENROUTER_API_KEY set and redeployed (founder, 2026-08-07)',
     ],
     nextSteps: [
-      'Owner: add OPENROUTER_API_KEY in Production and redeploy',
+      'Verify a production generation is actually served by OpenRouter, not the Gemini fallback',
       'Watch the Vercel 12-function limit when adding AI routes',
       'Add provider health/latency monitoring',
     ],
-    updated: '2026-07-28',
+    updated: '2026-08-07',
   },
   {
     id: 'infra-deploy',

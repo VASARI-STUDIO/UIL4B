@@ -40,7 +40,8 @@ Always read:
 
 1. `CLAUDE.md`;
 2. `docs/reference/positioning.md`;
-3. `docs/BUILD-PLAN.md`;
+3. `src/data/pipeline.js` (the current queue, blockers and known-unfixed bugs)
+   and `CHANGELOG.md` (what has actually shipped);
 4. the target source files and neighbouring approved surfaces.
 
 Read only the additional references relevant to the task. Check

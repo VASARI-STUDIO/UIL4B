@@ -11,19 +11,40 @@ subscriptions; OpenRouter AI with Gemini fallback.
 > the strategy framing in `positioning.md`. Don't reintroduce it in UI copy.
 
 > Lean index. Canonical story → [`positioning.md`](docs/reference/positioning.md).
-> **Taking over / new to the project?** Read
-> [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) first — the lean current-state hub,
-> linking only to the stable tool tree and the owner/decision queues. Read only
-> the sub-file you need.
+> **Taking over / new to the project?** Read this file, then the canonical map
+> below, then only the sub-file you need.
 
 ---
+
+## Direction
+
+**The goal is to make users happy.** Revenue follows that; it does not lead it.
+Shipping is not success — a feature nobody reaches, understands or returns to has
+failed, however green its build.
+
+Keep the working product infrastructure (Firebase, Stripe, AI providers, reusable
+tool logic) while the interface follows one coherent light-first design language:
+clear sales-page structure, continuous Create workbenches, restrained motion,
+consistent controls. Three surfaces:
+
+- **Create** — build, validate and export. The primary live surface.
+- **Discover** — browse community systems and curated resources. Intentionally
+  partial; the wider gallery and community build remains.
+- **Learn** — understand the methods behind the tools. Honest coming-soon until
+  scoped content routes ship.
+
+The homepage is a sales page with a working mini-workspace, not a dashboard. A
+first-time visitor should understand what the product does immediately.
 
 ## Working with me (Dylan)
 
 Designer-turned-vibe-coder and entrepreneur; I work autonomously — hand me a task
 and let me run. My instructions are often unstructured / out of order (ADHD
-tendencies) — **pull them apart, regroup, and re-sequence before acting.** Full
-PM operating model: [`project-manager.md`](docs/reference/project-manager.md).
+tendencies) — **pull them apart, regroup, and re-sequence before acting.**
+
+The main thread is the **Director**: it executes what I ask, and it also brings me
+ideas. Full operating model: [`director.md`](docs/reference/director.md).
+Proposals for me to approve or deny: [`PROPOSALS.md`](docs/PROPOSALS.md).
 
 ## Decision rules
 
@@ -72,8 +93,8 @@ Read the relevant one before working in that area.
   what UIL4B is + the three surfaces.
 - **[Discover](docs/reference/discover.md)** — community + curated-resource hub
   (replaces "Library").
-- **[Project Manager](docs/reference/project-manager.md)** — how the PM parses +
-  routes work. **The PM never writes code.**
+- **[Director](docs/reference/director.md)** — how the main thread parses, routes,
+  verifies and proposes. **The Director never writes code.**
 - **[Tech Stack](docs/reference/tech-stack.md)** — frameworks, AI backends,
   client/server boundary.
 - **[Architecture](docs/reference/architecture.md)** — pages, contexts,
@@ -103,13 +124,13 @@ Read the relevant one before working in that area.
 
 | Fact | Canonical home |
 |---|---|
-| Direction, what shipped, where open work is tracked | [`BUILD-PLAN.md`](docs/BUILD-PLAN.md) |
+| Product direction and the goal | **This file** (see Direction, above) |
+| Ideas awaiting founder approve/deny, and their verdicts | [`PROPOSALS.md`](docs/PROPOSALS.md) |
 | **Every gate baseline number** (lint warnings, test counts) | [`build-and-verify.md`](docs/reference/build-and-verify.md) |
-| Founder decisions, open and resolved | [`DECISIONS-NEEDED.md`](docs/DECISIONS-NEEDED.md) |
 | Founder-only console / credential / live-service work | [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) |
 | Execution order, blockers, known-unfixed bugs | `src/data/pipeline.js` |
 | Per-module product status | `src/data/moduleBoard.js` |
-| Shipped release history | [`CHANGELOG.md`](CHANGELOG.md) |
+| Shipped release history, and the record of founder decisions already made | [`CHANGELOG.md`](CHANGELOG.md) |
 | Tool structure, routes, Soon-vs-live | [`tool-tree.md`](docs/build-plan/tool-tree.md) |
 | Homepage behaviour contract | `tests/user-sim/10-home-chaos-to-calm.spec.js` (the tests are the contract) |
 
@@ -118,7 +139,25 @@ bug — delete it and link instead. Git history is the archive; do not create
 parallel historical planning docs. Subagent roster:
 [`.claude/agents/README.md`](.claude/agents/README.md).
 
-**Sourcing rule.** Never write that the founder approved, confirmed, decided or
-published something unless you can point at where that is recorded — this table,
-a commit, or a PR. If you can't source it, write what is verifiable or mark it
-UNVERIFIED. Do not smooth over uncertainty.
+## Standing rules
+
+**Sourcing.** Never write that the founder approved, confirmed, decided or
+published something unless you can point at where that is recorded — the
+`PROPOSALS.md` verdict line, the founder-decision record in `CHANGELOG.md`, this
+table, a commit, or a PR. If you can't source
+it, write what is verifiable or mark it UNVERIFIED. Do not smooth over
+uncertainty.
+
+**No unrun check may be claimed as passed.** Production, custom-claim, Storage,
+live-payment and load/concurrency checks have not been run. Silence is not a
+pass — write "not run".
+
+**Every slice passes the gate** in
+[`build-and-verify.md`](docs/reference/build-and-verify.md) plus focused rendered
+verification before it is called complete. Anything touching `/api`, auth, Stripe
+or user-generated content takes the security gate every time — see
+[`human-validation-zones.md`](docs/reference/human-validation-zones.md).
+
+**Bugs are not proposals.** Defects, regressions and accessibility failures go
+straight into `src/data/pipeline.js` and get fixed. Only genuine product
+direction goes to `PROPOSALS.md` for a verdict.

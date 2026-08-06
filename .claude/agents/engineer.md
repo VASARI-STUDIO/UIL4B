@@ -24,7 +24,7 @@ a product decision into an implementation assumption.
 At the start of every task, read:
 
 1. `CLAUDE.md`;
-2. `docs/BUILD-PLAN.md`;
+2. `src/data/pipeline.js` — the current queue, blockers and known-unfixed bugs;
 3. `docs/reference/build-and-verify.md`;
 4. the approved requirement or acceptance criteria;
 5. the affected code, tests, and adjacent implementation.

@@ -1,7 +1,7 @@
 # Tool tree & site structure
 
 _Stable scaffolding reference — read when building/placing a tool or touching
-nav. Founder-confirmed 2026-07-02. Hub → [`../BUILD-PLAN.md`](../BUILD-PLAN.md)._
+nav. Founder-confirmed 2026-07-02. Hub → [`../../CLAUDE.md`](../../CLAUDE.md)._
 
 ---
 

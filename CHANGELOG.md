@@ -2,9 +2,52 @@
 
 All notable changes to UIL4B.
 
-This file is the canonical shipped-release history. Current direction and open
-work live in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) and
-`src/data/pipeline.js` — don't use this file as a backlog.
+This file is the canonical shipped-release history, and it carries the standing
+record of the **founder decisions** behind each release — cite it when a document
+needs to point at where a call was actually made. Current product direction lives
+in [`CLAUDE.md`](CLAUDE.md) (Direction); ideas still awaiting a founder verdict
+live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
+`src/data/pipeline.js`. Don't use this file as a backlog.
+
+---
+
+## Unreleased — The Director model, and one home per fact
+
+Documentation and records only; no application behaviour changed. On the
+`docs/director-model` branch.
+
+### Roles and structure
+- The project-manager role became the **Director**: the same never-writes-code
+  rule, plus responsibility for proposing product ideas and reading user
+  feedback, measured against whether work landed with users rather than whether
+  it landed on `main`. Operating doc: `docs/reference/director.md`, which
+  supersedes and replaces the retired `docs/reference/project-manager.md`
+- Added `docs/PROPOSALS.md` — the standing queue of ideas the Director proposes
+  and the founder approves or denies, each with an honest evidence class and an
+  explicit verdict line. Bugs never go there; they go to `src/data/pipeline.js`
+- Retired `docs/BUILD-PLAN.md`. Product direction moved into `CLAUDE.md`
+  (Direction), the canonical map and standing release rules moved into `CLAUDE.md`,
+  and everything else it held was already a pointer to `src/data/pipeline.js`,
+  `CHANGELOG.md` or `docs/OWNER-ACTIONS.md`
+- Retired `docs/DECISIONS-NEEDED.md`. Its resolved-decision record is now kept in
+  this file, per release; its one open item was approved and became engineering
+  work (below)
+- Repointed every agent, skill and reference document at the surviving homes, and
+  renamed the coordinator from "the PM" to "the Director" throughout
+
+### Founder decisions (2026-08-07, in conversation with the Director)
+- **Approved: fix the subscription-chargeback gap.** The refund and dispute
+  revocation path in `api/stripe-webhook.js` is keyed to the one-off
+  `lifetimeEntitlement.paymentIntentId`, so a reversed *subscription* charge can
+  leave a yearly entitlement active. This is no longer an open product decision —
+  it is a queued P1 security item requiring a Human Validation Zone slice and a
+  security review before merge. Not yet implemented
+- **Recorded: the production OpenRouter key is set and redeployed.** Founder
+  statement: "openrouter key is updated and redeployed". This closes the owner
+  action that had blocked it. It does **not** mean the OpenRouter path has been
+  exercised — no production request has been verified through it, and a wrong or
+  rate-limited key fails over to Gemini silently, so a new queue item covers that
+  verification
 
 ---
 
@@ -101,9 +144,22 @@ Shipped across #196–#200.
 - Kept complete generated-system previews visible to Free users while Pro gates editing, expanded scenes and CSS, DTCG and Tailwind exports
 
 ### Project Truth & Quality
-- Consolidated current planning, owner actions and founder decisions into the canonical Build Plan, removing duplicate and closed audit/setup documents
-- Recorded the founder decisions to retain the 3-project/8-icon free caps, use Firebase for Community and prerender eligible public routes
+- Consolidated current planning, owner actions and founder decisions into a single canonical hub, removing duplicate and closed audit/setup documents
 - Recorded the founder-confirmed Firestore rules publication while keeping Storage, custom-claim, live auth/payment and other external checks explicitly open
+
+### Founder decisions behind this release
+
+Six calls made across 2026-07-28 → 2026-07-31 set the shape of v2.8.0 and the
+billing work that preceded it. They are recorded here because this is where the
+decisions and the release that carried them meet — nothing else in the repository
+holds them.
+
+- **2026-07-31 — Free-tier caps: keep them.** 3 saved projects and 8 custom icons stay as they are
+- **2026-07-31 — Community publishing architecture: Firebase.** Firestore plus Storage, with a transactional lowercased handle registry and moderation state
+- **2026-07-31 — Public SEO rendering: prerender, yes.** Prerender eligible public routes; exclude Soon, authenticated and admin routes
+- **2026-07-31 — Homepage typography: add it.** Typography becomes the fifth mini-workspace tab, and Font Gallery, Font Pair Finder and Type Scale are activated as live tools
+- **2026-07-31 — UI System Mode: build the functional premium mode now.** Free users may preview the generated output while editing and export stay Pro initially
+- **2026-07-28 — Lifetime tier: build it.** Ship one-off billing support; the owner still controls creation and activation of the live Stripe price
 
 ---
 
