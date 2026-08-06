@@ -8,6 +8,12 @@ import { GALLERY_PALETTES, paletteBuilderUrl } from '../../data/paletteGallery'
 // in localStorage, and "use" either navigates to the Palette Builder with a
 // ?c= hand-off or (when `onPick` is provided, e.g. inside the builder popup)
 // applies the colours directly via the callback.
+//
+// Palettes may carry `kind: 'brand'` (see data/paletteLibrary.js). Those get a
+// visible "Brand" badge so a published identity system is never mistaken for
+// one of our invented palettes. Brands the Palette Builder gates behind Pro
+// (`pro: true`) keep that gate here: the card links to the builder, where the
+// existing upgrade path lives, instead of handing the colours straight over.
 
 const LIKES_KEY = 'vs-palette-likes'
 
@@ -72,9 +78,12 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
       {palettes.map(p => {
         const selected = selectedId != null && p.id === selectedId
         return (
-        <article key={p.id} className={`pgal-card${selected ? ' is-selected' : ''}`}>
+        <article key={p.id} className={`pgal-card${selected ? ' is-selected' : ''}`} data-kind={p.kind || 'curated'}>
           {selected && (
             <span className="pgal-tick" aria-hidden="true"><CheckGlyph /></span>
+          )}
+          {p.kind === 'brand' && (
+            <span className="pgal-badge">Brand{p.pro ? ' · Pro' : ''}</span>
           )}
           {/* The stripes. On Discover (no onPick) each stripe copies its hex.
               Inside the builder popup (onPick) the whole swatch is the select
@@ -135,6 +144,18 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
                   <>Use <span aria-hidden="true">→</span></>
                 )}
               </button>
+            ) : p.pro ? (
+              // Pro-gated brand system. The Palette Builder decides who may
+              // load it (pickBrand there), so the library sends the user to
+              // that gate rather than handing the colours over via ?c=.
+              <Link
+                className="pgal-use pgal-use--pro"
+                to="/color/palette"
+                aria-label={`${p.name} is a Pro brand system — open the Palette Builder to load it`}
+                title="Pro brand system — load it from the Palette Builder"
+              >
+                Pro <span aria-hidden="true">→</span>
+              </Link>
             ) : (
               <Link
                 className="pgal-use"

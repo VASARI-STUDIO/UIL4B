@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { go, watch } from './helpers.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 
 const STATIC_INDEXABLE_ROUTES = [
   '/',
@@ -55,12 +56,12 @@ test.describe('public route contract', () => {
     await go(page, '/discover')
 
     await expect(page.getByRole('link', { name: /Palette Library/ })).toHaveAttribute('href', '/discover/palettes')
-    await expect(page.getByRole('link', { name: /Gradient Gallery/ })).toHaveAttribute('href', '/discover/gradients')
+    await expect(page.getByRole('link', { name: /Gradient Library/ })).toHaveAttribute('href', '/discover/gradients')
     await expect(page.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
 
     await go(page, '/discover/palettes')
     await expect(page.getByRole('heading', { level: 1, name: 'Palette Library' })).toBeVisible()
-    await expect(page.locator('.pgal-card')).toHaveCount(32)
+    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
     await page.getByPlaceholder('Search by name or hex…').fill('Midnight Teal')
     await expect(page.locator('.pgal-card')).toHaveCount(1)
   })
@@ -92,7 +93,7 @@ test.describe('public route contract', () => {
 
     const gradient = discover.locator('[data-route="/discover/gradients"]')
     await expect(gradient).not.toHaveAttribute('data-soon')
-    await expect(gradient.getByRole('link', { name: /Gradient Gallery/ })).toHaveAttribute('href', '/discover/gradients')
+    await expect(gradient.getByRole('link', { name: /Gradient Library/ })).toHaveAttribute('href', '/discover/gradients')
 
     const palettes = discover.locator('[data-route="/discover/palettes"]')
     await expect(palettes).not.toHaveAttribute('data-soon')
