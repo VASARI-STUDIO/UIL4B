@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
+import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
+import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import { GALLERY_PALETTES } from '../data/paletteGallery'
 
 const FILTERS = [
@@ -53,18 +55,12 @@ export default function PaletteGallery({ toast }) {
 
   return (
     <div className="sec pgl-page">
-      <header className="pgl-hero">
-        <div>
-          <span className="pgl-eyebrow">Discover / Colour</span>
-          <h1>Palette Library</h1>
-          <p>Colour systems with a point of view. Copy a swatch, save a favourite, or open the complete palette in the builder and make it yours.</p>
-        </div>
-        <div className="pgl-hero-mark" aria-hidden="true">
-          <span>#4338E0</span>
-          <strong>{GALLERY_PALETTES.length}</strong>
-          <small>curated palettes</small>
-        </div>
-      </header>
+      <DiscoverGalleryHero
+        eyebrow="Discover / Colour"
+        title="Palette Library"
+        description="Colour systems with a point of view. Copy a swatch, save a favourite, or open the complete palette in the builder and make it yours."
+        mark={{ label: '#4338E0', value: GALLERY_PALETTES.length, caption: 'curated palettes' }}
+      />
 
       <div className="pgl-toolbar">
         <label className="pgl-search">
@@ -84,16 +80,18 @@ export default function PaletteGallery({ toast }) {
         <Link className="pgl-build-link" to="/color/palette">Create a palette <span aria-hidden="true">↗</span></Link>
       </div>
 
-      <div className="pgl-result-head">
-        <div>
-          <span>Curated collection</span>
-          <h2>Colours worth building with</h2>
-        </div>
-        <p aria-live="polite">{visible.length} palette{visible.length === 1 ? '' : 's'}</p>
-      </div>
+      <DiscoverResultHead
+        eyebrow="Curated collection"
+        title="Colours worth building with"
+        count={visible.length}
+        noun="palette"
+        id="pgl-grid-heading"
+      />
 
       {visible.length ? (
-        <PaletteGalleryGrid toast={toast} palettes={visible} />
+        <section aria-labelledby="pgl-grid-heading">
+          <PaletteGalleryGrid toast={toast} palettes={visible} />
+        </section>
       ) : (
         <div className="pgl-empty" role="status">
           <strong>No palettes match that combination.</strong>

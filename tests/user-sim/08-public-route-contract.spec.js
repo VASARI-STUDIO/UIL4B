@@ -55,7 +55,7 @@ test.describe('public route contract', () => {
     await go(page, '/discover')
 
     await expect(page.getByRole('link', { name: /Palette Library/ })).toHaveAttribute('href', '/discover/palettes')
-    await expect(page.getByRole('link', { name: /Gradient Gallery/ })).toHaveAttribute('href', '/discover/gradients')
+    await expect(page.getByRole('link', { name: /Gradient Library/ })).toHaveAttribute('href', '/discover/gradients')
     await expect(page.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
 
     await go(page, '/discover/palettes')
@@ -92,7 +92,7 @@ test.describe('public route contract', () => {
 
     const gradient = discover.locator('[data-route="/discover/gradients"]')
     await expect(gradient).not.toHaveAttribute('data-soon')
-    await expect(gradient.getByRole('link', { name: /Gradient Gallery/ })).toHaveAttribute('href', '/discover/gradients')
+    await expect(gradient.getByRole('link', { name: /Gradient Library/ })).toHaveAttribute('href', '/discover/gradients')
 
     const palettes = discover.locator('[data-route="/discover/palettes"]')
     await expect(palettes).not.toHaveAttribute('data-soon')
