@@ -102,9 +102,12 @@ hero and its immediately adjacent mini-workbench only.**
 - **Responsive scope:** reduced-motion and mobile presentations express the same
   scattered-to-organised idea through static hierarchy rather than compressed
   choreography.
-- **Evidence:** founder-approved specification in
-  `docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md`; acceptance remains contingent on
-  rendered responsive, accessibility, performance and anti-slop review.
+- **Evidence:** the founder-approved specification was retired to git history in
+  #204 once shipped; its behavioural half is now executable as
+  `tests/user-sim/10-home-chaos-to-calm.spec.js`, and its unmet performance and
+  assistive-technology budgets sit on the `homepage-field-metrics` item in
+  `src/data/pipeline.js`. Acceptance remains contingent on those rendered
+  responsive, accessibility, performance and anti-slop reviews.
 
 Do not generalise this into a brand-wide rule requiring satellites, convergence,
 orbiting cards or dense heroes. Reuse requires a separate product-specific

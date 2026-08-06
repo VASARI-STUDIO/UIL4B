@@ -101,7 +101,7 @@ Each fact has exactly one home. Point at it; do not copy it.
 | `src/data/moduleBoard.js` | per-module product status |
 | `CHANGELOG.md` | shipped release history |
 | [`build-plan/tool-tree.md`](build-plan/tool-tree.md) | stable Create/Discover/Learn structure, routes and reusable-tool inventory |
-| [`build-plan/HOMEPAGE-CHAOS-TO-CALM.md`](build-plan/HOMEPAGE-CHAOS-TO-CALM.md) | homepage workbench acceptance contract and remaining field-metrics checks |
+| `tests/user-sim/10-home-chaos-to-calm.spec.js` | homepage workbench behaviour contract, executable |
 | [`reference/architecture.md`](reference/architecture.md) | pages, contexts, components and the `/api` function budget |
 | [`reference/positioning.md`](reference/positioning.md) | what UIL4B is and the three surfaces |
 
