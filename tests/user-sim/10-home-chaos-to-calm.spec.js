@@ -3,7 +3,9 @@
 // two in-memory hand-offs (images → File Converter, icon draft → Icon Editor).
 //
 // Numbers in the test titles refer to the acceptance list in
-// docs/build-plan/HOMEPAGE-CHAOS-TO-CALM.md §14.
+// the homepage acceptance contract (retired to git history in #204 — this file
+// IS the contract now; its unmet performance budgets moved to the
+// homepage-field-metrics item in src/data/pipeline.js).
 import { test, expect } from '@playwright/test'
 import { watch, go } from './helpers.js'
 
