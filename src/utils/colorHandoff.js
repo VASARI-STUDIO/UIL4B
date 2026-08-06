@@ -80,6 +80,61 @@ function makeColorSlot(min, max) {
 const gradientSlot = makeColorSlot(GRADIENT_HANDOFF_MIN, GRADIENT_HANDOFF_MAX)
 const tintSlot = makeColorSlot(TINT_HANDOFF_MIN, TINT_HANDOFF_MAX)
 
+/* ── Homepage mini-builder → Palette Builder ──────────────────────────────── */
+
+// The homepage palette panel's "Continue in Palette Builder" carried NOTHING —
+// it was a bare link — so the board opened on whatever colour system the
+// destination happened to default to. That default is 'analogous', which is a
+// PAID system: a signed-out visitor was dropped straight from the homepage into
+// a system they cannot use, and the first regenerate silently collapsed it back
+// to 'auto' (see FREE_SYSTEMS in PaletteBuilder). This slot makes the hand-off
+// explicit: the swatches the visitor generated, and the system the board must
+// open on.
+//
+// The system is carried as an opaque id and is NOT validated against a list
+// here — the destination owns its own list of systems (HARMONIES) and checks
+// the id against it, so this module never has to be kept in sync with the
+// page's catalogue, and an unknown id degrades to the destination's own
+// default rather than to a broken board. The id grants nothing: free/Pro
+// gating stays entirely with the destination.
+export const BOARD_HANDOFF_MIN = 2
+// HARD_MAX in the Palette Builder — the board never holds more than 10 columns.
+export const BOARD_HANDOFF_MAX = 10
+
+const SYSTEM_ID_RE = /^[a-z][a-z0-9-]{0,23}$/
+
+const boardSlot = createHandoffSlot()
+
+/** Re-validate on the way in AND on the way out; null when unusable. */
+export function validateBoardDraft(draft) {
+  if (!draft || typeof draft !== 'object') return null
+  if (draft.version !== COLOR_HANDOFF_VERSION) return null
+  const colors = cleanColors(draft.colors, BOARD_HANDOFF_MIN, BOARD_HANDOFF_MAX)
+  if (!colors) return null
+  const system = typeof draft.system === 'string' && SYSTEM_ID_RE.test(draft.system)
+    ? draft.system
+    : null
+  if (!system) return null
+  return { version: COLOR_HANDOFF_VERSION, colors, system }
+}
+
+export const buildBoardDraft = (colors, system) =>
+  validateBoardDraft({ version: COLOR_HANDOFF_VERSION, colors, system })
+
+/** Stage the board for the next Palette Builder mount. False when unusable. */
+export function setBoardDraft(colors, system) {
+  const valid = buildBoardDraft(colors, system)
+  boardSlot.set(valid)
+  return !!valid
+}
+
+/** Read during render, re-validated. Null when absent, consumed or invalid. */
+export const readBoardDraft = () => validateBoardDraft(boardSlot.peek())
+/** Consume — call once from the destination's mount effect. */
+export const consumeBoardDraft = () => boardSlot.consume()
+/** Drop a staged draft that will never be delivered (e.g. a failed navigation). */
+export const resetBoardDraft = () => boardSlot.clear()
+
 /* ── Palette → Gradient Generator ─────────────────────────────────────────── */
 
 /** Build a draft from loose colours, or null when it can't make a gradient. */
