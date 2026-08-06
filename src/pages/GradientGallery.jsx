@@ -1,15 +1,21 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import GradientGalleryGrid from '../components/discover/GradientGalleryGrid'
+import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
+import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import { GALLERY_GRADIENTS, GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
 
-// /discover/gradients — the curated gradient gallery. A designgradients-style
-// browse surface over the local static set (src/data/gradientGallery.js):
-// search by name/hex/tag, filter by mood tag and gradient type, copy the CSS
-// or open any gradient straight in the Gradient Generator. No network, no
-// loading state — the only Murphy state is "no results", which is never a
-// dead end (one-tap clear).
+// /discover/gradients — the Gradient Library. A designgradients-style browse
+// surface over the local static set (src/data/gradientGallery.js): search by
+// name/hex/tag, filter by mood tag and gradient type, copy the CSS or open any
+// gradient straight in the Gradient Generator. No network, no loading state —
+// the only Murphy state is "no results", which is never a dead end (one-tap
+// clear).
+//
+// The masthead and results row come from the shared Discover Library
+// components, so this page and the Palette Library stay in lockstep by
+// construction rather than by copy-paste.
 
 const TYPES = ['Linear', 'Radial', 'Conic']
 
@@ -38,18 +44,18 @@ export default function GradientGallery({ toast }) {
 
   return (
     <div className="sec grg-wrap">
-      <header className="sec-h grg-head">
-        <span className="sec-h-eyebrow">Discover</span>
-        <h1>Gradient gallery.</h1>
-        <p>
-          A curated set of production-ready CSS gradients — copy the rule in one
-          tap, or open any of them in the Gradient Generator to make it yours.
-        </p>
-        <Link className="btn btn-accent grg-cta" to="/color/gradient">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
-          Open the Gradient Generator
-        </Link>
-      </header>
+      <DiscoverGalleryHero
+        eyebrow="Discover / Colour"
+        title="Gradient Library"
+        description="Production-ready CSS gradients with a point of view. Copy the rule in one tap, save a favourite, or open any of them in the Gradient Generator and make it yours."
+        mark={{ label: 'linear-gradient()', value: GALLERY_GRADIENTS.length, caption: 'curated gradients' }}
+        action={(
+          <Link className="btn" to="/color/gradient">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
+            Open the Gradient Generator
+          </Link>
+        )}
+      />
 
       {submissions.length > 0 && (
         <section className="grg-queue" aria-labelledby="grg-queue-heading">
@@ -149,12 +155,13 @@ export default function GradientGallery({ toast }) {
         </div>
       </div>
 
-      <div className="section-h grg-count">
-        <h2 id="grg-grid-heading">Browse gradients</h2>
-        <span className="meta" aria-live="polite">
-          {visible.length} {visible.length === 1 ? 'gradient' : 'gradients'}
-        </span>
-      </div>
+      <DiscoverResultHead
+        eyebrow="Curated collection"
+        title="Gradients worth building with"
+        count={visible.length}
+        noun="gradient"
+        id="grg-grid-heading"
+      />
 
       {visible.length > 0 ? (
         <section aria-labelledby="grg-grid-heading">

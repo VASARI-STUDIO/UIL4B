@@ -148,11 +148,11 @@ export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) 
 // Discover + Learn are landing shells in Phase 1: most menu entries route to the
 // surface landing (which owns the honest "coming soon" messaging), so there are
 // no dead links and nothing claims to be live before it is. The exception is the
-// Gradient Gallery — a real, curated browse surface — which is `soon: false` and
+// Gradient Library — a real, curated browse surface — which is `soon: false` and
 // links straight to its live page, so it renders as a live card and menu row.
 export const DISCOVER_GROUPS = [
   { id: 'palette-library', icon: 'palette', label: 'Palette Library', desc: 'Curated colour systems ready to copy, save or open in the Palette Builder.', route: '/discover/palettes', soon: false },
-  { id: 'gradient-gallery', label: 'Gradient Gallery', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
+  { id: 'gradient-gallery', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
   { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', route: '/fontgallery', soon: false },
   { id: 'inspiration', label: 'Inspiration', desc: 'Community UI systems, Mobbin-style browsing.', route: '/discover', soon: true },
   { id: 'community-prompts', label: 'Community Prompts', desc: 'Proven prompts, submitted and curated.', route: '/discover', soon: true },
