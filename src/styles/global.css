@@ -1768,27 +1768,24 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .fg-sort-btn{min-height:30px;padding:6px 10px;font-size:11px;font-weight:600;color:var(--t2);background:transparent;border:1px solid transparent;border-radius:var(--radius-xs);cursor:pointer;transition:color var(--t),background var(--t),border-color var(--t)}
 .fg-sort-btn:hover{color:var(--t0)}
 .fg-sort-btn--on{color:var(--t0);background:var(--card);border-color:var(--border);box-shadow:var(--shadow-xs)}
-.fg-search{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:6px 16px;min-width:200px;transition:border-color var(--t),box-shadow var(--t)}
-.fg-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
-.fg-search svg{color:var(--t3);flex-shrink:0}
-.fg-search input{border:none;background:none;color:var(--t0);font-family:var(--font);font-size:13px;outline:none;width:100%;padding:0;min-height:26px}
-.fg-search input::placeholder{color:var(--t3)}
 .fg-count{margin:0 0 14px;font-family:var(--mono);font-size:11px;color:var(--t2);letter-spacing:.02em}
 .fg-empty{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:32px;margin-bottom:var(--s-6);border:1px dashed var(--border);border-radius:var(--radius-l);background:var(--bg-1)}
 .fg-empty strong{font-size:15px;font-weight:650;color:var(--t0)}
 .fg-empty span{max-width:60ch;font-size:13px;line-height:1.6;color:var(--t2)}
 
-/* Grid */
-.fg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin:0 0 var(--s-5);padding:0;list-style:none}
-.fg-card{position:relative;display:flex;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.fg-card:hover{border-color:var(--bh);box-shadow:var(--shadow-s);transform:translateY(-1px)}
-.fg-card--comparing{border-color:var(--brand)}
+/* Grid.
+   Layout (columns, gap, borders, radius) is set once in the premium library
+   block near the end of this file — the gallery is a full-width specimen list,
+   not a card grid. Keep the structural resets here and the look there; two
+   competing definitions of the same row is how this component last broke. */
+.fg-grid{display:grid;margin:0 0 var(--s-5);padding:0;list-style:none}
+.fg-card{position:relative;display:flex;background:var(--card);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .fg-card-open{display:flex;flex-direction:column;width:100%;padding:0;text-align:left;background:transparent;border:0;cursor:pointer}
 .fg-card-open:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
-/* 22 + 10 padding + 52 + 10 gap + 38 = 132. The arithmetic is deliberate: the
-   two text boxes must not shrink, or a long family name would steal height
-   from the pangram and the "reserved metrics" promise would only half hold. */
-.fg-card-preview{display:flex;flex-direction:column;gap:10px;height:132px;padding:22px 20px 10px;overflow:hidden;font-family:var(--fg-ff)}
+/* The two text boxes must not shrink, or a long family name would steal height
+   from the pangram and the "reserved metrics" promise would only half hold.
+   Their heights and the box that holds them are set in the premium block. */
+.fg-card-preview{display:flex;flex-direction:column;gap:10px;overflow:hidden;font-family:var(--fg-ff)}
 .fg-card-preview--pending{font-family:var(--font)}
 .fg-card-skeleton{display:block;flex:0 0 auto;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;animation:fg-shimmer 1.4s linear infinite}
 .fg-card-skeleton--sample{width:76%;height:52px}
@@ -1904,7 +1901,6 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 
 @media(max-width:980px){
   .fg-hero-copy{grid-template-columns:1fr;gap:var(--s-4)}
-  .fg-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
   .fg-detail{padding:28px}
 }
 @media(max-width:768px){
@@ -1916,8 +1912,6 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 @media(max-width:560px){
   .fg-hero h1{font-size:36px}
   .fg-hero-copy>p{font-size:13px}
-  .fg-grid{grid-template-columns:1fr}
-  .fg-search{min-width:0;width:100%}
   .fg-filter-right{align-items:stretch;flex-direction:column}
   .fg-sort{width:100%}
   .fg-sort-btn{flex:1}
@@ -1931,8 +1925,6 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
   .fg-detail-btn{flex:1;justify-content:center}
 }
 @media(max-width:380px){
-  .fg-card-preview{height:120px}
-  .fg-card-sample{height:44px;font-size:34px;line-height:44px}
   .fg-cat-pill{padding:7px 12px;font-size:11px}
   .fg-compare-tray{flex-direction:column;align-items:stretch}
   .fg-compare-tray-actions .fg-more-btn{flex:1}
@@ -7513,9 +7505,11 @@ button.plb-varrow:hover{background:var(--bg-2)}
 }
 
 /* Coarse pointers need a 44px target even when the compact visual treatment is
-   useful on small screens. These are the typography controls QA identified. */
+   useful on small screens. These are the typography controls QA identified.
+   Size only — the compare button's PLACEMENT is set once in the premium block
+   below, which comes later in the cascade and would silently win anyway. */
 @media(pointer:coarse){
-  .fg-card-compare{width:44px;height:44px;top:8px;right:8px;opacity:1}
+  .fg-card-compare{width:44px;height:44px;opacity:1}
   .fg-sort-btn,.fg-more-btn,.fg-compare-chip,.fpr-card-apply,.tsc-width-btn{min-height:44px}
 }
 
@@ -7573,35 +7567,95 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .fg-hero--premium h1{font-size:clamp(62px,9vw,128px);line-height:.76;letter-spacing:-.07em;color:#fff}
 .fg-hero-intro>p{max-width:520px;margin:0 0 34px;font-size:clamp(15px,1.5vw,19px);line-height:1.6;color:rgba(255,255,255,.66)}
 .fg-hero-stats{display:grid;grid-template-columns:repeat(3,1fr);border-block:1px solid rgba(255,255,255,.15)}
-.fg-hero-stats span{display:flex;flex-direction:column;gap:4px;padding:14px 12px 14px 0;font-family:var(--mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.42)}
+/* 9px is the floor used by every other mono kicker in the app, and .66 white on
+   the hero's near-black clears AA — .42 did not, and 8px was smaller than
+   anything else we ship. */
+.fg-hero-stats span{display:flex;flex-direction:column;gap:4px;padding:14px 12px 14px 0;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.66)}
 .fg-hero-stats span+span{padding-left:14px;border-left:1px solid rgba(255,255,255,.15)}
 .fg-hero-stats strong{font-family:var(--font);font-size:14px;letter-spacing:-.01em;text-transform:none;color:#fff}
-.fg-command{position:sticky;top:calc(var(--nav-clear) + 8px);z-index:45;display:grid;grid-template-columns:minmax(180px,.8fr) minmax(260px,1.3fr) minmax(180px,.65fr);gap:8px;align-items:center;margin:0 0 24px;padding:9px;background:color-mix(in srgb,var(--bg-0) 90%,transparent);border:1px solid var(--border);border-radius:17px;box-shadow:0 16px 50px rgba(10,10,18,.1);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+/* The whole control block pins, not just its first row. The wrapper carries an
+   opaque page-coloured backdrop so the filters sitting under the panel are not
+   transparent to the specimen list scrolling behind them. */
+.fg-controls{position:sticky;top:calc(var(--nav-clear) + 8px);z-index:45;background:var(--bg-0)}
+/* 97%, not 90%: a specimen list scrolling underneath a 90%-opaque bar showed
+   through it as ghosted type, which read as a rendering fault. The blur stays
+   for depth; legibility no longer depends on it. */
+.fg-command{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(260px,1.3fr) minmax(180px,.65fr);gap:8px;align-items:center;margin:0;padding:9px;background:color-mix(in srgb,var(--bg-0) 97%,transparent);border:1px solid var(--border);border-radius:17px;box-shadow:0 16px 50px rgba(10,10,18,.1);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
 .fg-command-search,.fg-command-text{display:flex;align-items:center;gap:9px;min-height:46px;padding:0 13px;color:var(--t2);background:var(--inp);border:1px solid var(--border);border-radius:10px}
 .fg-command-search:focus-within,.fg-command-text:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 .fg-command-search input,.fg-command-text input{min-width:0;width:100%;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-size:13px}
 .fg-command-text{display:grid;grid-template-columns:auto 1fr}
-.fg-command-text>span,.fg-command-size>span{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);white-space:nowrap}
+/* --t3 at 8px is 3.3:1 in the light theme — under AA, and the smallest type on
+   the page was on the two controls people have to read to use it. */
+.fg-command-text>span,.fg-command-size>span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
 .fg-command-size{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;min-height:46px;padding:0 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:10px}
+/* The two text controls beside this one already ring on :focus-within; the size
+   control did not, and a focused range input carries no outline of its own —
+   keyboard focus arrived here invisibly. Every range on the page now rings. */
+.fg-command-size:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.fg-command-size input:focus-visible,.fg-weight-slider-row input:focus-visible,.fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .fg-command-size input{min-width:70px;width:100%;accent-color:var(--brand)}
 .fg-command-size strong{font-family:var(--mono);font-size:10px;color:var(--t1)}
-.fg-filters{margin-bottom:12px;padding:12px 0;border-block:1px solid var(--border)}
+.fg-filters{margin:0;padding:14px 0 12px;border-block:0;border-bottom:1px solid var(--border)}
 .fg-cat-pill,.fg-sort-btn{border-radius:8px}
 .fg-count{margin:18px 0 20px;text-transform:uppercase;letter-spacing:.11em}
 .fg-grid{grid-template-columns:1fr;gap:0;border-top:1px solid var(--border)}
 .fg-card{border:0;border-bottom:1px solid var(--border);border-radius:0;box-shadow:none;overflow:visible}
 .fg-card:hover{z-index:1;border-color:var(--brand);transform:none;box-shadow:none}
-.fg-card-open{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(170px,240px);align-items:stretch}
-.fg-card-index{display:flex;align-items:center;padding:22px 0;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--t3)}
-.fg-card-preview{height:154px;padding:24px 34px 18px 0;background:transparent}
-.fg-card-skeleton--sample{height:72px}
-.fg-card-skeleton--body{height:24px}
-.fg-card-sample{height:72px;font-size:clamp(34px,var(--fg-card-size),72px);line-height:72px;letter-spacing:-.045em}
-.fg-card-pangram{height:24px;font-size:12px;line-height:24px;white-space:nowrap;text-overflow:ellipsis}
-.fg-card-meta{align-items:flex-end;margin:0;padding:24px 48px 24px 22px;border-top:0;border-left:1px solid var(--border);background:transparent}
-.fg-card-name{font-size:17px;letter-spacing:-.02em}
-.fg-card-info{font-size:8px}
-.fg-card-compare{top:50%;right:10px;opacity:1;transform:translateY(-50%)}
+/* ONE ALIGNMENT LINE PER ROW.
+   The row is 154px tall and holds four things: the index numeral, the specimen,
+   the family name and the compare toggle. They now share one horizontal line —
+   the specimen's cap height at the default preview size, ~42px down. Before
+   this they used four different alignments (index centred, specimen top, meta
+   BOTTOM, toggle centred), so the family name landed ~85px below the face it
+   named, with a full-height rule and an empty gutter in between. Nothing in the
+   row lined up with anything else, which is what made a finished tool read as a
+   half-built one.
+   The 38px offsets are constants, not baseline-derived: the specimen's own cap
+   line drifts ~5px either side of 42px across the size slider's range, so
+   pinning the labels is steadier than chasing it. */
+.fg-card-open{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(196px,258px);align-items:stretch}
+.fg-card-index{display:flex;align-items:flex-start;padding:38px 0 0;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--t3)}
+/* 22 + 80 + 10 + 22 + 18 = 152 in a 154px row. The sample line is 80px, not
+   72px: a 64px face needs ~1.17em of ascent + descent, and a 72px line box
+   clipped the tails of its own specimen at the top of the size range. */
+.fg-card-preview{height:154px;padding:22px 34px 18px 0;background:transparent}
+.fg-card-skeleton--sample{height:80px}
+.fg-card-skeleton--body{height:22px}
+.fg-card-sample{height:80px;font-size:clamp(34px,var(--fg-card-size),64px);line-height:80px;letter-spacing:-.045em}
+.fg-card-pangram{height:22px;font-size:12px;line-height:22px;white-space:nowrap;text-overflow:ellipsis}
+/* Name over classification, not name beside it: side by side, the tag and the
+   58px reserved for the compare toggle left ~100px of a 240px column for the
+   name, so "Roboto Condensed" truncated inside a column that was two-thirds
+   empty. */
+.fg-card-meta{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:5px;margin:0;padding:38px 58px 24px 22px;border-top:0;border-left:1px solid var(--border);background:transparent}
+.fg-card-name{max-width:100%;font-size:17px;line-height:1.3;letter-spacing:-.02em}
+.fg-card-info{font-size:10px;letter-spacing:.04em}
+.fg-card-compare{top:34px;right:12px;opacity:1;transform:none}
+/* A row queued for comparison has to say so on the row, not only on its toggle.
+   `.fg-card` resets `border` after `.fg-card--comparing` sets `border-color`,
+   so the bottom rule alone cannot carry this — an inset ring can. */
+.fg-card--comparing{box-shadow:inset 2px 0 0 var(--brand);background:var(--brand-bg)}
+
+/* The hero is a near-black slab, which reads as a deliberate object on the
+   light page and as NOTHING on the dark one: #0a0a0b against a --bg-0 of
+   #0A0B0D is the same colour. Lift it clear of the page in dark instead. */
+[data-theme="dark"] .fg-hero--premium{background:linear-gradient(158deg,#191a1f,#0e0f13 64%);border-color:rgba(255,255,255,.16);box-shadow:0 30px 90px rgba(0,0,0,.5)}
+[data-theme="dark"] .fg-hero--premium::after{color:rgba(255,255,255,.05)}
+
+/* The shared loading strip reserves 320px because in the other two tools it
+   stands alone. Here it sits above the skeleton, so the reserve is a hole. */
+.fg-page .typ-loading{min-height:0;padding:var(--s-6) var(--s-5) var(--s-5)}
+/* First-paint skeleton — the row geometry drawn empty while the catalogue is in
+   flight, so the list lands in a shape the reader has already seen. Deliberately
+   NOT .fg-card: the reserved-metrics contract is asserted across .fg-card, and
+   these are not typefaces. */
+.fg-grid--skeleton{gap:0}
+.fg-skel-row{display:flex;flex-direction:column;gap:10px;height:154px;padding:24px 34px 18px 52px;border-bottom:1px solid var(--border)}
+.fg-skel-row .fg-card-skeleton--sample{width:min(38%,420px)}
+.fg-skel-row .fg-card-skeleton--body{width:min(52%,540px)}
+
+.fg-empty{padding:40px;border-radius:18px}
 
 /* Font Pair */
 .fpr-page{padding-bottom:72px}
@@ -7672,11 +7726,21 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .fg-hero-stats{grid-template-columns:1fr}
   .fg-hero-stats span{padding:9px 0}
   .fg-hero-stats span+span{padding-left:0;border-left:0;border-top:1px solid rgba(255,255,255,.15)}
-  .fg-command{position:static;grid-template-columns:1fr;padding:8px}
+  .fg-controls{position:static}
+  .fg-command{grid-template-columns:1fr;padding:8px}
   .fg-command-size{order:initial}
   .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
-  .fg-card-preview{height:132px;padding:20px 44px 12px 0}
-  .fg-card-meta{grid-column:2;padding:0 44px 18px 0;border-left:0}
+  .fg-card-index{padding-top:31px}
+  .fg-card-compare{top:27px}
+  /* 18 + 66 + 10 + 22 + 12 = 128 in a 130px box — the same reserved arithmetic
+     as the wide layout, re-run for the narrower specimen. */
+  .fg-card-preview{height:130px;padding:18px 52px 12px 0}
+  .fg-card-sample,.fg-card-skeleton--sample{height:66px;line-height:66px}
+  .fg-card-sample{font-size:clamp(30px,var(--fg-card-size),52px)}
+  /* Stacked, the meta goes back to a single line under the specimen: the name
+     has the full column width there, so it does not need its own row. */
+  .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0 52px 18px 0;border-left:0}
+  .fg-skel-row{height:130px;padding:18px 24px 12px 34px}
   .fpr-hero-pair{grid-template-columns:1fr auto 1fr}
   .fpr-status{grid-template-columns:1fr 1fr}
   .fpr-status span:nth-child(3){border-left:1px solid var(--border)}

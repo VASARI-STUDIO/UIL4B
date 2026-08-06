@@ -175,15 +175,23 @@ function GalleryCard({ font, index, onOpen, inCompare, onToggleCompare, previewT
         aria-label={`Open the ${font.family} specimen — ${font.category}, ${font.variants.length} weights`}
       >
         <span className="fg-card-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+        {/* The specimen is decorative to assistive tech: the button's own label
+            already names the family, its category and its weight count, so
+            exposing the sample and the pangram as well would repeat the same
+            family name three times and read the pangram out once per row. */}
         <span
           className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
           ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body), '--fg-card-size': `${previewSize}px` })}
-          aria-hidden={!ready}
+          aria-hidden="true"
         >
           {ready ? (
             <>
+              {/* Two lines with two jobs: the display line takes the user's own
+                  words, the second line stays the pangram so every row still
+                  offers the same texture reference to compare against. Echoing
+                  the typed string on both lines told the reader nothing. */}
               <span className="fg-card-sample">{previewText.trim() || font.family}</span>
-              <span className="fg-card-pangram">{previewText.trim() || PANGRAM}</span>
+              <span className="fg-card-pangram">{PANGRAM}</span>
             </>
           ) : (
             <>
@@ -211,6 +219,57 @@ function GalleryCard({ font, index, onOpen, inCompare, onToggleCompare, previewT
         </svg>
       </button>
     </li>
+  )
+}
+
+/* ── Page header ───────────────────────────────────────────────────────────── */
+
+// One header for every state of the page. The loading branch renders it too, so
+// the Gallery never blinks out of existence and back while the catalogue
+// resolves — only the numbers are unknown, and they say so with an em dash.
+//
+// The three figures are all counted off the catalogue that is actually on
+// screen. Nothing here is a hand-written marketing number.
+function GalleryHero({ families, classifications, weights, pending }) {
+  const stat = (value) => (pending ? '—' : value.toLocaleString())
+
+  return (
+    <header className="fg-hero fg-hero--premium">
+      <div className="fg-hero-topline">
+        <span className="sec-h-eyebrow">Discover / Typography</span>
+        <NavLink to="/fontpairs" className="fg-hero-pair-link">Build a font pair <span aria-hidden="true">↗</span></NavLink>
+      </div>
+      <div className="fg-hero-copy">
+        <h1>Font<br />Gallery</h1>
+        <div className="fg-hero-intro">
+          <p>
+            A live catalogue for choosing type with confidence. Test your own words,
+            compare families side by side, then take the winner into a real pairing.
+          </p>
+          <div className="fg-hero-stats">
+            <span><strong>{stat(families)}</strong> text families</span>
+            <span><strong>{stat(classifications)}</strong> classifications</span>
+            <span><strong>{stat(weights)}</strong> weights to preview</span>
+          </div>
+        </div>
+      </div>
+    </header>
+  )
+}
+
+// The reserved row geometry, drawn empty. Shown while the catalogue is still in
+// flight so the list arrives into a shape the reader has already seen, instead
+// of a centred spinner collapsing into a full page.
+function SkeletonRows({ count = 6 }) {
+  return (
+    <ul className="fg-grid fg-grid--skeleton" aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <li key={i} className="fg-skel-row">
+          <span className="fg-card-skeleton fg-card-skeleton--sample" />
+          <span className="fg-card-skeleton fg-card-skeleton--body" />
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -557,6 +616,19 @@ export default function FontGallery({ onCopy, toast }) {
 
   const galleryCatalog = useMemo(() => filterGalleryTypefaces(catalog), [catalog])
 
+  // Every headline figure is derived from the catalogue on screen, so a
+  // degraded fallback list reports its own smaller numbers rather than the ones
+  // the full catalogue would have had.
+  const totalWeights = useMemo(
+    () => galleryCatalog.reduce((sum, f) => sum + f.variants.length, 0),
+    [galleryCatalog],
+  )
+  const heroStats = {
+    families: galleryCatalog.length,
+    classifications: CATS.length - 1, // CATS carries an "All" entry that is not a classification
+    weights: totalWeights,
+  }
+
   const filtered = useMemo(() => {
     let out = galleryCatalog
     const q = query.trim().toLowerCase()
@@ -628,36 +700,22 @@ export default function FontGallery({ onCopy, toast }) {
     navigate('/typescale')
   }, [navigate, setFonts, toast])
 
+  // The workbench is still withheld until the catalogue resolves — half-working
+  // filters over an empty list are worse than none — but the header and the row
+  // geometry are not, so the page has an identity and a shape from first paint.
   if (status === 'loading') {
     return (
       <div className="sec fg-page">
+        <GalleryHero {...heroStats} pending />
         <FontCatalogLoading label="Opening the Font Gallery" />
+        <SkeletonRows />
       </div>
     )
   }
 
   return (
     <div className="sec fg-page">
-      <header className="fg-hero fg-hero--premium">
-        <div className="fg-hero-topline">
-          <span className="sec-h-eyebrow">Discover / Typography</span>
-          <NavLink to="/fontpairs" className="fg-hero-pair-link">Build a font pair <span aria-hidden="true">↗</span></NavLink>
-        </div>
-        <div className="fg-hero-copy">
-          <h1>Font<br />Gallery</h1>
-          <div className="fg-hero-intro">
-            <p>
-              A live catalogue for choosing type with confidence. Test your own words,
-              compare families side by side, then take the winner into a real pairing.
-            </p>
-            <div className="fg-hero-stats" aria-label="Gallery summary">
-              <span><strong>{galleryCatalog.length.toLocaleString()}</strong> text families</span>
-              <span><strong>4</strong> classifications</span>
-              <span><strong>1</strong> clean handoff</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      <GalleryHero {...heroStats} />
 
       <FontCatalogNotice
         online={online}
@@ -667,64 +725,75 @@ export default function FontGallery({ onCopy, toast }) {
         count={galleryCatalog.length}
       />
 
-      <section className="fg-command" aria-label="Font preview controls">
-        <label className="fg-command-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="search"
-            placeholder="Search families…"
-            value={query}
-            spellCheck="false"
-            aria-label="Search font families"
-            onChange={e => setQuery(e.target.value)}
-          />
-        </label>
-        <label className="fg-command-text">
-          <span>Preview text</span>
-          <input
-            value={previewText}
-            maxLength={72}
-            spellCheck="false"
-            placeholder="Type something beautiful…"
-            onChange={e => setPreviewText(e.target.value)}
-          />
-        </label>
-        <label className="fg-command-size">
-          <span>Size</span>
-          <input type="range" min="34" max="72" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
-          <strong>{previewSize}px</strong>
-        </label>
-      </section>
+      {/* Search, preview and filtering are one control block and travel
+          together, the way the Palette Library's toolbar does. Pinning the
+          search row while the category and sort controls scrolled out from
+          under it left half the toolbar stranded off screen. */}
+      <div className="fg-controls">
+        <section className="fg-command" aria-label="Font preview controls">
+          <label className="fg-command-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Search families…"
+              value={query}
+              spellCheck="false"
+              aria-label="Search font families"
+              onChange={e => setQuery(e.target.value)}
+            />
+          </label>
+          <label className="fg-command-text">
+            <span>Preview text</span>
+            <input
+              value={previewText}
+              maxLength={72}
+              spellCheck="false"
+              placeholder="Type something beautiful…"
+              onChange={e => setPreviewText(e.target.value)}
+            />
+          </label>
+          <label className="fg-command-size">
+            <span>Size</span>
+            {/* Ceiling is the reserved sample box, not a round number: above
+                64px a normal-metric face no longer fits inside the fixed 80px
+                line the grid reserves for it, and the row would clip its own
+                descenders rather than reflow. The slider must not offer a size
+                the geometry cannot honour. */}
+            <input type="range" min="34" max="64" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
+            <strong>{previewSize}px</strong>
+          </label>
+        </section>
 
-      <div className="fg-filters">
-        <div className="fg-filter-cats" role="group" aria-label="Filter by category">
-          {CATS.map(c => (
-            <button
-              key={c.id}
-              type="button"
-              className={category === c.id ? 'fg-cat-pill fg-cat-pill--on' : 'fg-cat-pill'}
-              aria-pressed={category === c.id}
-              onClick={() => setCategory(c.id)}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-        <div className="fg-filter-right">
-          <div className="fg-sort" role="group" aria-label="Sort families">
-            {SORTS.map(s => (
+        <div className="fg-filters">
+          <div className="fg-filter-cats" role="group" aria-label="Filter by category">
+            {CATS.map(c => (
               <button
-                key={s.id}
+                key={c.id}
                 type="button"
-                className={sort === s.id ? 'fg-sort-btn fg-sort-btn--on' : 'fg-sort-btn'}
-                aria-pressed={sort === s.id}
-                onClick={() => setSort(s.id)}
+                className={category === c.id ? 'fg-cat-pill fg-cat-pill--on' : 'fg-cat-pill'}
+                aria-pressed={category === c.id}
+                onClick={() => setCategory(c.id)}
               >
-                {s.label}
+                {c.label}
               </button>
             ))}
+          </div>
+          <div className="fg-filter-right">
+            <div className="fg-sort" role="group" aria-label="Sort families">
+              {SORTS.map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={sort === s.id ? 'fg-sort-btn fg-sort-btn--on' : 'fg-sort-btn'}
+                  aria-pressed={sort === s.id}
+                  onClick={() => setSort(s.id)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -746,7 +815,7 @@ export default function FontGallery({ onCopy, toast }) {
           </span>
           <button
             type="button"
-            className="typ-picker-clear"
+            className="fg-more-btn fg-more-btn--primary"
             onClick={() => { setQuery(''); setCategory('all') }}
           >
             Clear filters
