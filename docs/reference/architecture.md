@@ -127,7 +127,7 @@ Shared server helpers (NOT counted as functions) live in `api/_lib/`:
 
 **Before adding an API route:** you are likely at or near the cap. Prefer
 extending an existing route (e.g. action-switch on `req.body`) or moving logic
-into `api/_lib/` over adding a 13th function. Flag the trade-off to the PM.
+into `api/_lib/` over adding a 13th function. Flag the trade-off to the Director.
 
 ⚠️ Stripe routes (`create-checkout`, `create-portal`, `checkout-status`,
 `get-prices`, `setup-stripe`, `stripe-webhook`) and `verify-admin` are

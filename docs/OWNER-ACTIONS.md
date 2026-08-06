@@ -2,33 +2,39 @@
 
 Only actions that require the founder's dashboard access, credentials, real
 accounts/cards or explicit Human Validation Zone authority belong here.
-Engineering work belongs in `src/data/pipeline.js`; product calls belong in
-[`DECISIONS-NEEDED.md`](DECISIONS-NEEDED.md).
+Engineering work belongs in `src/data/pipeline.js`; ideas awaiting a founder
+verdict belong in [`PROPOSALS.md`](PROPOSALS.md), and decisions already made are
+recorded in [`CHANGELOG.md`](../CHANGELOG.md).
 
-_Last reviewed: 2026-08-05._
+_Last reviewed: 2026-08-07._
 
 ## Confirmed complete
 
 - **`firestore.rules` published** — the founder has confirmed this. The
   privilege-escalation publication blocker is **closed**; do not re-open it.
+- **Production OpenRouter key set and redeployed** — founder statement in
+  conversation with the Director, 2026-08-07: "openrouter key is updated and
+  redeployed". The owner action is closed. This records the **key**, not the
+  route: no production request has been verified through the OpenRouter path,
+  and a wrong or rate-limited key fails over to Gemini silently, so the app
+  would look healthy while the primary provider is dead. That verification is
+  queued as `openrouter-path-verification` in `src/data/pipeline.js`.
 
-That confirmation covers the Firestore rules publication and nothing else. It
-does **not** confirm Storage activation or `storage.rules`, the admin custom
-claim, analytics accuracy, or any production payment/auth flow. Those are all
-still open below.
+Those confirmations cover the Firestore rules publication and the OpenRouter
+credential, and nothing else. They do **not** confirm Storage activation or
+`storage.rules`, the admin custom claim, analytics accuracy, a working OpenRouter
+generation, or any production payment/auth flow. Those are all still open below.
 
-## The four actions currently blocking engineering
+## The three actions currently blocking engineering
 
 These are the items the engineering queue (`src/data/pipeline.js`) records as
 `blocked` on the founder — nothing can move on them without dashboard access:
 
-1. **Production OpenRouter key** — `OPENROUTER_API_KEY` is missing in
-   Production, so Gemini is currently carrying the AI path alone (P1 row below).
-2. **Stripe retention / cancellation configuration** — the `RETAIN50` coupon and
+1. **Stripe retention / cancellation configuration** — the `RETAIN50` coupon and
    the portal cancellation flow (P1 row below).
-3. **Live Stripe checkout QA** — complete, abandon, return and retry against
+2. **Live Stripe checkout QA** — complete, abandon, return and retry against
    production (Manual release checks below).
-4. **Firebase off the public critical path** — needs an approved auth-loading
+3. **Firebase off the public critical path** — needs an approved auth-loading
    design and owner validation before Firebase initialisation or authenticated
    routing changes.
 
@@ -39,7 +45,7 @@ These are the items the engineering queue (`src/data/pipeline.js`) records as
 | P0 | Stripe webhook endpoint event list | Subscribe `/api/stripe-webhook` to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, all three `charge.dispute.*` events, subscription create/update/delete, invoice paid/failed and trial-will-end. Send representative test events and confirm HTTP 200 before creating a lifetime price. |
 | P0 | Admin → Feedback now that the Firestore rules are published | Verify the panel can read feedback. The rules require `request.auth.token.admin == true`; no code in `api/` or `src/` sets that custom claim, so do not assume it exists. If it returns `permission-denied`, either set the claim through a controlled Admin SDK action or approve moving the read behind a server-admin route. |
 | P0 | Firebase Console → Storage | Enable Storage and publish `storage.rules` for the approved Firebase community architecture. Verify an authenticated user can write only under `community-media/{uid}/` and public reads behave as intended. |
-| P1 | `https://uil4b.com/api/ai?diag=uil4b-dev-2026` | Add `OPENROUTER_API_KEY` to Production if it still reports missing, redeploy and confirm OpenRouter is available while Gemini remains the fallback. |
+| P1 | `https://uil4b.com/api/ai?diag=uil4b-dev-2026` | The key is set and redeployed (above). Confirm the diagnostic now reports OpenRouter as available, then run one real generation and confirm OpenRouter served it rather than the Gemini fallback. Record the result here. |
 | P1 | Stripe customer metadata | For each legacy paying customer, confirm `metadata.firebaseUid` exists. Back-fill only genuinely missing metadata; investigate—do not overwrite—a mismatched uid. |
 | P1 | Firebase login email | Confirm `dylanjacob1100@gmail.com` is the founder login used by the admin/server allowlists. If it is wrong, authorize one coordinated HVZ change rather than editing a single copy. |
 | P1 | Live Stripe product/prices and Vercel price env vars | Confirm the intended monthly/yearly ladder and whether the lifetime price should now be created. One-off billing code is shipped; create/advertise the lifetime price only after the webhook pre-flight above passes. |
