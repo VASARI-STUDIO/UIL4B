@@ -175,6 +175,87 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
   })
 })
 
+/* ── 3 · Column titles describe the colour in the slot ────────────────────────
+ * Founder: "when I change the colour system the title of each colour should
+ * change based on what is displayed in its slot — for example when I set it to
+ * mono, the subtle swatch isn't what it's showing."
+ * Was: the title was ROLES[i] — a hard-coded positional label that named the
+ * SLOT and could never track the colour. */
+
+test.describe('Palette Builder · colour titles', () => {
+  test('changing the colour system rewrites the title of every colour that moved', async ({ page }) => {
+    watch(page, 'designer switching colour systems')
+    // A fixed board via the share-link parser, so the before/after colours —
+    // and therefore the titles — are the same on every run. A random session
+    // palette would make this test's outcome depend on the seed.
+    await go(page, '/color/palette?c=4338E0,3881E0,9738E0,8494DB,A084DB')
+    await expect(page.locator('.plb-col').first()).toBeVisible()
+
+    const titles = page.locator('.plb-name')
+    const hexes = page.locator('.plb-hex')
+    await expect(titles).toHaveCount(5)
+
+    const before = { names: await titles.allInnerTexts(), hexes: await hexes.allInnerTexts() }
+    expect(before.names.every((n) => n.trim().length > 0)).toBe(true)
+
+    // Monochromatic is a FREE system, so this runs signed-out without a modal.
+    await page.locator('.plb-harm').click()
+    await page.getByRole('menuitemradio', { name: /Monochromatic/ }).click()
+    await expect(page.locator('.plb-harm')).toContainText('Monochromatic')
+    await expect.poll(async () => (await hexes.allInnerTexts()).join()).not.toBe(before.hexes.join())
+
+    // Read both in ONE evaluation, so a title can never be compared against a
+    // hex from a different frame. The title must be in step with the hex it
+    // sits under — that is the whole point of the fix, not a happy accident of
+    // when the assertion happened to run.
+    const after = await page.evaluate(() => ({
+      names: [...document.querySelectorAll('.plb-name')].map(e => e.textContent),
+      hexes: [...document.querySelectorAll('.plb-hex')].map(e => e.textContent),
+    }))
+
+    let changed = 0
+    for (let i = 0; i < after.hexes.length; i++) {
+      if (after.hexes[i] !== before.hexes[i]) {
+        // THE regression: a slot showing a new colour must show a new title.
+        expect(after.names[i], `slot ${i} kept a title describing the old colour`).not.toBe(before.names[i])
+        changed++
+      } else {
+        // …and a slot whose colour did NOT move keeps its title. Titles track
+        // the colour; they do not merely reshuffle on every system change.
+        expect(after.names[i], `slot ${i} was re-titled without changing colour`).toBe(before.names[i])
+      }
+    }
+    expect(changed, 'the system change moved at least one colour').toBeGreaterThan(0)
+
+    // The role eyebrow is still there — exports, tints and the UI preview all
+    // key off it, so it is demoted, not deleted.
+    await expect(page.locator('.plb-role').first()).toHaveText('PRIMARY')
+  })
+
+  test('a re-render that does not change the palette does not churn the titles', async ({ page }) => {
+    watch(page, 'designer opening and closing a toolbar menu')
+    await go(page, '/color/palette')
+    await expect(page.locator('.plb-col').first()).toBeVisible()
+
+    const titles = page.locator('.plb-name')
+    const before = await titles.allInnerTexts()
+
+    // A real React state change that touches no colour: open a toolbar menu…
+    await page.getByRole('button', { name: 'History' }).click()
+    await page.keyboard.press('Escape')
+    // …and a lens round-trip that returns the palette to exactly where it was.
+    const hue = page.getByRole('slider', { name: 'Hue adjustment' })
+    await hue.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(hue).toHaveValue('1')
+    await page.keyboard.press('ArrowLeft')
+    await expect(hue).toHaveValue('0')
+
+    await page.waitForTimeout(300)
+    expect(await titles.allInnerTexts(), 'titles are deterministic per colour').toEqual(before)
+  })
+})
+
 /* ── 4 · The adjust sliders are no longer a keyboard trap ─────────────────────
  * Was: every change went through snapValue(). From a snap point ArrowRight
  * yielded `snap + step`, inside snapRadius, so it snapped straight back —

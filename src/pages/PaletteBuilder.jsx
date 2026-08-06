@@ -10,6 +10,10 @@ import {
   tonalRamp,
 } from '../utils/colors'
 import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/paletteVariations'
+// Column titles + the community-submit dice name share one vocabulary — see
+// utils/paletteNames.js for why `colorName` is deterministic and
+// `randomPaletteName` deliberately is not.
+import { colorName, randomPaletteName } from '../utils/paletteNames'
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import { useProject } from '../contexts/ProjectContext'
@@ -134,109 +138,6 @@ function timeAgo(ts) {
   if (s < 3600) return `${Math.max(1, Math.round(s / 60))}m ago`
   if (s < 86400) return `${Math.round(s / 3600)}h ago`
   return `${Math.round(s / 86400)}d ago`
-}
-
-// ── Random themed palette-name generator (Wave 5 item 21) ────────────────────
-// Pure client-side, no API. We bucket the palette by its dominant HCT hue
-// (weighted by chroma so near-greys barely vote) plus overall chroma, then
-// stitch an adjective + noun from a themed wordlist — greens → nature, warm
-// hues → sunset, blues → ocean, greys → mono/tech, and so on.
-// Each theme carries three banks: `adj` (editorial modifiers), `noun` (material /
-// pigment names that can also stand alone), and `solo` (evocative single words
-// that need no adjective). Vocabulary leans on architecture, pigment and
-// interiors language so the output reads like a magazine colour story.
-const NAME_THEMES = {
-  sunset: {
-    adj: ['Burnished', 'Sun-Baked', 'Molten', 'Faded', 'Antique', 'Scorched', 'Aged', 'Raw'],
-    noun: ['Terracotta', 'Sienna', 'Ochre', 'Oxblood', 'Corten', 'Ember', 'Saffron', 'Cinnabar', 'Marmalade', 'Rust', 'Amber', 'Vermilion'],
-    solo: ['Sfumato', 'Kiln', 'Adobe', 'Harvest', 'Firebrick', 'Persimmon'],
-  },
-  nature: {
-    adj: ['Weathered', 'Dusty', 'Muted', 'Deep', 'Pale', 'Wild', 'Soft', 'Sun-Bleached'],
-    noun: ['Sage', 'Moss', 'Olive', 'Verdigris', 'Celadon', 'Fern', 'Eucalyptus', 'Malachite', 'Laurel', 'Thyme', 'Pistachio', 'Patina'],
-    solo: ['Conservatory', 'Botanica', 'Foliage', 'Wintergreen', 'Bracken', 'Undergrowth'],
-  },
-  ocean: {
-    adj: ['Deep', 'Glacial', 'Faded', 'Cold', 'Washed', 'Nordic', 'Muted', 'Antique'],
-    noun: ['Indigo', 'Cobalt', 'Prussian', 'Cerulean', 'Slate', 'Teal', 'Delft', 'Denim', 'Marine', 'Glacier', 'Azure', 'Petrol'],
-    solo: ['Nocturne', 'Fathom', 'Meridian', 'Bathhouse', 'Cyanotype', 'Deepwater'],
-  },
-  cosmic: {
-    adj: ['Velvet', 'Regal', 'Dusky', 'Smoked', 'Deep', 'Faded', 'Antique', 'Muted'],
-    noun: ['Aubergine', 'Plum', 'Amethyst', 'Damson', 'Orchid', 'Iris', 'Mulberry', 'Byzantine', 'Tyrian', 'Mauve', 'Wine', 'Heather'],
-    solo: ['Twilight', 'Vespers', 'Nightfall', 'Obscura', 'Penumbra', 'Aster'],
-  },
-  candy: {
-    adj: ['Soft', 'Faded', 'Sun-Washed', 'Bright', 'Powdered', 'Dusty', 'Vivid', 'Antique'],
-    noun: ['Rose', 'Blush', 'Coral', 'Peony', 'Fuchsia', 'Raspberry', 'Flamingo', 'Sorbet', 'Guava', 'Watermelon', 'Bubblegum', 'Punch'],
-    solo: ['Confetti', 'Aperitif', 'Camellia', 'Pomelo', 'Gelato', 'Rosewater'],
-  },
-  tech: {
-    adj: ['Brushed', 'Signal', 'Cold', 'Anodised', 'Electric', 'Muted', 'Matte', 'Charged'],
-    noun: ['Titanium', 'Chrome', 'Cobalt', 'Graphite', 'Pewter', 'Gunmetal', 'Steel', 'Neon', 'Circuit', 'Alloy', 'Carbon', 'Signal'],
-    solo: ['Monolith', 'Wireframe', 'Datum', 'Hologram', 'Blueprint', 'Interface'],
-  },
-  mono: {
-    adj: ['Raw', 'Aged', 'Bare', 'Soft', 'Weathered', 'Matte', 'Pale', 'Warm'],
-    noun: ['Alabaster', 'Travertine', 'Basalt', 'Graphite', 'Pewter', 'Greige', 'Oatmeal', 'Bone', 'Concrete', 'Plaster', 'Limestone', 'Chalk'],
-    solo: ['Brutalist', 'Terrazzo', 'Vellum', 'Parchment', 'Gesso', 'Monochrome'],
-  },
-}
-
-// Art-movement / atelier prefixes that pair with any theme noun for a
-// gallery-label feel ("Bauhaus Ochre", "Atelier Sienna").
-const NAME_MOVEMENTS = ['Bauhaus', 'Atelier', 'Modernist', 'Nordic', 'Studio', 'Salon', 'Deco', 'Archive']
-
-function paletteTheme(colors) {
-  if (!colors?.length) return 'mono'
-  let sumC = 0, hasAccent = false
-  const hueBins = {}
-  for (const hex of colors) {
-    let h, c
-    try { [h, c] = hexToHct(hex) } catch { continue }
-    sumC += c
-    if (c > 25) hasAccent = true
-    const key = (Math.round(h / 30) * 30) % 360   // 12 coarse hue bins
-    hueBins[key] = (hueBins[key] || 0) + c        // vote weighted by chroma
-  }
-  const avgC = sumC / colors.length
-  if (avgC < 12) return hasAccent ? 'tech' : 'mono' // mostly greys
-  const domHue = Number(Object.entries(hueBins).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0)
-  if (domHue < 15 || domHue >= 330) return avgC > 55 ? 'candy' : 'sunset' // red / pink
-  if (domHue < 45) return avgC > 45 ? 'sunset' : 'nature'                 // orange
-  if (domHue < 90) return 'sunset'                                        // yellow-amber
-  if (domHue < 165) return 'nature'                                       // green
-  if (domHue < 255) return 'ocean'                                        // cyan-blue
-  if (domHue < 300) return 'cosmic'                                       // purple
-  return 'candy'                                                          // magenta
-}
-
-const pickOne = (arr) => arr[Math.floor(Math.random() * arr.length)]
-
-// Compose a name from one of several editorial patterns so repeated rolls feel
-// curated, not templated: "Burnished Sienna", "Travertine", "Corten & Ash",
-// "Bauhaus Ochre", "Nocturne No. 4", "Sienna Study".
-function randomPaletteName(colors) {
-  const theme = NAME_THEMES[paletteTheme(colors)] || NAME_THEMES.mono
-  const adj = () => pickOne(theme.adj)
-  const noun = () => pickOne(theme.noun)
-  const patterns = [
-    () => `${adj()} ${noun()}`,
-    () => `${adj()} ${noun()}`,        // weight the classic pair a little heavier
-    () => pickOne(theme.solo),
-    () => `${pickOne(NAME_MOVEMENTS)} ${noun()}`,
-    () => `${noun()} Study`,
-    () => `${pickOne(theme.solo)} No. ${2 + Math.floor(Math.random() * 8)}`,
-    () => {
-      // "A & B" — two distinct nouns from the theme.
-      const a = noun()
-      let b = noun()
-      let guard = 0
-      while (b === a && guard++ < 5) b = noun()
-      return b === a ? `${adj()} ${a}` : `${a} & ${b}`
-    },
-  ]
-  return pickOne(patterns)()
 }
 
 // ── Community handle: profanity filter that also catches evasion (item 22) ───
@@ -1053,6 +954,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
     () => deferredAdjusted.map(c => ({ ramp: tonalRamp(c), contrast: contrastPair(c) })),
     [deferredAdjusted],
   )
+  // The column TITLE names the colour in the slot, so it is keyed on the
+  // DISPLAYED palette and NOT on the deferred one: a title that lags the hex
+  // beside it by a frame is the same "this label describes the colour that was
+  // here a moment ago" fault the fixed role labels had, just briefer. It costs
+  // one CAM16 solve per colour against the six the tonal ramp above spends, so
+  // it is cheap enough to keep in step. Pure over the hex list
+  // (utils/paletteNames.js), so a re-render that changes no colour produces the
+  // identical array and nothing re-titles.
+  const columnNames = useMemo(() => adjusted.map(colorName), [adjusted])
 
   // Coloured slider tracks — see adjustTrackStops. Keyed on the BASE palette
   // only, never on `adjust`, so dragging a slider never rebuilds them.
@@ -2375,6 +2285,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
           const meta = columnMeta[i]
           const contrast = meta ? meta.contrast : contrastPair(c)
           const ramp = meta ? meta.ramp : tonalRamp(c)
+          const name = columnNames[i]
           const role = i < ROLES.length ? ROLES[i] : `ALTERNATIVE ${i - ROLES.length + 1}`
           const isLocked = locked.has(i)
           const colClass = [
@@ -2517,6 +2428,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
                   />
                 ))}
               </div>
+              {/* The title describes the COLOUR in this slot, so it changes
+                  with the colour system. The role below it describes the SLOT
+                  — it is what exports, tints and the UI preview key off, so it
+                  stays, demoted to an eyebrow. */}
+              <div className="plb-name">{name}</div>
               <button type="button" className="plb-hex" title="Copy hex" onClick={() => onCopy?.(adjusted[i])}>{adjusted[i]}</button>
               <div className="plb-role">{role}</div>
               {showContrast && (
