@@ -1,14 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { stepFromKey } from '../utils/sliderKeys'
 
 /*
  * SnapSlider — range input with magnetic snap points, double-click reset,
  * and a click-to-edit value readout for custom values beyond the snaps.
  *
- * - Dragging snaps to the nearest value in `snaps` when within `snapRadius`
+ * - POINTER drags snap to the nearest value in `snaps` when within `snapRadius`
  *   of it (radius defaults to 6% of the track range; pass `snapRadius` in
  *   track units to override — wide ranges like ±180° need a small absolute
  *   radius or values near a snap become unreachable). Values between snaps
  *   stay free, so custom values are still reachable by dragging.
+ * - KEYBOARD stepping is exact and never snaps. Snapping used to run on every
+ *   change event, so from a snap point ArrowRight produced `snap + step`, which
+ *   was inside the snap radius and was pulled straight back — the slider was a
+ *   keyboard trap for every caller that passes `snaps`. Keys are handled here
+ *   (see utils/sliderKeys.js) and `preventDefault`ed, so the native change
+ *   never fires and the value the user asked for is the value they get: arrows
+ *   move one step, PageUp/PageDown a tenth of the range, Home/End the ends.
+ *   The snap function only ever sees values produced with a pointer down on
+ *   the track, which is the affordance it exists for.
  * - Double-click the track resets to `defaultValue`.
  * - Clicking the value text swaps it for a number input clamped to
  *   [inputMin ?? min, inputMax ?? max] — this is how values beyond the
@@ -70,6 +80,13 @@ export default function SnapSlider({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef(null)
+  // True only while a pointer is down on the track. Magnetism is a pointer
+  // affordance — it exists so a drag can find a snap without pixel precision —
+  // so this flag is what gates it. A stale `true` (pointer released off the
+  // element) is harmless: it can only affect the next pointer interaction,
+  // which would snap anyway, and every keyboard step clears it.
+  const pointerRef = useRef(false)
+  const endPointer = () => { pointerRef.current = false }
 
   const loBound = inputMin ?? min
   const hiBound = inputMax ?? max
@@ -138,7 +155,24 @@ export default function SnapSlider({
         value={trackValue}
         disabled={disabled}
         aria-label={ariaLabel}
-        onChange={e => onChange(snapValue(+e.target.value))}
+        onPointerDown={() => { pointerRef.current = true }}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        onLostPointerCapture={endPointer}
+        onBlur={endPointer}
+        onChange={e => onChange(pointerRef.current ? snapValue(+e.target.value) : +e.target.value)}
+        onKeyDown={e => {
+          // Modified presses stay with the browser / assistive tech, and never
+          // step twice.
+          if (e.altKey || e.ctrlKey || e.metaKey) return
+          const next = stepFromKey(e.key, { value: trackValue, min, max, step })
+          if (next === null) return
+          // Stop the native handler: it would emit the same move through
+          // onChange, where the snap would eat it. This is the fix.
+          e.preventDefault()
+          pointerRef.current = false
+          if (next !== trackValue) onChange(next)
+        }}
         onDoubleClick={defaultValue == null ? undefined : () => onChange(defaultValue)}
         title={defaultValue == null ? undefined : `Double-click to reset to ${fmt(defaultValue)}${unit}`}
       />

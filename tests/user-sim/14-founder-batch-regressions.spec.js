@@ -40,8 +40,9 @@ test.describe('Palette Builder · global-adjust slider handles', () => {
     expect(atZero.track.toUpperCase()).toContain(atZero.handle.toUpperCase())
 
     // Drag the slider: the dot must follow it, not sit still. (Driven through
-    // the input's own value + input event, which is exactly what a drag emits;
-    // arrow keys cannot leave a snap point on this track — see the PR notes.)
+    // the input's own value + input event, which is exactly what a drag emits.
+    // Arrow keys would work too now — that trap was fixed in founder batch 2,
+    // see 16-founder-batch-2.spec.js — but a drag is what this test is about.)
     await hue.evaluate((el) => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
       setter.call(el, '140')
@@ -140,8 +141,14 @@ test.describe('Palette Builder · global-adjust slider handles', () => {
 
 /* ── 2 · Icon-button hover reveals its label ──────────────────────────────────
  * Was: v2.8 migrated the reveal label from max-width to grid-template-columns,
- * but this label is ABSOLUTELY positioned, so its inline size was indefinite
- * and `1fr` resolved to 0px. Hovering opened an empty pill with no text in it. */
+ * but this label was ABSOLUTELY positioned, so its inline size was indefinite
+ * and `1fr` resolved to 0px. Hovering opened an empty pill with no text in it.
+ *
+ * The label has since moved INTO the button's normal flow (founder batch 2 —
+ * it used to overlay its neighbours). The guarantee these tests exist for is
+ * unchanged and still the one that broke: the `1fr` track must resolve to the
+ * label's REAL text width. Where that width now sits — inside the button's own
+ * bounding box — is asserted in 16-founder-batch-2.spec.js. */
 
 test.describe('Palette Builder · toolbar icon buttons', () => {
   test('hovering an icon button reveals its label at the label\'s real width', async ({ page }) => {
@@ -166,7 +173,7 @@ test.describe('Palette Builder · toolbar icon buttons', () => {
     })
 
     const collapsed = await measure()
-    expect(collapsed.visibility, 'collapsed by default').toBe('hidden')
+    expect(collapsed.opacity, 'collapsed by default').toBe(0)
     expect(collapsed.innerWidth).toBeLessThan(1)
     expect(collapsed.naturalWidth, 'the label has real text to reveal').toBeGreaterThan(10)
 
@@ -195,6 +202,11 @@ test.describe('Palette Builder · toolbar icon buttons', () => {
     for (let i = 0; i < count; i++) {
       const b = buttons.nth(i)
       const name = (await b.getAttribute('aria-label')) || `button ${i}`
+      // Leave the toolbar first: the labels expand the buttons themselves now,
+      // so hovering straight from one to the next races the layout shift the
+      // previous expansion causes.
+      await page.mouse.move(700, 600)
+      await page.waitForTimeout(320)
       await b.hover()
       await expect.poll(
         async () => b.evaluate((el) => el.querySelector('.plb-lbl-i').getBoundingClientRect().width),
@@ -204,6 +216,8 @@ test.describe('Palette Builder · toolbar icon buttons', () => {
 
     // Keyboard focus must reveal it too — the label is the button's only
     // visible name, so a keyboard user cannot be left with a blank chip.
+    await page.mouse.move(700, 600)
+    await page.waitForTimeout(320)
     const first = buttons.first()
     await first.focus()
     await expect.poll(

@@ -8,6 +8,44 @@ work live in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) and
 
 ---
 
+## Unreleased — Palette Builder founder batch 2
+
+On the `fix/palette-builder-founder-batch-2` branch, not yet merged.
+`package.json` stays `2.8.0`; cutting a version number is a release decision,
+not something this batch assumes.
+
+### Palette Builder
+- Toolbar icon buttons now EXPAND to hold their label instead of floating it
+  over the control beside them: the label moved into the button's normal flow,
+  so the box grows across the label's real width and the text always sits
+  inside the button's own bounds
+- Below 961px, where the toolbar's action group is a horizontal scroller, those
+  labels are pinned open rather than revealed on hover — which also closes the
+  separate report of labels being clipped in that band
+- Each colour column is now titled with a name describing the colour in the
+  slot, derived from the colour itself, so switching colour system re-titles
+  every column whose colour moved. The name is deterministic per colour, so the
+  same colour always reads the same and nothing churns on an unrelated
+  re-render. The positional role (PRIMARY … DEEP) stays as an eyebrow — exports,
+  tints and the UI preview key off it
+- "Continue in Palette Builder" on the homepage mini-builder now hands the board
+  the five swatches the visitor generated AND the colour system to open on:
+  **Auto**, the tonal system that is free for everyone. It previously carried
+  nothing, so the board fell through to its own default of Analogous — a paid
+  system for a signed-out visitor
+
+### Accessibility
+- Fixed a keyboard trap in `SnapSlider`, which affected every caller (Palette
+  Builder, Tint Scale, Type Scale, File Converter, Icon Library, the HCT
+  picker): every change ran through the magnetic snap, including keyboard ones,
+  so from a snap point an arrow key produced a value inside the snap radius and
+  was pulled straight back. A keyboard user could not move these sliders at all.
+  Snapping is now gated on a pointer being down — deliberate magnetism for
+  drags — while arrow keys step exactly, PageUp/PageDown move a tenth of the
+  range and Home/End reach the ends
+
+---
+
 ## On `main`, not yet version-tagged — Palette & Gradient founder batch (#202)
 
 Merged to `main` at `8f4e5ae` and therefore live via the Vercel auto-deploy.
