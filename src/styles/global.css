@@ -4070,7 +4070,17 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .pgal-tick{position:absolute;top:8px;right:8px;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--brand);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
 .pgal-stripe{position:relative;flex:1;min-height:0;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end}
 .pgal-stripe:first-child{flex:2.4}
-.pgal-hex{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:rgba(10,10,14,.5);padding:2px 7px;border-radius:var(--radius-pill);margin-right:8px;opacity:0;transition:opacity var(--dur-1) var(--ease-standard);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);pointer-events:none}
+/* .72 not .5: the chip has to clear AA against WHITE swatches too, and the
+   library now carries brand palettes full of #FFFFFF. Measured across all 100
+   library palettes, white 10.5px text on this scrim was 3.68:1 at .5 alpha
+   (fails AA) and is 8.17:1 at .72. */
+.pgal-hex{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:rgba(10,10,14,.72);padding:2px 7px;border-radius:var(--radius-pill);margin-right:8px;opacity:0;transition:opacity var(--dur-1) var(--ease-standard);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);pointer-events:none}
+/* Hairline between stripes so adjacent #FFFFFF (or #000000) bands in a brand
+   palette stay legible as separate colours rather than one solid block. */
+.pgal-stripe+.pgal-stripe{box-shadow:inset 0 1px 0 rgba(128,128,128,.28)}
+/* Brand marker — a published identity system, not one of ours. */
+.pgal-badge{position:absolute;top:8px;left:8px;z-index:2;padding:3px 8px;border-radius:var(--radius-pill);background:rgba(10,10,14,.78);color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;pointer-events:none;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.pgal-use--pro{color:var(--brand)}
 .pgal-stripe:hover .pgal-hex,.pgal-stripe:focus-visible .pgal-hex{opacity:1}
 .pgal-stripe:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 .pgal-foot{display:flex;align-items:center;gap:8px;min-width:0;padding:0 2px}
@@ -7576,6 +7586,8 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .pgl-page .pgal-card:hover .pgal-stripes{transform:translateY(-4px);box-shadow:0 22px 48px rgba(10,10,18,.14)}
 .pgl-page .pgal-foot{padding:4px 3px 0}
 .pgl-page .pgal-name{font-size:13px;color:var(--t0)}
+.pgl-note{margin:-8px 0 22px;font-size:12.5px;line-height:1.55;color:var(--t2)}
+.pgl-note strong{color:var(--t1);font-weight:700}
 .pgl-empty{display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:44px;border:1px dashed var(--border);border-radius:18px;background:var(--bg-1)}
 .pgl-empty strong{font-size:16px;color:var(--t0)}
 .pgl-empty span{font-size:13px;color:var(--t2)}

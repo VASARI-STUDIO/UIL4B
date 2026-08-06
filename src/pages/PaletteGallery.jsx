@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import DiscoverResultHead from '../components/discover/DiscoverResultHead'
-import { GALLERY_PALETTES } from '../data/paletteGallery'
+import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 
 const FILTERS = [
   { id: 'all', label: 'All palettes' },
+  { id: 'curated', label: 'Curated' },
+  { id: 'brand', label: 'Brand' },
   { id: 'dark', label: 'Dark' },
   { id: 'light', label: 'Light' },
   { id: 'vivid', label: 'Vivid' },
@@ -32,21 +34,34 @@ function paletteProfile(palette) {
   }
 }
 
+// Profiles are pure functions of static data, so compute them once at module
+// scope rather than on every keystroke — the library is ~100 palettes and the
+// search input filters on every character.
+const PROFILES = new Map(LIBRARY_PALETTES.map((palette) => [palette.id, paletteProfile(palette)]))
+const HAYSTACKS = new Map(LIBRARY_PALETTES.map((palette) => [
+  palette.id,
+  `${palette.name} ${palette.kind === 'brand' ? 'brand system' : 'curated'} ${palette.colors.join(' ')}`.toLowerCase(),
+]))
+
 export default function PaletteGallery({ toast }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return GALLERY_PALETTES.filter((palette) => {
-      const profile = paletteProfile(palette)
+    return LIBRARY_PALETTES.filter((palette) => {
+      const profile = PROFILES.get(palette.id)
+      if (filter === 'brand' && palette.kind !== 'brand') return false
+      if (filter === 'curated' && palette.kind !== 'curated') return false
       if (filter === 'dark' && profile.lightness >= 0.48) return false
       if (filter === 'light' && profile.lightness < 0.62) return false
       if (filter === 'vivid' && profile.vividness < 145) return false
-      if (q && !`${palette.name} ${palette.colors.join(' ')}`.toLowerCase().includes(q)) return false
+      if (q && !HAYSTACKS.get(palette.id).includes(q)) return false
       return true
     })
   }, [filter, query])
+
+  const brandCount = useMemo(() => visible.filter((p) => p.kind === 'brand').length, [visible])
 
   const clear = () => {
     setQuery('')
@@ -58,8 +73,8 @@ export default function PaletteGallery({ toast }) {
       <DiscoverGalleryHero
         eyebrow="Discover / Colour"
         title="Palette Library"
-        description="Colour systems with a point of view. Copy a swatch, save a favourite, or open the complete palette in the builder and make it yours."
-        mark={{ label: '#4338E0', value: GALLERY_PALETTES.length, caption: 'curated palettes' }}
+        description="Colour systems with a point of view — ours, plus the published brand palettes behind the interfaces you already know. Copy a swatch, save a favourite, or open the complete palette in the builder and make it yours."
+        mark={{ label: '#4338E0', value: LIBRARY_PALETTES.length, caption: 'palettes' }}
       />
 
       <div className="pgl-toolbar">
@@ -81,8 +96,8 @@ export default function PaletteGallery({ toast }) {
       </div>
 
       <DiscoverResultHead
-        eyebrow="Curated collection"
-        title="Colours worth building with"
+        eyebrow={filter === 'brand' ? 'Brand systems' : 'Curated collection'}
+        title={filter === 'brand' ? 'Identities you already know' : 'Colours worth building with'}
         count={visible.length}
         noun="palette"
         id="pgl-grid-heading"
@@ -90,12 +105,18 @@ export default function PaletteGallery({ toast }) {
 
       {visible.length ? (
         <section aria-labelledby="pgl-grid-heading">
+          {brandCount > 0 && filter !== 'brand' && (
+            <p className="pgl-note">
+              {brandCount} of these {brandCount === 1 ? 'is a' : 'are'} published brand
+              {brandCount === 1 ? ' system' : ' systems'}, badged <strong>Brand</strong> on the card.
+            </p>
+          )}
           <PaletteGalleryGrid toast={toast} palettes={visible} />
         </section>
       ) : (
         <div className="pgl-empty" role="status">
           <strong>No palettes match that combination.</strong>
-          <span>Try a broader search or reset the mood filter.</span>
+          <span>Try a broader search, or reset the mood and collection filters.</span>
           <button type="button" onClick={clear}>Clear filters</button>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { go, watch } from './helpers.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 
 const STATIC_INDEXABLE_ROUTES = [
   '/',
@@ -60,7 +61,7 @@ test.describe('public route contract', () => {
 
     await go(page, '/discover/palettes')
     await expect(page.getByRole('heading', { level: 1, name: 'Palette Library' })).toBeVisible()
-    await expect(page.locator('.pgal-card')).toHaveCount(32)
+    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
     await page.getByPlaceholder('Search by name or hex…').fill('Midnight Teal')
     await expect(page.locator('.pgal-card')).toHaveCount(1)
   })
