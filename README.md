@@ -4,9 +4,12 @@ The operating workspace for UI system creation — build, organize, validate, an
 
 The product is organised around three surfaces: **Create** (build), **Discover** (browse community + curated external resources), and **Learn** (understand). See [`docs/reference/positioning.md`](docs/reference/positioning.md) for the canonical story.
 
-Current direction, active work and release gaps live in
-[`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md). Do not use historical commits or
-closed audit prose as a parallel backlog.
+Current direction lives in [`CLAUDE.md`](CLAUDE.md) (Direction). Active work,
+blockers and known-unfixed bugs live in `src/data/pipeline.js`; founder-only
+console and credential work lives in
+[`docs/OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md); shipped history and the founder
+decisions behind it live in [`CHANGELOG.md`](CHANGELOG.md). Do not use historical
+commits or closed audit prose as a parallel backlog.
 
 **Live:** [uil4b.com](https://www.uil4b.com)
 
