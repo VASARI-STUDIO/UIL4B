@@ -566,11 +566,12 @@ export function randomSystemPalette(system) {
   return generateHarmony(seedHex, system)
 }
 
-// Warm / cool anchors for the temperature lens, and the fraction of the way a
-// colour travels toward one at full slider travel.
+// Warm / cool anchors for the temperature lens. Full slider travel reaches the
+// requested anchor: the previous 0.5 cap stopped opposite hues halfway through
+// the blend, so a blue palette's "warm" end visibly landed in magenta.
 export const TEMP_WARM_HUE = 30
 export const TEMP_COOL_HUE = 210
-const TEMP_MAX_PULL = 0.5
+const TEMP_MAX_PULL = 1
 const DEG = Math.PI / 180
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -694,6 +695,17 @@ export function applyAdjust(baseColors, adj) {
     } catch {
       let [h, s, l] = hexToHsl(hex)
       h = (((h + adj.h) % 360) + 360) % 360
+      // Keep the fallback faithful to the HCT path: temperature used to be
+      // silently ignored here if the perceptual conversion ever failed.
+      if (adj.temp !== 0) {
+        const anchor = (adj.temp > 0 ? TEMP_WARM_HUE : TEMP_COOL_HUE) * DEG
+        const pull = (Math.abs(adj.temp) / 100) * TEMP_MAX_PULL
+        const rad = h * DEG
+        const a = s * (Math.cos(rad) * (1 - pull) + Math.cos(anchor) * pull)
+        const b = s * (Math.sin(rad) * (1 - pull) + Math.sin(anchor) * pull)
+        h = (((Math.atan2(b, a) / DEG) % 360) + 360) % 360
+        s = Math.hypot(a, b)
+      }
       // Same interpolation fix as the HCT path above, mapped onto HSL's own
       // 0–100 saturation range (its natural, always-representable "gamut
       // boundary" is simply 100): rising walks toward 100, falling walks

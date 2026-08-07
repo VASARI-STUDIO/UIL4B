@@ -90,6 +90,7 @@ export default function SnapSlider({
 
   const loBound = inputMin ?? min
   const hiBound = inputMax ?? max
+  const edited = defaultValue != null && Number(value) !== Number(defaultValue)
 
   useEffect(() => {
     if (editing) inputRef.current?.select()
@@ -143,7 +144,8 @@ export default function SnapSlider({
 
   return (
     <span
-      className={`snapv${trackGradient ? ' snapv--grad' : ''}${className ? ` ${className}` : ''}`}
+      className={`snapv${trackGradient ? ' snapv--grad' : ''}${edited ? ' snapv--edited' : ''}${className ? ` ${className}` : ''}`}
+      data-edited={edited || undefined}
       ref={trackRef}
     >
       <input

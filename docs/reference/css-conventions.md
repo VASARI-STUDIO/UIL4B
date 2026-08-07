@@ -163,6 +163,12 @@ specific decorative element) layer on top of the global block — keep them.
 ### Layout
 `--sw:248px` (sidebar width), `--top-h:56px` (top bar height).
 
+Shared app chrome uses `--page-gutter` / `--page-inline` so the PillNav, tool
+bars, tool footers, UI-system sections, and app footer keep one horizontal
+alignment. The gutter is fluid on desktop and deliberately tightens at the
+existing mobile breakpoint; extend these tokens instead of adding local shell
+padding.
+
 ### Theme-scoped colour tokens (`[data-theme="dark"]` / `[data-theme="light"]`)
 
 | Token group | Purpose |

@@ -2785,7 +2785,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
             width. See .plb-adjust-fields in global.css. */}
         <div className="plb-adjust-fields">
           {ADJUST_FIELDS.map(f => (
-            <div className="plb-adjust-field" key={f.key}>
+            <div className={`plb-adjust-field${adjust[f.key] !== 0 ? ' plb-adjust-field--edited' : ''}`} key={f.key}>
               <label className="plb-adjust-label" htmlFor={`plb-${f.key}`}>{f.label}</label>
               <SnapSlider
                 id={`plb-${f.key}`}

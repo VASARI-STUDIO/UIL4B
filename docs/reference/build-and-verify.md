@@ -15,7 +15,7 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 33 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **175 tests, 175 pass** |
+| Unit | `npm run test:unit` | **176 tests, 176 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **179 tests across 17 spec files** (`npx playwright test --list`) |
 
@@ -24,7 +24,7 @@ The 33 lint warnings are pre-existing and advisory
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
 The previous figures in this table (33 / 141 / 167) were measured on
 `feat/discover-library-parity` at 2026-08-06. This branch added no lint
-warnings; it moved unit (+34 tests, +3 files: `slider-keys`, `palette-names`,
+warnings; it moved unit (+35 tests, +3 files: `slider-keys`, `palette-names`,
 `board-handoff`) and browser acceptance (+12 tests, +1 spec file,
 `16-founder-batch-2.spec.js`).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
