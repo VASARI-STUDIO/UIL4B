@@ -112,6 +112,73 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     expect(Math.abs(footerDelta)).toBeLessThanOrEqual(1)
   })
 
+  test('shared chrome uses the wide desktop span', async ({ page }) => {
+    watch(page, 'designer using a large desktop display')
+    await page.setViewportSize({ width: 1909, height: 900 })
+    await go(page, '/color/palette')
+    await expect(page.locator('.plb-toolbar')).toBeVisible()
+    await expect(page.locator('.plb-adjust')).toBeVisible()
+
+    const geometry = await page.evaluate(() => {
+      const nav = document.querySelector('.pnav-inner')
+      const toolbar = document.querySelector('.plb-toolbar')
+      const footer = document.querySelector('.plb-adjust')
+      const inset = element => parseFloat(getComputedStyle(element).paddingLeft)
+      return {
+        navInset: inset(nav),
+        toolbarInset: inset(toolbar),
+        footerInset: inset(footer),
+        navContentWidth: nav.clientWidth - inset(nav) * 2,
+      }
+    })
+
+    expect(geometry.navContentWidth, 'large screens expose the new 1680px shared span').toBeGreaterThanOrEqual(1679)
+    expect(Math.abs(geometry.toolbarInset - geometry.navInset)).toBeLessThanOrEqual(1)
+    expect(Math.abs(geometry.footerInset - geometry.navInset)).toBeLessThanOrEqual(1)
+  })
+
+  test('temperature stays under the pointer for the entire first drag', async ({ page }) => {
+    watch(page, 'designer warming and cooling a palette with the pointer')
+    await page.setViewportSize({ width: 1909, height: 900 })
+    await go(page, '/color/palette')
+
+    const temperature = page.getByRole('slider', { name: 'Temperature adjustment' })
+    const reset = page.locator('.plb-adjust-reset')
+    const footer = page.locator('.plb-adjust')
+    await expect(temperature).toHaveValue('0')
+    await expect(reset).toBeHidden()
+    // Measure interaction geometry after the production font swap, rather
+    // than accidentally treating the page's initial font load as slider motion.
+    await page.evaluate(() => document.fonts.ready)
+
+    const before = {
+      slider: await temperature.boundingBox(),
+      footer: await footer.boundingBox(),
+    }
+    await page.mouse.move(
+      before.slider.x + before.slider.width * .2,
+      before.slider.y + before.slider.height / 2,
+    )
+    await page.mouse.down()
+    await page.mouse.move(
+      before.slider.x + before.slider.width * .8,
+      before.slider.y + before.slider.height / 2,
+      { steps: 12 },
+    )
+    await page.mouse.up()
+
+    const after = {
+      slider: await temperature.boundingBox(),
+      footer: await footer.boundingBox(),
+    }
+    expect(Number(await temperature.inputValue())).toBeGreaterThan(50)
+    expect(after.slider).toEqual(before.slider)
+    expect(after.footer).toEqual(before.footer)
+    await expect(reset).toBeVisible()
+    await expect(temperature.locator('xpath=..').locator('.snapv-value')).toHaveCSS('font-weight', '800')
+    await expect(page.locator('label[for="plb-temp"]')).not.toHaveCSS('text-shadow', 'none')
+  })
+
   test('adjustment tracks are equal, explanatory, and mark the neutral centre', async ({ page }) => {
     watch(page, 'designer tuning colour relationships')
     await go(page, '/color/palette')

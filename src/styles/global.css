@@ -4212,8 +4212,11 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --fs-lede:clamp(1.0625rem,calc(0.96rem + 0.45vw),1.3125rem);
   --fs-body:1rem;--fs-body-s:0.875rem;--fs-caption:0.8125rem;--fs-micro:0.6875rem;
   --nav-h:60px;--nav-top:0px;--nav-clear:calc(var(--nav-top) + var(--nav-h) + 8px);
-  --page-gutter:20px;--page-content-max:1440px;
-  --page-inline:max(var(--page-gutter),calc((100% - var(--page-content-max))/2 + var(--page-gutter)))
+  /* Wide shared chrome: navigation, toolbars, and footers can use up to 1680px
+     instead of collapsing to the old ~1400px desktop span. `--page-inline`
+     is the actual viewport inset, so the content-max token means what it says. */
+  --page-gutter:clamp(20px,1.5vw,32px);--page-content-max:1680px;
+  --page-inline:max(var(--page-gutter),calc((100% - var(--page-content-max))/2))
 }
 
 /* ── Foundry light values (overrides the earlier [data-theme="light"] block;
@@ -4709,6 +4712,7 @@ html.lenis,html.lenis body{height:auto}
 .snapv{display:flex;flex:1 1 auto;align-items:center;gap:12px;min-width:0}
 .snapv input[type="range"]{flex:1;min-width:0;accent-color:var(--accent)}
 .snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.snapv--edited .snapv-value,.snapv--edited .snapv-input{font-weight:800;color:var(--t0)}
 .snapv-value:hover{border-color:var(--border);color:var(--t0)}
 .snapv-value:disabled{cursor:not-allowed;opacity:.6}
 .snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
@@ -6278,6 +6282,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
    margin, which lands inside the (auto) label column and so never eats into a
    track. Only fields that are not first in their ROW get it, hence the
    per-breakpoint reset — the row length changes with the column count. */
+.plb-adjust-field--edited .plb-adjust-label{color:var(--t0);text-shadow:.35px 0 currentColor,-.35px 0 currentColor}
 .plb-adjust-field:not(:first-child) .plb-adjust-label{margin-left:clamp(8px,1.6vw,20px)}
 /* Fixed readout width: "0°" and "-180°" are different widths, and a readout
    that grows would shorten its own track. Fixing it keeps all four equal at
@@ -6295,6 +6300,11 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-adjust-field .plb-adjust-label{margin-left:0}
 }
 .plb-copycss{margin-left:auto;white-space:nowrap}
+.plb-adjust-reset{white-space:nowrap}
+/* Visibility preserves the button's exact row width while keeping the clean
+   state out of both pointer and keyboard interaction. The slider grid no
+   longer changes size during the first drag. */
+.plb-adjust-reset--idle{visibility:hidden;pointer-events:none}
 /* Mid-band (tablet-ish): the toolbar stays one row, but the action group holds a
    fixed ~885px of controls that won't shrink, so between the mobile stack (≤768)
    and full desktop it would push the page wider than the viewport. Fix: keep the
