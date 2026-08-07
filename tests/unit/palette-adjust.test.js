@@ -382,12 +382,15 @@ test('warming a cool palette never splits neighbouring hues apart', () => {
 test('warming keeps a cool palette internally coherent', () => {
   const cool = [hctToHex(195, 45, 55), hctToHex(205, 45, 50), hctToHex(228, 45, 45)]
   const warmed = applyAdjust(cool, { ...ZERO, temp: 50 })
-  const hues = warmed.map((hex) => hexToHct(hex)[0])
-  // All three move the SAME way, and none of them laps the wheel to the far
-  // side (the old model landed these on 154° / 161° / 268° — two greens and a
-  // purple out of one nudge of the slider).
-  const spread = Math.max(...hues) - Math.min(...hues)
-  assert.ok(spread < 60, `the palette stayed together (hue spread ${spread.toFixed(0)}°)`)
+  // Halfway between opposite temperature anchors these colours are nearly
+  // neutral, where hue is numerically unstable and therefore the wrong
+  // coherence measure. Their rendered RGB values must remain neighbours (the
+  // old shortest-arc model visibly split them into greens and purple).
+  let worst = 0
+  for (let i = 1; i < warmed.length; i++) {
+    worst = Math.max(worst, rgbDistance(warmed[i - 1], warmed[i]))
+  }
+  assert.ok(worst < 30, `neighbouring colours stayed within ${worst.toFixed(1)} RGB units`)
 })
 
 test('temperature is symmetric: warm and cool are opposite pulls', () => {
@@ -395,6 +398,16 @@ test('temperature is symmetric: warm and cool are opposite pulls', () => {
   const cool = applyAdjust(BASE, { ...ZERO, temp: -60 })
   assert.ok(!same(warm, cool))
   assert.ok(!same(warm, BASE) && !same(cool, BASE))
+})
+
+test('temperature endpoints reach genuinely warm and cool anchors', () => {
+  const angularDistance = (a, b) => Math.abs((((a - b) % 360) + 540) % 360 - 180)
+  const source = ['#4338E0']
+  const warmHue = hexToHct(applyAdjust(source, { ...ZERO, temp: 100 })[0])[0]
+  const coolHue = hexToHct(applyAdjust(source, { ...ZERO, temp: -100 })[0])[0]
+
+  assert.ok(angularDistance(warmHue, 30) < 2, `warm end reached ${warmHue.toFixed(1)}°`)
+  assert.ok(angularDistance(coolHue, 210) < 2, `cool end reached ${coolHue.toFixed(1)}°`)
 })
 
 /* ── the hand-offs out of the builder ────────────────────────────────────── */
