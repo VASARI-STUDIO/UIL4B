@@ -337,8 +337,8 @@ test.describe('SnapSlider · keyboard stepping', () => {
     await expect(hue.locator('xpath=..'), 'the shared slider exposes its edited state').toHaveAttribute('data-edited', 'true')
     await expect.poll(() => hue.evaluate(el => getComputedStyle(el.closest('.snapv').querySelector('.snapv-value')).fontWeight),
       { message: 'an edited value is visibly bold' }).toBe('800')
-    await expect.poll(() => page.locator('label[for="plb-h"]').evaluate(el => getComputedStyle(el).fontWeight),
-      { message: 'the edited palette field label is visibly bold' }).toBe('800')
+    await expect.poll(() => page.locator('label[for="plb-h"]').evaluate(el => getComputedStyle(el).textShadow),
+      { message: 'the edited palette field label is visibly emphasised without changing its width' }).not.toBe('none')
     // It must STAY moved. The old behaviour re-snapped on the same event, so a
     // value of 1 never survived to the next frame.
     await page.waitForTimeout(400)

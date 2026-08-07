@@ -2804,9 +2804,19 @@ export default function PaletteBuilder({ onCopy, toast }) {
             </div>
           ))}
         </div>
-        {adjustDirty && (
-          <button type="button" className="btn btn-s btn-ghost" onClick={() => setAdjust(ZERO_ADJUST)}>Reset</button>
-        )}
+        {/* Keep this slot in the row at rest. Adding it only after the first
+            input event changed the grid width underneath an active pointer,
+            which made the right-most Temperature thumb jump away mid-drag. */}
+        <button
+          type="button"
+          className={`btn btn-s btn-ghost plb-adjust-reset${adjustDirty ? '' : ' plb-adjust-reset--idle'}`}
+          onClick={() => setAdjust(ZERO_ADJUST)}
+          disabled={!adjustDirty}
+          aria-hidden={!adjustDirty}
+          tabIndex={adjustDirty ? 0 : -1}
+        >
+          Reset
+        </button>
         <button type="button" className="btn btn-s plb-copycss" onClick={() => onCopy?.(cssExport)}>Copy CSS</button>
       </footer>
     </div>

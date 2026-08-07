@@ -165,9 +165,9 @@ specific decorative element) layer on top of the global block — keep them.
 
 Shared app chrome uses `--page-gutter` / `--page-inline` so the PillNav, tool
 bars, tool footers, UI-system sections, and app footer keep one horizontal
-alignment. The gutter is fluid on desktop and deliberately tightens at the
-existing mobile breakpoint; extend these tokens instead of adding local shell
-padding.
+alignment. Desktop content can span up to `--page-content-max` (1680px), with a
+fluid minimum gutter; the existing mobile breakpoint deliberately tightens it.
+Extend these tokens instead of adding local shell padding.
 
 ### Theme-scoped colour tokens (`[data-theme="dark"]` / `[data-theme="light"]`)
 
