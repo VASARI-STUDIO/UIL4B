@@ -11,6 +11,30 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ---
 
+## 2.8.1 — Palette temperature and shared layout rhythm
+
+### Palette Builder
+- Temperature no longer moves out from under the pointer on the first drag.
+  The Reset action now reserves its row space at rest, and edited-label
+  emphasis no longer changes the adjustment grid's measurements
+- Temperature now reaches genuinely cool and warm endpoints. The old half-pull
+  stopped blue and purple palettes in magenta at the warm end; the HCT path and
+  its HSL fallback now follow the same full-range behaviour
+- Every shared `SnapSlider` now exposes and visibly bolds an edited value. The
+  Palette Builder also emphasises the matching field label without shifting its
+  track, then returns both to rest styling when the value returns to its default
+
+### Shared interface
+- Expanded the shared desktop content span from roughly 1400px to 1680px for
+  the PillNav, tool bars, tool footers, UI-system sections and app footer.
+  Existing compact mobile spacing is preserved
+
+### Founder direction (2026-08-07, in conversation)
+- Requested a working Temperature control, unmistakable edited slider values,
+  and wider left/right spacing across the shared navigation, tools and footer
+
+---
+
 ## Unreleased — The Director model, and one home per fact
 
 Documentation and records only; no application behaviour changed. On the
