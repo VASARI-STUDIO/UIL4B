@@ -65,7 +65,7 @@ Model assignments are a founder decision. Keep this table and each agent's
 | **design** | `uil4b-brand-design` for all brand-facing work; target project sources; accessibility and research standards as needed |
 | **engineer** | `incremental-implementation` or `debugging-and-error-recovery`; `frontend-ui-engineering` and `uil4b-brand-design` for user-facing UI; browser and performance skills when relevant |
 | **code-reviewer** | Approved criteria and diff; `frontend-ui-engineering` and `uil4b-brand-design` for user-facing changes |
-| **qa** | Build-and-verify and Murphy-state references; browser-testing workflow for rendered flows |
+| **qa** | Build-and-verify and Murphy-state references; `browser-testing-with-devtools` and `skene-webapp-testing` for rendered flows; `skene-accessibility-audit` for access barriers |
 | **research** | Primary-source and citation discipline; product positioning before interpreting external material |
 
 Loading a skill does not give an agent authority outside its role. For example,
@@ -96,6 +96,35 @@ There is no mandatory agent chain. Use the fewest agents that cover the task:
   release blockers.
 - Preserve unrelated local work and state assumptions or untested boundaries.
 - Never fabricate research, analytics, product proof, testimonials, or success.
+
+## Evidence boundaries — binding on every agent
+
+Four kinds of evidence answer four different questions. No agent may present one
+as another, and no agent may produce the two we currently cannot gather.
+
+| Branch | Answers | Available to agents |
+|---|---|---|
+| Rendered verification | Does it do what it claims in a real browser? | **Yes** — `qa`, and any agent with `Bash` + Playwright |
+| Accessibility evaluation | Does it meet access requirements? | **Yes**, except screen-reader output and physical touch devices |
+| Usability evidence | Can representative people complete and understand the task? | **No** — requires observed participants |
+| Discovery / demand | What do people need, and would they pay? | **No** |
+
+**UIL4B has no shipped activation instrumentation and no user-feedback intake**
+(P-001 and P-002 are approved but unbuilt). Until they land, an agent asked for
+"user testing" delivers rendered and accessibility verification and **says so**;
+it does not invent participants, sessions, quotes, satisfaction levels or
+task-success rates. Predicted user confusion is a hypothesis and must carry that
+label. "Not run" is always a valid answer; a fabricated finding never is.
+
+**Severity is five dimensions, not one.** Impact, frequency (with its
+denominator), recovery, reach and confidence are judged independently before a
+tier is assigned. A rare safety, privacy, data-loss or accessibility blocker can
+stop a release on impact alone; a constant cosmetic wobble does not become a P0
+by being constant.
+
+**Reject proxy substitution.** Tour completion is not value; time-on-page is not
+success; aesthetic preference is not task performance; a green build is not a
+working feature.
 
 ## Keeping the system current
 

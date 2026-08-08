@@ -11,7 +11,7 @@ Nothing here blocks anything. Requested work proceeds while these sit unanswered
 the record — no other confirmation is needed, and no agent may claim a verdict
 that is not written here.
 
-_Last reviewed: 2026-08-07._
+_Last reviewed: 2026-08-08._
 
 ## How to read an entry
 
@@ -51,7 +51,8 @@ scale — and one canonical upgrade-gate event.
 **Cost / risk.** Small-to-moderate, no user-facing change. Risk is choosing the
 wrong activation definition and having to re-cut it later; cheap to revise.
 
-**Verdict:** _(unanswered)_
+**Verdict:** **APPROVED** — Dylan, in conversation with the Director,
+2026-08-08 ("you have the approval for all").
 
 ---
 
@@ -76,7 +77,10 @@ Validation Zone — needs founder approval before any route change.
 **What would settle it.** Even a fortnight of captured reports would tell us
 whether the silence is contentment or attrition.
 
-**Verdict:** _(unanswered)_
+**Verdict:** **APPROVED** — Dylan, in conversation with the Director,
+2026-08-08 ("you have the approval for all"). `/api` is a Human Validation Zone;
+the founder approval above covers the product decision, and the route change
+still takes the security gate before merge.
 
 ---
 
@@ -102,7 +106,52 @@ merely find that something behaved oddly.
 **Cost / risk.** Cheap to decide, moderate to apply consistently. Real revenue
 implications either way, which is why it is Dylan's call and not mine.
 
-**Verdict:** _(unanswered)_
+**Verdict:** **APPROVED, and the framing is decided.** Dylan, in conversation with
+the Director, 2026-08-08.
+
+**Free is a trial of everything** — not a permanently-reduced product — **with
+some small tools deliberately giving a little extra as loss leaders.**
+
+Two consequences, both binding:
+
+1. **Every paid edge is explicit. No silent collapse, anywhere.** A user must
+   always know they met a paid boundary, never merely find that something
+   behaved oddly. A trial that quietly downgrades is worse than a trial that
+   ends honestly.
+2. **Reach before restriction.** Because free is a trial, a free user should
+   meet the real thing first and the boundary second. Loss-leader tools are
+   chosen deliberately, not by accident of where a gate was easiest to add.
+
+3. **Prefer the login gate over the paywall.** Dylan, in conversation with the
+   Director, 2026-08-08: where a gate could reasonably be either, lean to
+   login. Evidence class: `inferred` — an established product-led pattern, not
+   a UIL4B measurement. P-001 is what would make it `measured`.
+
+   The reasoning is structural, not statistical. A login gate asks for an email
+   at a moment the user already wants something, and it is *recoverable* — a
+   user who does not upgrade today remains reachable. A paywall asks for a card,
+   and a bounce there is silent and permanent: no address, no follow-up, no
+   trace beyond a drop-off. A paywall does not merely convert worse; it destroys
+   the option to convert later.
+
+   **Gate placement follows the shape of the value:**
+
+   | Stage | Gate | Moment |
+   |---|---|---|
+   | Anonymous | none | Build freely. Everything works. This is the trial. |
+   | Login | login gate | The user wants to **keep** something — save, export, publish, sync. |
+   | Paid | paywall | **Repetition and volume**, never first access — project caps, bulk AI generations, Pro export formats. |
+
+   The failure mode to avoid is a paywall standing where a login gate belongs,
+   blocking *first* access to a feature. Under trial-of-everything that is both
+   off-framing and the weaker converter.
+
+   Pattern to standardise: the existing gradient-submission modal — "you must log
+   in … don't worry, it's still free" plus a **why we ask first** block giving
+   real reasons. Do not rebuild it; propagate it.
+
+> Superseded a Director assumption of "free is a genuinely useful small tool"
+> recorded earlier the same day. The founder decision above is the record.
 
 ---
 
@@ -123,7 +172,8 @@ own fallback chain must move in the same pass or the two surfaces disagree.
 new board — one hue in five tones rather than five hues. That is a taste call as
 much as a correctness one, which is why it is here rather than done.
 
-**Verdict:** _(unanswered)_
+**Verdict:** **APPROVED** — Dylan, in conversation with the Director,
+2026-08-08 ("you have the approval for all").
 
 ---
 
@@ -131,4 +181,7 @@ much as a correctness one, which is why it is here rather than done.
 
 | Date | Proposal | Verdict |
 |---|---|---|
-| _(none yet)_ | | |
+| 2026-08-08 | P-001 · Ship the instrumentation before shipping more features | APPROVED |
+| 2026-08-08 | P-002 · Give users somewhere to tell us something is wrong | APPROVED (security gate still applies) |
+| 2026-08-08 | P-003 · Decide what the free tier is *for* | APPROVED — free is a **trial of everything**, some small tools extra-generous as loss leaders; every gate explicit |
+| 2026-08-08 | P-004 · Make Auto the default colour system app-wide | APPROVED |
