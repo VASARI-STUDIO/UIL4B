@@ -717,7 +717,12 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-tab.active .pl-tab-count{background:var(--accent-bg);color:var(--accent)}
 .pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
 .pl-card-saves{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s)}
-.pl-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;position:sticky;top:0;z-index:30;padding:12px 0;background:color-mix(in srgb,var(--bg-0) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);margin-left:calc(-1 * clamp(16px,5vw,64px));margin-right:calc(-1 * clamp(16px,5vw,64px));padding-left:clamp(16px,5vw,64px);padding-right:clamp(16px,5vw,64px)}
+/* Sticky library command bar. It used to carry a negative-margin bleed sized to
+   the page gutter, but every page that uses it nests it inside .sec (max-width
+   1400) — so the bleed could never reach the viewport edge and simply
+   overhung the content column by whatever the gutter was. The bar now spans its
+   own container and lines up with the grid it filters. */
+.pl-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;position:sticky;top:0;z-index:30;padding:12px 0;background:color-mix(in srgb,var(--bg-0) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .pl-search-wrap{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;flex:1;min-width:200px;max-width:360px;transition:all var(--t)}
 .pl-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-search-wrap svg{color:var(--t3);flex-shrink:0}
@@ -4214,10 +4219,29 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --nav-h:60px;--nav-top:0px;--nav-clear:calc(var(--nav-top) + var(--nav-h) + 8px);
   /* Wide shared chrome: navigation, toolbars, and footers can use up to 1680px
      instead of collapsing to the old ~1400px desktop span. `--page-inline`
-     is the actual viewport inset, so the content-max token means what it says. */
+     is the actual viewport inset, so the content-max token means what it says.
+     Every page container, tool toolbar, nav and footer reads --page-inline, so
+     they share one horizontal alignment at every width.
+
+     The centring branch is measured against `100vw`, NOT `100%`. A percentage
+     inside a custom property is not resolved where the property is declared —
+     it re-resolves against whichever element finally uses it. A full-bleed
+     child sitting inside an already-padded page container therefore computed a
+     *smaller* inset than its parent and bled the wrong distance. `100vw` is
+     viewport-relative wherever it is read, so parent and child always agree.
+     (100vw includes the classic scrollbar; that widens the inset by a few px
+     above --page-content-max, symmetrically, for every consumer at once.) */
   --page-gutter:clamp(20px,1.5vw,32px);--page-content-max:1680px;
-  --page-inline:max(var(--page-gutter),calc((100% - var(--page-content-max))/2))
+  --page-inline:max(var(--page-gutter),calc((100vw - var(--page-content-max))/2))
 }
+
+/* Large-desktop gutter step — founder direction, 2026-08-08. Below
+   --page-content-max the centring branch has no slack to give, so a 1440-class
+   screen fell back to the ~22px minimum gutter and the page ran flush to the
+   viewport edge. This is the same shared scale one step wider, not a parallel
+   one: nav, footer, page containers and tool toolbars all move together
+   because they all read --page-inline. */
+@media(min-width:1440px){:root{--page-gutter:clamp(36px,3.2vw,64px)}}
 
 /* ── Foundry light values (overrides the earlier [data-theme="light"] block;
    same specificity, later wins — only Foundry-changed tokens are re-declared) ── */
@@ -4938,7 +4962,7 @@ html.lenis,html.lenis body{height:auto}
    horizontal gutter the old .main had; AppFooter sits full-bleed at the bottom
    of the column, pushed down by .app-page's flex-grow on short pages. ══ */
 .app-shell{min-height:100dvh;display:flex;flex-direction:column;background:var(--bg-0)}
-.app-page{flex:1 0 auto;display:flex;flex-direction:column;width:100%;padding:var(--nav-clear) clamp(16px,5vw,64px) clamp(48px,6vw,80px)}
+.app-page{flex:1 0 auto;display:flex;flex-direction:column;width:100%;padding:var(--nav-clear) var(--page-inline) clamp(48px,6vw,80px)}
 .app-page>*{min-width:0}
 .app-page>*:first-child{padding-top:clamp(12px,3vw,32px)}
 
@@ -4946,10 +4970,11 @@ html.lenis,html.lenis body{height:auto}
 /* The in-tool left rail is retired — navigation lives entirely in the PillNav
    mega-menus, so the shell is a single full-width content column. */
 .rail-shell{display:grid;grid-template-columns:1fr;min-height:100vh;padding-top:var(--nav-clear)}
-.rail-content{min-width:0;padding:24px var(--page-gutter) var(--s-9)}
-/* Library toolbars live inside the content column: clear the floating nav when
-   they stick, and re-bleed to the content gutter. */
-.rail-content .pl-toolbar{top:var(--nav-clear);margin-left:calc(-1 * clamp(20px,4vw,48px));margin-right:calc(-1 * clamp(20px,4vw,48px));padding-left:clamp(20px,4vw,48px);padding-right:clamp(20px,4vw,48px)}
+.rail-content{min-width:0;padding:24px var(--page-inline) var(--s-9)}
+/* Library toolbars live inside the content column and span it (see
+   .pl-toolbar). All they need here is to clear the floating nav when they
+   stick. */
+.rail-content .pl-toolbar{top:var(--nav-clear)}
 
 /* ══ Coming-soon tool state (soon-) ══ */
 .soon{max-width:560px;margin:0 auto;padding:var(--s-9) 0}
@@ -5030,7 +5055,11 @@ html.lenis,html.lenis body{height:auto}
   linear-gradient(90deg,color-mix(in srgb,var(--t0) 4%,transparent) 1px,transparent 1px);
   background-size:48px 48px;mask-image:linear-gradient(to bottom,#000,transparent 82%)}
 .home>main,.home>.home-foot{position:relative}
-.home-container{max-width:1216px;margin:0 auto;padding-inline:clamp(20px,4vw,32px)}
+/* The sales-page measure is deliberately capped at 1216px of CONTENT, but its
+   gutter is the shared one — below the cap the homepage's content edge lands
+   exactly where the nav's and the footer's do. The cap carries the gutter so
+   widening the gutter narrows the page instead of the measure. */
+.home-container{max-width:calc(1216px + 2*var(--page-inline));margin:0 auto;padding-inline:var(--page-inline)}
 .home-section{padding-top:var(--sec-pad);padding-bottom:0}
 .home-head{max-width:720px}
 .home-head-center{margin:0 auto;text-align:center}
@@ -5771,12 +5800,12 @@ html.lenis,html.lenis body{height:auto}
 
 /* ══════════ Palette Builder (/color/palette) ══════════ */
 /* Full-bleed workbench: the negative margins exactly cancel .rail-content's
-   padding (24px / clamp(20px,4vw,48px) / var(--s-9)) so the board runs
+   padding (24px / var(--page-inline) / var(--s-9)) so the board runs
    edge-to-edge under the pill nav. Column/ramp colours arrive as custom
    props (--plb-c / --plb-ink / --plb-rc) set via callback refs. */
-.plb{display:flex;flex-direction:column;min-height:calc(100vh - var(--nav-top) - var(--nav-h));margin:calc(-24px - var(--nav-clear) + var(--nav-top) + var(--nav-h)) calc(-1*var(--page-gutter)) calc(-1*var(--s-9))}
-/* Horizontal padding mirrors .pnav-inner (20px gutter, 1440px centred cap) so
-   the toolbar's content edge lines up with the pill nav's at every width. */
+.plb{display:flex;flex-direction:column;min-height:calc(100vh - var(--nav-top) - var(--nav-h));margin:calc(-24px - var(--nav-clear) + var(--nav-top) + var(--nav-h)) calc(-1*var(--page-inline)) calc(-1*var(--s-9))}
+/* Horizontal padding mirrors .pnav-inner (same --page-inline token) so the
+   toolbar's content edge lines up with the pill nav's at every width. */
 .plb-toolbar{position:sticky;top:calc(var(--nav-top) + var(--nav-h));z-index:30;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:nowrap;padding:10px var(--page-inline);background:var(--bg-0);border-bottom:1px solid var(--border)}
 /* The toolbar is a single line, always — it never wraps to a second row. Groups
    stay on one line; the title group may shrink (min-width:0) so its controls give
@@ -6823,7 +6852,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 }
 
 @media(max-width:640px){
-  .plb--ui-system{margin-right:calc(-1*var(--page-gutter));margin-left:calc(-1*var(--page-gutter))}
+  .plb--ui-system{margin-right:calc(-1*var(--page-inline));margin-left:calc(-1*var(--page-inline))}
   .uis-header{flex-direction:column;padding:var(--s-5) var(--page-gutter) var(--s-4)}
   .uis-title-block h1{font-size:28px}
   .uis-back{order:-1}
