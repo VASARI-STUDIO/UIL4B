@@ -396,15 +396,28 @@ test.describe('SnapSlider · keyboard stepping', () => {
       el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, isPrimary: true }))
     }, deg)
 
-    // Inside the 8° radius of the 0 snap → pulled onto it.
-    await dragTo(6)
+    // Just off the 0 snap → pulled onto it.
+    await dragTo(1)
     await expect(hue, 'a drag near a snap is still magnetic').toHaveValue('0')
-    // Inside the radius of the 90 snap → pulled onto it.
-    await dragTo(86)
+    // Just off the 90 snap → pulled onto it.
+    await dragTo(89)
     await expect(hue).toHaveValue('90')
     // Well clear of every snap → left exactly where it was dropped.
     await dragTo(40)
     await expect(hue, 'a drag between snaps stays free').toHaveValue('40')
+
+    // The pull FADES OUT across the radius rather than switching off at it.
+    // This assertion changed in batch 3: it used to read `dragTo(6) → 0`, i.e.
+    // the whole 8° radius collapsed onto the snap, so the value leapt by 8 the
+    // moment the pointer crossed the boundary. That discontinuity is exactly
+    // what the founder saw on Temperature (7 → 0 → −7). Mid-radius values are
+    // now nudged toward the snap, and the radius itself is the identity.
+    await dragTo(3)
+    await expect(hue, 'mid-radius is nudged, not swallowed').toHaveValue('2')
+    await dragTo(8)
+    await expect(hue, 'at the radius the pull is exactly zero').toHaveValue('8')
+    await dragTo(9)
+    await expect(hue, 'and outside it nothing happens at all').toHaveValue('9')
 
     // …and the very same value, arrived at by KEYBOARD, is not snapped. This
     // pair is the whole fix: one input modality is magnetic, the other exact.

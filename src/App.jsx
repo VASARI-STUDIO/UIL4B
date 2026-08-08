@@ -93,15 +93,25 @@ function RequireAuth({ children }) {
       </div>
     )
   }
-  if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
+  // Carry the query with the path. RequireAuth wraps Checkout, so it redirects
+  // before Checkout's own `state.from` (which does include ?plan=) can run —
+  // pathname alone dropped the chosen plan on every gated checkout link.
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />
   return children
 }
 
-// The login "page" is now just a launcher for the app-wide LoginPopup (topmost
-// z-index), so every existing `<Link to="/login">` / `navigate('/login')` opens
-// the popup over the app instead of a full page. On success we send the user to
-// where they were headed (RequireAuth / Checkout set location.state.from); on
-// dismiss we return them there too so the URL never gets stuck on /login.
+// The login "page" is a launcher for the app-wide LoginPopup (topmost z-index),
+// kept as a real route so bookmarks, RequireAuth redirects and Checkout's
+// `state.from` hand-off keep working. On success we send the user to where they
+// were headed (RequireAuth / Checkout set location.state.from); on dismiss we
+// return them there too so the URL never gets stuck on /login.
+//
+// The NAV no longer routes here — its "Log in" / "Start for Free" controls call
+// openLogin() in place (see PillNav), so the popup opens over the current page
+// and both dismiss and success leave the user exactly where they were. Routing
+// to /login for those was the bug: it unmounted the page before the popup
+// existed, and `from` defaulted to /home, so the X landed people on the
+// dashboard instead of back on the Palette Library.
 function LoginRoute() {
   const { openLogin } = useLoginPrompt()
   const { user, loading } = useAuth()
@@ -117,14 +127,11 @@ function LoginRoute() {
       navigate(from, { replace: true })
       return
     }
-    // A brand-new sign-up completed from this launcher is intercepted into
-    // onboarding by AppInner, which would otherwise discard `from` (QA Q1).
-    // Stash the intended destination so onboarding can resume the user there;
-    // the /home default needs no stash, and the key is session-scoped and
-    // consumed only inside the onboarding flow (harmless for existing logins).
-    if (from && from !== '/home') {
-      try { sessionStorage.setItem('vs-resume-after-onboarding', from) } catch { /* ignore */ }
-    }
+    // `from` is passed through so LoginPromptProvider stashes the intended
+    // destination for a brand-new sign-up (AppInner intercepts those into
+    // onboarding, which would otherwise discard it — QA Q1). The stash lives in
+    // the provider now, so a nav-initiated sign-up that never touches this route
+    // resumes correctly too.
     openLogin({ reason: '', from }).then(() => {
       navigate(from, { replace: true })
     })

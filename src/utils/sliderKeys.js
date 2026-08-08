@@ -1,4 +1,7 @@
-// Keyboard stepping for range inputs — the exact-value half of SnapSlider.
+// The pure value maths behind SnapSlider: exact keyboard stepping
+// (`stepFromKey`) and magnetic pointer snapping (`snapToTarget`). Both halves
+// live here, DOM-free, so the two behaviours that have each shipped a bug can
+// be unit-tested against the real track configurations.
 //
 // WHY THIS EXISTS (the bug it fixes): SnapSlider re-snapped on EVERY change
 // event, including the ones the browser fires for arrow keys. From a snap
@@ -35,6 +38,53 @@ function quantise(value, min, step) {
   if (!(step > 0)) return value
   const grid = min + Math.round((value - min) / step) * step
   return Number(grid.toFixed(decimalsOf(step)))
+}
+
+/**
+ * Magnetic pointer snapping — the value a POINTER drag should produce.
+ *
+ * WHY THE SHAPE MATTERS (the bug this fixes): the original was a hard step —
+ * return the snap inside `snapRadius`, return `raw` outside — so the output
+ * jumped by a whole `snapRadius` the instant the pointer crossed the boundary.
+ * On Temperature (±100 track, radius 6, ~136px wide at 1440) that was a ~7px
+ * dead band mid-track followed by a 7-unit leap: the rendered value went
+ * 7 → 0 → −7 and every value between was unreachable by pointer. #209 doubled
+ * TEMP_MAX_PULL, so that leap started recolouring the whole board in one frame.
+ *
+ * The fix is a CONTINUOUS pull: the snap's influence is weighted `(1 - d/r)³`,
+ * which is 1 at the snap (full magnetism) and reaches 0 — with zero slope — at
+ * the radius. So `|raw - snap| == radius` returns exactly `raw` and there is no
+ * boundary to jump across.
+ *
+ * The exponent is the whole design. Gain (output units per input unit) peaks at
+ * ~1.25 and returns to exactly 1 at the radius, so the value can never outrun
+ * the pointer by more than a quarter — that is what bounds how many values a
+ * drag skips. A hard core followed by an eased ramp (the obvious alternative)
+ * peaks at 2–3 instead and skips proportionally more. Squared holds the snap
+ * harder but measurably skips more mid-radius values on the real 120px
+ * Temperature track; anything flatter than cubed stops pulling at ±1, which is
+ * the magnetism the affordance exists for.
+ *
+ * The result is quantised onto the same step grid the native input uses, so a
+ * pointer parked within half a step of a snap yields the snap EXACTLY — the
+ * lock-on that makes the affordance feel magnetic, and what keeps `defaultValue`
+ * equality (the "edited" dot) honest.
+ *
+ * Keyboard input never comes here — see the modality note above.
+ */
+export function snapToTarget(raw, { snaps = [], snapRadius, min, max, step = 1 } = {}) {
+  if (!snaps.length) return raw
+  const radius = snapRadius ?? (max - min) * 0.06
+  if (!(radius > 0)) return raw
+  let best = null
+  for (const s of snaps) {
+    const d = Math.abs(raw - s)
+    if (d <= radius && (best === null || d < Math.abs(raw - best))) best = s
+  }
+  if (best === null) return raw
+  const fade = 1 - Math.abs(raw - best) / radius
+  const weight = fade * fade * fade
+  return quantise(raw + (best - raw) * weight, min, step > 0 ? step : 1)
 }
 
 /**
