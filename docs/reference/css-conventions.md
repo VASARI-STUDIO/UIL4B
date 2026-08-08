@@ -21,8 +21,12 @@
 `--s-6:32px`, `--s-7:48px`, `--s-8:64px`, `--s-9:96px`, `--s-10:128px`
 
 ### Radius scale
-`--radius-xs:4px`, `--radius-s:5px`, `--radius:7px`, `--radius-l:9px`,
-`--radius-xl:12px`, `--radius-2xl:16px`, `--radius-pill:999px`
+`--radius-xs:3px`, `--radius-s:5px`, `--radius:7px`, `--radius-l:10px`,
+`--radius-xl:13px`, `--radius-2xl:18px`, `--radius-pill:999px`
+
+> Corrected 2026-08-08 to match the live `:root` in `global.css` — this table
+> had drifted (4/9/12/16). The stylesheet is the source of truth for the values;
+> this doc is the source of truth for the rule that you use the scale.
 
 > Squarer-with-soft-corners set — small radii, not pill-everything. Use the
 > scale; don't hard-code `border-radius`.
@@ -164,10 +168,26 @@ specific decorative element) layer on top of the global block — keep them.
 `--sw:248px` (sidebar width), `--top-h:56px` (top bar height).
 
 Shared app chrome uses `--page-gutter` / `--page-inline` so the PillNav, tool
-bars, tool footers, UI-system sections, and app footer keep one horizontal
-alignment. Desktop content can span up to `--page-content-max` (1680px), with a
-fluid minimum gutter; the existing mobile breakpoint deliberately tightens it.
-Extend these tokens instead of adding local shell padding.
+bars, tool footers, UI-system sections, app footer **and every page container**
+(`.app-page`, `.rail-content`, `.home-container`) keep one horizontal alignment.
+Desktop content can span up to `--page-content-max` (1680px), with a fluid
+minimum gutter. Extend these tokens instead of adding local shell padding.
+
+The gutter has three steps (2026-08-08):
+
+| Width | `--page-gutter` |
+|---|---|
+| ≤768px | `16px` |
+| 769–1439px | `clamp(20px,1.5vw,32px)` |
+| ≥1440px | `clamp(36px,3.2vw,64px)` |
+
+`--page-inline` is `max(--page-gutter, (100vw - --page-content-max)/2)` — the
+centring branch takes over above 1680px. It is measured against **`100vw`, not
+`100%`**, on purpose: a percentage inside a custom property re-resolves against
+whichever element reads it, so a full-bleed child inside an already-padded page
+container would compute a smaller inset than its parent and bleed the wrong
+distance. Anything that cancels a page container's padding with a negative
+margin (`.plb`, `.plb--ui-system`) depends on this.
 
 ### Theme-scoped colour tokens (`[data-theme="dark"]` / `[data-theme="light"]`)
 
