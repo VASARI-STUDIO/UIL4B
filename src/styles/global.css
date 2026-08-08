@@ -5708,7 +5708,12 @@ html.lenis,html.lenis body{height:auto}
   .tt-output,.tt-config{grid-column:auto;grid-row:auto}
 }
 @media(max-width:768px){
-  :root{--page-gutter:12px}
+  /* Mobile gutter. Was 12px, which only ever applied to the nav, the footer and
+     the tool toolbars; the page containers carried their own ~20px. Now that
+     every page reads the same token the value has to work for body copy too, so
+     it is 16px — still the tightest step on the scale, but text and list
+     markers no longer run into the edge of a 390px screen. */
+  :root{--page-gutter:16px}
   .tt-audience{grid-template-columns:1fr}
   .tt-audience-tab+.tt-audience-tab{border-left:0;border-top:1px solid var(--border)}
   .tt-status{grid-template-columns:repeat(2,minmax(0,1fr))}
