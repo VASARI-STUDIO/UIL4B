@@ -21,8 +21,12 @@
 `--s-6:32px`, `--s-7:48px`, `--s-8:64px`, `--s-9:96px`, `--s-10:128px`
 
 ### Radius scale
-`--radius-xs:4px`, `--radius-s:5px`, `--radius:7px`, `--radius-l:9px`,
-`--radius-xl:12px`, `--radius-2xl:16px`, `--radius-pill:999px`
+`--radius-xs:3px`, `--radius-s:5px`, `--radius:7px`, `--radius-l:10px`,
+`--radius-xl:13px`, `--radius-2xl:18px`, `--radius-pill:999px`
+
+> Corrected 2026-08-08 to match the live `:root` in `global.css` — this table
+> had drifted (4/9/12/16). The stylesheet is the source of truth for the values;
+> this doc is the source of truth for the rule that you use the scale.
 
 > Squarer-with-soft-corners set — small radii, not pill-everything. Use the
 > scale; don't hard-code `border-radius`.
