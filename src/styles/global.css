@@ -5485,8 +5485,11 @@ html.lenis,html.lenis body{height:auto}
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
   .pnav-mobile{display:inline-flex}
   /* The centred menus are gone (hamburger sheet takes over), so the grid
-     falls back to a simple flex row. */
-  .pnav-inner{display:flex;padding:0 12px}
+     falls back to a simple flex row. Padding is NOT redeclared here — it stays
+     on --page-inline from the base rule. It used to hardcode 12px, a copy of
+     the old mobile gutter, which silently pinned the nav 4px off the footer and
+     the page the moment that token moved. */
+  .pnav-inner{display:flex}
   .pnav-lead{flex:1 1 auto}
   /* Search collapses to an icon-only tap target hugging the actions cluster;
      sales routes get it back too — on mobile it's the only way into the
@@ -5847,7 +5850,13 @@ html.lenis,html.lenis body{height:auto}
 .plb-kbd{padding:1px 6px;font-family:var(--mono);font-size:10px;font-weight:600;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:4px;opacity:.85}
 .plb-dark{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
 .plb-dark:hover{background:var(--t0);color:var(--bg-0);opacity:.88}
-.plb-menuwrap{position:relative}
+/* display:flex, not block. The wrapper's only in-flow child is an inline-block
+   <button>, so a block wrapper puts it in an inline formatting context: once the
+   button is squeezed below its intrinsic width its baseline moves, the line-box
+   strut adds a pixel underneath, and the whole toolbar grows 1px. Flex
+   blockifies the child and removes the strut. The popover is absolutely
+   positioned, so it stays out of flow either way. */
+.plb-menuwrap{position:relative;display:flex}
 /* max-height + overflow on the menu itself means a mousewheel over ANY part of
    an open popover scrolls its content (not the page behind it); overscroll
    containment stops the scroll from chaining out once the list ends. */
