@@ -454,6 +454,13 @@ export default function PillNav() {
   }
   const toggleMenu = (which) => { setOpen(null); setMenu((cur) => (cur === which ? null : which)) }
   const closeAll = () => { setOpen(null); setSheet(false); setMenu(null) }
+  // Auth from the nav opens the popup OVER the current page. These used to be
+  // <Link to="/login">, which navigated away before any popup existed: the URL
+  // became /login, the page under it unmounted (losing scroll and in-page
+  // state), and closing the popup ran LoginRoute's `from` fallback — /home —
+  // so the X dropped the user on the dashboard instead of back where they were.
+  // /login survives as a route for bookmarks and RequireAuth redirects.
+  const startLogin = () => { closeAll(); openLogin() }
   const openSearch = () => { closeAll(); setSearchOpen(true) }
   const openExport = () => { closeAll(); setExportOpen(true) }
   const onSignOut = () => { setMenu(null); logout() }
@@ -654,18 +661,19 @@ export default function PillNav() {
 
             {!user && (
               <>
-                <Link className="ui-pill ui-pill-ghost ui-pill-sm" to="/login" onClick={closeAll}>
+                <button type="button" className="ui-pill ui-pill-ghost ui-pill-sm" aria-haspopup="dialog" onClick={startLogin}>
                   Log in
-                </Link>
-                <Link
+                </button>
+                <button
+                  type="button"
                   className={'ui-pill ui-pill-accent ui-pill-sm pnav-cta' + (ctaReady ? '' : ' is-waiting')}
-                  to="/login"
-                  onClick={closeAll}
+                  aria-haspopup="dialog"
+                  onClick={startLogin}
                   tabIndex={ctaReady ? undefined : -1}
                   aria-hidden={ctaReady ? undefined : 'true'}
                 >
                   <span className="pnav-cta-i">Start for Free</span>
-                </Link>
+                </button>
               </>
             )}
 
@@ -816,14 +824,14 @@ export default function PillNav() {
                       <TagIcon />
                       <span>Pricing &amp; plans</span>
                     </Link>
-                    <Link className="pnav-pop-item" to="/login" onClick={closeAll}>
+                    <button type="button" className="pnav-pop-item" aria-haspopup="dialog" onClick={startLogin}>
                       <LoginArrowIcon />
                       <span>Log in</span>
-                    </Link>
-                    <Link className="pnav-pop-item pnav-pop-item--accent" to="/login" onClick={closeAll}>
+                    </button>
+                    <button type="button" className="pnav-pop-item pnav-pop-item--accent" aria-haspopup="dialog" onClick={startLogin}>
                       <SparkIcon />
                       <span>Start for Free</span>
-                    </Link>
+                    </button>
                   </div>
                 )}
               </div>
@@ -999,12 +1007,12 @@ export default function PillNav() {
               </Link>
             ) : (
               <>
-                <Link className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" to="/login" onClick={closeAll}>
+                <button type="button" className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" aria-haspopup="dialog" onClick={startLogin}>
                   Start for Free
-                </Link>
-                <Link className="ui-pill ui-pill-out ui-pill-lg ui-pill-block" to="/login" onClick={closeAll}>
+                </button>
+                <button type="button" className="ui-pill ui-pill-out ui-pill-lg ui-pill-block" aria-haspopup="dialog" onClick={startLogin}>
                   Log in
-                </Link>
+                </button>
               </>
             )}
           </div>
