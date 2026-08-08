@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 
 export default function SystemCTA({
   eyebrow = 'Start free',
@@ -10,6 +12,16 @@ export default function SystemCTA({
   secondaryTo,
   hint = 'No credit card · Build in your browser',
 }) {
+  const { user } = useAuth()
+  const { openLogin } = useLoginPrompt()
+  // This block sits at the very bottom of a long sales page. Routing a
+  // signed-out visitor to /login unmounted that page, and dismissing the popup
+  // dropped them on /home — scroll position and their place in the argument
+  // gone. Open it in place instead. Any non-auth destination stays a real link
+  // (middle-click, open-in-new-tab), and a signed-in visitor keeps today's
+  // behaviour exactly, since openLogin() would be a no-op for them.
+  const promptsLogin = primaryTo === '/login' && !user
+
   return (
     <section className="system-cta" aria-labelledby="system-cta-title">
       <div className="system-cta-beams" aria-hidden="true">
@@ -21,10 +33,17 @@ export default function SystemCTA({
         <h2 className="system-cta-title" id="system-cta-title">{title}</h2>
         {description && <p className="system-cta-lede">{description}</p>}
         <div className="system-cta-actions">
-          <Link className="ui-pill ui-pill-ink ui-pill-lg" to={primaryTo}>
-            {primaryLabel}
-            <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
-          </Link>
+          {promptsLogin ? (
+            <button type="button" className="ui-pill ui-pill-ink ui-pill-lg" aria-haspopup="dialog" onClick={() => openLogin()}>
+              {primaryLabel}
+              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
+            </button>
+          ) : (
+            <Link className="ui-pill ui-pill-ink ui-pill-lg" to={primaryTo}>
+              {primaryLabel}
+              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
+            </Link>
+          )}
           {secondaryLabel && secondaryTo && (
             <Link className="ui-pill ui-pill-out ui-pill-lg" to={secondaryTo}>
               {secondaryLabel}

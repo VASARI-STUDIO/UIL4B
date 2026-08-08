@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { stepFromKey } from '../utils/sliderKeys'
+import { snapToTarget, stepFromKey } from '../utils/sliderKeys'
 
 /*
  * SnapSlider — range input with magnetic snap points, double-click reset,
  * and a click-to-edit value readout for custom values beyond the snaps.
  *
- * - POINTER drags snap to the nearest value in `snaps` when within `snapRadius`
- *   of it (radius defaults to 6% of the track range; pass `snapRadius` in
- *   track units to override — wide ranges like ±180° need a small absolute
- *   radius or values near a snap become unreachable). Values between snaps
- *   stay free, so custom values are still reachable by dragging.
+ * - POINTER drags are pulled toward the nearest value in `snaps` when within
+ *   `snapRadius` of it (radius defaults to 6% of the track range; pass
+ *   `snapRadius` in track units to override — wide ranges like ±180° need a
+ *   small absolute radius or values near a snap become unreachable). The pull
+ *   fades to nothing AT the radius rather than switching off there, so the
+ *   value never jumps; see snapToTarget in utils/sliderKeys.js for why that
+ *   matters. Values between snaps stay free, so custom values are still
+ *   reachable by dragging.
  * - KEYBOARD stepping is exact and never snaps. Snapping used to run on every
  *   change event, so from a snap point ArrowRight produced `snap + step`, which
  *   was inside the snap radius and was pulled straight back — the slider was a
@@ -98,16 +101,7 @@ export default function SnapSlider({
 
   const fmt = v => (decimals > 0 ? (+v).toFixed(decimals).replace(/\.?0+$/, '') : String(Math.round(+v)))
 
-  const snapValue = raw => {
-    if (!snaps.length) return raw
-    const radius = snapRadius ?? (max - min) * 0.06
-    let best = null
-    for (const s of snaps) {
-      const d = Math.abs(raw - s)
-      if (d <= radius && (best === null || d < Math.abs(raw - best))) best = s
-    }
-    return best ?? raw
-  }
+  const snapValue = raw => snapToTarget(raw, { snaps, snapRadius, min, max, step })
 
   const commitDraft = () => {
     setEditing(false)

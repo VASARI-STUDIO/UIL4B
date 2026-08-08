@@ -5584,7 +5584,12 @@ html.lenis,html.lenis body{height:auto}
 .tt-config{grid-column:2;grid-row:1}
 .tt-panel{display:flex;flex-direction:column;min-width:0;padding:24px;background:var(--card);overflow:hidden}
 .tt-panel.card:hover{border-color:var(--border)}
-.tt-config{position:sticky;top:calc(var(--nav-clear) + var(--s-5))}
+/* Same unbounded-sticky pattern as .fpr-config — see the note there. Tint's
+   panel is shorter (582px measured at 1440x900) so it does not clip at common
+   laptop sizes today, but it has no ceiling either: it overflows below ~674px
+   of viewport height and would clip the moment the panel grows. Bound it now
+   rather than wait for the same report twice. */
+.tt-config{--tt-sticky-top:calc(var(--nav-clear) + var(--s-5));position:sticky;top:var(--tt-sticky-top);max-height:calc(100dvh - var(--tt-sticky-top) - var(--s-4));overflow-y:auto;overscroll-behavior:contain}
 .tt-section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:var(--s-5);padding-bottom:var(--s-4);border-bottom:1px solid var(--border)}
 .tt-section-head--output{justify-content:flex-start}
 .tt-section-num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--brand);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:var(--radius-xs)}
@@ -5707,7 +5712,7 @@ html.lenis,html.lenis body{height:auto}
 @media(max-width:980px){
   .tt-hero-copy{grid-template-columns:1fr;gap:var(--s-4)}
   .tt-grid{grid-template-columns:1fr}
-  .tt-config{position:static}
+  .tt-config{position:static;max-height:none;overflow-y:hidden}
   .tt-output,.tt-config{grid-column:auto;grid-row:auto}
 }
 @media(max-width:768px){
@@ -7371,7 +7376,16 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .fpr-grid>*{min-width:0}
 .fpr-panel{display:flex;flex-direction:column;min-width:0;padding:24px;background:var(--card);overflow:hidden}
 .fpr-panel.card:hover{border-color:var(--border)}
-.fpr-config{position:sticky;top:calc(var(--nav-clear) + var(--s-5))}
+/* Sticky config column. The sticky offset is a custom property so the premium
+   restyle further down can move the panel without the height maths drifting
+   away from it. A sticky box with no ceiling is only as tall as its content, so
+   at 1440x900 the "choose the pair" panel measured 906px against 808px of
+   usable viewport and clipped its own "Build a scale from this pair" hand-off —
+   .fpr-panel{overflow:hidden} meant the overhang could not even be scrolled to.
+   Bound it to the viewport and give it its own scroller. overflow-y must sit
+   here, not on .fpr-panel: same specificity, later in the file. dvh, not vh, so
+   a mobile URL bar cannot push the bottom out of reach. */
+.fpr-config{--fpr-sticky-top:calc(var(--nav-clear) + var(--s-5));position:sticky;top:var(--fpr-sticky-top);max-height:calc(100dvh - var(--fpr-sticky-top) - var(--s-4));overflow-y:auto;overscroll-behavior:contain}
 .fpr-section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:var(--s-5);padding-bottom:var(--s-4);border-bottom:1px solid var(--border)}
 .fpr-section-head--sub{margin-top:var(--s-5);border-bottom:0;padding-bottom:0}
 .fpr-section-num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--brand);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:var(--radius-xs)}
@@ -7445,7 +7459,11 @@ button.plb-varrow:hover{background:var(--bg-2)}
 @media(max-width:980px){
   .fpr-hero-copy{grid-template-columns:1fr;gap:var(--s-4)}
   .fpr-grid{grid-template-columns:1fr}
-  .fpr-config{position:static}
+  /* Stacked: the panel is in the page flow, so it must not keep its own
+     scroller. Back to hidden (what .fpr-panel sets) rather than visible —
+     visible alongside overflow-x:hidden computes to auto and would leave the
+     scrollbar behind. */
+  .fpr-config{position:static;max-height:none;overflow-y:hidden}
 }
 @media(max-width:768px){
   .fpr-status{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -7817,7 +7835,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .fpr-status span+span{border-left:1px solid var(--border)}
 .fpr-grid{grid-template-columns:minmax(0,1fr) 390px;gap:18px}
 .fpr-panel{padding:clamp(20px,2.5vw,32px);border-radius:20px;box-shadow:0 16px 44px rgba(10,10,18,.055)}
-.fpr-config{top:calc(var(--nav-clear) + 18px)}
+.fpr-config{--fpr-sticky-top:calc(var(--nav-clear) + 18px)}
 .fpr-section-num{background:#111113;border-color:#111113;color:#fff}
 .fpr-specimen{min-height:460px;padding:clamp(28px,5vw,64px);border-radius:17px;background:linear-gradient(145deg,var(--bg-1),var(--card));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--border) 70%,transparent)}
 .fpr-h1{font-size:clamp(42px,6vw,76px);line-height:1.01}

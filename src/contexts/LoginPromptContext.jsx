@@ -11,6 +11,31 @@ import LoginPopup from '../components/LoginPopup'
 // HVZ auth functions via <LoginPopup>; it does not touch AuthContext itself.
 const LoginPromptContext = createContext(null)
 
+// A brand-new sign-up is intercepted into /onboarding by AppInner the moment
+// auth resolves, which would otherwise discard wherever the user actually was.
+// Onboarding reads this key on finish (see Onboarding.jsx takeResumeTarget), so
+// the stash has to happen wherever the popup is OPENED — not on the /login
+// route, which nav-initiated sign-in no longer visits at all.
+const RESUME_KEY = 'vs-resume-after-onboarding'
+// Paths that are not destinations: /home is already the post-onboarding default,
+// /login is a launcher, /onboarding is the flow itself, / redirects.
+const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding'])
+
+function stashResumeTarget(explicitFrom) {
+  let target = explicitFrom
+  if (!target && typeof window !== 'undefined') {
+    target = window.location.pathname + window.location.search
+  }
+  const path = String(target || '').split('?')[0].replace(/\/+$/, '') || '/'
+  try {
+    // Clearing on a non-resumable open matters as much as setting: a dismissed
+    // prompt from an earlier page must not resurface as a later sign-up's
+    // destination.
+    if (!target || NON_RESUMABLE.has(path)) sessionStorage.removeItem(RESUME_KEY)
+    else sessionStorage.setItem(RESUME_KEY, target)
+  } catch { /* ignore */ }
+}
+
 export function LoginPromptProvider({ children }) {
   const { user } = useAuth()
   const [prompt, setPrompt] = useState(null)
@@ -38,6 +63,9 @@ export function LoginPromptProvider({ children }) {
     // Already signed in — nothing to prompt for.
     if (userRef.current && !opts.force) return Promise.resolve(userRef.current)
     if (pendingPromiseRef.current) return pendingPromiseRef.current
+    // Account switching never creates an account, so it never reaches
+    // onboarding — leave whatever is stashed alone.
+    if (opts.mode !== 'switch') stashResumeTarget(opts.from)
     openerRef.current = document.activeElement
     const promise = new Promise((resolve) => {
       resolverRef.current = resolve
