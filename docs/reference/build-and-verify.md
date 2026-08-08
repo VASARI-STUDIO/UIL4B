@@ -8,25 +8,24 @@
 **This table is the single source of truth for the gate numbers.** No other
 document, comment or commit message should restate them — link here instead.
 Every figure below was produced by running the command in this repository on
-the `fix/palette-builder-founder-batch-2` branch on 2026-08-07; if you change a
+the `fix/nav-login-slider-panel` branch on 2026-08-08; if you change a
 number here, you must have re-run it.
 
 | Gate | Command | Current baseline |
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 33 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **176 tests, 176 pass** |
+| Unit | `npm run test:unit` | **185 tests, 185 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **181 tests across 17 spec files** (`npx playwright test --list`) |
+| Browser acceptance | `npm run test:users` | **191 tests across 18 spec files** (`npx playwright test --list`) |
 
 The 33 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
-The previous figures in this table (33 / 141 / 167) were measured on
-`feat/discover-library-parity` at 2026-08-06. This branch added no lint
-warnings; it moved unit (+35 tests, +3 files: `slider-keys`, `palette-names`,
-`board-handoff`) and browser acceptance (+12 tests, +1 spec file,
-`16-founder-batch-2.spec.js`).
+The previous figures in this table (33 / 176 / 181) were measured on
+`fix/palette-builder-founder-batch-2` at 2026-08-07. This branch added no lint
+warnings; it moved unit (+9 tests, +1 file: `slider-snap`) and browser
+acceptance (+10 tests, +1 spec file, `17-founder-batch-3.spec.js`).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
 

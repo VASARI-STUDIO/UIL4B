@@ -11,6 +11,53 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ---
 
+## Unreleased — Founder batch 3: in-place sign-in, a continuous snap, a bounded panel
+
+On the `fix/nav-login-slider-panel` branch. Three founder-reported defects,
+each reproduced in a browser before it was touched and each left with a
+regression test.
+
+### Account
+- Signing in from the nav no longer navigates. "Log in" and "Start for Free" —
+  in the bar, the signed-out menu and the mobile sheet — now open the login
+  popup over the page you are on, so both the X and a successful sign-in leave
+  you exactly where you were. Previously they routed to `/login`, which
+  unmounted the page before the popup existed and dropped the user on `/home`
+  when they closed it. `/login` is unchanged as a route, for bookmarks and for
+  protected-route redirects
+- The bottom-of-page "Start building free" block on the sales pages does the
+  same for signed-out visitors
+- A brand-new sign-up started from anywhere still returns to where it started
+  after onboarding: the destination is now recorded where the popup opens
+  rather than on the `/login` route, and a launcher is no longer recorded as a
+  destination
+- A protected route now carries its query string through the sign-in redirect,
+  so `/checkout?plan=yearly` no longer loses the chosen plan
+
+### Palette Builder
+- Temperature crosses zero continuously. Magnetic snapping used to switch off
+  at the snap radius, so the value leapt by the whole radius as the pointer
+  crossed it — the readout went 7 → 0 → −7 and nothing in between could be
+  reached by dragging. The snap's pull now fades to nothing at the radius
+  instead, so one pixel of pointer travel moves the value by at most one step
+  more than the track's own resolution. Snapping itself is unchanged in feel
+  near the snap, and keyboard stepping still bypasses it entirely. Applies to
+  every shared `SnapSlider`
+
+### Font Pair · Tint Scale
+- The sticky "Choose the pair" configuration panel is bounded by the viewport
+  and scrolls internally, so "Build a scale from this pair" is always
+  reachable. It previously stood 906px tall against 808px of usable height at
+  1440×900 and was clipped rather than scrollable. The Tint Scale panel had the
+  same unbounded pattern and was fixed with it. The sticky movement is
+  unchanged, and below 981px both panels stack in the page flow as before
+
+### Founder direction (2026-08-08, in conversation)
+- Reported the auth popup closing to the wrong page, the Temperature slider
+  glitching around zero, and the Font Pair panel running off the screen
+
+---
+
 ## 2.8.1 — Palette temperature and shared layout rhythm
 
 ### Palette Builder
