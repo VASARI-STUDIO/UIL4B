@@ -3,7 +3,7 @@ name: secret-scanner
 description: >-
   Pre-commit hardcoded-secret detector for UIL4B. Use before any commit/PR to scan
   the working tree (and the diff) for leaked credentials — provider API keys
-  (Stripe, Google/Gemini, DeepSeek, AWS, GitHub, Slack, Azure), private keys
+  (Stripe, OpenRouter, Google/Gemini, AWS, GitHub, Slack, Azure), private keys
   (PEM / OpenSSH / PGP, ESPECIALLY a Firebase service-account `private_key`), DB
   connection strings with embedded passwords, `.env` values pasted into source, and
   high-entropy strings in credential-named vars. Knows UIL4B's PUBLIC-by-design
@@ -51,7 +51,7 @@ authorised domains, **not** secrecy. They are **NOT secrets** — do **NOT** fla
 
 **FLAG only true server secrets** — and **always FLAG** when a server secret carries
 a `VITE_` prefix (that prefix inlines it into the public bundle): Stripe `sk_`/`whsec_`,
-a Firebase **service-account** JSON / `private_key`, and **DeepSeek/Gemini** API keys
+a Firebase **service-account** JSON / `private_key`, and **OpenRouter / Gemini** API keys
 must be server-only `process.env`, never in source and never `VITE_`-prefixed.
 
 ## What you detect
@@ -59,7 +59,8 @@ must be server-only `process.env`, never in source and never `VITE_`-prefixed.
 **Provider key patterns:**
 - **Stripe** — secret `sk_live_…` / `sk_test_…`, restricted `rk_…`, webhook `whsec_…`. (`pk_…` publishable is **allowed**.)
 - **Google / Gemini** — `AIza[0-9A-Za-z_-]{35}` **when not the Firebase-web context above**.
-- **DeepSeek** — `sk-…` style API keys (and other `sk-` provider tokens not matching Stripe's `sk_live`/`sk_test`).
+- **OpenRouter** — `OPENROUTER_API_KEY`, keys shaped `sk-or-v1-[0-9a-f]{64}`. **This is the primary AI credential in production** — treat a leak as you would Stripe's. `OPENROUTER_MODEL` is a model name, not a secret; its default is `deepseek/deepseek-chat`, which is a *model identifier* and must not be mistaken for a DeepSeek API key.
+- **Generic `sk-` provider tokens** — any `sk-…` style API key not matching Stripe's `sk_live`/`sk_test` or the OpenRouter shape above (direct DeepSeek, OpenAI-compatible providers).
 - **AWS** — access key id `AKIA[0-9A-Z]{16}` (and any adjacent secret-access-key).
 - **GitHub** — `ghp_[A-Za-z0-9]{36}` (and `gho_`/`ghs_`/`ghr_` variants).
 - **Slack** — `xox[baprs]-…` tokens.
@@ -77,7 +78,7 @@ must be server-only `process.env`, never in source and never `VITE_`-prefixed.
 ## Severity
 
 - **CRITICAL** — any **private key**, **Firebase service-account** JSON/`private_key`, or a Stripe **`sk_live`** committed in source (or any real server secret carrying a `VITE_` prefix).
-- **HIGH** — `sk_test`/`rk_`/`whsec_`, DeepSeek/Gemini keys, AWS/GitHub/Slack/Azure tokens, or DB strings with embedded passwords, found in tracked source.
+- **HIGH** — `sk_test`/`rk_`/`whsec_`, OpenRouter/Gemini keys, AWS/GitHub/Slack/Azure tokens, or DB strings with embedded passwords, found in tracked source.
 - **MEDIUM** — a high-entropy credential-named literal that's probably real but unverified.
 - **LOW** — a suspicious-looking value that's likely a placeholder/example (still surfaced for a human glance).
 

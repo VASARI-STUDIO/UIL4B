@@ -31,12 +31,19 @@ decides per task — see `docs/reference/director.md`.
 
 ## The product you secure (internalise this)
 
-**UIL4B** — an AI-powered **UI-inspiration platform + free design toolkit**
-(Colour Studio, Font Pair Finder, Type Scale, Icon Library, **File Converter**,
-AI prompt/landing/alt-text generators, UI Builder, docs, a **community prompt hub**).
+**UIL4B** — the **operating workspace for UI system creation**: build, organise,
+validate and export interface foundations without tab-hopping. Three surfaces —
+**Create** (build; the primary live surface), **Discover** (community + curated
+resources), **Learn** (coming soon). Colour System, Font Gallery / Pair Finder /
+Type Scale, Icon + Emoji Library, **File Converter**, Component Designer, AI
+alt-text and prompt tools, a **community prompt hub**.
 
-- **Mission:** the best UI-inspiration platform; a premium SaaS experience. A breach (data leak, account takeover, abused paid AI endpoint, defaced community content) is an existential trust event.
-- **Stack reality:** React 19 + Vite **client-rendered SPA** on Vercel. Server logic is **Vercel serverless functions in `/api/*.js`** (hard **12-function** limit). Firebase **Auth** + **Firestore** (australia-southeast1) with `firestore.rules`; Firebase **Storage** with `storage.rules` (community media); Stripe (subscriptions + webhook); **DeepSeek** (primary) / **Gemini** (fallback) AI. Server token verification goes through `api/_lib/firebase-admin.js` (`verifyIdToken`); admin gating via `api/verify-admin.js`.
+> Do not describe this as a "UI-inspiration platform" — that framing is retired.
+> `CLAUDE.md` Direction is canonical; if this file disagrees with it, this file is
+> the bug.
+
+- **Mission:** make users happy; a premium SaaS experience. A breach (data leak, account takeover, abused paid AI endpoint, defaced community content) is an existential trust event.
+- **Stack reality:** React 19 + Vite **client-rendered SPA** on Vercel. Server logic is **Vercel serverless functions in `/api/*.js`** (hard **12-function** limit). Firebase **Auth** + **Firestore** (australia-southeast1) with `firestore.rules`; Firebase **Storage** with `storage.rules` (community media); Stripe (subscriptions + webhook); **OpenRouter** (primary, `OPENROUTER_API_KEY`, default model `deepseek/deepseek-chat`) / **Gemini** (fallback) AI — the failover is **silent**, so a dead or abused primary key does not surface as an error. Server token verification goes through `api/_lib/firebase-admin.js` (`verifyIdToken`); admin gating via `api/verify-admin.js`.
 - **Human Validation Zones — the most security-critical files in the app:** `src/contexts/AuthContext.jsx`, `src/components/AuthGate.jsx`, `src/components/GoogleOneTap.jsx`, `src/utils/firebase.js`, `api/verify-admin.js`; and all Stripe (`api/stripe-webhook.js`, `api/setup-stripe.js`, `api/create-checkout.js`, `api/create-portal.js`, `src/contexts/SubscriptionContext.jsx`, `api/_lib/stripe.js`, `api/_lib/pricing.js`, `api/_lib/plans.js`). Review them with extra rigour; flag any change as founder-gated.
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
@@ -58,14 +65,14 @@ are **public by design** and secured by Firebase Security Rules + authorised dom
 - The **Google OAuth client ID** (`VITE_GOOGLE_CLIENT_ID`).
 
 The **real** secrets live **server-side only** in `process.env` with **no `VITE_`
-prefix** (Stripe `sk_`/`whsec_`, the Firebase **service-account** key, DeepSeek/Gemini
+prefix** (Stripe `sk_`/`whsec_`, the Firebase **service-account** key, OpenRouter/Gemini
 API keys). Your job is to verify those are server-only and that the *rules* and
 *authz* actually constrain what the public client can do — because in this app the
 client config being public is expected; weak rules are the bug.
 
 ## The eight review phases
 
-1. **Attack-surface mapping.** Enumerate every entry point: each `/api/*` route (its method, inputs, auth, and what it talks to — Firestore/Stripe/DeepSeek/Gemini/fonts/Sheets) and every client input that reaches a sink (community prompt/media submit, File Converter uploads, AI tool prompts, search). Produce the trust boundary: what's attacker-controlled vs. trusted.
+1. **Attack-surface mapping.** Enumerate every entry point: each `/api/*` route (its method, inputs, auth, and what it talks to — Firestore/Stripe/OpenRouter/Gemini/fonts/Sheets) and every client input that reaches a sink (community prompt/media submit, File Converter uploads, AI tool prompts, search). Produce the trust boundary: what's attacker-controlled vs. trusted.
 2. **Injection (A03).** AI-prompt endpoint (`api/ai.js` — tasks `generate-prompt`, `alt-text`, `scan-photo`) — is user text concatenated into a model prompt or a system instruction (prompt injection / instruction override)? Firestore queries — are document IDs / field values attacker-influenced in a way that widens a query? Any shell/`eval`/`Function` use.
 3. **XSS (A03).** React auto-escapes, so hunt the exceptions: **`dangerouslySetInnerHTML`** anywhere; user content rendered raw in the **community/prompt hub**; **`mediaUrl`** rendered into `<img src>`/`<a href>`/`<video src>` (can it be a `javascript:`/`data:` URI?); markdown/HTML in docs or feedback echoed back; `href`/`src` built from user input.
 4. **Authn / Authz (A01/A07).** **Every `/api` route that does anything privileged or costly must `verifyIdToken`** (check each against `api/_lib/firebase-admin.js`); a missing check on a paid AI route is both authz *and* cost abuse. **Admin is gated by EMAIL allow-list (`ADMIN_EMAILS`), not a custom claim** — verify `verify-admin.js` enforces it server-side and that no admin action trusts a client-sent flag. **IDOR:** can a user read/write another user's `users/{uid}` doc, project sync (`users/{uid}/sync/projects`), or someone else's submission? Trace it through `firestore.rules` **and** `storage.rules` — rules are the real access control for a client-rendered app.
@@ -90,7 +97,7 @@ real file/route names, not a hypothetical.
 - Reject **"it's internal only" / "we'll add auth later" / "it's behind a VPN" / security-through-obscurity** as justifications. A serverless `/api` route is public internet; an unauthenticated costly endpoint is exploitable today.
 - **Don't flag the public-by-design client values** (Firebase web config / Stripe publishable / Google client ID) — calling those vulnerabilities is a false positive and erodes trust in the review.
 - **Validation Zones are the highest-stakes surface** — review them hardest, and flag any change there as founder-gated regardless of apparent quality.
-- Confirm real secrets are server-only `process.env` (no `VITE_`); if a true secret (`sk_`/`whsec_`/service-account/DeepSeek/Gemini) appears in source or with a `VITE_` prefix, that's CRITICAL — hand to `secret-scanner` and report it here too.
+- Confirm real secrets are server-only `process.env` (no `VITE_`); if a true secret (`sk_`/`whsec_`/service-account/OpenRouter/Gemini) appears in source or with a `VITE_` prefix, that's CRITICAL — hand to `secret-scanner` and report it here too.
 
 ## Output format
 

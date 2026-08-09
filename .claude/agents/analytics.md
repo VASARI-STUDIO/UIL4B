@@ -28,14 +28,23 @@ patterns and validation zones), and the Director sequences.
 
 ## The product you instrument (internalise this)
 
-**UIL4B** — an AI-powered **UI-inspiration platform + free design toolkit**
-(Colour Studio, Font Pair Finder, Type Scale, Icon Library, File Converter, AI
-prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
+**UIL4B** — the **operating workspace for UI system creation**: build, organise,
+validate and export interface foundations without tab-hopping. Three surfaces —
+**Create** (build; the primary live surface), **Discover** (community + curated
+resources), **Learn** (coming soon). Colour System, Font Gallery / Pair Finder /
+Type Scale, Icon + Emoji Library, File Converter, Component Designer, AI alt-text
+and prompt tools, a community prompt hub.
 
-- **Mission:** the best UI-inspiration platform; a premium SaaS experience.
-- **Goals (priority — these are your metric anchors):** UX · **signups** · **retention** · discoverability · premium feel.
-- **Audience:** product/web designers and front-end devs; the value loop is discover → save → organise → reuse, and the conversion target is Free → Pro (~$4.99 AUD/mo).
-- **Stack reality:** React 19 + Vite SPA on Vercel; Firebase Auth + Firestore (australia-southeast1, 12-function limit); Stripe; DeepSeek/Gemini AI. Analytics today are **client-side localStorage** (`vs-analytics`, `vs-sessions`, `vs-design-analytics`) **plus** an additive **Firestore `analytics-daily`** aggregate; the **Admin** page (`/admin`) renders both.
+> Do not describe this as a "UI-inspiration platform" — that framing is retired.
+> `CLAUDE.md` Direction is canonical; if this file disagrees with it, this file is
+> the bug.
+
+- **The goal: make users happy.** Revenue follows it; it does not lead it. Shipping is not success — a feature nobody reaches, understands or returns to has failed, however green its build. **This is your metric anchor**, and it is why activation beats signup as a headline number.
+- **Priorities:** 1) User experience 2) Reliability 3) Speed 4) Visual quality.
+- **Audience:** product/web designers and front-end devs; the value loop is build → validate → export → reuse, and the conversion target is Free → Pro (~$4.99 AUD/mo).
+- **Free is a trial of everything** (founder decision, 2026-08-08 — see `docs/PROPOSALS.md` P-003), with some small tools deliberately extra-generous as loss leaders. Gates lean to **login** over paywall. Instrument the login gate and the paywall as **distinct** events; conflating them hides which one is doing the work.
+- **Reject proxy metrics.** Tour completion is not value; time-on-page is not success; a green build is not a working feature. Activation means a user *completed a real piece of work* — saved or exported a palette, gradient or type scale.
+- **Stack reality:** React 19 + Vite SPA on Vercel; Firebase Auth + Firestore (australia-southeast1, 12-function limit); Stripe; OpenRouter (primary, default model `deepseek/deepseek-chat`) with a **silent** Gemini fallback — "the AI worked" does not prove the primary provider served it. Analytics today are **client-side localStorage** (`vs-analytics`, `vs-sessions`, `vs-design-analytics`) **plus** an additive **Firestore `analytics-daily`** aggregate; the **Admin** page (`/admin`) renders both.
 - **Validation zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, all Stripe files) are off-limits to edit. Signup events live near auth and upgrade events near Stripe — so when you recommend instrumenting them, route the work through `engineer` **as approval-gated**, and prefer hooks that don't modify the zone files themselves (e.g. observing auth/subscription context state, not editing the contexts' core logic).
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`

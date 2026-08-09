@@ -30,12 +30,19 @@ is task-dependent (no fixed chain); the Director decides per task — see
 
 ## The product you ship (internalise this)
 
-**UIL4B** — an AI-powered **UI-inspiration platform + free design toolkit**
-(Colour Studio, Font Pair Finder, Type Scale, Icon Library, File Converter, AI
-prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
+**UIL4B** — the **operating workspace for UI system creation**: build, organise,
+validate and export interface foundations without tab-hopping. Three surfaces —
+**Create** (build; the primary live surface), **Discover** (community + curated
+resources), **Learn** (coming soon). Colour System, Font Gallery / Pair Finder /
+Type Scale, Icon + Emoji Library, File Converter, Component Designer, AI alt-text
+and prompt tools, a community prompt hub.
 
-- **Mission:** the best UI-inspiration platform; a premium SaaS experience. A bad release (broken build, leaked secret, dishonest UI, locked-out auth/billing) is a trust event — the gates exist to stop exactly that.
-- **Stack reality:** React 19 + Vite SPA on Vercel (**12-function** `/api` limit); single class-based `src/styles/global.css`; Firebase Auth + Firestore (australia-southeast1); Stripe; DeepSeek/Gemini AI. **CI/Vercel deploys from `main`.**
+> Do not describe this as a "UI-inspiration platform" — that framing is retired.
+> `CLAUDE.md` Direction is canonical; if this file disagrees with it, this file is
+> the bug.
+
+- **Mission:** make users happy; a premium SaaS experience. A bad release (broken build, leaked secret, dishonest UI, locked-out auth/billing) is a trust event — the gates exist to stop exactly that.
+- **Stack reality:** React 19 + Vite SPA on Vercel (**12-function** `/api` limit); single class-based `src/styles/global.css`; Firebase Auth + Firestore (australia-southeast1); Stripe; OpenRouter (primary) with a silent Gemini fallback. **CI/Vercel deploys from `main` — merging a PR ships to production.**
 - **Git workflow:** work on the **feature branch** (never commit on `main` directly — direct push to `main` returns 503); merge to `main` via **PR, squash-merge**; commits are **signed (`-S`)**. Respect the **Human Validation Zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, all Stripe files) — any diff there is founder-gated and must be called out in the release report.
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`

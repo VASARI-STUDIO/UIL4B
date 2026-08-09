@@ -23,14 +23,35 @@ keyword-stuffing.
 
 ## The product you grow (internalise this)
 
-**UIL4B** — an AI-powered **UI inspiration platform + free design toolkit**
-(Colour Studio, Font Pair Finder, Type Scale, Icon Library, File Converter, AI
-generators, UI Builder, docs, community prompts).
+**UIL4B** — the **operating workspace for UI system creation**: build, organise,
+validate and export interface foundations without tab-hopping. Three surfaces —
+**Create** (build; the primary live surface), **Discover** (community + curated
+resources), **Learn** (coming soon). Colour System, Font Gallery / Pair Finder /
+Type Scale, Icon + Emoji Library, File Converter, Component Designer, AI
+generators, community prompts.
 
-- **Mission:** the best UI inspiration platform; premium SaaS.
-- **Goals (priority):** UX · signups · retention · **discoverability** · premium feel.
-- **Audience:** product/web designers, front-end devs, indie hackers, small agencies — searching things like "color palette generator", "font pairing tool", "ui inspiration", "google fonts combinations", "box shadow generator", "image to webp", "[competitor] alternative".
-- **Competitors:** Mobbin, Refero, Landbook, Lapa Ninja, Godly, UI Jar (direct); Coolors, Fontjoy, Pinterest, Behance, Dribbble, Muzli (adjacent/tool). Study who ranks and why.
+> Do not describe this as a "UI inspiration platform" — that framing is retired.
+> Canonical story: `docs/reference/positioning.md`. Note also that the old
+> `/docs-*` routes now redirect to `/learn`, and Learn is an honest coming-soon —
+> **do not build a content strategy on pages that do not exist yet.**
+
+- **The goal: make users happy.** Discoverability serves that; it does not replace it.
+- **Audience:** product/web designers, front-end devs, indie hackers, small agencies — searching things like "color palette generator", "font pairing tool", "google fonts combinations", "box shadow generator", "image to webp", "design tokens generator", "contrast checker", "[competitor] alternative".
+
+> ### ⚠️ The competitor set is UNVERIFIED — treat it as a hypothesis
+>
+> This file previously listed Mobbin, Refero, Landbook, Lapa Ninja, Godly and UI
+> Jar as direct competitors, with Coolors / Fontjoy / Pinterest / Behance /
+> Dribbble / Muzli as adjacent. **That set is inherited from the retired "UI
+> inspiration platform" framing and is not sourced anywhere** —
+> `positioning.md`, the canonical story, names no competitors.
+>
+> This matters more for SEO than anywhere else: keyword targeting and
+> "[competitor] alternative" pages aimed at the wrong market waste the whole
+> effort. Tool-intent queries (palette, contrast, type scale, tokens) are
+> defensible on their own merits and are safe to pursue. **Gallery-comparison
+> plays are not** until the founder settles positioning. Research the question,
+> label it unsettled, and flag it to the Director. Recorded 2026-08-09.
 - **Monetisation:** Free + Pro ($4.99 AUD/mo). Free tools are the growth engine.
 - **Stack reality (critical for SEO):** React 19 + Vite **client-rendered SPA** on Vercel. Per-route `<title>`/meta are set in JS (`src/App.jsx` PAGE_TITLES/PAGE_DESCRIPTIONS), there's a `<noscript>` block, plus `public/sitemap.xml`, `public/robots.txt`, OG/Twitter tags and a `WebApplication` JSON-LD in `index.html`. **Flag client-render indexability risk explicitly** (see below).
 

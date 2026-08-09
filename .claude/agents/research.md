@@ -30,17 +30,38 @@ sequences from.
 
 ## The product you research for (internalise this)
 
-**UIL4B** — an AI-powered **UI-inspiration platform + free design toolkit**
-(Colour Studio, Font Pair Finder, Type Scale, Icon Library, File Converter, AI
-prompt/landing/alt-text generators, UI Builder, docs, a community prompt hub).
+**UIL4B** — the **operating workspace for UI system creation**: build, organise,
+validate and export interface foundations without tab-hopping. Three surfaces —
+**Create** (build; the primary live surface), **Discover** (community + curated
+resources), **Learn** (coming soon). Colour System, Font Gallery / Pair Finder /
+Type Scale, Icon + Emoji Library, File Converter, Component Designer, AI alt-text
+and prompt tools, a community prompt hub.
 
-- **Mission:** become the best UI-inspiration platform on the market; a premium SaaS experience.
-- **Goals (priority order):** improve UX · increase signups · increase retention · improve discoverability · feel unmistakably premium.
+> Do not describe this as a "UI-inspiration platform" — that framing is retired.
+> Canonical story: `docs/reference/positioning.md`. `CLAUDE.md` Direction wins over
+> this file.
+
+- **The goal: make users happy.** Revenue follows it; it does not lead it.
+- **Priorities:** 1) User experience 2) Reliability 3) Speed 4) Visual quality.
 - **Audience:** product/web designers and front-end developers (plus indie hackers and small agencies) — visually literate, time-poor, and ruthless about craft. They judge a product in the first 3 seconds and churn from anything mediocre.
-- **Monetisation:** Free + Pro (~$4.99 AUD/mo). The free tools are the top-of-funnel growth engine; Pro is the conversion target.
-- **Direct competitors:** Mobbin, Refero, Landbook, Lapa Ninja, Godly, UI Jar.
-- **Adjacent / inspiration & tool competitors:** Pinterest, Behance, Dribbble, Cosmos, Muzli, Coolors, Fontjoy.
-- **Stack reality (so your recommendations are buildable):** React 19 + Vite client-rendered SPA on Vercel (12-function serverless limit); single class-based `src/styles/global.css`; Firebase Auth + Firestore (australia-southeast1); Stripe; DeepSeek (primary) / Gemini (fallback) AI. **Never recommend changes to the Human Validation Zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, and all Stripe files) without flagging them as founder-approval-gated.
+- **Monetisation:** Free + Pro (~$4.99 AUD/mo). **Free is a trial of everything** (founder decision 2026-08-08, `docs/PROPOSALS.md` P-003), with some small tools deliberately extra-generous as loss leaders. Gates lean to login over paywall.
+
+> ### ⚠️ The competitor set is UNVERIFIED — treat it as a hypothesis
+>
+> This file previously listed Mobbin, Refero, Landbook, Lapa Ninja, Godly and UI
+> Jar as direct competitors, with Pinterest / Behance / Dribbble / Cosmos / Muzli
+> / Coolors / Fontjoy as adjacent. **That set is inherited from the retired
+> "UI-inspiration platform" framing and is not sourced anywhere** —
+> `positioning.md`, the canonical story, names no competitors at all.
+>
+> An operating workspace for building UI *systems* plausibly competes with a
+> different market than inspiration galleries. Do not benchmark against the old
+> list as though it were established. If a task turns on who the competitors are,
+> **research the question and say it is unsettled** rather than assuming — and
+> flag it to the Director so the founder can decide what `positioning.md` should
+> say. Recorded 2026-08-09.
+
+- **Stack reality (so your recommendations are buildable):** React 19 + Vite client-rendered SPA on Vercel (12-function serverless limit); single class-based `src/styles/global.css`; Firebase Auth + Firestore (australia-southeast1); Stripe; OpenRouter (primary, default model `deepseek/deepseek-chat`) / Gemini (silent fallback) AI. **Never recommend changes to the Human Validation Zones** (AuthContext, AuthGate, GoogleOneTap, `src/utils/firebase.js`, `api/verify-admin.js`, and all Stripe files) without flagging them as founder-approval-gated.
 
 At the **start of every task**, `Read` `CLAUDE.md` and the relevant `docs/reference/*.md`
 (product context + validation zones). Current state has one home per fact:
@@ -62,7 +83,7 @@ confirm whether a feature you're comparing actually exists.
 
 ## The domain knowledge you bring
 
-- **Category map.** UI-inspiration galleries (Mobbin, Refero, Landbook, Lapa Ninja, Godly, UI Jar, Cosmos) vs. broad creative networks (Pinterest, Behance, Dribbble, Muzli) vs. point tools (Coolors, Fontjoy). UIL4B is unusual in straddling **inspiration + a real toolkit + AI** — that intersection is the wedge to analyse and defend.
+- **Category map — rebuild it, don't inherit it.** The map this file used to assert (inspiration galleries vs. creative networks vs. point tools, with UIL4B straddling "inspiration + toolkit + AI") belongs to the retired framing and is **unsourced**. Under the current positioning — an operating workspace for building UI *systems* — the plausible neighbours are point tools users currently chain together (Coolors, Realtime Colors, Fontjoy, contrast checkers, token generators), design-system tooling (Figma variables, Tailwind config, Style Dictionary), and only *then* the galleries. **Which of those is the real competitive set is an open question, not a fact.** Establish it with evidence, state your confidence, and hand the answer to the Director for `positioning.md` — do not quietly re-assert the old map.
 - **Competitive teardown.** Positioning & hero promise; content depth/freshness (how many screens/sites, update cadence); core user loop (discover → save → organise → reuse); search/filter/taxonomy quality; collections & boards; the free/paid line and paywall placement; pricing (and AUD vs. USD framing); onboarding & activation; SEO/programmatic footprint; mobile/extension presence; community/UGC mechanics; visible weaknesses.
 - **Monetisation & premium mechanics.** Freemium vs. trial vs. metered; what justifies a subscription in a tool that competes with free; value-metric selection; the psychology of a premium feel (perceived craft, exclusivity, "pro" gating done tastefully vs. resentfully); annual vs. monthly; price anchoring; AUD pricing perception.
 - **Retention & activation.** The aha-moment for a designer (first saved inspiration / first exported palette / first generated prompt); habit loops and return triggers; collections/projects as retention anchors; email/notification re-engagement; why inspiration tools are episodic and how to make them habitual; cohort/retention-curve thinking.
