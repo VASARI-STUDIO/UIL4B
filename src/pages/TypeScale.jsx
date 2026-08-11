@@ -9,6 +9,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont } from '../utils/googleFonts'
 import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
 import { fitTypePreviewSize, typePreviewNeedsFitting } from '../utils/typeScalePreview'
+import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepPx } from '../utils/fluidType'
 
 // Type Scale Generator — the standalone /typescale page. One base size and one
 // ratio generate a whole modular scale, previewed in a real article and handed
@@ -50,10 +51,15 @@ const ROUNDING = [
   { id: 'whole', label: 'Whole pixels' },
 ]
 
+// The preview breakpoints. `vw` is the viewport width each one REPRESENTS —
+// previously these only resized the preview container while every step kept its
+// desktop size, so the control implied a per-breakpoint scale the tool did not
+// have. Now the ladder resolves each step at this width, so what you see is
+// what the exported clamp() actually computes there.
 const WIDTHS = [
-  { id: 'full', label: 'Desktop', px: null },
-  { id: 'tablet', label: 'Tablet', px: 768 },
-  { id: 'mobile', label: 'Mobile', px: 375 },
+  { id: 'full', label: 'Desktop', px: null, vw: FLUID_VIEWPORTS.max },
+  { id: 'tablet', label: 'Tablet', px: 768, vw: 768 },
+  { id: 'mobile', label: 'Mobile', px: 375, vw: FLUID_VIEWPORTS.min },
 ]
 
 const UP_NAMES = ['lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', '8xl']
@@ -61,6 +67,10 @@ const DOWN_NAMES = ['sm', 'xs', '2xs', '3xs', '4xs']
 
 const DEFAULTS = {
   base: 16,
+  // The mobile anchor. Slightly smaller base, and the ratio is chosen separately
+  // (see mobileRatioId) rather than shared — see the state comment for why one
+  // ratio across both breakpoints cannot work.
+  mobileBase: 15,
   ratio: 1.25,
   custom: 1.333,
   up: 6,
@@ -83,11 +93,9 @@ function stepName(exp) {
   return DOWN_NAMES[-exp - 1] || `${-exp}xs`
 }
 
-function roundPx(px, mode) {
-  if (mode === 'whole') return Math.round(px)
-  if (mode === 'half') return Math.round(px * 2) / 2
-  return Math.round(px * 100) / 100
-}
+// (roundPx lived here. It is now `stepPx` in utils/fluidType.js, so the two
+// breakpoint ladders and their clamp() are all rounded by one function that the
+// unit suite can reach without a browser.)
 
 // Trim a computed number to a readable literal — 1.5 not 1.5000, 0.875 not
 // 0.87500. Exports read like something a person typed.
@@ -129,6 +137,23 @@ export default function TypeScale({ onCopy, toast }) {
   const [headingTrack, setHeadingTrack] = useState(() => design?.typeScale?.headingSpacing ?? DEFAULTS.headingTrack)
   const [bodyTrack, setBodyTrack] = useState(() => design?.typeScale?.bodySpacing ?? DEFAULTS.bodyTrack)
   const [rounding, setRounding] = useState(DEFAULTS.rounding)
+  // The MOBILE end of the scale. `base`/`ratio` above are the desktop end.
+  //
+  // These exist because the tool used to generate one ladder and only narrow
+  // the preview container, so an h1 was the same size on a 375px phone as on a
+  // 1440px desktop — which is not how any real design system behaves, and not
+  // what a control labelled "Mobile / Tablet / Desktop" appeared to promise.
+  // A ratio compounds: at 1.333 the sixth step is 5.6× the base, and 5.6× of
+  // anything is too big for a phone. So mobile needs its own smaller base AND
+  // its own gentler ratio; one number cannot fix it.
+  const [mobileBase, setMobileBase] = useState(DEFAULTS.mobileBase)
+  const [mobileRatioId, setMobileRatioId] = useState('1.2')
+  const [mobileCustomRatio, setMobileCustomRatio] = useState(DEFAULTS.custom)
+  // Fluid joins the two ends with clamp(); fixed emits per-breakpoint values in
+  // media queries. Fluid is the default because it is what the founder chose
+  // and what avoids a visible step on resize, but the choice is real — a team
+  // with strict per-breakpoint specs needs the other one.
+  const [fluid, setFluid] = useState(true)
   const [width, setWidth] = useState('full')
   const [audience, setAudience] = useState('designer')
   const [format, setFormat] = useState('css')
@@ -170,24 +195,51 @@ export default function TypeScale({ onCopy, toast }) {
 
   const ratio = ratioId === 'custom' ? customRatio : (RATIOS.find(o => o.id === ratioId)?.value || DEFAULTS.ratio)
 
+  const mobileRatio = mobileRatioId === 'custom'
+    ? mobileCustomRatio
+    : (RATIOS.find(o => o.id === mobileRatioId)?.value || 1.2)
+
+  // The viewport width the preview REPRESENTS — the number the fluid maths is
+  // evaluated at. Declared here rather than beside `activeWidth` further down
+  // because `steps` depends on it.
+  const previewVw = (WIDTHS.find(w => w.id === width) || WIDTHS[0]).vw
+
+  // Every step now carries BOTH ends of the scale and the clamp that joins
+  // them. `px` stays the desktop size so every existing consumer (the ladder
+  // labels, the Tailwind/SCSS exports, the saved kit) keeps reading the same
+  // field and means the same thing by it; `mobilePx` and `css` are additive.
+  //
+  // `previewPx` is what the step ACTUALLY resolves to at the width the user is
+  // previewing — read from the same fluidType helpers the export is built from,
+  // so the preview cannot drift from the CSS that gets copied.
   const steps = useMemo(() => {
     const out = []
     for (let exp = up; exp >= -down; exp -= 1) {
-      const px = roundPx(base * Math.pow(ratio, exp), rounding)
+      const px = stepPx(base, ratio, exp, rounding)
+      const mobilePx = stepPx(mobileBase, mobileRatio, exp, rounding)
       const isHeading = exp >= 2
+      const clamped = fluidClamp(mobilePx, px)
+      const previewPx = fluid
+        ? sizeAtViewport(mobilePx, px, previewVw)
+        : (previewVw <= 768 ? mobilePx : px)
       out.push({
         exp,
         name: stepName(exp),
         px,
+        mobilePx,
+        previewPx,
+        css: clamped.css,
+        isFluid: clamped.fluid,
         rem: +(px / 16).toFixed(4),
+        mobileRem: +(mobilePx / 16).toFixed(4),
         role: isHeading ? 'heading' : 'body',
         weight: isHeading ? headingW : bodyW,
         track: isHeading ? headingTrack : bodyTrack,
-        lineHeight: +(px * lineHeight).toFixed(1),
+        lineHeight: +(previewPx * lineHeight).toFixed(1),
       })
     }
     return out
-  }, [base, ratio, up, down, rounding, headingW, bodyW, headingTrack, bodyTrack, lineHeight])
+  }, [base, ratio, mobileBase, mobileRatio, fluid, previewVw, up, down, rounding, headingW, bodyW, headingTrack, bodyTrack, lineHeight])
   const previewIsFitted = typePreviewNeedsFitting(steps)
 
   // Persist from the handlers rather than an effect: an effect that writes on
@@ -263,7 +315,22 @@ export default function TypeScale({ onCopy, toast }) {
   }, [headingFont, bodyFont, headingW, bodyW])
 
   const cssExport = useMemo(() => {
-    const lines = steps.map(s => `  --text-${s.name}: ${trim(s.rem)}rem; /* ${s.px}px */`)
+    // FLUID: one clamp per step, interpolating between the mobile and desktop
+    // ladders across the viewport range. FIXED: the mobile ladder as the base
+    // and a single media query carrying the desktop one — which is what a team
+    // with strict per-breakpoint specs actually needs, and is mobile-first, so
+    // the smaller values are the default rather than an override.
+    const lines = fluid
+      ? steps.map(s => `  --text-${s.name}: ${s.css}; /* ${s.mobilePx}px → ${s.px}px */`)
+      : steps.map(s => `  --text-${s.name}: ${trim(s.mobileRem)}rem; /* ${s.mobilePx}px */`)
+    const desktopBlock = fluid ? [] : [
+      '',
+      `@media (min-width: ${FLUID_VIEWPORTS.max}px) {`,
+      '  :root {',
+      ...steps.map(s => `    --text-${s.name}: ${trim(s.rem)}rem; /* ${s.px}px */`),
+      '  }',
+      '}',
+    ]
     const out = [
       importUrl ? `@import url('${importUrl}');\n` : '',
       ':root {',
@@ -277,13 +344,17 @@ export default function TypeScale({ onCopy, toast }) {
       headingFont ? `  --weight-heading: ${headingW};` : '',
       bodyFont ? `  --weight-body: ${bodyW};` : '',
       '}',
+      ...desktopBlock,
     ]
     return out.filter(l => l !== '').join('\n')
-  }, [steps, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack, headingW, bodyW, importUrl])
+  }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack, headingW, bodyW, importUrl])
 
   const tailwindExport = useMemo(() => {
+    // Tailwind takes the clamp directly — an arbitrary value in a fontSize map
+    // is valid and is how fluid type is done there, so the theme carries the
+    // same behaviour the CSS export does rather than a desktop-only snapshot.
     const sizes = steps
-      .map(s => `        '${s.name}': ['${trim(s.rem)}rem', { lineHeight: '${trim(lineHeight, 3)}' }],`)
+      .map(s => `        '${s.name}': ['${fluid ? s.css : `${trim(s.rem)}rem`}', { lineHeight: '${trim(lineHeight, 3)}' }],`)
       .join('\n')
     return [
       'module.exports = {',
@@ -300,10 +371,12 @@ export default function TypeScale({ onCopy, toast }) {
       '  },',
       '}',
     ].filter(l => l !== '').join('\n')
-  }, [steps, lineHeight, headingFont, bodyFont, headingStack, bodyStack])
+  }, [steps, fluid, lineHeight, headingFont, bodyFont, headingStack, bodyStack])
 
   const scssExport = useMemo(() => {
-    const lines = steps.map(s => `$text-${s.name}: ${trim(s.rem)}rem; // ${s.px}px`)
+    const lines = steps.map(s => (fluid
+      ? `$text-${s.name}: ${s.css}; // ${s.mobilePx}px → ${s.px}px`
+      : `$text-${s.name}: ${trim(s.rem)}rem; // ${s.px}px`))
     return [
       ...lines,
       '',
@@ -313,7 +386,7 @@ export default function TypeScale({ onCopy, toast }) {
       headingFont ? `$font-heading: (${headingStack});` : '',
       bodyFont ? `$font-body: (${bodyStack});` : '',
     ].filter(l => l !== '').join('\n')
-  }, [steps, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
+  }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
 
   const currentExport = format === 'tailwind' ? tailwindExport : format === 'scss' ? scssExport : cssExport
 
@@ -459,17 +532,24 @@ export default function TypeScale({ onCopy, toast }) {
                 key={s.name}
                 type="button"
                 className="tsc-row"
-                onClick={() => onCopy?.(`font-size: ${trim(s.rem)}rem; /* ${s.px}px */\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)}
-                aria-label={`Copy the ${s.name} step — ${s.px} pixels`}
+                onClick={() => onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)}
+                aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
               >
                 <span className="tsc-row-meta">
                   <span className="tsc-row-name">--text-{s.name}</span>
-                  <span className="tsc-row-num">{s.px}px · {trim(s.rem)}rem</span>
-                  <span className="tsc-row-sub">{s.weight} · {s.lineHeight}px line</span>
+                  {/* The size AT THE PREVIEWED WIDTH, not the desktop size. The
+                      old readout always said the desktop figure even while the
+                      Mobile preview was selected, which is what made the
+                      breakpoint control look decorative. The mobile→desktop
+                      range sits underneath so both ends stay visible. */}
+                  <span className="tsc-row-num">{s.previewPx}px · {trim(+(s.previewPx / 16).toFixed(4))}rem</span>
+                  <span className="tsc-row-sub">
+                    {s.mobilePx !== s.px ? `${s.mobilePx} → ${s.px}px · ` : ''}{s.weight} · {s.lineHeight}px line
+                  </span>
                 </span>
                 <span
                   className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
-                  ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.px)}px` })}
+                  ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
                 >
                   {PANGRAM}
                 </span>
@@ -580,11 +660,102 @@ export default function TypeScale({ onCopy, toast }) {
             <span className="tsc-section-num">02</span>
             <div>
               <h2 id="tsc-config-title">Tune the scale</h2>
-              <p>Two numbers drive every size. Everything else is presentation.</p>
+              <p>A base and a ratio at each end. Everything between is interpolated.</p>
             </div>
           </div>
 
-          <label className="seg-label" htmlFor="tsc-ratio">Scale ratio</label>
+          {/* ── The mobile end ──
+              A ratio compounds, so one ratio cannot serve both breakpoints: at
+              1.333 the sixth step is 5.6× the base, which reads as confident on
+              a 1440px desktop and as shouting on a 375px phone. Mobile gets its
+              own base and its own gentler ratio, and the two ladders are joined
+              by clamp() — that is what makes an h1 genuinely different at each
+              breakpoint instead of merely previewed in a narrower box. */}
+          <fieldset className="tsc-bp">
+            <legend className="seg-label">Mobile · {FLUID_VIEWPORTS.min}px</legend>
+            <div className="tsc-bp-row">
+              <div className="tsc-slider-row">
+                <div className="tsc-slider-head">
+                  <label className="seg-label" htmlFor="tsc-mbase">Base size</label>
+                </div>
+                <SnapSlider
+                  id="tsc-mbase"
+                  min={12}
+                  max={22}
+                  step={0.5}
+                  decimals={1}
+                  unit="px"
+                  value={mobileBase}
+                  defaultValue={DEFAULTS.mobileBase}
+                  snaps={[14, 15, 16, 18]}
+                  snapRadius={0.6}
+                  onChange={setMobileBase}
+                  ariaLabel="Mobile base size"
+                />
+              </div>
+              <div>
+                <label className="seg-label" htmlFor="tsc-mratio">Ratio</label>
+                <select
+                  id="tsc-mratio"
+                  className="tsc-select"
+                  value={mobileRatioId}
+                  onChange={e => setMobileRatioId(e.target.value)}
+                >
+                  {RATIOS.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.label}{r.value ? ` — ${r.value}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {mobileRatioId === 'custom' && (
+              <div className="tsc-slider-row">
+                <div className="tsc-slider-head">
+                  <label className="seg-label" htmlFor="tsc-mcustom">Custom mobile ratio</label>
+                </div>
+                <SnapSlider
+                  id="tsc-mcustom"
+                  min={1.05}
+                  max={2}
+                  step={0.001}
+                  decimals={3}
+                  value={mobileCustomRatio}
+                  defaultValue={DEFAULTS.custom}
+                  snaps={[1.125, 1.2, 1.25, 1.333]}
+                  snapRadius={0.012}
+                  inputMin={1.01}
+                  inputMax={3}
+                  onChange={setMobileCustomRatio}
+                  ariaLabel="Custom mobile scale ratio"
+                />
+              </div>
+            )}
+          </fieldset>
+
+          {/* How the two ladders are joined. Fluid is the default; fixed is for
+              teams whose specs are stated per breakpoint. Both are honest — the
+              preview and every export follow whichever is chosen. */}
+          <div className="tsc-bp-mode" role="group" aria-label="How the two scales are joined">
+            <button
+              type="button"
+              className={fluid ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
+              aria-pressed={fluid}
+              onClick={() => setFluid(true)}
+            >
+              Fluid · clamp()
+            </button>
+            <button
+              type="button"
+              className={!fluid ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
+              aria-pressed={!fluid}
+              onClick={() => setFluid(false)}
+            >
+              Fixed · media query
+            </button>
+          </div>
+
+          <label className="seg-label tsc-bp-desktop-label" htmlFor="tsc-ratio">Desktop · {FLUID_VIEWPORTS.max}px — scale ratio</label>
           <select
             id="tsc-ratio"
             className="tsc-select"
