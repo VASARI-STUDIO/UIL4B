@@ -100,7 +100,8 @@ export const CREATE_GROUPS = [
       { id: 'alt-text', label: 'Alt Text', route: '/alt-text', soon: false },
       { id: 'ai-prompt', label: 'Image Prompt', route: '/ai-prompt', soon: true },
       { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', soon: true },
-      { id: 'prompts', label: 'Prompt Library', route: '/prompts', soon: true },
+      // Prompt Library is no longer here — it moved to Discover, where the
+      // other browse-and-take surfaces live. Create is for tools you OPERATE.
     ],
   },
 ]
@@ -158,7 +159,7 @@ export const DISCOVER_GROUPS = [
   { id: 'gradient-gallery', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
   { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', route: '/fontgallery', soon: false },
   { id: 'inspiration', label: 'Inspiration', desc: 'Community UI systems, Mobbin-style browsing.', route: '/discover', soon: true },
-  { id: 'community-prompts', label: 'Community Prompts', desc: 'Proven prompts, submitted and curated.', route: '/discover', soon: true },
+  { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
   { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab.', route: '/discover', soon: true },
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
 ]
@@ -233,7 +234,6 @@ const CREATE_MENU = [
         { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
         { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: true },
         { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: true },
-        { id: 'prompts', label: 'Prompt Library', route: '/prompts', icon: 'community-prompts', hue: 'ai', soon: true },
       ],
     },
   ],

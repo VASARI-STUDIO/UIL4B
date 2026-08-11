@@ -45,6 +45,9 @@ const InfoCentre = lazy(() => import('./pages/InfoCentre'))
 const SeoInspector = lazy(() => import('./pages/SeoInspector'))
 const GradientGallery = lazy(() => import('./pages/GradientGallery'))
 const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
+// Moved from Create to Discover: it is a browse-and-take surface, not a tool
+// you operate, so it belongs beside the palette and gradient libraries.
+const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
 
 // Create tool routes come straight from the single tool-tree source, so adding a
 // tool never needs a hand-edited <Route>. These paths — plus /discover and
@@ -233,7 +236,7 @@ function AppInner() {
       '/ai-prompt': 'UI L4B | AI Image Prompt Generator',
       '/ai-tools': 'UI L4B | AI Tools',
       '/landing-prompts': 'UI L4B | AI Landing Page Prompts',
-      '/prompts': 'UI L4B | Prompt Library',
+      '/discover/prompts': 'UI L4B | Prompt Library',
       '/emoji': 'UI L4B | Emoji Library',
       '/ratio': 'UI L4B | Aspect & Resolution Calculator',
       '/box-shadow': 'UI L4B | Box Shadow',
@@ -280,7 +283,7 @@ function AppInner() {
       '/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
       '/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by OpenRouter and Gemini.',
       '/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
-      '/prompts': 'Browse and submit community design prompts for AI image and web generators.',
+      '/discover/prompts': 'A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.',
       '/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',
       '/ratio': 'Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.',
       '/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',
@@ -394,11 +397,15 @@ function AppInner() {
               <Route path="/docs-ai" element={<Navigate to="/learn" replace />} />
               <Route path="/design-reference" element={<Navigate to="/learn" replace />} />
               <Route path="/resources" element={<Navigate to="/discover" replace />} />
+              {/* The Prompt Library moved from Create to Discover. Any existing
+                  link, bookmark or indexed URL still lands on it. */}
+              <Route path="/prompts" element={<Navigate to="/discover/prompts" replace />} />
 
               {/* Curated gradient gallery — copy CSS or hand a gradient to the
                   Gradient Generator (?gs= scheme). Renders inside the app-shell. */}
               <Route path="/discover/gradients" element={<GradientGallery toast={toast} />} />
               <Route path="/discover/palettes" element={<PaletteGallery toast={toast} />} />
+              <Route path="/discover/prompts" element={<PromptLibrary toast={toast} />} />
 
               {/* Account, billing, legal and system pages — rendered inside the
                   PillNav app-shell (the wrapper return below). */}
