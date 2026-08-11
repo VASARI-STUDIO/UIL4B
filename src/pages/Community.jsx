@@ -191,7 +191,19 @@ export default function Community({ toast }) {
       <header className="ch-head">
         <div>
           <h1 className="ch-title">Community Hub</h1>
-          <p className="ch-sub">Browse design inspiration from the community, save your favourites, and submit your own. Ranked by saves.</p>
+          {/* Says what these cards ARE. The twelve seeded entries carry names
+              and authors but link to four bare stock-site homepages, because
+              they are examples of the shape, not real submissions — the sweep
+              clicked "Aurora Analytics" and landed on Dribbble's front page.
+              Presenting seed data as a community is the kind of thing a visitor
+              only has to catch once. Real submissions sit above them and are
+              indistinguishable from the user's side, so this line is how you
+              can tell. */}
+          <p className="ch-sub">
+            Browse design inspiration, save your favourites, and submit your own. Ranked by saves.
+            <br />
+            <small>The starter cards below are example entries showing the format — submissions from the community appear above them.</small>
+          </p>
         </div>
         <button
           className="btn btn-accent ch-submit-btn"
