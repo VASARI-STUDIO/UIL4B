@@ -7,4 +7,10 @@ export const TAG_CATEGORIES = [
   { label: 'Branding', tags: ['branding', 'identity', 'creative', 'premium', 'elegant', 'warm', 'typography'] },
 ]
 
-export const FREE_PROMPT_LIMIT = 5
+// How many community prompts a free account can open. Raised from 5 to 12 when
+// the library moved to Discover and became a paid surface: five is too few to
+// judge whether the rest is worth paying for, and a browse surface whose value
+// is invisible until you buy it does not convert — it just annoys. Twelve is
+// enough to cover every category at least once, which is what makes the
+// remainder a credible offer rather than a wall.
+export const FREE_PROMPT_LIMIT = 12
