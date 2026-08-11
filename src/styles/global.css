@@ -714,7 +714,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-tab:hover{color:var(--t0)}
 .pl-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
 .pl-tab-count{font-size:10px;font-weight:700;background:var(--bg-3);color:var(--t2);padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
-.pl-tab.active .pl-tab-count{background:var(--accent-bg);color:var(--accent)}
+.pl-tab.active .pl-tab-count{background:var(--accent-bg);color:var(--accent-strong)}
 .pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
 .pl-card-saves{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s)}
 /* Sticky library command bar. It used to carry a negative-margin bleed sized to
@@ -735,7 +735,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-chips::-webkit-scrollbar{display:none}
 .pl-chip{padding:6px 14px;border-radius:var(--radius);font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--t);white-space:nowrap;flex-shrink:0}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
-.pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
 .pl-add-btn{flex-shrink:0;margin-left:auto}
 /* Native select, styled to sit in a .pl-toolbar next to the search field */
 .pl-select{flex-shrink:0;max-width:200px;height:40px;padding:0 34px 0 14px;border:1px solid var(--border);border-radius:var(--radius);background-color:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2370707b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;transition:border-color var(--t),box-shadow var(--t)}
@@ -1627,7 +1627,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .plans-compare-table thead th{font-family:var(--mono);font-size:var(--fs-caption);text-transform:uppercase;letter-spacing:.06em;color:var(--t2)}
 .plans-compare-table td:first-child{color:var(--t1);font-weight:560}
 .plans-compare-table .pct-pro{background:var(--accent-bg);color:var(--t0);font-weight:600}
-.plans-compare-table thead .pct-pro{color:var(--accent)}
+.plans-compare-table thead .pct-pro{color:var(--accent-strong)}
 .plans-compare-table .pct-none{color:var(--t3)}
 .plans-pro-banner{display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:18px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 10%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));font-size:13px;color:var(--t1);line-height:1.5}
 .plans-pro-banner svg{flex-shrink:0;color:var(--accent)}
@@ -4277,7 +4277,18 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 [data-theme="light"]{
   --bg-0:#FAFAFA;--bg-1:#FFFFFF;--bg-2:#F4F4F5;--bg-3:#E9E9EB;--bg-4:#D9D9DE;
   --card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--cbg:#F4F4F5;
-  --t0:#0A0A0B;--t1:#50505A;--t2:#6C6C76;--t3:#858590;
+  /* CONTRAST: --t3 was #858590, which measures 3.65:1 on white and 3.32:1 on
+     the #f4f4f5 card surface — below the 4.5:1 WCAG 1.4.3 needs for normal
+     text. It was not decoration: it carried the sitewide footer, the /plans
+     "Not included" cells, twelve prompt-card meta labels and nine type-scale
+     row subtitles. The same failure repeated on every route in the product.
+     Both tokens moved together so the HIERARCHY survives — collapsing --t3
+     onto the old --t2 would have made the token pointless. Measured on the
+     three backgrounds each is actually used against (#fff / #fafafa / #f4f4f5):
+       --t2 #5F5F69 → 6.31 / 6.05 / 5.74
+       --t3 #6C6C76 → 5.19 / 4.97 / 4.72
+     Dark theme is unchanged; it was not measured and is not claimed to pass. */
+  --t0:#0A0A0B;--t1:#50505A;--t2:#5F5F69;--t3:#6C6C76;
   --border:rgba(10,10,11,.08);--bh:rgba(10,10,11,.16);--hvr:rgba(10,10,11,.04);--scrim:rgba(10,10,11,.32);
   --accent:#2563EB;--accent-strong:#1D4ED8;--accent-soft:#3B82F6;--accent-bg:rgba(37,99,235,.08);
   --brand:#2563EB;--brand-soft:#3B82F6;--brand-bg:rgba(37,99,235,.08);--info:#2563EB;--info-bg:rgba(37,99,235,.08);
@@ -4772,6 +4783,14 @@ html.lenis,html.lenis body{height:auto}
    click-to-edit value readout for custom values beyond the track range. */
 .snapv{display:flex;flex:1 1 auto;align-items:center;gap:12px;min-width:0}
 .snapv input[type="range"]{flex:1;min-width:0;accent-color:var(--accent)}
+/* Every SnapSlider gets a real focus outline. The Type Scale sliders relied on
+   an 8%-alpha ring (1.12:1) that a keyboard user could not see — and those
+   sliders are the tool. The dual ring is for the ones that sit ON a palette
+   swatch (Palette Builder, the home workbench): the swatch colour is chosen by
+   the user, so no single outline colour can be guaranteed to clear 3:1 against
+   it — a white inner and a near-black outer means one of the two always does. */
+.snapv input[type="range"]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.snapv--grad input[type="range"]:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}
 .snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .snapv--edited .snapv-value,.snapv--edited .snapv-input{font-weight:800;color:var(--t0)}
 .snapv-value:hover{border-color:var(--border);color:var(--t0)}
@@ -5402,8 +5421,14 @@ html.lenis,html.lenis body{height:auto}
 .home-report-chip{display:grid;place-items:center;width:34px;height:34px;border-radius:var(--radius-s);border:1px solid var(--border);font-family:var(--serif);font-size:15px;line-height:1}
 .home-report-pair{font-size:var(--fs-body-s);color:var(--t1);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .home-report-ratio{font-family:var(--mono);font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums}
-.home-report-grade{font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 8px;border-radius:var(--radius-pill);white-space:nowrap;color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
-.home-report-grade[data-ok="false"]{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+/* The grade badges state a WCAG result, so they had better pass one themselves.
+   --ok (#16a34a) on its own 14% tint measured 4.15:1 and --warn (#ca8a04) on a
+   16% tint 3.98:1 — both under 4.5:1 for 11px text. Darkened foregrounds only;
+   the tints are unchanged, so the colour coding still reads the same. Measured
+   on the composited backgrounds: #166534 on #deede4 = 5.89:1,
+   #854d0e on #f0e6d7 = 5.55:1. */
+.home-report-grade{font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 8px;border-radius:var(--radius-pill);white-space:nowrap;color:#166534;background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.home-report-grade[data-ok="false"]{color:#854d0e;background:color-mix(in srgb,var(--warn) 16%,transparent)}
 
 /* Community / Discover scroller */
 .home-scroller{display:flex;gap:16px;margin-top:var(--s-6);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px}
@@ -7616,7 +7641,14 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .tsc-export{max-height:420px;margin:0;padding:18px;font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);overflow:auto}
 .tsc-export:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .tsc-select{width:100%;height:42px;padding:0 12px;font-family:var(--font);font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;margin-bottom:14px;transition:border-color var(--t),box-shadow var(--t)}
-.tsc-select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+/* FOCUS VISIBILITY. This was `outline:none` plus a 3px ring in --brand-bg,
+   which is an 8%-alpha blue: composited over the white panel it measures
+   1.12:1, against the 3:1 that WCAG 2.2 SC 2.4.11 requires and the plain
+   "visible" that SC 2.4.7 requires. Every button on the same page already used
+   a real 2px outline, so this was an inconsistency rather than a decision — a
+   keyboard user could not see where they were among the controls that ARE the
+   tool. The tinted ring stays as a soft halo behind a real outline. */
+.tsc-select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 .tsc-slider-row{margin-bottom:18px}
 .tsc-slider-row input[type="range"]{width:100%;accent-color:var(--brand)}
 .tsc-slider-head{display:flex;justify-content:space-between;align-items:baseline}
