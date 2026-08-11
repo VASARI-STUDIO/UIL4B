@@ -20,6 +20,9 @@ export default function SystemCTA({
   // gone. Open it in place instead. Any non-auth destination stays a real link
   // (middle-click, open-in-new-tab), and a signed-in visitor keeps today's
   // behaviour exactly, since openLogin() would be a no-op for them.
+  // …and it opens the SIGN-UP form, because this block's primary label is
+  // always some form of "start free" — opening on "Welcome Back" told a
+  // first-time visitor they already had an account.
   const promptsLogin = primaryTo === '/login' && !user
 
   return (
@@ -34,7 +37,7 @@ export default function SystemCTA({
         {description && <p className="system-cta-lede">{description}</p>}
         <div className="system-cta-actions">
           {promptsLogin ? (
-            <button type="button" className="ui-pill ui-pill-ink ui-pill-lg" aria-haspopup="dialog" onClick={() => openLogin()}>
+            <button type="button" className="ui-pill ui-pill-ink ui-pill-lg" aria-haspopup="dialog" onClick={() => openLogin({ signup: true })}>
               {primaryLabel}
               <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
             </button>
