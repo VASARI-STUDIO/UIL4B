@@ -152,3 +152,19 @@ test('no plan copy may claim Pro buys a better AI model — it buys capacity', (
     }
   }
 })
+
+test('the client quota FALLBACK is the real free limit, not a stale literal', () => {
+  // Before the plan snapshot resolves, the AI tools fall back to a default.
+  // That default was the literal 40 — the OLD free daily limit — so on first
+  // paint a free user was told they had 40 generations when the server grants
+  // 5, and could fire eight requests it would reject. A fallback that lies in
+  // the generous direction is the worst kind: it only fails at the moment the
+  // user is trying to do something.
+  for (const file of ['src/pages/AltTextGenerator.jsx', 'src/pages/AiPromptGenerator.jsx']) {
+    const src = stripComments(read(file))
+    assert.ok(/\?\?\s*AI_LIMITS\.free\.daily/.test(src),
+      `${file}: the quota fallback must derive from AI_LIMITS, not a literal`)
+    assert.ok(!/\?\?\s*\d+\b/.test(src.split('dailyLimit')[1]?.slice(0, 80) || ''),
+      `${file}: a numeric literal is still being used as the quota fallback`)
+  }
+})
