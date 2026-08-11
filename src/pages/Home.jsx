@@ -249,7 +249,18 @@ export default function Home() {
           </div>
           <div className="home-scroller" data-reveal>
             {COMMUNITY.map((sys) => (
-              <Link className="home-card fx-lift" key={sys.label} to="/discover" data-hue={sys.hue}>
+              // Each card opens ITS OWN palette in the builder. All six pointed
+              // at /discover, so six distinctly-named cards showing six
+              // different swatch sets all did the same thing — the usability
+              // sweep clicked "Nimbus" and got the Discover hub. The
+              // capability already existed; the Palette Library deep-links this
+              // way, and this is the same `?c=` hand-off it uses.
+              <Link
+                className="home-card fx-lift"
+                key={sys.label}
+                to={`/color/palette?c=${sys.pal.map(c => c.replace('#', '')).join(',')}`}
+                data-hue={sys.hue}
+              >
                 <div className="home-card-art">
                   <div className="home-card-swatches" aria-hidden="true">
                     {sys.pal.map((hex, i) => (
@@ -293,7 +304,12 @@ export default function Home() {
                   {g.label}
                 </span>
                 <span className="home-learn-desc">{g.desc}</span>
-                <span className="home-learn-go">{g.soon ? 'Coming soon' : 'Read'} &rarr;</span>
+                {/* "Coming soon →" on a live link is a contradiction — the
+                    sweep clicked one to find out which it meant. These DO go
+                    somewhere real (/learn, which honestly says the articles are
+                    on the way), so the label now describes the destination
+                    rather than denying there is one. */}
+                <span className="home-learn-go">{g.soon ? 'See what’s coming' : 'Read'} &rarr;</span>
               </Link>
             ))}
           </div>
