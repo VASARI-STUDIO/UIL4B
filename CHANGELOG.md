@@ -11,6 +11,84 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ---
 
+## 2026-08-11 — Founder batch 4: sliders, honest pricing, the hero, and the fold
+
+Six PRs, each verified in a rendered browser and merged green to `main`:
+[#213](https://github.com/VASARI-STUDIO/UIL4B/pull/213),
+[#214](https://github.com/VASARI-STUDIO/UIL4B/pull/214),
+[#215](https://github.com/VASARI-STUDIO/UIL4B/pull/215),
+[#216](https://github.com/VASARI-STUDIO/UIL4B/pull/216),
+[#217](https://github.com/VASARI-STUDIO/UIL4B/pull/217),
+[#218](https://github.com/VASARI-STUDIO/UIL4B/pull/218).
+
+### Palette Builder
+- The four adjust sliders **soft-snap to centre**. A snap point can now carry
+  its own radius, so zero gets a wide detent while the intermediate marks stay
+  light — one shared radius could only make all three equally sticky
+- **All four tracks follow the palette.** Pulling Hue to orange repaints the
+  Saturation, Tone and Temperature bars in orange, instead of leaving them in
+  the blue that no longer exists on screen
+- **Hue is ±50**, not ±180. Boards saved under the old range open looking
+  exactly as they were saved, through the existing re-derive-and-compare check
+- **The hex field reports the colour on screen.** It showed the *base* seed
+  while the board showed it hue-rotated, so a field reading `#4A56AE` sat above
+  an orange palette. Typing a seed now zeroes the lens
+
+### Access
+- **UI System mode is admin-only** while unfinished — it was advertising a Pro
+  upgrade for something not ready to sell
+- **`/style-guide` is admin-only.** It was behind sign-in alone, so every
+  account on the site could read the internal design system
+
+### Plans — founder decision: free provider tiers only, no spend until revenue
+- AI limits recalculated from the **shared** ceiling downward. Free tiers meter
+  *per project*, not per user, so the old 1,000/day Pro figure was oversold at
+  two simultaneous users. Now **Free 5/day · 40/month, Pro 30/day · 300/month**,
+  with the arithmetic recorded in `api/_lib/plans.js`
+- A **monthly ceiling** is now enforced, not just advertised
+- The claim was wrong in **seven** files including Checkout — the page read at
+  the moment of payment. All now derive from one table, guarded by a test
+- **"Higher-quality AI models" removed.** Both plans resolve to the same model
+- **The one-off tier is no longer sold.** Existing entitlements still honoured
+- Fixed: the Pro CTA invited payment even when the price service returned null
+
+### Home
+- **The hero owns the first screen** (`min(100svh, 980px)`), so the workbench is
+  no longer visible before scrolling. Four tests assert it across four viewports
+- **The jitter is fixed at its root.** Eleven infinite tweens drifted the
+  satellites while the convergence measured its travel vector from inside those
+  moving elements — the two were animating the same coordinates against each
+  other
+- The **splash is gone**; the arrival is one quiet settle of the shell
+- The workbench wears **app chrome** — title bar, live breadcrumb, state readout
+
+### Type Scale
+- **A real ladder per breakpoint**, joined by `clamp()`. Mobile gets its own
+  base and its own gentler ratio, because a ratio compounds and one cannot serve
+  both ends. The preview reads from the same helper the export is built from, so
+  it can no longer show one thing and ship another
+
+### Discover
+- **The Prompt Library is live** at `/discover/prompts` — it was finished but
+  never mounted, so `/prompts` rendered the "still building" state. Free tier
+  raised 5 → 12
+- **Alt Text Generator restored**, in the nav and the crawler sitemap
+- **Palette Library swatches carry hover actions** — Builder, Project, Gradient,
+  CSS, Hex — reachable by keyboard as well as pointer
+
+### Testing
+- Three agents added: `ux-researcher`, `usability-tester`, `monetisation`
+- **The recurring Iconify CI flake is fixed at root**: an unbounded
+  `waitForLoadState('networkidle')` in a spec that reaches a third-party API let
+  a slow request eat the whole test budget, then failed reporting something else
+
+Baselines moved to lint 32 (one fewer — the plan tables moved out of a component
+module), unit 210, browser 183 pass / 13 skipped. The 13 skipped are
+`12-ui-system-builder.spec.js`, unreachable while the tool is admin-only and the
+suite runs signed out.
+
+---
+
 ## Unreleased — Founder batch 3: in-place sign-in, a continuous snap, a bounded panel
 
 On the `fix/nav-login-slider-panel` branch. Three founder-reported defects,
