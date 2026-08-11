@@ -102,6 +102,40 @@ async function handOffImages(page, files) {
 test.describe('homepage: eleven tools, five ways of working', () => {
   test.use({ reducedMotion: 'reduce' })
 
+  // FOUNDER REPORT: "the mini tools are visible before scrolling." The hero was
+  // a flat `min-height: 720px`, so on any viewport taller than that the
+  // workbench sat in the opening screen and the hero never got a screen of its
+  // own. A pixel height cannot answer this, because the fold is a property of
+  // the VIEWPORT — the hero now claims `min(100svh, 980px)`.
+  //
+  // Asserted with full motion ON and at real laptop heights, because that is
+  // the condition the report came from. The ≤768px and reduced-motion layouts
+  // deliberately collapse to the calm static arrangement (test 6) and are
+  // excluded: there the workbench SHOULD follow directly, since there is no
+  // convergence to stage.
+  for (const [w, h] of [[1440, 900], [1512, 982], [1920, 1080], [1280, 800]]) {
+    test(`the workbench starts below the fold at ${w}×${h}`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h })
+      watch(page, PERSONA)
+      await go(page, '/')
+
+      const shell = page.locator('.hw-shell')
+      await expect(shell).toBeVisible()          // present and usable, just not yet on screen
+      const box = await shell.boundingBox()
+      expect(box, 'the workbench must exist in layout').not.toBeNull()
+      expect(
+        box.y,
+        `the workbench top (${Math.round(box.y)}px) must start below a ${h}px viewport`,
+      ).toBeGreaterThanOrEqual(h)
+
+      // …and the hero's own call to action is still ON screen, so pushing the
+      // workbench down must not push the primary action down with it.
+      const cta = page.locator('.home-hero-cta .ui-pill-ink')
+      const ctaBox = await cta.boundingBox()
+      expect(ctaBox.y + ctaBox.height, 'the primary CTA must stay above the fold').toBeLessThan(h)
+    })
+  }
+
   test('1–4 · the promise, the eleven links and exactly five tabs', async ({ page }) => {
     await reducedMotion(page)
     watch(page, PERSONA)
@@ -360,8 +394,12 @@ test.describe('homepage: eleven tools, five ways of working', () => {
           () => page.locator('.home[data-home-converge="converged"]').count(),
           { timeout: 10000 },
         ).toBe(1)
+        // The shell settles. The separate ring-and-crosshair `.hw-splash` that
+        // used to fire alongside it is gone — it read as a second, unrelated
+        // animation starting exactly as the first finished (founder note), so
+        // the arrival is now carried by the shell alone.
         await expect(page.locator('.hw-shell')).toHaveCSS('animation-name', 'hw-shell-arrive')
-        await expect(page.locator('.hw-splash')).toHaveCSS('animation-name', 'hw-splash')
+        await expect(page.locator('.hw-splash')).toHaveCount(0)
       }
     }
   })
