@@ -58,7 +58,10 @@ function ColorField({ id, label, raw, valid, committed, onRaw, onBlur }) {
           className="cc-picker"
           value={committed}
           onChange={(e) => onRaw(e.target.value.toUpperCase())}
-          aria-label={`Pick ${label.toLowerCase()} colour`}
+          // `label` is already "Text colour" / "Background colour", so appending
+          // "colour" produced "Pick text colour colour" — which is what a screen
+          // reader actually announced.
+          aria-label={`Pick ${label.toLowerCase()}`}
         />
         <input
           id={id}
