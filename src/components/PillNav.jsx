@@ -461,6 +461,11 @@ export default function PillNav() {
   // so the X dropped the user on the dashboard instead of back where they were.
   // /login survives as a route for bookmarks and RequireAuth redirects.
   const startLogin = () => { closeAll(); openLogin() }
+  // "Start for Free" opens the SIGN-UP form. It shared startLogin with the
+  // "Log in" control, so a first-time visitor clicking the primary CTA was met
+  // with "Welcome Back / Sign In" and had to find a small text link to do the
+  // thing the button said. Same popup, different opening form.
+  const startSignup = () => { closeAll(); openLogin({ signup: true }) }
   const openSearch = () => { closeAll(); setSearchOpen(true) }
   const openExport = () => { closeAll(); setExportOpen(true) }
   const onSignOut = () => { setMenu(null); logout() }
@@ -668,7 +673,7 @@ export default function PillNav() {
                   type="button"
                   className={'ui-pill ui-pill-accent ui-pill-sm pnav-cta' + (ctaReady ? '' : ' is-waiting')}
                   aria-haspopup="dialog"
-                  onClick={startLogin}
+                  onClick={startSignup}
                   tabIndex={ctaReady ? undefined : -1}
                   aria-hidden={ctaReady ? undefined : 'true'}
                 >
@@ -828,7 +833,7 @@ export default function PillNav() {
                       <LoginArrowIcon />
                       <span>Log in</span>
                     </button>
-                    <button type="button" className="pnav-pop-item pnav-pop-item--accent" aria-haspopup="dialog" onClick={startLogin}>
+                    <button type="button" className="pnav-pop-item pnav-pop-item--accent" aria-haspopup="dialog" onClick={startSignup}>
                       <SparkIcon />
                       <span>Start for Free</span>
                     </button>
@@ -1007,7 +1012,7 @@ export default function PillNav() {
               </Link>
             ) : (
               <>
-                <button type="button" className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" aria-haspopup="dialog" onClick={startLogin}>
+                <button type="button" className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" aria-haspopup="dialog" onClick={startSignup}>
                   Start for Free
                 </button>
                 <button type="button" className="ui-pill ui-pill-out ui-pill-lg ui-pill-block" aria-haspopup="dialog" onClick={startLogin}>

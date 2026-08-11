@@ -145,6 +145,11 @@ function LoginRoute() {
   const location = useLocation()
   const navigate = useNavigate()
   const from = location.state?.from || '/home'
+  // `/login?signup=1` (or `state.signup`) opens the sign-up form. The hero's
+  // "Start building free" is a real <Link> so it can be middle-clicked, which
+  // means the intent has to survive a full navigation — a prop cannot carry it.
+  const wantsSignup = location.state?.signup === true
+    || new URLSearchParams(location.search).get('signup') === '1'
   const started = useRef(false)
 
   useEffect(() => {
@@ -159,10 +164,10 @@ function LoginRoute() {
     // onboarding, which would otherwise discard it — QA Q1). The stash lives in
     // the provider now, so a nav-initiated sign-up that never touches this route
     // resumes correctly too.
-    openLogin({ reason: '', from }).then(() => {
+    openLogin({ reason: '', from, signup: wantsSignup }).then(() => {
       navigate(from, { replace: true })
     })
-  }, [loading, user, from, navigate, openLogin])
+  }, [loading, user, from, wantsSignup, navigate, openLogin])
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>

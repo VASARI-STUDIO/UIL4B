@@ -90,7 +90,10 @@ export default function Home() {
             imagery in one workspace. Component tooling is coming next.
           </p>
           <div className="home-hero-cta">
-            <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login">
+            {/* ?signup=1 so the popup opens on the sign-up form. A real <Link>
+                rather than a button, so it stays middle-clickable — which is
+                why the intent travels in the URL and not in a prop. */}
+            <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/login?signup=1">
               Start building free
               <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
             </Link>

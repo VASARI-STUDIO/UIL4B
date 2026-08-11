@@ -21,10 +21,14 @@ function GoogleIcon() {
 // need an account for this?". Callers that pass nothing render exactly as
 // before. Used by the community submission gate, where the honest answer
 // (attribution, moderation, withdrawal) is the whole reason we ask up front.
-export default function LoginPopup({ reason, reasons, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, onSuccess, onDismiss }) {
+// `signup` decides which form this OPENS on. A control labelled "Start for
+// Free" that presents "Welcome Back / Sign In" is telling the visitor they
+// already have an account — the actual signup was a small text link underneath.
+// Defaults to false, so every existing caller keeps the sign-in form it had.
+export default function LoginPopup({ reason, reasons, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, onSuccess, onDismiss }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
-  const [isSignup, setIsSignup] = useState(false)
+  const [isSignup, setIsSignup] = useState(openAsSignup)
   const [resetMode, setResetMode] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [email, setEmail] = useState(initialEmail)
