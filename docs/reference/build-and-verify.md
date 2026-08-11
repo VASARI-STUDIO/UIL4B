@@ -15,7 +15,7 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 32 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **210 tests, 210 pass** |
+| Unit | `npm run test:unit` | **216 tests, 216 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **201 tests across 19 spec files**; **188 pass, 13 skipped** (`npx playwright test --list`) |
 
