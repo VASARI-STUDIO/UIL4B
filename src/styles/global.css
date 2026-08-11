@@ -5211,6 +5211,16 @@ html.lenis,html.lenis body{height:auto}
 .hw-head .home-h2{font-size:var(--fs-h2)}
 .hw-head .home-lede{margin-inline:auto;font-size:var(--fs-body)}
 .hw-shell{position:relative;max-width:920px;margin:0 auto;scroll-margin-top:calc(var(--nav-clear) + var(--s-2));border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1);box-shadow:var(--shadow-m);overflow:hidden}
+/* Type Scale — the two breakpoint ends. Grouped in a fieldset so the base and
+   ratio read as one setting for one breakpoint rather than two loose controls,
+   which is what makes "there are two ladders here" legible at a glance. */
+.tsc-bp{margin:0 0 14px;padding:12px 14px 14px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--s1)}
+.tsc-bp legend{padding:0 6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.tsc-bp-row{display:grid;grid-template-columns:1fr minmax(0,190px);gap:12px;align-items:end}
+@media(max-width:640px){.tsc-bp-row{grid-template-columns:1fr}}
+.tsc-bp-mode{display:flex;gap:6px;margin:0 0 14px}
+.tsc-bp-desktop-label{display:block}
+
 /* App chrome — the furniture that makes the shell read as a window into the
    product rather than a marketing widget. Deliberately quiet: it is scenery, so
    it sits a step back from the panel it frames and never competes with the
