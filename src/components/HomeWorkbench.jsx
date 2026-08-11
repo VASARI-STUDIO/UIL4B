@@ -993,6 +993,27 @@ export default function HomeWorkbench() {
         </div>
 
         <div className="hw-shell" data-hue={activeTab.hue}>
+          {/* App chrome. The shell was a bare card with tabs, so the "live
+              workspace" claim above it was carried entirely by the copy. This
+              is the same furniture the real tool pages wear — a title bar, the
+              route you are notionally standing in, and the state readout — so
+              the panel reads as a window into the product rather than as a
+              marketing widget that happens to be interactive.
+
+              Decorative and inert: aria-hidden, nothing focusable, no route
+              claimed that does not exist. The breadcrumb tracks the active tab,
+              so it is never lying about where you are. */}
+          <div className="hw-chrome" aria-hidden="true">
+            <span className="hw-chrome-dots"><i /><i /><i /></span>
+            <span className="hw-chrome-crumb">
+              <span className="hw-chrome-app">UIL4B</span>
+              <span className="hw-chrome-sep">/</span>
+              <span className="hw-chrome-route">Create</span>
+              <span className="hw-chrome-sep">/</span>
+              <span className="hw-chrome-here">{activeTab.label}</span>
+            </span>
+            <span className="hw-chrome-live"><i />Live preview</span>
+          </div>
           <div className="hw-tabs" role="tablist" aria-label="Workbench modes">
             {HOME_WORKBENCH_TABS.map((tab, index) => (
               <button
@@ -1040,7 +1061,6 @@ export default function HomeWorkbench() {
           </div>
 
           <p className="sr-only" role="status" aria-live="polite">{status}</p>
-          <span className="hw-splash" aria-hidden="true" />
         </div>
       </div>
     </section>

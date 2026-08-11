@@ -93,27 +93,26 @@ export function useHomeMotion(scopeRef) {
             .from('.home-hero-cta > *', { y: 18, autoAlpha: 0, duration: 0.7, stagger: 0.1, clearProps: 'transform' }, '-=0.5')
             .from('.home-hero-hint', { y: 14, autoAlpha: 0, duration: 0.6 }, '-=0.45')
 
-          // ── Satellite field: an authored, deliberately uneven drift. The links
-          //    themselves keep their layout position and hit area; only a small
-          //    idle offset moves, so nothing collides and no label is clipped. ──
-          const satellites = gsap.utils.toArray('.hsat-item')
           // Must match the `max-width:1280px` static-field breakpoint in
-          // global.css: below it the field is a plain grid and neither the idle
-          // drift nor the convergence proxies apply.
+          // global.css: below it the field is a plain grid and the convergence
+          // proxies do not apply.
           const wide = window.matchMedia?.('(min-width: 1281px)').matches
-          if (wide && satellites.length) {
-            satellites.forEach((item, i) => {
-              gsap.to(item, {
-                y: i % 2 ? 9 : -11,
-                x: i % 3 === 0 ? 6 : -5,
-                duration: 3.4 + (i % 4) * 0.55,
-                ease: 'sine.inOut',
-                repeat: -1,
-                yoyo: true,
-                delay: i * 0.18,
-              })
-            })
-          }
+
+          // ── THE IDLE DRIFT IS GONE. It was the cause of the founder's "it's
+          //    not smooth". Eleven infinite yoyo tweens moved `.hsat-item` on x
+          //    and y forever — and the convergence below measures its travel
+          //    vector from `.hsat-link`, which lives INSIDE those moving items.
+          //    So every proxy was placed from, and travelled from, an origin
+          //    that had already moved by the time it painted, and every
+          //    ScrollTrigger refresh re-measured against a different phase of
+          //    eleven independent sine waves. Drift and convergence were
+          //    animating the same coordinates against each other.
+          //
+          //    Removing it fixes the jitter at the root rather than damping it,
+          //    and takes eleven permanently-running tweens off the main thread
+          //    for a motion nobody asked for. The satellites now hold still,
+          //    which is also what makes the convergence legible: something that
+          //    was already floating cannot appear to depart. ──
 
           // ── Convergence: the causal story, told with throwaway objects. ──
           //    Eleven tools; five modes. A decorative chip peels off each tool
@@ -178,14 +177,15 @@ export function useHomeMotion(scopeRef) {
                 invalidateOnRefresh: true,
                 onRefresh: place,
                 onUpdate: ({ progress }) => {
-                  // Wait until the proxies have completed their travel and fade:
-                  // the shell's restrained splash must read as the result of the
-                  // merge, not as a competing animation.
+                  // Marks the moment the last proxy lands, so the workbench can
+                  // settle as one beat. The old ring-and-crosshair "splash" that
+                  // fired here is gone — the founder's note was that it was not
+                  // what they were after, and it read as a second, unrelated
+                  // animation firing at the end of the first. What remains is a
+                  // single quiet settle on the shell itself.
                   const next = progress >= 0.96
                   if (next === converged) return
                   converged = next
-                  // Decorative only: the workbench is already visible and usable
-                  // either way. This just lets the arrival land as one beat.
                   scope.dataset.homeConverge = next ? 'converged' : 'moving'
                 },
                 onLeaveBack: () => { delete scope.dataset.homeConverge },
@@ -208,11 +208,16 @@ export function useHomeMotion(scopeRef) {
           }
 
           // Recede only the copy, so the satellites keep a stable travel origin.
+          // `scrub: 0.4` rather than `true`: an unsmoothed scrub applies the raw
+          // wheel delta, which on a trackpad arrives in coarse jumps and made
+          // the headline step rather than glide — the same complaint as the
+          // drift, from a different cause. The number is a catch-up duration, so
+          // GSAP eases toward the scroll position instead of snapping to it.
           gsap.to('.home-hero-core', {
             yPercent: -8,
             autoAlpha: 0.5,
             ease: 'none',
-            scrollTrigger: { trigger: '.home-hero', start: 'top top', end: 'bottom top', scrub: true },
+            scrollTrigger: { trigger: '.home-hero', start: 'top top', end: 'bottom top', scrub: 0.4 },
           })
 
           // ── Scroll reveals: batch single elements so each group animates in
