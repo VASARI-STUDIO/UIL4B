@@ -487,7 +487,7 @@
   },
   "auth": {
     "welcomeBack": "Welcome Back",
-    "createAccount": "Create Account",
+    "createAccount": "Create your free account",
     "resetPassword": "Reset Password",
     "signInSubtitle": "Sign in to your UIL4B account.",
     "signUpSubtitle": "Sign up to save your work and access all features.",

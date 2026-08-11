@@ -79,6 +79,12 @@ export function LoginPromptProvider({ children }) {
         initialEmail: typeof opts.email === 'string' ? opts.email : '',
         lockEmail: !!opts.lockEmail,
         passwordOnly: opts.mode === 'switch',
+        // Which form the popup OPENS on. Every "Start for Free" / "Start
+        // building free" control promised a new free account and delivered a
+        // "Welcome Back" sign-in form, with signup demoted to a small text link
+        // underneath — on the four highest-traffic paths into the product.
+        // Callers that pass nothing still get sign-in, so nothing else moves.
+        signup: !!opts.signup,
       })
     })
     pendingPromiseRef.current = promise
@@ -101,6 +107,7 @@ export function LoginPromptProvider({ children }) {
           initialEmail={prompt.initialEmail}
           lockEmail={prompt.lockEmail}
           passwordOnly={prompt.passwordOnly}
+          signup={prompt.signup}
           onSuccess={(u) => finish(u || userRef.current || null)}
           onDismiss={() => finish(null)}
         />
