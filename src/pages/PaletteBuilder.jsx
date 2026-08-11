@@ -21,7 +21,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
-import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
+import { getOwnerHandle, isAdminEmail, PUBLIC_OWNER_ID } from '../utils/constants'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
@@ -75,11 +75,22 @@ const VISION_MODES = [
 // snapRadius is absolute (track units): the hue track is ±180 so the default
 // 6%-of-range radius (±21°) swallowed everything near a snap — the "hue feels
 // buggy" report. Tight radii keep snaps magnetic without eating the range.
+// Zero is the value every one of these sliders is measured against — it is
+// "this palette, unlensed", and it is the point a user hunts for after an
+// experiment. So it carries a WIDE centre detent while the intermediate marks
+// stay light (see snapPoints in utils/sliderKeys.js for the per-point radius).
+// One shared radius could only make all three equally sticky, which is how
+// finding zero came to need pixel precision.
+//
+// Hue spans ±50 rather than ±180: past about a fifth of the wheel the board
+// stops being a variation of the colour the user chose and becomes a different
+// palette, which is what the Randomise button is for. ADJUST_TRACK_RANGES.h in
+// utils/colors.js MUST match — the track is a picture of this slider.
 const ADJUST_FIELDS = [
-  { key: 'h', label: 'Hue', min: -180, max: 180, unit: '°', snaps: [-90, 0, 90], snapRadius: 8 },
-  { key: 's', label: 'Saturation', min: -100, max: 100, unit: '%', snaps: [-50, 0, 50], snapRadius: 6 },
-  { key: 'b', label: 'Tone', min: -100, max: 100, unit: '%', snaps: [-50, 0, 50], snapRadius: 6 },
-  { key: 'temp', label: 'Temperature', min: -100, max: 100, unit: '', snaps: [-50, 0, 50], snapRadius: 6 },
+  { key: 'h', label: 'Hue', min: -50, max: 50, unit: '°', snaps: [{ value: -25, radius: 6 }, { value: 0, radius: 8 }, { value: 25, radius: 6 }] },
+  { key: 's', label: 'Saturation', min: -100, max: 100, unit: '%', snaps: [{ value: -50, radius: 6 }, { value: 0, radius: 12 }, { value: 50, radius: 6 }] },
+  { key: 'b', label: 'Tone', min: -100, max: 100, unit: '%', snaps: [{ value: -50, radius: 6 }, { value: 0, radius: 12 }, { value: 50, radius: 6 }] },
+  { key: 'temp', label: 'Temperature', min: -100, max: 100, unit: '', snaps: [{ value: -50, radius: 6 }, { value: 0, radius: 12 }, { value: 50, radius: 6 }] },
 ]
 
 // Tones for the expanded per-colour tints panel (click the mini ramp to open).
@@ -855,6 +866,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [colors, setColors] = useState(initial.colors)
   const [seed, setSeed] = useState(initial.seed)
   const [seedInput, setSeedInput] = useState(seed)
+  // The hex field is an EDITING BUFFER while focused and a READOUT otherwise —
+  // see `shownSeed` below for why the two cannot be the same value. Tracking
+  // focus is what lets a half-typed "#4A5" survive as the user types it while
+  // the resting field still reports the colour on screen.
+  const [seedFocused, setSeedFocused] = useState(false)
   // A hand-off names the system explicitly and outranks the carried-in project,
   // because it describes what the visitor just did rather than what this device
   // last held. The id is validated against HARMONIES here — utils/colorHandoff
@@ -915,7 +931,16 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [handleErr, setHandleErr] = useState('')
   // UI System mode leaves every ordinary Palette state value mounted and
   // untouched until the user explicitly applies its Brand scale back.
+  //
+  // ADMIN-ONLY while the tool is unfinished. Both entry points (the "UI System
+  // Pro" breadcrumb and the "Build UI system" toolbar button) are removed for
+  // everyone else rather than shown-and-blocked: a Pro badge on a control that
+  // then refuses to deliver is worse than no control, and this one was
+  // advertising a paid upgrade for something not ready to be sold. The mode
+  // itself, its Pro entitlement checks and applyUiBrandScale are all untouched
+  // — this only decides who can reach them.
   const [uiMode, setUiMode] = useState(false)
+  const canUseUiSystem = isAdminEmail(user?.email)
   // Combined community-gallery popup (Discover hand-in): one large popup with
   // Community / Variations / Brands tabs, applying a pick straight onto the board.
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -958,6 +983,16 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const adjusted = useMemo(() => applyAdjust(colors, adjust), [colors, adjust])
   const paletteScore = useMemo(() => scorePalette(adjusted), [adjusted])
 
+  // What the seed chip and the hex field REPORT: the colour swatch 0 actually
+  // is on screen — not the base the lens is derived from. Those two diverge the
+  // instant any adjust slider moves, and a field reading #4A56AE above an
+  // orange board is precisely the "showing a different palette to the current
+  // hex" fault. The base is not lost: it is still `seed`, still what the board
+  // re-derives from, and still what persists (see utils/paletteAdjust.js). It
+  // simply has no business being presented as the palette's colour when it is
+  // not a colour the palette contains.
+  const shownSeed = normaliseHex(adjusted[0]) || seed
+
   // Per-column derivations that are NOT the swatch itself. tonalRamp is six
   // CAM16 solves per colour, so on a full 10-colour board that is 60 solves —
   // three times the cost of the whole adjust lens — and it was being redone on
@@ -980,9 +1015,19 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // identical array and nothing re-titles.
   const columnNames = useMemo(() => adjusted.map(colorName), [adjusted])
 
-  // Coloured slider tracks — see adjustTrackStops. Keyed on the BASE palette
-  // only, never on `adjust`, so dragging a slider never rebuilds them.
-  const trackStops = useMemo(() => adjustTrackStops(colors), [colors])
+  // Coloured slider tracks — see adjustTrackStops. Each track sweeps its own
+  // axis with the other three held where the user left them, so moving Hue
+  // repaints the Saturation, Tone and Temperature bars into the hue that now
+  // exists. No track reads its own slider's value, so the bar under an active
+  // thumb is still stable mid-drag.
+  //
+  // Built from the DEFERRED adjust: 4 tracks × 9 stops is 36 CAM16 round trips,
+  // which is the same order as the tonal ramps below and has no business
+  // running on every frame of a scrub. React drops it to a lower priority while
+  // the pointer is moving and catches up when it settles — the dragged bar is
+  // unaffected either way, because it does not depend on the value changing.
+  const deferredAdjust = useDeferredValue(adjust)
+  const trackStops = useMemo(() => adjustTrackStops(colors, deferredAdjust), [colors, deferredAdjust])
   const trackGradients = useMemo(() => adjustTrackGradientsFromStops(trackStops), [trackStops])
   // …and the handle lens: the colour the track above paints at each slider's
   // CURRENT position, sampled from those very stops. It follows the drag, which
@@ -1050,7 +1095,20 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const setFromSeedInput = (raw) => {
     setSeedInput(raw)
     const norm = normaliseHex(raw)
-    if (norm) { setSeed(norm); regen(norm, harmony) }
+    if (!norm) return
+    setSeed(norm)
+    regen(norm, harmony)
+    // Zero the lens, so the colour the user just named is the colour they get.
+    // Regenerating UNDER an active lens is what produced the founder's report:
+    // type #4A56AE with hue at +116° and every swatch lands 116° away from it,
+    // including the seed swatch the field is supposedly reporting. There is no
+    // reading of "set the seed to this" that ends with the seed being something
+    // else. Announced only when a lens was actually discarded, and Undo
+    // restores it — see resetSnapshotRef.
+    if (ADJUST_FIELDS.some(f => adjust[f.key] !== 0)) {
+      setAdjust(ZERO_ADJUST)
+      setLiveMsg('Seed set — global adjustments cleared so the palette matches the hex')
+    }
   }
 
   const pickHarmony = (h) => {
@@ -1823,7 +1881,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
     return true
   }
 
-  if (uiMode) {
+  // Belt and braces: the entry points are gone for non-admins, so this can only
+  // fire if the flag is reached some other way. It renders the ordinary board
+  // rather than an error, because there is nothing here a visitor did wrong.
+  if (uiMode && canUseUiSystem) {
     return (
       <div className="plb plb--ui-system">
         <UiSystemBuilder
@@ -1848,14 +1909,18 @@ export default function PaletteBuilder({ onCopy, toast }) {
         <div className="plb-toolbar-group">
           <div className="plb-mode-switch">
             <h1 className="plb-title">Palette</h1>
-            <span aria-hidden="true">/</span>
-            <button type="button" aria-label="Open UI System Pro mode" onClick={() => setUiMode(true)}>
-              UI System <span>Pro</span>
-            </button>
+            {canUseUiSystem && (
+              <>
+                <span aria-hidden="true">/</span>
+                <button type="button" aria-label="Open UI System mode" onClick={() => setUiMode(true)}>
+                  UI System <span>Admin</span>
+                </button>
+              </>
+            )}
           </div>
           <div className="plb-seedpick">
             <ColorPickerPop
-              value={seed}
+              value={shownSeed}
               onChange={(hex) => setFromSeedInput(hex.toUpperCase())}
               ariaLabel="Pick seed colour"
             />
@@ -1863,9 +1928,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <input
             type="text"
             className={seedValid ? 'plb-hexfield' : 'plb-hexfield plb-hexfield--bad'}
-            value={seedInput}
+            value={seedFocused ? seedInput : shownSeed}
             onChange={(e) => setFromSeedInput(e.target.value)}
-            onBlur={() => setSeedInput(seed)}
+            onFocus={() => { setSeedInput(shownSeed); setSeedFocused(true) }}
+            onBlur={() => { setSeedFocused(false); setSeedInput(shownSeed) }}
             placeholder={DEFAULT_SEED}
             spellCheck="false"
             autoComplete="off"
@@ -2140,7 +2206,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
           >
             <IcoGradient /><span className="plb-lbl"><span className="plb-lbl-i">Gradient</span></span>
           </button>
-          <button type="button" className="btn btn-s" onClick={() => setUiMode(true)} title="Build a complete UI colour system from Brand 500"><IcoSliders /> Build UI system</button>
+          {canUseUiSystem && (
+            <button type="button" className="btn btn-s" onClick={() => setUiMode(true)} title="Build a complete UI colour system from Brand 500"><IcoSliders /> Build UI system</button>
+          )}
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
@@ -2449,7 +2517,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
                   — it is what exports, tints and the UI preview key off, so it
                   stays, demoted to an eyebrow. */}
               <div className="plb-name">{name}</div>
-              <button type="button" className="plb-hex" title="Copy hex" onClick={() => onCopy?.(adjusted[i])}>{adjusted[i]}</button>
+              {/* Canonical uppercase in the DOM, not just via text-transform.
+                  The CSS already displayed it uppercase, so the lowercase
+                  underneath was what a screen reader announced, what the copy
+                  button put on the clipboard, and what a test read back — three
+                  ways of disagreeing with the one thing the user can see. The
+                  seed field beside it reports normaliseHex's canonical form, so
+                  this is also what makes "the field names swatch 0" checkable
+                  as a string rather than only as a colour. */}
+              <button type="button" className="plb-hex" title="Copy hex" onClick={() => onCopy?.(adjusted[i].toUpperCase())}>{adjusted[i].toUpperCase()}</button>
               <div className="plb-role">{role}</div>
               {showContrast && (
                 <span className="plb-badges" role="group" aria-label={`Contrast of ${adjusted[i]} — white text ${contrast.light.ratio.toFixed(1)} to 1, black text ${contrast.dark.ratio.toFixed(1)} to 1`}>

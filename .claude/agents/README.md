@@ -40,7 +40,12 @@ blockers and known-unfixed bugs, and `CHANGELOG.md` for shipped history and the
 founder decisions behind each release. Product direction is in `CLAUDE.md`.
 Agents should read source documents rather than copying facts that will drift.
 
-## The ten agents
+## The thirteen agents
+
+The last three were added in founder batch 4 to cover the redesign programme:
+research decides what a surface must achieve, the tester finds out whether it
+does, and monetisation keeps the pricing page and `api/_lib/plans.js` telling
+the same story.
 
 | Agent | Model | Accountable outcome |
 |---|---|---|
@@ -54,6 +59,9 @@ Agents should read source documents rather than copying facts that will drift.
 | **qa** | claude-sonnet-5 | End-to-end functional verdict across requirements, states, viewports, and accessibility. |
 | **release-captain** | claude-sonnet-5 | Evidence-based release readiness and prepared hand-off to the Director. |
 | **analytics** | claude-sonnet-5 | Measurement plans and instrumentation that answer defined product questions. |
+| **ux-researcher** | claude-opus-5 | Segment first-wins, task scripts, and severity-ranked findings that say what a redesign must achieve. |
+| **usability-tester** | claude-sonnet-5 | A persona's honest attempt at a real task in a real browser, and where it broke. |
+| **monetisation** | claude-opus-5 | Plan limits the infrastructure can honour, and pricing claims that match the enforcing code. |
 
 Model assignments are a founder decision. Keep this table and each agent's
 `model:` field in sync.

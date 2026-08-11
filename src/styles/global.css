@@ -4080,6 +4080,28 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .pgal-use--pro{color:var(--brand)}
 .pgal-stripe:hover .pgal-hex,.pgal-stripe:focus-visible .pgal-hex{opacity:1}
 .pgal-stripe:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+/* Hover / focus actions over the swatch. The layer is always in the DOM (see
+   PaletteGalleryGrid) and only its VISIBILITY is CSS, so keyboard reaches every
+   action a pointer does — :focus-within is what carries that, and `visibility`
+   rather than `opacity` alone keeps the buttons out of the tab order until the
+   card is actually engaged. Anchored to the stripes, not the card, so it never
+   covers the name and like control in the foot. */
+.pgal-shot{position:relative;display:flex;flex-direction:column;min-width:0}
+.pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance),visibility var(--dur-2)}
+.pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;visibility:visible;transform:none}
+.pgal-act{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.16);background:rgba(10,10,14,.72);color:#fff;font-family:var(--font);font-size:11px;font-weight:600;line-height:1;cursor:pointer;text-decoration:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.pgal-act:hover{background:rgba(10,10,14,.9);border-color:rgba(255,255,255,.34)}
+.pgal-act:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* The action layer sits ON the swatch, so at small card sizes the labels are
+   what has to go — the icons keep every action reachable in a single row. */
+@media (max-width:600px){.pgal-act span{display:none}.pgal-act{padding:6px}}
+/* The foot's own controls must stay above the actions layer's stacking context. */
+.pgal-foot{position:relative;z-index:4}
+/* Inside the builder popup the cards are half height and already one big select
+   surface — no action layer is rendered there, and this guards the case where a
+   future caller passes palettes without onPick into a small grid. */
+.plb-galpopup-body .pgal-actions{display:none}
+@media (prefers-reduced-motion:reduce){.pgal-actions{transition:opacity var(--dur-1) linear,visibility var(--dur-1);transform:none}}
 .pgal-foot{display:flex;align-items:center;gap:8px;min-width:0;padding:0 2px}
 .pgal-like{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pgal-like:hover{color:var(--t0);border-color:var(--bh)}

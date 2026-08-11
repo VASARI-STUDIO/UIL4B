@@ -41,6 +41,30 @@ function quantise(value, min, step) {
 }
 
 /**
+ * A snap point is either a bare number — which uses the caller's shared
+ * `snapRadius` — or `{ value, radius }` when ONE point must pull harder than
+ * its neighbours. The Palette Builder adjust sliders use the object form to
+ * give zero a wide centre detent while the intermediate marks stay light: a
+ * single shared radius can't express "0 is the one you keep coming back to",
+ * and widening it uniformly would make the intermediate snaps sticky too.
+ *
+ * Returns the plain numeric values, for tick rendering and tests.
+ */
+export function snapValues(snaps) {
+  return (Array.isArray(snaps) ? snaps : [])
+    .map(s => (s !== null && typeof s === 'object' ? s.value : s))
+    .filter(v => Number.isFinite(v))
+}
+
+function snapPoints(snaps, fallbackRadius) {
+  return (Array.isArray(snaps) ? snaps : [])
+    .map(s => (s !== null && typeof s === 'object'
+      ? { value: s.value, radius: s.radius ?? fallbackRadius }
+      : { value: s, radius: fallbackRadius }))
+    .filter(p => Number.isFinite(p.value) && p.radius > 0)
+}
+
+/**
  * Magnetic pointer snapping — the value a POINTER drag should produce.
  *
  * WHY THE SHAPE MATTERS (the bug this fixes): the original was a hard step —
@@ -73,18 +97,24 @@ function quantise(value, min, step) {
  * Keyboard input never comes here — see the modality note above.
  */
 export function snapToTarget(raw, { snaps = [], snapRadius, min, max, step = 1 } = {}) {
-  if (!snaps.length) return raw
-  const radius = snapRadius ?? (max - min) * 0.06
-  if (!(radius > 0)) return raw
-  let best = null
-  for (const s of snaps) {
-    const d = Math.abs(raw - s)
-    if (d <= radius && (best === null || d < Math.abs(raw - best))) best = s
+  const points = snapPoints(snaps, snapRadius ?? (max - min) * 0.06)
+  if (!points.length) return raw
+  // Resolve by PULL, not by proximity. With one shared radius the nearest snap
+  // is always the strongest, so the two agree; once a point can carry its own
+  // radius they can disagree — a weak mark 2 units away would otherwise shadow
+  // a wide centre detent 3 units away and swallow its lock-on. Comparing the
+  // weights each candidate would actually apply is the only resolution that
+  // stays correct for both shapes.
+  let best = null, bestWeight = 0
+  for (const { value, radius } of points) {
+    const d = Math.abs(raw - value)
+    if (d > radius) continue
+    const fade = 1 - d / radius
+    const weight = fade * fade * fade
+    if (weight > bestWeight) { best = value; bestWeight = weight }
   }
   if (best === null) return raw
-  const fade = 1 - Math.abs(raw - best) / radius
-  const weight = fade * fade * fade
-  return quantise(raw + (best - raw) * weight, min, step > 0 ? step : 1)
+  return quantise(raw + (best - raw) * bestWeight, min, step > 0 ? step : 1)
 }
 
 /**

@@ -756,7 +756,7 @@ function mostVividHex(baseColors) {
 // ADJUST_FIELDS min/max — the track is a picture of the slider, so a mismatch
 // would put the gradient and the handle on different scales.
 export const ADJUST_TRACK_RANGES = {
-  h: [-180, 180],       // the hue sweep, as this palette travels it
+  h: [-50, 50],         // the hue sweep, as this palette travels it
   s: [-100, 100],       // fully neutral → the gamut boundary at this hue/tone
   b: [-100, 100],       // dark → light
   temp: [-100, 100],    // the 210° cool anchor → neutral → the 30° warm anchor
@@ -766,18 +766,28 @@ export const ADJUST_TRACK_RANGES = {
 // the slider handle's centre are built from. Keeping ONE stop list means the
 // dot can never disagree with the bar it sits on: they are literally the same
 // nine colours, read two different ways.
-export function adjustTrackStops(baseColors) {
+export function adjustTrackStops(baseColors, adj) {
   const rep = mostVividHex(baseColors)
   if (!rep) return null
+  // Each track sweeps its OWN axis while holding the other three where the user
+  // has actually left them. That is what makes the four bars one instrument:
+  // pull Hue to orange and the Saturation, Tone and Temperature tracks repaint
+  // in orange, because they are now previewing what they would do to the
+  // orange board that exists — not to the blue one that was replaced.
+  //
+  // A track is never a function of its own slider's value, so dragging Hue can
+  // recolour the other three without the bar moving under the thumb the user
+  // is holding. That is the property the old base-only version was protecting,
+  // and it survives intact here.
+  const base = { h: 0, s: 0, b: 0, temp: 0, ...(adj || null) }
   const out = {}
   for (const key of Object.keys(ADJUST_TRACK_RANGES)) {
     const [min, max] = ADJUST_TRACK_RANGES[key]
     const stops = []
     for (let i = 0; i < ADJUST_TRACK_STOPS; i++) {
       const pos = i / (ADJUST_TRACK_STOPS - 1)
-      const adj = { h: 0, s: 0, b: 0, temp: 0, [key]: min + (max - min) * pos }
       let hex = rep
-      try { hex = applyAdjust([rep], adj)[0] || rep } catch { hex = rep }
+      try { hex = applyAdjust([rep], { ...base, [key]: min + (max - min) * pos })[0] || rep } catch { hex = rep }
       stops.push({ hex, pos })
     }
     out[key] = { min, max, stops }

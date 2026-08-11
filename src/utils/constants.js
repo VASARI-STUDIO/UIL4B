@@ -1,4 +1,19 @@
 export const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
+
+/**
+ * Client-side admin check. Keep in sync with `isAdminEmail` in
+ * api/_lib/plans.js — that one reads a verified Firebase ID token and is the
+ * actual security boundary. THIS one only decides what to render: the bundle
+ * ships to every visitor, so it can hide a surface but can never protect data.
+ * Anything that must not leak belongs behind /api/verify-admin, the way the
+ * Admin dashboard does it.
+ *
+ * Six call sites had this expression inlined and one of them lower-cased
+ * differently, so it lives here now.
+ */
+export function isAdminEmail(email) {
+  return !!email && ADMIN_EMAILS.includes(String(email).toLowerCase())
+}
 export const PUBLIC_OWNER_ID = 'uil4b-founder'
 
 // Site owner(s). Keyed by lowercase email. When a matching user's name renders
