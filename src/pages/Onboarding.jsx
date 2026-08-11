@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
+import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice } from '../hooks/usePrices'
 
 const ONBOARDED_KEY = 'vs-onboarded'
@@ -26,8 +26,8 @@ const QUESTIONS = [
 ]
 
 const PRO_FEATURES = [
-  '1,000 AI generations per day',
-  'Higher-quality AI models',
+  `${AI_LIMITS.pro.daily} AI generations a day · ${AI_LIMITS.pro.monthly} a month`,
+  'Advanced colour controls and HCT editing',
   'Projects synced across devices',
   'Advanced design-system exports',
   'Priority support',
@@ -186,7 +186,7 @@ export default function Onboarding() {
                 <ul className="onb-tier-list">
                   <li><CheckIcon /> All core design tools</li>
                   <li><CheckIcon /> Unlimited palettes &amp; exports</li>
-                  <li><CheckIcon /> 40 AI generations / day</li>
+                  <li><CheckIcon /> {AI_LIMITS.free.daily} AI generations a day</li>
                 </ul>
                 <button className="btn onb-tier-btn" onClick={finishFree} disabled={busy}>Start with Free</button>
               </div>

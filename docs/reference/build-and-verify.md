@@ -13,9 +13,9 @@ number here, you must have re-run it.
 
 | Gate | Command | Current baseline |
 |---|---|---|
-| Lint | `npx eslint .` | **0 errors, 33 advisory warnings** |
+| Lint | `npx eslint .` | **0 errors, 32 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **192 tests, 192 pass** |
+| Unit | `npm run test:unit` | **201 tests, 201 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **192 tests across 18 spec files**; **179 pass, 13 skipped** (`npx playwright test --list`) |
 
@@ -25,7 +25,7 @@ surface is unreachable rather than broken — the file carries the reason and th
 one-word change that re-enables it. Skipped is the honest state; do not "fix"
 the count by deleting the file.
 
-The 33 lint warnings are pre-existing and advisory
+The 32 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
 The previous figures in this table (33 / 185 / 191) were measured at 2026-08-09.
@@ -36,10 +36,23 @@ rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
 
+The plans overhaul took lint from 33 to **32**. Not a drive-by fix: exporting
+the new `AI_LIMITS` table from `SubscriptionContext.jsx` would have ADDED a
+34th `react-refresh/only-export-components` warning, so the plan tables moved
+to `src/config/plans.js` — the counterpart `api/_lib/plans.js` had always named
+and which had never existed. That removed the pre-existing warning on
+`FREE_SAVE_LIMITS` at the same time, because it was the same fault.
+
 **Known browser-suite flake:** under runner contention a small number of
 specs can fail once and pass on rerun. Re-run before treating a single red
 browser job as a real regression, and say in the PR which failures were flake
 and which were real.
+
+Named instance (plans overhaul): `07-public-shell-library-palette.spec.js` →
+*Icon and Emoji modes switch from the keyboard*. Failed once on CI **only**,
+taking 22.4s against a 2.1s local run — the shape of an Iconify API call
+timing out on the runner, not a regression. Passed on rerun. This spec reaches
+a third-party API, so treat a slow failure here as network before code.
 
 Named instance (batch 4): `10-home-chaos-to-calm.spec.js` → *11a · a hand-off
 lands looking at the uploaded images*. Lenis owns the scroll position on that

@@ -5,6 +5,7 @@ import { db } from '../utils/firebase'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { ADMIN_EMAILS } from '../utils/constants'
 import { detectCurrency } from '../utils/currency'
+import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans'
 
 const SubscriptionContext = createContext()
 
@@ -22,20 +23,30 @@ function billingError(data, status, fallback) {
 // (ProjectContext, IconLibrary) and the pricing copy (Plans.jsx). Saving is no
 // longer fully Pro-gated: a free account gets a real allowance, and Pro lifts
 // the cap. Change the numbers here and every surface follows.
-export const FREE_SAVE_LIMITS = { projects: 3, customIcons: 8 }
+// Both tables live in src/config/plans.js — plain data, outside this file,
+// because a constant exported alongside a component breaks fast refresh
+// (react-refresh/only-export-components). Re-exported here so the many existing
+// `from '../contexts/SubscriptionContext'` imports keep working.
+export { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans'
 
 const FREE_PLAN = {
   id: 'free', label: 'Free',
   limits: {
-    'alt-text': 40, 'prompts-ai': 40, 'ai-default': 40,
+    'alt-text': AI_LIMITS.free.daily, 'prompts-ai': AI_LIMITS.free.daily, 'ai-default': AI_LIMITS.free.daily,
     projects: FREE_SAVE_LIMITS.projects, 'custom-icons': FREE_SAVE_LIMITS.customIcons,
+  },
+  monthlyLimits: {
+    'alt-text': AI_LIMITS.free.monthly, 'prompts-ai': AI_LIMITS.free.monthly, 'ai-default': AI_LIMITS.free.monthly,
   },
 }
 const PRO_PLAN = {
   id: 'pro', label: 'Pro',
   limits: {
-    'alt-text': 1000, 'prompts-ai': 1000, 'ai-default': 1000,
+    'alt-text': AI_LIMITS.pro.daily, 'prompts-ai': AI_LIMITS.pro.daily, 'ai-default': AI_LIMITS.pro.daily,
     projects: Infinity, 'custom-icons': Infinity,
+  },
+  monthlyLimits: {
+    'alt-text': AI_LIMITS.pro.monthly, 'prompts-ai': AI_LIMITS.pro.monthly, 'ai-default': AI_LIMITS.pro.monthly,
   },
 }
 
