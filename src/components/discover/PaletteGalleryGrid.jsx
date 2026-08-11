@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { GALLERY_PALETTES, paletteBuilderUrl } from '../../data/paletteGallery'
+import { setGradientDraft, resetGradientDraft } from '../../utils/colorHandoff'
+import { useProject } from '../../contexts/ProjectContext'
 
 // Colorhunt-style palette gallery — shared by the Discover palettes view and
 // the Palette Builder's colour-gallery popup. Everything is local + static
@@ -40,6 +42,62 @@ function EyeGlyph() {
   )
 }
 
+function BuilderGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="13" r="2.5" />
+      <circle cx="8.5" cy="7.5" r="2.5" /><circle cx="6.5" cy="14" r="2.5" />
+      <path d="M12 22a10 10 0 1 1 0-20 8 8 0 0 1 0 16h-1.5a1.5 1.5 0 0 0 0 3 1.5 1.5 0 0 1 0 1z" />
+    </svg>
+  )
+}
+
+function ProjectGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 20h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-7.5L10 4H4a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1z" />
+    </svg>
+  )
+}
+
+function GradientGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 15 15 3M9 21 21 9" />
+    </svg>
+  )
+}
+
+function CssGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m9 17-5-5 5-5M15 7l5 5-5 5" />
+    </svg>
+  )
+}
+
+function HexGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+    </svg>
+  )
+}
+
+// The CSS a palette copies as. Named from the palette so the variables mean
+// something in the file they are pasted into, rather than --c1…--c5.
+function paletteCss(palette) {
+  const slug = palette.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'palette'
+  const lines = palette.colors.map((hex, i) => `  --${slug}-${(i + 1) * 100}: ${hex.toUpperCase()};`)
+  return `/* ${palette.name} — UIL4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
+}
+
 function CheckGlyph() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -54,6 +112,8 @@ function CheckGlyph() {
 // the import off (the builder reverts to the pre-import system).
 export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = GALLERY_PALETTES }) {
   const [likes, setLikes] = useState(loadLikes)
+  const navigate = useNavigate()
+  const { setPalette, canSaveProjects } = useProject()
 
   const toggleLike = useCallback((id) => {
     setLikes(prev => {
@@ -73,6 +133,44 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
     })
   }, [toast])
 
+  const copyText = useCallback((text, label) => {
+    navigator.clipboard.writeText(text)
+      .then(() => toast?.(label))
+      .catch(() => toast?.('Failed to copy'))
+  }, [toast])
+
+  // Stage the palette as the live gradient draft, then navigate. Mirrors
+  // openInGradient in PaletteBuilder — including the honest failure when a
+  // palette has no two distinct colours to gradient between, and the reset so a
+  // failed navigation never leaves a stale draft behind.
+  const openInGradient = useCallback((palette) => {
+    if (!setGradientDraft(palette.colors)) {
+      toast?.('A gradient needs two different colours')
+      return
+    }
+    try {
+      navigate('/color/gradient')
+    } catch {
+      resetGradientDraft()
+      toast?.('Couldn’t open the Gradient Generator — try again')
+    }
+  }, [navigate, toast])
+
+  // Write into the shared design the way the Palette Builder does, then send
+  // the user to Projects to name and keep it. Deliberately NOT a silent save:
+  // saveProject needs a name, and inventing one on the user's behalf is how a
+  // projects list fills up with things nobody chose.
+  const saveToProject = useCallback((palette) => {
+    if (!canSaveProjects) {
+      toast?.('Sign in to save palettes to a project')
+      navigate('/login')
+      return
+    }
+    setPalette({ colors: palette.colors, baseColors: palette.colors, base: palette.colors[0] })
+    toast?.(`${palette.name} loaded — name it to save`)
+    navigate('/projects')
+  }, [canSaveProjects, navigate, setPalette, toast])
+
   return (
     <div className="pgal-grid">
       {palettes.map(p => {
@@ -89,6 +187,10 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
               Inside the builder popup (onPick) the whole swatch is the select
               surface: clicking any stripe enables the palette (or, when it's
               already selected, toggles it back off) — no per-hex copy. */}
+          {/* Positioning context for the action layer below, so it anchors to
+              the bottom of the SWATCH rather than the bottom of the card —
+              anchored to the card it would sit over the name and like row. */}
+          <div className="pgal-shot">
           <div className="pgal-stripes" role="group" aria-label={`${p.name} palette`}>
             {p.colors.map(hex => (
               <button
@@ -105,6 +207,67 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
                 {!onPick && <span className="pgal-hex">{hex.replace('#', '')}</span>}
               </button>
             ))}
+          </div>
+
+          {/* Hover / focus actions. Discover only — inside the builder popup
+              (onPick) the whole card is already one select surface and a second
+              action layer would compete with it.
+
+              These are real buttons in the DOM at all times, not injected on
+              hover: the layer is revealed with CSS (opacity/visibility on
+              .pgal-card:hover and :focus-within), so keyboard users tab into
+              exactly the same actions a pointer reveals, and a screen reader
+              never meets a control that appears only under a mouse. Pro brand
+              systems are excluded — the builder owns that gate, and handing the
+              colours over here would route around it. */}
+          {!onPick && !p.pro && (
+            <div className="pgal-actions" role="group" aria-label={`${p.name} actions`}>
+              <Link
+                className="pgal-act"
+                to={paletteBuilderUrl(p.colors)}
+                title="Open in the Palette Builder"
+                aria-label={`Open ${p.name} in the Palette Builder`}
+              >
+                <BuilderGlyph /><span>Builder</span>
+              </Link>
+              <button
+                type="button"
+                className="pgal-act"
+                onClick={() => saveToProject(p)}
+                title="Save to a project"
+                aria-label={`Save ${p.name} to a project`}
+              >
+                <ProjectGlyph /><span>Project</span>
+              </button>
+              <button
+                type="button"
+                className="pgal-act"
+                onClick={() => openInGradient(p)}
+                title="Open in the Gradient Generator"
+                aria-label={`Open ${p.name} in the Gradient Generator`}
+              >
+                <GradientGlyph /><span>Gradient</span>
+              </button>
+              <button
+                type="button"
+                className="pgal-act"
+                onClick={() => copyText(paletteCss(p), `Copied ${p.name} as CSS`)}
+                title="Copy as CSS custom properties"
+                aria-label={`Copy ${p.name} as CSS custom properties`}
+              >
+                <CssGlyph /><span>CSS</span>
+              </button>
+              <button
+                type="button"
+                className="pgal-act"
+                onClick={() => copyText(p.colors.join(', ').toUpperCase(), `Copied ${p.colors.length} hex codes`)}
+                title="Copy every hex code"
+                aria-label={`Copy all ${p.colors.length} hex codes from ${p.name}`}
+              >
+                <HexGlyph /><span>Hex</span>
+              </button>
+            </div>
+          )}
           </div>
 
           <div className="pgal-foot">

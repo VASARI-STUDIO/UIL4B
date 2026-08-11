@@ -254,6 +254,47 @@ test('the handle colour tracks the slider, and a zeroed lens sits on the track c
   for (const key of ['h', 's', 'temp']) assert.equal(moved[key], centre[key])
 })
 
+/* ── the four tracks are ONE instrument ───────────────────────────────────────
+ * REGRESSION GUARD: the stops were memoised on the base palette alone, so
+ * pulling Hue to orange left the Saturation, Tone and Temperature bars painted
+ * in the blue that no longer existed anywhere on screen. Three of the four
+ * sliders were previewing a palette the user had already replaced. */
+
+test('THE BUG: moving one slider repaints the other three tracks', () => {
+  const rest = adjustTrackStops(BASE, ZERO)
+  const hueTurned = adjustTrackStops(BASE, { ...ZERO, h: 40 })
+  for (const key of ['s', 'b', 'temp']) {
+    const before = rest[key].stops.map(s => s.hex).join()
+    const after = hueTurned[key].stops.map(s => s.hex).join()
+    assert.notEqual(after, before, `the ${key} track follows the hue slider`)
+  }
+})
+
+test('…but a track NEVER moves under its own thumb', () => {
+  // This is the property the base-only memo was protecting, and it has to
+  // survive the fix: a track is not a function of its own slider, so the bar
+  // under an active pointer is stable for the whole drag. Without this,
+  // dragging Hue would repaint the hue bar beneath the thumb every frame.
+  for (const key of ['h', 's', 'b', 'temp']) {
+    const atRest = adjustTrackStops(BASE, ZERO)[key].stops.map(s => s.hex).join()
+    for (const value of [-80, -25, 25, 80]) {
+      const dragged = adjustTrackStops(BASE, { ...ZERO, [key]: value })[key].stops.map(s => s.hex).join()
+      assert.equal(dragged, atRest, `the ${key} track ignores its own value (${value})`)
+    }
+  }
+})
+
+test('the track ranges still match the sliders they are a picture of', () => {
+  // ADJUST_TRACK_RANGES and PaletteBuilder's ADJUST_FIELDS are two halves of one
+  // contract — a mismatch puts the gradient and the handle on different scales,
+  // which is invisible in review and obvious to a user.
+  const tracks = adjustTrackStops(BASE, ZERO)
+  assert.deepEqual([tracks.h.min, tracks.h.max], [-50, 50])
+  for (const key of ['s', 'b', 'temp']) {
+    assert.deepEqual([tracks[key].min, tracks[key].max], [-100, 100])
+  }
+})
+
 test('an out-of-range or junk slider value still lands on a real track colour', () => {
   const tracks = adjustTrackStops(BASE)
   const ends = [tracks.h.stops[0].hex.toUpperCase(), tracks.h.stops[ADJUST_TRACK_STOPS - 1].hex.toUpperCase()]
@@ -347,17 +388,39 @@ test('an unusable saved palette falls through to the tool default', () => {
   assert.equal(readSavedPalette({ colors: ['nonsense', '', null, 12] }), null)
 })
 
+test('MIGRATION: a board saved under the old ±180 hue range opens looking identical', () => {
+  // The hue slider narrowed from ±180 to ±50. A board saved at h:116 cannot be
+  // re-derived under the new bound, and the read path must NOT silently show a
+  // differently-coloured palette because of it. The re-derive-and-compare check
+  // in readSavedPalette handles this without a version flag: the stored lens no
+  // longer reproduces the stored colours, so those colours become the new base
+  // with the sliders at zero. The user sees exactly what they saved — and the
+  // seed swatch beside the hex field is now telling the truth about it.
+  const shown = applyAdjust(BASE, { ...ZERO, h: 116 })
+  const restored = readSavedPalette({ baseColors: BASE, colors: shown, globalAdjust: { h: 116 } })
+  assert.ok(same(restored.colors, shown), 'the saved appearance survives verbatim')
+  assert.deepEqual(restored.adjust, ZERO, 'and the lens starts clean rather than half-applied')
+  // A board saved INSIDE the new range still round-trips the old way: base
+  // restored as base, sliders restored as sliders, nothing baked in.
+  const inRange = applyAdjust(BASE, { ...ZERO, h: 40 })
+  const kept = readSavedPalette({ baseColors: BASE, colors: inRange, globalAdjust: { h: 40 } })
+  assert.ok(same(kept.colors, BASE), 'the base is still the base')
+  assert.equal(kept.adjust.h, 40)
+})
+
 test('a corrupt stored lens is clamped, never trusted raw', () => {
   assert.deepEqual(normaliseAdjust(null), ZERO)
   assert.deepEqual(normaliseAdjust('warm'), ZERO)
   assert.deepEqual(normaliseAdjust({ h: 9999, s: -9999, b: NaN, temp: '45' }),
-    { h: 180, s: -100, b: 0, temp: 45 })
-  // An out-of-range stored lens still round-trips without compounding.
+    { h: 50, s: -100, b: 0, temp: 45 })
+  // An out-of-range stored lens still round-trips without compounding: 9999
+  // clamps to the bound, and a board whose colours were derived AT the bound
+  // re-derives cleanly, so base and sliders are both restored as themselves.
   const restored = readSavedPalette({
-    baseColors: BASE, colors: applyAdjust(BASE, { ...ZERO, h: 180 }), globalAdjust: { h: 9999 },
+    baseColors: BASE, colors: applyAdjust(BASE, { ...ZERO, h: 50 }), globalAdjust: { h: 9999 },
   })
   assert.ok(same(restored.colors, BASE))
-  assert.equal(restored.adjust.h, 180)
+  assert.equal(restored.adjust.h, 50)
 })
 
 /* ── temperature: no direction flip between neighbouring hues ────────────── */

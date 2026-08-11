@@ -363,16 +363,19 @@ test.describe('SnapSlider · keyboard stepping', () => {
     const hue = page.getByRole('slider', { name: 'Hue adjustment' })
     await hue.focus()
 
+    // The hue track is ±50, not ±180 — past about a fifth of the wheel the
+    // board stops being a variation of the chosen colour (founder decision,
+    // batch 4). A tenth of that range is 10°.
     await page.keyboard.press('End')
-    await expect(hue).toHaveValue('180')
+    await expect(hue).toHaveValue('50')
     await page.keyboard.press('Home')
-    await expect(hue).toHaveValue('-180')
+    await expect(hue).toHaveValue('-50')
     await page.keyboard.press('PageUp')
-    await expect(hue, 'a tenth of the range').toHaveValue('-144')
+    await expect(hue, 'a tenth of the range').toHaveValue('-40')
     await page.keyboard.press('PageDown')
-    await expect(hue).toHaveValue('-180')
+    await expect(hue).toHaveValue('-50')
     await page.keyboard.press('ArrowLeft')
-    await expect(hue, 'clamped at the end of the track').toHaveValue('-180')
+    await expect(hue, 'clamped at the end of the track').toHaveValue('-50')
   })
 
   test('a POINTER drag still snaps — magnetism is a pointer affordance', async ({ page }) => {
@@ -399,12 +402,24 @@ test.describe('SnapSlider · keyboard stepping', () => {
     // Just off the 0 snap → pulled onto it.
     await dragTo(1)
     await expect(hue, 'a drag near a snap is still magnetic').toHaveValue('0')
-    // Just off the 90 snap → pulled onto it.
-    await dragTo(89)
-    await expect(hue).toHaveValue('90')
+    // Just off the ±25 snap → pulled onto it. (Was 89 → 90, before the track
+    // narrowed from ±180 to ±50.)
+    await dragTo(24)
+    await expect(hue).toHaveValue('25')
     // Well clear of every snap → left exactly where it was dropped.
     await dragTo(40)
     await expect(hue, 'a drag between snaps stays free').toHaveValue('40')
+
+    // THE CENTRE DETENT (batch 4): zero reaches further than its neighbours, so
+    // returning to "this palette, unlensed" no longer needs pixel precision.
+    // Stated as the asymmetry itself — the SAME three-degree offset is still
+    // being pulled at zero (radius 8) and already free at ±25 (radius 6). That
+    // difference is the feature, and it is only expressible because a snap
+    // point may now carry its own radius (see snapPoints in utils/sliderKeys.js).
+    await dragTo(3)
+    await expect(hue, 'three out of zero is pulled toward it').toHaveValue('2')
+    await dragTo(28)
+    await expect(hue, 'the same offset from ±25 is left alone').toHaveValue('28')
 
     // The pull FADES OUT across the radius rather than switching off at it.
     // This assertion changed in batch 3: it used to read `dragTo(6) → 0`, i.e.
@@ -423,7 +438,7 @@ test.describe('SnapSlider · keyboard stepping', () => {
     // pair is the whole fix: one input modality is magnetic, the other exact.
     await hue.focus()
     await page.keyboard.press('Home')
-    await expect(hue).toHaveValue('-180')
+    await expect(hue).toHaveValue('-50')
     for (let i = 0; i < 5; i++) await page.keyboard.press('PageUp')
     await expect(hue).toHaveValue('0')
     await page.keyboard.press('ArrowRight')

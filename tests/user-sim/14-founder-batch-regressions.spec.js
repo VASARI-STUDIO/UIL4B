@@ -45,13 +45,53 @@ test.describe('Palette Builder · global-adjust slider handles', () => {
     // see 16-founder-batch-2.spec.js — but a drag is what this test is about.)
     await hue.evaluate((el) => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
-      setter.call(el, '140')
+      setter.call(el, '40')
       el.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    await expect(hue).toHaveValue('140')
+    // 40°, not 140° — the hue track is ±50 as of founder batch 4.
+    await expect(hue).toHaveValue('40')
     const moved = await read()
     expect(moved.handle, 'the lens follows the handle along the track').not.toBe(atZero.handle)
+    // Still true after batch 4 made the OTHER three tracks follow this slider:
+    // no track is ever a function of its own value, so the bar under an active
+    // thumb is stable for the whole drag. That is the property that lets the
+    // hue bar be repainted for the saturation/tone/temperature sliders without
+    // it moving beneath the pointer holding it.
     expect(moved.track, 'the track itself does not rebuild while dragging').toBe(atZero.track)
+  })
+
+  test('BATCH 4: dragging one slider repaints the other three tracks', async ({ page }) => {
+    watch(page, 'designer pulling hue and reading the other three bars')
+    await go(page, '/color/palette')
+
+    const hue = page.getByRole('slider', { name: 'Hue adjustment' })
+    await expect(hue).toBeVisible()
+
+    // The founder's report: "if i change the hue slider to an orange colour the
+    // other sliders are still blue". The tracks were memoised on the base
+    // palette alone, so three of the four bars previewed a palette that had
+    // already been replaced on screen.
+    const trackOf = (id) => page.locator(`#${id}`).evaluate(
+      (el) => el.closest('.snapv').style.getPropertyValue('--snapv-track'))
+
+    const before = { s: await trackOf('plb-s'), b: await trackOf('plb-b'), temp: await trackOf('plb-temp') }
+
+    await hue.evaluate((el) => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+      setter.call(el, '45')
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await expect(hue).toHaveValue('45')
+
+    // The stops are rebuilt from a deferred value, so give React the frame it
+    // is explicitly allowed to take before reading (see the deferredAdjust note
+    // in PaletteBuilder.jsx — 36 CAM16 round trips have no business running on
+    // every frame of a scrub).
+    for (const key of ['s', 'b', 'temp']) {
+      await expect
+        .poll(() => trackOf(`plb-${key}`), `the ${key} track follows the hue slider`)
+        .not.toBe(before[key])
+    }
   })
 
   test('the handle stays visible against the lightest and darkest track colours, in both themes', async ({ page }) => {

@@ -22,6 +22,9 @@
   <url><loc>https://www.uil4b.com/file-converter</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
   <url><loc>https://www.uil4b.com/ratio</loc><priority>0.8</priority><changefreq>monthly</changefreq><lastmod>2026-07-28</lastmod></url>
 
+  <!-- Live AI tools -->
+  <url><loc>https://www.uil4b.com/alt-text</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-08-11</lastmod></url>
+
   <!-- Discover -->
   <url><loc>https://www.uil4b.com/discover/palettes</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-05</lastmod></url>
   <url><loc>https://www.uil4b.com/discover/gradients</loc><priority>0.7</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>

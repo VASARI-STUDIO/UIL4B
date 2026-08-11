@@ -52,6 +52,11 @@ const FontGallery = lazy(() => import('./FontGallery'))
 const FontMatcher = lazy(() => import('./FontMatcher'))
 const TypeScale = lazy(() => import('./TypeScale'))
 
+// AI — Alt Text is the one AI tool that is finished. It gates itself behind
+// AuthGate and meters against the shared daily/monthly allowance in
+// utils/usageTracker, so mounting it here adds no new entitlement surface.
+const AltTextGenerator = lazy(() => import('./AltTextGenerator'))
+
 // Route → the component that is actually built. A Create route absent from this
 // map still renders the 🤫 state even if its group is flagged live — a safe
 // fallback that can never mount a half-finished screen.
@@ -68,6 +73,7 @@ const LIVE_TOOLS = {
   '/fontgallery': FontGallery,
   '/fontpairs': FontMatcher,
   '/typescale': TypeScale,
+  '/alt-text': AltTextGenerator,
 }
 
 // Match toolTree's own path handling (lowercase, strip query/hash, drop trailing
