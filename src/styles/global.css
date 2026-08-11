@@ -5109,7 +5109,15 @@ html.lenis,html.lenis body{height:auto}
 
 /* Hero */
 .home-workspace-intro{position:relative;isolation:isolate}
-.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:720px;margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-9)) 24px var(--s-8)}
+/* The hero owns the first screen. It was a flat 720px, which on any laptop
+   taller than that left the workbench sitting in the opening viewport — the
+   founder's "the mini tools are visible before scrolling". A fixed pixel height
+   cannot answer that, because the fold is a property of the VIEWPORT.
+   `100svh` is: the small-viewport unit, so a mobile browser's collapsing URL bar
+   cannot make the hero taller than the screen it is measured against. Clamped at
+   980px so an ultra-tall monitor does not stretch the copy into a void, and
+   floored by the content itself via min-height on a flow element. */
+.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:min(100svh,980px);margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-9)) 24px var(--s-8)}
 .home-hero-core{position:relative;z-index:2;max-width:790px;margin:70px auto 0}
 /* ── Hero satellites: the eleven tools that are live today ──────────────────
    Source order is the reading order and never changes. On wide screens the
@@ -5203,27 +5211,33 @@ html.lenis,html.lenis body{height:auto}
 .hw-head .home-h2{font-size:var(--fs-h2)}
 .hw-head .home-lede{margin-inline:auto;font-size:var(--fs-body)}
 .hw-shell{position:relative;max-width:920px;margin:0 auto;scroll-margin-top:calc(var(--nav-clear) + var(--s-2));border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1);box-shadow:var(--shadow-m);overflow:hidden}
-/* The "arrival" beat: a single decorative pulse as the last proxy lands. It is
-   a ::after on an already-visible shell, so it can never gate the workbench. */
-.hw-shell::after{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;opacity:0}
-.home[data-home-converge="converged"] .hw-shell{animation:hw-shell-arrive var(--dur-6) var(--ease-entrance) 1}
-.home[data-home-converge="converged"] .hw-shell::after{animation:hw-arrive var(--dur-6) var(--ease-entrance) 1}
-.home[data-home-converge="converged"] .hw-splash{animation:hw-splash var(--dur-6) var(--ease-entrance) 1}
+/* App chrome — the furniture that makes the shell read as a window into the
+   product rather than a marketing widget. Deliberately quiet: it is scenery, so
+   it sits a step back from the panel it frames and never competes with the
+   controls inside. The dots are a window affordance, not a macOS pastiche —
+   they take the border colour, so they read as "this is an application" without
+   impersonating one. */
+.hw-chrome{display:flex;align-items:center;gap:12px;padding:0 14px;height:38px;border-bottom:1px solid var(--border);background:var(--s1)}
+.hw-chrome-dots{display:inline-flex;gap:5px;flex-shrink:0}
+.hw-chrome-dots i{width:8px;height:8px;border-radius:50%;background:var(--border);border:1px solid var(--bh)}
+.hw-chrome-crumb{display:inline-flex;align-items:center;gap:6px;min-width:0;font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hw-chrome-app{font-weight:700;color:var(--t2)}
+.hw-chrome-sep{opacity:.5}
+.hw-chrome-here{color:var(--hue,var(--accent));font-weight:600}
+.hw-chrome-live{display:inline-flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.hw-chrome-live i{width:6px;height:6px;border-radius:50%;background:var(--hue,var(--accent))}
+@media(max-width:600px){.hw-chrome-crumb .hw-chrome-route,.hw-chrome-crumb .hw-chrome-sep:first-of-type{display:none}.hw-chrome-live{font-size:0;gap:0}}
+
+/* The "arrival" beat. The ring-and-crosshair splash that used to fire here is
+   GONE — it read as a second, unrelated animation starting exactly as the first
+   one finished, which is what the founder meant by "the splash animation isn't
+   what I'm after". What is left is one quiet settle of the shell itself: the
+   panel takes focus because it stops moving, not because something flashes at
+   it. Still purely decorative on an already-visible, already-usable shell. */
+.home[data-home-converge="converged"] .hw-shell{animation:hw-shell-arrive var(--dur-5) var(--ease-entrance) 1}
 @keyframes hw-shell-arrive{
-  from{opacity:.72;transform:translateY(14px) scale(.985)}
-  to{opacity:1;transform:none}
-}
-@keyframes hw-arrive{
-  from{opacity:1;box-shadow:0 0 0 0 color-mix(in srgb,var(--hue,var(--accent)) 55%,transparent)}
-  to{opacity:0;box-shadow:0 0 0 22px color-mix(in srgb,var(--hue,var(--accent)) 0%,transparent)}
-}
-.hw-splash{position:absolute;z-index:4;left:50%;top:52px;width:30px;height:30px;border:1px solid var(--hue,var(--accent));border-radius:50%;opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.2)}
-.hw-splash::before,.hw-splash::after{content:"";position:absolute;inset:50% auto auto 50%;width:46px;height:1px;background:var(--hue,var(--accent));transform:translate(-50%,-50%)}
-.hw-splash::after{transform:translate(-50%,-50%) rotate(90deg)}
-@keyframes hw-splash{
-  0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
-  28%{opacity:.7}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}
+  from{transform:translateY(8px) scale(.992)}
+  to{transform:none}
 }
 
 /* Tabs — the active one lifts onto the panel surface, so selection is carried
@@ -5495,9 +5509,7 @@ html.lenis,html.lenis body{height:auto}
 :where(html[data-reduced-motion="true"]) .hsat-item{position:static;transform:none!important}
 :where(html[data-reduced-motion="true"]) .hsat-link{height:100%;transform:none!important;backdrop-filter:none}
 :where(html[data-reduced-motion="true"]) .hsat-proxy-layer{display:none}
-:where(html[data-reduced-motion="true"]) .hw-shell,
-:where(html[data-reduced-motion="true"]) .hw-shell::after,
-:where(html[data-reduced-motion="true"]) .hw-splash{animation:none!important}
+:where(html[data-reduced-motion="true"]) .hw-shell{animation:none!important}
 @media(prefers-reduced-motion:reduce){
   :where(html:not([data-reduced-motion="false"])) .home-hero{min-height:auto}
   :where(html:not([data-reduced-motion="false"])) .home-hero-core{margin-top:0}
@@ -5506,9 +5518,7 @@ html.lenis,html.lenis body{height:auto}
   :where(html:not([data-reduced-motion="false"])) .hsat-item{position:static;transform:none!important}
   :where(html:not([data-reduced-motion="false"])) .hsat-link{height:100%;transform:none!important;backdrop-filter:none}
   :where(html:not([data-reduced-motion="false"])) .hsat-proxy-layer{display:none}
-  :where(html:not([data-reduced-motion="false"])) .hw-shell,
-  :where(html:not([data-reduced-motion="false"])) .hw-shell::after,
-  :where(html:not([data-reduced-motion="false"])) .hw-splash{animation:none!important}
+  :where(html:not([data-reduced-motion="false"])) .hw-shell{animation:none!important}
 }
 @media(max-width:768px){
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
