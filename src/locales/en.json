@@ -534,6 +534,7 @@
     "submitFeedback": "Submit Feedback",
     "enterFeedback": "Please enter your feedback",
     "thankYou": "Legend! Thanks for the feedback.",
+    "submitError": "Something went wrong sending that. Please check your connection and try again.",
     "sendViaEmail": "Send via Email",
     "openGitHubIssue": "Open GitHub Issue"
   },
