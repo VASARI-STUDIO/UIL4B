@@ -1,15 +1,26 @@
 import { useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
+import { AI_LIMITS, FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { refreshPrices, useProPrice } from '../hooks/usePrices'
 import SystemCTA from '../components/SystemCTA'
 
+// The One-off ("lifetime") tier is GONE from this page. It was a third tab that
+// could not be bought — the checkout stayed disabled pending a live Stripe
+// price — so a third of the page's decision surface was a dead end, and the
+// yearly/monthly choice was buried beside it. Existing lifetime entitlements
+// are still honoured (see planForUser in api/_lib/plans.js); the tier simply
+// stopped being advertised until it can actually be sold.
 const BILLING_OPTIONS = [
-  { id: 'monthly', label: 'Monthly' },
   { id: 'yearly', label: 'Yearly' },
-  { id: 'lifetime', label: 'One-off' },
+  { id: 'monthly', label: 'Monthly' },
 ]
+
+// Every AI figure on this page comes from AI_LIMITS, which is unit-tested
+// against api/_lib/plans.js — the server, and the only number that is real.
+// Typing them in by hand is how this page came to advertise 1,000 AI actions a
+// day against a free provider tier that meters per project, not per user.
+const AI = AI_LIMITS
 
 function Check() {
   return (
@@ -29,19 +40,27 @@ function TierIcon({ pro = false }) {
 const FAQ = [
   {
     q: 'Do I need a card to use Free?',
-    a: 'No. Free has no card requirement or trial clock. It includes the core toolkit, 40 AI actions per day, and a practical save allowance.',
+    a: `No. Free has no card requirement and no trial clock. It includes the complete core toolkit — every colour, type, icon and image tool — plus ${AI.free.daily} AI generations a day (${AI.free.monthly} a month) and room for ${FREE_SAVE_LIMITS.projects} saved projects.`,
   },
   {
-    q: 'What changes on Pro?',
-    a: 'Pro raises AI actions from 40 to 1,000 per day, removes the project and custom-icon save caps, unlocks advanced colour controls, and adds full design JSON export.',
+    q: 'Why are the AI limits not higher?',
+    a: `Because we would rather quote a number that always works than a big one that fails in month two. AI generation currently runs on free provider tiers, which are metered across the whole site rather than per person — so the honest per-user allowance is small. Pro raises it from ${AI.free.daily} to ${AI.pro.daily} a day and from ${AI.free.monthly} to ${AI.pro.monthly} a month. When paid capacity is funded, these go up, and you keep whatever plan you are on.`,
+  },
+  {
+    q: 'Does Pro use a better AI model?',
+    a: 'No, and we will not claim otherwise. Free and Pro run the same model today. Pro buys capacity, the advanced colour controls, and watermark-free export — not different output from the same prompt.',
+  },
+  {
+    q: 'What counts as an AI generation?',
+    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, exporting CSS, and everything else in the toolkit are unmetered — they run in your browser and cost us nothing.',
   },
   {
     q: 'How does yearly billing work?',
-    a: 'The yearly subscription starts with a 7-day free trial. The live saving is calculated from the current monthly and yearly Stripe prices.',
+    a: 'Yearly starts with a 7-day free trial and is charged once a year. The saving shown is calculated live from the current monthly and yearly Stripe prices, not from a number typed onto this page.',
   },
   {
-    q: 'What is the One-off option?',
-    a: 'One payment grants durable Pro access to this account. Checkout remains disabled until an active one-off Stripe price is available for your currency.',
+    q: 'What happens if I cancel?',
+    a: 'You keep Pro until the end of the period you have already paid for, then the account moves to Free. Nothing you have saved is deleted — if you are over the Free project limit, existing projects stay readable and you simply cannot add more until you are under it again.',
   },
 ]
 
@@ -55,9 +74,9 @@ export default function Plans() {
   const price = useProPrice()
 
   const selectTab = (index) => {
-    const next = BILLING_OPTIONS[(index + BILLING_OPTIONS.length) % BILLING_OPTIONS.length]
-    setBilling(next.id)
-    tabRefs.current[(index + BILLING_OPTIONS.length) % BILLING_OPTIONS.length]?.focus()
+    const wrapped = (index + BILLING_OPTIONS.length) % BILLING_OPTIONS.length
+    setBilling(BILLING_OPTIONS[wrapped].id)
+    tabRefs.current[wrapped]?.focus()
   }
   const onTabKeyDown = (event, index) => {
     if (event.key === 'ArrowRight') { event.preventDefault(); selectTab(index + 1) }
@@ -66,35 +85,30 @@ export default function Plans() {
     else if (event.key === 'End') { event.preventDefault(); selectTab(BILLING_OPTIONS.length - 1) }
   }
 
-  const amount = billing === 'monthly' ? price.monthly
-    : billing === 'yearly' ? price.yearlyTotal
-      : price.lifetime
-  const cadence = billing === 'monthly' ? 'per month'
-    : billing === 'yearly' ? 'per year'
-      : 'one payment'
+  const amount = billing === 'monthly' ? price.monthly : price.yearlyTotal
+  const cadence = billing === 'monthly' ? 'per month' : 'per year'
   const checkoutHref = `/checkout?plan=${billing}`
   const signInFrom = `${location.pathname}${location.search || ''}`
   const proTo = user ? checkoutHref : '/login'
   const proState = user ? undefined : { from: checkoutHref, returnTo: signInFrom }
-  // Only claim a tab is unavailable once the price service has actually
-  // answered — otherwise the first paint accuses the One-off tab of being
-  // disabled while the fetch is still in flight.
   const priceServiceDown = price.loaded && !price.serviceAvailable
-  const lifetimeUnavailable = billing === 'lifetime' && price.loaded && !price.availability.lifetime
   const priceState = !price.loaded ? 'Checking live price…'
     : priceServiceDown ? (amount
       ? `Live pricing is unreachable · showing the canonical ${price.currencyLabel} amount`
       : 'Live pricing is unreachable · no price can be shown right now')
       : price.source[billing] === 'live' ? `${price.currencyLabel} live price`
-        : billing === 'lifetime' ? `${price.currencyLabel} canonical price · checkout not active`
-          : `${price.currencyLabel} guide price · confirmed at checkout`
+        : `${price.currencyLabel} guide price · confirmed at checkout`
 
   return (
     <div className="sec plans-page">
       <div className="sec-h plans-hero">
         <div className="sec-h-eyebrow">Plans</div>
-        <h1>More room when your <em>workflow grows</em>.</h1>
-        <p>Start with the complete core toolkit. Choose a subscription or one-off Pro access when you need higher limits and advanced handoff controls.</p>
+        <h1>The whole toolkit is <em>free</em>. Pro adds room.</h1>
+        <p>
+          Every colour, type, icon and image tool runs in your browser without an account —
+          and without a limit, because it costs us nothing to run. Pro is for when you want
+          more AI capacity, deeper colour control and clean handoff.
+        </p>
       </div>
 
       {isPro && (
@@ -133,15 +147,15 @@ export default function Plans() {
             <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon /></span><div className="sub-tier-name">Free</div></div>
             <div className="sub-tier-price"><span className="sub-tier-amount">$0</span><span className="sub-tier-per">forever</span></div>
           </div>
-          <p className="plans-card-intro">A capable everyday workspace with clear, predictable limits.</p>
+          <p className="plans-card-intro">The complete toolkit, with limits only where something costs money to run.</p>
           <ul className="sub-tier-list">
-            <li><Check /> 40 AI actions each day</li>
-            <li><Check /> Save {FREE_SAVE_LIMITS.projects} projects and {FREE_SAVE_LIMITS.customIcons} custom icons</li>
-            <li><Check /> Core colour, type, icon and image tools</li>
-            <li><Check /> Standard CSS and palette exports</li>
+            <li><Check /> Every colour, type, icon and image tool</li>
+            <li><Check /> Unlimited palettes, scales, gradients and exports</li>
+            <li><Check /> {AI.free.daily} AI generations a day · {AI.free.monthly} a month</li>
+            <li><Check /> {FREE_SAVE_LIMITS.projects} saved projects and {FREE_SAVE_LIMITS.customIcons} custom icons</li>
           </ul>
           {user
-            ? <button className="btn sub-tier-btn" disabled>{isPro ? 'Included with Pro' : 'Current plan'}</button>
+            ? <button className="btn sub-tier-btn" disabled>{isPro ? 'Included with Pro' : 'Your current plan'}</button>
             : <Link className="btn sub-tier-btn" to="/login">Start on Free</Link>}
           <div className="sub-tier-foot">No card required</div>
         </article>
@@ -164,9 +178,6 @@ export default function Plans() {
             {billing === 'yearly' && price.loaded && price.yearlyPerMonth && (
               <div className="plans-price-detail">{price.yearlyPerMonth}/month · 7-day free trial</div>
             )}
-            {billing === 'lifetime' && (
-              <div className="plans-price-detail">Durable Pro access for this account · no subscription</div>
-            )}
             {priceServiceDown && (
               <button type="button" className="btn btn-s plans-price-retry" onClick={() => refreshPrices()}>
                 Retry live pricing
@@ -174,37 +185,33 @@ export default function Plans() {
             )}
           </div>
 
-          <p className="plans-card-intro plans-pro-intro">Everything in Free, plus the daily capacity, colour depth and handoff exports a full system build needs.</p>
+          <p className="plans-card-intro plans-pro-intro">Everything in Free, plus:</p>
 
-          <div className="plans-outcomes" aria-label="Verified Pro outcomes">
-            <section className="plans-outcome-group">
-              <h2>More capacity</h2>
-              <div className="plans-outcome-metrics">
-                <div><strong>1,000</strong><span>AI actions per day, up from 40 on Free</span></div>
-                <div><strong>Unlimited</strong><span>saved projects and custom icons, up from {FREE_SAVE_LIMITS.projects} and {FREE_SAVE_LIMITS.customIcons} on Free</span></div>
-              </div>
-            </section>
-            <section className="plans-outcome-group">
-              <h2>Deeper colour control</h2>
-              <p>Advanced harmonies, HCT editing, expanded palettes and gated colour-system controls.</p>
-            </section>
-            <section className="plans-outcome-group">
-              <h2>Cleaner handoff</h2>
-              <p>Full design JSON export and watermark-free palette export where that Pro export is supported.</p>
-            </section>
-          </div>
+          <ul className="sub-tier-list">
+            <li><Check /> <strong>{AI.pro.daily} AI generations a day</strong> · {AI.pro.monthly} a month</li>
+            <li><Check /> <strong>Unlimited</strong> saved projects and custom icons</li>
+            <li><Check /> Advanced harmonies, HCT editing and expanded palettes</li>
+            <li><Check /> Watermark-free export and full design JSON</li>
+          </ul>
 
+          {/* No amount means no offer. The CTA used to stay live and inviting
+              whenever `price.loaded` was true, even if the price itself came
+              back null — so the page could read "Unavailable · per year" above
+              a confident "Start 7-day free trial". Asking for a card without
+              being able to name the amount is the one thing a pricing page must
+              never do, so the button states the actual situation instead. */}
           {isPro ? (
             <Link className="btn sub-tier-btn" to="/settings" state={{ section: 'support' }}>View account details</Link>
-          ) : lifetimeUnavailable ? (
-            <button
-              type="button"
-              className="btn btn-accent sub-tier-btn"
-              aria-disabled="true"
-              aria-describedby="lifetime-unavailable"
-            >
-              One-off not available yet
-            </button>
+          ) : !amount && price.loaded ? (
+            <>
+              <button type="button" className="btn sub-tier-btn" aria-disabled="true" aria-describedby="plans-noprice">
+                Pricing unavailable right now
+              </button>
+              <p id="plans-noprice" className="plans-unavailable-note">
+                We can’t reach Stripe to confirm the {price.currencyLabel} price, so no checkout will be started.
+                Everything on Free keeps working — try again in a moment.
+              </p>
+            </>
           ) : (
             <Link
               className="btn btn-accent sub-tier-btn"
@@ -213,22 +220,33 @@ export default function Plans() {
               aria-disabled={subLoading || !price.loaded}
               onClick={(event) => { if (subLoading || !price.loaded) event.preventDefault() }}
             >
-              {billing === 'yearly' ? 'Start 7-day free trial' : billing === 'lifetime' ? 'Buy Pro once' : 'Choose monthly Pro'}
+              {billing === 'yearly' ? 'Start 7-day free trial' : 'Choose monthly Pro'}
             </Link>
           )}
-          {lifetimeUnavailable && (
-            <p id="lifetime-unavailable" className="plans-unavailable-note">No payment will be started until the live one-off price is active for {price.currencyLabel}. Monthly and Yearly are unaffected.</p>
-          )}
-          {!lifetimeUnavailable && <div className="sub-tier-foot">Secure checkout by Stripe</div>}
+          {!(price.loaded && !amount) && <div className="sub-tier-foot">Secure checkout by Stripe · cancel any time</div>}
         </article>
       </div>
+
+      {/* Said plainly, on the page, rather than discovered at a 429. Capacity
+          that is shared is a fact about the product, and a user who reads it
+          here is not surprised by it later. See growth-persuasion.md. */}
+      <p className="plans-honesty" role="note">
+        <strong>About the AI limits:</strong> AI generation currently runs on free provider
+        tiers, which are metered across the whole site rather than per person. We quote
+        allowances we can actually honour instead of large ones we cannot. Everything else in
+        UIL4B runs in your browser and is unmetered on both plans.
+      </p>
 
       <div className="plans-compare-wrap">
         <table className="plans-compare-table">
           <caption className="sr-only">Free and Pro verified limits and capabilities</caption>
           <thead><tr><th scope="col">Capability</th><th scope="col">Free</th><th scope="col" className="pct-pro">Pro</th></tr></thead>
           <tbody>
-            <tr><td>AI actions per day</td><td>40</td><td className="pct-pro">1,000</td></tr>
+            <tr><td>Colour, type, icon and image tools</td><td>All of them</td><td className="pct-pro">All of them</td></tr>
+            <tr><td>Palettes, scales and exports</td><td>Unlimited</td><td className="pct-pro">Unlimited</td></tr>
+            <tr><td>AI generations per day</td><td>{AI.free.daily}</td><td className="pct-pro">{AI.pro.daily}</td></tr>
+            <tr><td>AI generations per month</td><td>{AI.free.monthly}</td><td className="pct-pro">{AI.pro.monthly}</td></tr>
+            <tr><td>AI model</td><td>Same on both plans</td><td className="pct-pro">Same on both plans</td></tr>
             <tr><td>Saved projects</td><td>{FREE_SAVE_LIMITS.projects}</td><td className="pct-pro">Unlimited</td></tr>
             <tr><td>Custom icons</td><td>{FREE_SAVE_LIMITS.customIcons}</td><td className="pct-pro">Unlimited</td></tr>
             <tr><td>Advanced colour controls</td><td>Core controls</td><td className="pct-pro">Unlocked</td></tr>
@@ -240,8 +258,8 @@ export default function Plans() {
 
       <div className="plans-trust">
         <span><Check /> Free needs no card</span>
-        <span><Check /> Subscriptions can be cancelled</span>
-        <span><Check /> One-off is not a subscription</span>
+        <span><Check /> Cancel any time, keep the period you paid for</span>
+        <span><Check /> Nothing you saved is ever deleted</span>
       </div>
 
       <div className="plans-faq">
@@ -260,7 +278,7 @@ export default function Plans() {
       <SystemCTA
         eyebrow="Start on Free"
         title="Build first. Upgrade when your workflow asks for it."
-        description="The core toolkit is ready without a card. Pro adds capacity, advanced colour control and fuller handoff."
+        description="The complete toolkit is ready without a card. Pro adds capacity, advanced colour control and fuller handoff."
         primaryLabel={user ? 'Open the workspace' : 'Start building free'}
         primaryTo={user ? '/color' : '/login'}
         secondaryLabel="Explore colour tools"

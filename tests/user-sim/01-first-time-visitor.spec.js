@@ -56,7 +56,9 @@ test.describe('first-time visitor', () => {
       fb.note('improve', 'No pricing link reachable from the landing page — going direct.')
       await go(page, '/plans')
     }
-    await expect(page.getByRole('heading', { level: 1, name: /More room when your workflow grows/ })).toBeVisible()
+    // Headline rewritten in the plans overhaul: it now leads with what is free
+    // rather than with the upgrade, because the toolkit genuinely is.
+    await expect(page.getByRole('heading', { level: 1, name: /The whole toolkit is free/ })).toBeVisible()
     await expect(page.locator('.sub-tier', { hasText: 'Free' }).first()).toContainText('$0')
   })
 

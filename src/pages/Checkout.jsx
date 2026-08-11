@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, NavLink } from 'react-router-dom'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
 import { useAuth } from '../contexts/AuthContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
+import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
 import { useProPrice } from '../hooks/usePrices'
 
@@ -30,8 +30,11 @@ const PLANS = {
   },
 }
 
+// Derived, never typed. This list is read at the moment money changes hands,
+// which makes it the worst possible place for a figure the server will not
+// honour — it advertised 1,000 AI actions/day against a limit of 30.
 const FEATURES = [
-  '1,000 AI actions per day',
+  `${AI_LIMITS.pro.daily} AI generations a day · ${AI_LIMITS.pro.monthly} a month`,
   'Unlimited project and custom-icon saves',
   'Advanced colour controls',
   'Full design JSON export',
@@ -93,7 +96,7 @@ export default function Checkout() {
           <div className="card checkout-return-card">
             <div className="checkout-error-icon" aria-hidden="true">!</div>
             <h2>Invalid checkout selection</h2>
-            <p>Choose Monthly, Yearly or One-off from Plans. No payment session was created.</p>
+            <p>Choose Monthly or Yearly from Plans. No payment session was created.</p>
             <NavLink to="/plans" className="btn btn-accent">Back to Plans</NavLink>
           </div>
         </div>
