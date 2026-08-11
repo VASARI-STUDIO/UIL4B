@@ -156,7 +156,7 @@ export default function Plans() {
           </ul>
           {user
             ? <button className="btn sub-tier-btn" disabled>{isPro ? 'Included with Pro' : 'Your current plan'}</button>
-            : <Link className="btn sub-tier-btn" to="/login">Start on Free</Link>}
+            : <Link className="btn sub-tier-btn" to="/login?signup=1">Start on Free</Link>}
           <div className="sub-tier-foot">No card required</div>
         </article>
 
