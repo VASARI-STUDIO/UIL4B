@@ -1223,6 +1223,11 @@ export default function Admin({ toast }) {
   // Cross-user aggregate (server-read). null = loading, object = loaded.
   const [aggregate, setAggregate] = useState(null)
   const [aggregateLoaded, setAggregateLoaded] = useState(false)
+  // '' = fine. Non-empty = the read FAILED and any number shown would be a lie.
+  const [aggregateError, setAggregateError] = useState('')
+  // When the figures on screen were actually fetched. A dashboard with no
+  // timestamp cannot be distinguished from a dashboard that stopped updating.
+  const [refreshedAt, setRefreshedAt] = useState(null)
   const [confirmColourReset, setConfirmColourReset] = useState(false)
   const [confirmPageReset, setConfirmPageReset] = useState(false)
   const [resettingPages, setResettingPages] = useState(false)
@@ -1235,9 +1240,19 @@ export default function Admin({ toast }) {
     // Cross-user aggregate from Firestore (safe-empty on failure). Non-blocking
     // relative to the localStorage data above, which renders immediately.
     setAggregateLoaded(false)
+    setAggregateError('')
+    // A FAILED READ IS NOT ZERO. This used to swallow the error and substitute
+    // an empty result, so a permissions failure, an offline admin or a bad
+    // service account all rendered as "0 views" — visually identical to a site
+    // nobody visited. On the one page whose entire job is telling you what is
+    // true, the most expensive thing it can do is state a confident number it
+    // does not have. The error is kept and shown instead.
     getAggregateAnalytics(30)
-      .then(agg => setAggregate(agg))
-      .catch(() => setAggregate({ totalViews: 0, byPath: [], byTool: [], days: [] }))
+      .then(agg => { setAggregate(agg); setAggregateError('') })
+      .catch(err => {
+        setAggregate(null)
+        setAggregateError(String(err?.message || err || 'Unknown error').slice(0, 200))
+      })
       .finally(() => setAggregateLoaded(true))
     const localFeedback = getFeedback()
     let merged = [...localFeedback]
@@ -1264,6 +1279,7 @@ export default function Admin({ toast }) {
       const promptSnap = await getDocs(query(collection(db, 'community-prompts'), orderBy('createdAt', 'desc')))
       setPendingPrompts(promptSnap.docs.map(d => ({ ...d.data(), id: d.id })))
     } catch { /* firestore unavailable */ }
+    setRefreshedAt(Date.now())
   }, [])
 
   const [serverVerified, setServerVerified] = useState(false)
@@ -1520,6 +1536,14 @@ export default function Admin({ toast }) {
             ))}
           </div>
           <Link to="/style-guide" className="btn btn-s">Style Guide</Link>
+          {/* When these figures were actually fetched. Without it, a dashboard
+              that quietly stopped updating looks exactly like one that is
+              current — and this page is only useful if you can trust its age. */}
+          {refreshedAt && (
+            <span className="adm-cat-desc" style={{ marginRight: 8 }}>
+              Updated {new Date(refreshedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+          )}
           <button className="btn btn-s" onClick={refresh}>Refresh</button>
           <button className="btn btn-s" onClick={exportCSV}>Export CSV</button>
           {!isAdminUser && <button className="btn btn-s" onClick={() => { setUnlocked(false); toast('Admin access revoked') }} style={{ color: 'var(--err)' }}>Lock</button>}
@@ -1555,7 +1579,16 @@ export default function Admin({ toast }) {
           <div className="adm-cat">
             <div className="adm-cat-head">
               <div className="adm-cat-title"><span className="adm-section-bar" />Traffic &amp; Engagement</div>
-              <span className="adm-cat-desc">This device · tracked in this browser&apos;s localStorage</span>
+              {/* Loud, because these are the biggest numbers on the page and
+                  they are NOT site traffic — they are this admin's own browser.
+                  A quiet grey caption under a four-figure "Page views" is read
+                  as a footnote, not as the scope of the figure. */}
+              <span className="adm-cat-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ padding: '2px 7px', borderRadius: 999, background: 'color-mix(in srgb,var(--warn) 16%,transparent)', color: '#854d0e', fontWeight: 700, fontSize: 10, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                  This device only
+                </span>
+                not site-wide · from this browser&apos;s localStorage
+              </span>
             </div>
             <div className="adm-stats">
               <div className="adm-stat">
@@ -1647,6 +1680,21 @@ export default function Admin({ toast }) {
             </div>
             {!aggregateLoaded ? (
               <div className="adm-card"><div className="adm-empty">Loading aggregate analytics…</div></div>
+            ) : aggregateError ? (
+              // Distinct from "no data yet", deliberately. These two states used
+              // to be one, so a failed read looked like an empty site.
+              <div className="adm-card">
+                <div className="adm-card-body">
+                  <div className="adm-empty" style={{ color: 'var(--err)' }}>Aggregate analytics could not be read.</div>
+                  <p style={{ fontSize: 11, color: 'var(--t2)', textAlign: 'center', margin: '6px 0 0' }}>
+                    No number is shown because none was returned — this is <strong>not</strong> zero traffic.
+                  </p>
+                  <p className="mono" style={{ fontSize: 10.5, color: 'var(--t3)', textAlign: 'center', margin: '6px 0 0', wordBreak: 'break-word' }}>{aggregateError}</p>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+                    <button type="button" className="btn btn-s" onClick={refresh}>Retry</button>
+                  </div>
+                </div>
+              </div>
             ) : !aggregate || (aggregate.totalViews === 0 && aggregate.byPath.length === 0 && aggregate.byTool.length === 0) ? (
               <div className="adm-card">
                 <div className="adm-card-body">
