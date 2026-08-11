@@ -396,7 +396,13 @@ export default function Settings({ toast }) {
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
-  const [active, setActive] = useState('subscription')
+  // 'support' — the SECTION ID, not the label. This said 'subscription', which
+  // matched no section: harmless while every panel rendered at once and `active`
+  // only drove the nav highlight, so the page opened with nothing highlighted
+  // and nobody noticed. Turning the sections into panels turned it into a blank
+  // page. The id stays 'support' because Plans.jsx deep-links to it via
+  // `state={{ section: 'support' }}`.
+  const [active, setActive] = useState('support')
   const [confirmClear, setConfirmClear] = useState(false)
   const [billing, setBilling] = useState('yearly')
   const [checkingOut, setCheckingOut] = useState(false)
@@ -418,6 +424,7 @@ export default function Settings({ toast }) {
   // is centre-cropped + downscaled client-side to a few-KB data URL and saved
   // through the existing updateProfile path (Firestore doc, cached, synced).
   const avatarInputRef = useRef(null)
+  const tabRefs = useRef([])
   const providerPhoto = user?.providerData?.[0]?.photoURL || ''
   const hasCustomPhoto = !!userProfile?.photoURL && userProfile.photoURL !== providerPhoto
   const onAvatarFile = async (e) => {
@@ -439,13 +446,13 @@ export default function Settings({ toast }) {
     toast(providerPhoto ? 'Photo reset to your account image' : 'Profile photo removed')
   }
 
-  // Jump to a section when navigated from the profile quick-menu.
+  // Open on a section when navigated from the profile quick-menu. It no longer
+  // scrolls: sections are panels now, so selecting one IS showing it, and a
+  // smooth-scroll to an element that was already at the top of the content
+  // column just moved the page for no reason.
   useEffect(() => {
     const section = location.state?.section
-    if (!section) return
-    setActive(section)
-    const el = document.getElementById(`set-${section}`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (section) setActive(section)
   }, [location.state])
 
   const exportData = () => {
@@ -476,13 +483,27 @@ export default function Settings({ toast }) {
   }
 
   const sections = [
-    { id: 'support', label: 'Support' },
+    { id: 'support', label: 'Subscription' },
     { id: 'accessibility', label: t('settings.accessibility') || 'Accessibility' },
     { id: 'language', label: t('settings.language') || 'Language' },
     ...(user ? [{ id: 'account', label: t('settings.account') || 'Account' }] : []),
     { id: 'data', label: t('settings.dataManagement') || 'Data' },
     { id: 'privacy', label: t('settings.privacyLegal') || 'Privacy' },
   ]
+
+  // Roving tabindex: Arrow/Home/End move the active tab, matching the ARIA
+  // authoring pattern for a vertical tablist.
+  const selectTab = (index) => {
+    const next = sections[(index + sections.length) % sections.length]
+    setActive(next.id)
+    tabRefs.current[(index + sections.length) % sections.length]?.focus()
+  }
+  const onTabKeyDown = (event, index) => {
+    const keys = { ArrowDown: index + 1, ArrowRight: index + 1, ArrowUp: index - 1, ArrowLeft: index - 1, Home: 0, End: sections.length - 1 }
+    if (!(event.key in keys)) return
+    event.preventDefault()
+    selectTab(keys[event.key])
+  }
 
   return (
     <div className="sec">
@@ -493,15 +514,27 @@ export default function Settings({ toast }) {
       </div>
 
       <div className="settings-grid">
-        <nav className="settings-nav">
-          {sections.map(s => (
+        {/* A real tablist, not a scroll-jump list. Every section used to render
+            at once and the nav scrolled you to one — so "Settings" was a single
+            long page where changing your language meant scrolling past billing,
+            and the highlighted nav item could disagree with what was on screen.
+            Now one panel shows at a time and the nav says which.
+
+            Arrow keys move between tabs and only the active one is tabbable,
+            which is the ARIA pattern a tablist owes a keyboard user. */}
+        <nav className="settings-nav" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
+          {sections.map((s, i) => (
             <button
               key={s.id}
+              id={`settab-${s.id}`}
+              role="tab"
+              aria-selected={active === s.id}
+              aria-controls={`set-${s.id}`}
+              tabIndex={active === s.id ? 0 : -1}
+              ref={(node) => { tabRefs.current[i] = node }}
               className={`settings-nav-item${active === s.id ? ' active' : ''}`}
-              onClick={() => {
-                setActive(s.id)
-                document.getElementById(`set-${s.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
+              onClick={() => setActive(s.id)}
+              onKeyDown={(event) => onTabKeyDown(event, i)}
             >
               <NavIcon id={s.id} />
               <span>{s.label}</span>
@@ -512,7 +545,7 @@ export default function Settings({ toast }) {
         <div className="settings-content">
 
           {/* Subscription */}
-          <section id="set-support" className="settings-section">
+          <section id="set-support" className="settings-section" role="tabpanel" aria-labelledby="settab-support" hidden={active !== 'support'}>
             <div className="settings-section-h">
               <h2>Subscription</h2>
               <p>{isPro ? 'You\'re on UIL4B Pro — thank you for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
@@ -555,13 +588,20 @@ export default function Settings({ toast }) {
                 )}
               </div>
               </>
+            ) : !user ? (
+              // Signed out, this page used to render the ENTIRE pricing
+              // comparison — both tiers, a billing toggle and a "Start 7-day
+              // free trial" button — under a small "Sign in to upgrade" note.
+              // A trial CTA you cannot use, beneath a line telling you that, on
+              // a page about an account you do not have. It also meant the plan
+              // copy lived in two places, which is how it came to be wrong in
+              // seven files. Plans owns pricing; this owns your account.
+              <div className="sub-signin-note">
+                <p>Settings are for your account — <NavLink to="/login">sign in</NavLink> to manage a subscription.</p>
+                <p>Comparing plans first? <NavLink to="/plans">See Free and Pro</NavLink>.</p>
+              </div>
             ) : (
               <>
-                {!user && (
-                  <div className="sub-signin-note">
-                    <NavLink to="/login">Sign in</NavLink> to upgrade to Pro.
-                  </div>
-                )}
                 <div className="sub-billing-toggle" role="tablist" aria-label="Billing interval">
                   <button role="tab" aria-selected={billing === 'monthly'} className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
                   <button role="tab" aria-selected={billing === 'yearly'} className={billing === 'yearly' ? 'active' : ''} onClick={() => setBilling('yearly')}>
@@ -620,7 +660,7 @@ export default function Settings({ toast }) {
           </section>
 
           {/* Accessibility */}
-          <section id="set-accessibility" className="settings-section">
+          <section id="set-accessibility" className="settings-section" role="tabpanel" aria-labelledby="settab-accessibility" hidden={active !== 'accessibility'}>
             <div className="settings-section-h">
               <h2>Accessibility</h2>
               <p>Reduce motion for a calmer, distraction-free interface. Your light or dark theme lives in the top-nav settings menu.</p>
@@ -639,7 +679,7 @@ export default function Settings({ toast }) {
           </section>
 
           {/* Language */}
-          <section id="set-language" className="settings-section">
+          <section id="set-language" className="settings-section" role="tabpanel" aria-labelledby="settab-language" hidden={active !== 'language'}>
             <div className="settings-section-h">
               <h2>Language</h2>
               <p>Choose the interface language. Affects all menus, labels, and copy.</p>
@@ -674,7 +714,7 @@ export default function Settings({ toast }) {
 
           {/* Account */}
           {user && (
-            <section id="set-account" className="settings-section">
+            <section id="set-account" className="settings-section" role="tabpanel" aria-labelledby="settab-account" hidden={active !== 'account'}>
               <div className="settings-section-h">
                 <h2>Account</h2>
                 <p>Manage your profile, email, and password.</p>
@@ -740,7 +780,7 @@ export default function Settings({ toast }) {
           )}
 
           {/* Data */}
-          <section id="set-data" className="settings-section">
+          <section id="set-data" className="settings-section" role="tabpanel" aria-labelledby="settab-data" hidden={active !== 'data'}>
             <div className="settings-section-h">
               <h2>Your data</h2>
               <p>Everything UIL4B stores lives in your browser. You own it.</p>
@@ -783,7 +823,7 @@ export default function Settings({ toast }) {
           </section>
 
           {/* Privacy */}
-          <section id="set-privacy" className="settings-section">
+          <section id="set-privacy" className="settings-section" role="tabpanel" aria-labelledby="settab-privacy" hidden={active !== 'privacy'}>
             <div className="settings-section-h">
               <h2>Privacy &amp; legal</h2>
               <p>How we handle (and don't handle) your information.</p>
