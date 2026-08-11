@@ -14,9 +14,17 @@
 // unit suite; Vite resolves it identically.
 import { applyAdjust } from './colors.js'
 
-// Slider bounds, mirrored by ADJUST_FIELDS in the Palette Builder toolbar. Each
-// field is symmetric around 0, so one number per key is the whole range.
-export const ADJUST_BOUNDS = Object.freeze({ h: 180, s: 100, b: 100, temp: 100 })
+// Slider bounds, mirrored by ADJUST_FIELDS in the Palette Builder toolbar and
+// by ADJUST_TRACK_RANGES in colors.js. Each field is symmetric around 0, so one
+// number per key is the whole range.
+//
+// `h` narrowed from 180 to 50 when the hue slider did. Boards saved under the
+// old range restore through readSavedPalette below, which re-derives and
+// compares: a stored h of 116 no longer reproduces the stored colours, so those
+// colours become the new base with the sliders at zero. The user's palette
+// opens looking exactly as they left it — which is also the only reading under
+// which the seed swatch beside the hex field is telling the truth.
+export const ADJUST_BOUNDS = Object.freeze({ h: 50, s: 100, b: 100, temp: 100 })
 export const ZERO_ADJUST = Object.freeze({ h: 0, s: 0, b: 0, temp: 0 })
 
 const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i

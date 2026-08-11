@@ -11,6 +11,7 @@ import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { updateRouteMeta } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
+import { isAdminEmail } from './utils/constants'
 import { LoginPromptProvider, useLoginPrompt } from './contexts/LoginPromptContext'
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
@@ -97,6 +98,29 @@ function RequireAuth({ children }) {
   // before Checkout's own `state.from` (which does include ?plan=) can run —
   // pathname alone dropped the chosen plan on every gated checkout link.
   if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />
+  return children
+}
+
+// Admin-only routes. RequireAuth was doing this job for /style-guide, which
+// only ever asked "are you signed in?" — so the internal design system was
+// readable by every account on the site. A non-admin is sent to the homepage
+// rather than /login: they are already signed in, so a login wall would be a
+// lie about why they can't be here, and the route's existence is not something
+// they need told.
+//
+// Presentation only — see isAdminEmail in utils/constants.js. Routes holding
+// real data verify server-side (/api/verify-admin), which the Admin dashboard
+// already does and which this does not replace.
+function RequireAdmin({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+        <div className="fg-loader" />
+      </div>
+    )
+  }
+  if (!isAdminEmail(user?.email)) return <Navigate to="/" replace />
   return children
 }
 
@@ -397,7 +421,7 @@ function AppInner() {
               <Route path="/about" element={<Navigate to="/help#about" replace />} />
               <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
-              <Route path="/style-guide" element={<RequireAuth><StyleGuide toast={toast} /></RequireAuth>} />
+              <Route path="/style-guide" element={<RequireAdmin><StyleGuide toast={toast} /></RequireAdmin>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

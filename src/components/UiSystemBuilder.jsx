@@ -168,7 +168,11 @@ export default function UiSystemBuilder({
           <div className="uis-mode-switch" aria-label="Palette workspace mode">
             <button type="button" onClick={onBack}>Palette</button>
             <span aria-hidden="true">/</span>
-            <strong aria-current="page">UI System <span>Pro</span></strong>
+            {/* Admin, not Pro: the mode is not on sale while it is unfinished
+                (see canUseUiSystem in PaletteBuilder.jsx). The Pro entitlement
+                checks inside stay, so the paid behaviour is still exercised
+                whenever an admin who is not Pro opens it. */}
+            <strong aria-current="page">UI System <span>Admin</span></strong>
           </div>
           <h1>UI System Builder</h1>
           <p>One brand colour expanded into six scales, measured roles and interface-ready light and dark tokens.</p>

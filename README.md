@@ -22,7 +22,7 @@ public summary.
 ### Colour
 
 - **Colour System** — connected Palette, Semantic Colour, Tint, Gradient and Contrast tools at `/color/*`, with recovery paths, UI previews and production-ready exports
-- **UI System Mode** — perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one brand seed, with WCAG evidence and CSS / DTCG / Tailwind export. Free users preview the generated system; editing, expanded scenes and export are Pro
+- **UI System Mode** — perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one brand seed, with WCAG evidence and CSS / DTCG / Tailwind export. **Admin-only while it is finished** — it is not on sale and no visitor can reach it
 
 ### Typography
 
@@ -60,7 +60,7 @@ public summary.
 - **Design System Export** — Export palette + tint scale + state colours as a styled HTML page, CSS custom properties file, or copy to clipboard; free exports include a watermark, Pro unlocks all formats
 - **Accounts** — Firebase auth with Google One Tap, profile management, cross-device Firestore sync
 - **Admin Dashboard** — Analytics, feedback triage, community prompt review with inline editing, design analytics (most copied fonts / picked colours), server-verified admin access
-- **Admin Style Guide** — Internal design system reference at `/style-guide` (tokens, type scale, components, patterns)
+- **Admin Style Guide** — Internal design system reference at `/style-guide` (tokens, type scale, components, patterns). Admin-only: it was behind sign-in alone, so every account on the site could read it
 - **Keyboard Accessible** — Global `:focus-visible` styles on all interactive elements
 
 ## Tech Stack
