@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import AuthGate from '../components/AuthGate'
+import { AI_LIMITS } from '../config/plans'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { auth as firebaseAuth } from '../utils/firebase'
@@ -58,7 +59,7 @@ export default function AltTextGenerator({ toast }) {
   const fileInputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
   const { plan, isPro } = useSubscription()
-  const dailyLimit = plan?.limits?.[ALT_TEXT_TOOL_ID] ?? 40
+  const dailyLimit = plan?.limits?.[ALT_TEXT_TOOL_ID] ?? AI_LIMITS.free.daily
 
   const handleFiles = useCallback(async (files) => {
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
