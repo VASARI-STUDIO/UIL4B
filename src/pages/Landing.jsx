@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
+import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { loadFont } from '../utils/googleFonts'
 import { CATEGORIES, TOOLS } from '../data/tools'
 import { useProPrice } from '../hooks/usePrices'
@@ -78,15 +78,17 @@ const HIGHLIGHTS = [
 const FREE_FEATURES = [
   'All core tools — colour, type, icons, images',
   'Unlimited palettes, type scales & CSS exports',
-  '40 AI generations per day',
+  `${AI_LIMITS.free.daily} AI generations a day · ${AI_LIMITS.free.monthly} a month`,
   'Work saved locally in your browser',
   'A polished dark interface, multiple languages',
 ]
 
+// "Higher-quality AI models" is gone: both plans resolve to the same model
+// (MODELS in api/_lib/plans.js), so it was selling something that does not
+// exist. Pro buys capacity. A unit test fails if the claim returns.
 const PRO_FEATURES = [
   'Everything in Free, plus:',
-  '1,000 AI generations per day',
-  'Higher-quality AI models',
+  `${AI_LIMITS.pro.daily} AI generations a day · ${AI_LIMITS.pro.monthly} a month`,
   'Projects synced across devices',
   'Advanced design-system exports',
   'Priority support',
@@ -841,7 +843,7 @@ export default function Landing() {
           <div className="landing-pricing-head">
             <span className="landing-eyebrow">Simple, fair pricing</span>
             <h2>Start free, scale when you're ready.</h2>
-            <p>Every core tool is free with no time limit. Pro unlocks 1,000 daily AI generations, higher-quality models, cross-device project sync, and priority support.</p>
+            <p>Every core tool is free with no time limit — unlimited palettes, scales and exports, because they run in your browser. Pro raises AI generations from {AI_LIMITS.free.daily} to {AI_LIMITS.pro.daily} a day, unlocks advanced colour controls, and syncs projects across devices.</p>
           </div>
           <div className="landing-billing-toggle" data-interval={billing} role="group" aria-label="Billing period">
             <span className="landing-billing-thumb" aria-hidden="true" />

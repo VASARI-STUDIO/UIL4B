@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { processAvatarImage } from '../utils/imageProcessing'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
+import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice } from '../hooks/usePrices'
 import { LOCATIONS } from '../data/locations'
 import { FLAIRS, getFlair } from '../utils/constants'
@@ -579,7 +579,7 @@ export default function Settings({ toast }) {
                     <ul className="sub-tier-list">
                       <li><Check /> All core design tools</li>
                       <li><Check /> Unlimited palettes, scales &amp; exports</li>
-                      <li><Check /> 40 AI generations per day</li>
+                      <li><Check /> {AI_LIMITS.free.daily} AI generations a day · {AI_LIMITS.free.monthly} a month</li>
                       <li><Check /> Local browser saves</li>
                     </ul>
                     <button className="btn sub-tier-btn" disabled>Your current plan</button>
@@ -599,7 +599,7 @@ export default function Settings({ toast }) {
                     <ul className="sub-tier-list">
                       <li><Check /> <strong>Everything in Free, plus:</strong></li>
                       {billing === 'yearly' && <li><Check /> <strong>7-day free trial</strong> — cancel anytime</li>}
-                      <li><Check /> 1,000 AI actions per day</li>
+                      <li><Check /> {AI_LIMITS.pro.daily} AI generations a day · {AI_LIMITS.pro.monthly} a month</li>
                       <li><Check /> Unlimited project and custom-icon saves</li>
                       <li><Check /> Advanced colour controls</li>
                       <li><Check /> Full design JSON and watermark-free palette export</li>
