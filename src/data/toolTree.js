@@ -92,11 +92,14 @@ export const CREATE_GROUPS = [
     hue: 'ai',
     home: '/ai-tools',
     desc: 'Generators for prompts, pages and alt text.',
-    soon: true,
+    // Live because Alt Text is live and mounted in CreateTool's LIVE_TOOLS. The
+    // three unbuilt siblings now carry their own Soon badge, which is exactly
+    // the per-tool behaviour the header comment describes.
+    soon: false,
     tools: [
+      { id: 'alt-text', label: 'Alt Text', route: '/alt-text', soon: false },
       { id: 'ai-prompt', label: 'Image Prompt', route: '/ai-prompt', soon: true },
       { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', soon: true },
-      { id: 'alt-text', label: 'Alt Text', route: '/alt-text', soon: true },
       { id: 'prompts', label: 'Prompt Library', route: '/prompts', soon: true },
     ],
   },
@@ -227,9 +230,9 @@ const CREATE_MENU = [
     {
       label: 'AI',
       tools: [
+        { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
         { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: true },
         { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: true },
-        { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: true },
         { id: 'prompts', label: 'Prompt Library', route: '/prompts', icon: 'community-prompts', hue: 'ai', soon: true },
       ],
     },

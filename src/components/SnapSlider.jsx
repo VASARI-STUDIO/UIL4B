@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { snapToTarget, stepFromKey } from '../utils/sliderKeys'
+import { snapToTarget, snapValues, stepFromKey } from '../utils/sliderKeys'
 
 /*
  * SnapSlider — range input with magnetic snap points, double-click reset,
@@ -46,8 +46,11 @@ import { snapToTarget, stepFromKey } from '../utils/sliderKeys'
 // that flips with the theme (the track underneath is palette colour, not
 // surface colour, so a theme-aware tick would vanish half the time).
 function tickLayers(snaps, min, max) {
-  if (!snaps.length || !(max > min)) return ''
-  return snaps
+  // `snaps` may carry per-point radii (see snapValues) — a tick is drawn at
+  // every snap regardless of how hard that one pulls, so only the value matters.
+  const marks = snapValues(snaps)
+  if (!marks.length || !(max > min)) return ''
+  return marks
     .filter(s => s > min && s < max)
     .map(s => {
       const p = ((s - min) / (max - min)) * 100

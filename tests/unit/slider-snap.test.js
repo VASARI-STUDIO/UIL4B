@@ -18,11 +18,23 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { snapToTarget } from '../../src/utils/sliderKeys.js'
 
-// Verbatim from ADJUST_FIELDS in PaletteBuilder.jsx.
-const TEMP = { min: -100, max: 100, step: 1, snaps: [-50, 0, 50], snapRadius: 6 }
-const HUE = { min: -180, max: 180, step: 1, snaps: [-90, 0, 90], snapRadius: 8 }
-// Verbatim from TypeScale.jsx — the tightest radius any caller passes.
+// Verbatim from ADJUST_FIELDS in PaletteBuilder.jsx. Zero carries a wider
+// radius than its neighbours — the centre detent — so these also cover the
+// per-point radius form.
+const TEMP = {
+  min: -100, max: 100, step: 1,
+  snaps: [{ value: -50, radius: 6 }, { value: 0, radius: 12 }, { value: 50, radius: 6 }],
+}
+const HUE = {
+  min: -50, max: 50, step: 1,
+  snaps: [{ value: -25, radius: 6 }, { value: 0, radius: 8 }, { value: 25, radius: 6 }],
+}
+// Verbatim from TypeScale.jsx — the tightest radius any caller passes, and the
+// bare-number + shared-`snapRadius` form every other call site still uses.
 const BODY_TRACK = { min: -0.03, max: 0.08, step: 0.002, snaps: [-0.01, 0, 0.02], snapRadius: 0.004 }
+// The pre-detent Palette Builder shape, kept so the shared-radius path stays
+// covered after the adjust sliders moved to per-point radii.
+const SHARED_RADIUS = { min: -100, max: 100, step: 1, snaps: [-50, 0, 50], snapRadius: 6 }
 
 /** Every value the track can hold, stepped the way the native input steps it. */
 function walk({ min, max, step }) {
@@ -48,32 +60,75 @@ test('THE BUG: one step of pointer input never moves the value by more than two'
   // input times the peak gain of ~1.25, rounded onto the step grid.
   assert.equal(biggestJump(TEMP), 2)
   assert.equal(biggestJump(HUE), 2)
+  assert.equal(biggestJump(SHARED_RADIUS), 2)
   // One step, within the float noise of subtracting two grid values.
   assert.ok(Math.abs(biggestJump(BODY_TRACK) - 0.002) < 1e-9)
 })
 
 test('the pull is exactly zero at the radius, so there is no boundary to cross', () => {
   // This is the continuity property, stated directly: at |raw - snap| == radius
-  // the function is the identity, and it stays the identity just outside.
-  for (const snap of TEMP.snaps) {
-    assert.equal(snapToTarget(snap + 6, TEMP), snap + 6)
-    assert.equal(snapToTarget(snap - 6, TEMP), snap - 6)
-    assert.equal(snapToTarget(snap + 7, TEMP), snap + 7)
-    assert.equal(snapToTarget(snap - 7, TEMP), snap - 7)
+  // the function is the identity, and it stays the identity just outside. Each
+  // point is checked at ITS OWN radius, which is the whole reason the per-point
+  // form exists — 0 reaches twice as far as its neighbours on TEMP.
+  for (const { value, radius } of TEMP.snaps) {
+    assert.equal(snapToTarget(value + radius, TEMP), value + radius)
+    assert.equal(snapToTarget(value - radius, TEMP), value - radius)
+    assert.equal(snapToTarget(value + radius + 1, TEMP), value + radius + 1)
+    assert.equal(snapToTarget(value - radius - 1, TEMP), value - radius - 1)
   }
-  assert.equal(snapToTarget(88, HUE), 89)   // inside the radius — still pulled
-  assert.equal(snapToTarget(82, HUE), 82)   // exactly one radius below 90
-  assert.equal(snapToTarget(81, HUE), 81)   // outside — untouched
+  assert.equal(snapToTarget(24, HUE), 25)   // inside the ±25 radius — still pulled
+  assert.equal(snapToTarget(19, HUE), 19)   // exactly one radius below 25
+  assert.equal(snapToTarget(18, HUE), 18)   // outside — untouched
+})
+
+test('EVERY snap can actually capture a pointer one step away', () => {
+  // A radius that never locks on is decoration, not magnetism — the ±25 hue
+  // marks shipped at radius 4 in the first cut of this batch and did exactly
+  // nothing: at one step out the cubic weight is 0.42, which rounds back to
+  // where the pointer already was. This asserts the affordance exists at every
+  // mark on every adjust track, which is the property that was missing.
+  for (const field of [TEMP, HUE]) {
+    for (const { value } of field.snaps) {
+      assert.equal(snapToTarget(value + 1, field), value, `${value} captures from above`)
+      assert.equal(snapToTarget(value - 1, field), value, `${value} captures from below`)
+    }
+  }
+})
+
+test('THE DETENT: zero pulls harder than its neighbours, and only it does', () => {
+  // Item 1 of the founder batch: finding "unlensed" again after an experiment
+  // needed pixel precision, because 0 was no stickier than any other mark. A
+  // pointer two steps out now lands on zero, while the same offset from ±50
+  // does not — that asymmetry IS the feature.
+  assert.equal(snapToTarget(2, TEMP), 1)
+  assert.equal(snapToTarget(1, TEMP), 0)
+  assert.equal(snapToTarget(-1, TEMP), 0)
+  assert.equal(snapToTarget(8, TEMP), 8)          // still inside 0's radius…
+  assert.equal(snapToTarget(11, TEMP), 11)        // …and fading out by 11
+  // The neighbours keep the old light touch: 6 out of ±50 is already free.
+  assert.equal(snapToTarget(56, TEMP), 56)
+  assert.equal(snapToTarget(44, TEMP), 44)
+  // Hue's detent is narrower because its track is half the span in units but
+  // the same width in pixels.
+  assert.equal(snapToTarget(1, HUE), 0)
+  assert.equal(snapToTarget(8, HUE), 8)
+})
+
+test('a strong snap is not shadowed by a weak one that happens to sit closer', () => {
+  // Resolution is by pull, not proximity. 40 is nearer, but 50's radius is wide
+  // enough that its pull at this point is the stronger of the two.
+  const field = { min: 0, max: 100, step: 1, snaps: [{ value: 40, radius: 4 }, { value: 50, radius: 30 }] }
+  assert.equal(snapToTarget(44, field), 47)
 })
 
 test('the values the founder could not reach are reachable', () => {
   // Every one of ±1…±6 used to collapse onto 0. Now the band around a snap
-  // spreads across the range instead of erasing it. ±2 is the single value the
-  // magnetism still costs at this radius — the price of the snap existing at
-  // all, and one step wide rather than six.
+  // spreads across the range instead of erasing it. Widening zero's radius to
+  // 12 costs exactly one value per side (±7) — the price of the detent, and one
+  // step wide rather than six.
   const reached = new Set()
-  for (let raw = -8; raw <= 8; raw++) reached.add(snapToTarget(raw, TEMP))
-  for (const wanted of [1, 3, 4, 5, 6, -1, -3, -4, -5, -6]) {
+  for (let raw = -14; raw <= 14; raw++) reached.add(snapToTarget(raw, TEMP))
+  for (const wanted of [1, 2, 3, 4, 5, 6, 8, 9, 10, -1, -2, -3, -4, -5, -6, -8, -9, -10]) {
     assert.ok(reached.has(wanted), `${wanted} is reachable by pointer`)
   }
 })

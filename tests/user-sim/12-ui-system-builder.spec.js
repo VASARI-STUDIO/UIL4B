@@ -7,7 +7,18 @@ async function enter(page) {
   await expect(page.getByRole('heading', { name: 'UI System Builder' })).toBeVisible()
 }
 
-test.describe('UI System Builder', () => {
+// SKIPPED, not deleted: UI System mode went ADMIN-ONLY (founder decision, this
+// batch — see canUseUiSystem in PaletteBuilder.jsx). Every test below enters
+// through the "Build UI system" button, which no longer exists for anyone but
+// an admin, and this suite runs signed out — there is no auth harness, so the
+// surface is genuinely unreachable from here rather than merely failing.
+//
+// The assertions are still the right contract for the tool; they are simply
+// testing a door that is currently locked. When the tool is finished and goes
+// public, delete this `.skip` and the suite runs again unchanged. Until then it
+// would be dishonest to report these as passing, and wasteful to throw away
+// eleven tests' worth of behaviour that took real work to specify.
+test.describe.skip('UI System Builder', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.removeItem('vs-current-design')

@@ -15,17 +15,24 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 33 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **185 tests, 185 pass** |
+| Unit | `npm run test:unit` | **192 tests, 192 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **191 tests across 18 spec files** (`npx playwright test --list`) |
+| Browser acceptance | `npm run test:users` | **192 tests across 18 spec files**; **179 pass, 13 skipped** (`npx playwright test --list`) |
+
+The 13 skipped are the whole of `12-ui-system-builder.spec.js`. UI System mode
+went admin-only in founder batch 4 and this suite runs signed out, so the
+surface is unreachable rather than broken — the file carries the reason and the
+one-word change that re-enables it. Skipped is the honest state; do not "fix"
+the count by deleting the file.
 
 The 33 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
-The previous figures in this table (33 / 176 / 181) were measured on
-`fix/palette-builder-founder-batch-2` at 2026-08-07. This branch added no lint
-warnings; it moved unit (+9 tests, +1 file: `slider-snap`) and browser
-acceptance (+10 tests, +1 spec file, `17-founder-batch-3.spec.js`).
+The previous figures in this table (33 / 185 / 191) were measured at 2026-08-09.
+Founder batch 4 (2026-08-11) added no lint warnings; it moved unit
+(+7 tests: the per-point snap radius, the centre detent, the cross-axis slider
+tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
+rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
 
@@ -33,6 +40,15 @@ side effect of unrelated work. CI fails on lint **errors** only.
 specs can fail once and pass on rerun. Re-run before treating a single red
 browser job as a real regression, and say in the PR which failures were flake
 and which were real.
+
+Named instance (batch 4): `10-home-chaos-to-calm.spec.js` → *11a · a hand-off
+lands looking at the uploaded images*. Lenis owns the scroll position on that
+path, and under four parallel workers the settle poll can return before the
+smooth scroll finishes, leaving the card ~38px below the fold. It passes
+single-worker and passes on a clean suite rerun. **Verify a flake the right
+way:** rerun the same spec at the same worker count. Stashing your changes and
+rerunning it alone proves nothing — that changes two variables at once, and it
+will "pass on main" whether or not your work is the cause.
 
 ## CI
 
