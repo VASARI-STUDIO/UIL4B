@@ -48,11 +48,18 @@ specs can fail once and pass on rerun. Re-run before treating a single red
 browser job as a real regression, and say in the PR which failures were flake
 and which were real.
 
-Named instance (plans overhaul): `07-public-shell-library-palette.spec.js` →
-*Icon and Emoji modes switch from the keyboard*. Failed once on CI **only**,
-taking 22.4s against a 2.1s local run — the shape of an Iconify API call
-timing out on the runner, not a regression. Passed on rerun. This spec reaches
-a third-party API, so treat a slow failure here as network before code.
+**FIXED, not just named:** `07-public-shell-library-palette.spec.js` → *Icon and
+Emoji modes switch from the keyboard* failed CI twice in one session at ~23s
+against a 2.1s local run. The cause was an unbounded
+`waitForLoadState('networkidle')` in a spec that reaches the **Iconify API** —
+so a slow third party ate the whole test budget, and the offline poll after it
+then timed out with a misleading message about the banner. It looked like a
+regression in code nobody had touched, twice.
+
+The wait is now bounded to 5s and non-fatal; the real precondition is the
+`Live library connected` assertion that follows it. **Do not reintroduce a bare
+`networkidle` in any spec that touches a third-party API** — Playwright's own
+docs discourage it, and this is why.
 
 Named instance (batch 4): `10-home-chaos-to-calm.spec.js` → *11a · a hand-off
 lands looking at the uploaded images*. Lenis owns the scroll position on that

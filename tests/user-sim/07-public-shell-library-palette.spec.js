@@ -117,11 +117,24 @@ test.describe('public UI quality release', () => {
     await expect(page.getByRole('tab', { name: /Emoji/ })).toBeFocused()
 
     // The scenario is "already using the page, then the connection drops", so the
-    // page must be fully settled first. On a cold CI runner the /emoji panel's
-    // lazy chunk can still be in flight, and cutting the network mid-fetch tests
+    // page must be settled first. On a cold CI runner the /emoji panel's lazy
+    // chunk can still be in flight, and cutting the network mid-fetch tests
     // chunk loading rather than the offline banner.
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByText(/Live library connected/)).toBeVisible()
+    //
+    // BOUNDED AND NON-FATAL, deliberately. This spec reaches the Iconify API,
+    // and an unbounded `networkidle` waits on THAT too — so a slow third party
+    // silently ate the test's whole budget and the offline poll below then
+    // timed out with a misleading message about the banner. It failed CI twice
+    // in one session at ~23s against a 2s local run, each time looking like a
+    // regression in code that had not been touched.
+    //
+    // Five seconds is enough for the local chunk; a hanging Iconify request now
+    // costs five seconds instead of the run. The real precondition is the line
+    // below — "Live library connected" only renders once the panel has mounted
+    // and the catalogue probe has resolved — so the assertion, not the wait, is
+    // what actually guarantees the page is ready.
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    await expect(page.getByText(/Live library connected/)).toBeVisible({ timeout: 15000 })
 
     await context.setOffline(true)
     // Re-dispatch while polling: Playwright's setOffline does not reliably flip
