@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useCallback } from 'react'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { AI_LIMITS } from '../config/plans'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { auth as firebaseAuth } from '../utils/firebase'
 import AuthGate from '../components/AuthGate'
@@ -35,7 +36,7 @@ export default function AiPromptGenerator({ toast }) {
   const [error, setError] = useState(null)
   const textareaRef = useRef(null)
   const { plan, isPro } = useSubscription()
-  const dailyLimit = plan?.limits?.[TOOL_ID] ?? 40
+  const dailyLimit = plan?.limits?.[TOOL_ID] ?? AI_LIMITS.free.daily
 
   // JSON builder state
   const [subject, setSubject] = useState('')
