@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { getLenis } from '../hooks/useSmoothScroll'
+import { useProject } from '../contexts/ProjectContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 
 // The Export shell — a polished, accessible dialog that previews the handoff
 // formats UIL4B will ship. There is NO real export logic yet: every format is a
@@ -12,7 +15,8 @@ import { getLenis } from '../hooks/useSmoothScroll'
 // the opener (the Export button) on unmount.
 
 const FORMATS = [
-  { id: 'html', name: 'HTML design system', desc: 'A full page — tokens, components and styles as ready-to-ship HTML + CSS.' },
+  { id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true },
+  { id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true },
   { id: 'css', name: 'CSS tokens', desc: 'Custom properties for colour, type, spacing and radii — drop into any stylesheet.' },
   { id: 'json', name: 'JSON tokens', desc: 'Design tokens as JSON for pipelines and Style Dictionary.' },
   { id: 'tailwind', name: 'Tailwind theme', desc: 'A tailwind.config theme extension mapped to your system.' },
@@ -21,6 +25,38 @@ const FORMATS = [
 
 export default function ExportPanel({ onClose }) {
   const [format, setFormat] = useState('html')
+  const { design } = useProject()
+  const { isPro } = useSubscription()
+  const activeFormat = FORMATS.find(f => f.id === format)
+
+  // Build and download in the browser. No server round trip: the document is a
+  // pure function of the saved design (see utils/styleGuideExport.js), so there
+  // is nothing to upload and nothing to wait for — and a paid export that can
+  // fail on someone else's infrastructure is a support ticket waiting to happen.
+  //
+  // Free exports carry a visible footer credit; Pro exports are clean. That is
+  // the policy the Plans page already states, so it is read from the live
+  // entitlement rather than hard-coded here.
+  const runExport = () => {
+    const projectName = design?.name || 'Design System'
+    const markdown = format === 'md'
+    const body = markdown
+      ? buildStyleGuideMarkdown(design, { projectName, watermark: !isPro })
+      : buildStyleGuideHtml(design, { projectName, watermark: !isPro })
+    const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
+    const blob = new Blob([body], { type: markdown ? 'text/markdown;charset=utf-8' : 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${slug}-style-guide.${markdown ? 'md' : 'html'}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    // Revoked on the next tick rather than immediately: revoking synchronously
+    // races the download in Safari and produces an empty file.
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    onClose()
+  }
   const panelRef = useRef(null)
   const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
 
@@ -79,7 +115,7 @@ export default function ExportPanel({ onClose }) {
             <span className="exp-eyebrow">Export</span>
             <h2 className="exp-title" id="exp-title">Export your design system</h2>
             <p className="exp-sub">
-              Pick a format. Real exports are landing soon — this is a preview of what you&rsquo;ll be able to ship.
+              The style guide exports for real. The token formats are still on their way and say so.
             </p>
           </div>
           <button type="button" className="exp-close" onClick={onClose} aria-label="Close export">
@@ -106,7 +142,7 @@ export default function ExportPanel({ onClose }) {
                   <span className="exp-fmt-name">{f.name}</span>
                   <span className="exp-fmt-desc">{f.desc}</span>
                 </span>
-                <span className="exp-fmt-soon">Soon</span>
+                {!f.live && <span className="exp-fmt-soon">Soon</span>}
               </button>
             )
           })}
@@ -116,15 +152,21 @@ export default function ExportPanel({ onClose }) {
           <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={onClose}>
             Cancel
           </button>
-          <button
-            type="button"
-            className="ui-pill ui-pill-accent ui-pill-md"
-            disabled
-            aria-disabled="true"
-            title="Exports are coming soon"
-          >
-            Export &mdash; Soon
-          </button>
+          {activeFormat?.live ? (
+            <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={runExport}>
+              Export {format === 'md' ? 'Markdown' : 'HTML'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="ui-pill ui-pill-accent ui-pill-md"
+              disabled
+              aria-disabled="true"
+              title="This format is coming soon"
+            >
+              Export &mdash; Soon
+            </button>
+          )}
         </div>
       </div>
     </div>
