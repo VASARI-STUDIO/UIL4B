@@ -48,6 +48,12 @@ specs can fail once and pass on rerun. Re-run before treating a single red
 browser job as a real regression, and say in the PR which failures were flake
 and which were real.
 
+Named instance (plans overhaul): `07-public-shell-library-palette.spec.js` →
+*Icon and Emoji modes switch from the keyboard*. Failed once on CI **only**,
+taking 22.4s against a 2.1s local run — the shape of an Iconify API call
+timing out on the runner, not a regression. Passed on rerun. This spec reaches
+a third-party API, so treat a slow failure here as network before code.
+
 Named instance (batch 4): `10-home-chaos-to-calm.spec.js` → *11a · a hand-off
 lands looking at the uploaded images*. Lenis owns the scroll position on that
 path, and under four parallel workers the settle poll can return before the
