@@ -23,7 +23,7 @@ const FLAT_SECTIONS = [
       { label: 'Home', route: '/home', note: 'The overview and starting point.' },
       { label: 'Projects', route: '/projects', note: 'Saved palettes, fonts and exports.' },
       { label: 'Settings', route: '/settings', note: 'Theme, appearance, account and data.' },
-      { label: 'Plans & pricing', route: '/plans', note: 'Compare Free, Pro and Premium Plus.' },
+      { label: 'Plans & pricing', route: '/plans', note: 'Compare Free and Pro.' },
       { label: 'Sign in', route: '/login', note: 'Log in or create an account.' },
     ],
   },
