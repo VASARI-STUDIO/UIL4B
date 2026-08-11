@@ -86,8 +86,14 @@ test.describe('Type Scale Generator', () => {
     await page.getByRole('button', { name: 'Developer handoff' }).click()
     await expect(page.getByRole('heading', { name: 'Prepare the handoff' })).toBeVisible()
 
+    // The scale is now FLUID by default: two ladders (mobile and desktop)
+    // joined by clamp(), so a step exports as an interpolation rather than a
+    // single rem. The comment carries both ends, which is what keeps the export
+    // readable by a human rather than an opaque expression.
     const code = page.locator('#tsc-export')
-    await expect(code).toContainText('--text-base: 1rem;')
+    await expect(code).toContainText('--text-base: clamp(')
+    await expect(code).toContainText('vw,')                    // the fluid term
+    await expect(code).toContainText('px → ')                  // mobile → desktop, in the comment
     await expect(code).toContainText('--text-5xl:')
     await expect(code).toContainText('--leading: 1.5;')
     await expect(code).toContainText('--font-heading:')
@@ -95,10 +101,19 @@ test.describe('Type Scale Generator', () => {
 
     await page.getByRole('button', { name: 'Tailwind' }).click()
     await expect(code).toContainText('fontSize: {')
-    await expect(code).toContainText("'base': ['1rem'")
+    await expect(code).toContainText("'base': ['clamp(")
 
     await page.getByRole('button', { name: 'SCSS' }).click()
-    await expect(code).toContainText('$text-base: 1rem;')
+    await expect(code).toContainText('$text-base: clamp(')
+
+    // Fixed mode is the other honest answer, for teams whose specs are stated
+    // per breakpoint. Mobile-first: the base :root carries the SMALL ladder and
+    // a single media query raises it, rather than desktop values being the
+    // default and mobile an override.
+    await page.getByRole('button', { name: 'CSS variables' }).click()
+    await page.getByRole('button', { name: /Fixed · media query/ }).click()
+    await expect(code).not.toContainText('clamp(')
+    await expect(code).toContainText(`@media (min-width: 1440px)`)
   })
 
   test('the audience tabs are a real tablist for the keyboard', async ({ page }) => {
@@ -147,8 +162,13 @@ test.describe('Type Scale Generator', () => {
     expect(rendered).toBeLessThanOrEqual(96)
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(10000)
 
+    // The exact figure survives into the export. It is now the DESKTOP end of a
+    // clamp rather than a lone rem — the extreme value is still carried
+    // losslessly, which is what this test exists to prove, and the comment
+    // still names it in pixels.
     await page.getByRole('button', { name: 'Developer handoff' }).click()
-    await expect(page.locator('#tsc-export')).toContainText('--text-8xl: 49207.5rem; /* 787320px */')
+    await expect(page.locator('#tsc-export')).toContainText('787320px')
+    await expect(page.locator('#tsc-export')).toContainText('--text-8xl: clamp(')
   })
 })
 
