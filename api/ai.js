@@ -1,5 +1,5 @@
 import { adminDb, adminAuth, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
-import { planForUser, dailyLimitFor, modelFor } from './_lib/plans.js'
+import { planForUser, dailyLimitFor, monthlyLimitFor, modelFor } from './_lib/plans.js'
 import { cleanKey } from './_lib/env.js'
 
 // Consolidated AI endpoint — POST /api/ai with { task, ...taskBody }.
@@ -35,6 +35,17 @@ const GEMINI_MODEL = 'gemini-2.0-flash'
 function todayStr() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// The month bucket, as a doc id that can never collide with a day bucket: days
+// are `uid_2026-08-11`, months are `uid_m2026-08`. Both live in `daily-usage`,
+// which is absent from firestore.rules and therefore default-denied to every
+// client — only the Admin SDK (which bypasses rules) touches it. Reusing the
+// collection is what keeps the monthly ceiling free of a rules change, and
+// rules changes are founder-gated and separately published.
+function monthStr() {
+  const d = new Date()
+  return `m${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 // ── alt-text ─────────────────────────────────────────────────────────────────
@@ -458,7 +469,8 @@ export default async function handler(req, res) {
   const toolId = task.toolId
   const date = todayStr()
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
-  let plan, limit, used
+  const monthRef = fireDb.doc(`daily-usage/${uid}_${monthStr()}`)
+  let plan, limit, used, monthLimit, monthUsed
   try {
     const userSnap = await fireDb.doc(`users/${uid}`).get()
     plan = planForUser({
@@ -467,16 +479,30 @@ export default async function handler(req, res) {
       email,
     })
     limit = dailyLimitFor(plan, toolId)
-    const usageSnap = await usageRef.get()
+    monthLimit = monthlyLimitFor(plan, toolId)
+    const [usageSnap, monthSnap] = await Promise.all([usageRef.get(), monthRef.get()])
     used = usageSnap.data()?.[toolId] || 0
+    monthUsed = monthSnap.data()?.[toolId] || 0
   } catch (e) {
     return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
+  }
+
+  // Whichever ceiling is reached first. The message names WHICH one and when it
+  // frees up — "you have hit your limit" with no period and no reset time is
+  // the kind of dead end that makes a paying user think the product is broken
+  // rather than that they are being metered.
+  if (monthUsed >= monthLimit) {
+    return res.status(429).json({
+      error: `You've used all ${monthLimit} AI generations in your plan this month. It resets on the 1st.`,
+      usage: { used, limit, remaining: 0, monthUsed, monthLimit, period: 'month' },
+      plan: plan.id,
+    })
   }
 
   if (used >= limit) {
     return res.status(429).json({
       error: task.limitError,
-      usage: { used, limit, remaining: 0 },
+      usage: { used, limit, remaining: 0, monthUsed, monthLimit, period: 'day' },
       plan: plan.id,
     })
   }
@@ -490,7 +516,11 @@ export default async function handler(req, res) {
 
   try {
     const inc = await FieldValueIncrement(1)
-    await usageRef.set({ [toolId]: inc }, { merge: true })
+    // Both buckets, or the monthly ceiling never fills and is decorative.
+    await Promise.all([
+      usageRef.set({ [toolId]: inc }, { merge: true }),
+      monthRef.set({ [toolId]: inc }, { merge: true }),
+    ])
   } catch { /* usage write best-effort — never fail a successful generation */ }
 
   return res.status(200).json(result)

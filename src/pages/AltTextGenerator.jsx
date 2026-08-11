@@ -202,7 +202,11 @@ export default function AltTextGenerator({ toast }) {
       <div className="sec-h">
         <div className="sec-h-eyebrow">AI Tools</div>
         <h1>Alt Text <em>Generator</em></h1>
-        <p>Batch-upload images and generate accessible alt text using AI. {isPro ? 'Pro model active.' : 'Upgrade to Pro for higher-quality models.'}</p>
+        {/* Both plans resolve to the same model (see MODELS in
+            api/_lib/plans.js), so the old "upgrade for higher-quality models"
+            was selling something that does not exist. Pro buys CAPACITY. A
+            unit test fails if this claim comes back while the models match. */}
+        <p>Batch-upload images and generate accessible alt text using AI. {isPro ? 'Pro capacity active.' : 'Pro raises your daily and monthly generation limits.'}</p>
       </div>
 
       <AuthGate featureLabel="generate alt text">
