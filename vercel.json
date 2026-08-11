@@ -5,20 +5,132 @@
   "outputDirectory": "dist",
   "installCommand": "npm ci",
   "rewrites": [
-    { "source": "/p/:code", "destination": "/api/share?c=:code" },
-    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
+    {
+      "source": "/p/:code",
+      "destination": "/api/share?c=:code"
+    },
+    {
+      "source": "/alt-text",
+      "destination": "/alt-text/index.html"
+    },
+    {
+      "source": "/color",
+      "destination": "/color/index.html"
+    },
+    {
+      "source": "/color/contrast",
+      "destination": "/color/contrast/index.html"
+    },
+    {
+      "source": "/color/gradient",
+      "destination": "/color/gradient/index.html"
+    },
+    {
+      "source": "/color/palette",
+      "destination": "/color/palette/index.html"
+    },
+    {
+      "source": "/color/semantic",
+      "destination": "/color/semantic/index.html"
+    },
+    {
+      "source": "/color/tint",
+      "destination": "/color/tint/index.html"
+    },
+    {
+      "source": "/community",
+      "destination": "/community/index.html"
+    },
+    {
+      "source": "/discover/gradients",
+      "destination": "/discover/gradients/index.html"
+    },
+    {
+      "source": "/discover/palettes",
+      "destination": "/discover/palettes/index.html"
+    },
+    {
+      "source": "/discover/prompts",
+      "destination": "/discover/prompts/index.html"
+    },
+    {
+      "source": "/emoji",
+      "destination": "/emoji/index.html"
+    },
+    {
+      "source": "/feedback",
+      "destination": "/feedback/index.html"
+    },
+    {
+      "source": "/file-converter",
+      "destination": "/file-converter/index.html"
+    },
+    {
+      "source": "/fontgallery",
+      "destination": "/fontgallery/index.html"
+    },
+    {
+      "source": "/fontpairs",
+      "destination": "/fontpairs/index.html"
+    },
+    {
+      "source": "/help",
+      "destination": "/help/index.html"
+    },
+    {
+      "source": "/icons",
+      "destination": "/icons/index.html"
+    },
+    {
+      "source": "/info",
+      "destination": "/info/index.html"
+    },
+    {
+      "source": "/plans",
+      "destination": "/plans/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy/index.html"
+    },
+    {
+      "source": "/ratio",
+      "destination": "/ratio/index.html"
+    },
+    {
+      "source": "/seo",
+      "destination": "/seo/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms/index.html"
+    },
+    {
+      "source": "/typescale",
+      "destination": "/typescale/index.html"
+    },
+    {
+      "source": "/((?!api/|assets/).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/(.*)\\.svg",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
       ]
     }
   ]
