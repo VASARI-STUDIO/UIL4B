@@ -173,12 +173,15 @@ export default function PromptLibrary({ onCopy, toast }) {
       {/* Toolbar: search + category chips */}
       <div className="pl-toolbar">
         <div className="pl-search-wrap">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
+          {/* A placeholder is not an accessible name — it is unreadable to a
+              screen reader as a label and it disappears the moment you type. */}
           <input
             type="text"
             className="pl-search"
+            aria-label={isCommunity ? 'Search community prompts' : 'Search your prompts'}
             placeholder={isCommunity ? 'Search community prompts...' : t('promptLibrary.searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
