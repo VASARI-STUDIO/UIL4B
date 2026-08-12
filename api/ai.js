@@ -80,7 +80,7 @@ const TONE_CONFIGS = {
   },
 }
 
-async function runAltText(req, res, { plan, limit, used }) {
+async function runAltText(req, res, { plan, limit, used, monthUsed, monthLimit }) {
   const { image, mimeType, context, tone } = req.body || {}
   if (!image || !mimeType) return res.status(400).json({ error: 'image (base64) and mimeType required' })
   const toneKey = tone && TONE_CONFIGS[tone] ? tone : 'concise'
@@ -154,7 +154,7 @@ async function runAltText(req, res, { plan, limit, used }) {
       model,
       tone: toneKey,
       plan: plan.id,
-      usage: { used: used + 1, limit, remaining: limit - used - 1 },
+      usage: { used: used + 1, limit, remaining: limit - used - 1, monthUsed: monthUsed + 1, monthLimit, monthRemaining: monthLimit - monthUsed - 1 },
     }
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -330,7 +330,7 @@ async function callGemini(userMessage, opts = {}) {
   return prompt
 }
 
-async function runGeneratePrompt(req, res, { plan, limit, used }) {
+async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, monthLimit }) {
   const { description, style, platform } = req.body || {}
   if (!description || typeof description !== 'string') {
     return res.status(400).json({ error: 'description (string) is required' })
@@ -383,7 +383,7 @@ async function runGeneratePrompt(req, res, { plan, limit, used }) {
     provider,
     platform: platform || null,
     plan: plan.id,
-    usage: { used: used + 1, limit, remaining: limit - used - 1 },
+    usage: { used: used + 1, limit, remaining: limit - used - 1, monthUsed: monthUsed + 1, monthLimit, monthRemaining: monthLimit - monthUsed - 1 },
   }
 }
 
@@ -511,7 +511,7 @@ export default async function handler(req, res) {
 
   // Task runners either send an error response themselves (and return the res
   // object / undefined) or return the success payload for the shared tail.
-  const result = await task.run(req, res, { plan, limit, used })
+  const result = await task.run(req, res, { plan, limit, used, monthUsed, monthLimit })
   if (!result || result === res || res.writableEnded || res.headersSent) return
 
   try {

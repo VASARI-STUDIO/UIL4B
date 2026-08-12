@@ -2,6 +2,8 @@ import { useState, useRef, useMemo, useCallback } from 'react'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { AI_LIMITS } from '../config/plans'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
+import { useAiQuota } from '../hooks/useAiQuota'
+import QuotaMeter from '../components/QuotaMeter'
 import { auth as firebaseAuth } from '../utils/firebase'
 import AuthGate from '../components/AuthGate'
 import { RULE_CATEGORIES, PRESETS, buildPromptJson, buildPromptText } from '../data/promptRules'
@@ -37,6 +39,10 @@ export default function AiPromptGenerator({ toast }) {
   const textareaRef = useRef(null)
   const { plan, isPro } = useSubscription()
   const dailyLimit = plan?.limits?.[TOOL_ID] ?? AI_LIMITS.free.daily
+  // Reads the `usage` object every /api/ai response has always carried and
+  // nothing ever consumed — so the meter reflects the account, not this
+  // browser, and the monthly ceiling is visible before it bites.
+  const quota = useAiQuota(TOOL_ID)
 
   // JSON builder state
   const [subject, setSubject] = useState('')
@@ -134,8 +140,11 @@ export default function AiPromptGenerator({ toast }) {
   const generate = async () => {
     const brief = mode === 'builder' ? builderText : description.trim()
     if (!brief) return
-    if (!canUseFeature(TOOL_ID, dailyLimit)) {
-      toast?.('Daily limit reached — resets at midnight')
+    // Two ceilings, not one. The local tracker only counts today, so the
+    // MONTHLY limit could refuse a user every local check said was fine — and
+    // that refusal then read as a generic error.
+    if (quota.blocked || !canUseFeature(TOOL_ID, dailyLimit)) {
+      toast?.(quota.message || 'Daily limit reached — resets at midnight')
       return
     }
     setBusy(true)
@@ -158,6 +167,8 @@ export default function AiPromptGenerator({ toast }) {
         }),
       })
       const data = await r.json().catch(() => ({}))
+      // Authoritative counts ride on every response, 429s included.
+      quota.absorb(data)
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       recordUsage(TOOL_ID)
 
@@ -201,6 +212,7 @@ export default function AiPromptGenerator({ toast }) {
       </div>
 
       <AuthGate featureLabel="generate AI image prompts">
+        <QuotaMeter quota={quota} className="quota--tool" />
         {/* Mode toggle */}
         <div className="aipg-mode-toggle">
           <button type="button" className={`aipg-mode-btn${mode === 'builder' ? ' active' : ''}`} onClick={() => setMode('builder')}>

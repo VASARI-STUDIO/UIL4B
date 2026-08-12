@@ -3,6 +3,8 @@ import AuthGate from '../components/AuthGate'
 import { AI_LIMITS } from '../config/plans'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
+import { useAiQuota } from '../hooks/useAiQuota'
+import QuotaMeter from '../components/QuotaMeter'
 import { auth as firebaseAuth } from '../utils/firebase'
 
 const ALT_TEXT_TOOL_ID = 'alt-text'
@@ -60,6 +62,10 @@ export default function AltTextGenerator({ toast }) {
   const [isDragging, setIsDragging] = useState(false)
   const { plan, isPro } = useSubscription()
   const dailyLimit = plan?.limits?.[ALT_TEXT_TOOL_ID] ?? AI_LIMITS.free.daily
+  // Reads the `usage` object the server has always returned and nothing ever
+  // consumed, so the meter reflects the account rather than this browser — and
+  // so the MONTHLY ceiling is visible before it is hit.
+  const quota = useAiQuota(ALT_TEXT_TOOL_ID)
 
   const handleFiles = useCallback(async (files) => {
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -109,9 +115,14 @@ export default function AltTextGenerator({ toast }) {
 
   const generateForItem = async (item, retries = 2) => {
     if (!item.base64) return
-    if (!canUseFeature(ALT_TEXT_TOOL_ID, dailyLimit)) {
-      setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: 'Daily usage limit reached' } : p))
-      toast?.('Daily limit reached — resets at midnight')
+    // Two ceilings, not one. The local tracker only knows about the daily
+    // count, so a user could be blocked by the MONTHLY limit while every local
+    // check said they were fine — and the server's refusal then read as a
+    // generic error. quota.blocked covers both, and quota.message names which.
+    if (quota.blocked || !canUseFeature(ALT_TEXT_TOOL_ID, dailyLimit)) {
+      const why = quota.message || 'Daily limit reached — resets at midnight'
+      setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: why } : p))
+      toast?.(why)
       return
     }
     setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'generating', error: null } : p))
@@ -128,6 +139,11 @@ export default function AltTextGenerator({ toast }) {
         body: JSON.stringify({ task: 'alt-text', image: item.base64, mimeType: item.mimeType, context: context.trim() || undefined, tone }),
       })
       const data = await r.json().catch(() => ({}))
+      // Every response carries the authoritative counts — including the 429s.
+      // Absorbing them here is what makes the meter correct after a refusal,
+      // and what surfaces the monthly ceiling the client could not otherwise
+      // know about.
+      quota.absorb(data)
       if (r.status === 429 && data.retryAfter && retries > 0) {
         const wait = (data.retryAfter || 5) * 1000
         setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'ready', error: `Rate limited, retrying in ${wait / 1000}s…` } : p))
@@ -211,6 +227,9 @@ export default function AltTextGenerator({ toast }) {
       </div>
 
       <AuthGate featureLabel="generate alt text">
+      {/* Above the dropzone, not beside the button: the allowance is something
+          to know BEFORE uploading forty images, not after the eighth refusal. */}
+      <QuotaMeter quota={quota} className="quota--tool" />
       <div
         className={`alt-dropzone${isDragging ? ' dragging' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}

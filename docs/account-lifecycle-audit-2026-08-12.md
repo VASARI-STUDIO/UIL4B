@@ -8,7 +8,7 @@ so before the plan snapshot resolved a free user was told they had 40
 generations when the server grants 5 — and could fire eight requests it would
 reject. Now derives from `AI_LIMITS.free.daily`, with a test.
 
-**Status: A1-A3 and B1 are fixed.** Those touch auth, Stripe and Firestore
+**Status: A1-A3, B1 and B2 are fixed.** Those touch auth, Stripe and Firestore
 deletion, which [`human-validation-zones.md`](reference/human-validation-zones.md)
 gates behind founder validation — correctly, because the failure modes are
 billing people who left and deleting data that cannot be recovered. The founder
@@ -113,18 +113,40 @@ rediscovered:
 Still open from this section: the **emails**. A banner only reaches someone who
 is already in the app — see section C.
 
-### B2 · Nothing warns before the AI quota, and the machinery is dead code
+### ~~B2 · Nothing warns before the AI quota, and the machinery is dead code~~ — FIXED
 
-`usageTracker.js` exports `getRemainingUses` (:54) and `getResetTime` (:61) —
-exactly the two functions needed. **Neither is imported anywhere.**
-`purgeStaleUsage` (:73) is never called, so `vs-usage-*` keys accumulate
-forever. The server returns `usage: { used, limit, remaining }` on every success
-(`api/ai.js:157`) and no caller reads it.
+*Was:* `getRemainingUses` and `getResetTime` were exported from
+`usageTracker.js` and imported nowhere. `purgeStaleUsage` was never called, so
+`vs-usage-*` keys accumulated forever. The server returned
+`usage: { used, limit, remaining }` on every response and no caller read it. And
+the monthly ceiling was completely invisible — Free is 5/day *and* 40/month, but
+the client only knew the daily figure, so a free user hit the monthly wall on
+day 8 with no warning and the server's `period: 'month'` reply rendered as a
+generic error.
 
-**The monthly ceiling is completely invisible.** Free is 5/day *and* 40/month,
-but the client only ever reads the daily figure — so a free user hits the
-monthly wall on day 8 with no warning, and the server's `period: 'month'`
-response renders as a generic error.
+**Now:** [`src/utils/aiQuota.js`](../src/utils/aiQuota.js) does the arithmetic
+(DOM-free, 21 unit tests), [`useAiQuota`](../src/hooks/useAiQuota.js) wires it to
+the plan and to the server's figures, and
+[`QuotaMeter`](../src/components/QuotaMeter.jsx) shows **both** ceilings above
+the tool rather than beside the button — the allowance is something to know
+before uploading forty images, not after the eighth refusal.
+`purgeStaleUsage()` now runs on app start.
+
+Two rules the code holds, because getting either backwards is what made the old
+behaviour feel broken:
+
+- **The server is the truth.** The localStorage tracker counts one browser; the
+  ceiling is per account. A second device, a cleared cache or a private window
+  all make the local count an undercount. Where the two disagree, the figure
+  leaving **less** headroom wins — a quota that reads generous and then refuses
+  only fails at the moment of use.
+- **Never name the wrong reset.** The daily bucket resets at midnight, the
+  monthly one on the 1st. Telling someone their monthly wall "resets at
+  midnight" is a lie they act on by returning tomorrow to the same wall.
+
+`api/ai.js` now returns the monthly figures on **success** too, not only in the
+429 that enforces them — otherwise the ceiling stays invisible right up until it
+blocks, which was the original dead end.
 
 ### B3 · The onboarding survey's answers are never used
 

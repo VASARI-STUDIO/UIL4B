@@ -44,6 +44,43 @@ Full detail: [`docs/account-lifecycle-audit-2026-08-12.md`](docs/account-lifecyc
 
 ---
 
+## 2026-08-12 — The AI allowance, shown before you hit it
+
+The warning machinery was already written and wired to nothing.
+`usageTracker.js` exported `getRemainingUses` and `getResetTime` — exactly the
+two functions needed — and neither was imported anywhere. `purgeStaleUsage` was
+never called once, so every `vs-usage-<tool>-<date>` key a user generated stayed
+in their browser forever. The server returned `usage: { used, limit, remaining }`
+on every response and no caller read it.
+
+- **The monthly ceiling is visible at last.** Free is 5/day *and* 40/month, but
+  the client only ever knew the daily figure — so a free user hit the monthly
+  wall on day 8 with no warning, and the server's `period: 'month'` refusal
+  rendered as a generic error. Both bars now show, and both tools block on
+  whichever ceiling comes first
+- **The meter sits above the tool, not beside the button.** The allowance is
+  something to know before uploading forty images, not after the eighth refusal
+- `api/ai.js` now returns the monthly figures on **success** too, not only in
+  the 429 that enforces them
+- `purgeStaleUsage()` runs on app start
+
+Two rules the code holds, because getting either backwards is what made the old
+behaviour feel broken rather than metered:
+
+**The server is the truth.** The localStorage tracker counts one browser; the
+ceiling is per account. A second device, a cleared cache or a private window all
+make the local count an undercount, so where the two disagree the figure leaving
+*less* headroom wins. A quota that reads generous and then refuses only fails at
+the moment of use.
+
+**Never name the wrong reset.** The daily bucket resets at midnight, the monthly
+one on the 1st. Telling someone their monthly wall "resets at midnight" is a lie
+they act on by coming back tomorrow to the same wall.
+
+Unit 273 → 294, lint unchanged at 32.
+
+---
+
 ## 2026-08-12 — Account deletion that is legal and actually works
 
 Founder decision: explicit approval to proceed on the auth/Stripe/deletion work
