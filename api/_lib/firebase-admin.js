@@ -93,6 +93,20 @@ export function adminAuth() {
   return getAuth()
 }
 
+// Storage is OPTIONAL in this project: community media uploads fall back to
+// inline base64 in Firestore when the bucket isn't enabled
+// (SubmitPromptPanel.jsx). So callers must treat a throw here as "no bucket",
+// not as a failure — see api/delete-account.js, which reports the Storage sweep
+// separately rather than aborting a deletion over it.
+export async function adminStorageBucket() {
+  ensureApp()
+  const { getStorage } = await import('firebase-admin/storage')
+  const name = process.env.VITE_FIREBASE_STORAGE_BUCKET
+    || process.env.FIREBASE_STORAGE_BUCKET
+    || 'uil4b-357c5.firebasestorage.app'
+  return getStorage().bucket(name)
+}
+
 export const FieldValueIncrement = async (n) => {
   const { FieldValue } = await import('firebase-admin/firestore')
   return FieldValue.increment(n)

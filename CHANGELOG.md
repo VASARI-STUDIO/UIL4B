@@ -44,6 +44,49 @@ Full detail: [`docs/account-lifecycle-audit-2026-08-12.md`](docs/account-lifecyc
 
 ---
 
+## 2026-08-12 — Account deletion that is legal and actually works
+
+Founder decision: explicit approval to proceed on the auth/Stripe/deletion work
+that [`human-validation-zones.md`](docs/reference/human-validation-zones.md)
+gates ("continue all you have full permissions").
+
+Deleting an account used to do three things wrong at once:
+
+- **It never touched Stripe.** A Pro user who deleted their account **kept being
+  charged**, and the billing portal — the only cancellation route — needs an ID
+  token they can never mint again. Support email or chargeback were the only
+  outs. Now every subscription that can still bill is cancelled first, and a
+  Stripe failure **aborts the deletion** rather than deleting an account we are
+  still billing
+- **It left the data.** It deleted `users/{uid}` alone, and Firestore does not
+  remove subcollections with their parent — so `users/{uid}/sync/data`, holding
+  every synced project, prompt and design, survived a dialog that said "and all
+  associated data". Now the profile, sync data, community prompts, feedback,
+  uploaded media and AI usage counters all go
+- **It was broken for Google users** — the primary sign-in method. It skipped
+  reauthentication for them and then called `deleteUser()`, which throws
+  `requires-recent-login`. Meanwhile the dialog asked a Google-only account for
+  a password it does not have, and mapped only `auth/wrong-password`, so
+  everything else surfaced as `Firebase: Error (auth/requires-recent-login).`
+
+Deletion is now one server-side transaction (`api/delete-account.js`), which is
+also what makes the Google case work: the Admin SDK needs no recent login. The
+security reauthentication was providing is kept by verifying `auth_time` on the
+token — five minutes — somewhere the client cannot lie about it.
+
+**The order is the safety property, and a test asserts it:** billing → data →
+auth. The auth user is deleted last, because a failure after it is gone orphans
+data with no token left that could ever authorise another attempt.
+
+The Settings dialog no longer asserts "all associated data"; it lists what goes,
+and the list is now true.
+
+Unit 251 → 273, lint unchanged at 32. **The API is now at exactly 12 of 12
+Vercel functions** — the next endpoint has to replace one, and a test fails the
+build if the count goes over.
+
+---
+
 ## 2026-08-11 — Founder batch 4: sliders, honest pricing, the hero, and the fold
 
 Six PRs, each verified in a rendered browser and merged green to `main`:

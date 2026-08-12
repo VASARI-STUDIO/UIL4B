@@ -15,7 +15,7 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 32 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **251 tests, 251 pass** |
+| Unit | `npm run test:unit` | **273 tests, 273 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **208 tests across 21 spec files**; **195 pass, 13 skipped** (`npx playwright test --list`) |
 
@@ -35,6 +35,16 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+Account deletion (2026-08-12) moved unit 251 → **273** (+22: the reauth freshness
+window, Stripe customer ownership verdicts, which subscription statuses still
+bill, the stage ordering, and the 12-function budget). Browser acceptance
+unchanged — the deletion dialog only renders signed in, and this suite has no
+way to create a signed-in user.
+
+**The API is now at exactly 12 of 12 Vercel functions.** `api/delete-account.js`
+took the last slot. The next endpoint has to replace one;
+`tests/unit/account-deletion.test.js` fails the build if the count goes over.
 
 The billing-signals slice (2026-08-12) moved unit 229 → **251** (+22: the
 seven-day grace window, its boundary conditions, alert precedence and the
