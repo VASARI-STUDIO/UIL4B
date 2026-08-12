@@ -13,9 +13,9 @@ number here, you must have re-run it.
 
 | Gate | Command | Current baseline |
 |---|---|---|
-| Lint | `npx eslint .` | **0 errors, 32 advisory warnings** |
+| Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **294 tests, 294 pass** |
+| Unit | `npm run test:unit` | **313 tests, 313 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **208 tests across 21 spec files**; **195 pass, 13 skipped** (`npx playwright test --list`) |
 
@@ -35,6 +35,19 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+Data export (2026-08-12) moved unit 294 → **313** (+19: prefix ownership, the
+collection and clearing rules, disclosure of undescribed keys, and the crash
+below). Lint 32 → **31**: the export page's inline `style={}` objects moved to
+global.css, which retired one `react-refresh/only-export-components` warning.
+
+**A crash found while verifying that slice, worth knowing about.** Seeding
+`vs-analytics` with a valid-JSON *object* where an array was expected
+white-screened the whole app with `push is not a function` on every page view.
+`analytics.js`'s `load()` used `JSON.parse(...) || fallback`, which only
+catches null — the wrong SHAPE passed straight through and failed on the next
+write. Reachable by a stale schema or by someone hand-restoring their own data
+export. Now shape-checked against the fallback, with a regression test.
 
 AI quota warnings (2026-08-12) moved unit 273 → **294** (+21: which ceiling
 binds, the low threshold, server-vs-local reconciliation, reset times, and the

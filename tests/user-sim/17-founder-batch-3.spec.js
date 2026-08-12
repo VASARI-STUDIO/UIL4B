@@ -124,10 +124,39 @@ function measurePanel(page, selector) {
   })
 }
 
-/** Park the page far enough down that the sticky panel is actually stuck. */
-async function settleSticky(page) {
-  await page.evaluate(() => window.scrollTo(0, 1400))
-  await page.waitForTimeout(500)
+/**
+ * Park the page far enough down that the sticky panel is actually stuck.
+ *
+ * FLAKE ROOT CAUSE — this failed CI twice while passing locally every time,
+ * and the numbers gave it away. The panel measured 933px, then 1448px, against
+ * a 768px viewport. Both are `naturalDocumentTop + 666`, and 666px is EXACTLY
+ * the max-height the CSS bound it to. So the panel was never unbounded: it was
+ * correctly sized and simply not stuck, sitting at its resting offset.
+ *
+ * The app runs Lenis smooth scroll (src/hooks/useSmoothScroll.js), which owns
+ * the scroller. A raw window.scrollTo is therefore advisory — Lenis can animate
+ * from it or re-apply its own target on the next rAF — so a fixed 500ms wait is
+ * a guess about someone else's animation, and on a loaded CI runner the guess
+ * lost.
+ *
+ * Polling on scrollY would only move the guess. What the test actually needs is
+ * "the panel is stuck", so that is what this waits for: the element's viewport
+ * top sitting at its own computed `top` offset, which is true only once sticky
+ * has engaged.
+ */
+async function settleSticky(page, selector = '.fpr-config') {
+  await expect.poll(async () => page.evaluate((sel) => {
+    window.scrollTo(0, 1400)
+    const el = document.querySelector(sel)
+    if (!el) return Number.POSITIVE_INFINITY
+    const stickyTop = parseFloat(getComputedStyle(el).top)
+    if (!Number.isFinite(stickyTop)) return Number.POSITIVE_INFINITY
+    return Math.abs(el.getBoundingClientRect().top - stickyTop)
+  }, selector), {
+    timeout: 10000,
+    intervals: [100, 200, 300, 500],
+    message: `${selector} never became stuck — the scroll did not settle`,
+  }).toBeLessThanOrEqual(2)
 }
 
 test.describe('Font Pair · the sticky config panel is bounded by the viewport', () => {

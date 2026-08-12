@@ -1,20 +1,21 @@
 import { useI18n } from '../contexts/I18nContext'
+import { KEY_PURPOSES } from '../utils/dataExport'
 
-const STORAGE_DISCLOSURE = [
-  { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
-  { key: 'vs-nav-open', purpose: 'Sidebar category expand/collapse state', pii: 'no' },
-  { key: 'vs-pinned-tools', purpose: 'Tools you pinned for quick access', pii: 'no' },
-  { key: 'vs-recent-tools', purpose: 'Recently used tools list', pii: 'no' },
-  { key: 'vs-current-design', purpose: 'Active palette, fonts, type scale, gradient', pii: 'no' },
-  { key: 'vs-projects', purpose: 'Saved design projects (per account)', pii: 'local' },
-  { key: 'vs-prompts', purpose: 'Your AI prompt library', pii: 'local' },
-  { key: 'vs-community-saves', purpose: 'Designs you saved in the Community Hub', pii: 'no' },
-  { key: 'vs-community-submissions', purpose: 'Designs you submitted to the Community Hub', pii: 'local' },
-  { key: 'vs-state-shades', purpose: 'Cached state colour shades', pii: 'no' },
-  { key: 'vs-users', purpose: 'Account credentials (email + hashed password) for local accounts', pii: 'yes' },
-  { key: 'vs-session', purpose: 'Active session info (no password)', pii: 'yes' },
-  { key: 'vs-admin-unlocked', purpose: 'Admin panel unlock flag', pii: 'no' },
-]
+// Generated from the single shared table in utils/dataExport.js, which is also
+// what the exporter and "Clear local data" enumerate. It used to be a third
+// hand-written copy, and it had drifted badly enough to be actively wrong:
+//
+//   • It listed 13 of the ~40 keys the app writes.
+//   • It disclosed `vs-users` — "Account credentials (email + hashed password)
+//     for local accounts" — and `vs-session`. NEITHER KEY EXISTS. The app moved
+//     to Firebase Auth and has stored no password, hashed or otherwise, since.
+//     A privacy policy claiming to hold credentials it does not hold is a
+//     disclosure defect in its own right.
+//
+// Deriving it means the policy cannot fall behind the code again.
+const STORAGE_DISCLOSURE = Object.entries(KEY_PURPOSES)
+  .map(([key, meta]) => ({ key, ...meta }))
+  .sort((a, b) => a.key.localeCompare(b.key))
 
 export default function Privacy() {
   const { t } = useI18n()

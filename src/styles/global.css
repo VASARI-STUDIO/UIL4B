@@ -8075,3 +8075,8 @@ button.plb-varrow:hover{background:var(--bg-2)}
 @media (prefers-reduced-motion:reduce){
   .quota-fill{transition:none}
 }
+
+/* Settings → Your data. Replaces inline style={} objects (see
+   docs/reference/css-conventions.md). */
+.settings-data-note{font-size:13px;color:var(--t1);line-height:1.65;padding:12px 0;max-width:64ch}
+.settings-row--pad{padding-top:16px;padding-bottom:16px}
