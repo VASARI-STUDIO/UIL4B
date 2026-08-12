@@ -341,38 +341,98 @@ function EmailEditField({ value, onSave }) {
   )
 }
 
-function DeleteAccount({ onDelete }) {
+// Firebase's raw codes reach users as strings like
+// "Firebase: Error (auth/requires-recent-login)." Only auth/wrong-password was
+// ever mapped, so every other failure — including the one Google accounts hit
+// on every single attempt — surfaced as that.
+const DELETE_ERRORS = {
+  'auth/wrong-password': 'That password is incorrect.',
+  'auth/invalid-credential': 'That password is incorrect.',
+  'auth/too-many-requests': 'Too many attempts. Wait a few minutes and try again.',
+  'auth/requires-recent-login': 'For your security, sign in again and then retry.',
+  'reauth-required': 'For your security, sign in again and then retry.',
+  'auth/popup-closed-by-user': 'The Google window closed before you confirmed. Try again.',
+  'auth/cancelled-popup-request': 'The Google window closed before you confirmed. Try again.',
+  'auth/popup-blocked': 'Your browser blocked the Google window. Allow pop-ups for this site and try again.',
+  'auth/user-mismatch': 'That is a different Google account. Confirm with the one you are signed in as.',
+}
+
+function deleteErrorText(e) {
+  const mapped = DELETE_ERRORS[e?.code]
+  if (mapped) return mapped
+  // The server's own messages are already written for a user to read, and carry
+  // a correlation id support can trace.
+  if (e?.message) return e.message
+  return 'We could not delete your account. Please try again.'
+}
+
+function DeleteAccount({ onDelete, googleOnly, isPro }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const handleDelete = async () => {
+    setBusy(true)
+    setError('')
     try {
       await onDelete(password)
+      // On success the account is gone and AuthContext has signed out; the app
+      // re-renders signed out from under this component.
     } catch (e) {
-      if (e.code === 'auth/wrong-password') setError('Password is incorrect')
-      else setError(e.message || 'Failed to delete account')
+      setBusy(false)
+      setError(deleteErrorText(e))
     }
   }
 
   if (!open) {
     return (
-      <button className="btn" onClick={() => setOpen(true)} style={{ color: 'var(--err)', borderColor: 'var(--err)' }}>
+      <button className="btn danger-zone-open" onClick={() => setOpen(true)}>
         Delete account
       </button>
     )
   }
 
   return (
-    <div style={{ marginTop: 12 }}>
-      <input type="password" placeholder="Enter your password to confirm" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', marginBottom: 10 }} />
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn btn-accent" onClick={handleDelete} style={{ background: 'var(--err)', color: '#fff', borderColor: 'var(--err)' }}>
-          Permanently delete
+    <div className="danger-confirm">
+      <ul className="danger-confirm-list">
+        {isPro && <li>Your subscription is cancelled immediately — you will not be billed again.</li>}
+        <li>Your profile, saved projects, icons and synced designs are deleted.</li>
+        <li>Prompts you submitted to the community, and any media with them, are removed.</li>
+        <li>This cannot be undone, and the same email can sign up again as a new account.</li>
+      </ul>
+
+      {googleOnly ? (
+        // A Google-only account HAS no password. The old dialog asked for one
+        // unconditionally, which was unanswerable — and then deletion threw
+        // requires-recent-login anyway.
+        <p className="danger-confirm-note">
+          You&rsquo;ll be asked to confirm with Google before anything is deleted.
+        </p>
+      ) : (
+        <>
+          <label className="seg-label" htmlFor="del-confirm-pw">Confirm your password</label>
+          <input
+            id="del-confirm-pw"
+            type="password"
+            className="danger-confirm-input"
+            autoComplete="current-password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            aria-invalid={!!error}
+          />
+        </>
+      )}
+
+      <div className="danger-confirm-actions">
+        <button className="btn danger-confirm-go" onClick={handleDelete} disabled={busy}>
+          {busy ? 'Deleting…' : 'Permanently delete'}
         </button>
-        <button className="btn btn-s" onClick={() => { setOpen(false); setError('') }}>Cancel</button>
+        <button className="btn btn-s" onClick={() => { setOpen(false); setError(''); setPassword('') }} disabled={busy}>
+          Cancel
+        </button>
       </div>
-      {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 6 }}>{error}</div>}
+      {error && <div className="danger-confirm-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -392,7 +452,7 @@ function NavIcon({ id }) {
 }
 
 export default function Settings({ toast }) {
-  const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount, profileSyncError, dismissProfileSyncError } = useAuth()
+  const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, checkout, openPortal, loading: subLoading } = useSubscription()
   const { t, lang, setLang, languages } = useI18n()
@@ -771,8 +831,15 @@ export default function Settings({ toast }) {
 
                   <div className="danger-zone">
                     <div className="danger-zone-h">Danger zone</div>
-                    <p>Permanently delete your account and all associated data. This cannot be undone.</p>
-                    <DeleteAccount onDelete={(pw) => deleteAccount(pw)} />
+                    <p>
+                      Delete your account, everything in it, and{isPro ? ' your subscription' : ' any billing you have with us'}.
+                      This cannot be undone.
+                    </p>
+                    <DeleteAccount
+                      onDelete={(pw) => deleteAccount(pw)}
+                      googleOnly={isGoogleOnlyAccount()}
+                      isPro={isPro}
+                    />
                   </div>
                 </div>
               </div>

@@ -35,9 +35,14 @@ service cloud.firestore {
       allow read: if isOwner();
       allow create: if isOwner() && createsNoLockedField();
       allow update: if isOwner() && leavesLockedFieldsUntouched();
-      // Account deletion (AuthContext.deleteAccount) removes the whole doc.
-      // Dropping entitlements can only ever lose the owner access, never grant
-      // it: every grant path re-verifies a paid Stripe session server-side.
+      // Real account deletion now runs server-side (api/delete-account.js) with
+      // the Admin SDK, because it also has to cancel Stripe and reach the sync
+      // subcollection, which a client rule can never delete with its parent.
+      //
+      // This permission is kept anyway: dropping your own profile can only ever
+      // lose you access, never grant it — every entitlement path re-verifies a
+      // paid Stripe session server-side — and it leaves the owner a way to
+      // clear their own document if the endpoint is ever unavailable.
       allow delete: if isOwner();
 
       // Sync data subcollection — only the owner

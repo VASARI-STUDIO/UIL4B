@@ -10,14 +10,17 @@ import {
   updateProfile as fbUpdateProfile,
   updateEmail as fbUpdateEmail,
   updatePassword as fbUpdatePassword,
-  deleteUser,
   EmailAuthProvider,
   GoogleAuthProvider,
   reauthenticateWithCredential,
+  reauthenticateWithPopup,
   sendPasswordResetEmail,
 } from 'firebase/auth'
 import { auth as firebaseAuth, db } from '../utils/firebase'
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
+// deleteUser/deleteDoc are deliberately gone: deletion is now a single
+// server-side transaction (api/delete-account.js) that cancels billing and
+// reaches the subcollections a client never could.
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 
 const AuthContext = createContext()
@@ -364,25 +367,67 @@ export function AuthProvider({ children }) {
     await fbUpdatePassword(firebaseUser, newPassword)
   }, [firebaseUser])
 
+  // True when this account can only sign in with Google, so the UI knows not to
+  // ask for a password that does not exist. An account with BOTH providers
+  // linked can still use its password.
+  const isGoogleOnlyAccount = useCallback(() => {
+    const ids = accountProviderIds(firebaseUser)
+    return ids.includes('google.com') && !ids.includes('password')
+  }, [firebaseUser])
+
+  // Account deletion. See api/delete-account.js for the full reasoning; the
+  // short version of what changed:
+  //
+  //  • It cancels the Stripe subscription. The old path did not, so a Pro user
+  //    who deleted their account KEPT BEING CHARGED with no way to stop it —
+  //    the billing portal needs an ID token they can never mint again.
+  //  • It deletes the sync subcollection, community prompts, feedback, uploaded
+  //    media and usage counters. The old path deleted `users/{uid}` alone, and
+  //    Firestore does not remove subcollections with their parent, so every
+  //    synced project survived a "delete all associated data".
+  //  • It WORKS FOR GOOGLE ACCOUNTS. The old path skipped reauthentication for
+  //    them and then called deleteUser(), which throws requires-recent-login —
+  //    so deletion simply failed for the primary sign-in method.
+  //
+  // Reauthentication still happens here, in the browser, because that is where
+  // the credential is. The server does not take our word for it: it reads
+  // `auth_time` off the verified token and refuses anything older than five
+  // minutes.
   const deleteAccount = useCallback(async (password) => {
     if (!firebaseUser) return
-    if (!accountProviderIds(firebaseUser).includes('google.com')) {
+    const uid = firebaseUser.uid
+
+    if (isGoogleOnlyAccount()) {
+      await reauthenticateWithPopup(firebaseUser, new GoogleAuthProvider())
+    } else {
       await reauthenticate(password)
     }
-    const uid = firebaseUser.uid
-    // Delete the auth account FIRST, and only clean up on success. deleteUser
-    // can throw (auth/requires-recent-login — and the Google branch above does
-    // not reauthenticate at all), so deleting the user document first would
-    // leave a live, still-signed-in account whose Pro entitlement had already
-    // been erased. Losing paid access to a failed delete is far worse than an
-    // orphaned document, and the thrown error still reaches the Settings UI.
-    await deleteUser(firebaseUser)
-    try { await deleteDoc(doc(db, 'users', uid)) } catch { /* account already gone; the document is orphaned, not live */ }
+
+    // forceRefresh: reauthentication updates auth_time, but a cached token
+    // still carries the OLD value — and the old value is exactly what the
+    // server rejects.
+    const token = await firebaseUser.getIdToken(true)
+    const res = await fetch('/api/delete-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      const err = new Error(data?.error || 'We could not delete your account. Please try again.')
+      err.code = data?.code || 'delete-failed'
+      if (data?.correlationId) err.correlationId = data.correlationId
+      throw err
+    }
+
+    // The auth user is already gone server-side, so this session is dead —
+    // signOut just clears the local state and listeners tidily.
+    try { await signOut(firebaseAuth) } catch { /* the user no longer exists; nothing to sign out of */ }
     removeCachedProfile(uid)
     const remaining = getKnownAccounts().filter((a) => a.uid !== uid)
     persistKnownAccounts(remaining)
     setKnownAccounts(remaining)
-  }, [firebaseUser])
+    return data
+  }, [firebaseUser, isGoogleOnlyAccount])
 
   return (
     <AuthContext.Provider value={{
@@ -392,6 +437,7 @@ export function AuthProvider({ children }) {
       login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,
       knownAccounts, switchAccount, removeKnownAccount,
       updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,
+      isGoogleOnlyAccount,
     }}>
       {children}
     </AuthContext.Provider>
