@@ -10,6 +10,7 @@ import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
+import { purgeStaleUsage } from './utils/usageTracker'
 import { updateRouteMeta } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
@@ -188,6 +189,11 @@ function AppInner() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    // purgeStaleUsage has existed since usageTracker was written and was never
+    // called once, so every `vs-usage-<tool>-<date>` key a user ever generated
+    // stayed in their localStorage permanently. It only removes keys whose date
+    // suffix is before today, so it can never touch a live counter.
+    purgeStaleUsage()
     return initAnalytics()
   }, [])
 
