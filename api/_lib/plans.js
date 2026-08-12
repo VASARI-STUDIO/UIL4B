@@ -70,15 +70,41 @@ export const PLANS = {
   },
 }
 
+// Stripe retries a failed charge for days before giving up, so a subscription
+// in `past_due` is a customer with an expired card, not a customer who left.
+// Revoking Pro on the first failed charge is how you lose someone who would
+// have paid — they hit a limit, get no explanation, and conclude the product
+// broke. Seven days of continued access buys them time to fix the card.
+//
+// Deliberately NOT extended to `unpaid` or `canceled`: `unpaid` means Stripe
+// exhausted the retry schedule, and by then this is a lapsed customer.
+//
+// ⚠️ SECURITY BOUNDARY. This grants Pro to an account that has not paid. It is
+// bounded by paymentFailedAt — a timestamp only the webhook (admin SDK) can
+// write, which firestore.rules makes unwritable from a browser. Mirrored in
+// src/utils/billingState.js for the UI; tests/unit/plan-limits.test.js fails if
+// the two numbers drift.
+export const PAST_DUE_GRACE_MS = 7 * 86_400_000
+
 export function planForSubscription(subscription) {
   if (!subscription) return PLANS.free
   const active = subscription.status === 'active' || subscription.status === 'trialing'
-  if (!active) return PLANS.free
-  // Guard against an expired period that the webhook hasn't cleaned up yet.
-  if (subscription.currentPeriodEnd && Date.now() > subscription.currentPeriodEnd + 86_400_000) {
-    return PLANS.free
+  if (active) {
+    // Guard against an expired period that the webhook hasn't cleaned up yet.
+    if (subscription.currentPeriodEnd && Date.now() > subscription.currentPeriodEnd + 86_400_000) {
+      return PLANS.free
+    }
+    return PLANS.pro
   }
-  return PLANS.pro
+  // Grace runs from the moment the payment broke, NOT from currentPeriodEnd.
+  // Stripe advances the period end before it finalises the renewal invoice, so
+  // by the time that invoice fails the period end is already a month out —
+  // anchoring there would hand out ~37 free days instead of 7.
+  if (subscription.status === 'past_due' && Number.isFinite(subscription.paymentFailedAt)
+      && Date.now() <= subscription.paymentFailedAt + PAST_DUE_GRACE_MS) {
+    return PLANS.pro
+  }
+  return PLANS.free
 }
 
 export function hasLifetimeEntitlement(entitlement) {

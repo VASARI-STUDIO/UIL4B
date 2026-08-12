@@ -7993,3 +7993,41 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .fpr-gallery-callout{grid-template-columns:44px 1fr}
   .fpr-gallery-callout>span:last-child{display:none}
 }
+
+/* ── Billing banner ─────────────────────────────────────────────────────────
+   Persistent system notice for failing payments, ending trials and scheduled
+   cancellations (components/BillingBanner.jsx). Bottom-LEFT because
+   bottom-right is already .toast (z 9999) and .global-feedback-btn (z 80) —
+   a payment warning hidden under a "Copied!" toast is a warning nobody reads.
+   z-index sits above the FAB and below the toast, so a transient confirmation
+   still wins the foreground for its two seconds. */
+.bill-banner{position:fixed;left:20px;bottom:20px;z-index:120;display:flex;align-items:flex-start;gap:10px;width:min(360px,calc(100vw - 40px));padding:14px 12px 14px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--t3);border-radius:var(--radius-l);box-shadow:var(--ring),var(--warm-shadow-lg);animation:bill-rise var(--dur-3) var(--ease-entrance)}
+.bill-banner--urgent{border-left-color:var(--err)}
+.bill-banner-body{flex:1;min-width:0}
+.bill-banner-title{margin:0;font-size:13px;font-weight:650;line-height:1.4;color:var(--t0)}
+.bill-banner--urgent .bill-banner-title{color:var(--err)}
+.bill-banner-text{margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--t1)}
+.bill-banner-err{margin:6px 0 0;font-size:12px;line-height:1.45;color:var(--err)}
+.bill-banner-actions{display:flex;align-items:center;gap:12px;margin-top:11px;flex-wrap:wrap}
+.bill-banner-cta{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--brand);background:var(--brand);color:var(--accent-fg);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.bill-banner-cta:hover:not(:disabled){background:var(--accent-strong);border-color:var(--accent-strong)}
+.bill-banner-cta:disabled{opacity:.6;cursor:progress}
+.bill-banner-link{font-size:12.5px;font-weight:550;color:var(--t2);text-decoration:none}
+.bill-banner-link:hover{color:var(--t0);text-decoration:underline}
+/* 24px minimum, measured — at padding:4px this rendered 23x23 and missed WCAG
+   2.5.8 by a pixel. Explicit box sizing rather than padding maths so it can't
+   drift back under with a font change. */
+.bill-banner-x{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;background:none;color:var(--t3);cursor:pointer;border-radius:var(--radius-s);transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.bill-banner-x svg{width:15px;height:15px}
+.bill-banner-x:hover{background:var(--hvr);color:var(--t0)}
+@keyframes bill-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (max-width:520px){
+  /* Full width below 520px, which puts the banner directly over the feedback
+     FAB (.global-feedback-btn, bottom:20px right:20px). The banner wins on
+     z-index, so measured at 320px the FAB was covered and unclickable. Sitting
+     above it keeps both reachable rather than trading one for the other. */
+  .bill-banner{left:12px;right:12px;bottom:74px;width:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .bill-banner{animation:none}
+}
