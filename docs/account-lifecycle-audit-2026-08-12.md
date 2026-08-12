@@ -8,7 +8,7 @@ so before the plan snapshot resolved a free user was told they had 40
 generations when the server grants 5 — and could fire eight requests it would
 reject. Now derives from `AI_LIMITS.free.daily`, with a test.
 
-**Status: A1-A3, B1 and B2 are fixed.** Those touch auth, Stripe and Firestore
+**Status: A1-A4, B1 and B2 are fixed.** Those touch auth, Stripe and Firestore
 deletion, which [`human-validation-zones.md`](reference/human-validation-zones.md)
 gates behind founder validation — correctly, because the failure modes are
 billing people who left and deleting data that cannot be recovered. The founder
@@ -59,19 +59,49 @@ whether every existing Stripe customer carries `metadata.firebaseUid` — any
 that does not will be refused as `missing_metadata` and needs it added in the
 Stripe dashboard.
 
-### A4 · Data export is browser-local and incomplete
+### ~~A4 · Data export is browser-local and incomplete~~ — FIXED
 
-`Settings.jsx:458-474` iterates a hand-maintained 15-key list and reads
-localStorage only — never the Firestore profile, `users/{uid}/sync/data`,
-billing history or server-side submissions. Observed: **16 keys present, 9 not
-in the list and therefore not exported**, including `vs-sessions` and
-`vs-analytics`. `vs-accounts` (`AuthContext.jsx:26`) holds email, display name
-and photo for up to five accounts and is neither disclosed, exported, nor
-cleared by "Clear local data".
+*Was:* the export iterated a hand-maintained 15-key list and read localStorage
+only — never the Firestore profile, `users/{uid}/sync/data`, or the account
+identity. Observed: **16 keys present, 9 missing from the list** and therefore
+absent from a file the user was told was their data. `vs-accounts` (email,
+display name and photo for up to five accounts) was neither disclosed, exported,
+nor cleared.
 
-`Settings.jsx:786` ("Everything UIL4B stores lives in your browser") and `:838`
-("You can export or delete your data at any time") are both inaccurate for a
-signed-in user.
+**Now:** [`src/utils/dataExport.js`](../src/utils/dataExport.js) enumerates by
+**prefix**, never by list — a list is a promise someone will remember to update
+it, and that promise had already been broken nine times. The export carries
+localStorage, sessionStorage, the Firestore profile, `users/{uid}/sync/data` and
+the account identity; a server read that fails is *recorded in the file* rather
+than silently dropped. "Clear local data" enumerates the same way.
+
+An undescribed key is still exported and still disclosed, marked
+`pii: unknown` — a documentation gap must not become a data gap in a file
+someone is relying on.
+
+**Verified end-to-end through the real button:** 18 keys exported against a
+seeded browser, `vs-accounts` included with its email, a deliberately invented
+key exported and honestly disclosed, dated keys (`vs-usage-…-2026-08-12`)
+described via their stem, and a foreign key left untouched.
+
+**Two further defects fixed in the same pass:**
+
+- **The privacy policy described storage that does not exist.**
+  `Privacy.jsx` held a *third* hand-written copy of the list, and it disclosed
+  `vs-users` — *"Account credentials (email + hashed password) for local
+  accounts"* — and `vs-session`. Neither key exists anywhere in the app; it moved
+  to Firebase Auth and stores no password, hashed or otherwise. The table is now
+  generated from the shared source, so the policy cannot fall behind the code.
+- **Settings claimed "Everything UIL4B stores lives in your browser."** False
+  for any signed-in account, whose profile and synced design live in Firestore.
+
+**Also found while verifying this:** `analytics.js`'s `load()` used
+`JSON.parse(...) || fallback`, which only catches null. A valid-JSON *object*
+where an array was expected passed straight through and then threw
+`push is not a function` on the next page view — **a white screen on every page
+load** until the user cleared storage, with no way for them to know why.
+Reachable by a stale schema or by someone hand-restoring their own export. Now
+shape-checked, with a regression test.
 
 ---
 

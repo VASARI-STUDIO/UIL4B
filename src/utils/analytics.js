@@ -6,7 +6,20 @@ const SESSIONS_KEY = 'vs-sessions'
 const FEEDBACK_KEY = 'vs-feedback'
 
 function load(key, fallback = []) {
-  try { return JSON.parse(localStorage.getItem(key)) || fallback } catch { return fallback }
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key))
+    if (parsed === null || parsed === undefined) return fallback
+    // A stored value of the WRONG SHAPE is more dangerous than a missing one.
+    // `|| fallback` only catches null/undefined, so a valid-JSON object where an
+    // array was expected passed straight through and then threw
+    // "push is not a function" on the next trackPageView — i.e. a white screen
+    // on EVERY page load until the user cleared their storage, with no way for
+    // them to know why. Reachable by a stale schema, a synced value from an
+    // older build, or someone hand-restoring their own data export.
+    if (Array.isArray(fallback) !== Array.isArray(parsed)) return fallback
+    if (typeof parsed !== typeof fallback) return fallback
+    return parsed
+  } catch { return fallback }
 }
 
 function save(key, data) {
@@ -238,8 +251,14 @@ export function deleteFeedback(id) {
 const DESIGN_ANALYTICS_KEY = 'vs-design-analytics'
 
 function loadDesignAnalytics() {
-  try { return JSON.parse(localStorage.getItem(DESIGN_ANALYTICS_KEY)) || { fontCopies: {}, colourPicks: {}, toolUsage: {} } }
-  catch { return { fontCopies: {}, colourPicks: {}, toolUsage: {} } }
+  const empty = () => ({ fontCopies: {}, colourPicks: {}, toolUsage: {} })
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DESIGN_ANALYTICS_KEY))
+    // Same shape guard as load(): an array or a primitive here would survive
+    // `|| fallback` and then fail on the first property write.
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return empty()
+    return { ...empty(), ...parsed }
+  } catch { return empty() }
 }
 
 function saveDesignAnalytics(data) {

@@ -44,6 +44,44 @@ Full detail: [`docs/account-lifecycle-audit-2026-08-12.md`](docs/account-lifecyc
 
 ---
 
+## 2026-08-12 — "Export my data" now means all of it
+
+The export iterated a hand-maintained 15-key list while the app writes about
+forty. Measured on a real browser: **16 keys present, 9 of them missing** from
+a file the user was told was their data. `vs-accounts` — email, display name
+and photo for up to five accounts — was neither disclosed, exported, nor
+cleared. And it read localStorage only, so a signed-in user got none of their
+Firestore profile or synced projects.
+
+- **Enumerated by prefix, never by list.** A list is a promise someone will
+  remember to update it, and that promise had already been broken nine times
+- The export now carries localStorage, sessionStorage, the Firestore profile,
+  `users/{uid}/sync/data` and the account identity. A server read that fails is
+  **recorded in the file** rather than silently dropped
+- An undescribed key is still exported and still disclosed, marked
+  `pii: unknown` — a documentation gap must not become a data gap
+
+**The privacy policy described storage that does not exist.** It held a third
+hand-written copy of the list, disclosing `vs-users` — *"Account credentials
+(email + hashed password) for local accounts"* — and `vs-session`. Neither key
+exists; the app moved to Firebase Auth and stores no password, hashed or
+otherwise. The table is now generated from the shared source.
+
+**Settings claimed "Everything UIL4B stores lives in your browser."** False for
+any signed-in account.
+
+**A white screen, found while verifying the above.** `analytics.js` loaded
+stored values with `JSON.parse(...) || fallback`, which only catches null — so
+a valid-JSON *object* where an array was expected passed through and threw
+`push is not a function` on the next page view, on **every page load**, until
+the user cleared their storage. Reachable by a stale schema or by someone
+hand-restoring their own data export. Now shape-checked against the fallback.
+
+Unit 294 → 313. Lint 32 → **31** (the inline `style={}` objects moved to
+global.css, retiring one warning).
+
+---
+
 ## 2026-08-12 — The AI allowance, shown before you hit it
 
 The warning machinery was already written and wired to nothing.
