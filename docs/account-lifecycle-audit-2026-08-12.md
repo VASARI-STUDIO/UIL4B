@@ -78,21 +78,41 @@ signed-in user.
 
 ## B — Product findings
 
-### B1 · The billing signals are all written and none are read
+### ~~B1 · The billing signals are all written and none are read~~ — FIXED
 
-`stripe-webhook.js:267-278` writes `paymentFailed` **and** `hostedInvoiceUrl` —
-the exact Stripe page where the user could fix their card. `:280-290` writes
-`trialEndsAt` and `trialEndingSoon`.
+*Was:* `stripe-webhook.js` wrote `paymentFailed`, `hostedInvoiceUrl`,
+`trialEndsAt` and `trialEndingSoon`; grep across `src/` returned zero hits for
+all four. `SubscriptionContext.jsx` dropped the user to Free the moment Stripe
+flipped status, so an expired card silently removed Pro and the user found out
+by hitting a limit.
 
-**Grep for any of them across `src/`: zero hits.** Nothing reads any of it.
+**Now:** [`src/utils/billingState.js`](../src/utils/billingState.js) derives the
+alert, [`BillingBanner.jsx`](../src/components/BillingBanner.jsx) renders it
+app-wide (mounted outside `AppInner` so it reaches the chromeless Create tools),
+and a **seven-day grace window** holds Pro through Stripe's retry schedule
+instead of revoking on the first failed charge. 22 unit tests + 3 layout tests.
 
-Meanwhile `SubscriptionContext.jsx:53-60` drops the user to Free the moment
-Stripe flips status. So an expired card silently removes Pro, and the user finds
-out by hitting a limit — with no banner, no email, and no link to the retry page
-the system already stored for them.
+Three things that were not obvious going in, recorded so they are not
+rediscovered:
 
-**This is finished backend work with no front end**, which makes it the cheapest
-revenue protection available.
+- **The grace window cannot be anchored on `currentPeriodEnd`.** Stripe advances
+  the period end *before* it finalises the renewal invoice, so by the time that
+  invoice fails the period end is already a month out — grace measured from it
+  would run ~37 days, not 7. It is anchored on a new `paymentFailedAt`, stamped
+  once on the transition into failure and preserved across retries.
+- **`writeSubscription` cleared `paymentFailed` unconditionally**, and Stripe
+  sends `customer.subscription.updated` (→ `past_due`) alongside
+  `invoice.payment_failed` with no ordering guarantee. Whenever the subscription
+  event landed second it wiped the flag the invoice event had just set — so the
+  banner would never have appeared even once it existed. The clear is now gated
+  on a healthy status.
+- **`trialEndingSoon` is never set back to false anywhere.** On its own it would
+  announce a trial that ended months ago on every page load. The banner guards
+  on live `status === 'trialing'` plus a future `trialEndsAt`, and treats the
+  flag only as a widening hint.
+
+Still open from this section: the **emails**. A banner only reaches someone who
+is already in the app — see section C.
 
 ### B2 · Nothing warns before the AI quota, and the machinery is dead code
 
@@ -179,9 +199,12 @@ runtime-truth, where it depends on those.
 
 ## The three highest-impact
 
-1. **Read the billing state you already collect.** Four fields written by the
-   webhook, zero read. A banner plus two emails is the cheapest revenue
-   protection here.
+1. ~~**Read the billing state you already collect.**~~ **The banner half is
+   done** (see B1) — four fields written by the webhook now drive an app-wide
+   notice, and a seven-day grace window keeps a retrying customer on Pro. The
+   **email half is not**, and it is the half that reaches someone who has
+   already stopped opening the app. Blocked on section C: there is no
+   deliverable sending domain.
 2. **Make deletion legal and functional** — cancel the subscription, delete the
    subcollection, work for Google accounts. Compliance, not features.
 3. **Replace the pricing step with the first win.** Today the last thing

@@ -5,6 +5,7 @@ import Toast from './components/Toast'
 import AppFooter from './components/AppFooter'
 import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/GoogleOneTap'
+import BillingBanner from './components/BillingBanner'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
@@ -373,6 +374,10 @@ export default function App() {
             (WCAG 2.4.1). Each layout tags its content-start with id="main". */}
         <a href="#main" className="skip-link">Skip to content</a>
         <AppInner />
+        {/* Mounted out here rather than inside AppInner's shell: every Create
+            tool takes the CHROMELESS_PATHS early return, and those are exactly
+            the pages where a lapsed subscription is about to be felt. */}
+        <BillingBanner />
       </ProModalProvider>
     </LoginPromptProvider>
   )

@@ -11,6 +11,39 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ---
 
+## 2026-08-12 — Billing signals: the state we collected but never showed
+
+`api/stripe-webhook.js` had written `paymentFailed`, `hostedInvoiceUrl`,
+`trialEndsAt` and `trialEndingSoon` to Firestore since it was built. Grepping
+`src/` for any of the four returned **zero hits** — finished backend work with
+no consumer. Meanwhile `SubscriptionContext` dropped a user to Free the instant
+Stripe flipped status, so an expired card silently removed Pro and the customer
+discovered it by hitting a limit.
+
+- **A seven-day grace window.** A `past_due` subscription keeps Pro while
+  Stripe retries the charge, on the server (`api/_lib/plans.js`, the security
+  boundary) and mirrored on the client. Not extended to `unpaid` or `canceled` —
+  those mean the retry schedule is exhausted
+- **An app-wide banner** naming what happened, what it costs, and the one link
+  that fixes it — the hosted Stripe invoice URL the webhook had been storing
+  and nothing had ever used. Mounted outside `AppInner` so it reaches the
+  chromeless Create tools, which is exactly where a lapse gets felt
+- Also surfaces **trial ending** (with the date) and **scheduled cancellation**
+  (stating plainly that nothing is deleted, because nothing is)
+- Two webhook correctness fixes found while wiring it up: `paymentFailedAt` is
+  now stamped once and preserved across retries, and `writeSubscription` only
+  clears the failure flags on a healthy status
+
+**The trap worth remembering:** the grace window cannot be anchored on
+`currentPeriodEnd`. Stripe advances the period end *before* it finalises the
+renewal invoice, so when that invoice fails the period end is already a month
+out — grace measured from it would have run ~37 days instead of 7.
+
+Unit 229 → 251, browser acceptance 205 → 208, lint unchanged at 32.
+Full detail: [`docs/account-lifecycle-audit-2026-08-12.md`](docs/account-lifecycle-audit-2026-08-12.md) § B1.
+
+---
+
 ## 2026-08-11 — Founder batch 4: sliders, honest pricing, the hero, and the fold
 
 Six PRs, each verified in a rendered browser and merged green to `main`:

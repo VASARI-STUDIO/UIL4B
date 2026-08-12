@@ -28,6 +28,18 @@ async function upsertSubscription(subscription) {
 }
 
 async function writeSubscription(uid, sub) {
+  // Only a HEALTHY status may clear the failure flags. This used to clear them
+  // unconditionally, and Stripe sends customer.subscription.updated (status →
+  // past_due) alongside invoice.payment_failed with no ordering guarantee — so
+  // whenever the subscription event landed second it wiped the flag the invoice
+  // event had just set. The visible symptom was the failure banner never
+  // appearing; the invisible one is that clearing `paymentFailedAt` destroys
+  // the grace window's anchor and drops a retrying customer straight to Free.
+  const healthy = sub.status === 'active' || sub.status === 'trialing'
+  const recovery = healthy
+    ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null }
+    : {}
+
   await adminDb().collection('users').doc(uid).set({
     subscription: {
       id: sub.id,
@@ -36,10 +48,8 @@ async function writeSubscription(uid, sub) {
       interval: sub.items?.data?.[0]?.price?.recurring?.interval || null,
       currentPeriodEnd: sub.current_period_end ? sub.current_period_end * 1000 : null,
       cancelAtPeriodEnd: sub.cancel_at_period_end || false,
-      // Cleared by any healthy subscription update so a recovered payment
-      // removes the "payment failed" banner automatically.
-      paymentFailed: false,
       trialEndsAt: sub.trial_end ? sub.trial_end * 1000 : null,
+      ...recovery,
       updatedAt: Date.now(),
     },
   }, { merge: true })
@@ -267,9 +277,29 @@ async function restoreAfterDisputeWon(stripe, dispute) {
 async function flagPaymentFailed(invoice) {
   const uid = await uidForCustomer(invoice.customer)
   if (!uid) return
-  await adminDb().collection('users').doc(uid).set({
+  const ref = adminDb().collection('users').doc(uid)
+
+  // `paymentFailedAt` is the clock the seven-day grace window runs on
+  // (api/_lib/plans.js), so it has to be stamped ONCE — on the transition into
+  // failure — and then survive every retry. Stripe fires invoice.payment_failed
+  // again on each Smart Retry; re-stamping here would push the window forward
+  // each time, which is the same as having no window at all.
+  let failedAt = Date.now()
+  try {
+    const existing = (await ref.get()).data()?.subscription
+    if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedAt)) {
+      failedAt = existing.paymentFailedAt
+    }
+  } catch (err) {
+    // A read failure must not swallow the failure flag. Stamping "now" can only
+    // ever be generous to the customer by at most one retry interval.
+    console.error('stripe-webhook: could not read existing payment state', { uid, error: err?.message })
+  }
+
+  await ref.set({
     subscription: {
       paymentFailed: true,
+      paymentFailedAt: failedAt,
       // Hosted invoice page the customer can use to retry payment.
       hostedInvoiceUrl: invoice.hosted_invoice_url || null,
       updatedAt: Date.now(),
@@ -378,7 +408,13 @@ export default async function handler(req, res) {
       const uid = await uidForCustomer(event.data.object.customer)
       if (uid) {
         await adminDb().collection('users').doc(uid).set({
-          subscription: { paymentFailed: false, updatedAt: Date.now() },
+          // Clear the grace anchor and the retry link too, or a customer who
+          // has paid keeps being shown a "fix your card" banner pointing at a
+          // settled invoice.
+          subscription: {
+            paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null,
+            updatedAt: Date.now(),
+          },
         }, { merge: true })
       }
       break

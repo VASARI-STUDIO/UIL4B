@@ -15,9 +15,9 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 32 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **228 tests, 228 pass** |
+| Unit | `npm run test:unit` | **251 tests, 251 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **205 tests across 20 spec files**; **192 pass, 13 skipped** (`npx playwright test --list`) |
+| Browser acceptance | `npm run test:users` | **208 tests across 21 spec files**; **195 pass, 13 skipped** (`npx playwright test --list`) |
 
 The 13 skipped are the whole of `12-ui-system-builder.spec.js`. UI System mode
 went admin-only in founder batch 4 and this suite runs signed out, so the
@@ -35,6 +35,19 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+The billing-signals slice (2026-08-12) moved unit 229 → **251** (+22: the
+seven-day grace window, its boundary conditions, alert precedence and the
+webhook wiring) and browser acceptance 205 → **208** (+3: the banner's layout
+against the feedback FAB, target size, and contrast/focus ring). Lint unchanged
+at 32.
+
+**A flake worth knowing about.** On the first full `test:users` run of that
+slice, `18-signup-intent.spec.js:41` ("Log in" still opens sign-in) failed on a
+click timeout at `/plans`. It did not reproduce on a clean re-run of the whole
+suite. Note the trap: re-running the failing spec ALONE also changes the worker
+count, so a pass there proves nothing on its own — re-run the FULL suite, which
+is what actually distinguishes a load flake from a regression.
 
 The plans overhaul took lint from 33 to **32**. Not a drive-by fix: exporting
 the new `AI_LIMITS` table from `SubscriptionContext.jsx` would have ADDED a
