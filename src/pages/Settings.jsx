@@ -10,24 +10,9 @@ import { LOCATIONS } from '../data/locations'
 import { FLAIRS, getFlair } from '../utils/constants'
 import UserName from '../components/UserName'
 import { clearCommunitySubmissions, COMMUNITY_SUBMISSIONS_KEY } from '../utils/communitySubmissions'
-
-const STORAGE_DISCLOSURE = [
-  { key: 'vs-lang', purpose: 'Selected interface language', pii: 'no' },
-  { key: 'vs-appearance', purpose: 'Reduced-motion preference', pii: 'no' },
-  { key: 'vs-nav-open', purpose: 'Sidebar category state', pii: 'no' },
-  { key: 'vs-pinned-tools', purpose: 'Tools you pinned for quick access', pii: 'no' },
-  { key: 'vs-recent-tools', purpose: 'Recently used tools list', pii: 'no' },
-  { key: 'vs-current-design', purpose: 'Active palette, fonts, type scale', pii: 'no' },
-  { key: 'vs-projects', purpose: 'Saved design projects (per account)', pii: 'local' },
-  { key: 'vs-prompts', purpose: 'Your AI prompt library', pii: 'local' },
-  { key: 'vs-community-submissions', purpose: 'Designs submitted from this browser', pii: 'local' },
-  { key: 'vs-community-saves', purpose: 'Community designs you saved', pii: 'no' },
-  { key: 'vs-community-handle', purpose: 'Public community handle', pii: 'local' },
-  { key: 'vs-palette-history', purpose: 'Recent Palette Builder recovery history', pii: 'no' },
-  { key: 'vs-state-shades', purpose: 'Cached state colour shades', pii: 'no' },
-  { key: 'vs-profile-cache', purpose: 'Cached user profile (synced via Firebase)', pii: 'yes' },
-  { key: 'vs-admin-unlocked', purpose: 'Admin panel access flag', pii: 'no' },
-]
+import { collectStorage, buildExport, keysToClear } from '../utils/dataExport'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '../utils/firebase'
 
 function Check() {
   return (
@@ -464,6 +449,11 @@ export default function Settings({ toast }) {
   // `state={{ section: 'support' }}`.
   const [active, setActive] = useState('support')
   const [confirmClear, setConfirmClear] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  // Counted from storage, not from the length of a hand-written list. The old
+  // page reported "15 items" whatever was actually there — including for a
+  // browser holding 16 keys, 9 of which the export then omitted.
+  const [localKeyCount, setLocalKeyCount] = useState(0)
   const [billing, setBilling] = useState('yearly')
   const [checkingOut, setCheckingOut] = useState(false)
   const proPrice = useProPrice()
@@ -515,29 +505,79 @@ export default function Settings({ toast }) {
     if (section) setActive(section)
   }, [location.state])
 
-  const exportData = () => {
-    const data = {}
-    STORAGE_DISCLOSURE.forEach(({ key }) => {
-      const raw = localStorage.getItem(key)
-      if (raw) {
-        try { data[key] = JSON.parse(raw) } catch { data[key] = raw }
+  // Recount whenever the Data panel is opened, and after a clear, so the figure
+  // shown is the figure on disk.
+  useEffect(() => {
+    if (active !== 'data') return
+    setLocalKeyCount(Object.keys(collectStorage(window.localStorage)).length)
+  }, [active, confirmClear])
+
+  // Enumerates storage rather than walking a hand-written list. The old version
+  // iterated 15 named keys while the app writes about forty — measured on a
+  // real browser, 9 of the 16 keys present were silently missing from a file
+  // the user was told was their data. It also never read the server, so for a
+  // signed-in user it omitted the profile and users/{uid}/sync/data, which is
+  // where their projects and prompts actually live.
+  const exportData = async () => {
+    setExporting(true)
+    try {
+      let firestore = null
+      let account = null
+      if (user?.uid) {
+        account = {
+          uid: user.uid,
+          email: user.email || null,
+          displayName: user.displayName || null,
+          photoURL: user.photoURL || null,
+          providers: (user.providerData || []).map((p) => p?.providerId).filter(Boolean),
+          createdAt: user.metadata?.creationTime || null,
+          lastSignInAt: user.metadata?.lastSignInTime || null,
+        }
+        // Both server documents. A read failure is RECORDED in the file rather
+        // than silently dropped — an export missing a section without saying so
+        // is worse than one that admits the gap.
+        const [profileSnap, syncSnap] = await Promise.allSettled([
+          getDoc(doc(db, 'users', user.uid)),
+          getDoc(doc(db, 'users', user.uid, 'sync', 'data')),
+        ])
+        firestore = {
+          profile: profileSnap.status === 'fulfilled'
+            ? (profileSnap.value.exists() ? profileSnap.value.data() : null)
+            : { error: 'Could not be read — please try again or contact support.' },
+          sync: syncSnap.status === 'fulfilled'
+            ? (syncSnap.value.exists() ? syncSnap.value.data() : null)
+            : { error: 'Could not be read — please try again or contact support.' },
+        }
       }
-    })
-    data.exportedAt = new Date().toISOString()
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `uil4b-export-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    toast(t('settings.dataExported') || 'Data exported')
+
+      const payload = buildExport({
+        local: collectStorage(window.localStorage),
+        session: collectStorage(window.sessionStorage),
+        firestore,
+        account,
+      })
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `uil4b-export-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(a.href)
+      toast(t('settings.dataExported') || 'Data exported')
+    } catch {
+      toast('Could not build your export. Please try again.')
+    } finally {
+      setExporting(false)
+    }
   }
 
   const deleteAllData = () => {
     clearCommunitySubmissions()
-    STORAGE_DISCLOSURE
-      .filter(({ key }) => key !== 'vs-admin-unlocked' && key !== COMMUNITY_SUBMISSIONS_KEY)
-      .forEach(({ key }) => localStorage.removeItem(key))
+    // Enumerated, so a key added tomorrow is cleared too. keysToClear keeps
+    // back only the ones whose removal would sign you out or drop an
+    // entitlement — clearing preferences should not log you out.
+    keysToClear(window.localStorage)
+      .filter((key) => key !== COMMUNITY_SUBMISSIONS_KEY)
+      .forEach((key) => localStorage.removeItem(key))
     setConfirmClear(false)
     toast(t('settings.dataCleared') || 'Local data cleared')
   }
@@ -850,31 +890,49 @@ export default function Settings({ toast }) {
           <section id="set-data" className="settings-section" role="tabpanel" aria-labelledby="settab-data" hidden={active !== 'data'}>
             <div className="settings-section-h">
               <h2>Your data</h2>
-              <p>Everything UIL4B stores lives in your browser. You own it.</p>
+              {/* This used to read "Everything UIL4B stores lives in your
+                  browser", which is simply false for a signed-in account —
+                  the profile and the synced design live in Firestore. */}
+              <p>
+                {user
+                  ? 'Some of it lives in this browser, and some on our server so it follows you between devices. Either way it is yours.'
+                  : 'Signed out, everything UIL4B stores lives in this browser. You own it.'}
+              </p>
             </div>
             <div className="settings-card">
               <div className="settings-card-h">
                 <div>
-                  <h3>Stored on this device</h3>
-                  <p>{STORAGE_DISCLOSURE.length} items in browser localStorage</p>
+                  <h3>What we hold</h3>
+                  <p>
+                    {localKeyCount} item{localKeyCount === 1 ? '' : 's'} in this browser
+                    {user ? ', plus your profile and synced design on the server' : ''}
+                  </p>
                 </div>
                 <NavLink to="/privacy" className="btn btn-s">Full disclosure</NavLink>
               </div>
               <div className="settings-card-body">
-                <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.65, padding: '12px 0', maxWidth: '64ch' }}>
-                  We don't sell your data or use third-party trackers. Preferences and projects are stored locally in your browser. When signed in, data syncs securely via Firebase for cross-device access.
+                <p className="settings-data-note">
+                  We don&rsquo;t sell your data or use third-party trackers. Preferences and projects are stored in this browser. When signed in, your profile and current design also sync via Firebase so they follow you between devices.
                 </p>
-                <div className="settings-row" style={{ paddingTop: 16, paddingBottom: 16 }}>
+                <div className="settings-row settings-row--pad">
                   <div>
                     <div className="settings-row-label">Export</div>
-                    <div className="settings-row-meta">Download a JSON copy of every key stored in this browser</div>
+                    <div className="settings-row-meta">
+                      A JSON copy of everything — every key in this browser
+                      {user ? ', plus your profile and synced design from the server' : ''}
+                    </div>
                   </div>
-                  <button className="btn btn-accent btn-s" onClick={exportData}>Export JSON</button>
+                  <button className="btn btn-accent btn-s" onClick={exportData} disabled={exporting}>
+                    {exporting ? 'Preparing…' : 'Export JSON'}
+                  </button>
                 </div>
                 <div className="settings-row">
                   <div>
                     <div className="settings-row-label">Clear local data</div>
-                    <div className="settings-row-meta">Remove pinned tools, prompts, current design, and recents. Account data preserved.</div>
+                    <div className="settings-row-meta">
+                      Removes everything stored in this browser except your sign-in.
+                      {user ? ' Your account and synced data on the server are untouched.' : ''}
+                    </div>
                   </div>
                   {confirmClear ? (
                     <div style={{ display: 'flex', gap: 6 }}>
