@@ -15,7 +15,7 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 32 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **273 tests, 273 pass** |
+| Unit | `npm run test:unit` | **294 tests, 294 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **208 tests across 21 spec files**; **195 pass, 13 skipped** (`npx playwright test --list`) |
 
@@ -35,6 +35,11 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+AI quota warnings (2026-08-12) moved unit 273 → **294** (+21: which ceiling
+binds, the low threshold, server-vs-local reconciliation, reset times, and the
+wiring the audit found missing). Browser acceptance unchanged — both AI tools
+sit behind an AuthGate this suite cannot pass.
 
 Account deletion (2026-08-12) moved unit 251 → **273** (+22: the reauth freshness
 window, Stripe customer ownership verdicts, which subscription statuses still
