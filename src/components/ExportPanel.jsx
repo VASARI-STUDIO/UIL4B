@@ -17,6 +17,8 @@ import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuid
 const FORMATS = [
   { id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true },
   { id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true },
+  { id: 'png', name: 'Style guide (PNG)', desc: 'A single A4 sheet at 2× — palette, contrast grades and the type ladder. For pasting into a deck or a handoff ticket.', live: true },
+  { id: 'jpeg', name: 'Style guide (JPEG)', desc: 'The same sheet, smaller file — for anywhere that will not take a PNG.', live: true },
   { id: 'css', name: 'CSS tokens', desc: 'Custom properties for colour, type, spacing and radii — drop into any stylesheet.' },
   { id: 'json', name: 'JSON tokens', desc: 'Design tokens as JSON for pipelines and Style Dictionary.' },
   { id: 'tailwind', name: 'Tailwind theme', desc: 'A tailwind.config theme extension mapped to your system.' },
@@ -25,9 +27,12 @@ const FORMATS = [
 
 export default function ExportPanel({ onClose }) {
   const [format, setFormat] = useState('html')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   const { design } = useProject()
   const { isPro } = useSubscription()
   const activeFormat = FORMATS.find(f => f.id === format)
+  const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG' }
 
   // Build and download in the browser. No server round trip: the document is a
   // pure function of the saved design (see utils/styleGuideExport.js), so there
@@ -37,25 +42,49 @@ export default function ExportPanel({ onClose }) {
   // Free exports carry a visible footer credit; Pro exports are clean. That is
   // the policy the Plans page already states, so it is read from the live
   // entitlement rather than hard-coded here.
-  const runExport = () => {
-    const projectName = design?.name || 'Design System'
-    const markdown = format === 'md'
-    const body = markdown
-      ? buildStyleGuideMarkdown(design, { projectName, watermark: !isPro })
-      : buildStyleGuideHtml(design, { projectName, watermark: !isPro })
-    const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
-    const blob = new Blob([body], { type: markdown ? 'text/markdown;charset=utf-8' : 'text/html;charset=utf-8' })
+  const download = (blob, filename) => {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${slug}-style-guide.${markdown ? 'md' : 'html'}`
+    a.download = filename
     document.body.appendChild(a)
     a.click()
     a.remove()
     // Revoked on the next tick rather than immediately: revoking synchronously
     // races the download in Safari and produces an empty file.
     setTimeout(() => URL.revokeObjectURL(url), 1000)
-    onClose()
+  }
+
+  const runExport = async () => {
+    const projectName = design?.name || 'Design System'
+    const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
+    setBusy(true)
+    setError('')
+    try {
+      if (format === 'png' || format === 'jpeg') {
+        // Drawn on a canvas rather than rasterised from the HTML — see the note
+        // at the top of utils/styleGuideRaster.js. Loaded on demand so the
+        // raster path costs nothing to anyone exporting HTML.
+        const { renderStyleGuideImage } = await import('../utils/styleGuideRaster')
+        const blob = await renderStyleGuideImage(design, { projectName, watermark: !isPro, format })
+        download(blob, `${slug}-style-guide.${format === 'jpeg' ? 'jpg' : 'png'}`)
+      } else {
+        const markdown = format === 'md'
+        const body = markdown
+          ? buildStyleGuideMarkdown(design, { projectName, watermark: !isPro })
+          : buildStyleGuideHtml(design, { projectName, watermark: !isPro })
+        download(
+          new Blob([body], { type: markdown ? 'text/markdown;charset=utf-8' : 'text/html;charset=utf-8' }),
+          `${slug}-style-guide.${markdown ? 'md' : 'html'}`,
+        )
+      }
+      onClose()
+    } catch (err) {
+      // The panel stays open on failure: closing it would leave the user with
+      // no file and no explanation, which reads as the button doing nothing.
+      setBusy(false)
+      setError(err?.message || 'The export could not be created. Please try again.')
+    }
   }
   const panelRef = useRef(null)
   const restoreRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
@@ -148,13 +177,15 @@ export default function ExportPanel({ onClose }) {
           })}
         </div>
 
+        {error && <p className="exp-error" role="alert">{error}</p>}
+
         <div className="exp-foot">
-          <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={onClose}>
+          <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={onClose} disabled={busy}>
             Cancel
           </button>
           {activeFormat?.live ? (
-            <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={runExport}>
-              Export {format === 'md' ? 'Markdown' : 'HTML'}
+            <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={runExport} disabled={busy}>
+              {busy ? 'Exporting…' : `Export ${EXPORT_LABEL[format] || 'file'}`}
             </button>
           ) : (
             <button
