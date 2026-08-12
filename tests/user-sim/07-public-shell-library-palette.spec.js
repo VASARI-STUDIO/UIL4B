@@ -137,10 +137,24 @@ test.describe('public UI quality release', () => {
     await expect(page.getByText(/Live library connected/)).toBeVisible({ timeout: 15000 })
 
     await context.setOffline(true)
-    // Re-dispatch while polling: Playwright's setOffline does not reliably flip
-    // navigator.onLine, and a single synthetic event can land before the listener
-    // is attached. Re-firing exercises the real behaviour without binding the
-    // assertion to load timing.
+    // Pin navigator.onLine as well as firing the event.
+    //
+    // Playwright's setOffline does not reliably flip navigator.onLine, and the
+    // component seeds its state from that value on mount
+    // (IconEmojiLibrary.jsx). So a remount at the wrong moment — a lazy chunk
+    // resolving, a Suspense boundary settling — re-reads a navigator that still
+    // says "online" and quietly undoes the synthetic event. Locally the sandbox
+    // blocks the network so this never bites; in CI, where the runner has real
+    // internet, it timed out at 15s looking like a broken offline banner.
+    //
+    // Overriding the property makes both paths agree, so the test measures what
+    // it claims to: that going offline shows the banner.
+    await page.evaluate(() => {
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => false })
+    })
+    // Re-dispatch while polling: a single synthetic event can land before the
+    // listener is attached. Re-firing exercises the real behaviour without
+    // binding the assertion to load timing.
     const offlineBanner = page.getByText(/Offline · built-in assets remain available/)
     await expect.poll(async () => {
       await dispatchWindowEvent(page, 'offline')
@@ -148,6 +162,12 @@ test.describe('public UI quality release', () => {
     }, { timeout: 15000 }).toBe(true)
 
     await context.setOffline(false)
+    // Symmetric restore. Without it the override above survives, and any
+    // remount from here on re-seeds the component as offline — which would make
+    // the recovery assertion below unpassable for the wrong reason.
+    await page.evaluate(() => {
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => true })
+    })
     await expect.poll(async () => {
       await dispatchWindowEvent(page, 'online')
       return page.getByText(/Live library connected/).isVisible()

@@ -8,57 +8,56 @@ so before the plan snapshot resolved a free user was told they had 40
 generations when the server grants 5 — and could fire eight requests it would
 reject. Now derives from `AI_LIMITS.free.daily`, with a test.
 
-**Nothing else here is fixed.** Sections A and B touch auth, Stripe and
-Firestore deletion, which
-[`human-validation-zones.md`](reference/human-validation-zones.md) puts behind
-founder validation — correctly, because the failure modes are billing people
-who left and deleting data that cannot be recovered.
+**Status: A1-A3 and B1 are fixed.** Those touch auth, Stripe and Firestore
+deletion, which [`human-validation-zones.md`](reference/human-validation-zones.md)
+gates behind founder validation — correctly, because the failure modes are
+billing people who left and deleting data that cannot be recovered. The founder
+gave explicit approval to proceed on them. **A4 and the rest of B and C remain
+open.**
 
 ---
 
 ## A — Legal / compliance. Not optional.
 
-### A1 · Deleting an account does not cancel the subscription
+### ~~A1 · Deleting an account does not cancel the subscription~~ — FIXED
+### ~~A2 · "Delete all associated data" leaves the data~~ — FIXED
+### ~~A3 · Deletion is broken for Google users~~ — FIXED
 
-`AuthContext.jsx:367-385` reauthenticates, calls `deleteUser()`, deletes the
-user doc. **There is no Stripe call anywhere in that path**, and no endpoint for
-one (`api/` has create-checkout, create-portal, checkout-status, stripe-webhook
-— none cancels).
+All three are now one server-side transaction:
+[`api/delete-account.js`](../api/delete-account.js), with the refusal rules
+extracted to [`api/_lib/accountDeletion.js`](../api/_lib/accountDeletion.js) so
+they can be tested without Firebase or Stripe in the room. 22 unit tests.
 
-The billing portal is the only cancellation route and it needs a Firebase ID
-token (`SubscriptionContext.jsx:135-139`), which a deleted user can never mint
-again.
+**A1.** It cancels every subscription that can still bill — including
+`trialing`, `past_due` and `unpaid`, not only `active` — and it does that
+**first**, aborting the whole deletion if Stripe fails. Deleting an account we
+are still billing is the worst outcome available here; leaving it intact so the
+user can retry is recoverable. Ownership of the Stripe customer is re-verified
+against `metadata.firebaseUid` exactly as `create-portal` does, because
+`stripeCustomerId` was client-writable until the rules lock and a tampered id
+would otherwise cancel a stranger's subscription.
 
-**So a Pro user who deletes their account keeps being charged, with no
-self-serve way to stop it.** Their options are a support email or a chargeback —
-and a chargeback lands in `stripe-webhook.js:356-365`, which tries to revoke an
-entitlement on a user doc that no longer exists.
+**A2.** `recursiveDelete` takes `users/{uid}/sync/data` with the profile.
+Community prompts, feedback, uploaded media under `community-media/{uid}/` and
+the `daily-usage` counters go too. Settings no longer asserts "all associated
+data" — it lists what goes, item by item, and the list is now true.
 
-*Fix: an authenticated cancel before `deleteUser`, and say so in the dialog.*
+**A3.** Google accounts get `reauthenticateWithPopup`, and only accounts that
+actually have a password are asked for one. The Admin SDK deletes the auth user,
+so `auth/requires-recent-login` cannot occur at all — the freshness that
+reauthentication was providing is preserved by checking `auth_time` on the
+verified token instead (five minutes), which is somewhere the client cannot lie.
+Every auth error now maps to English.
 
-### A2 · "Delete all associated data" leaves the data
+**Order is the safety property, and a test asserts it:** billing → data → auth.
+The auth user goes LAST, because a failure after it is gone orphans data with no
+token left that could ever authorise another attempt.
 
-`AuthContext.jsx:380` deletes only `users/{uid}`. Firestore does not delete
-subcollections with their parent, and `users/{uid}/sync/data` — the user's
-synced projects, prompts and current design (`useFirestoreSync.js:38`) —
-survives. So do `community-prompts` carrying `authorUid`
-(`SubmitPromptPanel.jsx:88`) and `feedback` carrying their email
-(`api/support.js:59,68`). The `deleteDoc` is in a silent `catch`, so a failure
-is never surfaced.
-
-`Settings.jsx:774` says "Permanently delete your account and all associated
-data. This cannot be undone." **That is false**, and GDPR Art. 17 is not
-satisfied.
-
-### A3 · Deletion is broken for Google users — the primary sign-in method
-
-`AuthContext.jsx:369-371` skips reauthentication for Google accounts, so
-`deleteUser()` throws `auth/requires-recent-login`. Meanwhile `Settings.jsx:368`
-unconditionally asks for a password a Google-only user does not have, and
-`Settings.jsx:353-354` maps only `auth/wrong-password` — everything else shows
-the raw string `Firebase: Error (auth/requires-recent-login).`
-
-*Fix: `reauthenticateWithPopup` for Google; map the error to English.*
+**Not run:** no live deletion, no real Stripe cancellation, no webhook delivery.
+This is code-truth. The one thing worth a founder's eyes before it matters is
+whether every existing Stripe customer carries `metadata.firebaseUid` — any
+that does not will be refused as `missing_metadata` and needs it added in the
+Stripe dashboard.
 
 ### A4 · Data export is browser-local and incomplete
 
@@ -205,8 +204,9 @@ runtime-truth, where it depends on those.
    **email half is not**, and it is the half that reaches someone who has
    already stopped opening the app. Blocked on section C: there is no
    deliverable sending domain.
-2. **Make deletion legal and functional** — cancel the subscription, delete the
-   subcollection, work for Google accounts. Compliance, not features.
+2. ~~**Make deletion legal and functional**~~ — **done** (A1-A3). Still open in
+   this area: A4, the data EXPORT, which is browser-local and misses nine of the
+   sixteen keys actually present.
 3. **Replace the pricing step with the first win.** Today the last thing
    onboarding does is ask for money, and the first thing after it is ask them to
    sign up again.
