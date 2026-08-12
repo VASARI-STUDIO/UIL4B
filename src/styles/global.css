@@ -5680,7 +5680,7 @@ html.lenis,html.lenis body{height:auto}
    laptop sizes today, but it has no ceiling either: it overflows below ~674px
    of viewport height and would clip the moment the panel grows. Bound it now
    rather than wait for the same report twice. */
-.tt-config{--tt-sticky-top:calc(var(--nav-clear) + var(--s-5));position:sticky;top:var(--tt-sticky-top);max-height:calc(100dvh - var(--tt-sticky-top) - var(--s-4));overflow-y:auto;overscroll-behavior:contain}
+.tt-config{--tt-sticky-top:calc(var(--nav-clear) + var(--s-5));position:sticky;top:var(--tt-sticky-top);max-height:calc(100vh - var(--tt-sticky-top) - var(--s-4));max-height:calc(100dvh - var(--tt-sticky-top) - var(--s-4));overflow-y:auto;overscroll-behavior:contain}
 .tt-section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:var(--s-5);padding-bottom:var(--s-4);border-bottom:1px solid var(--border)}
 .tt-section-head--output{justify-content:flex-start}
 .tt-section-num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--brand);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:var(--radius-xs)}
@@ -7476,7 +7476,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
    Bound it to the viewport and give it its own scroller. overflow-y must sit
    here, not on .fpr-panel: same specificity, later in the file. dvh, not vh, so
    a mobile URL bar cannot push the bottom out of reach. */
-.fpr-config{--fpr-sticky-top:calc(var(--nav-clear) + var(--s-5));position:sticky;top:var(--fpr-sticky-top);max-height:calc(100dvh - var(--fpr-sticky-top) - var(--s-4));overflow-y:auto;overscroll-behavior:contain}
+/* The vh line is a REQUIRED fallback, not a duplicate. An engine that does not
+   parse `dvh` drops that whole declaration as invalid — which does not mean
+   "fall back to a sensible height", it means max-height is NONE and the panel
+   is unbounded again, i.e. exactly the bug this rule exists to fix, silently
+   reintroduced. Engines that do support dvh take the second line. */
+.fpr-config{--fpr-sticky-top:calc(var(--nav-clear) + var(--s-5));position:sticky;top:var(--fpr-sticky-top);max-height:calc(100vh - var(--fpr-sticky-top) - var(--s-4));max-height:calc(100dvh - var(--fpr-sticky-top) - var(--s-4));overflow-y:auto;overscroll-behavior:contain}
 .fpr-section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:var(--s-5);padding-bottom:var(--s-4);border-bottom:1px solid var(--border)}
 .fpr-section-head--sub{margin-top:var(--s-5);border-bottom:0;padding-bottom:0}
 .fpr-section-num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--brand);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:var(--radius-xs)}
