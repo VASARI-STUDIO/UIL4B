@@ -44,6 +44,42 @@ Full detail: [`docs/account-lifecycle-audit-2026-08-12.md`](docs/account-lifecyc
 
 ---
 
+## 2026-08-12 — The style guide as an image
+
+Completes the export work: the style guide now also exports as a **single A4
+sheet**, PNG or JPEG, at 2× (1588×2246).
+
+- Palette with the hex on each swatch and its measured contrast underneath
+- The full type ladder, set in the system’s own fonts
+- Free exports carry the credit line; Pro exports are clean — the same policy
+  the HTML guide already follows
+
+**Drawn on a canvas, not rasterised from the HTML.** `<foreignObject>` silently
+drops webfonts in several browsers and taints the canvas the moment anything
+external is referenced, so the download either fails or comes out in Times New
+Roman — a style guide that misrepresents the user’s typography is worse than no
+image. html2canvas is ~200KB that reimplements a layout engine approximately.
+This document is a known structure over known data, so drawing it directly is
+exact, dependency-free and deterministic.
+
+**One sheet, not the HTML version’s four pages.** An image is for pasting into
+a deck or a handoff ticket; four PNGs would need a zip and nobody pastes four
+images. The booklet already exists as HTML → print to PDF.
+
+The layout is a pure function returning draw operations, so the composition is
+unit-tested without a DOM — including that nothing runs off the page on an
+aggressive type scale, that a capped drawing still prints the **true** size,
+and that every hex label is drawn in an ink that actually passes on its swatch.
+
+Two bugs those tests caught before they shipped: `inkFor()` returns
+`{ ink, ratio, label }` and was being used as a colour string (every hex label
+would have drawn in the wrong colour), and the type ladder’s field is `px`, not
+`size` (every specimen would have been `NaN`).
+
+Unit 313 → 330.
+
+---
+
 ## 2026-08-12 — "Export my data" now means all of it
 
 The export iterated a hand-maintained 15-key list while the app writes about

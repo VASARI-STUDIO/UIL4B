@@ -6,17 +6,22 @@ import { appendCommunitySubmission, readCommunitySubmissions } from '../../src/u
 import { buildCommunityPromptRecord, resolvePromptProfileLink } from '../../src/utils/promptSubmission.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
 
-async function dispatchWindowEvent(page, type) {
-  await expect.poll(async () => {
-    try {
-      return await page.evaluate((eventType) => {
-        window.dispatchEvent(new Event(eventType))
-        return true
-      }, type)
-    } catch {
-      return false
-    }
-  }, { timeout: 5000 }).toBe(true)
+/**
+ * Fire the connectivity event and read back what the library's status pill
+ * actually says.
+ *
+ * Returns the pill's text, or an explicit marker when the pill is absent — so a
+ * failure distinguishes "said the wrong thing" from "was not rendered at all".
+ * The rAF yield lets React commit the state change the event triggered before
+ * the text is read.
+ */
+async function readNetPill(page, type = 'offline') {
+  return page.evaluate(async (eventType) => {
+    window.dispatchEvent(new Event(eventType))
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const pill = document.querySelector('.lib-net')
+    return pill ? pill.textContent.trim() : '(no .lib-net in the DOM)'
+  }, type)
 }
 
 test.describe('public UI quality release', () => {
@@ -152,14 +157,26 @@ test.describe('public UI quality release', () => {
     await page.evaluate(() => {
       Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => false })
     })
-    // Re-dispatch while polling: a single synthetic event can land before the
-    // listener is attached. Re-firing exercises the real behaviour without
-    // binding the assertion to load timing.
-    const offlineBanner = page.getByText(/Offline · built-in assets remain available/)
-    await expect.poll(async () => {
-      await dispatchWindowEvent(page, 'offline')
-      return offlineBanner.isVisible()
-    }, { timeout: 15000 }).toBe(true)
+    // Poll on the STATUS PILL'S OWN TEXT rather than on a page-wide text match.
+    //
+    // `getByText(...).isVisible()` collapses three different failures into one
+    // `false`: the pill says the wrong thing, the pill is hidden, or the pill is
+    // not in the DOM at all. This spec failed CI three times reporting only
+    // "Received: false", which distinguished none of them and sent two separate
+    // investigations down the wrong path.
+    //
+    // Reading `.lib-net`'s textContent means a failure message now names what
+    // the pill actually said — or says "(no .lib-net in the DOM)", which would
+    // point at the component having unmounted rather than at the banner logic.
+    //
+    // The rAF wait matters too: the state update happens inside a native event
+    // listener, so without yielding a frame the read can land before React has
+    // committed.
+    await expect.poll(() => readNetPill(page), {
+      timeout: 15000,
+      intervals: [100, 200, 300, 500],
+      message: 'the library status pill never switched to its offline state',
+    }).toMatch(/Offline · built-in assets remain available/)
 
     await context.setOffline(false)
     // Symmetric restore. Without it the override above survives, and any
@@ -168,10 +185,11 @@ test.describe('public UI quality release', () => {
     await page.evaluate(() => {
       Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => true })
     })
-    await expect.poll(async () => {
-      await dispatchWindowEvent(page, 'online')
-      return page.getByText(/Live library connected/).isVisible()
-    }, { timeout: 15000 }).toBe(true)
+    await expect.poll(() => readNetPill(page, 'online'), {
+      timeout: 15000,
+      intervals: [100, 200, 300, 500],
+      message: 'the library status pill never returned to its connected state',
+    }).toMatch(/Live library connected/)
   })
 
   test('Palette Reset then edit then Undo restores the latest mutation before the pre-reset state', async ({ page }) => {

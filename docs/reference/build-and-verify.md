@@ -15,7 +15,7 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
 | Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **313 tests, 313 pass** |
+| Unit | `npm run test:unit` | **330 tests, 330 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **208 tests across 21 spec files**; **195 pass, 13 skipped** (`npx playwright test --list`) |
 
@@ -35,6 +35,12 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+Raster style-guide export (2026-08-12) moved unit 313 → **330** (+17: the sheet
+layout — nothing off-page, printed sizes matching the real ladder, readable ink
+on every swatch, and determinism). Browser acceptance unchanged: the Export
+panel is behind auth, so the built chunk was exercised directly in a browser
+instead — see the PR.
 
 Data export (2026-08-12) moved unit 294 → **313** (+19: prefix ownership, the
 collection and clearing rules, disclosure of undescribed keys, and the crash
