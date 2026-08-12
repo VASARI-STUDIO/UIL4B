@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from './AuthContext'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../utils/firebase'
@@ -6,6 +6,7 @@ import { auth as firebaseAuth } from '../utils/firebase'
 import { ADMIN_EMAILS } from '../utils/constants'
 import { detectCurrency } from '../utils/currency'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans'
+import { billingAlert, isWithinPastDueGrace } from '../utils/billingState'
 
 const SubscriptionContext = createContext()
 
@@ -50,13 +51,21 @@ const PRO_PLAN = {
   },
 }
 
+// Mirrors api/_lib/plans.js planForSubscription. The server is the only one
+// that actually grants anything; this exists so the UI doesn't have to wait for
+// a round trip to know what to show. Both honour the same seven-day grace on a
+// failing payment — see src/utils/billingState.js for why the window is
+// anchored on paymentFailedAt rather than on currentPeriodEnd.
 function planForSubscription(sub, lifetimeEntitlement) {
   if (lifetimeEntitlement?.active === true && !lifetimeEntitlement.revokedAt) return PRO_PLAN
   if (!sub) return FREE_PLAN
   const active = sub.status === 'active' || sub.status === 'trialing'
-  if (!active) return FREE_PLAN
-  if (sub.currentPeriodEnd && Date.now() > sub.currentPeriodEnd + 86_400_000) return FREE_PLAN
-  return PRO_PLAN
+  if (active) {
+    if (sub.currentPeriodEnd && Date.now() > sub.currentPeriodEnd + 86_400_000) return FREE_PLAN
+    return PRO_PLAN
+  }
+  if (isWithinPastDueGrace(sub)) return PRO_PLAN
+  return FREE_PLAN
 }
 
 export function SubscriptionProvider({ children }) {
@@ -93,6 +102,18 @@ export function SubscriptionProvider({ children }) {
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
   const plan = isAdmin ? PRO_PLAN : planForSubscription(subscription, lifetimeEntitlement)
   const isPro = plan.id === 'pro'
+
+  // The billing state worth interrupting someone about — failing payment, trial
+  // about to end, cancellation scheduled. Everything it reads is written by
+  // api/stripe-webhook.js and, until now, read by nothing.
+  //
+  // Admins are excluded: their Pro comes from the email allowlist, so a stale
+  // subscription doc on a founder account must not raise a payment banner about
+  // access they were never going to lose.
+  const alert = useMemo(
+    () => (isAdmin ? null : billingAlert(subscription)),
+    [isAdmin, subscription],
+  )
 
   // Sends the user to our own embedded checkout page (/checkout) instead of a
   // Stripe-hosted page, so the flow keeps the site's branding and chrome.
@@ -147,6 +168,7 @@ export function SubscriptionProvider({ children }) {
   return (
     <SubscriptionContext.Provider value={{
       subscription, lifetimeEntitlement, plan, isPro, isAdmin, loading,
+      billingAlert: alert,
       checkout, createCheckoutSession, getCheckoutStatus, openPortal,
     }}>
       {children}
