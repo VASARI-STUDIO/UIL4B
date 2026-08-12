@@ -8053,3 +8053,25 @@ button.plb-varrow:hover{background:var(--bg-2)}
 @media (prefers-reduced-motion:reduce){
   .bill-banner{animation:none}
 }
+
+/* ── AI quota meter ─────────────────────────────────────────────────────────
+   components/QuotaMeter.jsx. Shows both ceilings — Free is 5/day AND 40/month,
+   and the monthly one used to be completely invisible until it refused you.
+   Colour is never the only signal: the numeric "used / limit" and the sentence
+   below it both carry the state (WCAG 1.4.1). */
+.quota{display:grid;gap:10px;padding:14px 16px;margin-bottom:var(--s-5);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l)}
+.quota-row{display:grid;gap:5px}
+.quota-row-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.quota-label{font-size:12px;font-weight:600;color:var(--t1)}
+.quota-count{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums}
+.quota-track{position:relative;height:6px;border-radius:var(--radius-pill);background:var(--bg-3);overflow:hidden}
+.quota-fill{display:block;height:100%;width:var(--quota-pct,0%);border-radius:var(--radius-pill);background:var(--accent);transition:width var(--dur-3) var(--ease-out)}
+.quota-track--low .quota-fill{background:var(--warn)}
+.quota-track--out .quota-fill{background:var(--err)}
+.quota-msg{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
+.quota-msg--low{color:var(--warn)}
+.quota-msg--out{color:var(--err)}
+.quota-note{margin:0;font-size:11.5px;line-height:1.45;color:var(--t3)}
+@media (prefers-reduced-motion:reduce){
+  .quota-fill{transition:none}
+}
