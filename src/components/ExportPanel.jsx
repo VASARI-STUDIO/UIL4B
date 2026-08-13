@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { trackActivation } from '../utils/analytics'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -78,6 +79,11 @@ export default function ExportPanel({ onClose }) {
           `${slug}-style-guide.${markdown ? 'md' : 'html'}`,
         )
       }
+      // P-001 ACTIVATION (export half). Fired only after the file actually
+      // downloaded — an export that threw is not a piece of completed work,
+      // and counting the attempt would inflate the one number meant to say
+      // whether the product was useful.
+      try { trackActivation('style-guide', 'export') } catch { /* never break an export */ }
       onClose()
     } catch (err) {
       // The panel stays open on failure: closing it would leave the user with

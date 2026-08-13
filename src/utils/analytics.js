@@ -1,4 +1,5 @@
 import { db, auth } from './firebase'
+import { canWriteSharedAnalytics } from './environment'
 import { doc, setDoc, collection, getDocs, query, orderBy, limit, increment, deleteField } from 'firebase/firestore'
 
 const ANALYTICS_KEY = 'vs-analytics'
@@ -84,6 +85,12 @@ function bumpAggregate(field, n = 1) {
 function flushAggregate() {
   try {
     if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
+    // P-001: dev, preview and CI traffic must never reach the shared counters.
+    // Guarded HERE, at the one choke point every shared write passes through,
+    // so a counter added later cannot forget to opt in. Pending increments are
+    // dropped rather than queued — they are not production data, and holding
+    // them would just write them the moment someone opened the real site.
+    if (!canWriteSharedAnalytics()) { pendingIncrements = {}; return }
     if (!auth?.currentUser) { pendingIncrements = {}; return }
     const fields = pendingIncrements
     pendingIncrements = {}
@@ -283,6 +290,47 @@ export function trackColourPick(hex) {
   saveDesignAnalytics(data)
   // Additive: also feed the cross-user Firestore aggregate as a tool action.
   recordAggregateTool('colour-pick')
+}
+
+// ── P-001: the two events that make the funnel answerable ───────────────────
+// Both are APPROVED in docs/PROPOSALS.md. Until they existed there was no way
+// to answer "did this user build something?", "what did they do before
+// upgrading?" or "where do people stop?" — which is why nearly every other
+// proposal in that file is 'inferred' rather than 'measured'.
+
+/**
+ * The canonical upgrade gate. ONE event with a gate id, not sixteen.
+ *
+ * openProModal has 16 call sites; instrumenting each would guarantee the next
+ * gate is added without one, and the count would quietly under-report forever.
+ * This is called once, inside ProModalContext, so a new gate is measured by
+ * existing.
+ */
+export function trackUpgradeGate(gateId) {
+  const id = String(gateId || 'unknown').slice(0, 48)
+  const data = loadDesignAnalytics()
+  data.toolUsage[`gate:${id}`] = (data.toolUsage[`gate:${id}`] || 0) + 1
+  saveDesignAnalytics(data)
+  recordAggregateTool(`gate__${id}`)
+}
+
+/**
+ * ACTIVATION — "completed a real piece of work", which the proposal defines as
+ * saving or exporting a palette, gradient or type scale.
+ *
+ * Deliberately NOT "opened a tool" or "moved a slider". Those measure traffic
+ * and fidgeting; this measures the first moment the product was actually
+ * useful to someone, which is the only number that says whether any of this
+ * works. Kept separate from trackToolAction so ordinary usage can never
+ * inflate it.
+ */
+export function trackActivation(toolId, kind = 'save') {
+  const id = String(toolId || 'unknown').slice(0, 48)
+  const k = kind === 'export' ? 'export' : 'save'
+  const data = loadDesignAnalytics()
+  data.toolUsage[`activation:${id}:${k}`] = (data.toolUsage[`activation:${id}:${k}`] || 0) + 1
+  saveDesignAnalytics(data)
+  recordAggregateTool(`activation__${id}__${k}`)
 }
 
 export function trackToolAction(toolId) {
