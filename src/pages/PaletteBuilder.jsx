@@ -14,6 +14,7 @@ import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/palet
 // utils/paletteNames.js for why `colorName` is deterministic and
 // `randomPaletteName` deliberately is not.
 import { colorName, randomPaletteName } from '../utils/paletteNames'
+import { roleLabel } from '../utils/paletteRoles'
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import { useProject } from '../contexts/ProjectContext'
@@ -2370,7 +2371,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
           const contrast = meta ? meta.contrast : contrastPair(c)
           const ramp = meta ? meta.ramp : tonalRamp(c)
           const name = columnNames[i]
-          const role = i < ROLES.length ? ROLES[i] : `ALTERNATIVE ${i - ROLES.length + 1}`
+          // The DISPLAYED role, which varies by system. ROLES[i] stays the
+          // stable slot identity that exports, tints and the UI preview key
+          // off — see utils/paletteRoles.js for why those must not move.
+          const role = roleLabel(harmony, i)
           const isLocked = locked.has(i)
           const colClass = [
             'plb-col',
