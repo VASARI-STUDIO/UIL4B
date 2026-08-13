@@ -42,6 +42,10 @@
       "destination": "/community/index.html"
     },
     {
+      "source": "/discover",
+      "destination": "/discover/index.html"
+    },
+    {
       "source": "/discover/gradients",
       "destination": "/discover/gradients/index.html"
     },
@@ -102,6 +106,10 @@
       "destination": "/seo/index.html"
     },
     {
+      "source": "/sitemap",
+      "destination": "/sitemap/index.html"
+    },
+    {
       "source": "/terms",
       "destination": "/terms/index.html"
     },
@@ -111,7 +119,7 @@
     },
     {
       "source": "/((?!api/|assets/).*)",
-      "destination": "/index.html"
+      "destination": "/404.html"
     }
   ],
   "headers": [

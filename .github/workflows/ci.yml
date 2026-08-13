@@ -45,8 +45,15 @@ jobs:
       - name: Lint (eslint)
         run: npx eslint .
 
-      - name: Build (vite)
-        run: npx vite build
+      # `npm run build`, NOT `npx vite build`. The two are not the same command:
+      # only the npm script runs scripts/prerender.mjs, which is what writes the
+      # per-route head metadata and the noindex 404 shell. CI was therefore
+      # never exercising the step production actually deploys — a prerender that
+      # crashed, or silently stopped matching index.html's tags, would have
+      # shipped green. It also means dist/ exists in the shape the unit tests
+      # assert against.
+      - name: Build (vite + prerender)
+        run: npm run build
 
       - name: Unit tests
         run: npm run test:unit
@@ -73,8 +80,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build (vite)
-        run: npx vite build
+      # Same reasoning as the other job: the acceptance suite walks `vite
+      # preview` over dist/, so it should walk the build production deploys.
+      - name: Build (vite + prerender)
+        run: npm run build
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

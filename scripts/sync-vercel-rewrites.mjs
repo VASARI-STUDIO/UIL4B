@@ -33,7 +33,14 @@ export function buildRewrites(routes) {
   return [
     { source: '/p/:code', destination: '/api/share?c=:code' },
     ...routes.map(r => ({ source: r, destination: `${r}/index.html` })),
-    { source: '/((?!api/|assets/).*)', destination: '/index.html' },
+    // Everything that matched no explicit route above gets the NOINDEX 404
+    // shell, not index.html. Serving index.html made every typo and dead
+    // backlink a 200-status indexable copy of the homepage.
+    //
+    // The SPA still boots from this shell and renders normally, so private app
+    // routes (/settings, /projects, …) keep working — they simply arrive
+    // carrying `noindex`, which is what they should have had anyway.
+    { source: '/((?!api/|assets/).*)', destination: '/404.html' },
   ]
 }
 
