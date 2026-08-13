@@ -247,3 +247,26 @@ test('the sitemap never advertises a page that tells crawlers not to index it', 
       `${route} is advertised in sitemap.xml but resolves to ${robotsFor(route)}`)
   }
 })
+
+// ── Offline is not a stale deploy ───────────────────────────────────────────
+
+test('a chunk preload failure never reloads the page while offline', () => {
+  // main.jsx reloads on `vite:preloadError` to recover from a cached
+  // index.html asking for chunk filenames a redeploy removed. Losing
+  // connectivity fires the SAME event for an entirely different reason, and
+  // there a reload is the worst available response: it throws away a working,
+  // already-rendered app and tries to re-fetch everything over the connection
+  // that just failed.
+  //
+  // Found by the acceptance suite — cutting the network mid-session reloaded
+  // the page out from under it ("Execution context was destroyed"), which is
+  // exactly what it would do to a user on a train.
+  const src = stripComments(read('src/main.jsx'))
+  const handler = /vite:preloadError[\s\S]*?\n\}\)/.exec(src)?.[0] || ''
+  assert.ok(handler, 'the preloadError handler must still exist')
+  assert.ok(/navigator\.onLine === false/.test(handler),
+    'the handler must bail out when offline, before it decides to reload')
+  // The guard has to come BEFORE the reload, or it guards nothing.
+  assert.ok(handler.indexOf('navigator.onLine') < handler.indexOf('location.reload'),
+    'the offline check must precede the reload')
+})

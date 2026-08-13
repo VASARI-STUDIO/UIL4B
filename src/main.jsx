@@ -18,6 +18,21 @@ import './styles/global.css'
 // fails. One hard reload fetches the fresh index.html and the new chunk set.
 // sessionStorage guards against a reload loop if the error persists.
 window.addEventListener('vite:preloadError', (event) => {
+  // OFFLINE IS NOT A STALE DEPLOY, and reloading cannot fix it.
+  //
+  // This handler exists for one failure: after a redeploy, a cached index.html
+  // asks for chunk filenames that no longer exist, and one reload fetches the
+  // new index and the new chunk set. Losing connectivity produces the SAME
+  // event for a completely different reason — and there, a reload is the worst
+  // available response. It throws away a working, already-rendered app and
+  // tries to re-fetch everything over a connection that just failed, turning a
+  // recoverable "this panel needs the network" into a blank page.
+  //
+  // Found by the acceptance suite: cutting the network mid-session reloaded the
+  // page out from under the test ("Execution context was destroyed"), which is
+  // exactly what it would do to a user on a train.
+  if (navigator.onLine === false) return
+
   const key = 'vs-chunk-reload'
   const last = Number(sessionStorage.getItem(key) || 0)
   if (Date.now() - last < 30000) return
