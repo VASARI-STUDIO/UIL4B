@@ -6,6 +6,7 @@ import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 const STATIC_INDEXABLE_ROUTES = [
   '/',
   '/color',
+  '/discover',
   '/plans',
   '/community',
   '/help',
@@ -14,6 +15,10 @@ const STATIC_INDEXABLE_ROUTES = [
   '/feedback',
   '/privacy',
   '/terms',
+  // The HTML sitemap. Low priority, but it is a real page and the 404 links to
+  // it as "see every page", so a crawler following that link should find it
+  // advertised rather than treated as an orphan.
+  '/sitemap',
 ]
 
 const LIVE_CREATE_ROUTES = CREATE_GROUPS.flatMap((group) => (
@@ -43,7 +48,16 @@ const RETIRED_OR_THIN_ROUTES = [
   '/icons-emoji',
   '/ai-tools',
   '/prompts',
-  '/discover',
+  // /discover moved OUT of this list: it is a real surface landing with links
+  // to three live libraries (asserted in the first test below), so excluding it
+  // was hiding a genuine page from the index.
+  //
+  // /learn stays. The 2026-08-11 audit listed it alongside /discover as
+  // "missing from sitemap.xml but real, indexable" — that half was wrong.
+  // EVERY group in LEARN_GROUPS carries `soon: true` and the page's own copy
+  // reads "Learn is coming soon", so `robotsFor('/learn')` is noindex.
+  // Advertising it would mean the sitemap saying "index this" about a page that
+  // says "do not". It belongs here until real content ships.
   '/learn',
 ]
 

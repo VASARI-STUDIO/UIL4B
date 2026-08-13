@@ -59,7 +59,11 @@ test('THE ONE THAT MATTERS: vercel.json serves the prerendered file for every ro
 
 test('the explicit rewrites come BEFORE the catch-all, or they never fire', async () => {
   const rewrites = vercel().rewrites
-  const catchAll = rewrites.findIndex(r => r.destination === '/index.html' && r.source.includes('?!'))
+  // The catch-all now serves /404.html, not /index.html: serving the homepage
+  // shell for unknown URLs was the soft 404 (200 + index,follow + the
+  // homepage's content at unlimited URLs). Matched on the negative-lookahead
+  // source, which is what actually makes it the catch-all.
+  const catchAll = rewrites.findIndex(r => r.source.includes('?!'))
   assert.ok(catchAll > -1, 'the SPA catch-all must still exist for client-side routes')
   const routes = await prerenderRoutes()
   for (const route of routes) {
@@ -74,12 +78,23 @@ test('the API share route survives, and the SPA fallback still covers everything
   assert.equal(rewrites[0].destination, '/api/share?c=:code')
   // Client-only routes that are deliberately NOT prerendered (they are
   // noindexed, gated or redirect-only) still need the fallback to reach React.
+  //
+  // That fallback is now /404.html rather than /index.html. Both are the same
+  // SPA shell so React still boots and renders the real page — the difference
+  // is the head it arrives with. Serving index.html meant every unknown URL
+  // returned 200 with `index,follow` and the homepage's canonical, which is a
+  // soft 404. These gated routes get `noindex` out of the same change, which is
+  // what they should have carried anyway.
   const catchAll = rewrites[rewrites.length - 1]
-  assert.equal(catchAll.destination, '/index.html')
-  for (const clientOnly of ['/settings', '/projects', '/checkout', '/login', '/discover', '/learn']) {
+  assert.equal(catchAll.destination, '/404.html')
+  for (const clientOnly of ['/settings', '/projects', '/checkout', '/login', '/learn']) {
     assert.ok(!rewrites.some(r => r.source === clientOnly),
       `${clientOnly} must fall through to the SPA, not be prerendered`)
   }
+  // /discover moved the other way: it is a real page with real content and is
+  // now prerendered and advertised.
+  assert.ok(rewrites.some(r => r.source === '/discover'),
+    '/discover is indexable content and should have its own prerendered shell')
 })
 
 test('vercel.json is exactly what the generator produces — no hand-edit drift', async () => {

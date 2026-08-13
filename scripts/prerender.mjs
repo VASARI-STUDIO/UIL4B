@@ -59,19 +59,42 @@ async function routesFromSitemap() {
  * no-op here would ship the homepage's metadata again while the build stayed
  * green, which is precisely the failure this script exists to end.
  */
-function rewriteHead(html, { route, title, description }) {
-  const canonical = `${ORIGIN}${route}`
+function rewriteHead(html, { route, title, description, robots = null, canonicalUrl = null }) {
+  const canonical = canonicalUrl ?? `${ORIGIN}${route}`
   const misses = []
   const sub = (label, re, next) => {
     if (!re.test(html)) { misses.push(label); return }
     html = html.replace(re, next)
   }
 
+  // The 404 shell needs `noindex` in the SERVED html, not just after React has
+  // run — a crawler that does not execute JS is exactly the reader that would
+  // otherwise index it.
+  //
+  // SUBSTITUTED, never inserted. index.html already ships a static
+  // `<meta name="robots" content="index,follow">`, so appending produced two
+  // contradictory robots tags in one head. Google resolves that conflict by
+  // taking the most restrictive, so it happened to behave — but shipping a
+  // contradiction and relying on a tie-break rule is not the same as being
+  // correct, and the next reader has no way to tell which one is intended.
+  if (robots) {
+    sub('robots', /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/,
+      `<meta name="robots" content="${attr(robots)}" />`)
+  }
+
   sub('title', /<title>[\s\S]*?<\/title>/, `<title>${text(title)}</title>`)
   sub('description', /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/,
     `<meta name="description" content="${attr(description)}" />`)
-  sub('canonical', /<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/,
-    `<link rel="canonical" href="${attr(canonical)}" />`)
+  // A shell carrying `noindex` gets NO canonical. Asserting "this is the
+  // authoritative version of this page" in the same head that says "do not keep
+  // this" is a contradiction, and pointing it at `/` instead would funnel every
+  // typo's signals into the homepage. Saying nothing is the honest option.
+  if (robots && robots.includes('noindex')) {
+    sub('canonical', /\s*<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/, '')
+  } else {
+    sub('canonical', /<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/,
+      `<link rel="canonical" href="${attr(canonical)}" />`)
+  }
   sub('og:title', /<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/,
     `<meta property="og:title" content="${attr(title)}" />`)
   sub('og:description', /<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/,
@@ -125,6 +148,26 @@ async function main() {
     await writeFile(path.join(dir, 'index.html'), html, 'utf8')
   }
 
+  // ── The 404 shell ─────────────────────────────────────────────────────────
+  // vercel.json's catch-all serves this for every URL that matched no explicit
+  // route, so it is what a crawler receives for a typo, a dead backlink or a
+  // hallucinated URL. It previously received dist/index.html: status 200,
+  // `index,follow`, and the homepage's content and canonical — an instruction
+  // to index unlimited duplicates of the homepage.
+  //
+  // It carries NO canonical of its own. Pointing every unknown URL at `/` would
+  // consolidate junk into the homepage's signals, and self-canonicalising would
+  // assert the page is real. `noindex` says the true thing: don't keep this.
+  const notFound = rewriteHead(shell, {
+    route: '/404',
+    title: 'UI L4B | Page not found',
+    description: 'That page does not exist. Browse the tools, or head back to the homepage.',
+    robots: 'noindex,follow',
+    canonicalUrl: `${ORIGIN}/404`,
+  })
+  notFound.misses.forEach(m => allMisses.add(m))
+  await writeFile(path.join(dist, '404.html'), notFound.html, 'utf8')
+
   if (allMisses.size) {
     console.error(`prerender: these tags were not found in dist/index.html and were NOT rewritten: ${[...allMisses].join(', ')}`)
     console.error('prerender: index.html has changed shape — fix the patterns rather than shipping homepage metadata.')
@@ -135,7 +178,7 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`prerender: wrote ${routes.length} route shells with per-route metadata.`)
+  console.log(`prerender: wrote ${routes.length} route shells + a noindex 404 shell.`)
 }
 
 main().catch((err) => { console.error('prerender failed:', err); process.exit(1) })

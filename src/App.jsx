@@ -11,7 +11,7 @@ import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { purgeStaleUsage } from './utils/usageTracker'
-import { updateRouteMeta } from './utils/routeMeta'
+import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaMap'
@@ -51,6 +51,7 @@ const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 // Moved from Create to Discover: it is a browse-and-take surface, not a tool
 // you operate, so it belongs beside the palette and gradient libraries.
 const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 // Create tool routes come straight from the single tool-tree source, so adding a
 // tool never needs a hand-edited <Route>. These paths — plus /discover and
@@ -229,8 +230,17 @@ function AppInner() {
     // data, so scripts/prerender.mjs writes the SAME values into the served
     // HTML at build time and the two cannot drift.
 
-    const title = PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
-    const description = PAGE_DESCRIPTIONS[location.pathname] || DEFAULT_DESCRIPTION
+    // A URL that resolves to nothing must not wear the homepage's title. It
+    // read "UI L4B | Design Toolkit" in the tab, in history and in a bookmark,
+    // so a 404 was indistinguishable from the homepage everywhere except the
+    // page body. The strings match scripts/prerender.mjs's 404 shell.
+    const missing = isUnknownRoute(location.pathname)
+    const title = missing
+      ? 'UI L4B | Page not found'
+      : PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
+    const description = missing
+      ? 'That page does not exist. Browse the tools, or head back to the homepage.'
+      : PAGE_DESCRIPTIONS[location.pathname] || DEFAULT_DESCRIPTION
     document.title = title
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc) {
@@ -352,7 +362,11 @@ function AppInner() {
               <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
               <Route path="/style-guide" element={<RequireAdmin><StyleGuide toast={toast} /></RequireAdmin>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* A real 404, not a redirect. The redirect made every typo and
+                  dead backlink a 200-status indexable copy of the homepage, and
+                  silently teleported the user so a broken link looked like it
+                  had worked. See pages/NotFound.jsx. */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </ErrorBoundary>
