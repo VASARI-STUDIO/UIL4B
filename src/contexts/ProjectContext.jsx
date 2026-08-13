@@ -12,7 +12,11 @@ const PROJECTS_KEY = 'vs-projects'
 export const DEFAULT_DESIGN = {
   palette: {
     base: '#0051FF',
-    harmony: 'analogous',
+    // P-004: Auto, not Analogous. Analogous is a PAID system, and the engine
+    // silently collapses it to Auto for a free user — so a new board's first
+    // impression was a system that did not do what its label said. Auto is free
+    // for everyone and is what the board was actually rendering anyway.
+    harmony: 'auto',
     extraColors: [],
     activeIdx: 0,
     colors: ['#0051FF'],

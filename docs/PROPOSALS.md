@@ -51,7 +51,7 @@ scale — and one canonical upgrade-gate event.
 **Cost / risk.** Small-to-moderate, no user-facing change. Risk is choosing the
 wrong activation definition and having to re-cut it later; cheap to revise.
 
-**Verdict:** _(unanswered)_
+**Verdict:** _(APPROVE)_
 
 ---
 
@@ -76,7 +76,7 @@ Validation Zone — needs founder approval before any route change.
 **What would settle it.** Even a fortnight of captured reports would tell us
 whether the silence is contentment or attrition.
 
-**Verdict:** _(unanswered)_
+**Verdict:** _(APPROVEvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv)_
 
 ---
 
@@ -123,7 +123,7 @@ own fallback chain must move in the same pass or the two surfaces disagree.
 new board — one hue in five tones rather than five hues. That is a taste call as
 much as a correctness one, which is why it is here rather than done.
 
-**Verdict:** _(unanswered)_
+**Verdict:** _(APPROVE)_
 
 ---
 
@@ -131,4 +131,4 @@ much as a correctness one, which is why it is here rather than done.
 
 | Date | Proposal | Verdict |
 |---|---|---|
-| _(none yet)_ | | |
+| 2026-08-14 | P-004 · Make Auto the default colour system app-wide | APPROVED — shipped |
