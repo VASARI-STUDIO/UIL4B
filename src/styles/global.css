@@ -8193,3 +8193,37 @@ button.plb-varrow:hover{background:var(--bg-2)}
    Twelve invented designers used to render through the same <UserName> as real
    members — see the note in src/data/communityDesigns.js. */
 .ch-card-source{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Admin: community review queue ──────────────────────────────────────────
+   components/admin/CommunityQueue.jsx. The reviewer's side of the shared
+   submission queue — which did not exist, because gradient and design
+   submissions were written to localStorage and nowhere else. */
+.cq{display:grid;gap:14px}
+.cq-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cq-filters{display:flex;gap:6px;flex-wrap:wrap}
+.cq-filter{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid var(--border);border-radius:var(--radius-pill);background:transparent;color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.cq-filter:hover{color:var(--t0);border-color:var(--bh)}
+.cq-filter.is-on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.cq-filter-count{font-family:var(--mono);font-size:11px;opacity:.85}
+.cq-msg{display:grid;gap:8px;justify-items:start;padding:28px;border:1px dashed var(--border);border-radius:var(--radius-l);color:var(--t2);font-size:13px}
+.cq-msg--error{border-style:solid;border-color:color-mix(in srgb,var(--err) 40%,transparent);background:color-mix(in srgb,var(--err) 6%,transparent);color:var(--err)}
+.cq-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.cq-item{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--card)}
+.cq-preview{flex:0 0 auto;width:64px;height:44px;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;display:flex}
+.cq-preview--gradient{background:var(--cq-grad,var(--bg-3))}
+.cq-preview--palette i{flex:1;background:var(--cq-sw,var(--bg-3))}
+.cq-preview--none{background:var(--bg-2)}
+.cq-item-body{flex:1;min-width:0}
+.cq-item-name{margin:0;font-size:13.5px;font-weight:650;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cq-item-meta{margin:3px 0 0;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cq-kind{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px}
+.cq-item-actions{display:flex;gap:6px;flex-shrink:0}
+.cq-approve{border-color:var(--ok);color:var(--ok)}
+.cq-approve:hover:not(:disabled){background:var(--ok);border-color:var(--ok);color:#fff}
+.cq-delete{border-color:var(--err);color:var(--err)}
+.cq-delete:hover:not(:disabled){background:var(--err);border-color:var(--err);color:#fff}
+@media(max-width:640px){
+  .cq-item{flex-wrap:wrap}
+  .cq-item-body{flex-basis:100%;order:2}
+  .cq-item-actions{order:3;margin-left:auto}
+}

@@ -68,6 +68,42 @@ service cloud.firestore {
         && request.auth.token.admin == true;
     }
 
+    // Community submissions — the shared review queue for gradients, designs
+    // and palettes (utils/communityQueue.js).
+    //
+    // WHY IT EXISTS: those submissions were localStorage-only. A user who
+    // submitted on one browser saw nothing on another, and no admin could ever
+    // review them — "pending" described a review that could not happen.
+    //
+    // Same shape as community-prompts, with one addition: the owner may
+    // withdraw their own submission. That is the one write a non-admin has a
+    // legitimate reason to make after creating it, and it can only ever remove
+    // something from the queue, never promote it.
+    match /community-submissions/{submissionId} {
+      function isSignedIn() { return request.auth != null; }
+      function isAdmin() { return isSignedIn() && request.auth.token.admin == true; }
+      function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
+
+      // A client may only ever create its OWN submission, and only as
+      // 'pending'. 'approved' is a reviewer's word — reachable from nowhere on
+      // the client, so nothing can put itself in the library.
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow read: if isSignedIn();
+
+      // Reviewers decide. This is the write that never worked: the `admin`
+      // claim was gated on here and NOTHING in the codebase ever called
+      // setCustomUserClaims, so every moderation write was rejected.
+      // api/verify-admin.js now grants it, from a server-verified email.
+      allow update: if isAdmin()
+        || (isOwner() && request.resource.data.status == 'withdrawn'
+            && request.resource.data.authorUid == resource.data.authorUid);
+
+      allow delete: if isAdmin() || isOwner();
+    }
+
     // Aggregate usage analytics — per-day counter docs ({YYYY-MM-DD}).
     // Any signed-in user may create/update (increment) the counters so the
     // admin dashboard can reflect ALL users' usage. Read is gated to the owner

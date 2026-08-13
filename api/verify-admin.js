@@ -65,18 +65,46 @@ export default async function handler(req, res) {
     // otherwise register the admin address and pass the allowlist check.
     const isAdmin = !!email && !!decoded.email_verified && ADMIN_EMAILS.includes(email)
 
-    if (isAdmin && req.body?.includeUsers === true) {
+    // ── Grant the `admin` custom claim ────────────────────────────────────
+    // firestore.rules gates every moderation write on
+    // `request.auth.token.admin == true`, and NOTHING IN THIS CODEBASE EVER
+    // CALLED setCustomUserClaims. The condition was therefore always false, so
+    // approving or deleting a community prompt from the dashboard was rejected
+    // by Firestore every single time — the buttons have never worked.
+    //
+    // This is the right place to fix it: the endpoint has already proved
+    // adminness server-side from a verified email against the allowlist, which
+    // is strictly stronger than the claim it is granting. Nothing a client
+    // sends influences the decision.
+    //
+    // Idempotent — only written when the claim is missing, because
+    // setCustomUserClaims invalidates nothing but does cost a write and forces
+    // a token refresh on every call.
+    let claimUpdated = false
+    if (isAdmin && decoded.admin !== true) {
       try {
-        const users = await listAllUsers()
-        return res.status(200).json({ isAdmin, uid: decoded.uid, email, users })
+        await adminAuth().setCustomUserClaims(decoded.uid, { admin: true })
+        claimUpdated = true
       } catch (err) {
-        // Admin verification still succeeded — report the user-list failure
-        // separately so the dashboard can fall back to local data.
-        return res.status(200).json({ isAdmin, uid: decoded.uid, email, usersError: err?.message || 'Failed to list users' })
+        // Non-fatal: verification still succeeded, and the dashboard's own
+        // read paths do not depend on the claim. Only moderation does, and it
+        // will report its own failure.
+        console.error('verify-admin: could not set the admin claim', { uid: decoded.uid, error: err?.message })
       }
     }
 
-    return res.status(200).json({ isAdmin, uid: decoded.uid, email })
+    if (isAdmin && req.body?.includeUsers === true) {
+      try {
+        const users = await listAllUsers()
+        return res.status(200).json({ isAdmin, uid: decoded.uid, email, users, claimUpdated })
+      } catch (err) {
+        // Admin verification still succeeded — report the user-list failure
+        // separately so the dashboard can fall back to local data.
+        return res.status(200).json({ isAdmin, uid: decoded.uid, email, claimUpdated, usersError: err?.message || 'Failed to list users' })
+      }
+    }
+
+    return res.status(200).json({ isAdmin, uid: decoded.uid, email, claimUpdated })
   } catch {
     return res.status(401).json({ error: credentialProblem() || 'Invalid token', isAdmin: false })
   }
