@@ -287,9 +287,21 @@ test.describe('Palette Builder · colour titles', () => {
     }
     expect(changed, 'the system change moved at least one colour').toBeGreaterThan(0)
 
-    // The role eyebrow is still there — exports, tints and the UI preview all
-    // key off it, so it is demoted, not deleted.
-    await expect(page.locator('.plb-role').first()).toHaveText('PRIMARY')
+    // The role eyebrow is still there — it is demoted, not deleted.
+    //
+    // It no longer reads a fixed 'PRIMARY' regardless of system. That array
+    // (PRIMARY/SECONDARY/ACCENT/SUBTLE/DEEP) is accurate for the auto tonal
+    // engine and wrong for every hue-based harmony, so the CAPTION now comes
+    // from utils/paletteRoles.js and varies. The stable slot identity that
+    // exports, tints and the UI preview key off is unchanged underneath — see
+    // tests/unit/palette-roles.test.js, which checks each label against the
+    // colour the generator actually put in that slot.
+    const eyebrow = page.locator('.plb-role').first()
+    await expect(eyebrow).toBeVisible()
+    await expect(eyebrow, 'the caption must name a real role, not sit blank').not.toHaveText('')
+    // This spec switched to monochromatic, where every output is one hue at a
+    // different tone — so a label claiming a second hue would be the bug.
+    await expect(eyebrow).toHaveText(/BASE|LIGHT|DARK/)
   })
 
   test('a re-render that does not change the palette does not churn the titles', async ({ page }) => {
