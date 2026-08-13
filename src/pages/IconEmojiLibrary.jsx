@@ -70,7 +70,12 @@ export default function IconEmojiLibrary({ onCopy }) {
       <header className="lib-head">
         <div className="lib-head-copy">
           <span className="lib-eyebrow">Asset library</span>
-          <h1>Find the right symbol. Keep building.</h1>
+          {/* /icons and /emoji are two separate indexable URLs sharing this
+              component, and they shared this headline verbatim — so both pages
+              announced "Find the right symbol. Keep building." to a crawler and
+              to anyone navigating by heading. The subtitle below already
+              differed per tab; the h1 is the one that matters most and did not. */}
+          <h1>{tab === 'icon' ? 'Icons for every interface.' : 'Every emoji, one tap away.'}</h1>
           <p>{tab === 'icon' ? t('iconLibrary.subtitle') : t('emojiLibrary.subtitle')}</p>
         </div>
         <div className="lib-switch" role="tablist" aria-label="Choose asset library">
