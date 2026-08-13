@@ -80,7 +80,11 @@ export default function CheckoutReturn() {
               </p>
             )}
             <div className="checkout-return-actions">
-              <NavLink to="/dashboard" className="btn btn-accent">Go to dashboard</NavLink>
+              {/* Was `/dashboard`, which is only a redirect to `/home` — the
+                  anonymous sales page. So the moment of highest goodwill, right
+                  after someone paid, ended on the page trying to acquire them,
+                  being told about the free tier they had just moved off. */}
+              <NavLink to="/projects" className="btn btn-accent">Start building</NavLink>
               <NavLink to="/settings" className="btn">{checkoutMode === 'payment' ? 'View account details' : 'Manage subscription'}</NavLink>
             </div>
           </div>
