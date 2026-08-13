@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { trackActivation } from '../utils/analytics'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { useAuth } from './AuthContext'
 import { useSubscription } from './SubscriptionContext'
@@ -219,6 +220,14 @@ export function ProjectProvider({ children }) {
       saveAllProjects(next)
       return next
     })
+    // P-001 ACTIVATION. A saved project is the first thing that requires an
+    // account and survives the session — the audit's own definition of the
+    // first real win — so this is the moment the product became useful to
+    // someone. Fired after the write succeeds, and only for a genuine save:
+    // `opts.blank` creates an empty shell, which is a container, not work.
+    if (!opts.blank) {
+      try { trackActivation('project', 'save') } catch { /* never break a save */ }
+    }
     return id
   }, [design, userKey, allProjects, projectLimit])
 
