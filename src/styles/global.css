@@ -8243,3 +8243,29 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .legal-h{font-family:var(--serif);font-size:22px;font-weight:500;letter-spacing:-.015em;margin-bottom:12px}
 .legal-h--tight{margin-bottom:8px}
 .legal-h--sm{font-family:var(--font);font-size:16px;font-weight:700;letter-spacing:normal}
+
+/* ── Font Gallery: the specimen list is a panel, not a bare strip ───────────
+   The flush, full-bleed rows are deliberate and stay — a specimen list reads
+   better as a continuous table than as a stack of floating cards. What was
+   missing is the container around them: `.fg-grid` carried only a `border-top`
+   and `.fg-card` set `border-radius: 0`, so the whole block met the rounded
+   toolbar and filter chips above it with four hard corners.
+
+   Rounding the CONTAINER and clipping to it keeps every row square against its
+   neighbours while the block itself matches the rest of the page. */
+.fg-grid{
+  border:1px solid var(--border);
+  border-radius:var(--radius-l);
+  overflow:hidden;
+  background:var(--card);
+}
+/* The container's own edge is the bottom rule for the final row, so the row's
+   border would double it into a 2px line.
+   TRANSPARENT, not `border-bottom: 0` — removing the border makes the last row
+   1px shorter than every other, and these cards reserve an identical height on
+   purpose so the grid cannot reflow as webfaces load (asserted by
+   11-typography-tools.spec.js). Hiding the line keeps the box identical. */
+.fg-card:last-child{border-bottom-color:transparent}
+/* The chosen ratio's "where it fits" line. An interval name is a fact about
+   music; this is the bit that answers whether to pick it. */
+.tsc-ratio-hint{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--t2)}
