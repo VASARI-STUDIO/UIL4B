@@ -8,7 +8,7 @@ so before the plan snapshot resolved a free user was told they had 40
 generations when the server grants 5 — and could fire eight requests it would
 reject. Now derives from `AI_LIMITS.free.daily`, with a test.
 
-**Status: A1-A4, B1 and B2 are fixed.** Those touch auth, Stripe and Firestore
+**Status: A1-A4, B1, B2, B4 and part of B6 are fixed.** Those touch auth, Stripe and Firestore
 deletion, which [`human-validation-zones.md`](reference/human-validation-zones.md)
 gates behind founder validation — correctly, because the failure modes are
 billing people who left and deleting data that cannot be recovered. The founder
@@ -185,13 +185,24 @@ blocks, which was the original dead end.
 product surface reads them** — no personalisation, no tool ordering, no copy
 variation. Three screens of friction delivering value only to an internal table.
 
-### B4 · The post-signup destination is the anonymous sales page
+### ~~B4 · The post-signup destination is the anonymous sales page~~ — FIXED
 
-`Onboarding.jsx:104` → `/home`, and `Home.jsx` has **no auth awareness at all**
-— no `useAuth` import in the file. A user who just created an account is shown
-"No more tab hoarding", a "Start building free" CTA, and "No credit card · No
-setup". That CTA loops: `App.jsx:159-161` bounces a signed-in user from
-`/login` straight back to `/home`.
+*Was:* `Onboarding.jsx` finished at `/home`, and `Home.jsx` has no auth
+awareness at all — it does not import `useAuth`. So someone who had just created
+an account was shown "No more tab hoarding", a "Start building free" CTA and
+"No credit card · No setup". That CTA loops: `App.jsx` bounces a signed-in user
+from `/login` straight back to `/home`.
+
+**Now:** all three onboarding exits share one `FIRST_RUN_DESTINATION`
+constant — `/projects` — so they cannot drift apart again. That is where **B5's
+first real win** lives, and its empty state already named the two tools to start
+with and offered the action. The teaching state existed; it was simply not on
+the path anyone walked.
+
+The homepage staying auth-unaware is not a bug to fix — CLAUDE.md is explicit
+that it is a sales page, not a dashboard. It is the *reason* a signed-in user
+must not be routed there, and a test asserts that if it ever gains auth
+awareness the destination gets reconsidered rather than silently left.
 
 ### B5 · Activation, stated observably
 
@@ -207,12 +218,17 @@ has no reason to visit. There IS a good teaching empty state
 
 ### B6 · Smaller
 
-- `CheckoutReturn.jsx:83` — the success CTA points at `/dashboard`, which is a
-  redirect to `/home`. The moment of highest goodwill ends on the acquisition
-  page.
-- `Onboarding.jsx:99-105` vs `:121-126` — "continue free" discards the stashed
-  resume target while "skip" honours it, so the same user gets two different
-  destinations depending on which button they press.
+- ~~`CheckoutReturn.jsx:83` — the success CTA points at `/dashboard`~~ —
+  **FIXED.** It is now "Start building" → `/projects`. A test asserts
+  `/dashboard` really is only a redirect, so if it ever becomes a real page
+  these destinations get rethought rather than silently staying put.
+- `Onboarding.jsx` — "continue free" discards the stashed resume target while
+  "skip" honours it. **Reviewed and kept**, because the two are not the same
+  event: choosing Free is an explicit decision not to buy, so resuming into the
+  checkout they just declined would be hostile; skipping the survey says nothing
+  about intent, so the original destination still stands. Both now land on
+  `/projects` when there is no stashed target, so the inconsistency the audit
+  actually felt — two different landings — is gone.
 - Downgrade behaviour is **correct** (`ProjectContext.jsx:201-203` blocks only
   new saves; nothing is deleted) but is never communicated. `Projects.jsx` never
   reads `projectLimit`; the only usage counter in the product is

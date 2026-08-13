@@ -4,6 +4,21 @@ import { useAuth } from '../contexts/AuthContext'
 import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice } from '../hooks/usePrices'
 
+// Where a brand-new account lands.
+//
+// Was '/home' — the ANONYMOUS SALES PAGE. Home.jsx has no auth awareness at all
+// (it does not import useAuth), so someone who had just created an account was
+// shown "No more tab hoarding", a "Start building free" CTA and "No credit card
+// · No setup". That CTA then loops: App.jsx bounces a signed-in user from
+// /login straight back to /home.
+//
+// /projects instead, because that is where the first real win lives — the first
+// saved project is the first thing that requires an account and survives the
+// session — and because its empty state already names the two tools to start
+// with and offers the action. That teaching state existed and was simply not on
+// the path anyone actually walked.
+const FIRST_RUN_DESTINATION = '/projects'
+
 const ONBOARDED_KEY = 'vs-onboarded'
 const RESUME_KEY = 'vs-resume-after-onboarding'
 
@@ -101,7 +116,7 @@ export default function Onboarding() {
     // Explicit Free choice on the pricing step — drop any stashed checkout
     // intent rather than pushing the user into a checkout they just declined.
     takeResumeTarget()
-    navigate('/home')
+    navigate(FIRST_RUN_DESTINATION)
   }
 
   const finishPro = async () => {
@@ -109,7 +124,7 @@ export default function Onboarding() {
     // Chose Pro here — checkout() fulfils the intent directly. Capture (and
     // clear) the stashed target up front so the Stripe redirect can't leave a
     // stale key; fall back to it only if checkout itself fails.
-    const resume = takeResumeTarget() || '/home'
+    const resume = takeResumeTarget() || FIRST_RUN_DESTINATION
     setBusy(true)
     try {
       await checkout(billing)
@@ -122,7 +137,7 @@ export default function Onboarding() {
     try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
     // Skipping the survey shouldn't discard why they signed up — resume to the
     // stashed destination (e.g. /checkout) when there is one.
-    navigate(takeResumeTarget() || '/home')
+    navigate(takeResumeTarget() || FIRST_RUN_DESTINATION)
   }
 
   return (
