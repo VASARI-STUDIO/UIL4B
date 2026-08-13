@@ -9,6 +9,8 @@ import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 import { appendGradientSubmission, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
+import { buildQueueRecord } from '../utils/communityQueue'
+import { publishToQueue } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
@@ -667,7 +669,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     openSubmitForm()
   }, [authLoading, uid, openSubmitForm])
 
-  const submitForReview = useCallback((fields) => {
+  const submitForReview = useCallback(async (fields) => {
     if (!uid) { setSubmitOpen(false); return false }   // defence in depth
     const record = sanitizeGradientSubmission({
       id: `g${Date.now()}`,
@@ -680,11 +682,37 @@ export default function GradientGenerator({ onCopy, toast }) {
       submittedAt: Date.now(),
     })
     if (!record) return false
+
+    // Local first: submitting works offline and the user's own list updates
+    // without waiting on a round trip.
     appendGradientSubmission(record)
     setSubmitOpen(false)
-    toast?.('Gradient queued for review — nothing is published yet')
+
+    // Then publish to the shared queue. Until this existed, a submission never
+    // left the browser — invisible on the user's other devices, and invisible
+    // to any reviewer, so "pending" described a review that could not happen.
+    const queued = buildQueueRecord({
+      kind: 'gradient',
+      name: record.name,
+      user,
+      payload: { type: record.type, angle: record.angle, stops: record.stops },
+    })
+    if (!queued) {
+      // No signed-in user — the local copy stands, and the message says so
+      // rather than claiming it reached a reviewer.
+      toast?.('Saved to this browser. Sign in to submit it for review.')
+      return true
+    }
+    try {
+      await publishToQueue({ ...queued, localId: record.id })
+      toast?.('Gradient submitted for review')
+    } catch {
+      // Never claim it reached the queue when it did not. The local copy is
+      // kept, so nothing the user made is lost.
+      toast?.('Saved locally — we could not reach the review queue. Try again later.')
+    }
     return true
-  }, [angle, stops, type, toast, uid, user?.email])
+  }, [angle, stops, type, toast, uid, user])
 
   // ── Drag: stop handles on the preview rail ──
   // One drag session, shared by "grab an existing handle" and "press the rail to
