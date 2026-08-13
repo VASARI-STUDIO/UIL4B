@@ -8154,3 +8154,37 @@ button.plb-varrow:hover{background:var(--bg-2)}
    hides the result instead of producing a visible scrollbar that would have
    made it obvious. Measured here: a 322px track in a 315px viewport. */
 .rc-panel{min-width:0}
+
+/* ── Feedback form ──────────────────────────────────────────────────────────
+   Replaces a set of inline style={{}} objects (docs/reference/css-conventions.md).
+   The form had ZERO <label> elements — the `.seg-label` divs look like labels
+   and are not, so neither field had an accessible name. */
+.fb-card{max-width:600px}
+.fb-form{display:flex;flex-direction:column;gap:16px}
+.fb-types{gap:6px;flex-wrap:wrap}
+.fb-input,.fb-textarea{width:100%}
+.fb-textarea{min-height:120px;resize:vertical}
+.fb-error{margin:0;font-size:12.5px;line-height:1.5;color:var(--err)}
+.fb-submit{align-self:flex-start}
+.fb-done{padding:40px 20px;text-align:center}
+.fb-done-mark{width:48px;height:48px;border-radius:50%;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.fb-done-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.fb-done-sub{font-size:13px;color:var(--t2)}
+.fb-again{margin-top:16px}
+
+/* ── Focus rings on controls that sit ON a user-chosen colour ───────────────
+   Measured against the live swatches: `button.plb-tool` 1.33:1 and
+   `.plb-ramp-bar` 1.80:1, both against the required 3:1 (WCAG 1.4.11).
+
+   This is STRUCTURAL, not a bad colour choice — the background is whatever the
+   user picked, so no single accent can pass against all of it. The fix is the
+   dual ring already used by the gradient sliders (.snapv--grad): a white inner
+   ring with a near-black outer one. Every colour is far from at least one end
+   of that pair, so at least one edge of the indicator always clears 3:1.
+
+   The homepage swatch overlays (.hw-pal-lock / .hw-pal-copy) sit on the same
+   kind of user-chosen fill and get the same treatment. */
+.plb-tool:focus-visible,
+.plb-ramp-bar:focus-visible,
+.hw-pal-lock:focus-visible,
+.hw-pal-copy:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}

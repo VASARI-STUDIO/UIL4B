@@ -19,6 +19,13 @@ const EXPECTED_NOISE = [
   /fonts\.googleapis\.com/, /fonts\.gstatic\.com/,
   /googleapis\.com/, /firebaseinstallations/, /identitytoolkit/,
   /api\.iconify\.design/,
+  // `vite preview` serves dist/ as static files and runs no Vercel functions,
+  // so EVERY /api/* request 404s here regardless of whether it is correct.
+  // 22-feedback-and-focus.spec.js relies on that to exercise the failed-send
+  // path — the property that matters is that the form never claims success on
+  // a request that did not land, and this is the only way to test it without a
+  // live backend.
+  /\/api\/[a-z-]+/,
   /ERR_CONNECTION|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|ERR_TUNNEL/,
 ]
 
