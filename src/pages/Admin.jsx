@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics, getAggregateAnalytics, resetColourPicks, resetPageAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
@@ -1209,6 +1209,24 @@ export default function Admin({ toast }) {
   const [unlocked, setUnlocked] = useState(false)
   const [code, setCode] = useState('')
   const [tab, setTab] = useState('overview')
+  // Roving-tabindex keyboard navigation for the tab bar. A tablist is ONE tab
+  // stop; arrows move within it. Without this the ten tabs were ten separate
+  // stops, so reaching the content of the last one meant ten presses.
+  const tabRefs = useRef({})
+  const onTabKeyDown = (e) => {
+    const i = TABS.findIndex(t => t.id === tab)
+    let next = null
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % TABS.length
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + TABS.length) % TABS.length
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = TABS.length - 1
+    if (next === null) return
+    e.preventDefault()
+    const id = TABS[next].id
+    setTab(id)
+    tabRefs.current[id]?.focus()
+  }
+
   const [timeRange, setTimeRange] = useState('7d')
   const [data, setData] = useState(null)
   const [feedback, setFeedback] = useState([])
@@ -1562,10 +1580,29 @@ export default function Admin({ toast }) {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="adm-tabs">
+      {/* Tabs.
+          Were ten plain <button>s: no tablist, nothing in the accessibility
+          tree saying which was selected, no keyboard navigation between them,
+          and "active" carried by a CSS class alone. Now a real tablist with a
+          roving tabindex — one tab stop for the whole bar, arrows to move
+          within it — matching the pattern Settings already uses. */}
+      <div
+        className="adm-tabs"
+        role="tablist"
+        aria-label="Admin sections"
+        onKeyDown={onTabKeyDown}
+      >
         {TABS.map(t => (
-          <button key={t.id} className={`adm-tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
+          <button
+            key={t.id}
+            role="tab"
+            id={`admtab-${t.id}`}
+            aria-selected={tab === t.id}
+            tabIndex={tab === t.id ? 0 : -1}
+            ref={(el) => { if (el) tabRefs.current[t.id] = el }}
+            className={`adm-tab${tab === t.id ? ' active' : ''}`}
+            onClick={() => setTab(t.id)}
+          >
             {t.label}
             {t.id === 'submissions' && (newCount + inProgressCount) > 0 && (
               <span className="adm-tab-badge">{newCount + inProgressCount}</span>

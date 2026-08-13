@@ -879,7 +879,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .uib-preset-chips{display:flex;flex-wrap:wrap;gap:6px}
 .uib-preset-chip{padding:6px 12px;border:1px solid var(--border);border-radius:99px;background:var(--bg-1);color:var(--t1);font-size:12px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .uib-preset-chip:hover{background:var(--brand-bg);border-color:var(--brand);color:var(--brand)}
-.uib-shadow-chip{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px 6px;border:1px solid var(--border);border-radius:var(--radius-m);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard);min-width:52px}
+.uib-shadow-chip{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard);min-width:52px}
 .uib-shadow-chip:hover{border-color:var(--brand);background:var(--brand-bg)}
 .uib-shadow-swatch{width:28px;height:20px;border-radius:4px;background:var(--card);border:1px solid var(--border);flex-shrink:0}
 .uib-shadow-chip-label{font-size:10px;font-weight:700;font-family:var(--mono);color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
@@ -1619,7 +1619,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
    and a user who reads it here should not feel warned off. It sits between the
    tier cards and the comparison table because that is where someone asks "why
    are those numbers so small?" — the answer belongs at the question. */
-.plans-honesty{margin:26px auto 0;max-width:72ch;padding:14px 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--s1);color:var(--t2);font-size:13.5px;line-height:1.6}
+.plans-honesty{margin:26px auto 0;max-width:72ch;padding:14px 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t2);font-size:13.5px;line-height:1.6}
 .plans-honesty strong{color:var(--t0)}
 .plans-compare-wrap{margin-top:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .plans-compare-table{width:100%;min-width:520px;border-collapse:collapse;font-size:var(--fs-body-s)}
@@ -2136,7 +2136,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .aipg-tips{padding:18px;display:flex;flex-direction:column;gap:10px;margin-top:16px}
 
 /* ─── AI Prompt JSON Builder ─── */
-.aipg-mode-toggle{display:inline-flex;gap:2px;padding:3px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-m);margin-bottom:16px}
+.aipg-mode-toggle{display:inline-flex;gap:2px;padding:3px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px}
 .aipg-mode-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--radius-s);transition:all var(--dur-2) var(--ease-standard)}
 .aipg-mode-btn:hover{color:var(--t0)}
 .aipg-mode-btn.active{color:var(--t0);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08)}
@@ -2148,7 +2148,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 
 /* Presets */
 .aipg-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.aipg-preset{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-m);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.aipg-preset{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .aipg-preset:hover{border-color:var(--brand)}
 .aipg-preset.active{border-color:var(--brand);background:var(--brand-bg)}
 .aipg-preset-label{font-size:12.5px;font-weight:700;color:var(--t0)}
@@ -2783,7 +2783,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .proj-new-modal{max-width:460px}
 .proj-new-folders{display:flex;flex-wrap:wrap;gap:6px}
 .proj-new-start{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.proj-new-start-opt{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-m);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.proj-new-start-opt{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .proj-new-start-opt:hover{border-color:var(--brand)}
 .proj-new-start-opt.active{border-color:var(--brand);background:var(--brand-bg)}
 .proj-new-start-opt strong{font-size:13px;font-weight:700;color:var(--t0)}
@@ -2800,7 +2800,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .adm-actions{display:flex;gap:6px;flex-wrap:wrap}
 
 /* Admin tabs */
-.adm-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-m);margin-bottom:28px;flex-wrap:wrap}
+.adm-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:28px;flex-wrap:wrap}
 .adm-tab{padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--radius-s);transition:all var(--dur-2) var(--ease-standard);position:relative;white-space:nowrap}
 .adm-tab:hover{color:var(--t0);background:var(--hvr)}
 .adm-tab.active{color:var(--t0);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08)}
@@ -2820,12 +2820,12 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 
 /* Stat cards */
 .adm-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
-.adm-stat{padding:18px 20px;border-radius:var(--radius-m);background:var(--card-grad);border:1px solid var(--border);box-shadow:var(--warm-shadow);transition:border-color var(--dur-1) var(--ease-standard)}
+.adm-stat{padding:18px 20px;border-radius:var(--radius);background:var(--card-grad);border:1px solid var(--border);box-shadow:var(--warm-shadow);transition:border-color var(--dur-1) var(--ease-standard)}
 .adm-stat:hover{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
 .adm-stat-value{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--t0)}
 .adm-stat-label{font-size:11px;font-weight:600;color:var(--t2);margin-top:8px;letter-spacing:.02em}
 .adm-stat-sub{font-size:10px;color:var(--t3);margin-top:3px}
-.adm-stat-delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:8}
+.adm-stat-delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:8px}
 .adm-stat-delta.up{color:var(--ok);background:rgba(16,185,129,.1)}
 .adm-stat-delta.down{color:var(--err);background:rgba(239,68,68,.1)}
 .adm-stat-delta.neutral{color:var(--t3);background:var(--bg-2)}
@@ -2835,7 +2835,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .adm-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:14px}
 
 /* Card variants */
-.adm-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-m);box-shadow:var(--warm-shadow);overflow:hidden}
+.adm-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow);overflow:hidden}
 .adm-card-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .adm-card-title{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
 .adm-card-body{padding:16px 20px}
@@ -3145,7 +3145,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .arc-select-btn:hover{border-color:var(--accent)}
 .arc-select-ph{font-size:13px;color:var(--t3)}
 .arc-select-chev{width:14px;height:14px;flex-shrink:0;color:var(--t3)}
-.arc-select-pop{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;max-height:320px;overflow:auto;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-m);box-shadow:var(--shadow-l)}
+.arc-select-pop{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;max-height:320px;overflow:auto;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-l)}
 .arc-opt{display:block;width:100%;padding:8px 10px;border:none;background:none;border-radius:var(--radius-s);font-family:var(--font);text-align:left;cursor:pointer;transition:background var(--t)}
 .arc-opt:hover{background:var(--bg-2)}
 .arc-opt.on{background:var(--accent-bg)}
@@ -4897,7 +4897,7 @@ html.lenis,html.lenis body{height:auto}
 .icust-gate-dismiss:hover{color:var(--t0);background:var(--hvr)}
 /* Save-to-project picker (shares the gate dialog shell) */
 .icust-proj-list{display:flex;flex-direction:column;gap:6px;width:100%;max-height:240px;overflow-y:auto;margin-top:2px}
-.icust-proj-btn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:10px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t0);cursor:pointer;text-align:left;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
+.icust-proj-btn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:10px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t0);cursor:pointer;text-align:left;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
 .icust-proj-btn:hover:not(:disabled){border-color:var(--accent);background:var(--hvr)}
 .icust-proj-btn:disabled{opacity:.55;cursor:not-allowed}
 .icust-proj-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -4906,7 +4906,7 @@ html.lenis,html.lenis body{height:auto}
 .icust-proj-btn--new:hover{color:var(--t0)}
 /* Inline new-project creation: name first, then the icon is assigned */
 .icust-newproj{display:flex;gap:8px;width:100%;margin-top:2px}
-.icust-newproj-input{flex:1;min-width:0;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
+.icust-newproj-input{flex:1;min-width:0;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
 .icust-newproj-input:focus{outline:none;border-color:var(--accent)}
 .icust-newproj-input::placeholder{color:var(--t3)}
 /* Footer extras: saved-in note */
@@ -5064,7 +5064,7 @@ html.lenis,html.lenis body{height:auto}
 .surface-card-desc{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
 .surface-card .soon-badge{align-self:flex-start;margin-top:auto}
 .surface-card--link{text-decoration:none;transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
-.surface-card--link:hover{border-color:var(--brand);box-shadow:var(--shadow-sm)}
+.surface-card--link:hover{border-color:var(--brand);box-shadow:var(--shadow-s)}
 .surface-card-go{align-self:flex-start;margin-top:auto;font-size:var(--fs-body-s);font-weight:600;color:var(--brand)}
 
 /* ══ Surface sales — value pillars (sl-) ══ */
@@ -5250,7 +5250,7 @@ html.lenis,html.lenis body{height:auto}
 /* Type Scale — the two breakpoint ends. Grouped in a fieldset so the base and
    ratio read as one setting for one breakpoint rather than two loose controls,
    which is what makes "there are two ladders here" legible at a glance. */
-.tsc-bp{margin:0 0 14px;padding:12px 14px 14px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--s1)}
+.tsc-bp{margin:0 0 14px;padding:12px 14px 14px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1)}
 .tsc-bp legend{padding:0 6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .tsc-bp-row{display:grid;grid-template-columns:1fr minmax(0,190px);gap:12px;align-items:end}
 @media(max-width:640px){.tsc-bp-row{grid-template-columns:1fr}}
@@ -5263,7 +5263,7 @@ html.lenis,html.lenis body{height:auto}
    controls inside. The dots are a window affordance, not a macOS pastiche —
    they take the border colour, so they read as "this is an application" without
    impersonating one. */
-.hw-chrome{display:flex;align-items:center;gap:12px;padding:0 14px;height:38px;border-bottom:1px solid var(--border);background:var(--s1)}
+.hw-chrome{display:flex;align-items:center;gap:12px;padding:0 14px;height:38px;border-bottom:1px solid var(--border);background:var(--bg-1)}
 .hw-chrome-dots{display:inline-flex;gap:5px;flex-shrink:0}
 .hw-chrome-dots i{width:8px;height:8px;border-radius:50%;background:var(--border);border:1px solid var(--bh)}
 .hw-chrome-crumb{display:inline-flex;align-items:center;gap:6px;min-width:0;font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -5743,7 +5743,7 @@ html.lenis,html.lenis body{height:auto}
 .tt-cell-step{font-size:11px;font-weight:750;letter-spacing:.02em}
 .tt-cell-hex{font-family:var(--mono);font-size:9px;opacity:.84}
 .tt-ramp--dense .tt-cell{min-width:6px;min-height:52px;padding:0}
-.tt-dense-inspector{display:flex;align-items:center;gap:10px;min-height:34px;padding:7px 10px;border:1px solid var(--line);border-top:0;border-radius:0 0 var(--r-s) var(--r-s);background:var(--s1);font-size:11px;color:var(--t2)}
+.tt-dense-inspector{display:flex;align-items:center;gap:10px;min-height:34px;padding:7px 10px;border:1px solid var(--border);border-top:0;border-radius:0 0 var(--radius-s) var(--radius-s);background:var(--bg-1);font-size:11px;color:var(--t2)}
 .tt-dense-inspector strong,.tt-dense-inspector code{color:var(--t0)}
 .tt-dense-inspector code{font-family:var(--mono)}
 .tt-dense-inspector span:last-child{margin-left:auto}
@@ -6658,7 +6658,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-mode-switch>span{font-size:12px;color:var(--t3)}
 .plb-mode-switch>button{padding:2px 0;font:inherit;font-size:13px;font-weight:650;color:var(--t2);background:none;border:0;cursor:pointer}
 .plb-mode-switch>button:hover{color:var(--t0)}
-.plb-mode-switch>button>span,.uis-mode-switch button>span,.uis-pro-label{display:inline-flex;align-items:center;margin-left:4px;padding:2px 5px;font-size:8px;font-weight:750;line-height:1;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);background:var(--brand-weak);border-radius:var(--radius-xs)}
+.plb-mode-switch>button>span,.uis-mode-switch button>span,.uis-pro-label{display:inline-flex;align-items:center;margin-left:4px;padding:2px 5px;font-size:8px;font-weight:750;line-height:1;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);background:var(--brand-bg);border-radius:var(--radius-xs)}
 
 .plb--ui-system{background:var(--bg-0)}
 .uis{width:100%;min-width:0;padding-bottom:var(--s-8);color:var(--t0);background:var(--bg-0)}
@@ -8227,3 +8227,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .cq-item-body{flex-basis:100%;order:2}
   .cq-item-actions{order:3;margin-left:auto}
 }
+
+/* The admin tab bar scrolls rather than wrapping into three ragged rows at
+   narrow widths — ten tabs plus badges never fit, and a wrapped tab bar makes
+   the page header taller than the content it labels. */
+.adm-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.adm-tabs::-webkit-scrollbar{display:none}
+.adm-tab{flex:0 0 auto}
