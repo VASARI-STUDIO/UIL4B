@@ -11,6 +11,7 @@ import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { purgeStaleUsage } from './utils/usageTracker'
+import { onboardingDestination } from './utils/onboardingState'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
@@ -181,7 +182,7 @@ function LoginRoute() {
 }
 
 function AppInner() {
-  const { user: authUser, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
+  const { user: authUser, userProfile, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   useSmoothScroll()
   const { message, visible, type, toast } = useToast()
@@ -274,8 +275,20 @@ function AppInner() {
     // Once we positively know the visitor is logged in, canonicalise them onto
     // /home (the Dashboard is gone); new sign-ups still route through onboarding.
     if (!authLoading && authUser) {
-      const onboarded = (() => { try { return localStorage.getItem('vs-onboarded') === '1' } catch { return true } })()
-      return <Navigate to={onboarded ? '/home' : '/onboarding'} replace />
+      // Onboarding is a property of the ACCOUNT, not of this browser.
+      //
+      // This used to read localStorage alone, so a returning user on a new
+      // device, a second browser, an incognito window or after clearing site
+      // data was sent back through onboarding — every time. The profile is the
+      // account-level truth and it wins whenever it is known.
+      //
+      // While the profile is still loading, prefer /home. Brand-new sign-ups do
+      // not depend on this path at all: `pendingOnboarding` routes them from
+      // the auth event itself (see the effect above). So the only person this
+      // branch can still send to onboarding is someone whose account genuinely
+      // has no completion recorded — and guessing "not onboarded" during a slow
+      // read would re-run it for exactly the established users it kept catching.
+      return <Navigate to={onboardingDestination(userProfile)} replace />
     }
     return <><Home /><AppFooter /><GoogleOneTap /></>
   }
