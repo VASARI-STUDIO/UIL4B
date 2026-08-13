@@ -85,10 +85,15 @@ export default function Onboarding() {
   const onPricing = step >= total
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
 
-  const persist = () => {
-    try { updateProfile?.({ onboarding: { ...answers, completedAt: Date.now() } }) } catch { /* ignore */ }
+  // Record completion on the ACCOUNT, with localStorage as a fast local mirror.
+  // The account copy is the one that matters: it is what stops onboarding
+  // reappearing on a second device.
+  const markOnboardingComplete = (extra = null) => {
+    try { updateProfile?.({ onboarding: { ...(extra || {}), completedAt: Date.now() } }) } catch { /* ignore */ }
     try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
   }
+
+  const persist = () => markOnboardingComplete(answers)
 
   // A mid-action sign-up (e.g. clicked "Upgrade to Pro" → created an account)
   // is intercepted into onboarding by App.jsx, which would otherwise silently
@@ -134,7 +139,15 @@ export default function Onboarding() {
   }
 
   const skip = () => {
-    try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
+    // Skipping still COMPLETES onboarding — it just declines the survey.
+    //
+    // This used to write localStorage only, so the account never learned it had
+    // happened. Onboarding then reappeared on the next browser, device or
+    // cleared cache, forever, for anyone who skipped. Recording it on the
+    // profile is what makes "seen once" true of the person rather than of one
+    // browser. `answers` is deliberately not persisted here: they did not
+    // answer, and inventing blanks would put empty values in the admin table.
+    markOnboardingComplete()
     // Skipping the survey shouldn't discard why they signed up — resume to the
     // stashed destination (e.g. /checkout) when there is one.
     navigate(takeResumeTarget() || FIRST_RUN_DESTINATION)
