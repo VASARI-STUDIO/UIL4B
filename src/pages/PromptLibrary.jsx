@@ -195,7 +195,12 @@ export default function PromptLibrary({ onCopy, toast }) {
 
         {isCommunity && (
           <>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+            {/* Was an inline style={{}} with no class, so it had no responsive
+                control at all and defaulted to min-width:auto — at 320px it
+                established a 519px flex line that pushed "Submit prompt" fully
+                off screen. Styling belongs in global.css
+                (docs/reference/css-conventions.md). */}
+            <div className="pl-sort">
               <button className={`pl-chip${communitySort === 'popular' ? ' active' : ''}`} onClick={() => setCommunitySort('popular')}>
                 Popular
               </button>

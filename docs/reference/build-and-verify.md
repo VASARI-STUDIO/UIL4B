@@ -17,7 +17,7 @@ number here, you must have re-run it.
 | Build | `npm run build` | passes (vite + prerender) |
 | Unit | `npm run test:unit` | **358 tests, 358 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **208 tests across 21 spec files**; **195 pass, 13 skipped** (`npx playwright test --list`) |
+| Browser acceptance | `npm run test:users` | **219 tests across 22 spec files**; **206 pass, 13 skipped** (`npx playwright test --list`) |
 
 The 13 skipped are the whole of `12-ui-system-builder.spec.js`. UI System mode
 went admin-only in founder batch 4 and this suite runs signed out, so the
@@ -35,6 +35,16 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+Reflow at 320px (2026-08-13) moved browser acceptance 208 → **219** (+11: an
+unreachability sweep across eight routes, plus the three specific guarantees —
+specimens that truncate without shrinking, palette tools that stay ≥24px, and a
+visible submit CTA).
+
+**`test:users` now prerenders too.** It ran `vite build --mode test` alone,
+which overwrote dist/ WITHOUT the prerender step — so running it before the unit
+suite silently skipped every test that asserts against the built shells, and the
+acceptance suite walked a different artefact from the one production serves.
 
 Soft-404 fix (2026-08-13) moved unit 330 → **357** (+27: what counts as a
 missing route, what gets indexed, the served shells, and the rewrites that
