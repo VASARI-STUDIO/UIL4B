@@ -141,22 +141,25 @@ test.describe('public UI quality release', () => {
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
     await expect(page.getByText(/Live library connected/)).toBeVisible({ timeout: 15000 })
 
-    await context.setOffline(true)
-    // Pin navigator.onLine as well as firing the event.
+    // Pin navigator.onLine BEFORE cutting the network — the order matters.
     //
-    // Playwright's setOffline does not reliably flip navigator.onLine, and the
-    // component seeds its state from that value on mount
-    // (IconEmojiLibrary.jsx). So a remount at the wrong moment — a lazy chunk
-    // resolving, a Suspense boundary settling — re-reads a navigator that still
-    // says "online" and quietly undoes the synthetic event. Locally the sandbox
-    // blocks the network so this never bites; in CI, where the runner has real
-    // internet, it timed out at 15s looking like a broken offline banner.
+    // Playwright's setOffline does not reliably flip navigator.onLine, and two
+    // separate things read it: IconEmojiLibrary seeds its `online` state from
+    // it on mount, and main.jsx's vite:preloadError handler consults it before
+    // deciding whether to reload. Pinning it afterwards leaves a window in
+    // which the app still believes it is online.
     //
-    // Overriding the property makes both paths agree, so the test measures what
-    // it claims to: that going offline shows the banner.
+    // That window is what made this spec fail CI four times. Going offline
+    // makes an in-flight lazy chunk preload fail, vite:preloadError fires, and
+    // the handler reloaded the page — destroying the execution context out from
+    // under the very next page.evaluate. The first three failures reported only
+    // "Received: false" and sent two investigations down the wrong path. The app
+    // now refuses to reload while offline (a reload cannot fetch anything), and
+    // this ordering makes sure that guard is in place before the network drops.
     await page.evaluate(() => {
       Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => false })
     })
+    await context.setOffline(true)
     // Poll on the STATUS PILL'S OWN TEXT rather than on a page-wide text match.
     //
     // `getByText(...).isVisible()` collapses three different failures into one

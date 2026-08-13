@@ -26,6 +26,8 @@
   <url><loc>https://www.uil4b.com/alt-text</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-08-11</lastmod></url>
 
   <!-- Discover -->
+  <url><loc>https://www.uil4b.com/discover</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-13</lastmod></url>
+  <url><loc>https://www.uil4b.com/sitemap</loc><priority>0.4</priority><changefreq>monthly</changefreq><lastmod>2026-08-13</lastmod></url>
   <url><loc>https://www.uil4b.com/discover/palettes</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-05</lastmod></url>
   <url><loc>https://www.uil4b.com/discover/gradients</loc><priority>0.7</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
   <url><loc>https://www.uil4b.com/discover/prompts</loc><priority>0.7</priority><changefreq>weekly</changefreq><lastmod>2026-08-11</lastmod></url>
