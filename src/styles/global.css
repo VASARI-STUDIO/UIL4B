@@ -8099,3 +8099,58 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .nf-more{font-size:13px;color:var(--t2)}
 .nf-more a{color:var(--accent);text-decoration:none}
 .nf-more a:hover{text-decoration:underline}
+
+/* ── Narrow-viewport reflow (WCAG 1.4.10) ───────────────────────────────────
+   Measured at 320px: .plb-col became a single nowrap row at ≤768px, and its
+   name + hex + FIVE action buttons needed 363px against 315px of viewport. The
+   buttons were simply cut off — and because body carries `overflow-x: clip`
+   they could not be scrolled to either, so lock/copy/delete were unreachable
+   rather than merely awkward.
+
+   Wrapping the tools onto their own line keeps every control at full touch
+   size. The alternative — shrinking five buttons into the ~206px left after the
+   hex — would have pushed them toward the 24px floor (2.5.8) to avoid breaking
+   1.4.10, which is trading one failure for another. */
+@media(max-width:430px){
+  .plb-col{flex-wrap:wrap;row-gap:8px;min-height:0;padding-top:12px;padding-bottom:12px}
+  .plb-col-tools{width:100%;margin-left:0;justify-content:flex-start}
+}
+
+/* Prompt library toolbar. `.pl-sort` replaces an inline style={{}} that had no
+   class and therefore no responsive control: at 320px its `min-width: auto`
+   established a 519px flex line inside a 283px toolbar, which pushed the
+   "Submit prompt" primary CTA to right:535 — entirely off screen, and
+   unreachable because body carries `overflow-x: clip`. */
+.pl-sort{display:flex;gap:4px;margin-bottom:4px;min-width:0;flex-wrap:wrap}
+.pl-chips{max-width:100%}
+@media(max-width:520px){
+  /* Below this the toolbar cannot hold a filter row and a button side by side.
+     Giving the CTA its own full-width line keeps it visible and comfortably
+     tappable instead of clipped. */
+  .pl-add-btn{width:100%;margin-left:0}
+  .pl-toolbar{gap:8px}
+}
+
+/* Type-scale ladder: let the specimen actually truncate.
+   `.tsc-row-text` already asked for `overflow:hidden; text-overflow:ellipsis;
+   white-space:nowrap` — and none of it took effect, because `.tsc-row` is a
+   flex ITEM and flex items default to `min-width: auto`, which refuses to
+   shrink below their content. With a Display-sized specimen that content is
+   enormous: measured 1328px inside a 247px row at 320px viewport, clipped by an
+   ancestor's `overflow:hidden` and therefore unreachable (WCAG 1.4.10).
+   `min-width: 0` restores the truncation the rule already intended, so the
+   specimen keeps its TRUE size — which is the whole point of a type scale —
+   and simply ends in an ellipsis. */
+.tsc-ladder{min-width:0}
+.tsc-row{min-width:0}
+.tsc-row-text{max-width:100%}
+
+/* Ratio calculator panel — the same root cause as .plb-col-tools and
+   .tsc-row-text, which is worth naming because it accounts for all three of the
+   audit's reflow findings and one it missed:
+   A FLEX OR GRID ITEM DEFAULTS TO `min-width: auto`, WHICH REFUSES TO SHRINK
+   BELOW ITS CONTENT. So a `1fr` track quietly becomes as wide as its widest
+   child, an ellipsis rule never fires, and `overflow-x: clip` on body then
+   hides the result instead of producing a visible scrollbar that would have
+   made it obvious. Measured here: a 322px track in a 315px viewport. */
+.rc-panel{min-width:0}
