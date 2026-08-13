@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics, getAggregateAnalytics, resetColourPicks, resetPageAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
+import CommunityQueue from '../components/admin/CommunityQueue'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
@@ -28,6 +29,7 @@ const TABS = [
   { id: 'design', label: 'Design' },
   { id: 'submissions', label: 'Submissions' },
   { id: 'prompts', label: 'Prompts' },
+  { id: 'community', label: 'Community' },
   { id: 'pages', label: 'Pages' },
   { id: 'users', label: 'Users' },
   { id: 'stripe', label: 'Stripe' },
@@ -2224,6 +2226,21 @@ export default function Admin({ toast }) {
       {tab === 'board' && <ModuleBoard />}
 
       {/* ═══════ PROMPTS TAB ═══════ */}
+      {/* ═══════ COMMUNITY REVIEW QUEUE ═══════ */}
+      {tab === 'community' && (
+        <div className="adm-cat">
+          <div className="adm-cat-head">
+            <h2>Community submissions</h2>
+            <p>
+              Gradients, palettes and designs members have submitted. Until this
+              existed they were written to the submitter&rsquo;s browser and nowhere
+              else, so nothing could be reviewed.
+            </p>
+          </div>
+          <CommunityQueue toast={toast} />
+        </div>
+      )}
+
       {tab === 'prompts' && (
         <div className="adm-section">
           <div className="adm-section-h">

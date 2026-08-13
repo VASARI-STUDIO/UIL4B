@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import GradientGalleryGrid from '../components/discover/GradientGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import { GALLERY_GRADIENTS, GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
+import { mergeSubmissions } from '../utils/communityQueue'
+import { listMySubmissions } from '../utils/communityQueueApi'
+import { useAuth } from '../contexts/AuthContext'
 
 // /discover/gradients — the Gradient Library. A designgradients-style browse
 // surface over the local static set (src/data/gradientGallery.js): search by
@@ -20,6 +23,7 @@ import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gr
 const TYPES = ['Linear', 'Radial', 'Conic']
 
 export default function GradientGallery({ toast }) {
+  const { user } = useAuth()
   const [rawQuery, setRawQuery] = useState('')
   const [tag, setTag] = useState('all')
   const [type, setType] = useState('all')
@@ -27,6 +31,39 @@ export default function GradientGallery({ toast }) {
   // OUT of the browse grid: they are not in the library, and showing them there
   // would imply they had been published. See utils/gradientSubmissions.js.
   const [submissions, setSubmissions] = useState(readGradientSubmissions)
+
+  // "My pending submissions" is a property of the ACCOUNT, not of this browser.
+  //
+  // This list used to come from localStorage alone, so a gradient submitted on
+  // a phone was invisible on a laptop and vice versa — the reported symptom was
+  // "I submitted other gradients that I do not see here". They were never lost;
+  // they were simply only ever in one browser's storage, and no reviewer could
+  // see them either.
+  //
+  // The local list still renders first (instant, works offline); the account's
+  // copy merges in when it arrives. Local-only entries are KEPT and marked
+  // unsynced rather than dropped — they are real submissions that have not
+  // reached the queue yet, and hiding them would look exactly like the bug.
+  useEffect(() => {
+    let cancelled = false
+    if (!user?.uid) return undefined
+    listMySubmissions(user.uid, 'gradient')
+      .then((server) => {
+        if (cancelled) return
+        setSubmissions(prev => mergeSubmissions(
+          server.map(s => ({
+            id: s.localId || s.id,
+            name: s.name,
+            status: s.status,
+            createdAt: s.createdAt,
+            ...(s.payload || {}),
+          })),
+          prev,
+        ))
+      })
+      .catch(() => { /* the local list still stands; nothing is lost */ })
+    return () => { cancelled = true }
+  }, [user?.uid])
   const query = rawQuery.trim().toLowerCase()
 
   const visible = useMemo(() => GALLERY_GRADIENTS.filter(g => {
