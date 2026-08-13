@@ -131,4 +131,4 @@ much as a correctness one, which is why it is here rather than done.
 
 | Date | Proposal | Verdict |
 |---|---|---|
-| _(none yet)_ | | |
+| 2026-08-14 | P-004 · Make Auto the default colour system app-wide | APPROVED — shipped |

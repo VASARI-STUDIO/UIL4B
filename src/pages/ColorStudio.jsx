@@ -1822,7 +1822,7 @@ export default function ColorStudio({ onCopy, toast }) {
   }, [])
 
   const [baseColor, setBaseColor] = useState(() => design?.palette?.base || '#2563EB')
-  const [harmony, setHarmony] = useState(() => design?.palette?.harmony || 'analogous')
+  const [harmony, setHarmony] = useState(() => design?.palette?.harmony || 'auto')
   // Engine selector — 'auto' (HCT/Material-3 tonal) is the Slice-1 default and the
   // only mode wired so far. The Auto/HSL toggle UI is a later slice; we read+persist
   // `mode` now (so the value round-trips through ProjectContext) but don't expose a
@@ -1847,7 +1847,7 @@ export default function ColorStudio({ onCopy, toast }) {
     const adj = p.globalAdjust
     const zeroAdj = !adj || (!adj.h && !adj.s && !adj.b && !adj.temp)
     if (!full || full.length < 2 || !zeroAdj) return stored
-    const gen = generateHarmony(p.base || '#2563EB', p.harmony || 'analogous')
+    const gen = generateHarmony(p.base || '#2563EB', p.harmony || 'auto')
     const merged = { ...stored }
     for (let i = 0; i < gen.length; i++) {
       const c = full[i]
@@ -2204,7 +2204,7 @@ export default function ColorStudio({ onCopy, toast }) {
   useEffect(() => {
     if (didInitRandomRef.current) return
     didInitRandomRef.current = true
-    const pristine = harmony === 'analogous' && extraColors.length === 0 && Object.keys(overrides).length === 0 && (baseColor === '#2563EB' || baseColor === '#0051FF')
+    const pristine = harmony === 'auto' && extraColors.length === 0 && Object.keys(overrides).length === 0 && (baseColor === '#2563EB' || baseColor === '#0051FF')
     if (pristine) randomize()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -2497,7 +2497,7 @@ ${stateVars}
   const resetPalette = useCallback(() => {
     const prev = { base: baseColor, harmony, extras: [...extraColors], ovr: { ...overrides }, idx: activeColorIdx }
     setBaseColor('#2563EB')
-    setHarmony('analogous')
+    setHarmony('auto')
     setExtraColors([])
     setOverrides({})
     setActiveColorIdx(0)
