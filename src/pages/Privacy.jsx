@@ -40,19 +40,19 @@ export default function Privacy() {
       </div>
 
       <div className="card" style={{ maxWidth: 820, lineHeight: 1.8 }}>
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 12 }}>{t('privacy.s1Title')}</h3>
+        <h2 className="legal-h">{t('privacy.s1Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 24 }}>{t('privacy.s1Text')}</p>
 
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 12 }}>{t('privacy.s2Title')}</h3>
+        <h2 className="legal-h">{t('privacy.s2Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}>{t('privacy.s2Intro')}</p>
         {renderList(s2Items)}
 
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 12 }}>{t('privacy.s3Title')}</h3>
+        <h2 className="legal-h">{t('privacy.s3Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}>{t('privacy.s3Intro')}</p>
         {renderList(s3Items)}
 
         {/* Storage disclosure table — full transparency */}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 8 }}>What we store on your device</h3>
+        <h2 className="legal-h legal-h--tight">What we store on your device</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 16 }}>
           UIL4B writes the following keys to your browser's localStorage. With one narrow exception described below, this data stays on your device. You can inspect, export, or clear all of this from <a href="/settings">Settings → Your data</a>.
         </p>
@@ -80,23 +80,23 @@ export default function Privacy() {
           <strong style={{ color: 'var(--t1)' }}>Note:</strong> "Account-bound" means the data is keyed to an account but never leaves your device. We keep no copy of it.
         </p>
 
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 8 }}>Aggregate usage counts</h3>
+        <h2 className="legal-h legal-h--tight">Aggregate usage counts</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 16 }}>
           When you are <strong>signed in</strong>, UIL4B records anonymous, aggregate usage counts in our Firestore database (Sydney region) to understand which features are useful and where to invest. Specifically, we increment per-day tallies of which page paths are visited (for example <span className="storage-key">/color</span>) and how many times tools are used (for example a font copy or a colour pick). These are running totals shared across all users — they contain <strong>no message content, no prompt text, no colours or fonts you chose, and nothing that identifies you</strong>. We cannot tie a count back to an individual account. Signed-out visitors send nothing; their usage is tracked only in localStorage on their own device.
         </p>
 
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 12 }}>{t('privacy.s4Title')}</h3>
+        <h2 className="legal-h">{t('privacy.s4Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}>{t('privacy.s4Text')}</p>
         {renderList(s4Items)}
 
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 12 }}>{t('privacy.s5Title')}</h3>
+        <h2 className="legal-h">{t('privacy.s5Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}>{t('privacy.s5Intro')}</p>
         {renderList(s5Items)}
 
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 12 }}>{t('privacy.s6Title')}</h3>
+        <h2 className="legal-h">{t('privacy.s6Title')}</h2>
         {renderList(s6Items)}
 
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, letterSpacing: '-.015em', marginBottom: 12 }}>{t('privacy.s7Title')}</h3>
+        <h2 className="legal-h">{t('privacy.s7Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}>
           {t('privacy.s7Text')}{' '}
           <a href="mailto:privacy@uil4b.com">privacy@uil4b.com</a>

@@ -33,16 +33,32 @@ import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepPx } from '../utils/fl
 // notice and a retry (see useFontCatalog) — the maths, the preview and every
 // export keep working either way, so a blocked font host never blanks the page.
 
+// The musical intervals are the canonical set (they are what type-scale.com
+// offers, and what most articles on the subject name). They were also the ONLY
+// thing offered here — which left out both ends of what real web work uses:
+//
+//   • Dense product UI and dashboards routinely run TIGHTER than 1.067. Those
+//     scales are not musical, they are practical — you want six usable steps
+//     inside ~11-24px and a 1.2 ratio blows past that by the third step.
+//   • Editorial and marketing pages run LOOSER than the golden ratio, and the
+//     octave in particular is a standard step this list stopped just short of.
+//
+// `hint` says where each one actually suits, because "Augmented fourth" tells a
+// designer nothing about whether to pick it. Descriptive, not a claim about any
+// specific framework — Tailwind, Material and Bootstrap all ship hand-tuned
+// step lists rather than a single ratio, so naming one here would be false.
 const RATIOS = [
-  { id: '1.067', label: 'Minor second', value: 1.067 },
-  { id: '1.125', label: 'Major second', value: 1.125 },
-  { id: '1.2', label: 'Minor third', value: 1.2 },
-  { id: '1.25', label: 'Major third', value: 1.25 },
-  { id: '1.333', label: 'Perfect fourth', value: 1.333 },
-  { id: '1.414', label: 'Augmented fourth', value: 1.414 },
-  { id: '1.5', label: 'Perfect fifth', value: 1.5 },
-  { id: '1.618', label: 'Golden ratio', value: 1.618 },
-  { id: 'custom', label: 'Custom ratio', value: 0 },
+  { id: '1.067', label: 'Minor second', value: 1.067, hint: 'Very tight — data-dense tables' },
+  { id: '1.1', label: 'Tight', value: 1.1, hint: 'Dashboards and admin UI' },
+  { id: '1.125', label: 'Major second', value: 1.125, hint: 'Compact product UI' },
+  { id: '1.2', label: 'Minor third', value: 1.2, hint: 'A safe default for apps' },
+  { id: '1.25', label: 'Major third', value: 1.25, hint: 'The common web default' },
+  { id: '1.333', label: 'Perfect fourth', value: 1.333, hint: 'Marketing and landing pages' },
+  { id: '1.414', label: 'Augmented fourth', value: 1.414, hint: 'Editorial, print-like' },
+  { id: '1.5', label: 'Perfect fifth', value: 1.5, hint: 'Bold, display-led layouts' },
+  { id: '1.618', label: 'Golden ratio', value: 1.618, hint: 'Dramatic — few steps' },
+  { id: '2', label: 'Octave', value: 2, hint: 'Poster scale — two or three steps only' },
+  { id: 'custom', label: 'Custom ratio', value: 0, hint: 'Set your own' },
 ]
 
 const ROUNDING = [
@@ -722,7 +738,7 @@ export default function TypeScale({ onCopy, toast }) {
                   decimals={3}
                   value={mobileCustomRatio}
                   defaultValue={DEFAULTS.custom}
-                  snaps={[1.125, 1.2, 1.25, 1.333]}
+                  snaps={[1.1, 1.125, 1.2, 1.25, 1.333]}
                   snapRadius={0.012}
                   inputMin={1.01}
                   inputMax={3}
@@ -768,6 +784,11 @@ export default function TypeScale({ onCopy, toast }) {
               </option>
             ))}
           </select>
+          {/* The interval name is a fact about music, not guidance about
+              layout. This is the line that answers "should I pick this one?" */}
+          {RATIOS.find(r => r.id === ratioId)?.hint && (
+            <p className="tsc-ratio-hint">{RATIOS.find(r => r.id === ratioId).hint}</p>
+          )}
           {ratioId === 'custom' && (
             <div className="tsc-slider-row">
               <div className="tsc-slider-head">
@@ -781,7 +802,7 @@ export default function TypeScale({ onCopy, toast }) {
                 decimals={3}
                 value={customRatio}
                 defaultValue={DEFAULTS.custom}
-                snaps={[1.125, 1.25, 1.333, 1.5, 1.618]}
+                snaps={[1.1, 1.125, 1.2, 1.25, 1.333, 1.5, 1.618, 2]}
                 snapRadius={0.012}
                 inputMin={1.01}
                 inputMax={3}
