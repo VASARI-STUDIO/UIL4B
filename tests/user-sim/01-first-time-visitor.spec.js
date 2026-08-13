@@ -77,11 +77,30 @@ test.describe('first-time visitor', () => {
     }
   })
 
-  test('a mistyped URL lands somewhere sensible, not a dead end', async ({ page }) => {
+  test('a mistyped URL says so, and offers a way on', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/this-page-does-not-exist')
-    // App policy: unknown routes redirect home.
-    await expect(page).toHaveURL(/\/$/)
+
+    // POLICY CHANGE, deliberate. This used to assert `toHaveURL(/\/$/)` —
+    // unknown routes redirected to the homepage. That silently teleported the
+    // visitor, so a broken link looked like it had worked and nobody ever
+    // reported one; and it returned 200 with `index,follow`, which made every
+    // typo an indexable copy of the homepage.
+    await expect(page, 'the visitor stays on the URL they typed').toHaveURL(/this-page-does-not-exist/)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/doesn’t exist/i)
+
+    // "Not a dead end" is still the requirement — it is just met by offering
+    // real destinations rather than by hiding the failure.
+    const suggestions = page.locator('.nf-card')
+    expect(await suggestions.count(), 'the 404 offers somewhere to go').toBeGreaterThan(2)
+    await expect(page.getByRole('link', { name: /Back to the homepage/i })).toBeVisible()
+
+    // And it must not ask to be indexed.
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
+
+    // The links work: following one leaves the 404 behind.
+    await suggestions.first().click()
+    await expect(page).not.toHaveURL(/this-page-does-not-exist/)
     expect(await expectRendered(page)).toBe(true)
   })
 })

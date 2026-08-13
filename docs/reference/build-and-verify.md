@@ -14,8 +14,8 @@ number here, you must have re-run it.
 | Gate | Command | Current baseline |
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
-| Build | `npx vite build` | passes |
-| Unit | `npm run test:unit` | **330 tests, 330 pass** |
+| Build | `npm run build` | passes (vite + prerender) |
+| Unit | `npm run test:unit` | **357 tests, 357 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **208 tests across 21 spec files**; **195 pass, 13 skipped** (`npx playwright test --list`) |
 
@@ -35,6 +35,17 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+Soft-404 fix (2026-08-13) moved unit 330 → **357** (+27: what counts as a
+missing route, what gets indexed, the served shells, and the rewrites that
+serve them).
+
+**CI now runs `npm run build`, not `npx vite build`.** Only the npm script runs
+`scripts/prerender.mjs`, so the build step production deploys had NO coverage —
+a prerender that crashed or silently stopped matching index.html's tags would
+have shipped green. This also means `dist/` exists when the unit suite runs, so
+the tests that assert against the built shells actually execute rather than
+skipping.
 
 Raster style-guide export (2026-08-12) moved unit 313 → **330** (+17: the sheet
 layout — nothing off-page, printed sizes matching the real ladder, readable ink
