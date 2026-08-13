@@ -52,7 +52,13 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
       <div className="ch-card-body">
         <div className="ch-card-name">{item.name}</div>
         <div className="ch-card-meta">
-          <UserName name={item.author} ownerId={item.ownerId} bold={!!item.ownerId} />
+          {/* A curated link is credited to the PLATFORM it opens; a member
+              submission is credited to the member. These used to render
+              identically, with twelve invented designers indistinguishable from
+              real ones — see the note in data/communityDesigns.js. */}
+          {item.curated
+            ? <span className="ch-card-source">{item.source}</span>
+            : <UserName name={item.author} ownerId={item.ownerId} bold={!!item.ownerId} />}
           <span className="ch-card-tag">{item.category}</span>
         </div>
       </div>
