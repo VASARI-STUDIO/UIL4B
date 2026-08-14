@@ -835,6 +835,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     [isPro]
   )
 
+
   const navigate = useNavigate()
 
   // Read the incoming state ONCE, on first mount — the board owns it from then
@@ -879,9 +880,28 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // to the existing behaviour instead of producing a board with no system.
   const [harmony, setHarmony] = useState(() => {
     if (handoff && HARMONIES.some(h => h.id === handoff.system)) return handoff.system
-    return HARMONIES.some(h => h.id === design?.palette?.harmony) ? design.palette.harmony : 'analogous'
+    // 'auto', not 'analogous' — P-004. Missed in the first pass: the default
+    // moved in ProjectContext and ColorStudio but this fallback still handed a
+    // new board a PAID system that then silently collapsed to Auto anyway.
+    return HARMONIES.some(h => h.id === design?.palette?.harmony) ? design.palette.harmony : 'auto'
   })
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
+
+  // P-003, founder verdict: the free tier is A FOOT IN THE DOOR.
+  //
+  // That settles what this collapse should feel like. A free user opening a
+  // board saved on a paid system got Auto silently: the chip still read
+  // "Analogous" while the board rendered something else, so the product looked
+  // unreliable rather than paid. The proposal's own smallest version is "make
+  // every gate EXPLICIT rather than silent — the user should always know they
+  // hit a paid edge, never merely find that something behaved oddly."
+  //
+  // For a foot-in-the-door tier that is not just honesty, it is the entire
+  // mechanism: a silent downgrade teaches the user nothing, while a named one
+  // shows them exactly what Pro buys at the moment they wanted it.
+  const collapsedSystem = !isPro && !FREE_SYSTEMS.includes(harmony)
+    ? HARMONIES.find(h => h.id === harmony)?.label || harmony
+    : null
   // A shared link carries finished colours, so it opens with the sliders at zero
   // rather than re-applying whatever lens was last left on this device.
   const [adjust, setAdjust] = useState(initial.adjust)
@@ -2355,6 +2375,28 @@ export default function PaletteBuilder({ onCopy, toast }) {
       </header>
 
       {/* ── The board ── */}
+      {/* P-003: name the paid edge instead of quietly stepping around it. */}
+      {collapsedSystem && (
+        <div className="plb-collapsed" role="status">
+          <span>
+            <strong>{collapsedSystem}</strong> is a Pro system — this board is
+            using <strong>Auto</strong>. Nothing you saved has changed.
+          </span>
+          <button
+            type="button"
+            className="btn btn-s plb-collapsed-cta"
+            onClick={() => openProModal({
+              gate: 'palette-system-collapse',
+              eyebrow: 'Pro colour tools',
+              title: `Build with ${collapsedSystem}`,
+              subtitle: 'Analogous, complementary, triadic, tetradic and custom harmonies build richer palettes than the free Auto and Monochromatic systems.',
+            })}
+          >
+            See what Pro adds
+          </button>
+        </div>
+      )}
+
       <div className="plb-board">
         {adjusted.map((c, i) => {
           // Vision type split: TOP half paints the real palette colour, BOTTOM

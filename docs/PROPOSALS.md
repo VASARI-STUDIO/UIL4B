@@ -102,7 +102,7 @@ merely find that something behaved oddly.
 **Cost / risk.** Cheap to decide, moderate to apply consistently. Real revenue
 implications either way, which is why it is Dylan's call and not mine.
 
-**Verdict:** _(unanswered)_
+**Verdict:** _(APPROVED — "the free tier is a foot in the door")_
 
 ---
 
@@ -133,4 +133,5 @@ much as a correctness one, which is why it is here rather than done.
 |---|---|---|
 | 2026-08-14 | P-001 · Ship the instrumentation before shipping more features | APPROVED — env guard + gate event shipped; per-tool activation partial |
 | 2026-08-14 | P-002 · Give users somewhere to tell us something is wrong | APPROVED — every report now carries its route, tool and state; no API change needed |
+| 2026-08-14 | P-003 · Decide what the free tier is for | ANSWERED — "a foot in the door". Silent system collapse now names the paid edge; remaining gates still to audit |
 | 2026-08-14 | P-004 · Make Auto the default colour system app-wide | APPROVED — shipped |
