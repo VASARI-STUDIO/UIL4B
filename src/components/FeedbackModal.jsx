@@ -1,4 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
+import { useLocation } from 'react-router-dom'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { buildReportContext, withReportContext } from '../utils/reportContext'
+import { resolveTool } from '../data/toolTree'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
 
@@ -58,6 +62,10 @@ const TYPES = [
 
 export default function FeedbackModal({ open, onClose }) {
   const { user, userProfile } = useAuth()
+  // P-002: the report carries where the user was, so acting on it does not
+  // start with a round trip asking which page they meant.
+  const location = useLocation()
+  const { isPro } = useSubscription()
   const titleId = useId()
 
   const [typeId, setTypeId] = useState('feedback')
@@ -135,9 +143,26 @@ export default function FeedbackModal({ open, onClose }) {
       category: selectedValue('category'),
       ...(typeId === 'bug' ? { severity: selectedValue('severity') } : {}),
       subject: subject.trim(),
-      message: message.trim(),
+      // P-002: every report now carries WHERE the user was. Without it a report
+      // arrives as free text with no route, no tool and no state, so acting on
+      // one means asking "which page were you on?" — and most people never
+      // reply to that. It is also the proposal's own mitigation for low-quality
+      // volume: capture the context so the user need not describe it.
+      message: withReportContext(message.trim(), buildReportContext({
+        pathname: location.pathname,
+        tool: resolveTool(location.pathname)?.tool?.label || null,
+        viewport: typeof window !== 'undefined'
+          ? { width: window.innerWidth, height: window.innerHeight }
+          : null,
+        plan: isPro ? 'pro' : 'free',
+        signedIn: !!user,
+      })),
       email,
-      source: 'feedback-modal',
+      // 'inline' is a value api/support.js actually accepts. 'feedback-modal'
+      // was not in VALID_SOURCES, so the server silently replaced it with
+      // 'feedback-form' — every report from this modal has been mislabelled as
+      // coming from the /feedback page.
+      source: 'inline',
     }
 
     // saveFeedback takes a single entry object (a positional call corrupts the
