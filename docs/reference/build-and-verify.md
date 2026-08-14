@@ -15,7 +15,7 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
 | Build | `npm run build` | passes (vite + prerender) |
-| Unit | `npm run test:unit` | **447 tests, 447 pass** |
+| Unit | `npm run test:unit` | **457 tests, 457 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **226 tests across 23 spec files**; **213 pass, 13 skipped** (`npx playwright test --list`) |
 
@@ -35,6 +35,32 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+Hero entrance (2026-08-15) moved unit 447 → **457** (+10: the entrance not
+waiting on the GSAP chunk, compositor-only properties, the clip container, both
+reduced-motion directions, and the self-hosted variable font). Browser acceptance
+unchanged at 213 — `10-home-chaos-to-calm.spec.js:219` was rewritten rather than
+added to: it polled for the absence of a `.motion-armed` class, and that class no
+longer exists, so it now asserts the thing that actually mattered (every hero
+element computes to opacity 1 even when the motion chunk is blocked).
+
+**Measure the hero, don't theorise about it.** Two rounds of guessing got this
+wrong. Removing the `filter: blur(12px)` tween — the obvious suspect, and a real
+improvement — changed dropped frames from 21 to 22, i.e. nothing. A CPU profile
+then showed 66% idle, which ruled out script entirely, and a devtools trace found
+the actual cost: **363ms of Layout across 31 events, one of them a 248ms
+full-document relayout of all 851 boxes at 673ms**, landing mid-entrance. The
+decisive experiment was a warm-cache run — same page, same DOM, **27ms** of total
+layout — which proved the cost was resource arrival time and not the page.
+
+Note the near-miss in that sequence: a run with the font blocked was *worse*
+(346ms), so the font swap was not the whole story either, and single cold loads
+vary enough (192 / 209 / 346) that one run proves nothing. Take ten.
+
+Useful negative result: blocking `accounts.google.com` changed layout not at all
+(397ms vs 407ms). Google One Tap still costs a 247ms background parse and five
+requests on a signed-out homepage — worth revisiting on its own merits, but it is
+not a hero-smoothness fix, and shipping it as one would have been a false claim.
 
 Feedback form + swatch focus rings (2026-08-13) moved browser acceptance
 219 → **226** (+7). Unit unchanged: both fixes are rendered behaviour, and the
