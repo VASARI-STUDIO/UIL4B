@@ -233,11 +233,22 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.locator('.hw-shell')).toBeVisible()
     await expect(page.locator('.hw-panel')).toBeVisible()
 
-    // No stranded arming class, and no decorative proxy layer was ever built.
-    await expect.poll(
-      () => page.locator('.home.motion-armed').count(),
-      { timeout: 8000 },
-    ).toBe(0)
+    // The hero is not merely present in the DOM — it is fully OPAQUE. This used
+    // to be a check for a stranded `.motion-armed` class, because the headline
+    // was held at opacity:0 by JS until the GSAP chunk arrived and a failed
+    // chunk could leave it invisible forever. The entrance is CSS keyframes now,
+    // so no chunk can strand it; assert the property that actually matters
+    // rather than the absence of a class that no longer exists.
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const els = ['.home-hero-h1', '.home-hero-sub', '.home-hero-cta', '.home-hero-hint']
+          .map((s) => document.querySelector(s))
+          .filter(Boolean)
+        // The animated units are the CTA's children, not the flex row itself.
+        els.push(...document.querySelectorAll('.home-hero-cta > *, .home-hero-line-in'))
+        return els.every((el) => Number(getComputedStyle(el).opacity) === 1)
+      })
+    }, { timeout: 8000 }).toBe(true)
     await expect(page.locator('.hsat-proxy-layer')).toHaveCount(0)
 
     // Everything still operates.
