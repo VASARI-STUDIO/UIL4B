@@ -8269,3 +8269,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
 /* The chosen ratio's "where it fits" line. An interval name is a fact about
    music; this is the bit that answers whether to pick it. */
 .tsc-ratio-hint{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--t2)}
+
+/* P-003 (free tier = foot in the door): the paid edge announces itself.
+   A free user opening a board saved on a paid system used to get Auto silently
+   — the chip still read "Analogous" while the board rendered something else, so
+   the product looked unreliable rather than paid. */
+.plb-collapsed{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 var(--page-inline) 12px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--brand) 55%,transparent);border-radius:var(--radius-l);background:var(--brand-bg);font-size:12.5px;line-height:1.5;color:var(--t1)}
+.plb-collapsed strong{color:var(--t0);font-weight:650}
+.plb-collapsed-cta{flex-shrink:0;border-color:var(--brand);color:var(--brand)}
+.plb-collapsed-cta:hover{background:var(--brand);border-color:var(--brand);color:var(--accent-fg)}
