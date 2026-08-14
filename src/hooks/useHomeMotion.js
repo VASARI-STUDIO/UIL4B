@@ -33,11 +33,14 @@ function revealAll(scope) {
 //
 // GSAP + ScrollTrigger (~40KB gzip) are dynamically imported so they code-split
 // into their own chunk and never weigh down the tool pages — only a home visit
-// fetches them. To stay flash-free while that chunk loads, we hide the hero
-// headline block synchronously (in a layout effect, before paint) via
-// `.motion-armed` and hand that hidden state to GSAP the instant it arrives. If
-// the chunk ever fails to load, we reveal everything and fall back to native
-// scroll, so content is never stuck.
+// fetches them. If the chunk ever fails to load, we reveal everything and fall
+// back to native scroll, so content is never stuck.
+//
+// NOTHING ABOVE THE FOLD WAITS ON THAT CHUNK. The hero entrance used to run from
+// a timeline here, which meant the headline was held at opacity:0 by a JS arming
+// class until the import resolved — ~350ms of blank hero on a throttled CPU,
+// then a pop. It is CSS keyframes in global.css now: it starts at first paint
+// and runs on the compositor. Do not move it back.
 //
 // PROGRESSIVE-ENHANCEMENT RULE, non-negotiable: the eleven satellite links and the
 // whole mini-workbench are never hidden, faded, `inert`ed or opacity-gated by
@@ -58,11 +61,10 @@ export function useHomeMotion(scopeRef) {
       return
     }
 
-    // Synchronous, pre-paint: mark the tree so CSS hides the hero copy and
-    // silences its own reveal transition (GSAP will be the only engine easing
-    // these). Note this covers the headline block only — never the tool links
-    // and never the workbench.
-    scope.classList.add('has-gsap', 'motion-armed')
+    // Synchronous, pre-paint: silence the CSS reveal transitions on
+    // `[data-reveal]` so GSAP is the only engine easing them. This no longer
+    // hides the hero — CSS owns that entrance start to finish.
+    scope.classList.add('has-gsap')
 
     let cancelled = false
     let teardown = null
@@ -81,17 +83,12 @@ export function useHomeMotion(scopeRef) {
         let removeProxyLayer = null
 
         const ctx = gsap.context(() => {
-          // GSAP now controls the hidden state; drop the CSS pre-hide so its
-          // inline tweens are unobstructed (same frame — no paint in between).
-          scope.classList.remove('motion-armed')
-
-          // ── Hero entrance: each headline line clips up from below with a blur
-          //    burn-off, then the sub, CTAs and hint rise underneath it. ──
-          gsap.timeline({ defaults: { ease: 'power3.out' } })
-            .from('.home-hero-line-in', { yPercent: 110, filter: 'blur(12px)', duration: 1.1, stagger: 0.12, ease: 'expo.out', clearProps: 'transform,filter' })
-            .from('.home-hero-sub', { y: 22, autoAlpha: 0, duration: 0.8 }, '-=0.7')
-            .from('.home-hero-cta > *', { y: 18, autoAlpha: 0, duration: 0.7, stagger: 0.1, clearProps: 'transform' }, '-=0.5')
-            .from('.home-hero-hint', { y: 14, autoAlpha: 0, duration: 0.6 }, '-=0.45')
+          // The hero entrance is NOT here any more — it is CSS keyframes in
+          // global.css. Running it from this timeline meant it could not begin
+          // until the GSAP chunk resolved, so the headline sat hidden and then
+          // popped, and its `filter: blur(12px)` tween re-rasterised the largest
+          // text on the page every frame. Both are gone. GSAP keeps the work it
+          // is actually needed for: the scroll-driven convergence below.
 
           // Must match the `max-width:1280px` static-field breakpoint in
           // global.css: below it the field is a plain grid and the convergence
@@ -305,14 +302,14 @@ export function useHomeMotion(scopeRef) {
         // Motion chunk failed to load — restore native scroll and reveal all
         // content so nothing is left hidden behind the arming class. The
         // satellites and workbench were never hidden in the first place.
-        scope.classList.remove('has-gsap', 'motion-armed')
+        scope.classList.remove('has-gsap')
         revealAll(scope)
       })
 
     return () => {
       cancelled = true
       if (teardown) teardown()
-      else scope.classList.remove('has-gsap', 'motion-armed')
+      else scope.classList.remove('has-gsap')
     }
   }, [scopeRef])
 }
