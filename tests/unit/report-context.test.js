@@ -1,0 +1,128 @@
+// A bug report has to say where the user was.
+//
+// docs/PROPOSALS.md P-002 (APPROVED): "When a tool misbehaves, a user's only
+// options are to leave or to email. Most leave. We then learn nothing, and
+// silent churn leaves no review — so the absence of complaints reads, wrongly,
+// as satisfaction."
+//
+// A feedback modal already existed and was reachable everywhere. What it did
+// not do was record WHERE. Every report arrived as free text with no route, no
+// tool and no state, so acting on one began with "which page were you on?" —
+// and most people never reply to that. The proposal names this as the
+// mitigation for low-quality volume too: capture the context so the user need
+// not describe it.
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import { buildReportContext, formatReportContext, withReportContext } from '../../src/utils/reportContext.js'
+
+const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
+
+// ── What it captures ────────────────────────────────────────────────────────
+
+test('a report records the route, tool, viewport, plan and sign-in state', () => {
+  const c = buildReportContext({
+    pathname: '/color/palette',
+    tool: 'Palette Generator',
+    viewport: { width: 1440, height: 900 },
+    plan: 'free',
+    signedIn: true,
+  })
+  assert.equal(c.route, '/color/palette')
+  assert.equal(c.tool, 'Palette Generator')
+  assert.equal(c.viewport, '1440x900')
+  assert.equal(c.plan, 'free')
+  assert.equal(c.signedIn, 'yes')
+})
+
+test('missing facts are omitted rather than guessed', () => {
+  const c = buildReportContext({ pathname: '/icons' })
+  assert.deepEqual(Object.keys(c), ['route'])
+  assert.equal(c.tool, undefined)
+})
+
+test('a report with no route at all still says something', () => {
+  assert.equal(buildReportContext({}).route, '/')
+  assert.equal(buildReportContext().route, '/')
+})
+
+// ── What it deliberately does NOT capture ───────────────────────────────────
+
+test('the query string is dropped, because the colour tools encode work into it', () => {
+  // /color/palette?c=0051FF,4C8DFF,... carries the user's actual palette.
+  // Keeping the query would smuggle their work into a support inbox through
+  // the URL, which is exactly what the no-content rule exists to prevent.
+  const c = buildReportContext({ pathname: '/color/palette?c=0051FF,4C8DFF,A9C7FF' })
+  assert.equal(c.route, '/color/palette')
+  assert.ok(!JSON.stringify(c).includes('0051FF'))
+})
+
+test('the hash is dropped too', () => {
+  assert.equal(buildReportContext({ pathname: '/help#billing' }).route, '/help')
+})
+
+test('nothing in the module reaches for the user\'s content', () => {
+  // A bug report is not consent to send someone's work, and a support inbox is
+  // a much weaker place to hold it than the user's own browser.
+  const src = read('src/utils/reportContext.js')
+  for (const forbidden of ['localStorage', 'sessionStorage', 'document.cookie']) {
+    assert.ok(!new RegExp(`\b${forbidden}\b`).test(src.replace(/\/\/.*$/gm, '')),
+      `reportContext must not read ${forbidden}`)
+  }
+})
+
+test('every captured value is length-capped', () => {
+  const c = buildReportContext({ pathname: '/x', tool: 'T'.repeat(500), plan: 'p'.repeat(500) })
+  assert.ok(c.tool.length <= 60)
+  assert.ok(c.plan.length <= 60)
+})
+
+// ── How it is attached ──────────────────────────────────────────────────────
+
+test('the context is clearly separated from the user\'s own words', () => {
+  const out = withReportContext('The sliders jump.', { route: '/color/palette' })
+  assert.match(out, /^The sliders jump\./)
+  assert.match(out, /--- captured automatically ---/)
+  assert.match(out, /route: \/color\/palette/)
+})
+
+test('a long message is truncated so the context always survives', () => {
+  // A report that loses its route because someone wrote a long description is
+  // the exact failure this exists to prevent.
+  const out = withReportContext('x'.repeat(9000), { route: '/typescale' }, 5000)
+  assert.ok(out.length <= 5000, `${out.length} exceeds the server's limit`)
+  assert.match(out, /route: \/typescale/, 'the context must survive truncation')
+})
+
+test('an empty context adds nothing', () => {
+  assert.equal(withReportContext('hello', {}), 'hello')
+  assert.equal(formatReportContext(null), '')
+})
+
+// ── The wiring ──────────────────────────────────────────────────────────────
+
+test('the modal sends a source the server actually accepts', () => {
+  // It sent 'feedback-modal', which is not in api/support.js's VALID_SOURCES,
+  // so the server silently replaced it with 'feedback-form' — every report from
+  // the modal has been mislabelled as coming from the /feedback page.
+  const api = read('api/support.js')
+  const valid = /const VALID_SOURCES = \[([^\]]*)\]/.exec(api)?.[1] || ''
+  const modal = read('src/components/FeedbackModal.jsx')
+  const source = /source: '([^']+)'/.exec(modal)?.[1]
+  assert.ok(source, 'the modal must set a source')
+  assert.ok(valid.includes(`'${source}'`),
+    `the modal sends source '${source}', which api/support.js will discard (accepts: ${valid.trim()})`)
+})
+
+test('context rides in an existing field, so no API change was needed', () => {
+  // api/support.js destructures a fixed set of fields and drops anything else,
+  // and /api is a Human Validation Zone. Folding the context into `message`
+  // makes the proposal's "no new backend if the existing support path can carry
+  // it" literally true — no route change, no rules change, nothing to review.
+  const modal = read('src/components/FeedbackModal.jsx')
+  assert.match(modal, /message: withReportContext\(/)
+  const api = read('api/support.js')
+  assert.match(api, /const \{ type, subject, message, email, source \} = req\.body/,
+    'the server contract must be unchanged')
+})

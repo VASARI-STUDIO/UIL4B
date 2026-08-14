@@ -132,4 +132,5 @@ much as a correctness one, which is why it is here rather than done.
 | Date | Proposal | Verdict |
 |---|---|---|
 | 2026-08-14 | P-001 · Ship the instrumentation before shipping more features | APPROVED — env guard + gate event shipped; per-tool activation partial |
+| 2026-08-14 | P-002 · Give users somewhere to tell us something is wrong | APPROVED — every report now carries its route, tool and state; no API change needed |
 | 2026-08-14 | P-004 · Make Auto the default colour system app-wide | APPROVED — shipped |
