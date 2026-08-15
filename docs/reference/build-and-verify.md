@@ -15,7 +15,7 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
 | Build | `npm run build` | passes (vite + prerender) |
-| Unit | `npm run test:unit` | **457 tests, 457 pass** |
+| Unit | `npm run test:unit` | **484 tests, 484 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **226 tests across 23 spec files**; **213 pass, 13 skipped** (`npx playwright test --list`) |
 
@@ -35,6 +35,28 @@ tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
 Match the count, don't add new ones, and don't "fix" the existing ones as a
 side effect of unrelated work. CI fails on lint **errors** only.
+
+Alt-text truncation + SEO brief (2026-08-15) moved unit 457 → **484** (+27: the
+Gemini `finishReason` decision table, the auto-growing result field and its CSS
+backstop, the prompt's structure/WCAG-floor/anti-stuffing contract, and the
+context sanitiser). Lint and browser acceptance unchanged (0 errors / 31
+warnings; 213 pass / 13 skipped) — the tool sits behind an `AuthGate` the
+acceptance suite cannot pass, so the rendered proof was taken directly in a
+browser instead (see the PR).
+
+**The measurement that mattered, since two of the three faults presented as the
+same symptom.** The founder reported "the longer version generation seems to get
+cut off". There was a real silent-truncation bug — `runAltText` never read
+`finishReason`, so a `MAX_TOKENS` response was returned as a finished answer —
+but that is NOT what was being seen. At the narrowest card (320px) a 299-character
+'detailed' result needs **157px** and the `rows={3}` box showed **79px**, hiding
+**78px — half the answer** behind a scrollbar. Both are fixed; only the second
+one was visible. Measure which fault the report actually describes before
+assuming the interesting bug is the one the user hit.
+
+A third, smaller clip was found the same way: setting `height = scrollHeight`
+under this stylesheet's global `border-box` leaves the content area **2px** short
+and shaves the last line's descenders. The autosize adds the border back.
 
 Hero entrance (2026-08-15) moved unit 447 → **457** (+10: the entrance not
 waiting on the GSAP chunk, compositor-only properties, the clip container, both
