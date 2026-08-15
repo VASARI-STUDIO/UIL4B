@@ -3407,7 +3407,9 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 @media(max-width:560px){.seo-ca-stats{grid-template-columns:repeat(2,1fr)}.seo-ca-kw-grid{grid-template-columns:1fr}}
 
 /* ── Theme-direction primitives (Phase 0.5) ─────────────────── */
-/* Glass — the Coolors floating-panel recipe, one source of truth */
+/* Glass — the floating-panel blur/border/shadow recipe, one source of truth
+   so every panel that wants this treatment pulls from the same tokens
+   instead of hand-tuning its own blur. */
 .glass{background:var(--glass-bg);backdrop-filter:saturate(160%) blur(14px);-webkit-backdrop-filter:saturate(160%) blur(14px);border:1px solid var(--glass-border);border-radius:var(--radius-l);box-shadow:var(--glass-shadow),var(--ring)}
 @supports not (backdrop-filter:blur(1px)){
   [data-theme="dark"] .glass{--glass-bg:color-mix(in srgb,var(--bg-1) 94%,transparent)}
@@ -4543,8 +4545,9 @@ html.lenis,html.lenis body{height:auto}
 /* Sales/marketing routes drop the search field (the / shortcut still opens the
    palette); the grid's middle column keeps the three menus centred regardless. */
 .pnav--sales .pnav-search-field{display:none}
-/* Always-visible icon buttons in the RIGHT actions cluster (Mobbin reference):
-   saved projects (bookmark) + export. 40px circles like .pnav-more. */
+/* Always-visible icon buttons in the RIGHT actions cluster: saved projects
+   (bookmark) + export stay one click away instead of behind a menu, since
+   both are reached constantly mid-task. 40px circles like .pnav-more. */
 .pnav-iconbtn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;text-decoration:none;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-iconbtn:hover,.pnav-iconbtn[aria-expanded="true"]{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 /* Export keeps its accent tint so it still reads as the primary action. */
@@ -4570,8 +4573,9 @@ html.lenis,html.lenis body{height:auto}
 .pnav-avatar-btn .pnav-avatar{width:100%;height:100%}
 .pnav-pop-wrap{position:relative;flex:0 0 auto}
 
-/* Right cluster — the avatar stays always visible (Mobbin reference), so the
-   resting pill reads: bookmark · export · avatar for signed-in users. */
+/* Right cluster — the avatar stays always visible as the one settled account
+   entry point, so the resting pill reads: bookmark · export · avatar for
+   signed-in users. */
 .pnav-util{display:flex;align-items:center;gap:8px}
 .pnav-util .pnav-pop-wrap{flex:0 0 auto}
 .pnav-pop{position:absolute;top:calc(100% + 10px);right:0;z-index:130;width:260px;max-width:calc(100vw - 24px);padding:8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
@@ -5581,7 +5585,9 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-her
 .home-cta .home-hero-cta{margin-top:var(--s-6);justify-content:center}
 .home-cta-hint{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-top:var(--s-4)}
 
-/* Footer (Coolors homage) */
+/* Footer — a row of large feature links above the standard column links, so
+   the last thing before the page ends still sells the product, not just
+   navigates it. */
 .home-foot{background:var(--bg-1);border-top:1px solid var(--border);padding:var(--s-9) 0 var(--s-6);margin-top:var(--sec-pad)}
 .home-foot-feat{display:grid;grid-template-columns:repeat(3,1fr);gap:32px 48px}
 .home-foot-feat-link{display:block;text-decoration:none}
