@@ -8,7 +8,7 @@ import { DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
 
 // The Discover + Learn landing shells. Phase 1 is structure-only: both surfaces
-// render a Mobbin-style hero over a grid of the sections that are on the way, each
+// render a hero band over a grid of the sections that are on the way, each
 // carrying an honest "Soon" badge. One component serves both surfaces via the
 // `surface` prop, driven by the same DISCOVER_GROUPS / LEARN_GROUPS that feed the
 // nav — so the page can never promise a section the menu doesn't list.

@@ -18,7 +18,8 @@ const ExportPanel = lazy(() => import('./ExportPanel'))
 // The marketing / app nav: a fixed, full-width standard-SaaS top bar with three
 // mega-menus (Create / Discover / Learn) driven entirely by src/data/toolTree.js,
 // so the menu can never drift from the router. One shared panel morphs width per
-// section (Coolors-footer homage) and carries a right-hand promo card; on mobile
+// section — sized to what that menu actually holds instead of a fixed dropdown
+// width — and carries a right-hand promo card; on mobile
 // it becomes a full-screen sheet with accordions. The centre holds the search
 // field (reusing the CommandPalette index); the right cluster holds the Export
 // shell, the auth/upgrade CTAs and the Avatar account popover. Auth +
@@ -619,8 +620,9 @@ export default function PillNav() {
           </div>
 
           <div className="pnav-actions">
-            {/* Right cluster (Mobbin reference): always-visible icon-only
-                buttons — Saved projects (bookmark), then Export — ahead of the
+            {/* Right cluster: Saved projects (bookmark) and Export stay as
+                always-visible icon buttons rather than tucked behind a menu,
+                since both are reached constantly mid-task — ahead of the
                 conversion pill and the avatar. On marketing/sales routes
                 there's nothing to export, so the Export shell is dropped and
                 the bar leads with "Get Pro" instead. */}
@@ -790,9 +792,10 @@ export default function PillNav() {
             )}
 
             {/* Compact "more" affordance — signed-out only. Signed-in users get the
-                always-visible avatar instead (Mobbin pattern), so the meatball here
-                carries the theme toggle + auth links so preferences stay reachable
-                for visitors. */}
+                always-visible avatar instead, since it's their one settled entry
+                point for account actions; visitors have no account button yet, so
+                the meatball here carries the theme toggle + auth links so
+                preferences stay reachable for them. */}
             {!user && (
               <div className="pnav-pop-wrap pnav-more-wrap">
                 <button
