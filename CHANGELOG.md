@@ -11,6 +11,107 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ---
 
+## 2026-08-15 — The hero, measured rather than guessed (#248, #249)
+
+Founder report, for the second time: *"also make the hero animation better its
+not smooth."* #215 had already rebuilt the hero, so this needed measurement, not
+another rewrite. Removing the obvious suspect — a `filter: blur(12px)` tween —
+moved dropped frames from 21 to 22, i.e. nothing. A CPU profile then showed 66%
+idle, ruling out script, and a devtools trace found four separate faults:
+
+- **The entrance could not start until a ~40KB chunk arrived.** It ran from a
+  GSAP timeline with a JS class holding the headline at `opacity: 0` until the
+  dynamic import resolved — ~350ms of blank hero on a throttled CPU, then a pop.
+  It is CSS keyframes now: it begins at first paint and survives the motion
+  chunk failing outright
+- **It animated `filter: blur(12px)`** across the largest text on the page,
+  re-rasterising every frame. Transform and opacity only now; a trace confirms
+  `compositeFailed: 0`, so a busy main thread no longer stutters it
+- **The "clip up" never clipped.** `.home-hero-line` had no `overflow: hidden`,
+  so despite `yPercent: 110` the two headline lines slid *through* each other
+- **The font took two sequential third-party round trips** and landed at ~587ms,
+  dirtying all 851 boxes in a 262ms full-document relayout mid-entrance. Outfit
+  is self-hosted and preloaded now
+
+Layout total fell 407ms → ~200ms; CLS measured **0.0000** against a 0.05 budget.
+The decisive experiment was a warm-cache run — same page, same DOM, 27ms of
+layout — which proved the cost was resource arrival time, not the page.
+
+**A design bug found on the way.** `global.css` authors sixteen weights, ten not
+multiples of 100 (450, 550, 720, 750 …), but the request asked for nine *static*
+instances, so every one was silently rounded — the hero `h1` asks for 720 and was
+rendering at 700. The variable axis renders them as authored, in one file
+instead of nine.
+
+**Honest negative result:** blocking Google One Tap changed layout not at all
+(397ms vs 407ms). It still costs a 247ms background parse and five requests on a
+signed-out homepage — a real issue, but not this one.
+
+## 2026-08-15 — The free tier is a foot in the door (#247)
+
+Founder verdict on PROPOSALS P-003, recorded verbatim: *"the free tier is a food
+in the door"*. The Palette Builder silently collapsed non-free harmony systems
+for signed-out and Free users — the paid edge was invisible, so it read as the
+tool being broken rather than as something to upgrade for. The collapse is now
+explicit and named. Also completed a missed P-004 fallback (`'analogous'` →
+`'auto'`).
+
+## 2026-08-14 — Instrumentation, and the questions it answers (#245, #246)
+
+- **P-001 — stop counting ourselves.** Every environment (localhost, every
+  preview deploy, every CI run walking ~30 routes) wrote into the same shared
+  `analytics-daily` counters, so the admin dashboard mixed real users with our
+  own robots. Shared analytics are now allowlisted to production hosts only,
+  fail-safe: an environment we do not positively recognise is not production
+- **P-002 — a bug report now says where the user was.** Reports arrived as free
+  text with no route, no tool and no state, so acting on one began with "which
+  page were you on?" — and most people never reply. Context is captured
+  automatically. Deliberately *not* captured: document content, palette colours,
+  prompt text, project names. The query string is dropped too, because the
+  colour tools encode full palettes into `?c=`
+
+## 2026-08-14 — Colour, type and the tokens that never applied (#242, #243, #244)
+
+- **Seven design tokens did not exist**, so 20 declarations were silently
+  invalid and dropped — undefined CSS custom properties kill the whole
+  declaration, which is why the symptom was square corners and flat shadows
+  rather than an error
+- **Palette slot labels now describe the colour actually in the slot.** Every
+  harmony system showed the same five labels (PRIMARY, SECONDARY, ACCENT,
+  SUBTLE, DEEP) regardless of what it generated. Founder report: *"these should
+  update based on system."* Labels are now per-system; the underlying export
+  token identity is unchanged
+- **Heading structure, a duplicated `h1`, font-gallery corners, and wider type
+  scales** — including the typical web type scales the founder asked for
+
+## 2026-08-13 / 14 — Accounts, community and honesty (#235–#241)
+
+- **Community submissions never left the browser, and nobody could review
+  them** (#241). The admin claim was never actually granted, so moderation had
+  never worked for anyone. Founder report: *"my user submitted other gradients
+  that i do not see under my pending submissions"*
+- **Onboarding is shown once per person, not once per browser** (#240) —
+  founder report: onboarding should only appear on first login
+- **A new account no longer lands on the page trying to acquire it** (#239)
+- **The Community page invented twelve designers and their save counts** (#238).
+  Fabricated social proof, removed
+- **The feedback form had no labels, and focus was invisible on swatches** (#237)
+- **Nothing is clipped out of reach at 320px** (#236) — the flex/grid
+  `min-width: auto` trap across four routes
+- **A real 404, and a CI build that runs what production runs** (#235). CI ran
+  `npx vite build`, which skips the prerender step, so the build production
+  actually deploys had no coverage. Also fixed an offline `vite:preloadError`
+  reload loop that was both a CI flake and a real user bug
+
+## 2026-08-12 — Account lifecycle (#231–#234)
+
+- **Account deletion that is legal and actually works** (#231). Order is
+  billing → data → auth, deliberately. Took the last of the 12 Vercel function
+  slots
+- **Show the AI allowance before someone hits it** (#232)
+- **"Export my data" now means all of it** (#233)
+- **The style guide as an image** (#234)
+
 ## 2026-08-12 — Billing signals: the state we collected but never showed
 
 `api/stripe-webhook.js` had written `paymentFailed`, `hostedInvoiceUrl`,

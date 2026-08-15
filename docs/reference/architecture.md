@@ -107,13 +107,16 @@ Shared UI: `PillNav`, `Sidebar`, `TopBar`, `AppFooter`, `CommandPalette`,
 
 ## API routes (`/api`) — 12-function limit
 
-Vercel's plan caps serverless functions at **12**. Current routes (11 of 12 —
-one slot spare):
+Vercel's plan caps serverless functions at **12**. We are at **exactly 12 of 12
+— the budget is FULL, with no slot spare.** `delete-account.js` took the last
+one. The next endpoint has to replace an existing one or fold into `api/_lib/`;
+`tests/unit/account-deletion.test.js` fails the build if the count goes over, so
+this is enforced rather than merely documented.
 
 ```
 ai.js               share.js             checkout-status.js   create-checkout.js
 create-portal.js    fonts.js             get-prices.js        setup-stripe.js
-stripe-webhook.js   support.js           verify-admin.js
+stripe-webhook.js   support.js           verify-admin.js      delete-account.js
 ```
 
 `ai.js` is a task dispatcher — POST `{ task: 'alt-text' | 'scan-photo' |
