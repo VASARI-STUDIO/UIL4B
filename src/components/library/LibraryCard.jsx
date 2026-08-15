@@ -38,6 +38,11 @@ export default function LibraryCard({
   name,
   meta,
   tail,
+  // Consumers that already have a test hook or a type-specific treatment on the
+  // name or meta line keep it here rather than nesting another span inside the
+  // shared one — nesting would leave two boxes competing for the same ellipsis.
+  nameClassName = '',
+  metaClassName = '',
   selected = false,
   ...rest
 }) {
@@ -59,8 +64,8 @@ export default function LibraryCard({
       {(name || meta || tail) && (
         <div className="lbry-card-foot">
           <div className="lbry-card-id">
-            {name && <span className="lbry-card-name">{name}</span>}
-            {meta && <span className="lbry-card-meta">{meta}</span>}
+            {name && <span className={`lbry-card-name${nameClassName ? ` ${nameClassName}` : ''}`}>{name}</span>}
+            {meta && <span className={`lbry-card-meta${metaClassName ? ` ${metaClassName}` : ''}`}>{meta}</span>}
           </div>
           {tail && <div className="lbry-card-tail">{tail}</div>}
         </div>
