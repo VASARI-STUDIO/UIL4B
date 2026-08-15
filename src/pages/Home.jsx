@@ -11,11 +11,12 @@ import { HOME_FAMILY_LABEL, HOME_SATELLITES, HOME_WORKBENCH_TABS, LEARN_GROUPS }
 // ships when a visitor actually asks to see the export formats.
 const ExportPanel = lazy(() => import('../components/ExportPanel'))
 
-// The public homepage: a Mobbin-style sales page for UIL4B. It is intentionally
-// image-light for Phase 1 — every "screenshot" is a `spec-frame` placeholder the
-// founder swaps for real captures later. All structure is driven by the same
-// `CREATE_GROUPS` that feeds the nav and router, so the story can never claim a
-// tool the product doesn't have.
+// The public homepage: a sales page built around a working mini-workspace, not
+// a dashboard — a first-time visitor should understand what the product does
+// immediately. It is intentionally image-light for Phase 1 — every "screenshot"
+// is a `spec-frame` placeholder the founder swaps for real captures later. All
+// structure is driven by the same `CREATE_GROUPS` that feeds the nav and
+// router, so the story can never claim a tool the product doesn't have.
 //
 // Motion: `useHomeMotion()` owns the home page's motion — Lenis smooth-scroll, a
 // GSAP hero entrance, scroll-triggered reveals and a light hero parallax — all

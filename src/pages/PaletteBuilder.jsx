@@ -30,12 +30,13 @@ import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, 
 // colours and the slider values are persisted separately.
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
 
-// Palette Builder — the standalone /color/palette workbench. A Coolors-style
-// full-bleed board: a toolbar (seed + harmony + brands/variations/preview +
-// vision + randomise + save/share), full-height colour columns with per-column
-// tools (drag-reorder, HCT edit, tints, right-click menu), and a bottom
-// global-adjust bar. Runs on the exact same colour engine as the merged Colour
-// Studio (utils/colors.js), so palettes built here match the studio's output.
+// Palette Builder — the standalone /color/palette workbench. A full-bleed
+// board so the columns are the page, not a panel floating in chrome: a
+// toolbar (seed + harmony + brands/variations/preview + vision + randomise +
+// save/share), full-height colour columns with per-column tools (drag-reorder,
+// HCT edit, tints, right-click menu), and a bottom global-adjust bar. Runs on
+// the exact same colour engine as the merged Colour Studio (utils/colors.js),
+// so palettes built here match the studio's output.
 
 const DEFAULT_SEED = '#4338E0'
 const SESSION_SEED_KEY = 'vs-palette-session-seed'
@@ -1272,8 +1273,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setLiveMsg(`Colour swapped ${direction}`)
   }
 
-  // Drag-reorder: full splice move (not a swap) so the whole row shifts the
-  // way Coolors does it. Locks travel with their colour.
+  // Drag-reorder: full splice move (not a swap) so the whole row shifts to
+  // close the gap, matching how the columns visually reflow. Locks travel
+  // with their colour.
   const moveCol = (from, to) => {
     if (from == null || to == null || from === to) return
     setColors(prev => { const n = [...prev]; const [c] = n.splice(from, 1); n.splice(to, 0, c); return n })
