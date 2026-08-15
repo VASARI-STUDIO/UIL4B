@@ -4322,13 +4322,19 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* ── Palette gallery (colorhunt-style) — shared by Discover's palettes view
       and the Palette Builder's colour-gallery popup. A card is a rounded stack
       of colour stripes (hero on top) with a light foot: like + name + use. ── */
-.pgal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:22px 18px}
-.pgal-card{position:relative;display:flex;flex-direction:column;gap:8px;min-width:0}
+/* Grid, card frame, foot and the hover action layer now come from the shared
+   Library language (.lbry-). What is left here is what is specific to a
+   palette: the stacked stripes, the hex labels and the Pro/selected states. */
+.pgal-grid{--lbry-col-min:200px;gap:22px 18px}
+.pgal-card{gap:8px}
 .pgal-stripes{display:flex;flex-direction:column;height:196px;border-radius:var(--radius-l);overflow:hidden;border:1px solid var(--border);transition:transform var(--dur-2) var(--ease-entrance),box-shadow var(--dur-2) var(--ease-standard),outline-color var(--dur-2) var(--ease-standard)}
 .pgal-card:hover .pgal-stripes{transform:translateY(-2px);box-shadow:var(--warm-shadow)}
 /* Selected (imported) card: a brand ring on the stripes + a tick badge. */
 .pgal-card.is-selected .pgal-stripes{outline:2px solid var(--brand);outline-offset:2px}
-.pgal-tick{position:absolute;top:8px;right:8px;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--brand);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
+/* Both of these sit in the shared card's float slot now, which is already
+   absolutely positioned at the top-right of the swatch — so they only need
+   their own shape, not their own placement. */
+.pgal-tick{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--brand);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
 .pgal-stripe{position:relative;flex:1;min-height:0;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end}
 .pgal-stripe:first-child{flex:2.4}
 /* .72 not .5: the chip has to clear AA against WHITE swatches too, and the
@@ -4340,93 +4346,76 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    palette stay legible as separate colours rather than one solid block. */
 .pgal-stripe+.pgal-stripe{box-shadow:inset 0 1px 0 rgba(128,128,128,.28)}
 /* Brand marker — a published identity system, not one of ours. */
-.pgal-badge{position:absolute;top:8px;left:8px;z-index:2;padding:3px 8px;border-radius:var(--radius-pill);background:rgba(10,10,14,.78);color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;pointer-events:none;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.pgal-badge{padding:3px 8px;background:rgba(10,10,14,.78);font-size:9px;letter-spacing:.1em}
 .pgal-use--pro{color:var(--brand)}
 .pgal-stripe:hover .pgal-hex,.pgal-stripe:focus-visible .pgal-hex{opacity:1}
 .pgal-stripe:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
-/* Actions over the swatch. The layer is always in the DOM (see
-   PaletteGalleryGrid); it is visible at rest, and only a device that can hover
-   gets the hide-until-engaged treatment. Anchored to the stripes, not the card,
-   so it never covers the name and like control in the foot.
+/* Hover / focus actions over the swatch. The layer is always in the DOM (see
+   PaletteGalleryGrid) — but the card renders LibraryCard now, so the reveal
+   layer IS the shared `.lbry-card-actions` and `.pgal-actions` no longer exists
+   in the DOM at all.
 
-   THE COMMENT THAT USED TO BE HERE WAS WRONG, in a way that mattered, so here is
-   what actually happens. It claimed `visibility` rather than `opacity` alone
-   "keeps the buttons out of the tab order until the card is actually engaged",
-   and offered that as the reason to prefer it. Two faults followed from it:
+   The long comment that used to sit here did not describe a palette rule. It
+   described how a reveal layer has to behave, and it is the only record of two
+   wrong fixes that were tried and measured. It moved WITH the behaviour: it is
+   now the block above `.lbry-card-actions` in the Library UI language section
+   further down this file, and so are the hover-capability guard and the touch
+   treatment it justifies. Read it before changing the reveal on any library
+   card. The one-line version: `visibility` is a discrete property, so it must
+   never appear in a transition list — and it must not be traded away for
+   opacity either, because only `visibility:hidden` keeps the hidden actions out
+   of the accessibility tree.
 
-   1. `visibility` is a DISCRETE property. Listing it in a transition does not
-      fade it — it flips at 50% of the duration. So the reveal cost a frame, and
-      a focus advance faster than one frame skipped the layer entirely: measured
-      on /discover/palettes at 390x844, 0 of 5 reveal buttons reached with no
-      round-trip between Tab presses, 5 of 5 from ~16ms up. A control whose
-      reachability depends on how fast you tab is not reachable (S13).
-   2. It was never guarded on hover capability, so on a phone or tablet the
-      hover half can never fire at all — 350 actions per page load on a 70-card
-      grid, every take-away action the surface offers, unreachable except by an
-      accident: tapping a stripe gives the card focus and :focus-within matches,
-      but that same tap fires the stripe's own copy action (S12).
-
-   The fix is to keep `visibility` as a plain state property and NEVER put it in
-   a transition. It then flips on the first style recalc after :focus-within or
-   :hover matches, with no 50% point to be outrun — measured 11 of 11 reached at
-   0ms, 16ms and 250ms, on both pointer and touch.
-
-   Dropping `visibility` altogether for opacity + pointer-events was tried first
-   and is WRONG here, which is worth recording because it looks tidier.
-   `visibility:hidden` also removes a node from the ACCESSIBILITY TREE; opacity
-   does not. On a 70-card grid that swap put 350 action links into the a11y tree
-   and the tab order permanently — measured as 70 spurious "Open ..." links
-   exposed at rest, which broke an existing acceptance test by making the
-   accessible name ambiguous, and which would make a screen reader announce five
-   extra actions on every card while browsing. Hidden-until-engaged is the right
-   behaviour; the bug was only ever the transition, so only the transition
-   changed.
-
-   The one thing given up: on hover-out `visibility` snaps rather than waiting
-   for the opacity fade, so the layer vanishes instead of fading. The idiom that
-   buys the fade back is `visibility 0s linear var(--dur-1)` (see .ggn-handle-val)
-   — deliberately not used, because a hide that nobody watches is not worth
-   putting a discrete property back into a transition list for. */
-.pgal-shot{position:relative;display:flex;flex-direction:column;min-width:0}
-.pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance)}
-@media(hover:hover){
-  .pgal-actions{opacity:0;visibility:hidden;transform:translateY(4px)}
-  .pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;visibility:visible;transform:none}
-}
-/* No hover, so the layer is permanent — and a permanent overlay is the wrong
-   shape for it. Measured as an overlay on touch it covered 85% of the fourth
-   stripe and 35% of the third at 768-1180px (22% of the whole swatch), i.e. a
-   browsing surface for four colours that only ever showed two and a half of
-   them. Obscuring the artefact the actions act on is a different defect, not a
-   fix. So on touch it leaves the swatch and becomes a real row in the card:
-   nothing is covered, and the card grows by the height of the row instead. */
-@media(hover:none){
-  /* gap goes 4px -> 8px here for the same reason: the 4px was paid to keep the
-     row narrow enough to float on the swatch. Off the swatch that constraint is
-     gone, and 4px between adjacent 27-29px targets is thin for a finger. */
-  .pgal-actions{position:static;margin-top:8px;gap:8px}
-}
+   What is genuinely specific to a palette is density: five actions is more than
+   any other library card carries, so they sit tighter than the shared 6px. */
+.pgal-card .lbry-card-actions{gap:4px}
+/* On touch the shared rule takes the row off the swatch, and the 4px stops
+   buying anything — it was only ever paid to keep the row narrow enough to
+   float there. 4px between adjacent 27-29px targets is thin for a finger. */
+@media(hover:none){.pgal-card .lbry-card-actions{gap:8px}}
 .pgal-act{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.16);background:rgba(10,10,14,.72);color:#fff;font-family:var(--font);font-size:11px;font-weight:600;line-height:1;cursor:pointer;text-decoration:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pgal-act:hover{background:rgba(10,10,14,.9);border-color:rgba(255,255,255,.34)}
 .pgal-act:focus-visible{outline:2px solid #fff;outline-offset:2px}
 /* The action layer sits ON the swatch, so at small card sizes the labels are
    what has to go — the icons keep every action reachable in a single row. */
 @media (max-width:600px){.pgal-act span{display:none}.pgal-act{padding:6px}}
-/* The foot's own controls must stay above the actions layer's stacking context. */
-.pgal-foot{position:relative;z-index:4}
+/* The foot used to need `position:relative;z-index:4` to stay above the
+   actions layer. It no longer does, and the rule is gone rather than kept
+   "just in case": the reveal layer is now inside .lbry-card-shot and
+   anchored to the bottom of the SHOT, so it has no way to reach the foot,
+   which is a later sibling of the shot rather than an overlapped one. */
 /* Inside the builder popup the cards are half height and already one big select
    surface — no action layer is rendered there, and this guards the case where a
    future caller passes palettes without onPick into a small grid. */
-.plb-galpopup-body .pgal-actions{display:none}
-/* The reduced-motion variant carried the same `visibility var(--dur-1)` and so
-   had the same discrete mid-transition flip — the frame dependency above was
-   present on BOTH paths, which is why it survived a reduced-motion re-test. */
-@media (prefers-reduced-motion:reduce){.pgal-actions{transition:opacity var(--dur-1) linear;transform:none}}
-.pgal-foot{display:flex;align-items:center;gap:8px;min-width:0;padding:0 2px}
-.pgal-like{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-.pgal-like:hover{color:var(--t0);border-color:var(--bh)}
-.pgal-like.is-liked{color:#fb7185;border-color:color-mix(in srgb,#fb7185 40%,transparent)}
-.pgal-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plb-galpopup-body .lbry-card-actions{display:none}
+/* On the swatch now, not in the foot — same place the Gradient Library keeps
+   it. Dark scrim rather than a bordered pill, because it sits over colour. */
+.pgal-like{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.35);background:rgba(10,10,14,.42);color:#fff;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:opacity var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.pgal-like:hover{background:rgba(10,10,14,.62)}
+.pgal-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.pgal-like.is-liked{color:#fb7185;background:rgba(10,10,14,.5);border-color:rgba(251,113,133,.6)}
+/* Hidden at rest on a hover device — and here `opacity` alone is the RIGHT
+   tool, where for the actions layer it is the wrong one. What differs is scale
+   and reveal conditions, not taste:
+
+   - opacity is continuous and blocks neither focus nor hit-testing, so no Tab
+     speed can outrun it the way one could outrun a discrete `visibility` flip;
+   - `:focus-visible` is a reveal condition, so a keyboard user sees the control
+     their focus is on — the old foot pill was always visible, and this keeps
+     that promise rather than quietly dropping it;
+   - `.is-liked` is a reveal condition, so the state you set stays legible at
+     rest, which is the entire point of a like;
+   - it stays in the accessibility tree at rest, which is ONE extra toggle per
+     card that was already announced from the foot before this move — not the
+     350 spurious action links the opacity-only actions layer produced.
+
+   And no hover capability means no hiding at all: on touch this block never
+   matches, so the button is simply always visible and always tappable. */
+@media(hover:hover){
+  .pgal-like{opacity:0}
+  .pgal-card:hover .pgal-like,.pgal-like:focus-visible,.pgal-like.is-liked{opacity:1}
+}
+.pgal-name{font-size:12.5px;font-weight:600;color:var(--t1)}
 .pgal-use{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-family:var(--font);font-size:11.5px;font-weight:700;color:var(--t2);background:none;border:none;padding:4px 2px;cursor:pointer;text-decoration:none;transition:color var(--dur-1) var(--ease-standard)}
 .pgal-use:hover{color:var(--brand)}
 .pgal-use.is-selected{color:var(--brand)}
