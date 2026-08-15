@@ -6,6 +6,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import { readCommunitySubmissions, writeCommunitySubmissions } from '../utils/communitySubmissions'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
+import useModalDialog from '../hooks/useModalDialog'
 
 // Community Hub — browse, save, and submit design inspiration. Saves drive the
 // ranking. Baseline save counts are illustrative for now; the heart toggle and
@@ -30,11 +31,7 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
   const [form, setForm] = useState({ name: '', author: authorName || '', url: '', category: 'Landing' })
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const submitDialogRef = useModalDialog(onClose)
 
   const submit = () => {
     if (!form.name.trim()) return setError('Give your design a name.')
@@ -56,7 +53,7 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
 
   return (
     <div className="ui-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design">
+      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design" tabIndex={-1} ref={submitDialogRef}>
         <div className="ui-modal-head">
           <h2 className="ui-modal-title">Submit a design</h2>
           <button className="ui-modal-x" onClick={onClose} aria-label="Close">

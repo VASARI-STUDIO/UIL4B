@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { generateHarmony, textColorForBg } from '../utils/colors'
+import useModalDialog from '../hooks/useModalDialog'
 
 // A universal "preview your colour system on real UI" popup. It reads the
 // current design's palette and state colours straight from ProjectContext, so
@@ -133,14 +134,10 @@ export default function UIPreviewModal({ open, onClose }) {
     try { localStorage.setItem('vs-preview-device', previewDevice) } catch { /* quota */ }
   }, [previewDevice])
 
-  // Lock background scroll and wire Escape-to-close while open.
-  useEffect(() => {
-    if (!open) return
-    document.body.style.overflow = 'hidden'
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => { document.body.style.overflow = ''; document.removeEventListener('keydown', onKey) }
-  }, [open, onClose])
+  // Scroll lock, Escape, focus trap and focus restoration from the shared hook.
+  // This had the first two only, and Tab walked out of a dialog that claimed to
+  // be modal.
+  const dialogRef = useModalDialog(onClose, { enabled: open })
 
   // Close the preview when the user navigates to a different page (e.g. clicks a
   // nav item) — the preview should never linger over a page it doesn't belong to.
@@ -173,8 +170,19 @@ export default function UIPreviewModal({ open, onClose }) {
   const deviceWidth = (DEVICE_OPTIONS.find(d => d.id === previewDevice) || DEVICE_OPTIONS[0]).width
 
   return (
-    <div className="uip-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="UI preview">
-      <div className="uip-modal" onClick={e => e.stopPropagation()}>
+    // role="dialog" was on the OVERLAY, which made the scrim part of the dialog
+    // and gave the whole backdrop the dialog's accessible name. The scrim is
+    // presentation; the panel is the dialog.
+    <div className="uip-overlay" onClick={onClose} role="presentation">
+      <div
+        className="uip-modal"
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="UI preview"
+        tabIndex={-1}
+        ref={dialogRef}
+      >
         <div className="uip-modal-head">
           <div>
             <div className="uip-modal-eyebrow">Live preview</div>
