@@ -100,9 +100,9 @@ export const MODULE_BOARD = [
     id: 'alt-text-generator',
     name: 'Alt Text Generator',
     area: 'AI',
-    status: 'planned',
+    status: 'live',
     health: 'watch',
-    summary: 'Reusable batch alt-text implementation exists but is not activated in the public route tree.',
+    summary: 'Live at /alt-text and reachable from the AI Studio menu — the only live AI tool. This entry previously said the implementation "is not activated in the public route tree", which had stopped being true: toolTree.js carries it with soon: false in both the menu and the satellite set.',
     recentChanges: [
       'End-to-end QA: auth + upload + batch + retry + CSV + tone (ALT-01)',
       'Strengthened WCAG/alt-text guidance in prompt (ALT-02)',
