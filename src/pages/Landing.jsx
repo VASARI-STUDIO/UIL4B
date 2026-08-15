@@ -341,8 +341,10 @@ function AnimatedNumber({ value, suffix = '', duration = 1600 }) {
   return <span ref={ref} className="landing-stat-num">{formatted}{suffix}</span>
 }
 
-// Linear-style bento showcase of the toolkit. Asymmetric spans, hairline tiles
-// with an inner top-highlight; each opens its category.
+// Bento-grid showcase of the toolkit: asymmetric spans give each category its
+// own visual weight instead of a uniform tile wall, hairline borders with an
+// inner top-highlight read as depth without a heavy drop shadow; each opens
+// its category.
 const BENTO = [
   { id: 'color', span: 4, label: 'COLOUR', to: '/color', title: 'Build whole colour systems, not just swatches', body: 'Palettes, tint scales, gradients and WCAG contrast — export to CSS, Tailwind, PNG or SVG.', icon: (<><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 010-20 9 9 0 019 9c0 4-3 4-5 4h-2a2 2 0 00-2 2 2 2 0 01-2 2"/></>) },
   { id: 'type', span: 2, label: 'TYPE', to: '/typography', title: 'Pair fonts that work', body: '1,200+ Google Fonts, curated pairings, and a modular scale.', icon: (<><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></>) },

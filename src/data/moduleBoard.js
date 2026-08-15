@@ -23,7 +23,7 @@ export const MODULE_BOARD = [
       'Retired the standalone UI Colour page from public IA while preserving a safe /color redirect',
       'Undo now covers all palette-wiping actions; surfaced image-extract errors; ARIA tablist + keyboard-operable swatches; dead code removed',
       'Fixed production crash on Color Studio (TDZ violation in Rolldown bundle)',
-      'Coolors parity: lock colors + spacebar regen + drag reorder (CS-15)',
+      'Lock colors + spacebar regen + drag reorder (CS-15)',
       'Image color extraction via k-means from uploaded photos (CS-11)',
       'Palette visualizer on 4 UI mockups (CS-12)',
       'Named libraries: CSS/Japanese/Material/Tailwind + closest match (CS-13)',
