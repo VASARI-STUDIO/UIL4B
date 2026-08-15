@@ -7443,25 +7443,14 @@ button.plb-varrow:hover{background:var(--bg-2)}
    The masthead and result head are the shared Discover components (dgh-/drh-);
    only the richer filter toolbar and the gradient cards are local to this page. */
 .grg-wrap{padding-bottom:88px}
-.grg-toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:28px 0 32px}
-/* Rounding parity with the Palette Library toolbar (.pgl-toolbar, above): the
-   search field and the type segment took their radius from the shared .pl-/.ch-
-   bases (7px and a full pill), which read as a different family beside the
-   Palette Library. They now use the same two tokens. The mood chips keep
-   --radius, which is what .pgl-filters' buttons resolve to. */
-.grg-search{flex:1 1 260px;min-width:220px;border-radius:var(--radius-xl)}
-.grg-chips{flex-wrap:wrap}
-.grg-types{flex-shrink:0;border-radius:var(--radius-xl)}
-.grg-types .ch-sort-btn{border-radius:var(--radius)}
-.grg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:36px 24px}
-.grg-card{display:flex;flex-direction:column;gap:14px;min-width:0}
-.grg-thumb{position:relative}
-.grg-swatch{position:relative;display:block;aspect-ratio:3/4;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-s);transition:transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-standard)}
-.grg-card:hover .grg-swatch{transform:translateY(-3px);box-shadow:var(--shadow-l)}
+/* Toolbar, grid, card frame, foot and empty state now come from the shared
+   Library language (.lbry-, below). What is left here is what is genuinely
+   specific to a gradient: the 3:4 swatch, and the three controls that hang off
+   it. The type badge that used to be `.grg-pill` — hover-only — is now the
+   shared `.lbry-card-badge` and is visible at rest. */
+.grg-swatch{display:block;aspect-ratio:3/4;border:1px solid var(--border);border-radius:inherit;box-shadow:var(--shadow-s)}
 .grg-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.grg-pill{position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:rgba(10,10,14,.5);padding:3px 9px;border-radius:var(--radius-pill);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:0;transition:opacity var(--dur-1) var(--ease-standard);pointer-events:none}
-.grg-card:hover .grg-pill,.grg-swatch:focus-visible .grg-pill{opacity:1}
-.grg-like{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.35);background:rgba(10,10,14,.42);color:#fff;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.grg-like{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.35);background:rgba(10,10,14,.42);color:#fff;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .grg-like:hover{background:rgba(10,10,14,.62)}
 .grg-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .grg-like.is-liked{color:#fb7185;background:rgba(10,10,14,.5);border-color:rgba(251,113,133,.6)}
@@ -7469,11 +7458,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .grg-like{opacity:0;transform:translateY(-2px)}
   .grg-card:hover .grg-like,.grg-like:focus-visible,.grg-like.is-liked{opacity:1;transform:none}
 }
-.grg-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-width:0;padding:0 1px}
-.grg-id{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.grg-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0);letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.grg-meta{font-size:var(--fs-caption);color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.grg-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .grg-copy{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.04em;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:6px 11px;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .grg-copy:hover{color:var(--t0);border-color:var(--bh);background:var(--bg-3)}
 .grg-open{display:inline-flex;align-items:center;gap:5px;font-family:var(--font);font-size:var(--fs-micro);font-weight:700;letter-spacing:.02em;color:var(--brand);background:none;border:none;padding:6px 4px;cursor:pointer;text-decoration:none;transition:gap var(--dur-2) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
@@ -7879,14 +7863,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
    tokens exactly: --radius-2xl for the bar, --radius-xl for a field or a
    segmented control, --radius for a control inside one. Both libraries read the
    scale, so neither can drift again. */
-.pgl-toolbar{position:sticky;top:calc(var(--nav-clear) + 8px);z-index:45;display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:10px;align-items:center;margin-bottom:52px;padding:10px;background:color-mix(in srgb,var(--bg-0) 88%,transparent);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:0 14px 42px rgba(10,10,18,.09);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
-.pgl-search{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 14px;color:var(--t2);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl)}
-.pgl-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
-.pgl-search input{width:100%;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-size:13px}
-.pgl-filters{display:flex;gap:3px;padding:3px;background:var(--bg-2);border-radius:var(--radius-xl)}
-.pgl-filters button{min-height:38px;padding:7px 12px;color:var(--t2);background:transparent;border:0;border-radius:var(--radius);font-size:11px;font-weight:650;cursor:pointer}
-.pgl-filters button:hover{color:var(--t0)}
-.pgl-filters button.is-active{color:var(--t0);background:var(--card);box-shadow:var(--shadow-xs)}
+/* Toolbar, search, filters and empty state moved to the shared Library
+   language (.lbry-, below) — this page was the better of the two reference
+   implementations, so the shared toolbar is largely this one, generalised to
+   take any number of filter groups instead of exactly one. */
 .pgl-build-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;color:#fff;background:#111113;border-radius:var(--radius-xl);font-size:11px;font-weight:700;text-decoration:none}
 .pgl-build-link:hover{background:var(--brand)}
 .pgl-page .pgal-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:34px 18px}
@@ -7896,10 +7876,91 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .pgl-page .pgal-name{font-size:13px;color:var(--t0)}
 .pgl-note{margin:-8px 0 22px;font-size:12.5px;line-height:1.55;color:var(--t2)}
 .pgl-note strong{color:var(--t1);font-weight:700}
-.pgl-empty{display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:44px;border:1px dashed var(--border);border-radius:18px;background:var(--bg-1)}
-.pgl-empty strong{font-size:16px;color:var(--t0)}
-.pgl-empty span{font-size:13px;color:var(--t2)}
-.pgl-empty button{min-height:38px;margin-top:8px;padding:8px 14px;color:#fff;background:var(--brand);border:0;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer}
+
+/* ── Library UI language ───────────────────────────────────────────────────
+   The shared browse vocabulary: toolbar, filters, grid, card, empty state.
+   Extracted from the Palette and Gradient Libraries, which had solved the same
+   browsing problem twice and disagreed on every part of it — two search field
+   heights, THREE filter idioms across two toolbars, one sticky toolbar and one
+   that scrolled away, and two different answers to where a card's actions live.
+
+   Consumers add their own identity class alongside these (`.grg-card`,
+   `.pgal-card`, `.fg-card`) for per-surface deltas. Anything that lands in a
+   consumer block and is not genuinely specific to that surface belongs up here
+   instead — that is how the three implementations drifted apart the first time. */
+.lbry-toolbar{position:sticky;top:calc(var(--nav-clear) + 8px);z-index:45;display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 clamp(28px,4vw,52px);padding:10px;background:color-mix(in srgb,var(--bg-0) 88%,transparent);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:0 14px 42px rgba(10,10,18,.09);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+/* 14px, not 8: two adjacent trays with an 8px gap read as one long segmented
+   control, so "Mono" and "All types" looked like options in the same group
+   when they answer two different questions. */
+.lbry-toolbar-filters{display:flex;flex-wrap:wrap;align-items:center;gap:14px;min-width:0}
+.lbry-toolbar-action{flex-shrink:0;margin-left:auto}
+
+.lbry-search{display:flex;align-items:center;gap:10px;flex:1 1 240px;min-width:0;min-height:46px;padding:0 12px 0 14px;color:var(--t2);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.lbry-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.lbry-search>svg{flex-shrink:0}
+.lbry-search input{width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+.lbry-search input::placeholder{color:var(--t3)}
+/* The engine's own clear affordance would sit beside ours and do the same job
+   with a different glyph. Ours stays, because it carries an accessible name. */
+.lbry-search input::-webkit-search-cancel-button{display:none}
+/* 24px is the WCAG 2.5.8 floor, not a visual choice — the glyph is 14px. */
+.lbry-search-clear{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;color:var(--t3);background:none;border:0;border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.lbry-search-clear:hover{color:var(--t0);background:var(--hvr)}
+.lbry-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.lbry-filters{position:relative;display:flex;gap:3px;flex-shrink:0;max-width:100%;padding:3px;background:var(--bg-2);border-radius:var(--radius-xl);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.lbry-filters::-webkit-scrollbar{display:none}
+/* Decoration only — aria-pressed on each button is what reports state. The
+   fallbacks matter: until JS measures, opacity 0 keeps it off the first option
+   rather than claiming a selection at x=0. */
+.lbry-filter-ind{position:absolute;top:3px;bottom:3px;left:0;width:var(--lbry-ind-w,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-xs);transform:translateX(var(--lbry-ind-x,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
+.lbry-filter{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:7px 13px;color:var(--t2);background:transparent;border:0;border-radius:var(--radius);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
+.lbry-filter:hover{color:var(--t0)}
+.lbry-filter[data-active="true"]{color:var(--t0)}
+.lbry-filter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.lbry-filter-dot{width:8px;height:8px;flex-shrink:0;border-radius:var(--radius-pill);box-shadow:inset 0 0 0 1px rgba(10,10,18,.16)}
+.lbry-filter-dot[data-dot="warm"]{background:linear-gradient(135deg,#FFA94D,#F0435F)}
+.lbry-filter-dot[data-dot="cool"]{background:linear-gradient(135deg,#4DA3FF,#7C5CFF)}
+.lbry-filter-dot[data-dot="dark"]{background:linear-gradient(135deg,#3A3F4B,#0E1015)}
+/* The pale dot needs a real edge, not the shared hairline: on the light theme
+   its fill is within a few percent of the tray behind it, so at 8px the inset
+   ring WAS the dot and .16 alpha made it read as an empty circle. */
+.lbry-filter-dot[data-dot="light"]{background:linear-gradient(135deg,#FFFFFF,#D3DAE6);box-shadow:inset 0 0 0 1px rgba(10,10,18,.42)}
+
+.lbry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(var(--lbry-col-min,280px),100%),1fr));gap:clamp(24px,3vw,34px) 20px}
+
+.lbry-card{position:relative;display:flex;flex-direction:column;gap:12px;min-width:0}
+.lbry-card-shot{position:relative;min-width:0;border-radius:var(--radius-l);transition:transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-standard)}
+.lbry-card:hover .lbry-card-shot{transform:translateY(-3px);box-shadow:var(--shadow-l)}
+.lbry-card-badge{position:absolute;top:10px;left:10px;z-index:2;padding:3px 9px;color:#fff;background:rgba(10,10,14,.62);border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.05em;text-transform:uppercase;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);pointer-events:none}
+.lbry-card-float{position:absolute;top:10px;right:10px;z-index:2;display:flex;align-items:center;gap:6px}
+/* Real DOM at all times, revealed with CSS — never mounted on hover, so the
+   keyboard route and the pointer route expose exactly the same controls. */
+.lbry-card-actions{position:absolute;inset:auto 8px 8px;z-index:2;display:flex;flex-wrap:wrap;gap:6px;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-out),visibility var(--dur-2) var(--ease-standard)}
+.lbry-card:hover .lbry-card-actions,.lbry-card:focus-within .lbry-card-actions{opacity:1;visibility:visible;transform:none}
+.lbry-card-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-width:0;padding:0 1px}
+.lbry-card-id{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.lbry-card-name{font-size:var(--fs-body-s);font-weight:600;letter-spacing:-.005em;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lbry-card-meta{font-size:var(--fs-caption);color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lbry-card-tail{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+.lbry-empty{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:clamp(28px,5vw,48px);background:var(--bg-1);border:1px dashed var(--border);border-radius:var(--radius-2xl)}
+.lbry-empty>svg{margin-bottom:4px;color:var(--t3)}
+.lbry-empty strong{font-size:16px;color:var(--t0)}
+.lbry-empty span{max-width:56ch;font-size:13px;line-height:1.55;color:var(--t2)}
+.lbry-empty-clear{min-height:38px;margin-top:8px;padding:8px 16px;color:var(--accent-fg);background:var(--brand);border:0;border-radius:var(--radius);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+.lbry-empty-clear:hover{background:var(--brand-soft)}
+.lbry-empty-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+@media(max-width:640px){
+  /* The action stops being a tail and becomes a full-width row: at this width
+     `margin-left:auto` was pushing it onto its own line anyway, ragged. */
+  .lbry-toolbar{gap:8px;padding:8px}
+  .lbry-toolbar-filters{width:100%}
+  .lbry-filters{width:100%}
+  .lbry-toolbar-action{width:100%;margin-left:0}
+  .lbry-toolbar-action>*{width:100%;justify-content:center}
+}
 
 /* Font Gallery */
 .fg-page{padding-bottom:72px}
