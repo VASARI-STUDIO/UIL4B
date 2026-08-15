@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useLayoutEffect } from 'react'
 import AuthGate from '../components/AuthGate'
 import { AI_LIMITS } from '../config/plans'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -11,11 +11,67 @@ const ALT_TEXT_TOOL_ID = 'alt-text'
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif'
 const MAX_DIM = 1600
 
+// `desc` says what the mode PRODUCES, `when` says when to reach for it. Both
+// used to live in a `title` tooltip, which is invisible on touch and never
+// answered the only question a first-time user has — which one do I pick? The
+// selected mode's guidance is now rendered, so the choice is legible without
+// hovering.
 const TONES = [
-  { id: 'concise', label: 'Concise', desc: '1–2 sentences, ~125 chars' },
-  { id: 'detailed', label: 'Detailed', desc: '2–4 sentences, up to 300 chars' },
-  { id: 'technical', label: 'Technical', desc: 'Data, labels, and precise details' },
+  {
+    id: 'concise',
+    label: 'Concise',
+    desc: '1–2 sentences, ~125 characters',
+    when: 'The safe default. Most images in body content want this — screen readers announce it in one breath.',
+  },
+  {
+    id: 'detailed',
+    label: 'Detailed',
+    desc: '2–4 sentences, up to 300 characters',
+    when: 'When the image carries the meaning: a hero shot, a product photo, a scene the reader would otherwise lose.',
+  },
+  {
+    id: 'technical',
+    label: 'Technical',
+    desc: 'Exact text, data values and labels',
+    when: 'For charts, diagrams, screenshots and UI, where the numbers and labels ARE the content.',
+  },
 ]
+
+// Roughly a dozen lines at the card's type size — past that a description has
+// gone wrong and a scrollbar is the honest signal. Well beyond the 300-character
+// ceiling the 'detailed' tone targets, so a normal result never hits it.
+const ALT_TEXT_MAX_HEIGHT = 260
+
+// The result box was a fixed rows={3} textarea. A 300-character 'detailed'
+// result does not fit in three rows, so a complete answer arrived looking
+// clipped and the user had to scroll a tiny box to read their own output —
+// which is what a truncated generation looks like from the outside, and is
+// almost certainly the "generation gets cut off" in the founder's report.
+// Sizing to content is what makes a finished answer LOOK finished.
+function AutoGrowTextarea({ value, maxHeight = ALT_TEXT_MAX_HEIGHT, ...rest }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    // Collapse before measuring. scrollHeight of a sized element never reports
+    // less than its current height, so without this reset the box ratchets
+    // upward and never shrinks back when the user deletes text.
+    el.style.height = 'auto'
+    // scrollHeight covers content + padding but NOT the border, while this
+    // stylesheet is border-box globally — so assigning it straight to `height`
+    // leaves the content area short by the border and shaves the last line.
+    // Measured at 2px, which is enough to clip the descenders off a final line
+    // and reintroduce exactly the "it got cut off" impression being fixed here.
+    const cs = getComputedStyle(el)
+    const border = cs.boxSizing === 'border-box'
+      ? parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth)
+      : 0
+    const needed = el.scrollHeight + border
+    el.style.height = `${Math.min(needed, maxHeight)}px`
+    el.style.overflowY = needed > maxHeight ? 'auto' : 'hidden'
+  }, [value, maxHeight])
+  return <textarea ref={ref} value={value} rows={1} {...rest} />
+}
 
 function formatBytes(b) {
   if (b < 1024) return b + ' B'
@@ -82,6 +138,7 @@ export default function AltTextGenerator({ toast }) {
       base64: null,
       mimeType: null,
       altText: '',
+      truncated: false,
       status: 'pending',
       error: null,
     }))
@@ -125,7 +182,9 @@ export default function AltTextGenerator({ toast }) {
       toast?.(why)
       return
     }
-    setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'generating', error: null } : p))
+    // Clear the truncation flag too, or a retry that succeeds in full still
+    // wears the warning from the attempt before it.
+    setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'generating', error: null, truncated: false } : p))
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Not signed in')
@@ -152,7 +211,10 @@ export default function AltTextGenerator({ toast }) {
       }
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       recordUsage(ALT_TEXT_TOOL_ID)
-      setItems(prev => prev.map(p => p.id === item.id ? { ...p, altText: data.altText, status: 'done' } : p))
+      // The server flags a response that hit the model's token ceiling. Carry it
+      // onto the item so the card can say the answer is unfinished — a partial
+      // description presented as complete is the bug this whole flag exists for.
+      setItems(prev => prev.map(p => p.id === item.id ? { ...p, altText: data.altText, truncated: Boolean(data.truncated), status: 'done' } : p))
     } catch (err) {
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: err.message } : p))
     }
@@ -213,6 +275,7 @@ export default function AltTextGenerator({ toast }) {
 
   const readyCount = items.filter(it => it.status === 'ready' || it.status === 'error').length
   const doneCount = items.filter(it => it.altText).length
+  const activeTone = TONES.find(t => t.id === tone) || TONES[0]
 
   return (
     <div className="sec">
@@ -223,7 +286,7 @@ export default function AltTextGenerator({ toast }) {
             api/_lib/plans.js), so the old "upgrade for higher-quality models"
             was selling something that does not exist. Pro buys CAPACITY. A
             unit test fails if this claim comes back while the models match. */}
-        <p>Batch-upload images and generate accessible alt text using AI. {isPro ? 'Pro capacity active.' : 'Pro raises your daily and monthly generation limits.'}</p>
+        <p>Batch-upload images and generate WCAG-compliant alt text that also earns search relevance — by describing images accurately, not by stuffing keywords. {isPro ? 'Pro capacity active.' : 'Pro raises your daily and monthly generation limits.'}</p>
       </div>
 
       <AuthGate featureLabel="generate alt text">
@@ -258,30 +321,44 @@ export default function AltTextGenerator({ toast }) {
 
       <div className="alt-options">
         <div className="alt-context" style={{ flex: 1 }}>
-          <label htmlFor="alt-context-input">Context (optional)</label>
+          <label htmlFor="alt-context-input">Page context (optional)</label>
           <input
             id="alt-context-input"
             type="text"
             placeholder="e.g. blog post about hiking in the Alps"
             value={context}
             onChange={(e) => setContext(e.target.value)}
+            aria-describedby="alt-context-help"
           />
+          {/* Says plainly what this field is NOT. It is the one input a
+              keyword-stuffing tool would abuse, and the server prompt refuses to
+              use it that way — the UI should not imply otherwise. */}
+          <p className="alt-field-help" id="alt-context-help">
+            What the page is about. Used to judge which details matter — never inserted as keywords, which Google treats as spam.
+          </p>
         </div>
         <div className="alt-context">
-          <label>Tone</label>
-          <div className="aipg-chips">
+          <label id="alt-tone-label">Length</label>
+          <div className="aipg-chips" role="group" aria-labelledby="alt-tone-label">
             {TONES.map(t => (
               <button
                 key={t.id}
                 type="button"
                 className={`pl-chip${tone === t.id ? ' active' : ''}`}
                 onClick={() => setTone(t.id)}
+                // The chips were styled-selected only. Without aria-pressed a
+                // screen-reader user cannot tell which length is active.
+                aria-pressed={tone === t.id}
+                aria-describedby={tone === t.id ? 'alt-tone-help' : undefined}
                 title={t.desc}
               >
                 {t.label}
               </button>
             ))}
           </div>
+          <p className="alt-field-help" id="alt-tone-help">
+            <strong>{activeTone.desc}.</strong> {activeTone.when}
+          </p>
         </div>
       </div>
 
@@ -303,8 +380,12 @@ export default function AltTextGenerator({ toast }) {
           <ul className="alt-tips">
             <li>Keep it under ~125 characters — screen readers cut off long descriptions.</li>
             <li>Don&rsquo;t start with “image of” or “picture of” — that&rsquo;s already announced.</li>
-            <li>Add a <strong>context</strong> note above (e.g. the article topic) for sharper results.</li>
+            <li>Add <strong>page context</strong> above (e.g. the article topic) for sharper results.</li>
             <li>For purely decorative images, leave alt text empty (<code>alt=&quot;&quot;</code>).</li>
+            {/* The honest version, stated where a user forms their mental model
+                of what this tool is for. A stuffing tool would promise the
+                opposite, and would earn them a spam penalty. */}
+            <li>Search engines reward <strong>accurate and specific</strong> descriptions. Stuffing keywords breaks Google&rsquo;s spam policy and helps nobody.</li>
           </ul>
         </div>
       )}
@@ -354,11 +435,16 @@ export default function AltTextGenerator({ toast }) {
               {it.status === 'error' && <div className="alt-card-error">{it.error}</div>}
               {it.altText && (
                 <>
-                  <textarea
+                  {it.truncated && (
+                    <div className="alt-card-warn" role="status">
+                      The AI ran out of room and stopped mid-answer. Finish it below, or retry.
+                    </div>
+                  )}
+                  <AutoGrowTextarea
                     className="alt-card-text"
+                    aria-label={`Alt text for ${it.name}`}
                     value={it.altText}
                     onChange={(e) => editAlt(it.id, e.target.value)}
-                    rows={3}
                   />
                   <div className="alt-card-actions">
                     <span className={`alt-card-count${it.altText.length > 125 ? ' over' : ''}`}>
