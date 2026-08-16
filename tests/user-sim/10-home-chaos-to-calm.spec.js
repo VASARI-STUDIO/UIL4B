@@ -1,6 +1,26 @@
-// Acceptance coverage for the homepage chaos → calm experience:
-// eleven real tool links resolving into one five-mode mini-workbench, and the
-// two in-memory hand-offs (images → File Converter, icon draft → Icon Editor).
+// Acceptance coverage for the homepage: every live tool route reachable, the
+// command bar over the REAL search index, the five-mode mini-workbench (now
+// housed in the V2 sticky-scroll section), and the two in-memory hand-offs
+// (images → File Converter, icon draft → Icon Editor).
+//
+// V2 REDESIGN (feat/v2-homepage) genuinely changed three behaviours, and the
+// assertions below moved WITH them rather than being deleted:
+//
+//   · The eleven hero satellites became the tools grid. The contract is
+//     unchanged in substance — every one of those eleven routes must still be
+//     reachable from the homepage with a real href — so the same table is now
+//     asserted against `.htool-link`. The grid is a SUPERSET: it also exposes
+//     /emoji and the AI + component routes the old hero never linked, so no
+//     route was orphaned by the redesign.
+//   · The satellite → workbench convergence is gone, and nothing decorative
+//     replaced it. The sticky step sync took its place, and it moves REAL
+//     workbench state rather than aria-hidden proxy chips — so it is asserted
+//     on the panel's own selected mode, which is a stronger check than
+//     counting proxies ever was.
+//   · The hero's primary CTA is the V2 accent pill, not the ink pill.
+//
+// Everything about the five panels themselves — state, clipboard, keyboard,
+// ARIA, hand-offs — is untouched, and so are their tests.
 //
 // Numbers in the test titles refer to the acceptance list in
 // the homepage acceptance contract (retired to git history in #204 — this file
@@ -11,6 +31,8 @@ import { watch, go } from './helpers.js'
 
 const PERSONA = 'designer evaluating the workspace from the homepage'
 
+// The eleven routes the pre-V2 hero exposed. Every one must still be reachable
+// from the homepage — that is the half of the contract that did not change.
 const SATELLITES = [
   ['Palette', '/color/palette'],
   ['Semantic', '/color/semantic'],
@@ -130,7 +152,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
       // …and the hero's own call to action is still ON screen, so pushing the
       // workbench down must not push the primary action down with it.
-      const cta = page.locator('.home-hero-cta .ui-pill-ink')
+      const cta = page.locator('.home-hero-cta .ui-pill-accent')
       const ctaBox = await cta.boundingBox()
       expect(ctaBox.y + ctaBox.height, 'the primary CTA must stay above the fold').toBeLessThan(h)
     })
@@ -146,27 +168,40 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(heading).toContainText('No more tab hoarding.')
     await expect(heading).toContainText('Build your UI system in one place.')
 
-    // 2 · exactly eleven satellites, with the approved labels and stable routes.
-    // A real href is what makes open-in-new-tab and copy-link behave.
-    const links = page.locator('.hsat-link')
-    await expect(links).toHaveCount(11)
+    // 2 · every route the old hero exposed is still reachable, with a real
+    // href — that is what makes open-in-new-tab and copy-link behave. They now
+    // live in the tools grid rather than the satellite field.
     for (const [label, href] of SATELLITES) {
-      const link = page.locator(`.hsat-link:has(.hsat-label:text-is("${label}"))`)
-      await expect(link).toHaveCount(1)
-      await expect(link).toHaveAttribute('href', href)
-      await expect(link.locator('.hsat-icon svg')).toHaveCount(1)
+      const link = page.locator(`.htool-link[href="${href}"]`)
+      await expect(link, `${label} (${href}) must still be reachable`).toHaveCount(1)
     }
 
-    // Source order is the reading order: copy, then links, then workbench.
+    // …and the grid is a superset: the redesign orphaned nothing and added the
+    // routes the constellation never had room for.
+    for (const href of ['/emoji', '/alt-text', '/ui-builder', '/box-shadow']) {
+      await expect(page.locator(`.htool-link[href="${href}"]`)).toHaveCount(1)
+    }
+
+    // Six category cards, one per Create group.
+    await expect(page.locator('.htool')).toHaveCount(6)
+
+    // Source order is the reading order: hero copy, the command bar, the live
+    // workbench, then the full grid.
     const order = await page.evaluate(() => {
       const pos = (sel) => {
         const el = document.querySelector(sel)
         return [...document.querySelectorAll('*')].indexOf(el)
       }
-      return { copy: pos('.home-hero-core'), links: pos('.hsat'), bench: pos('.hw') }
+      return {
+        copy: pos('.home-hero-core'),
+        cmd: pos('.hcmd'),
+        bench: pos('.hw-shell'),
+        grid: pos('.htools-grid'),
+      }
     })
-    expect(order.copy).toBeLessThan(order.links)
-    expect(order.links).toBeLessThan(order.bench)
+    expect(order.copy).toBeLessThan(order.cmd)
+    expect(order.cmd).toBeLessThan(order.bench)
+    expect(order.bench).toBeLessThan(order.grid)
 
     // 3 · exactly five primary tabs, in the approved order.
     const tabs = page.locator('.hw-tab')
@@ -229,7 +264,8 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await go(page, '/')
 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    await expect(page.locator('.hsat-link').first()).toBeVisible()
+    await expect(page.locator('.htool-link').first()).toBeVisible()
+    await expect(page.locator('.hcmd-input')).toBeVisible()
     await expect(page.locator('.hw-shell')).toBeVisible()
     await expect(page.locator('.hw-panel')).toBeVisible()
 
@@ -241,7 +277,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // rather than the absence of a class that no longer exists.
     await expect.poll(async () => {
       return page.evaluate(() => {
-        const els = ['.home-hero-h1', '.home-hero-sub', '.home-hero-cta', '.home-hero-hint']
+        const els = ['.home-hero-h1', '.home-hero-sub', '.hcmd', '.home-hero-cta', '.home-hero-hint']
           .map((s) => document.querySelector(s))
           .filter(Boolean)
         // The animated units are the CTA's children, not the flex row itself.
@@ -249,13 +285,27 @@ test.describe('homepage: eleven tools, five ways of working', () => {
         return els.every((el) => Number(getComputedStyle(el).opacity) === 1)
       })
     }, { timeout: 8000 }).toBe(true)
-    await expect(page.locator('.hsat-proxy-layer')).toHaveCount(0)
 
-    // Everything still operates.
+    // No step may be stranded at the inactive opacity when the sync that would
+    // activate it never loaded. This is the V2 equivalent of the old stranded
+    // `.motion-armed` check, and it is the failure mode that matters most:
+    // the narrative is prose, and prose must never depend on a chunk.
+    const stepOpacities = await page.locator('.hstep').evaluateAll(
+      (steps) => steps.map((el) => Number(getComputedStyle(el).opacity)),
+    )
+    expect(stepOpacities.length).toBe(5)
+    expect(Math.max(...stepOpacities), 'at least one step must be fully legible').toBe(1)
+
+    // Everything still operates: the tablist is the authoritative mode control
+    // whether or not the scroll sync ever arrives.
     await page.locator('.hw-tab[data-tab="gradient"]').click()
     await expect(page.locator('.hw-grad-preview')).toBeVisible()
-    await page.locator('.hsat-link').first().focus()
-    await expect(page.locator('.hsat-link').first()).toBeFocused()
+    await page.locator('.htool-link').first().focus()
+    await expect(page.locator('.htool-link').first()).toBeFocused()
+
+    // And the command bar is plain React — it never waited on GSAP.
+    await page.locator('.hcmd-input').fill('contrast')
+    await expect(page.locator('.hcmd-row').first()).toBeVisible()
   })
 
   test('6 · reduced motion and ≤768px use the calm static arrangement', async ({ page }) => {
@@ -263,21 +313,26 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // Reduced motion: no proxies, no transform on any satellite.
-    await expect(page.locator('.hsat-proxy-layer')).toHaveCount(0)
-    const transforms = await page.locator('.hsat-item').evaluateAll(
-      (items) => items.map((el) => getComputedStyle(el).transform),
-    )
-    expect(transforms.every((t) => t === 'none')).toBe(true)
-    expect(await page.locator('.hsat').evaluate((el) => getComputedStyle(el).position)).toBe('static')
+    // Reduced motion never runs the step sync, so nothing may depend on it:
+    // the panel is not sticky, and EVERY step reads at full opacity rather
+    // than sitting at the inactive .4 forever.
+    const view = await page.evaluate(() => ({
+      sticky: getComputedStyle(document.querySelector('.hsteps-sticky')).position,
+      opacities: [...document.querySelectorAll('.hstep')]
+        .map((el) => Number(getComputedStyle(el).opacity)),
+    }))
+    expect(view.sticky).toBe('static')
+    expect(view.opacities).toEqual([1, 1, 1, 1, 1])
 
     await page.setViewportSize({ width: 768, height: 900 })
     await go(page, '/')
-    expect(await page.locator('.hsat').evaluate((el) => getComputedStyle(el).position)).toBe('static')
-    const narrowTransforms = await page.locator('.hsat-item').evaluateAll(
-      (items) => items.map((el) => getComputedStyle(el).transform),
+    expect(
+      await page.locator('.hsteps-sticky').evaluate((el) => getComputedStyle(el).position),
+    ).toBe('static')
+    const narrow = await page.locator('.hstep').evaluateAll(
+      (steps) => steps.map((el) => Number(getComputedStyle(el).opacity)),
     )
-    expect(narrowTransforms.every((t) => t === 'none')).toBe(true)
+    expect(narrow).toEqual([1, 1, 1, 1, 1])
     expect(await overflowOf(page)).toBeLessThanOrEqual(1)
   })
 
@@ -293,11 +348,11 @@ test.describe('homepage: eleven tools, five ways of working', () => {
       expect(await overflowOf(page), `page overflow at ${width}px`).toBeLessThanOrEqual(1)
 
       const report = await page.evaluate(() => {
-        const sats = [...document.querySelectorAll('.hsat-link')]
-        const clipped = sats
+        const links = [...document.querySelectorAll('.htool-link')]
+        const clipped = links
           .filter((a) => a.scrollWidth > a.clientWidth + 1)
           .map((a) => a.textContent)
-        const boxes = sats.map((a) => a.getBoundingClientRect())
+        const boxes = links.map((a) => a.getBoundingClientRect())
         const collisions = []
         for (let i = 0; i < boxes.length; i++) {
           for (let j = i + 1; j < boxes.length; j++) {
@@ -306,13 +361,20 @@ test.describe('homepage: eleven tools, five ways of working', () => {
             if (hit) collisions.push([i, j])
           }
         }
-        const small = sats.filter((a) => a.getBoundingClientRect().height < 40).length
-        return { clipped, collisions, small, count: sats.length }
+        // The command bar is the hero's primary control at every width.
+        const cmd = document.querySelector('.hcmd-input')?.getBoundingClientRect()
+        return {
+          clipped,
+          collisions,
+          count: links.length,
+          cmdWidth: cmd ? Math.round(cmd.width) : 0,
+        }
       })
-      expect(report.count, `satellite count at ${width}px`).toBe(11)
-      expect(report.clipped, `clipped labels at ${width}px`).toEqual([])
-      expect(report.collisions, `satellite collisions at ${width}px`).toEqual([])
-      expect(report.small, `under-sized touch targets at ${width}px`).toBe(0)
+      // Every Create tool, live or Soon — the grid never hides a route.
+      expect(report.count, `tool links at ${width}px`).toBe(18)
+      expect(report.clipped, `clipped tool labels at ${width}px`).toEqual([])
+      expect(report.collisions, `tool link collisions at ${width}px`).toEqual([])
+      expect(report.cmdWidth, `command bar unusable at ${width}px`).toBeGreaterThan(120)
 
       // Every control in the default panel stays inside the viewport.
       const reachable = await page.evaluate(() => {
@@ -328,10 +390,9 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     }
   })
 
-  test('5–7 · the authored wide field stays clear of the copy, and its proxies are decorative only', async ({ page }) => {
-    // Motion ON: this is the only path that renders the absolute satellite field
-    // and the convergence proxies, so the reduced-motion sweep above cannot
-    // cover it.
+  test('5–7 · the sticky panel holds and the step sync drives the REAL workbench', async ({ page }) => {
+    // Motion ON: the sticky column and the scroll sync only exist on this path,
+    // so the reduced-motion sweep above cannot cover them.
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await page.addInitScript(() => {
       localStorage.setItem('vs-appearance', JSON.stringify({
@@ -344,75 +405,145 @@ test.describe('homepage: eleven tools, five ways of working', () => {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/')
       await expect(page.locator('.hw-shell')).toBeVisible()
-      // Wait for the enhancement to arm, then measure the resting layout.
-      await expect.poll(() => page.locator('.hsat-proxy').count(), { timeout: 10000 }).toBe(11)
 
-      const report = await page.evaluate(() => {
-        // Neutralise the idle drift so we measure authored positions, then add a
-        // safety margin at least as large as the drift itself.
-        const items = [...document.querySelectorAll('.hsat-item')]
-        const saved = items.map((el) => el.style.transform)
-        items.forEach((el) => { el.style.transform = 'none' })
-        const box = (el) => {
-          const r = el.getBoundingClientRect()
-          return [r.left, r.top, r.right, r.bottom]
-        }
-        const textBox = (el) => {
-          const range = document.createRange()
-          range.selectNodeContents(el)
-          const r = range.getBoundingClientRect()
-          return [r.left, r.top, r.right, r.bottom]
-        }
-        const copy = [
-          ...[...document.querySelectorAll('.home-hero-cta .ui-pill')].map(box),
-          textBox(document.querySelector('.home-hero-hint')),
-          textBox(document.querySelector('.home-hero-kicker')),
-        ]
-        const sats = [...document.querySelectorAll('.hsat-link')].map(box)
-        const MARGIN = 14
-        const hit = (a, b) => !(
-          a[2] + MARGIN < b[0] || b[2] + MARGIN < a[0] || a[3] + MARGIN < b[1] || b[3] + MARGIN < a[1]
-        )
-        const collisions = []
-        for (const c of copy) for (const s of sats) if (hit(c, s)) collisions.push(['copy', c, s])
-        for (let i = 0; i < sats.length; i++) {
-          for (let j = i + 1; j < sats.length; j++) if (hit(sats[i], sats[j])) collisions.push(['satellite', i, j])
-        }
-        const inside = sats.every((s) => s[0] >= 0 && s[2] <= document.documentElement.clientWidth)
-        items.forEach((el, i) => { el.style.transform = saved[i] })
-
-        const layer = document.querySelector('.hsat-proxy-layer')
+      const layout = await page.evaluate(() => {
+        const sticky = document.querySelector('.hsteps-sticky')
+        const rail = document.querySelector('.hsteps-rail')
+        const s = sticky.getBoundingClientRect()
+        const r = rail.getBoundingClientRect()
         return {
-          collisions,
-          inside,
-          layerHidden: layer?.getAttribute('aria-hidden'),
-          focusableInLayer: layer?.querySelectorAll('a,button,input,select,textarea,[tabindex]').length,
-          position: getComputedStyle(document.querySelector('.hsat')).position,
+          position: getComputedStyle(sticky).position,
+          // Two real columns: the panel sits beside the narrative, not under it.
+          sideBySide: s.left >= r.right - 1,
+          panelInside: s.left >= 0 && s.right <= document.documentElement.clientWidth + 1,
         }
       })
-
-      expect(report.position, `authored field at ${width}px`).toBe('absolute')
-      expect(report.collisions, `collisions at ${width}px`).toEqual([])
-      expect(report.inside, `a satellite left the viewport at ${width}px`).toBe(true)
-      // Decorative proxies are announced to nobody and reachable by nobody.
-      expect(report.layerHidden).toBe('true')
-      expect(report.focusableInLayer).toBe(0)
+      expect(layout.position, `sticky column at ${width}px`).toBe('sticky')
+      expect(layout.sideBySide, `columns collapsed at ${width}px`).toBe(true)
+      expect(layout.panelInside, `the panel left the viewport at ${width}px`).toBe(true)
       expect(await overflowOf(page)).toBeLessThanOrEqual(1)
 
       if (width === 1440) {
-        await page.locator('.hw-shell').scrollIntoViewIfNeeded()
+        // The sync moves REAL product state. Scrolling the Typography step into
+        // the band must select the Typography MODE of the live workbench — the
+        // panel body genuinely swaps, which is what the old decorative
+        // convergence only implied.
+        await page.locator('.hstep[data-step="typography"]').scrollIntoViewIfNeeded()
         await expect.poll(
-          () => page.locator('.home[data-home-converge="converged"]').count(),
+          () => page.locator('.hw-tab[data-tab="typography"]').getAttribute('aria-selected'),
           { timeout: 10000 },
-        ).toBe(1)
-        // The shell settles. The separate ring-and-crosshair `.hw-splash` that
-        // used to fire alongside it is gone — it read as a second, unrelated
-        // animation starting exactly as the first finished (founder note), so
-        // the arrival is now carried by the shell alone.
-        await expect(page.locator('.hw-shell')).toHaveCSS('animation-name', 'hw-shell-arrive')
-        await expect(page.locator('.hw-splash')).toHaveCount(0)
+        ).toBe('true')
+        await expect(page.locator('.hw-type-preview')).toBeVisible()
+        // The active step is the legible one; the rest recede.
+        await expect(page.locator('.hstep[data-step="typography"]')).toHaveAttribute('data-active', 'true')
+
+        // Scrolling back up walks the modes back rather than sticking.
+        await page.locator('.hstep[data-step="gradient"]').scrollIntoViewIfNeeded()
+        await expect.poll(
+          () => page.locator('.hw-tab[data-tab="gradient"]').getAttribute('aria-selected'),
+          { timeout: 10000 },
+        ).toBe('true')
+
+        // …and once the visitor drives the tablist themselves, scroll stops
+        // overriding them. A control that keeps changing back is unusable.
+        await page.locator('.hw-tab[data-tab="icon"]').click()
+        await page.locator('.hstep[data-step="typography"]').scrollIntoViewIfNeeded()
+        await page.waitForTimeout(700)
+        await expect(page.locator('.hw-tab[data-tab="icon"]')).toHaveAttribute('aria-selected', 'true')
       }
     }
+  })
+
+  test('the command bar searches the real registry and never invents a route', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, 'visitor looking for one specific tool')
+    await go(page, '/')
+
+    const input = page.locator('.hcmd-input')
+    // Empty is empty: no results panel until there is a query.
+    await expect(page.locator('.hcmd-results')).toHaveCount(0)
+
+    await input.fill('contrast')
+    const rows = page.locator('.hcmd-row')
+    await expect(rows.first()).toBeVisible()
+
+    // Every row is a real link to a route the router actually has — the mock's
+    // invented /tools/* hrefs must never appear.
+    const hrefs = await rows.evaluateAll((els) => els.map((el) => el.getAttribute('href')))
+    expect(hrefs.length).toBeGreaterThan(0)
+    for (const href of hrefs) {
+      expect(href, 'a fabricated route reached the results panel').toMatch(/^\//)
+      expect(href).not.toContain('/tools/')
+    }
+
+    // A query with no match says so instead of showing a stale or invented row.
+    await input.fill('zzzznothing')
+    await expect(page.locator('.hcmd-row')).toHaveCount(0)
+    await expect(page.locator('.hcmd-empty')).toContainText('zzzznothing')
+
+    // A quick-fill chip is a real query against the same index.
+    await page.locator('.hcmd-chip', { hasText: 'gradient' }).click()
+    await expect(input).toHaveValue('gradient')
+    await expect(page.locator('.hcmd-row').first()).toBeVisible()
+
+    // Enter opens the first hit.
+    const first = await page.locator('.hcmd-row').first().getAttribute('href')
+    await input.press('Enter')
+    await page.waitForURL(`**${first}`)
+  })
+
+  test('the ⌘K keycap names a shortcut that actually works', async ({ page }) => {
+    // A keycap that does nothing is a decoration that lies. This one focuses
+    // the bar, which is exactly what it claims.
+    await reducedMotion(page)
+    watch(page, 'keyboard-first visitor')
+    await go(page, '/')
+
+    await page.locator('.hstep').first().scrollIntoViewIfNeeded()
+    await page.keyboard.press('ControlOrMeta+k')
+    await expect(page.locator('.hcmd-input')).toBeFocused()
+
+    // ArrowDown walks into the results and every row is reachable by keyboard.
+    await page.locator('.hcmd-input').fill('icon')
+    await page.locator('.hcmd-input').press('ArrowDown')
+    await expect(page.locator('.hcmd-row').first()).toBeFocused()
+    await page.locator('.hcmd-row').first().press('ArrowUp')
+    await expect(page.locator('.hcmd-input')).toBeFocused()
+
+    // Escape clears rather than trapping.
+    await page.locator('.hcmd-input').press('Escape')
+    await expect(page.locator('.hcmd-input')).toHaveValue('')
+  })
+
+  test('the pricing panel leads with the approved ladder and does not invent proof', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, 'visitor deciding whether to pay')
+    await go(page, '/')
+
+    // Founder-approved ladder (design-language-v2.md), headline "from $4/month".
+    await expect(page.locator('.hprice-title')).toContainText('$4/month')
+    const ladder = await page.locator('.hprice-row').evaluateAll(
+      (rows) => rows.map((r) => r.textContent.replace(/\s+/g, ' ').trim()),
+    )
+    expect(ladder.length).toBe(3)
+    expect(ladder[0]).toContain('$7')
+    expect(ladder[1]).toContain('$18')
+    expect(ladder[2]).toContain('$48')
+    // The mock headlined Pro at $6/mo. The approved ladder headlines $4 — $6 is
+    // legitimately the QUARTERLY per-month figure, so the check belongs on the
+    // headline, not on the panel as a whole.
+    await expect(page.locator('.hprice-title')).not.toContainText('$6')
+    expect(ladder[1], 'quarterly is the only $6/month row').toContain('$6')
+
+    // The community strip states real counts and never a fabricated rank.
+    await expect(page.locator('.hcomm-note')).toContainText('curated starting points')
+    await page.locator('.hcomm-tab', { hasText: 'Most saved' }).click()
+    await expect(page.locator('.hcomm-note')).toContainText('real saves')
+    // Every count is a real count, which starts at zero. A visible zero is
+    // honest; an invented 342 is not. (`text-transform` uppercases these, so
+    // the match is deliberately case-insensitive.)
+    const saves = await page.locator('.hcomm-card-saves').allInnerTexts()
+    expect(saves.every((s) => /^0 saves$/i.test(s.trim())), JSON.stringify(saves)).toBe(true)
   })
 
   test('typography mode previews real scale maths and hands the draft to Type Scale', async ({ page }) => {
