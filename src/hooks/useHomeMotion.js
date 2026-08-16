@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { getLenis } from './useSmoothScroll'
 
 // Reduced-motion source of truth. AppearanceContext writes
@@ -21,10 +21,24 @@ function revealAll(scope) {
 }
 
 // The home page's motion system, scoped to the home route and fully torn down on
-// unmount: a GSAP hero entrance, scroll-triggered reveals, a light hero parallax,
-// the satellite → workbench convergence and a magnetic primary CTA. Everything
-// sits behind a reduced-motion guard — when motion is off we reveal all content
-// instantly and leave native scrolling alone.
+// unmount: scroll-triggered reveals, a light hero parallax, the V2 sticky-step
+// sync and a magnetic primary CTA. Everything sits behind a reduced-motion
+// guard — when motion is off we reveal all content instantly and leave native
+// scrolling alone.
+//
+// V2: the satellite → workbench convergence is GONE. It moved decorative proxies
+// from the eleven hero tool links to the workbench tabs, and the V2 page has
+// neither of those adjacencies — the tools grid is now a section of its own and
+// the workbench lives inside the sticky-scroll section far below the hero. What
+// replaced it is the sticky step sync, which is the same idea told better:
+// scrolling the step narrative swaps the mode of the REAL workbench beside it,
+// so the motion moves actual product state rather than throwaway chips.
+//
+// The mock drove that sync with a raw window.addEventListener('scroll') handler.
+// That is not ported: it ignores the reduced-motion contract, it fights Lenis
+// for the scroll position, and it cannot be torn down with the rest of the
+// context. ScrollTrigger, subscribed to the shared Lenis instance, is the
+// existing mechanism and it already honours both.
 //
 // Smooth scroll itself is owned app-wide by `useSmoothScroll` (a single Lenis
 // module singleton); here we only subscribe ScrollTrigger to that shared instance
@@ -42,16 +56,24 @@ function revealAll(scope) {
 // then a pop. It is CSS keyframes in global.css now: it starts at first paint
 // and runs on the compositor. Do not move it back.
 //
-// PROGRESSIVE-ENHANCEMENT RULE, non-negotiable: the eleven satellite links and the
-// whole mini-workbench are never hidden, faded, `inert`ed or opacity-gated by
-// this file. The only thing that depends on GSAP is a layer of decorative,
-// aria-hidden, non-focusable proxies that is CREATED here and destroyed on
-// teardown — if GSAP never arrives, that layer simply never exists and the
-// static composition is already the finished page.
+// PROGRESSIVE-ENHANCEMENT RULE, non-negotiable: the command bar, every tool
+// link and the whole mini-workbench are never hidden, faded, `inert`ed or
+// opacity-gated by this file. If GSAP never arrives, the static composition is
+// already the finished page: the workbench's own tablist is the authoritative
+// mode control and the step narrative is plain readable prose.
 //
 // Owns the reveals that `useReveal()` handles elsewhere, so Home calls this
 // instead of that hook.
-export function useHomeMotion(scopeRef) {
+//
+// `options.onStepChange(tabId)` is called when the sticky section's active step
+// changes. It is invoked from a scroll callback, never from the effect body, so
+// it is a normal event-driven setState and not the set-state-in-effect
+// advisory. It never fires under reduced motion or without GSAP.
+export function useHomeMotion(scopeRef, options = {}) {
+  const { onStepChange } = options
+  const stepRef = useRef(onStepChange)
+  stepRef.current = onStepChange
+
   useLayoutEffect(() => {
     const scope = scopeRef.current
     if (!scope) return
@@ -80,131 +102,44 @@ export function useHomeMotion(scopeRef) {
         const lenis = getLenis()
         lenis?.on('scroll', ScrollTrigger.update)
 
-        let removeProxyLayer = null
-
         const ctx = gsap.context(() => {
-          // The hero entrance is NOT here any more — it is CSS keyframes in
-          // global.css. Running it from this timeline meant it could not begin
-          // until the GSAP chunk resolved, so the headline sat hidden and then
-          // popped, and its `filter: blur(12px)` tween re-rasterised the largest
-          // text on the page every frame. Both are gone. GSAP keeps the work it
-          // is actually needed for: the scroll-driven convergence below.
+          // The hero entrance is NOT here — it is CSS keyframes in global.css.
+          // Running it from this timeline meant it could not begin until the
+          // GSAP chunk resolved, so the headline sat hidden and then popped, and
+          // its `filter: blur(12px)` tween re-rasterised the largest text on the
+          // page every frame. Both are gone. GSAP keeps the work it is actually
+          // needed for: the scroll-driven work below.
 
-          // Must match the `max-width:1280px` static-field breakpoint in
-          // global.css: below it the field is a plain grid and the convergence
-          // proxies do not apply.
-          const wide = window.matchMedia?.('(min-width: 1281px)').matches
-
-          // ── THE IDLE DRIFT IS GONE. It was the cause of the founder's "it's
-          //    not smooth". Eleven infinite yoyo tweens moved `.hsat-item` on x
-          //    and y forever — and the convergence below measures its travel
-          //    vector from `.hsat-link`, which lives INSIDE those moving items.
-          //    So every proxy was placed from, and travelled from, an origin
-          //    that had already moved by the time it painted, and every
-          //    ScrollTrigger refresh re-measured against a different phase of
-          //    eleven independent sine waves. Drift and convergence were
-          //    animating the same coordinates against each other.
+          // ── V2 sticky step sync ──────────────────────────────────────────
+          //    The narrative column's steps each own a scroll band. As a band
+          //    takes the middle of the viewport, its step becomes active — the
+          //    left column marks it (CSS reads [data-active]) and the callback
+          //    swaps the REAL workbench beside it into the matching mode.
           //
-          //    Removing it fixes the jitter at the root rather than damping it,
-          //    and takes eleven permanently-running tweens off the main thread
-          //    for a motion nobody asked for. The satellites now hold still,
-          //    which is also what makes the convergence legible: something that
-          //    was already floating cannot appear to depart. ──
-
-          // ── Convergence: the causal story, told with throwaway objects. ──
-          //    Eleven tools; five modes. A decorative chip peels off each tool
-          //    link and travels to the workbench tab it belongs to — the three
-          //    extra colour tools all land on Palette, both media tools land on
-          //    Image — then fades as the workbench takes focus. Everything below
-          //    is aria-hidden, non-focusable and removed on teardown.
-          const intro = scope.querySelector('.home-workspace-intro')
-          const anchors = gsap.utils.toArray('.hsat-link')
-          if (wide && intro && anchors.length) {
-            const layer = document.createElement('div')
-            layer.className = 'hsat-proxy-layer'
-            layer.setAttribute('aria-hidden', 'true')
-            intro.appendChild(layer)
-            removeProxyLayer = () => layer.remove()
-
-            const proxies = anchors.map((anchor) => {
-              const el = document.createElement('span')
-              el.className = 'hsat-proxy'
-              el.dataset.family = anchor.dataset.family || ''
-              const icon = anchor.querySelector('.hsat-icon svg')?.cloneNode(true)
-              if (icon) el.appendChild(icon)
-              const label = document.createElement('span')
-              label.className = 'hsat-proxy-label'
-              label.textContent = anchor.querySelector('.hsat-label')?.textContent || ''
-              el.appendChild(label)
-              const hue = anchor.closest('.hsat-item')?.dataset.hue
-              if (hue) el.dataset.hue = hue
-              layer.appendChild(el)
-              return {
-                el,
-                anchor,
-                target: scope.querySelector(`.hw-tab[data-tab="${anchor.dataset.family}"]`),
-              }
-            }).filter((p) => p.target)
-
-            // Both endpoints are measured against the same containing block, so
-            // the travel vector survives scrolling, zoom and a re-layout.
-            const centreIn = (base, el) => {
-              const r = el.getBoundingClientRect()
-              return { x: r.left - base.left + r.width / 2, y: r.top - base.top + r.height / 2 }
-            }
-            const place = () => {
-              const base = intro.getBoundingClientRect()
-              proxies.forEach(({ el, anchor }) => {
-                const r = anchor.getBoundingClientRect()
-                el.style.left = `${r.left - base.left}px`
-                el.style.top = `${r.top - base.top}px`
-                el.style.width = `${r.width}px`
-                el.style.height = `${r.height}px`
+          //    Two-way: onEnter going down, onEnterBack coming up, so scrolling
+          //    upward walks the modes back rather than sticking on the last one.
+          //
+          //    Below the two-column breakpoint the panel is not sticky and the
+          //    steps read as a plain stacked list, so there is nothing to sync —
+          //    matching `--hsteps-split` in global.css (min-width: 981px).
+          const split = window.matchMedia?.('(min-width: 981px)').matches
+          const steps = gsap.utils.toArray('.hstep')
+          if (split && steps.length) {
+            steps.forEach((step) => {
+              const tab = step.dataset.step
+              if (!tab) return
+              const activate = () => stepRef.current?.(tab)
+              ScrollTrigger.create({
+                trigger: step,
+                start: 'top 55%',
+                end: 'bottom 55%',
+                onEnter: activate,
+                onEnterBack: activate,
               })
-            }
-            place()
-
-            let converged = false
-            const timeline = gsap.timeline({
-              scrollTrigger: {
-                trigger: '.home-hero',
-                start: '34% top',
-                end: 'bottom 26%',
-                scrub: 0.3,
-                invalidateOnRefresh: true,
-                onRefresh: place,
-                onUpdate: ({ progress }) => {
-                  // Marks the moment the last proxy lands, so the workbench can
-                  // settle as one beat. The old ring-and-crosshair "splash" that
-                  // fired here is gone — the founder's note was that it was not
-                  // what they were after, and it read as a second, unrelated
-                  // animation firing at the end of the first. What remains is a
-                  // single quiet settle on the shell itself.
-                  const next = progress >= 0.96
-                  if (next === converged) return
-                  converged = next
-                  scope.dataset.homeConverge = next ? 'converged' : 'moving'
-                },
-                onLeaveBack: () => { delete scope.dataset.homeConverge },
-              },
-            })
-
-            proxies.forEach(({ el, anchor, target }, i) => {
-              const travel = (axis) => () => {
-                const base = intro.getBoundingClientRect()
-                const from = centreIn(base, anchor)
-                const to = centreIn(base, target)
-                const current = Number(gsap.getProperty(el, axis)) || 0
-                return axis === 'x' ? to.x - (from.x - current) : to.y - (from.y - current)
-              }
-              timeline
-                .fromTo(el, { autoAlpha: 0, scale: 1 }, { autoAlpha: 0.92, duration: 0.08, ease: 'none' }, i * 0.012)
-                .to(el, { x: travel('x'), y: travel('y'), scale: 0.62, ease: 'power1.inOut', duration: 0.74 }, 0.08 + i * 0.012)
-                .to(el, { autoAlpha: 0, duration: 0.12, ease: 'none' }, 0.8 + i * 0.012)
             })
           }
 
-          // Recede only the copy, so the satellites keep a stable travel origin.
+          // The hero copy recedes as the page moves past it.
           // `scrub: 0.4` rather than `true`: an unsmoothed scrub applies the raw
           // wheel delta, which on a trackpad arrives in coarse jumps and made
           // the headline step rather than glide — the same complaint as the
@@ -248,24 +183,16 @@ export function useHomeMotion(scopeRef) {
             })
           })
 
-          // ── Community rail: cards slide in from the right with a stagger. ──
-          const scroller = scope.querySelector('.home-scroller')
-          if (scroller && scroller.children.length) {
-            gsap.from(scroller.children, {
-              x: 48,
-              autoAlpha: 0,
-              duration: 0.7,
-              stagger: 0.08,
-              ease: 'power3.out',
-              clearProps: 'transform',
-              scrollTrigger: { trigger: scroller, start: 'top 88%' },
-            })
-          }
+          // The community strip is a `[data-reveal-group]`, so its cards are
+          // already staggered by the grouped-reveal pass above. It used to get a
+          // second, bespoke slide-from-the-right here — two engines animating
+          // the same elements, which is how the old page ended up with cards
+          // that stuttered on arrival.
 
           // ── Magnetic hero CTA: the primary pill drifts a few px toward the
           //    pointer on fine-pointer devices, then springs back. Skipped on
           //    touch; reduced motion never reaches here. ──
-          const magnet = scope.querySelector('.home-hero-cta .ui-pill-ink')
+          const magnet = scope.querySelector('.home-hero-cta .ui-pill-accent')
           let removeMagnet = null
           if (magnet && window.matchMedia?.('(pointer: fine)').matches) {
             const xTo = gsap.quickTo(magnet, 'x', { duration: 0.5, ease: 'power3.out' })
@@ -293,15 +220,14 @@ export function useHomeMotion(scopeRef) {
         teardown = () => {
           lenis?.off('scroll', ScrollTrigger.update)
           ctx.revert()
-          removeProxyLayer?.()
           scope.classList.remove('has-gsap')
-          delete scope.dataset.homeConverge
         }
       })
       .catch(() => {
         // Motion chunk failed to load — restore native scroll and reveal all
-        // content so nothing is left hidden behind the arming class. The
-        // satellites and workbench were never hidden in the first place.
+        // content so nothing is left hidden. The command bar, the tool links and
+        // the workbench were never hidden in the first place; only the step sync
+        // is lost, and the workbench's own tablist still selects every mode.
         scope.classList.remove('has-gsap')
         revealAll(scope)
       })
