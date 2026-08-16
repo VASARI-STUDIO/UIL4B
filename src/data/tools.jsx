@@ -240,6 +240,34 @@ export function localiseCategories(t) {
   })
 }
 
+// ── The one query implementation ────────────────────────────────────────────
+// Shared by the ⌘K CommandPalette and the homepage command bar. Both surfaces
+// call THIS — a second hand-rolled filter over a hard-coded array is how a
+// "search" starts offering tools the product does not have, or hiding ones it
+// does. Callers pass an already-localised index so the predicate never has to
+// know about i18n.
+export function matchesQuery(item, q) {
+  if (item.label.toLowerCase().includes(q)) return true
+  if (item.description && item.description.toLowerCase().includes(q)) return true
+  if (item.keywords && item.keywords.some(k => k.includes(q))) return true
+  return false
+}
+
+export function queryCommandIndex(query, { tools = [], categories = [], actions = [] }) {
+  const q = query.trim().toLowerCase()
+  if (!q) return { query: '', tools: [], categories: [], actions: [], total: 0 }
+  const hitTools = tools.filter(tl => matchesQuery(tl, q))
+  const hitCats = categories.filter(c => matchesQuery(c, q))
+  const hitActions = actions.filter(a => matchesQuery(a, q))
+  return {
+    query: q,
+    tools: hitTools,
+    categories: hitCats,
+    actions: hitActions,
+    total: hitTools.length + hitCats.length + hitActions.length,
+  }
+}
+
 export function searchToolsLocalised(query, t) {
   const q = query.trim().toLowerCase()
   if (!q) return []
