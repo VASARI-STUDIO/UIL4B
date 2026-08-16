@@ -8766,3 +8766,55 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ui-login-unlocks li{position:relative;padding-left:18px;font-size:12.5px;line-height:1.45;color:var(--t1)}
 .ui-login-unlocks li::before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:var(--radius-pill);background:var(--accent-strong)}
 .ui-login-intent-back{margin:10px 0 0;font-size:11.5px;font-weight:650;color:var(--t2)}
+
+/* -- PillNav V2 -----------------------------------------------------------
+   Structure and information architecture are UNCHANGED: same three sections,
+   same columns, same tools, same promo card, same mobile sheet. The founder
+   asked to keep this navigation system, so this is a skin, density and state
+   pass only. */
+
+/* Accent TEXT below large size must be --accent-strong. --accent measures
+   3.82:1 on the page ground and 4.43:1 on white, both under the 4.5:1 floor.
+   These three were the remaining failures in the nav surface. */
+.pnav-promo-eyebrow{color:var(--accent-strong)}
+.pnav-editorial-link:hover{color:var(--accent-strong)}
+.soon-badge-accent{border-color:var(--accent-strong);color:var(--accent-strong)}
+
+/* Motion: the panel is opened by HOVER, so its entrance has to keep up with the
+   pointer. --dur-4 (420ms) is the scroll-reveal step and read as lag here;
+   --dur-3 is the named step for "reveals with travel - small panels". The width
+   morph between sections keeps --dur-4: that one covers real distance. */
+.pnav-menu{animation-duration:var(--dur-3)}
+
+/* Hierarchy: the mega menu is a list of destinations, so the eye needs a spine.
+   A hue-tinted rail appears on the hovered/focused row - one motif, doing one
+   job (which category am I in), rather than a second background wash. */
+.pnav-tool{position:relative;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pnav-tool::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:var(--radius-pill);background:var(--hue,var(--accent));opacity:0;transform:scaleY(.4);transform-origin:center;transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.pnav-tool:hover::before,.pnav-tool:focus-visible::before{opacity:1;transform:scaleY(1)}
+.pnav-tool[data-soon]::before{display:none}
+/* Keyboard parity: hovering and focusing a row must look the same, or the
+   arrow-key path through the menu is invisible. */
+.pnav-tool:focus-visible{background:var(--hvr);color:var(--t0);outline:2px solid var(--accent);outline-offset:-2px}
+
+/* Density: 50px rows with a description each is comfortable at 1440 and
+   wasteful once the panel is competing for height. Tighten the body and the
+   rows together below the small-laptop breakpoint rather than letting the
+   panel grow taller than the viewport. */
+@media(max-width:980px){
+  .pnav-menu-body{padding:24px 28px}
+  .pnav-menu-cols{gap:28px}
+  .pnav-tool{min-height:44px;padding:6px 8px}
+  .pnav-menu-foot{padding:14px 28px}
+}
+
+/* Focus visibility on the bar itself. A pill trigger with only a background
+   change on :hover leaves keyboard users guessing. */
+.pnav-trigger:focus-visible,.pnav-search-field:focus-visible,.pnav-avatar-btn:focus-visible,.pnav-more:focus-visible,.pnav-iconbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pnav-seg-btn:focus-visible,.pnav-pop-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pnav-pop-item:focus-visible{background:var(--hvr);color:var(--t0)}
+
+/* The mobile sheet is a real modal (role=dialog aria-modal=true) and already
+   traps focus. Give it the panel elevation so it reads as the same family as
+   the desktop mega panel. */
+.pnav-sheet{box-shadow:var(--shadow-panel)}
