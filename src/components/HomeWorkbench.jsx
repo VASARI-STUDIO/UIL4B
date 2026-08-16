@@ -41,6 +41,15 @@ import NavIcon from './NavIcon'
 // All five panels' state lives here, so switching tabs keeps a visitor's edits
 // for the session. A reload deliberately returns to safe defaults — no
 // persistence is added just to make a preview survive.
+//
+// V2 RE-FRAMING (feat/v2-homepage): the five panels, their state, their copy
+// hand-offs and their keyboard/ARIA wiring are UNCHANGED. What changed is that
+// the shell can now be rendered on its own (`variant="sticky"`) so the V2
+// sticky-scroll section can house it in its right-hand column, and the active
+// mode can be driven from outside (`activeTab` / `onTabChange`) so the left
+// column's step narrative and this tablist stay one shared selection rather
+// than two competing ones. Uncontrolled use — `<HomeWorkbench />` — behaves
+// exactly as before.
 
 /* ── colour maths (no dependency, deterministic) ────────────────────────── */
 
@@ -955,8 +964,17 @@ function TypographyPanel({ state, onChange, announce }) {
 
 /* ── the workbench ───────────────────────────────────────────────────────── */
 
-export default function HomeWorkbench() {
-  const [active, setActive] = useState(HOME_WORKBENCH_TABS[0].id)
+export default function HomeWorkbench({ variant = 'section', activeTab, onTabChange }) {
+  // Controlled when `activeTab` is supplied, uncontrolled otherwise. The
+  // internal value is kept in step either way, so a caller can hand the
+  // selection over mid-session (the V2 scroll sync does exactly that) without
+  // the tablist ever losing its own roving tab stop.
+  const [internal, setInternal] = useState(HOME_WORKBENCH_TABS[0].id)
+  const active = activeTab ?? internal
+  const setActive = useCallback((id) => {
+    setInternal(id)
+    onTabChange?.(id)
+  }, [onTabChange])
   const [status, setStatus] = useState('')
   const tabRefs = useRef([])
 
@@ -978,21 +996,10 @@ export default function HomeWorkbench() {
     tabRefs.current[next]?.focus()
   }
 
-  const activeTab = HOME_WORKBENCH_TABS.find((t) => t.id === active) || HOME_WORKBENCH_TABS[0]
+  const activeMeta = HOME_WORKBENCH_TABS.find((t) => t.id === active) || HOME_WORKBENCH_TABS[0]
 
-  return (
-    <section className="hw" id="workbench" aria-labelledby="hw-title">
-      <div className="home-container">
-        <div className="hw-head">
-          <span className="home-eyebrow">Live workspace</span>
-          <h2 className="home-h2" id="hw-title">Turn scattered tools into one working surface.</h2>
-          <p className="home-lede">
-            A limited but real slice of the workspace: the values below are generated, editable and
-            yours to take into the full tool. Nothing is saved and no account is needed.
-          </p>
-        </div>
-
-        <div className="hw-shell" data-hue={activeTab.hue}>
+  const shell = (
+        <div className="hw-shell" data-hue={activeMeta.hue}>
           {/* App chrome. The shell was a bare card with tabs, so the "live
               workspace" claim above it was carried entirely by the copy. This
               is the same furniture the real tool pages wear — a title bar, the
@@ -1010,7 +1017,7 @@ export default function HomeWorkbench() {
               <span className="hw-chrome-sep">/</span>
               <span className="hw-chrome-route">Create</span>
               <span className="hw-chrome-sep">/</span>
-              <span className="hw-chrome-here">{activeTab.label}</span>
+              <span className="hw-chrome-here">{activeMeta.label}</span>
             </span>
             <span className="hw-chrome-live"><i />Live preview</span>
           </div>
@@ -1041,7 +1048,7 @@ export default function HomeWorkbench() {
             className="hw-panel"
             id="hw-panel"
             role="tabpanel"
-            aria-labelledby={`hw-tab-${activeTab.id}`}
+            aria-labelledby={`hw-tab-${activeMeta.id}`}
           >
             {active === 'palette' && (
               <PalettePanel swatches={swatches} onChange={setSwatches} announce={announce} />
@@ -1062,6 +1069,26 @@ export default function HomeWorkbench() {
 
           <p className="sr-only" role="status" aria-live="polite">{status}</p>
         </div>
+  )
+
+  // The V2 sticky column supplies its own frame, heading and narrative, so the
+  // shell travels there bare. Everything inside it — state, clipboard, keyboard
+  // handling, ARIA wiring, hand-offs — is byte-for-byte the same component.
+  if (variant === 'sticky') return shell
+
+  return (
+    <section className="hw" id="workbench" aria-labelledby="hw-title">
+      <div className="home-container">
+        <div className="hw-head">
+          <span className="home-eyebrow">Live workspace</span>
+          <h2 className="home-h2" id="hw-title">Turn scattered tools into one working surface.</h2>
+          <p className="home-lede">
+            A limited but real slice of the workspace: the values below are generated, editable and
+            yours to take into the full tool. Nothing is saved and no account is needed.
+          </p>
+        </div>
+
+        {shell}
       </div>
     </section>
   )
