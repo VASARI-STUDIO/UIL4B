@@ -75,7 +75,13 @@
    warm-neutral steps between ink and mute, not new roles. Borders are opaque
    now (the spec ships a line COLOUR, not an ink alpha), which also stops them
    compounding unpredictably when surfaces stack. */
-[data-theme="dark"]{--bg-0:#101012;--bg-1:#151619;--bg-2:#191A1D;--bg-3:#212327;--bg-4:#2A2B2F;--border:#2A2B2F;--bh:#3C3D42;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#151619;--hvr:rgba(242,241,236,.05);--card:#191A1D;--card-grad:#191A1D;--inp:#191A1D;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--accent:#9A81FF;--accent-strong:#8061FF;--accent-soft:#B9A8FF;--accent-bg:rgba(154,129,255,.12);--accent-glow:rgba(154,129,255,.20);--icon-inv:invert(1);--brand:#9A81FF;--brand-soft:#B9A8FF;--brand-bg:rgba(154,129,255,.12);--brand-glow:rgba(154,129,255,.18);--info:#9A81FF;--info-bg:rgba(154,129,255,.12);--scrim:rgba(8,8,10,.62);
+[data-theme="dark"]{--bg-0:#101012;--bg-1:#151619;--bg-2:#191A1D;--bg-3:#212327;--bg-4:#2A2B2F;--border:#2A2B2F;--bh:#3C3D42;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#151619;--hvr:rgba(242,241,236,.05);--card:#191A1D;--card-grad:#191A1D;--inp:#191A1D;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(8,8,10,.62);
+  /* ON-ACCENT FLIPS IN DARK. The dark accent is a LIGHT blue, so white on it
+     measures 2.41:1 — a bad failure, and it applies to every accent-filled
+     control, not just buttons. Ink on the same fill measures 7.89:1. This is
+     also the correct M3 on-primary behaviour: the on-colour tracks the tone of
+     the colour it sits on. Light keeps white (:root). */
+  --accent-fg:#101012;
   /* --hi is DELIBERATELY the same value in both themes — the highlight does not
      lighten in dark the way the accent does. Spec: design-language-v2.md#the-highlight-is-a-new-scarce-role
      Budget: at most one --hi element per viewport. It reads as a marker pen. */
@@ -83,7 +89,7 @@
 /* ── LIGHT — V2 reseed. NOTE: the authoritative light values are the second
    [data-theme="light"] block further down (same specificity, later wins). Both
    are kept in agreement so reading either one tells the truth. ── */
-[data-theme="light"]{--bg-0:#EFEEE9;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#6B4EF0;--accent-strong:#5635ED;--accent-soft:#856EF2;--accent-bg:rgba(107,78,240,.08);--accent-glow:rgba(107,78,240,.14);--icon-inv:none;--brand:#6B4EF0;--brand-soft:#856EF2;--brand-bg:rgba(107,78,240,.08);--brand-glow:rgba(107,78,240,.12);--info:#6B4EF0;--info-bg:rgba(107,78,240,.08);--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
+[data-theme="light"]{--bg-0:#EFEEE9;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#0F6FFF;--accent-strong:#0B5ED7;--accent-soft:#4D90FF;--accent-bg:rgba(15,111,255,.08);--accent-glow:rgba(15,111,255,.14);--icon-inv:none;--brand:#0F6FFF;--brand-soft:#4D90FF;--brand-bg:rgba(15,111,255,.08);--brand-glow:rgba(15,111,255,.12);--info:#0F6FFF;--info-bg:rgba(15,111,255,.08);--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
 html{scroll-behavior:smooth}
 /* Reduced motion = near-instant, not merely fast. Duration alone is not enough:
    an infinite loop at 0.01ms spins thousands of times a second (CPU burn, and
@@ -520,13 +526,21 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .btn:hover{border-color:var(--bh);background:var(--bg-2);color:var(--t0)}
 .btn:active{background:var(--bg-3);color:var(--t0);transition-duration:var(--dur-1)}
 .btn-s{padding:6px 12px;font-size:11px}
-.btn-accent,.btn-primary{background:var(--brand);color:var(--accent-fg);border-color:transparent;transition:all var(--dur-2) var(--ease-standard)}
+/* Primary fills with --accent-strong, NOT --accent. The label is 12.5px, so it
+   is normal-size text at a 4.5:1 floor, and --accent-fg on --accent measures
+   only 4.43:1 in light. On --accent-strong it is 5.84:1 (light) and 6.09:1
+   (dark, where --accent-fg flips to ink). */
+.btn-accent,.btn-primary{background:var(--accent-strong);color:var(--accent-fg);border-color:transparent;transition:all var(--dur-2) var(--ease-standard)}
 /* Inverse — the strongest non-accent action. Nav "Start free", in-panel tool
    links. Ink fill, page-coloured label, so it flips correctly with the theme. */
 .btn.btn-inverse{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
 .btn.btn-inverse:hover{background:var(--t1);border-color:var(--t1);color:var(--bg-0)}
 .btn.btn-inverse:active{background:var(--t0);color:var(--bg-0);transition-duration:var(--dur-1)}
-.btn-accent:hover,.btn-primary:hover{background:var(--brand-soft);transform:translateY(-1px);box-shadow:0 1px 2px rgba(0,0,0,.12),0 4px 10px -3px color-mix(in srgb,var(--brand) 30%,transparent)}
+/* Hover no longer changes the FILL. The old --brand-soft hover dropped the
+   label to 3.11:1 in light — hovering a button made it harder to read. The
+   hover reads through the lift and shadow that were already here, which cost
+   nothing in contrast. */
+.btn-accent:hover,.btn-primary:hover{transform:translateY(-1px);box-shadow:0 1px 2px rgba(0,0,0,.12),0 4px 10px -3px color-mix(in srgb,var(--accent-strong) 40%,transparent)}
 .btn-accent:active,.btn-primary:active{transform:translateY(0);opacity:.8;transition-duration:var(--dur-1)}
 .btn-accent:disabled,.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none}
 .btn.btn-ghost{background:none;border-color:transparent;color:var(--t1)}
@@ -2126,11 +2140,23 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
    failed" — a returned partial answer with no marking at all was the bug. */
 .alt-card-warn{font-size:12px;line-height:1.45;color:var(--warn);background:rgba(202,138,4,.1);padding:8px 10px;border-radius:var(--radius-s);border:1px solid rgba(202,138,4,.25)}
 
-/* ─── Appearance: Rounding ─── */
-[data-rounding="none"]{--radius:0px;--radius-s:0px;--radius-l:0px;--radius-xl:0px}
-[data-rounding="subtle"]{--radius:6px;--radius-s:4px;--radius-l:8px;--radius-xl:12px}
-[data-rounding="default"]{--radius-xs:3px;--radius-s:5px;--radius:7px;--radius-l:10px;--radius-xl:13px;--radius-2xl:18px}
-[data-rounding="pronounced"]{--radius:28px;--radius-s:18px;--radius-l:40px;--radius-xl:9999px}
+/* ─── Appearance: Rounding ───
+   THIS is the effective radius scale, not the :root block. index.html writes
+   data-rounding="default" on <html> before first paint, and these attribute
+   selectors sit later in the file at equal specificity — so they WIN over
+   :root. A radius remap that only edits :root silently does nothing; the V2
+   remap was caught doing exactly that in a rendered check.
+   "default" must therefore mirror the :root V2 scale value-for-value.
+   Docs: docs/reference/design-language-v2.md#panels-remap-the-existing-scale
+   Every tier now declares the whole scale, including --radius-xs and
+   --radius-3xl. Previously only "default" declared --radius-xs, so choosing
+   "none" left 3px chips sitting inside 0px panels. */
+[data-rounding="none"]{--radius-xs:0px;--radius-s:0px;--radius:0px;--radius-l:0px;--radius-xl:0px;--radius-2xl:0px;--radius-3xl:0px}
+[data-rounding="subtle"]{--radius-xs:3px;--radius-s:5px;--radius:6px;--radius-l:8px;--radius-xl:10px;--radius-2xl:12px;--radius-3xl:16px}
+[data-rounding="default"]{--radius-xs:6px;--radius-s:10px;--radius:12px;--radius-l:14px;--radius-xl:16px;--radius-2xl:18px;--radius-3xl:24px}
+[data-rounding="pronounced"]{--radius-xs:10px;--radius-s:16px;--radius:20px;--radius-l:28px;--radius-xl:32px;--radius-2xl:40px;--radius-3xl:48px}
+/* --radius-pill is NOT part of this preference. V2 has one button shape and a
+   rounding preference must not be able to un-pill a button. */
 
 /* ─── Appearance: Density ─── */
 [data-density="compact"] .sec{padding:20px 16px}
@@ -4427,12 +4453,22 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
                                             clears it by 0.05, so do not darken
                                             the page or lighten --t3 further)
        --t0 #0F0F10 → 19.16 / 16.49 / 17.56
-     Accent #6B4EF0 → 5.29 / 4.55 / 4.84 as text; white on an accent FILL is
-     5.29. Dark theme is measured in the PR, not claimed here. */
+     Dark theme is measured in the PR, not claimed here. */
   --t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;
   --border:#DAD8CF;--bh:#C0BDB0;--hvr:rgba(15,15,16,.04);--scrim:rgba(15,15,16,.32);
-  --accent:#6B4EF0;--accent-strong:#5635ED;--accent-soft:#856EF2;--accent-bg:rgba(107,78,240,.08);--accent-glow:rgba(107,78,240,.14);
-  --brand:#6B4EF0;--brand-soft:#856EF2;--brand-bg:rgba(107,78,240,.08);--brand-glow:rgba(107,78,240,.12);--info:#6B4EF0;--info-bg:rgba(107,78,240,.08);
+  /* ACCENT — founder-selected blue, 2026-08-16. The two tokens carry different
+     jobs and are NOT interchangeable:
+       --accent        #0F6FFF  3.82 / 4.43 / 4.06  (page / white / --bg-2)
+       --accent-strong #0B5ED7  5.03 / 5.84 / 5.35
+     --accent misses the 4.5:1 floor for NORMAL-size text on every ground. It is
+     for fills, borders, icons, focus rings and LARGE display text (>=24px, or
+     >=18.66px bold), where the floor is 3:1. Any accent-coloured text below that
+     — and V2 leans on 11-12px mono eyebrows, counts and category labels — must
+     use --accent-strong. This is the whole reason both tokens exist; do not
+     collapse them. Spec: design-language-v2.md#the-blue-accent-is-not-safe-for-small-text
+     --accent-soft #4D90FF is decorative only (2.68 on the page) — never text. */
+  --accent:#0F6FFF;--accent-strong:#0B5ED7;--accent-soft:#4D90FF;--accent-bg:rgba(15,111,255,.08);--accent-glow:rgba(15,111,255,.14);
+  --brand:#0F6FFF;--brand-soft:#4D90FF;--brand-bg:rgba(15,111,255,.08);--brand-glow:rgba(15,111,255,.12);--info:#0F6FFF;--info-bg:rgba(15,111,255,.08);
   /* Same value as dark — the highlight does not lighten. See the dark block. */
   --hi:#E9FF64;--hi-fg:#0F0F10;
   /* Default-avatar background: brand-blue → darker. References --brand/--accent-strong so it resolves per-theme at use-site. */
@@ -4540,8 +4576,18 @@ html.lenis,html.lenis body{height:auto}
 .ui-pill-ink:hover{color:var(--bg-0);box-shadow:var(--shadow-s)}
 .ui-pill-out{background:var(--bg-1);color:var(--t0);border-color:var(--bh)}
 .ui-pill-out:hover{border-color:var(--t0)}
-.ui-pill-accent{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-.ui-pill-accent:hover{background:var(--accent-strong);color:var(--accent-fg)}
+/* Fills with --accent-strong, not --accent — same reason as .btn-accent. This
+   is the shared pill primitive behind the nav "Start for Free" and the hero
+   CTA, i.e. the most-seen control in the product: at 14px its label is normal
+   text, and --accent-fg on --accent measured 4.43:1 against the 4.5:1 floor.
+   On --accent-strong it is 5.84:1 (light) / 6.09:1 (dark).
+   The old rule had this backwards — it filled with --accent at rest and only
+   reached the readable --accent-strong on HOVER, so the resting state was the
+   failing one. Hover now holds the fill and reads through lift + glow, which
+   also keeps it correct in dark, where "darker on hover" would reduce contrast
+   against the ink label rather than increase it. */
+.ui-pill-accent{background:var(--accent-strong);color:var(--accent-fg);border-color:var(--accent-strong)}
+.ui-pill-accent:hover{background:var(--accent-strong);color:var(--accent-fg);border-color:var(--accent-strong);transform:translateY(-1px);box-shadow:0 4px 14px -4px var(--accent-glow)}
 .ui-pill-ghost{background:none;color:var(--t1)}
 .ui-pill-ghost:hover{background:var(--hvr);color:var(--t0)}
 .ui-pill-sm{height:40px;padding:0 18px;font-size:var(--fs-body-s)}
