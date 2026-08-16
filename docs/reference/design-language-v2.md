@@ -42,13 +42,18 @@ fill it.
 | `--fg` (ink) | `#0F0F10` | — |
 | `--mute` (secondary) | `#6C6C66` | — |
 | `--line` (border) | `#DAD8CF` | — |
-| `--accent` | `#6B4EF0` violet | `#2563EB` blue |
+| `--accent` | **`#0F6FFF` blue** | `#2563EB` blue |
 | `--hi` (highlight) | `#E9FF64` acid lime | *new role* |
+
+> **Accent decision, founder, 2026-08-16: blue `#0F6FFF`.** The design file ships
+> violet `#6B4EF0` as its default, but exposes four accents as theme props and the
+> founder chose the blue. Blue is the selected accent everywhere in V2; the violet
+> is not a fallback and should not appear.
 
 ### Dark
 
 `--bg:#101012` · `--surf:#191A1D` · `--fg:#F2F1EC` · `--mute:#8E8E88` ·
-`--line:#2A2B2F` · `--accent:#9A81FF` · `--hi:#E9FF64`
+`--line:#2A2B2F` · `--accent:#6FA8FF` · `--hi:#E9FF64`
 
 The accent **lightens** in dark mode; the highlight does not. The design ships an
 explicit map, which is the rule for any future accent:
@@ -57,6 +62,25 @@ explicit map, which is the rule for any future accent:
 #6B4EF0 → #9A81FF    #0F6FFF → #6FA8FF
 #0FA97F → #3FD9AC    #D24B32 → #FF8468
 ```
+
+### ⚠️ The blue accent is not safe for small text
+
+`#0F6FFF` on the `#EFEEE9` page ground measures **≈3.85:1**. That clears WCAG AA
+for large text (≥24px, or ≥18.66px bold) and for non-text UI, but **fails the
+4.5:1 floor for normal body text**. V2 uses the accent heavily for 11–12px mono
+eyebrows, counts and category labels — at that size it is a genuine failure, not
+a rounding argument.
+
+The existing token architecture already solves this. Use:
+
+- **`--accent` `#0F6FFF`** — fills, borders, icons, large display text, focus rings.
+- **`--accent-strong`** — any accent-coloured text below large size. It must be
+  darkened until it measures **≥4.5:1** on both `--bg` and `--surf`. `#0B5ED7`
+  measures ≈5.07:1 on `#EFEEE9` and is a sound starting point; verify rather than
+  trusting that figure.
+
+Dark mode needs the mirror check: `#6FA8FF` is light-on-dark, so it clears
+comfortably on `#101012` — confirm, don't assume.
 
 ### The highlight is a new, scarce role
 
@@ -70,10 +94,12 @@ thing on screen and nowhere else.
 
 ### Founder-selectable accents
 
-The design exposes accent (`#6B4EF0`, `#0F6FFF`, `#0FA97F`, `#D24B32`) and
-highlight (`#E9FF64`, `#FFD93D`, `#39E5B6`, `#FF8E72`) as theme props. Keep the
-existing M3 role generation in [`color-system-m3.md`](color-system-m3.md) —
-V2 changes the **seed**, not the method.
+The design exposes accent (`#6B4EF0`, **`#0F6FFF` ← selected**, `#0FA97F`,
+`#D24B32`) and highlight (**`#E9FF64` ← selected**, `#FFD93D`, `#39E5B6`,
+`#FF8E72`) as theme props. Keep the existing M3 role generation in
+[`color-system-m3.md`](color-system-m3.md) — V2 changes the **seed**, not the
+method. The other three accents remain available should the founder re-pick, but
+each would need its own contrast pass before use.
 
 ---
 

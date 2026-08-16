@@ -21,19 +21,56 @@
 `--s-6:32px`, `--s-7:48px`, `--s-8:64px`, `--s-9:96px`, `--s-10:128px`
 
 ### Radius scale
-`--radius-xs:3px`, `--radius-s:5px`, `--radius:7px`, `--radius-l:10px`,
-`--radius-xl:13px`, `--radius-2xl:18px`, `--radius-pill:999px`
+
+Remapped to Design Language V2, 2026-08-16. See
+[`design-language-v2.md`](design-language-v2.md#panels-remap-the-existing-scale).
+
+| Token | Value | Applies to |
+|---|---|---|
+| `--radius-xs` | `6px` | Tint chips, highlight mark |
+| `--radius-s` | `10px` | Icon tiles, scale rows |
+| `--radius` | `12px` | Swatches, token blocks, inline search |
+| `--radius-l` | `14px` | Inputs, command bar, pricing rows |
+| `--radius-xl` | `16px` | Community / feed cards |
+| `--radius-2xl` | `18px` | Tool cards, sticky demo panel |
+| `--radius-3xl` | `24px` | Full-width feature panels |
+| `--radius-pill` | `999px` | **All buttons** |
+
+> The V2 remap was done in the **token block only**. The scale's whole value is
+> that ~1000 call sites already reference the names, so they inherited V2
+> rounding from one edit. Don't sweep call sites; don't hard-code
+> `border-radius`.
 
 > Corrected 2026-08-08 to match the live `:root` in `global.css` — this table
 > had drifted (4/9/12/16). The stylesheet is the source of truth for the values;
 > this doc is the source of truth for the rule that you use the scale.
 
-> Squarer-with-soft-corners set — small radii, not pill-everything. Use the
-> scale; don't hard-code `border-radius`.
+> **V2 shape rule:** buttons are pill, panels use the scale. There is no second
+> button shape — every button, CTA, chip, tab, keycap and badge is
+> `--radius-pill`. (This replaces the former "squarer-with-soft-corners set —
+> small radii, not pill-everything" note, which described V1 and is now false.)
 
 ### Type
-`--font:'Outfit'`, `--serif:'Outfit'`, `--mono:'Outfit'` — one family across
-all three roles today.
+
+Two families, both self-hosted and variable. V2 replaced `Outfit` in all three
+roles, 2026-08-16 — see [`design-language-v2.md`](design-language-v2.md#type).
+
+| Token | Family | Weights used | Role |
+|---|---|---|---|
+| `--font` | **Manrope** | 400 / 500 / 700 / 800 | All UI and display |
+| `--serif` | **Manrope** | — | Retired as a distinct role; aliases `--font`. The name stays so existing call sites keep resolving. |
+| `--mono` | **JetBrains Mono** | 400 / 500 / 700 | Eyebrows, meta, category pills, keycaps, code, footer headings, stat lines |
+
+**Mono is load-bearing in V2** — it is the texture that makes the product read as
+a tool rather than a marketing page. It is also above the fold, so both families
+are preloaded in `index.html`, not just the UI face.
+
+> **Mind the axis.** Manrope's variable axis is `200..800` and JetBrains Mono's
+> is `100..800` — both narrower than Outfit's `100..900`. A weight outside the
+> axis is **silently clamped**, which is the same failure mode static instances
+> had. Keep authored weights inside `200..800`;
+> `tests/unit/hero-entrance.test.js` enforces this and bounds the two known
+> pre-existing `900` call sites so a third can't appear unnoticed.
 
 ### Motion — the named scale
 
@@ -199,10 +236,62 @@ margin (`.plb`, `.plb--ui-system`) depends on this.
 | `--card`, `--inp`, `--cbg`, `--hvr` | Surfaces, inputs, hover wash. |
 | `--accent`, `--accent-strong`, `--accent-soft`, `--accent-bg`, `--accent-glow`, `--accent-fg` | Accent system. |
 | `--brand`, `--brand-soft`, `--brand-bg`, `--brand-glow` | Brand system (tracks accent). |
+| `--hi`, `--hi-fg` | **V2 highlight.** Acid lime marker. Scarce by design. |
 | `--ok`, `--warn`, `--err` | Status colours. |
 | `--shadow-xs/s/m/l`, `--shadow-glow`, `--ring` | Elevation. |
+| `--shadow-cmd`, `--shadow-panel` | **V2 elevation** — command bar, and sticky panel / modals. Theme-independent. |
 
 > Live values for `--t0`–`--t3` and `--brand` are in `constants-and-config.md`.
+
+**V2 colour, 2026-08-16.** The accent is the founder-selected **blue**: light
+seeds `--accent:#0F6FFF` on a warm-bone page (`#EFEEE9`) with white cards; dark
+seeds `--accent:#6FA8FF` on `#101012`. The accent lightens in dark; **`--hi` does
+not** — it is the same `#E9FF64` in both themes. Budget at most **one `--hi`
+element per viewport**: it reads as a marker pen, and it also drives the global
+`::selection`.
+
+> #### ⚠️ `--accent` and `--accent-strong` are not interchangeable
+>
+> The blue misses the 4.5:1 floor for **normal-size text** on every light ground
+> — measured `3.82` on the page, `4.43` on white, `4.06` on `--bg-2`.
+>
+> - **`--accent`** — fills, borders, icons, focus rings, and **large** display
+>   text only (≥24px, or ≥18.66px bold), where the floor is 3:1.
+> - **`--accent-strong`** (`#0B5ED7` light) — **every accent-coloured text below
+>   large size.** Measures `5.03 / 5.84 / 5.35` on those same three grounds. V2
+>   leans on 11–12px mono eyebrows, counts and category labels, so this is the
+>   common case, not the exception.
+> - **`--accent-soft`** is decorative only — `2.68` on the page. Never text.
+>
+> The same split governs **fills carrying `--accent-fg` text**: a 12–14px label
+> on an `--accent` fill measures 4.43:1 and fails, so `.btn-accent`,
+> `.btn-primary` and `.ui-pill-accent` all fill with `--accent-strong`. Don't
+> "restore" them to `--accent`.
+>
+> **`--accent-fg` is theme-scoped.** White in light, ink (`#101012`) in dark —
+> because the dark accent is a *light* blue and white on it measures 2.41:1.
+> This is standard M3 on-primary behaviour: the on-colour tracks the tone of the
+> colour beneath it.
+
+> The light background ladder is deliberately **not** a straight ramp. Cards rise
+> to white above the bone ground, so `--bg-2` sits *between* page and white
+> (subtle fills, `.btn:hover`) and only `--bg-3`/`--bg-4` recede below the page.
+> A darker-than-page text surface cannot carry the V2 mute at AA — the
+> measurements are in the `[data-theme="light"]` block in `global.css`.
+
+### Buttons — one shape, three treatments
+
+V2 has no second button shape. The shared `.btn` family is `--radius-pill`.
+
+| Treatment | Class | Fill | Text |
+|---|---|---|---|
+| Primary | `.btn-accent` / `.btn-primary` | `--accent-strong` (see the contrast note) | `--accent-fg` |
+| Inverse | `.btn-inverse` | `--t0` (ink) | `--bg-0` (page) |
+| Quiet | `.btn` (the base rule) | `--card` + `1px --border` | `--t0` |
+
+Don't add a fourth. `.hover-lift` carries the shared card-hover language —
+`border-color` to ink **and** `translateY(-3px)`, together, on
+`--dur-2`/`--ease-standard`. Both, or it reads as a different interaction.
 
 ## Responsive breakpoints — the named scale
 

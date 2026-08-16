@@ -11,6 +11,96 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ---
 
+## Unreleased
+
+### Design Language V2 — token foundation
+
+The token layer of [`docs/reference/design-language-v2.md`](docs/reference/design-language-v2.md),
+which is added here as the source of truth for the V2 look. Values move; token
+**names** and the M3 role-generation method do not, so the rest of the product
+inherits V2 without a call-site sweep.
+
+- **Type.** Two families replace Outfit in all three roles: **Manrope**
+  (`--font`/`--serif`) and **JetBrains Mono** (`--mono`). `--serif` is retired as
+  a distinct role and aliases `--font`; the name stays so its call sites keep
+  resolving. Both self-hosted and variable, as Outfit was. Both latin subsets are
+  now preloaded — V2 makes mono load-bearing *above the fold* (nav wordmark,
+  eyebrows, stat line), so it is a first-paint font rather than a detail font.
+- **Radius.** Remapped in the token block only — 6/10/12/14/16/18, plus a new
+  `--radius-3xl:24px`. Roughly 1000 existing call sites inherited V2 rounding
+  from that single edit, which is the entire point of having a named scale.
+- **Colour.** Reseeded onto the existing `--bg-0..4` / `--t0..t3` / `--border` /
+  `--card` names. Light is a warm bone page (`#EFEEE9`) with white cards, ink
+  `#0F0F10`, mute `#6C6C66`, line `#DAD8CF`. Dark is `#101012` / `#191A1D` /
+  `#F2F1EC` / `#8E8E88` / `#2A2B2F`. The accent is the **founder-selected blue**
+  (decision recorded 2026-08-16 in `design-language-v2.md`): `#0F6FFF` light,
+  `#6FA8FF` dark. The design file's default violet is **not** used anywhere.
+  Every `rgba()` wash that was hard-coded from `37,99,235` was recomputed from
+  the new seed rather than left behind.
+- **New tokens.** `--hi` (`#E9FF64`) and `--hi-fg`, deliberately identical in
+  both themes — the accent lightens in dark, the highlight does not. Plus
+  `--shadow-cmd` and `--shadow-panel`, and a global `::selection` using the
+  highlight.
+- **Shape.** V2 has one button shape. The shared `.btn` family moved to
+  `--radius-pill` with three treatments: Primary, the new `.btn-inverse`
+  (ink fill, page-coloured label), and Quiet (the base rule). Adds `.hover-lift`
+  — `border-color` to ink **and** `translateY(-3px)`, together, on the named
+  motion scale.
+
+**Two things measurement changed, rather than confirmed.**
+
+The light background ladder is no longer a straight grey ramp. On a `#EFEEE9`
+ground, *no* darker-than-page surface can carry the spec's mute at AA — the
+closest candidate still measured 4.43:1 — so cards rise to white instead:
+`--bg-2` now sits between bone and white, and only `--bg-3`/`--bg-4` recede.
+`--t3 #6C6C66` measures **5.28 / 4.55 / 4.84** on the three grounds it is
+actually used against. The 4.55 has 0.05 of headroom over the AA floor, so the
+page cannot get darker without moving the ink with it.
+
+Manrope's real variable axis is **200..800** — read from the shipped `fvar`
+table, not assumed — against Outfit's 100..900. Two Palette Builder preview
+headings ask for `900` and now clamp to 800. V2's own display scale tops out at
+800, so this is accepted rather than swept, and
+`tests/unit/hero-entrance.test.js` now bounds the exception so a third
+out-of-axis weight fails the gate instead of clamping silently.
+
+**The blue is not safe for small text, and that shaped the whole slice.**
+`#0F6FFF` measures **3.82 / 4.43 / 4.06** on the page, white and `--bg-2`. It
+clears the 3:1 floor for large display text and non-text UI but misses 4.5:1 for
+normal text — and V2 leans on 11–12px mono eyebrows, counts and category labels.
+So the two accent tokens now carry different jobs: `--accent` for fills, borders,
+icons, focus rings and large display text; **`--accent-strong` `#0B5ED7`
+(5.03 / 5.84 / 5.35) for all accent-coloured text below large size**.
+
+The same split fixed two failures found by rendering rather than by reading.
+`.ui-pill-accent` — the shared primitive behind the nav "Start for Free" and the
+hero CTA, the most-seen control in the product — filled with `--accent` and put
+white on it: **4.43:1**. Worse, its rule reached the readable `--accent-strong`
+only on *hover*, so the resting state was the failing one. `.btn-accent` had the
+mirror problem, and its `--brand-soft` hover dropped the label to **3.11:1** —
+hovering a button made it harder to read. Both now fill with `--accent-strong`
+and express hover through lift and shadow, which costs nothing in contrast.
+
+`--accent-fg` is theme-scoped for the first time: white in light, ink in dark.
+The dark accent is a *light* blue, so white on it measured **2.41:1** — a bad
+failure across every accent-filled control, not just buttons. Ink on the same
+fill is 7.89:1, and the flip is the correct M3 on-primary behaviour.
+
+**Verified by rendering, not by reading the stylesheet.** A whole-page contrast
+audit that composites translucent stacks down to opaque colour was run at 1440
+and 390 in both themes: `/plans` dark is **0 failures across 107 text
+elements**, and the homepage CTA moved 4.43 → **5.84** (light) / **6.09** (dark).
+
+**Known, not fixed** — all owned by `Home.jsx`, which is out of scope for this
+slice: 11 `.hsat-proxy-label` tool labels measure 4.03–4.37 against a 4.5 floor,
+and `.home-report-*` / `.hw-pal-hex` render *generated* colours, where a low
+ratio is the tool honestly displaying a bad pair rather than a UI defect. The
+homepage also paints a blue radial wash over the page, which the spec explicitly
+forbids ("do not tint the page with the accent hue"). All handed to the Home
+workstream.
+
+---
+
 ## 2026-08-15 — The hero, measured rather than guessed (#248, #249)
 
 Founder report, for the second time: *"also make the hero animation better its
