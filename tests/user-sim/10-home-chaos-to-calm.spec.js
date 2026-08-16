@@ -163,10 +163,34 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // 1 · both approved sentences survive.
+    // 1 · the design project's headline, and the mark that ties it to the bar.
+    //
+    // This replaces "No more tab hoarding. / Build your UI system in one place."
+    // The V2 design makes the headline and the command bar ONE idea: the
+    // highlighted phrase names the input directly beneath it. The old copy
+    // never mentioned searching, so the bar arrived unintroduced and the --hi
+    // mark pointed at nothing. Founder instruction, 2026-08-16.
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText('No more tab hoarding.')
-    await expect(heading).toContainText('Build your UI system in one place.')
+    await expect(heading).toContainText('Every design tool,')
+    await expect(heading).toContainText('one search box away.')
+
+    // The mark is on "search box" specifically — that is the whole point of the
+    // pairing, and a mark on any other phrase is the bug this guards.
+    const mark = heading.locator('.home-mark')
+    await expect(mark).toHaveCount(1)
+    await expect(mark).toHaveText('search box')
+
+    // …and the thing it names is really there, directly below it.
+    const geometry = await page.evaluate(() => {
+      const m = document.querySelector('.home-hero-h1 .home-mark').getBoundingClientRect()
+      const bar = document.querySelector('.hcmd-bar').getBoundingClientRect()
+      return { markBottom: m.bottom, barTop: bar.top }
+    })
+    expect(geometry.barTop, 'the command bar must sit below its own headline mark')
+      .toBeGreaterThan(geometry.markBottom)
+
+    // The sub-copy sets up typing a query rather than describing a workspace.
+    await expect(page.locator('.home-hero-sub')).toContainText('Type what you need')
 
     // 2 · every route the old hero exposed is still reachable, with a real
     // href — that is what makes open-in-new-tab and copy-link behave. They now
