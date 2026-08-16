@@ -2337,7 +2337,6 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .app-footer-links a:hover{color:var(--accent)}
 .app-footer-soon-link{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-caption);color:var(--t2);font-weight:500}
 .app-footer-soon-link em{padding:2px 5px;border:1px solid var(--border);border-radius:999px;font-family:var(--mono);font-size:8px;font-style:normal;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
-.home-export-soon{display:inline-flex;margin-left:8px;padding:2px 6px;border:1px solid var(--border);border-radius:999px;font-family:var(--mono);font-size:9px;font-style:normal;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .app-footer-legal{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding-top:var(--s-5);border-top:1px solid var(--border);font-size:var(--fs-caption);color:var(--t3)}
 .app-footer-copy{font-family:var(--mono)}
 .app-footer--compact{padding-block:var(--s-6) var(--s-4)}
@@ -5337,8 +5336,6 @@ html.lenis,html.lenis body{height:auto}
 /* Wide enough that the 96px headline breaks in two or three lines rather than
    four — the sub-copy and command bar keep their own narrower measures below. */
 .home-hero-core{position:relative;z-index:2;max-width:1080px;margin:0 auto}
-.home-hero-kicker{display:inline-flex;align-items:center;gap:9px;margin:0 auto var(--s-5);padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-1) 88%,transparent);box-shadow:var(--shadow-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:var(--t1);backdrop-filter:blur(10px)}
-.home-hero-kicker-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 12%,transparent)}
 /* V2 display scale — design-language-v2.md, "Display scale". */
 .home-hero-h1{font-size:clamp(46px,6.6vw,96px);font-weight:800;letter-spacing:-.045em;line-height:.98;color:var(--t0);text-wrap:balance}
 /* Each headline line is its own block so the two phrases break cleanly instead of
@@ -5395,20 +5392,7 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 .home-hero-hint{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:var(--s-4)}
 
 /* Trust / stat strip (honest — no fabricated logos) */
-.home-trust{margin-top:var(--s-8);text-align:center}
-.home-trust-label{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.14em;text-transform:uppercase;color:var(--t2)}
-.home-stats{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 0;margin-top:16px}
-.home-stat{font-family:var(--mono);font-size:var(--fs-body-s);color:var(--t1);padding:0 20px}
-.home-stat b{color:var(--t0);font-weight:600}
-.home-stat:not(:last-child){border-right:1px solid var(--border)}
-.home-stat strong{font-weight:600;color:var(--t0)}
 
-/* Traffic-light dots — retained for the Validate contrast-report card. */
-.prev-traffic{display:inline-flex;gap:6px;flex:0 0 auto;padding-bottom:9px}
-.prev-traffic i{width:11px;height:11px;border-radius:50%;background:var(--bg-3)}
-.prev-traffic i:nth-child(1){background:color-mix(in srgb,#ff5f57 60%,var(--bg-3))}
-.prev-traffic i:nth-child(2){background:color-mix(in srgb,#febc2e 60%,var(--bg-3))}
-.prev-traffic i:nth-child(3){background:color-mix(in srgb,#28c840 60%,var(--bg-3))}
 
 /* ══ V2 homepage ═══════════════════════════════════════════════════════════════
    Built against docs/reference/design-language-v2.md. Colour comes entirely
@@ -5831,58 +5815,15 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 }
 
 
-/* Validate / Export splits */
-.home-split{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-8);align-items:center;margin-top:var(--s-7)}
-.home-split + .home-split{margin-top:var(--sec-pad)}
-.home-split.reverse .home-split-copy{order:2}
-.home-split-copy .home-h2{font-size:var(--fs-h2)}
-.home-check{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:20px}
-.home-check li{display:flex;align-items:center;gap:10px;font-size:var(--fs-body-s);color:var(--t1)}
-.home-check-mark{color:var(--ok);flex:0 0 auto}
-.home-code{display:inline-block;margin-top:20px;font-family:var(--mono);font-size:13px;background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--t0)}
 
-/* Contrast report card (Validate media) */
-.home-report{border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--bg-1);box-shadow:var(--shadow-s);overflow:hidden}
-.home-report-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-2);border-bottom:1px solid var(--border)}
-.home-report-title{font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--t1)}
-.home-report-list{list-style:none;display:flex;flex-direction:column}
-.home-report-row{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--border)}
-.home-report-row:first-child{border-top:0}
-.home-report-chips{display:flex}
-.home-report-chip{display:grid;place-items:center;width:34px;height:34px;border-radius:var(--radius-s);border:1px solid var(--border);font-family:var(--serif);font-size:15px;line-height:1}
-.home-report-pair{font-size:var(--fs-body-s);color:var(--t1);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.home-report-ratio{font-family:var(--mono);font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums}
 /* The grade badges state a WCAG result, so they had better pass one themselves.
    --ok (#16a34a) on its own 14% tint measured 4.15:1 and --warn (#ca8a04) on a
    16% tint 3.98:1 — both under 4.5:1 for 11px text. Darkened foregrounds only;
    the tints are unchanged, so the colour coding still reads the same. Measured
    on the composited backgrounds: #166534 on #deede4 = 5.89:1,
    #854d0e on #f0e6d7 = 5.55:1. */
-.home-report-grade{font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 8px;border-radius:var(--radius-pill);white-space:nowrap;color:#166534;background:color-mix(in srgb,var(--ok) 14%,transparent)}
-.home-report-grade[data-ok="false"]{color:#854d0e;background:color-mix(in srgb,var(--warn) 16%,transparent)}
 
-/* Community / Discover scroller */
-.home-scroller{display:flex;gap:16px;margin-top:var(--s-6);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px}
-.home-card{flex:0 0 auto;width:230px;scroll-snap-align:start;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--bg-1);overflow:hidden;text-decoration:none;box-shadow:var(--shadow-xs)}
-.home-card:hover{text-decoration:none}
-.home-card-art{position:relative;display:flex;align-items:flex-end;height:150px;padding:14px;background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2))}
-.home-card-swatches{display:flex;gap:6px;width:100%}
-.home-card-swatch{flex:1 1 0;height:52px;border-radius:var(--radius-s);box-shadow:var(--shadow-xs)}
-.home-card-specimen{position:absolute;top:12px;right:16px;font-family:var(--serif);font-size:30px;line-height:1;color:var(--hue,var(--accent));opacity:.85}
-.home-card-foot{padding:12px 14px 14px}
-.home-card-label{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
-.home-card-meta{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2);margin-top:3px}
-.home-scroller-cta{margin-top:var(--s-5)}
 
-/* Learn hub */
-.home-learn{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:var(--s-6)}
-.home-learn-card{position:relative;display:flex;flex-direction:column;gap:8px;padding:20px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--bg-1);text-decoration:none;box-shadow:var(--shadow-xs);transition:border-color var(--dur-3) var(--ease-out),background var(--dur-3) var(--ease-out)}
-.home-learn-card:hover{text-decoration:none;border-color:var(--bh)}
-.home-learn-card[data-accent] .fx-dot{background:var(--accent)}
-.home-learn-title{display:flex;align-items:center;gap:10px;font-size:var(--fs-body);font-weight:600;letter-spacing:-.012em;color:var(--t0)}
-.home-learn-desc{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5;flex:1 1 auto}
-.home-learn-go{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;color:var(--t2);transition:color var(--dur-3) var(--ease-out)}
-.home-learn-card:hover .home-learn-go{color:var(--t0)}
 
 /* Reusable final CTA */
 .system-cta{position:relative;isolation:isolate;max-width:1180px;min-height:420px;margin:var(--sec-pad) auto var(--s-8);display:grid;place-items:center;overflow:hidden;padding:var(--s-8) 24px;border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1)}
@@ -5901,18 +5842,6 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 .system-cta-lede{max-width:520px;margin:var(--s-4) auto 0;font-size:var(--fs-body);line-height:1.55;color:var(--t2)}
 .system-cta-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--s-6)}
 .system-cta-hint{margin-top:var(--s-4);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
-/* Final CTA — retained for legacy surfaces still migrating to SystemCTA */
-.home-cta{position:relative;text-align:center;padding:var(--sec-pad) 24px var(--s-9);overflow:hidden}
-.home-cta-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(60% 60% at 50% 0%,color-mix(in srgb,var(--accent) 12%,transparent),transparent 70%)}
-.home-cta-tabs{position:absolute;top:var(--s-6);left:0;right:0;display:flex;justify-content:center;gap:10px;pointer-events:none}
-.home-cta-tab{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:color-mix(in srgb,var(--hue,var(--accent)) 14%,transparent)}
-.home-cta-tab .fx-dot{background:var(--hue,var(--accent))}
-.home-cta-inner{position:relative;z-index:1;max-width:640px;margin:0 auto;padding-top:var(--s-6)}
-.home-cta-h2{font-size:var(--fs-h1);font-weight:700;letter-spacing:-.03em;color:var(--t0);margin-top:var(--s-3);line-height:1.05}
-.home-cta-em{color:var(--accent);font-style:italic;font-family:var(--serif);font-weight:600}
-.home-cta-lede{font-size:var(--fs-body);color:var(--t2);line-height:1.55;margin:var(--s-4) auto 0;max-width:440px}
-.home-cta .home-hero-cta{margin-top:var(--s-6);justify-content:center}
-.home-cta-hint{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-top:var(--s-4)}
 
 /* Footer — a row of large feature links above the standard column links, so
    the last thing before the page ends still sells the product, not just
@@ -5946,7 +5875,6 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
   .pnav-promo,.pnav-editorial{display:none}
   .home-hero{min-height:auto}
   .home-hero-core{margin-top:0}
-  .home-learn{grid-template-columns:repeat(2,1fr)}
   .surface-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:768px){
@@ -5971,10 +5899,6 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
      hover-state affordance) is redundant — drop it. Signed-in users keep the
      avatar; theme + auth live in the sheet / Settings. */
   .pnav-more-wrap{display:none}
-  /* .home-learn stays 2-col here — already set at ≤1024; 1-col kicks in at ≤480. */
-  .home-split,.home-split.reverse{grid-template-columns:1fr;gap:var(--s-6)}
-  .home-split .home-split-copy,.home-split.reverse .home-split-copy{order:2}
-  .home-split .home-split-media{order:1}
   .home-foot-feat{grid-template-columns:repeat(2,1fr)}
   .home-foot-cols{grid-template-columns:repeat(2,1fr);gap:24px 32px}
   .home-hero{padding-top:calc(var(--nav-top) + var(--nav-h) + var(--s-8))}
@@ -5998,9 +5922,6 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
   .system-cta-actions .ui-pill{width:100%}
   .home-foot-feat{grid-template-columns:1fr}
   .home-foot-cols{grid-template-columns:1fr}
-  .home-learn{grid-template-columns:1fr}
-  .home-card{width:200px}
-  .home-stat{padding:0 12px;font-size:var(--fs-caption)}
   .surface-grid{grid-template-columns:1fr}
 }
 @media(max-width:380px){
