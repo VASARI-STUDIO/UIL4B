@@ -1,17 +1,28 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useId, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCategory, localiseTools, localiseCategories, queryCommandIndex } from '../data/tools'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
+import useModalDialog from '../hooks/useModalDialog'
 
+// The command bar. V2 gives it a front door in the nav, which makes its
+// keyboard contract load-bearing rather than a power-user extra.
+//
+// It was an unlabelled <div> overlay: no dialog role, no focus trap, no focus
+// restore, and an arrow-key highlight that existed only as a CSS class — a
+// screen-reader user arrowing through results heard nothing change. It is now a
+// real modal dialog wrapping a real combobox, so the highlighted row is
+// announced through aria-activedescendant as it moves.
 export default function CommandPalette({ open, onClose }) {
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const listRef = useRef(null)
+  const uid = useId()
+  const dialogRef = useModalDialog(onClose, { enabled: !!open, initialFocus: '.cp-input' })
   const { recent } = useWorkspace()
   const { user } = useAuth()
   const { t } = useI18n()
@@ -61,22 +72,17 @@ export default function CommandPalette({ open, onClose }) {
 
   const flat = useMemo(() => sections.flatMap(s => s.items), [sections])
 
+  // Reset the query per opening. Focus and the body-scroll lock are
+  // useModalDialog's job now, so this no longer competes with it for either.
   useEffect(() => {
     if (open) {
       setQuery('')
       setHighlight(0)
-      requestAnimationFrame(() => inputRef.current?.focus())
     }
   }, [open])
 
   const safeHighlight = Math.min(highlight, Math.max(flat.length - 1, 0))
-
-  useEffect(() => {
-    if (!open) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [open])
+  const activeId = flat.length ? `${uid}-opt-${safeHighlight}` : undefined
 
   if (!open) return null
 
@@ -86,10 +92,14 @@ export default function CommandPalette({ open, onClose }) {
     navigate(item.path)
   }
 
+  // Escape belongs to useModalDialog, which listens in the capture phase and
+  // also restores focus to whatever opened the palette. Handling it here too
+  // would close it twice and skip the restore.
   const onKey = (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); onClose() }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight(Math.min(safeHighlight + 1, flat.length - 1)) }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight(Math.min(safeHighlight + 1, flat.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight(Math.max(safeHighlight - 1, 0)) }
+    else if (e.key === 'Home') { e.preventDefault(); setHighlight(0) }
+    else if (e.key === 'End') { e.preventDefault(); setHighlight(Math.max(flat.length - 1, 0)) }
     else if (e.key === 'Enter') { e.preventDefault(); select(flat[safeHighlight]) }
   }
 
@@ -97,29 +107,46 @@ export default function CommandPalette({ open, onClose }) {
 
   return (
     <div className="cp-overlay" onMouseDown={onClose}>
-      <div className="cp-panel" onMouseDown={e => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className="cp-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('cmd.placeholder') || 'Search UIL4B'}
+        tabIndex={-1}
+        onMouseDown={e => e.stopPropagation()}
+      >
         <div className="cp-input-wrap">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
             ref={inputRef}
             className="cp-input"
+            type="text"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls={`${uid}-list`}
+            aria-activedescendant={activeId}
+            aria-autocomplete="list"
+            autoComplete="off"
+            spellCheck="false"
+            aria-label={t('cmd.placeholder') || 'Search UIL4B'}
             placeholder={t('cmd.placeholder')}
             value={query}
             onChange={e => { setQuery(e.target.value); setHighlight(0) }}
             onKeyDown={onKey}
           />
-          <span className="cp-kbd">esc</span>
+          <span className="cp-kbd" aria-hidden="true">esc</span>
         </div>
 
-        <div className="cp-results" ref={listRef}>
+        <div className="cp-results" ref={listRef} id={`${uid}-list`} role="listbox" aria-label={t('common.tools') || 'Results'}>
           {flat.length === 0 && (
-            <div className="cp-empty">{t('cmd.noResults', { query })}</div>
+            <div className="cp-empty" role="status">{t('cmd.noResults', { query })}</div>
           )}
           {sections.map(section => (
-            <div key={section.label}>
-              <div className="cp-section-label">{section.label}</div>
+            <div key={section.label} role="group" aria-label={section.label}>
+              <div className="cp-section-label" aria-hidden="true">{section.label}</div>
               {section.items.map(item => {
                 const idx = runningIdx++
                 const cat = item.kind === 'tool' ? getCategory(item.category) : null
@@ -131,11 +158,19 @@ export default function CommandPalette({ open, onClose }) {
                   <button
                     key={`${item.kind}-${item.id}`}
                     type="button"
+                    id={`${uid}-opt-${idx}`}
+                    // role="option" inside the listbox is what lets
+                    // aria-activedescendant announce this row as the arrow keys
+                    // move over it. It stays a real <button> so a mouse user
+                    // gets a real click target, not a div with a handler.
+                    role="option"
+                    aria-selected={idx === safeHighlight}
+                    tabIndex={-1}
                     className={`cp-item${idx === safeHighlight ? ' active' : ''}`}
                     onMouseEnter={() => setHighlight(idx)}
                     onClick={() => select(item)}
                   >
-                    <div className="cp-item-icon">
+                    <div className="cp-item-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                         {icon}
                       </svg>

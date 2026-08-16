@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import usePopover from '../hooks/usePopover'
 
 // ── ColorPickerPop ────────────────────────────────────────────────────────────
 // Token-styled replacement for the OS-native <input type="color"> popup: a
 // swatch trigger that opens a small popover with a saturation/value pad, hue
 // slider, hex field, and preset swatches. Controlled: emits normalised
 // lowercase #rrggbb through onChange on every committed change.
+//
+// Dismissal, focus and edge-flipping come from usePopover — the one popover
+// contract shared with the nav popovers and the tool micro-menus. This file
+// used to hand-roll outside-click and Escape and did neither of the other two:
+// opening it left focus on the trigger (so a keyboard user had to tab through
+// the page to reach the pad), Escape dropped focus to <body>, and next to the
+// right-hand edge of a narrow viewport the panel was simply clipped.
 
 const HEX_RE = /^#?([0-9a-f]{6})$/i
 const SHORT_HEX_RE = /^#?([0-9a-f]{3})$/i
@@ -64,9 +72,13 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
   // the colour passes through black/white (where hue is lost in hex round-trips).
   const [hsv, setHsv] = useState(() => hexToHsv(current))
   const [hexText, setHexText] = useState(current)
-  const wrapRef = useRef(null)
   const padRef = useRef(null)
   const draggingRef = useRef(false)
+  const close = useCallback(() => setOpen(false), [])
+  // Land on the saturation/value pad, not the panel: this popover's whole
+  // purpose is that one control, and anything else costs a keyboard user a tab
+  // every single time they open it.
+  const { triggerRef, popRef } = usePopover(open, close, { initialFocus: '.cpk-pad' })
 
   // Re-seed the working state each time the popover opens (or the outside value
   // changes while closed) so it always starts from the live colour.
@@ -76,26 +88,6 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
       setHexText(current)
     }
   }, [current, open])
-
-  useEffect(() => {
-    if (!open) return undefined
-    const onDown = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
-    }
-    const onKey = (e) => {
-      if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
-    }
-    // Capture phase: an ancestor (e.g. the icon customizer panel) stops mousedown
-    // propagation to guard its own overlay, so a bubble-phase document listener
-    // never sees clicks landing elsewhere inside that panel. Capturing runs before
-    // any stopPropagation, so clicking off always closes the popover.
-    document.addEventListener('mousedown', onDown, true)
-    document.addEventListener('keydown', onKey, true)
-    return () => {
-      document.removeEventListener('mousedown', onDown, true)
-      document.removeEventListener('keydown', onKey, true)
-    }
-  }, [open])
 
   const commit = (next) => {
     setHsv(next)
@@ -125,10 +117,11 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
   }
 
   return (
-    <div className="cpk-wrap" ref={wrapRef}>
+    <div className="cpk-wrap">
       <button
         type="button"
         className="cpk-trigger"
+        ref={triggerRef}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -144,7 +137,7 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
       </button>
 
       {open && (
-        <div className="cpk-pop" role="dialog" aria-label={ariaLabel}>
+        <div className="pop cpk-pop" ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
           <div
             className="cpk-pad"
             ref={padRef}
