@@ -1,8 +1,39 @@
-import { useEffect } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import { useProPrice } from '../hooks/usePrices'
+import { usePrices, refreshPrices } from '../hooks/usePrices'
+import { detectCurrency } from '../utils/currency'
+import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans'
+import {
+  resolvePlanLadder,
+  purchasablePlans,
+  cheapestPerMonth,
+  savingsVsMonthly,
+} from '../config/planLadder'
+import useModalDialog from '../hooks/useModalDialog'
+
+// The Pro upgrade modal — a funnel surface, and the only one in the app.
+//
+// The founder's requirement, in order: clicking a Pro tool shows this popup ·
+// the CTA is an Upgrade button · it shows the plans · the user can start a
+// trial, which begins create-account → checkout.
+//
+// Three rules this file holds to, all from docs/reference/growth-persuasion.md:
+//
+//  1. The cost-per-month is the dominant number and the annualised total is
+//     supporting text — because per-month is the figure a person compares, and
+//     hiding the total would be the dishonest half of that trade.
+//  2. Nothing here counts down, expires, or claims scarcity. There is no
+//     "3 spots left", no timer, no invented testimonial. The previous version
+//     of this modal carried five filled stars and "Loved by designers who'd
+//     rather build than tab-hop" — fabricated social proof, guardrail 1, gone.
+//  3. The trial is stated plainly: which plan carries it, how long it runs, and
+//     the day money moves. src/pages/Checkout.jsx grants the trial on the
+//     YEARLY plan only, so only the yearly CTA may say "trial".
+//
+// Prices come from src/config/planLadder.js — the single module — never typed
+// into this file. Read its header before changing any amount.
 
 function Tick() {
   return (
@@ -12,137 +43,203 @@ function Tick() {
   )
 }
 
-function Star() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01z" />
-    </svg>
-  )
-}
-
 const DEFAULT_FEATURES = [
-  'Unlimited palettes, projects & icon saves',
-  'Pro colour tools — HCT editing and light + dark contrast',
-  'Clean, watermark-free exports',
-  'Every brand system, fully editable',
+  `${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month`,
+  `Unlimited saved projects (Free keeps ${FREE_SAVE_LIMITS.projects})`,
+  'Pro colour tools — HCT editing, light + dark contrast repair',
+  'Clean, watermark-free exports and full design JSON',
 ]
 
-// Canonical Pro-upgrade modal (Image 3). Opened imperatively via
-// useProModal().openProModal(opts); reads live Stripe prices so the CTA can
-// never show a price we don't charge.
 export default function ProUpgradeModal({ opts = {}, onClose }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { requireLogin } = useLoginPrompt()
-  const price = useProPrice('aud')
+  const { prices, settled } = usePrices()
+  const dialogRef = useModalDialog(onClose)
+  const uid = useId()
+  const [starting, setStarting] = useState(false)
 
   const {
     title = 'Unlock everything with Pro',
-    subtitle = 'Go Pro to remove the limits — keep your exports clean and every tool unlocked.',
+    subtitle = 'Keep every tool open and every export clean. Free stays free — Pro removes the ceiling.',
     eyebrow = 'UIL4B Pro',
     features = DEFAULT_FEATURES,
   } = opts
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const currency = useMemo(() => detectCurrency(), [])
+  const ladder = useMemo(
+    () => resolvePlanLadder({ prices, currency }),
+    [prices, currency],
+  )
+  const plans = useMemo(() => purchasablePlans(ladder), [ladder])
+  const headline = useMemo(() => cheapestPerMonth(ladder), [ladder])
+
+  // Default to the cheapest per-month plan, which is also the one carrying the
+  // trial. Selecting it for the user is a convenience, not a trap: every other
+  // plan is one click away and nothing is pre-ticked that costs more.
+  const [choiceId, setChoiceId] = useState(() => headline?.id || 'yearly')
+  const choice = plans.find((p) => p.id === choiceId) || plans[0] || null
+
+  const priceUnavailable = settled && !prices
+  const hasTrial = !!choice?.trialDays
 
   const goCheckout = async () => {
+    if (!choice || starting) return
+    setStarting(true)
+    const destination = `/checkout?plan=${choice.checkoutPlan}`
     onClose()
     if (!user) {
-      const u = await requireLogin('upgrade to Pro')
+      // "Start a trial" for a signed-out visitor means create an account first —
+      // the founder's create-account → checkout order. Open the popup on the
+      // SIGN-UP form, not sign-in, so the control does what it said.
+      const u = await requireLogin('start your Pro plan', { signup: true })
       if (!u) return
-      // A brand-new sign-up here is intercepted into onboarding by App.jsx,
-      // which would otherwise discard this checkout intent (QA Q1). Stash the
-      // destination so onboarding resumes the user straight to checkout when
-      // they finish. Harmless for an existing-account login: onboarding never
-      // runs, the navigate below reaches /checkout directly, and the key is
-      // session-scoped and consumed only inside the onboarding flow.
-      try { sessionStorage.setItem('vs-resume-after-onboarding', '/checkout') } catch { /* ignore */ }
+      // A brand-new sign-up is intercepted into onboarding by App.jsx, which
+      // would otherwise discard this checkout intent. Stash the destination so
+      // onboarding resumes straight to checkout — including the chosen plan,
+      // which a bare '/checkout' would have dropped.
+      try { sessionStorage.setItem('vs-resume-after-onboarding', destination) } catch { /* ignore */ }
     }
-    navigate('/checkout')
+    navigate(destination)
   }
 
-  // Strings from useProPrice are already formatted (e.g. "A$3.33"); the hook
-  // falls back to the AUD anchor on its own, so never re-format them here.
-  // The headline rate is the YEARLY plan's monthly equivalent — the cheapest
-  // honest "per month" number we charge.
-  const amount = price.yearlyPerMonth
+  const seeAllPlans = () => { onClose(); navigate('/plans') }
 
   return (
     <div className="ui-modal-overlay" onMouseDown={onClose}>
       <div
+        ref={dialogRef}
         className="ui-modal ui-pro"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="ui-pro-title"
+        aria-labelledby={`${uid}-title`}
+        aria-describedby={`${uid}-sub`}
+        tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="ui-pro-grid">
-          <div className="ui-pro-main">
-            <div className="ui-modal-head" style={{ padding: 0 }}>
-              <span className="ui-pro-eyebrow">{eyebrow}</span>
-              <button type="button" className="ui-modal-x" onClick={onClose} aria-label="Close">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-              </button>
+        <div className="ui-pro-head">
+          <span className="ui-pro-eyebrow">{eyebrow}</span>
+          <button type="button" className="ui-modal-x" onClick={onClose} aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="ui-pro-body">
+          <h2 className="ui-pro-title" id={`${uid}-title`}>{title}</h2>
+          <p className="ui-pro-sub" id={`${uid}-sub`}>{subtitle}</p>
+
+          {/* The headline rate. Computed from whichever plan is genuinely the
+              cheapest per month — never typed, so it cannot drift from the
+              tiles underneath it. */}
+          <p className="ui-pro-from" aria-live="polite">
+            {settled && headline?.perMonthLabel ? (
+              <>
+                <span className="ui-pro-from-lead">from</span>
+                <span className="ui-pro-from-amount">{headline.perMonthLabel}</span>
+                <span className="ui-pro-from-per">/month</span>
+              </>
+            ) : (
+              <span className="sk ui-pro-from-skel"><span className="sr-only">Loading prices…</span></span>
+            )}
+          </p>
+
+          <ul className="ui-pro-list">
+            {features.map((f) => (
+              <li className="ui-pro-li" key={f}>
+                <span className="ui-pro-tick"><Tick /></span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+
+          {priceUnavailable ? (
+            // Murphy's law: the price service can be down or the visitor offline.
+            // Never guess an amount at the moment money is discussed — say so and
+            // offer the retry, which refreshPrices() exists for.
+            <div className="ui-pro-plans-err" role="alert">
+              <p>We couldn&rsquo;t load current prices just now.</p>
+              <div className="ui-pro-plans-err-acts">
+                <button type="button" className="btn btn-s" onClick={() => refreshPrices()}>Try again</button>
+                <button type="button" className="btn btn-s" onClick={seeAllPlans}>See all plans</button>
+              </div>
             </div>
-            <h2 className="ui-pro-title" id="ui-pro-title">{title}</h2>
-            <p className="ui-pro-sub">{subtitle}</p>
-            <ul className="ui-pro-list">
-              {features.map((f, i) => (
-                <li className="ui-pro-li" key={i}>
-                  <span className="ui-pro-tick"><Tick /></span>
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="ui-pro-price" aria-live="polite">
-              {price.loaded ? (
+          ) : (
+            <fieldset className="ui-pro-plans" disabled={!settled}>
+              <legend className="sr-only">Choose a billing period</legend>
+              {!settled && <span className="sk ui-pro-plans-skel" aria-hidden="true" />}
+              {settled && plans.map((plan) => {
+                const save = savingsVsMonthly(plan, ladder)
+                return (
+                  <label
+                    key={plan.id}
+                    className={'ui-pro-plan' + (choice?.id === plan.id ? ' is-chosen' : '')}
+                    htmlFor={`${uid}-${plan.id}`}
+                  >
+                    <input
+                      className="sr-only ui-pro-plan-input"
+                      type="radio"
+                      id={`${uid}-${plan.id}`}
+                      name={`${uid}-plan`}
+                      value={plan.id}
+                      checked={choice?.id === plan.id}
+                      onChange={() => setChoiceId(plan.id)}
+                    />
+                    <span className="ui-pro-plan-top">
+                      <span className="ui-pro-plan-name">{plan.label}</span>
+                      {save > 0 && <span className="ui-pro-plan-save">Save {save}%</span>}
+                    </span>
+                    <span className="ui-pro-plan-rate">
+                      <span className="ui-pro-plan-amount">{plan.perMonthLabel}</span>
+                      <span className="ui-pro-plan-per">/mo</span>
+                    </span>
+                    <span className="ui-pro-plan-total">
+                      {plan.totalLabel} {plan.cadence}
+                    </span>
+                    {plan.trialDays > 0 && (
+                      <span className="ui-pro-plan-trial">{plan.trialDays}-day free trial</span>
+                    )}
+                  </label>
+                )
+              })}
+            </fieldset>
+          )}
+
+          {/* Say plainly what happens and when billing starts. Static text: no
+              clock, no countdown, no "offer ends". */}
+          {settled && choice && !priceUnavailable && (
+            <ol className="ui-pro-steps" aria-label="What happens next">
+              <li><strong>Today</strong> — create your account and confirm payment details.</li>
+              {hasTrial ? (
                 <>
-                  <span className="ui-pro-amount">{amount}</span>
-                  <span className="ui-pro-per">/ month — {price.yearlyTotal} billed yearly</span>
-                  {price.savingsPct > 0 && (
-                    <span className="ui-pro-save">Save {price.savingsPct}% vs monthly</span>
-                  )}
+                  <li><strong>Days 1&ndash;{choice.trialDays}</strong> — full Pro access. Nothing is charged.</li>
+                  <li>
+                    <strong>Day {choice.trialDays}</strong> — {choice.totalLabel} is charged, then {choice.cadence.replace('billed ', '')}.
+                    Cancel any time before then and you pay nothing.
+                  </li>
                 </>
               ) : (
-                // First open of the session: hold a skeleton until the one live
-                // price fetch settles, so the amount never jumps wrong-then-right.
-                <span className="sk ui-pro-price-skel">
-                  <span className="sr-only">Loading price…</span>
-                </span>
+                <li><strong>Then</strong> — {choice.totalLabel} {choice.cadence}, starting today. Cancel any time from Settings.</li>
               )}
-            </div>
-            <div className="ui-pro-cta">
-              <button type="button" className="btn btn-accent btn-l" onClick={goCheckout}>
-                {user ? 'Upgrade to Pro' : 'Get started free'}
-              </button>
-            </div>
-            <p className="ui-pro-note">
-              Cancel anytime. <button type="button" onClick={() => { onClose(); navigate('/plans') }}>See all plans</button>
-            </p>
+            </ol>
+          )}
+
+          <div className="ui-pro-cta">
+            <button
+              type="button"
+              className="btn btn-accent btn-l"
+              onClick={goCheckout}
+              disabled={!choice || !settled || starting || priceUnavailable}
+              aria-busy={starting}
+            >
+              {hasTrial ? `Start ${choice.trialDays}-day free trial` : 'Upgrade to Pro'}
+            </button>
           </div>
 
-          <div className="ui-pro-art" aria-hidden="true">
-            <div className="ui-pro-art-glyphs">
-              <svg width="150" height="150" viewBox="0 0 120 120" fill="none">
-                <circle cx="60" cy="60" r="46" stroke="rgba(255,255,255,.5)" strokeWidth="1.5" />
-                <circle cx="60" cy="14" r="9" fill="#fff" opacity=".95" />
-                <circle cx="100" cy="60" r="9" fill="#fff" opacity=".75" />
-                <circle cx="60" cy="106" r="9" fill="#fff" opacity=".6" />
-                <circle cx="20" cy="60" r="9" fill="#fff" opacity=".85" />
-                <circle cx="60" cy="60" r="6" fill="#fff" />
-              </svg>
-            </div>
-            <div className="ui-pro-proof">
-              <div className="ui-pro-proof-stars">
-                <Star /><Star /><Star /><Star /><Star />
-              </div>
-              <p className="ui-pro-proof-txt">Loved by designers who’d rather build than tab-hop.</p>
-            </div>
-          </div>
+          <p className="ui-pro-note">
+            {user ? 'Cancel any time from Settings.' : 'You’ll create a free account first, then confirm payment.'}
+            {' '}
+            <button type="button" onClick={seeAllPlans}>See all plans</button>
+          </p>
         </div>
       </div>
     </div>

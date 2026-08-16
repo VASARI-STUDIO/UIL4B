@@ -8570,3 +8570,199 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-collapsed strong{color:var(--t0);font-weight:650}
 .plb-collapsed-cta{flex-shrink:0;border-color:var(--brand);color:var(--brand)}
 .plb-collapsed-cta:hover{background:var(--brand);border-color:var(--brand);color:var(--accent-fg)}
+
+/* ============================================================
+   W3 · V2 SHARED UI — one popover language, app-wide
+   ------------------------------------------------------------
+   The founder's brief: "a nice round app where all tools feel part of this
+   app." Before this block there were four different popover treatments —
+   .pnav-pop (radius-xl / warm-shadow-lg / 8px), .cpk-pop (radius-l / 12px),
+   .plb-menu, .dsc-menu, .cs-ctx, .emoji-tone-pop, .profile-menu — each styled
+   in isolation and each slightly wrong next to the others.
+
+   This is the one surface definition. It sits at the END of the stylesheet on
+   purpose: every rule below is the same specificity as the per-component rules
+   above it, so a later declaration wins and the components inherit the shared
+   language WITHOUT their JSX being touched. That matters because several of
+   those components are owned by other workstreams right now — restyling them
+   from here is the only way to unify them without editing their files.
+
+   Layout (position / display / width) deliberately stays with each component:
+   a popover's anchor is its own business, its skin is the system's.
+   ============================================================ */
+
+.pop,
+.pnav-pop,
+.cpk-pop,
+.plb-menu,
+.dsc-menu,
+.cs-ctx,
+.emoji-tone-pop,
+.profile-menu{
+  background:var(--bg-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-l);
+  box-shadow:var(--shadow-cmd),0 0 0 1px color-mix(in srgb,var(--t0) 4%,transparent);
+  animation:pop-in var(--dur-2) var(--ease-entrance)
+}
+
+/* Entry motion: rise + settle, --dur-2 because it moves (geometry never
+   transitions below --dur-2, css-conventions.md). Reduced motion is handled by
+   the global clamp — this animation is not exempted from it. */
+@keyframes pop-in{
+  from{opacity:0;transform:translateY(-6px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+/* The shared primitive itself, for popovers built on usePopover. */
+.pop{
+  position:absolute;
+  top:calc(100% + var(--s-2));
+  right:0;
+  z-index:130;
+  min-width:180px;
+  max-width:calc(100vw - 24px);
+  max-height:var(--pop-max-h,none);
+  padding:var(--s-2);
+  overflow:hidden auto;
+  overscroll-behavior:contain
+}
+/* Edge flipping, driven by data attributes that usePopover writes after
+   measuring the TRIGGER (never the positioned panel — that oscillates). */
+.pop[data-pop-align="start"]{right:auto;left:0}
+.pop[data-pop-align="clamp"]{right:auto;left:50%;transform:translateX(-50%)}
+.pop[data-pop-side="top"]{top:auto;bottom:calc(100% + var(--s-2))}
+.pop[data-pop-side="top"]{animation-name:pop-in-up}
+@keyframes pop-in-up{
+  from{opacity:0;transform:translateY(6px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.pop[data-pop-align="clamp"][data-pop-side="top"],
+.pop[data-pop-align="clamp"]{animation-name:pop-in-centre}
+@keyframes pop-in-centre{
+  from{opacity:0;transform:translate(-50%,-6px) scale(.985)}
+  to{opacity:1;transform:translate(-50%,0) scale(1)}
+}
+.pop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Shared row rhythm for anything built on .pop. */
+.pop-head{padding:var(--s-2) 10px var(--s-1);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.pop-sep{height:1px;margin:var(--s-1) 6px;background:var(--border)}
+.pop-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;background:none;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
+
+/* ── The nav popovers, brought onto the shared language ─────────────────── */
+/* Small accent TEXT must use --accent-strong: --accent measures 3.82:1 on the
+   page and 4.43:1 on white, both under the 4.5:1 floor for normal-size text.
+   These two rules were the only accent-text failures in the nav. */
+.pnav-pop-item--accent{color:var(--accent-strong)}
+.pnav-pop-item--accent svg{color:var(--accent-strong)}
+.pnav-pop-item--accent:hover{background:var(--accent-bg);color:var(--accent-strong)}
+.pnav-pop-tag{color:var(--accent-strong);border-color:var(--accent-strong)}
+/* Rows pick up the shared radius so the nav popover and a tool micro-menu
+   round their hover states identically. */
+.pnav-pop-item,.pnav-pop-acct{border-radius:var(--radius-s)}
+
+/* The mega-menu is a panel, not a popover: --shadow-panel and the panel radius,
+   per design-language-v2.md's elevation pair. Structure and IA are untouched. */
+.pnav-menu{box-shadow:var(--shadow-panel);border-radius:var(--radius-2xl)}
+/* Tool rows in the mega menu share the popover row rhythm. */
+.pnav-tool{border-radius:var(--radius-s)}
+
+/* ── Modals ─────────────────────────────────────────────────────────────── */
+/* One elevation for every modal surface, per the V2 pair. */
+.ui-modal,.cp-panel{box-shadow:var(--shadow-panel);border-radius:var(--radius-2xl)}
+
+/* -- Pro upgrade modal: the funnel surface --------------------------------
+   Rebuilt as a plan chooser. References studied on Mobbin (all web):
+   Replit  https://mobbin.com/screens/017bf4cb-ade3-42e5-bf6f-2c8be1ba931c
+           - the per-month figure huge, "per month / billed annually" stacked
+             small beside it. The closest thing to what the founder asked for.
+   Bloom   https://mobbin.com/screens/4999c558-9dcd-412f-b522-0ceb3ed6a83b
+           - "$16 /mo" dominant with "$192 billed annually" as one quiet line,
+             and a save badge that sits ON the tile rather than shouting.
+   Glide   https://mobbin.com/screens/c3e6c4f4-a42d-4ff4-b7a9-e250d4c74202
+           - the compact in-modal chooser that stacks into rows; the shape this
+             ladder collapses to at 480px and below.
+   Monarch https://mobbin.com/screens/beace145-7225-4bd7-a187-8a1ee2dde7b3
+           - "How your free trial works": Today / in 6 days / in 7 days, stated
+             as plain text. No countdown. That is the .ui-pro-steps list.
+   Skiff   https://mobbin.com/screens/39e29469-7796-4f0d-8bd9-814b9c2ae16a
+           - the honest billing sentence: what you will be charged, when, and
+             that you can cancel before then.
+   Deliberately NOT taken: any "most popular" ribbon that isn't backed by real
+   data, and every save badge that only appears once you hover the cheaper tab. */
+.ui-pro{max-width:560px}
+.ui-pro-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px 0}
+.ui-pro-body{padding:6px 24px 24px}
+/* Mono eyebrow - V2's tool texture. --accent-strong because it is 11px. */
+.ui-pro-eyebrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.ui-pro-title{margin:8px 0 0;font-size:var(--fs-h3);font-weight:800;line-height:1.12;letter-spacing:-.03em;color:var(--t0);text-wrap:balance}
+.ui-pro-sub{margin:8px 0 0;max-width:46ch;font-size:14px;line-height:1.55;color:var(--t2);text-wrap:pretty}
+
+/* The headline rate. */
+.ui-pro-from{display:flex;align-items:baseline;gap:6px;margin:18px 0 0}
+.ui-pro-from-lead{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.ui-pro-from-amount{font-size:clamp(30px,5vw,40px);font-weight:800;line-height:1;letter-spacing:-.04em;color:var(--t0)}
+.ui-pro-from-per{font-size:14px;font-weight:600;color:var(--t2)}
+.ui-pro-from-skel{display:inline-block;width:180px;height:34px}
+
+.ui-pro-list{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
+.ui-pro-li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--t1)}
+.ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-strong);color:var(--accent-fg)}
+
+/* The ladder. Two tiles at rest, stacking into Glide-style rows on a phone. */
+.ui-pro-plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:20px 0 0;padding:0;border:none;min-width:0}
+.ui-pro-plans-skel{grid-column:1/-1;height:112px;border-radius:var(--radius-l)}
+.ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:14px 15px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+/* The shared V2 card-hover language: border to ink AND a 3px lift, together. */
+.ui-pro-plan:hover{border-color:var(--t0);transform:translateY(-3px)}
+.ui-pro-plan.is-chosen{border-color:var(--accent);background:var(--accent-bg);box-shadow:inset 0 0 0 1px var(--accent)}
+/* The radio is the real control; the tile is its label. Focus has to be visible
+   on the tile, because the input itself is screen-reader-only. */
+.ui-pro-plan:has(.ui-pro-plan-input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.ui-pro-plan-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ui-pro-plan-name{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
+.ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-strong)}
+/* The one --hi element on this surface, and the only place it appears in the
+   whole modal - the marker-pen budget is one per viewport. */
+.ui-pro-plan-save{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:var(--radius-pill);background:var(--hi);color:var(--hi-fg)}
+.ui-pro-plan-rate{display:flex;align-items:baseline;gap:3px;margin-top:5px}
+.ui-pro-plan-amount{font-size:28px;font-weight:800;line-height:1;letter-spacing:-.035em;color:var(--t0)}
+.ui-pro-plan-per{font-size:13px;font-weight:600;color:var(--t2)}
+.ui-pro-plan-total{font-size:12px;line-height:1.4;color:var(--t2)}
+.ui-pro-plan-trial{margin-top:4px;font-size:11.5px;font-weight:650;color:var(--accent-strong)}
+
+.ui-pro-plans-err{margin:20px 0 0;padding:14px;border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius-l);background:color-mix(in srgb,var(--err) 8%,transparent)}
+.ui-pro-plans-err p{margin:0 0 10px;font-size:13px;color:var(--t1)}
+.ui-pro-plans-err-acts{display:flex;flex-wrap:wrap;gap:8px}
+
+/* "What happens next" - static, ordered, no clock anywhere near it. */
+.ui-pro-steps{list-style:none;margin:18px 0 0;padding:14px 15px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--cbg);display:flex;flex-direction:column;gap:7px;font-size:12.5px;line-height:1.5;color:var(--t2)}
+.ui-pro-steps strong{color:var(--t0);font-weight:700}
+.ui-pro-cta{margin-top:16px}
+.ui-pro-cta .btn{width:100%;justify-content:center}
+.ui-pro-note{margin:11px 0 0;font-size:11.5px;line-height:1.5;color:var(--t2);text-align:center}
+.ui-pro-note button{background:none;border:none;color:var(--t1);font:inherit;text-decoration:underline;cursor:pointer;padding:0}
+.ui-pro-note button:hover{color:var(--t0)}
+
+@media(max-width:480px){
+  .ui-pro-head{padding:16px 18px 0}
+  .ui-pro-body{padding:6px 18px 20px}
+  .ui-pro-plans{grid-template-columns:1fr}
+  .ui-pro-plan{padding:12px 13px}
+  .ui-pro-plan-amount{font-size:24px}
+}
+
+/* -- Login-to-continue ----------------------------------------------------
+   The interrupted-action panel: what you were doing, what an account gives you,
+   and the promise that you come back to it. Replaces "You must log in to X",
+   which led with an obligation and buried the thing the user was doing. */
+.ui-login-intent{margin:0 0 16px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--accent) 26%,transparent);border-radius:var(--radius-l);background:var(--accent-bg)}
+.ui-login-intent-h{display:flex;gap:9px;align-items:flex-start;margin:0;font-size:13px;line-height:1.45;color:var(--t1)}
+.ui-login-intent-h strong{color:var(--t0);font-weight:700}
+.ui-login-intent-h svg{flex:none;margin-top:1px;color:var(--accent-strong)}
+.ui-login-unlocks{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.ui-login-unlocks li{position:relative;padding-left:18px;font-size:12.5px;line-height:1.45;color:var(--t1)}
+.ui-login-unlocks li::before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:var(--radius-pill);background:var(--accent-strong)}
+.ui-login-intent-back{margin:10px 0 0;font-size:11.5px;font-weight:650;color:var(--t2)}
