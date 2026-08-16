@@ -16,7 +16,29 @@ import {
 import { planForUser, PAST_DUE_GRACE_MS as SERVER_GRACE_MS } from '../../api/_lib/plans.js'
 
 const DAY = 86_400_000
-const NOW = Date.UTC(2026, 7, 12, 12, 0, 0)
+// NOW is the REAL clock, deliberately — do not pin it back to a literal date.
+//
+// This was `Date.UTC(2026, 7, 12, 12, 0, 0)` and it was a time bomb that duly
+// detonated: the suite passed 484/484 and then failed mid-session with nothing
+// in the diff. `billingAlert` and `isWithinPastDueGrace` both accept an injected
+// `now`, so they were never the problem — but `planForUser({ subscription })`
+// takes no clock and reads `Date.now()` internally. Against a frozen fixture its
+// 7-day grace window simply expired in real time, turning "keeps Pro" into
+// "loses it" on a date nobody chose.
+//
+// Anchoring here to the real clock makes every fixture relative, so the offsets
+// below mean what they say (`NOW - 3 * DAY` is genuinely three days ago) and the
+// suite is stable forever. The margins absorb the few milliseconds between this
+// line and `planForUser`'s own `Date.now()`: the tightest is a full day.
+//
+// The millisecond-precision boundary test stays exact because it passes NOW in
+// explicitly and never calls `planForUser`.
+//
+// The real defect is upstream — a pure plan-resolution function reading an
+// ambient clock is untestable by construction. The fix is an injectable `now`
+// defaulting to `Date.now()`, which is additive and backwards-compatible, but
+// `api/_lib/plans.js` is founder-gated. Logged in src/data/pipeline.js.
+const NOW = Date.now()
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
 // A comment may legitimately NAME the thing it explains why we avoided — only
