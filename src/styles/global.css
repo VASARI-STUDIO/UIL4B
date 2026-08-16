@@ -5294,9 +5294,12 @@ html.lenis,html.lenis body{height:auto}
 }
 
 /* ══ Sales / home page (home-) ══ */
-.home{position:relative;overflow-x:clip;background:
-  radial-gradient(circle at 50% 5%,color-mix(in srgb,var(--accent) 8%,transparent),transparent 30rem),
-  var(--bg-0)}
+/* The accent radial wash is GONE. V2's ground is warm bone (--bg-0 #EFEEE9) and
+   content floats on white --surf cards above it; the spec is explicit that the
+   page is not tinted with the accent hue, and the blue wash over the bone read
+   as a colour cast rather than as depth.
+   Docs: docs/reference/design-language-v2.md#page-background */
+.home{position:relative;overflow-x:clip;background:var(--bg-0)}
 .home::before{content:"";position:absolute;inset:0 0 auto;height:760px;pointer-events:none;opacity:.46;background-image:
   linear-gradient(color-mix(in srgb,var(--t0) 4%,transparent) 1px,transparent 1px),
   linear-gradient(90deg,color-mix(in srgb,var(--t0) 4%,transparent) 1px,transparent 1px);
@@ -5327,63 +5330,17 @@ html.lenis,html.lenis body{height:auto}
    cannot make the hero taller than the screen it is measured against. Clamped at
    980px so an ultra-tall monitor does not stretch the copy into a void, and
    floored by the content itself via min-height on a flow element. */
-.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:min(100svh,980px);margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-9)) 24px var(--s-8)}
-.home-hero-core{position:relative;z-index:2;max-width:790px;margin:70px auto 0}
-/* ── Hero satellites: the eleven tools that are live today ──────────────────
-   Source order is the reading order and never changes. On wide screens the
-   items are PLACED (authored offsets below, deterministic — never randomised)
-   so the breadth of the toolset is visible around a collision-free centre
-   column; from 1024px down they collapse to a calm source-ordered grid.
-   Labels never truncate, and every item stays a real link at every width. */
-.hsat{position:absolute;z-index:4;inset:calc(var(--nav-top) + var(--nav-h) + 16px) 1% 40px;pointer-events:none}
-.hsat-list{position:relative;height:100%;list-style:none}
-.hsat-item{position:absolute;pointer-events:auto;will-change:transform}
-/* Zones, in source order — see HOME_SATELLITES in toolTree.js. */
-.hsat-item:nth-child(1){left:5%;top:14%}      /* Palette · upper left */
-.hsat-item:nth-child(2){left:0.5%;top:41%}    /* Semantic · left */
-.hsat-item:nth-child(3){left:6%;top:68%}      /* Tint · lower left */
-.hsat-item:nth-child(4){right:4%;top:11%}     /* Gradient Generator · upper right */
-.hsat-item:nth-child(5){right:1%;top:38%}     /* Contrast · right */
-.hsat-item:nth-child(6){right:5%;top:64%}     /* Icon Library · outer right */
-.hsat-item:nth-child(7){right:16%;top:88%}    /* File Converter · lower right */
-.hsat-item:nth-child(8){left:0;top:90%}       /* Aspect & Resolution · lower outer edge */
-.hsat-item:nth-child(9){left:19%;top:1%}      /* Font Gallery · upper inner left */
-.hsat-item:nth-child(10){right:25%;top:1%}    /* Font Pair · upper inner right */
-.hsat-item:nth-child(11){left:44%;top:1%}     /* Type Scale · upper centre */
-/* Small authored tilts — enough irregularity to read as real breadth, never
-   enough to hurt legibility or the hit area. */
-.hsat-item:nth-child(1) .hsat-link{transform:rotate(-2.5deg)}
-.hsat-item:nth-child(2) .hsat-link{transform:rotate(2deg)}
-.hsat-item:nth-child(3) .hsat-link{transform:rotate(-1.25deg)}
-.hsat-item:nth-child(4) .hsat-link{transform:rotate(2.75deg)}
-.hsat-item:nth-child(5) .hsat-link{transform:rotate(-1.75deg)}
-.hsat-item:nth-child(6) .hsat-link{transform:rotate(1.5deg)}
-.hsat-item:nth-child(7) .hsat-link{transform:rotate(-2.25deg)}
-.hsat-item:nth-child(8) .hsat-link{transform:rotate(1.75deg)}
-.hsat-item:nth-child(9) .hsat-link{transform:rotate(1.5deg)}
-.hsat-item:nth-child(10) .hsat-link{transform:rotate(-1.75deg)}
-.hsat-item:nth-child(11) .hsat-link{transform:rotate(.75deg)}
-.hsat-link{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:9px;min-height:46px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-l);background:color-mix(in srgb,var(--bg-1) 97%,transparent);box-shadow:var(--shadow-s);text-decoration:none;backdrop-filter:blur(10px);transition:border-color var(--t),background var(--t),box-shadow var(--t)}
-.hsat-link:hover{border-color:color-mix(in srgb,var(--hue,var(--accent)) 50%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 8%,var(--bg-1));box-shadow:var(--shadow-m);text-decoration:none}
-.hsat-link:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:3px}
-.hsat-icon{display:grid;place-items:center;width:28px;height:28px;border:1px solid color-mix(in srgb,var(--hue,var(--accent)) 28%,var(--border));border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 8%,var(--bg-1));color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));transition:background var(--t),border-color var(--t)}
-.hsat-icon svg{width:17px;height:17px}
-.hsat-link:hover .hsat-icon,.hsat-link:focus-visible .hsat-icon{border-color:color-mix(in srgb,var(--hue,var(--accent)) 48%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 15%,var(--bg-1))}
-.hsat-copy{display:flex;min-width:0;flex-direction:column;gap:1px}
-.hsat-label{font-size:var(--fs-caption);font-weight:640;line-height:1.3;color:var(--t0);white-space:nowrap}
-.hsat-family{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.08em;text-transform:uppercase;line-height:1.3;color:var(--t2);white-space:nowrap}
-.hsat-family::before{content:"→ "}
-.hsat-link:hover .hsat-family,.hsat-link:focus-visible .hsat-family{color:color-mix(in srgb,var(--hue,var(--accent)) 45%,var(--t0))}
-
-/* Decorative convergence proxies. Created by useHomeMotion ONLY when GSAP has
-   loaded on a wide screen, and removed on teardown — nothing here is ever a
-   control, and nothing the visitor needs waits on it. */
-.hsat-proxy-layer{position:absolute;inset:0;z-index:5;pointer-events:none}
-.hsat-proxy{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 9px;border-radius:var(--radius-l);border:1px solid color-mix(in srgb,var(--hue,var(--accent)) 45%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 16%,var(--bg-1));color:var(--hue,var(--accent));font-family:var(--font);font-size:var(--fs-micro);font-weight:650;white-space:nowrap;opacity:0;will-change:transform,opacity}
-.hsat-proxy svg{width:15px;height:15px;flex:0 0 auto}
+.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:min(100svh,980px);margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-7)) 24px var(--s-8)}
+/* The 70px top margin here was headroom for the absolutely-positioned satellite
+   field, which V2 removed. Keeping it pushed the hero's primary CTA below an
+   800px fold once the command bar arrived — see the below-the-fold test. */
+/* Wide enough that the 96px headline breaks in two or three lines rather than
+   four — the sub-copy and command bar keep their own narrower measures below. */
+.home-hero-core{position:relative;z-index:2;max-width:1080px;margin:0 auto}
 .home-hero-kicker{display:inline-flex;align-items:center;gap:9px;margin:0 auto var(--s-5);padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-1) 88%,transparent);box-shadow:var(--shadow-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:var(--t1);backdrop-filter:blur(10px)}
 .home-hero-kicker-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 12%,transparent)}
-.home-hero-h1{font-size:var(--fs-display);font-weight:720;letter-spacing:-.044em;line-height:.98;color:var(--t0);text-wrap:balance}
+/* V2 display scale — design-language-v2.md, "Display scale". */
+.home-hero-h1{font-size:clamp(46px,6.6vw,96px);font-weight:800;letter-spacing:-.045em;line-height:.98;color:var(--t0);text-wrap:balance}
 /* Each headline line is its own block so the two phrases break cleanly instead of
    colliding ("design systembefore"); the inner span is inline-block so GSAP's
    yPercent slide-up reveal (useHomeMotion) has a transformable box to animate. */
@@ -5413,25 +5370,29 @@ html.lenis,html.lenis body{height:auto}
 
 /* `both` fill supplies the pre-paint hidden state, so no JS arming class is
    needed to prevent a flash. */
-.home-hero-line-in{animation:home-hero-clip-up .92s var(--ease-entrance) both}
-.home-hero-line:nth-of-type(2) .home-hero-line-in{animation-delay:.1s}
-.home-hero-sub{animation:home-hero-rise .66s var(--ease-entrance) .34s both}
-.home-hero-cta>*{animation:home-hero-rise .6s var(--ease-entrance) .46s both}
-.home-hero-cta>*+*{animation-delay:.55s}
-.home-hero-hint{animation:home-hero-rise .56s var(--ease-entrance) .62s both}
+.home-hero-stats{animation:home-hero-rise .5s var(--ease-entrance) both}
+.home-hero-line-in{animation:home-hero-clip-up .92s var(--ease-entrance) .08s both}
+.home-hero-line:nth-of-type(2) .home-hero-line-in{animation-delay:.18s}
+.home-hero-sub{animation:home-hero-rise .66s var(--ease-entrance) .42s both}
+/* The command bar is the hero's primary instrument, so it arrives before the
+   buttons do — the visitor can start typing while the CTAs are still settling. */
+.hcmd{animation:home-hero-rise .62s var(--ease-entrance) .52s both}
+.home-hero-cta>*{animation:home-hero-rise .6s var(--ease-entrance) .64s both}
+.home-hero-cta>*+*{animation-delay:.72s}
+.home-hero-hint{animation:home-hero-rise .56s var(--ease-entrance) .8s both}
 
 /* Reduced motion settles the hero instantly. Mirrors prefersReducedMotion() in
    useHomeMotion.js exactly: an explicit `data-reduced-motion` attribute wins
    over the OS query in BOTH directions, so a visitor who turned motion back on
    inside the app still gets the entrance. */
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.home-hero-line-in,.home-hero-sub,.home-hero-cta>*,.home-hero-hint){animation:none}
+  html:not([data-reduced-motion="false"]) :is(.home-hero-stats,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
 }
-html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-hero-cta>*,.home-hero-hint){animation:none}
-.home-hero-line--accent{color:var(--accent)}
-.home-hero-sub{font-size:var(--fs-lede);color:var(--t1);line-height:1.5;max-width:630px;margin:var(--s-5) auto 0;text-wrap:pretty}
+html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+/* V2 body: 54ch measure, --mute, line-height 1.65. */
+.home-hero-sub{font-size:var(--fs-lede);font-weight:400;color:var(--t2);line-height:1.6;max-width:54ch;margin:var(--s-5) auto 0;text-wrap:pretty}
 .home-hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:var(--s-6)}
-.home-hero-hint{font-size:var(--fs-caption);color:var(--t2);margin-top:var(--s-4)}
+.home-hero-hint{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:var(--s-4)}
 
 /* Trust / stat strip (honest — no fabricated logos) */
 .home-trust{margin-top:var(--s-8);text-align:center}
@@ -5448,6 +5409,255 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-her
 .prev-traffic i:nth-child(1){background:color-mix(in srgb,#ff5f57 60%,var(--bg-3))}
 .prev-traffic i:nth-child(2){background:color-mix(in srgb,#febc2e 60%,var(--bg-3))}
 .prev-traffic i:nth-child(3){background:color-mix(in srgb,#28c840 60%,var(--bg-3))}
+
+/* ══ V2 homepage ═══════════════════════════════════════════════════════════════
+   Built against docs/reference/design-language-v2.md. Colour comes entirely
+   from existing role tokens, so this block inherits the V2 palette the moment
+   feat/v2-token-foundation remaps them — nothing here names a hex.
+
+   ⚠️ ACCENT CONTRAST (founder, 2026-08-16): the V2 accent is blue #0F6FFF,
+   which measures ≈3.85:1 on the page ground — fine for fills, borders, icons,
+   large display text and focus rings, and BELOW the 4.5:1 floor for normal
+   text. Every accent-coloured string in this block that is smaller than large
+   text therefore uses --accent-strong, never --accent. If you add an accent
+   text colour here, check its size first.
+
+   The five V2 tokens this block consumes — --hi, --hi-fg, --radius-3xl,
+   --shadow-cmd, --shadow-panel — are owned by feat/v2-token-foundation. */
+
+/* ── Shared V2 section furniture ── */
+.hbrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.hh2{margin-top:var(--s-4);font-size:clamp(30px,3.8vw,48px);font-weight:800;letter-spacing:-.04em;line-height:1.04;color:var(--t0);text-wrap:balance}
+.hlede{margin-top:var(--s-4);max-width:54ch;font-size:var(--fs-lede);font-weight:400;line-height:1.6;color:var(--t2);text-wrap:pretty}
+
+/* ── Hero ────────────────────────────────────────────────────────────────────
+   Composition is the page's existing centred measure; every TYPE and SPACING
+   value is the V2 display scale. */
+.home-hero-stats{display:flex;flex-wrap:wrap;justify-content:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.home-hero-stat{display:inline-flex;align-items:center;white-space:nowrap}
+.home-hero-stat-sep{padding:0 10px;opacity:.5}
+
+/* The single --hi element on this viewport. It is a marker pen, and the budget
+   is one per screen — see design-language-v2.md. `box-decoration-break:clone`
+   keeps both halves of a wrapped mark rounded and padded. */
+.home-mark{background:var(--hi);color:var(--hi-fg);border-radius:var(--radius-xs);padding:0 .1em;margin:0 -.02em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+
+/* ── Command bar (structural pattern 2) ── */
+.hcmd{max-width:660px;margin:var(--s-5) auto 0;text-align:left}
+/* Short laptop screens: the hero's own rhythm tightens so the primary CTA and
+   the trust line stay above the fold at 1280×800, which is the founder-reported
+   condition the below-the-fold test guards. Type sizes are untouched — only the
+   gaps between blocks give way. */
+@media(max-height:900px){
+  .home-hero{padding-top:calc(var(--nav-top) + var(--nav-h) + var(--s-6))}
+  .home-hero-sub{margin-top:var(--s-4)}
+  .hcmd{margin-top:var(--s-4)}
+  .hcmd-chips{margin-top:var(--s-3)}
+  .home-hero-cta{margin-top:var(--s-5)}
+}
+.hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
+.hcmd-bar:focus-within{border-color:var(--accent)}
+.hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-strong)}
+.hcmd-input{min-width:0;height:56px;border:0;background:none;color:var(--t0);font-family:var(--font);font-size:var(--fs-body);font-weight:500}
+.hcmd-input::placeholder{color:var(--t3)}
+.hcmd-input:focus{outline:none}
+.hcmd-kbd{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.hcmd-kbd:hover{background:var(--hvr);border-color:var(--bh)}
+.hcmd-kbd:active{transform:scale(.96)}
+.hcmd-kbd:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hcmd-kbd kbd{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;color:var(--t2)}
+
+.hcmd-results{margin-top:var(--s-3);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);overflow:hidden}
+.hcmd-list{list-style:none}
+.hcmd-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:13px 16px;border-top:1px solid var(--border);text-decoration:none;transition:background var(--dur-1) var(--ease-standard)}
+.hcmd-list li:first-child .hcmd-row{border-top:0}
+.hcmd-row:hover{background:var(--hvr);text-decoration:none}
+.hcmd-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.hcmd-row-glyph{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--accent)}
+.hcmd-row-glyph svg{width:17px;height:17px}
+.hcmd-row-body{display:flex;min-width:0;flex-direction:column;gap:2px}
+.hcmd-row-title{font-size:var(--fs-body-s);font-weight:700;letter-spacing:-.01em;color:var(--t0)}
+.hcmd-row-desc{font-size:var(--fs-caption);line-height:1.45;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcmd-row-cat{flex:0 0 auto;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong);white-space:nowrap}
+.hcmd-empty{padding:18px 16px;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
+.hcmd-empty strong{color:var(--t0)}
+
+.hcmd-chips{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:var(--s-4)}
+.hcmd-chips-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.hcmd-chip{min-height:34px;padding:0 14px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.04em;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.hcmd-chip:hover{color:var(--t0);border-color:var(--t0);transform:translateY(-2px)}
+.hcmd-chip:active{transform:scale(.97)}
+.hcmd-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ── V2 pill treatments ──
+   Three, and no others: primary (accent), inverse (ink) and quiet. `ui-pill-hi`
+   is the inverted pricing panel's CTA — the panel is ink-on-ink, so its action
+   takes the highlight rather than the accent, which would vanish against it. */
+.ui-pill-quiet{background:var(--bg-1);color:var(--t0);border-color:var(--border)}
+.ui-pill-quiet:hover{border-color:var(--t0);color:var(--t0)}
+.ui-pill-hi{background:var(--hi);color:var(--hi-fg);border-color:var(--hi)}
+.ui-pill-hi:hover{color:var(--hi-fg);box-shadow:var(--shadow-s)}
+
+/* ── Sticky scroll section (structural pattern 3) ── */
+.hsteps{padding-top:var(--sec-pad);scroll-margin-top:calc(var(--nav-clear) + var(--s-4))}
+.hsteps-head{max-width:720px}
+.hsteps-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-7);margin-top:var(--s-8)}
+.hsteps-rail{list-style:none;display:flex;flex-direction:column;gap:var(--s-8)}
+.hsteps-sticky{min-width:0}
+
+.hstep{max-width:54ch;transition:opacity var(--dur-3) var(--ease-standard)}
+.hstep-num{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.hstep-num-sep{opacity:.5}
+.hstep-title{margin-top:var(--s-3);font-size:clamp(26px,2.8vw,36px);font-weight:800;letter-spacing:-.03em;line-height:1.08;color:var(--t0);text-wrap:balance}
+.hstep-body{margin-top:var(--s-3);font-size:var(--fs-body);line-height:1.65;color:var(--t2);text-wrap:pretty}
+.hstep-points{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:var(--s-4)}
+.hstep-points li{display:flex;align-items:flex-start;gap:10px;font-size:var(--fs-body-s);line-height:1.5;color:var(--t1)}
+.hstep-tick{flex:0 0 auto;margin-top:3px;color:var(--accent)}
+/* `align-self` matters: the step is a flex column, so an inline-flex child
+   stretches to the full measure and the underline becomes a full-width rule
+   instead of sitting under the words. */
+.hstep-cta{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;margin-top:var(--s-5);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t0);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:4px;transition:border-color var(--dur-2) var(--ease-standard),gap var(--dur-2) var(--ease-standard)}
+.hstep-cta:hover{border-color:var(--t0);gap:12px;text-decoration:none}
+.hstep-cta:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* ── Tools grid (structural pattern 7) ── */
+.htools{padding-top:var(--sec-pad)}
+.htools-head{max-width:720px}
+.htools-grid{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-4);margin-top:var(--s-7)}
+.htool{position:relative;display:flex;flex-direction:column;padding:26px;border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1);transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+/* The V2 hover language: border to ink AND a 3px lift, together. */
+.htool:hover{border-color:var(--t0);transform:translateY(-3px)}
+.htool:focus-within{border-color:var(--t0)}
+.htool-head{display:flex;align-items:center;gap:12px;text-decoration:none}
+.htool-head:hover{text-decoration:none}
+.htool-head:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--radius-xs)}
+.htool-glyph{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--hue,var(--accent))}
+.htool-glyph svg{width:19px;height:19px}
+.htool-title{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:var(--t0)}
+.htool-desc{margin-top:12px;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
+.htool-links{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--s-4)}
+.htool-link{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-0);color:var(--t1);font-size:var(--fs-caption);font-weight:500;text-decoration:none;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.htool-link:hover{color:var(--t0);border-color:var(--t0);text-decoration:none}
+.htool-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.htool-soon{display:inline-flex;padding:2px 7px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:9px;font-style:normal;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.htool-open{margin-top:auto;padding-top:var(--s-4);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);transition:color var(--dur-2) var(--ease-standard)}
+.htool:hover .htool-open{color:var(--t0)}
+
+/* ── Community strip ── */
+.hcomm{padding-top:var(--sec-pad)}
+.hcomm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-5);flex-wrap:wrap}
+.hcomm-tabs{display:flex;gap:6px}
+.hcomm-tab{min-height:36px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t2);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.hcomm-tab:hover{color:var(--t0);border-color:var(--bh)}
+.hcomm-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hcomm-tab[aria-selected="true"]{background:var(--t0);border-color:var(--t0);color:var(--bg-0)}
+.hcomm-note{margin-top:var(--s-4);font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
+.hcomm-grid{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-4);margin-top:var(--s-5)}
+.hcomm-card{display:flex}
+.hcomm-card-link{display:flex;flex:1;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--bg-1);overflow:hidden;text-decoration:none;transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.hcomm-card-link:hover{border-color:var(--t0);transform:translateY(-3px);text-decoration:none}
+.hcomm-card-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Generated thumbnails — the two stops arrive as runtime custom properties
+   (--hcomm-c1/--hcomm-c2, set from the data in Home.jsx), so no external asset
+   and no Storage dependency. Renders offline. */
+.hcomm-card-art{display:block;height:132px;background:linear-gradient(135deg,var(--hcomm-c1,var(--accent)),var(--hcomm-c2,var(--accent-soft)))}
+.hcomm-card-body{display:flex;flex-direction:column;gap:6px;padding:16px 16px 0}
+.hcomm-card-name{font-size:var(--fs-body-s);font-weight:700;letter-spacing:-.01em;line-height:1.35;color:var(--t0)}
+.hcomm-card-meta{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;color:var(--t2)}
+.hcomm-card-cat{padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-pill)}
+.hcomm-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding:14px 16px 16px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;color:var(--t3)}
+.hcomm-card-tag{padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-pill);color:var(--t2)}
+.hcomm-cta{margin-top:var(--s-6)}
+
+/* ── Pricing — the inverted panel (structural pattern 6). One per page. ── */
+.hprice{padding-top:var(--sec-pad)}
+.hprice-panel{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-7);padding:clamp(28px,4vw,64px);border-radius:var(--radius-3xl);background:var(--t0);color:var(--bg-0)}
+.hprice-eyebrow{color:var(--bg-0);opacity:.72}
+.hprice-title{color:var(--bg-0)}
+.hprice-hi{color:var(--hi)}
+.hprice-lede{margin-top:var(--s-4);max-width:46ch;font-size:var(--fs-body);line-height:1.65;color:var(--bg-0);opacity:.76;text-wrap:pretty}
+.hprice-includes{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:var(--s-5)}
+.hprice-includes li{display:flex;align-items:flex-start;gap:10px;font-size:var(--fs-body-s);line-height:1.5;color:var(--bg-0);opacity:.88}
+.hprice-includes svg{flex:0 0 auto;margin-top:3px;color:var(--hi)}
+.hprice-rows{list-style:none;display:flex;flex-direction:column;gap:8px}
+.hprice-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"cadence amount" "total note";gap:4px 14px;align-items:baseline;padding:16px 18px;border:1px solid color-mix(in srgb,var(--bg-0) 18%,transparent);border-radius:var(--radius-l);transition:border-color var(--dur-2) var(--ease-standard)}
+.hprice-row:hover{border-color:color-mix(in srgb,var(--bg-0) 40%,transparent)}
+.hprice-row[data-best]{border-color:var(--hi)}
+.hprice-cadence{grid-area:cadence;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--bg-0);opacity:.7}
+.hprice-amount{grid-area:amount;display:inline-flex;align-items:baseline;gap:3px;color:var(--bg-0)}
+.hprice-amount strong{font-size:28px;font-weight:800;letter-spacing:-.03em}
+.hprice-per{font-size:var(--fs-caption);opacity:.62}
+.hprice-total{grid-area:total;font-size:var(--fs-caption);color:var(--bg-0);opacity:.66}
+.hprice-note{grid-area:note;text-align:right;font-size:var(--fs-caption);color:var(--bg-0);opacity:.66}
+.hprice-row[data-best] .hprice-note{color:var(--hi);opacity:1}
+.hprice-cta{margin-top:var(--s-5);width:100%}
+.hprice-fine{margin-top:var(--s-4);font-size:var(--fs-caption);line-height:1.5;color:var(--bg-0);opacity:.6}
+
+/* ── Responsive ──────────────────────────────────────────────────────────────
+   The two-column split is the ONLY place the sticky panel exists. Keep the
+   981px floor in step with the matchMedia guard in useHomeMotion.js — below it
+   there is no sticky column, so there is nothing for the scroll sync to move. */
+@media(min-width:981px){
+  .hsteps-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.06fr);gap:var(--s-8);align-items:start}
+  .hsteps-rail{gap:var(--s-10)}
+  /* Each step gets a screen of its own to sync against. */
+  .hstep{min-height:62vh;display:flex;flex-direction:column;justify-content:center;opacity:.4}
+  .hstep[data-active="true"]{opacity:1}
+  .hsteps-sticky{position:sticky;top:calc(var(--nav-clear) + var(--s-4))}
+  .hsteps-sticky .hw-shell{box-shadow:var(--shadow-panel)}
+  /* The sticky column is roughly half the page, so the workbench's 118px tab
+     floor overflowed its own strip and clipped "Typography". The tabs share the
+     width evenly here and the icons carry the recognition. */
+  .hsteps-sticky .hw-tab{min-width:0;padding:0 8px;gap:6px}
+  .hprice-panel{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:var(--s-8);align-items:center}
+}
+@media(max-width:1180px){
+  .htools-grid,.hcomm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:768px){
+  .hcmd-bar{min-height:54px;padding-left:14px}
+  .hcmd-input{height:50px}
+  .hcmd-row-desc{white-space:normal}
+  .hcomm-head{align-items:flex-start}
+}
+@media(max-width:640px){
+  .htools-grid,.hcomm-grid{grid-template-columns:minmax(0,1fr)}
+  .hprice-row{grid-template-columns:minmax(0,1fr);grid-template-areas:"cadence" "amount" "total" "note"}
+  .hprice-note{text-align:left}
+}
+@media(max-width:480px){
+  .home-hero-stat-sep{padding:0 7px}
+  .hcmd{margin-top:var(--s-5)}
+  .hcmd-bar{grid-template-columns:auto minmax(0,1fr);padding-right:14px}
+  /* The keycap names a shortcut a phone has no keyboard for. */
+  .hcmd-kbd{display:none}
+  .hcmd-row{grid-template-columns:auto minmax(0,1fr);gap:10px;padding:12px 14px}
+  .hcmd-row-cat{display:none}
+  .hcomm-tabs{width:100%}
+  .hcomm-tab{flex:1 1 0;padding:0 8px}
+  .hstep-cta,.hcmd-chip{min-height:40px}
+}
+@media(max-width:380px){
+  .hcmd-chips-label{display:none}
+  .htool{padding:20px}
+  .hprice-panel{padding:22px}
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   The global block at the top of this file already clamps all four properties.
+   What it cannot do is undo LAYOUT that only makes sense with scroll sync: with
+   motion off the step sync never runs, so no step would ever become active and
+   every step would sit stranded at opacity .4. Below: full opacity, no sticky,
+   no reserved screen height — the same content as a plain readable stack, and
+   the workbench's own tablist is the control. Mirrors prefersReducedMotion() in
+   useHomeMotion.js — an explicit attribute wins over the OS query both ways. */
+:where(html[data-reduced-motion="true"]) .hstep{opacity:1;min-height:0}
+:where(html[data-reduced-motion="true"]) .hsteps-sticky{position:static}
+@media(prefers-reduced-motion:reduce){
+  :where(html:not([data-reduced-motion="false"])) .hstep{opacity:1;min-height:0}
+  :where(html:not([data-reduced-motion="false"])) .hsteps-sticky{position:static}
+}
+
 
 /* ══ Home mini-workbench (hw-) ═══════════════════════════════════════════════
    The calm half of the hero's chaos → calm story: eight real tools above,
@@ -5486,18 +5696,6 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-her
 .hw-chrome-live{display:inline-flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
 .hw-chrome-live i{width:6px;height:6px;border-radius:50%;background:var(--hue,var(--accent))}
 @media(max-width:600px){.hw-chrome-crumb .hw-chrome-route,.hw-chrome-crumb .hw-chrome-sep:first-of-type{display:none}.hw-chrome-live{font-size:0;gap:0}}
-
-/* The "arrival" beat. The ring-and-crosshair splash that used to fire here is
-   GONE — it read as a second, unrelated animation starting exactly as the first
-   one finished, which is what the founder meant by "the splash animation isn't
-   what I'm after". What is left is one quiet settle of the shell itself: the
-   panel takes focus because it stops moving, not because something flashes at
-   it. Still purely decorative on an already-visible, already-usable shell. */
-.home[data-home-converge="converged"] .hw-shell{animation:hw-shell-arrive var(--dur-5) var(--ease-entrance) 1}
-@keyframes hw-shell-arrive{
-  from{transform:translateY(8px) scale(.992)}
-  to{transform:none}
-}
 
 /* Tabs — the active one lifts onto the panel surface, so selection is carried
    by shape and border as well as colour. */
@@ -5542,7 +5740,10 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-her
 
 /* 1 · Palette */
 .hw-pal{display:flex;gap:0;height:154px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-s);list-style:none}
-.hw-pal-sw{position:relative;flex:1 1 0;min-width:0;display:flex}
+/* V2 signature: a hovered swatch grows and pushes its neighbours (flex 1 → 1.8).
+   Geometry, so it takes --dur-3, never anything faster. */
+.hw-pal-sw{position:relative;flex:1 1 0;min-width:0;display:flex;transition:flex-grow var(--dur-3) var(--ease-standard)}
+.hw-pal-sw:hover,.hw-pal-sw:focus-within{flex-grow:1.8}
 .hw-pal-lock{position:absolute;top:0;right:0;display:grid;place-items:center;width:40px;height:40px;border:none;background:none;border-radius:50%;cursor:pointer;opacity:.5;transition:opacity var(--t)}
 .hw-pal-sw:hover .hw-pal-lock,.hw-pal-lock[aria-pressed="true"],.hw-pal-lock:focus-visible{opacity:1}
 .hw-pal-copy{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:0 6px 12px;border:none;background:none;cursor:pointer}
@@ -5748,45 +5949,6 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-her
   .home-learn{grid-template-columns:repeat(2,1fr)}
   .surface-grid{grid-template-columns:repeat(2,1fr)}
 }
-/* ── Satellites: the calm static arrangement ─────────────────────────────────
-   At or below 1280px, and whenever motion is reduced, the hero copy no longer
-   has a collision-free centre at every zoom and font size — so the field becomes
-   a plain, source-ordered grid directly under the copy rather than a squeezed
-   desktop composition. The `!important` transform resets matter: an orientation
-   change or a resize past the breakpoint must never leave a stale GSAP transform
-   behind. Keep this breakpoint in step with the matchMedia guard in
-   useHomeMotion.js — the authored field and its proxies belong together. */
-@media(max-width:1280px){
-  .hsat{position:static;inset:auto;margin:var(--s-6) auto 0;padding:0;pointer-events:auto}
-  .home-hero{min-height:auto}
-  .home-hero-core{margin-top:0}
-  .hsat-list{position:static;height:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-  .hsat-item{position:static;transform:none!important}
-  .hsat-link{height:100%;transform:none!important;backdrop-filter:none}
-  .hsat-proxy-layer{display:none}
-}
-/* Reduced motion gets the same calm static field at ANY width. The motion-mode
-   ancestor is wrapped in :where() so it contributes no specificity — otherwise
-   it would out-rank the width-based column rules further down and strand a
-   4-column grid at 320px. */
-:where(html[data-reduced-motion="true"]) .home-hero{min-height:auto}
-:where(html[data-reduced-motion="true"]) .home-hero-core{margin-top:0}
-:where(html[data-reduced-motion="true"]) .hsat{position:static;inset:auto;margin:var(--s-6) auto 0;padding:0;pointer-events:auto}
-:where(html[data-reduced-motion="true"]) .hsat-list{position:static;height:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-:where(html[data-reduced-motion="true"]) .hsat-item{position:static;transform:none!important}
-:where(html[data-reduced-motion="true"]) .hsat-link{height:100%;transform:none!important;backdrop-filter:none}
-:where(html[data-reduced-motion="true"]) .hsat-proxy-layer{display:none}
-:where(html[data-reduced-motion="true"]) .hw-shell{animation:none!important}
-@media(prefers-reduced-motion:reduce){
-  :where(html:not([data-reduced-motion="false"])) .home-hero{min-height:auto}
-  :where(html:not([data-reduced-motion="false"])) .home-hero-core{margin-top:0}
-  :where(html:not([data-reduced-motion="false"])) .hsat{position:static;inset:auto;margin:var(--s-6) auto 0;padding:0;pointer-events:auto}
-  :where(html:not([data-reduced-motion="false"])) .hsat-list{position:static;height:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-  :where(html:not([data-reduced-motion="false"])) .hsat-item{position:static;transform:none!important}
-  :where(html:not([data-reduced-motion="false"])) .hsat-link{height:100%;transform:none!important;backdrop-filter:none}
-  :where(html:not([data-reduced-motion="false"])) .hsat-proxy-layer{display:none}
-  :where(html:not([data-reduced-motion="false"])) .hw-shell{animation:none!important}
-}
 @media(max-width:768px){
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
   .pnav-mobile{display:inline-flex}
@@ -5816,9 +5978,6 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-her
   .home-foot-feat{grid-template-columns:repeat(2,1fr)}
   .home-foot-cols{grid-template-columns:repeat(2,1fr);gap:24px 32px}
   .home-hero{padding-top:calc(var(--nav-top) + var(--nav-h) + var(--s-8))}
-  /* No convergence at this width — just the eight links as a compact list,
-     immediately followed by the workbench. */
-  .hsat-list{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hw-tab{flex:1 1 0;min-width:74px;padding:0 8px;font-size:var(--fs-caption)}
 }
 @media(max-width:480px){
@@ -5831,12 +5990,6 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-her
   .home-hero-cta{flex-direction:column}
   .home-hero-cta .ui-pill{width:100%}
   .home-hero{padding-inline:18px}
-  .home-hero-kicker{font-size:10px;letter-spacing:.055em}
-  /* Controls stack, labels stay complete (they wrap rather than truncate) and
-     touch targets keep clear of one another. */
-  .hsat{padding-inline:0}
-  .hsat-label,.hsat-family{white-space:normal}
-  .hsat-link{padding:9px 12px}
   .hw-head .home-h2{font-size:var(--fs-h3)}
   .hw-tabs{padding:6px 6px 0}
   .hw-tab{flex:1 0 auto;min-width:72px}
@@ -5852,10 +6005,6 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.home-her
 }
 @media(max-width:380px){
   .home-hero-sub{font-size:var(--fs-body)}
-  /* 320px floor: one column of links, and the four tabs stay ONE tablist —
-     they are allowed to scroll inside their own strip rather than wrap or
-     overflow the page. */
-  .hsat-list{grid-template-columns:1fr}
   .hw-panel{padding:14px}
   .hw-tab{flex:0 0 auto;min-width:0;padding:0 12px}
 }
