@@ -114,41 +114,68 @@ test('reduced motion settles the hero instantly, and an explicit opt-in wins', (
 
 // ── The font arrives before it can shift anything ───────────────────────────
 
-test('the font is self-hosted, not two third-party round trips', () => {
+test('the fonts are self-hosted, not two third-party round trips', () => {
   assert.ok(!/fonts\.googleapis\.com/.test(html),
     'the stylesheet request is back; the font URL is only discoverable after it parses')
   assert.ok(!/fonts\.gstatic\.com/.test(css), 'font files must be served from our own origin')
-  for (const f of ['public/fonts/outfit-latin.woff2', 'public/fonts/outfit-latin-ext.woff2']) {
+  // Design Language V2 replaced Outfit with two families: Manrope (--font/--serif)
+  // and JetBrains Mono (--mono, which V2 makes load-bearing rather than decorative).
+  for (const f of [
+    'public/fonts/manrope-latin.woff2', 'public/fonts/manrope-latin-ext.woff2',
+    'public/fonts/jetbrains-mono-latin.woff2', 'public/fonts/jetbrains-mono-latin-ext.woff2'
+  ]) {
     assert.ok(fs.existsSync(path.join(process.cwd(), f)), `${f} is missing`)
   }
   // OFL 1.1 permits redistribution; shipping the font means shipping the licence.
   assert.ok(fs.existsSync(path.join(process.cwd(), 'public/fonts/OFL.txt')))
 })
 
-test('the font is preloaded, in CORS mode', () => {
-  const link = /<link[^>]*rel="preload"[^>]*>/.exec(html)?.[0] || ''
-  assert.match(link, /outfit-latin\.woff2/)
-  assert.match(link, /as="font"/)
-  // Fonts are always fetched in CORS mode. A preload without `crossorigin`
-  // mismatches the real request and the file is downloaded twice.
-  assert.match(link, /crossorigin/)
+test('both families are preloaded, in CORS mode', () => {
+  const links = html.match(/<link[^>]*rel="preload"[^>]*>/g) || []
+  // BOTH, not just the UI face: V2 puts mono above the fold (nav wordmark,
+  // eyebrows, stat line), so a late mono arrival shifts first paint too.
+  for (const want of [/manrope-latin\.woff2/, /jetbrains-mono-latin\.woff2/]) {
+    const link = links.find((l) => want.test(l))
+    assert.ok(link, `no preload for ${want}`)
+    assert.match(link, /as="font"/)
+    // Fonts are always fetched in CORS mode. A preload without `crossorigin`
+    // mismatches the real request and the file is downloaded twice.
+    assert.match(link, /crossorigin/)
+  }
 })
 
-test('the variable axis covers every weight the design actually uses', () => {
+test('every authored weight sits inside the variable axis that renders it', () => {
   // global.css authors sixteen weights and ten are not multiples of 100. Static
   // instances cannot express those, so they were silently rounded — the hero h1
-  // asks for 720 and was rendering at 700.
+  // asks for 720 and was rendering at 700. Hence variable faces with a RANGE.
+  //
+  // The V2 families have narrower axes than Outfit's 100..900 — verified by
+  // reading the fvar table of the shipped files: Manrope 200..800, JetBrains
+  // Mono 100..800. A weight outside a family's axis is silently CLAMPED, which
+  // is the same silent-rounding failure this test was written to catch.
   const faces = css.match(/@font-face\{[^}]*\}/g) || []
   assert.ok(faces.length >= 1, 'expected self-hosted @font-face rules')
   for (const f of faces) {
-    assert.match(f, /font-weight:\s*100 900/,
-      'each face must declare the full variable range, or intermediate weights round')
+    assert.match(f, /font-weight:\s*\d{3} \d{3}/,
+      'each face must declare a variable RANGE, or intermediate weights round')
     assert.match(f, /font-display:\s*swap/)
   }
-  const used = [...css.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1]))
+  // Weights authored OUTSIDE the @font-face rules, i.e. real call sites.
+  const used = [...css.replace(/@font-face\{[^}]*\}/g, '').matchAll(/font-weight:\s*(\d{3})/g)]
+    .map((m) => Number(m[1]))
   const odd = [...new Set(used.filter((w) => w % 100 !== 0))]
   assert.ok(odd.length > 0, 'expected intermediate weights; if these were removed, update this test')
+  // The intermediate weights are the whole reason for a variable font, so they
+  // must be renderable by BOTH families — the tighter axis, 200..800, binds.
   for (const w of odd) {
-    assert.ok(w >= 100 && w <= 900, `weight ${w} sits outside the declared axis`)
+    assert.ok(w >= 200 && w <= 800, `intermediate weight ${w} sits outside Manrope's 200..800 axis`)
   }
+  // Two call sites still ask for 900 (Palette Builder's preview/export headings)
+  // and clamp to Manrope's 800. V2's own display scale tops out at 800, so this
+  // is accepted rather than fixed — but it is BOUNDED here on purpose. A third
+  // out-of-axis weight fails this test so the next author has to make a choice
+  // instead of inheriting a silent clamp.
+  const outOfAxis = used.filter((w) => w < 200 || w > 800)
+  assert.deepStrictEqual(outOfAxis, [900, 900],
+    'a new out-of-axis weight appeared; it will be silently clamped — pick one inside 200..800')
 })

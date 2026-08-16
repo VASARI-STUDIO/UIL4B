@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>UI L4B | Design Toolkit</title>
 <meta name="description" content="Free browser-based design toolkit for colour systems, icons, emoji, image conversion, aspect ratios, gradients and contrast checks.">
-<meta name="theme-color" content="#FAFAFA">
+<meta name="theme-color" content="#EFEEE9">
 <meta property="og:title" content="UI L4B | Design Toolkit">
 <meta property="og:description" content="Browser-based tools for colour systems, icons, emoji, imagery and interface validation.">
 <meta property="og:type" content="website">
@@ -35,29 +35,35 @@
   ]
 }
 </script>
-<!-- Outfit is self-hosted (see the @font-face block at the top of global.css for
-     why). Preloaded because the font is only DISCOVERED once the stylesheet
-     parses; without this it starts a round trip late and swaps mid-entrance.
+<!-- Manrope + JetBrains Mono are self-hosted (see the @font-face block at the top
+     of global.css for why). Preloaded because a font is only DISCOVERED once the
+     stylesheet parses; without this it starts a round trip late and swaps
+     mid-entrance. BOTH families are preloaded now: V2 makes mono load-bearing
+     above the fold (nav wordmark, eyebrows, stat line), so it is a first-paint
+     font rather than a detail font.
      Latin only — latin-ext is rare enough that preloading it would cost every
      visitor bandwidth to save a few. `crossorigin` is required even same-origin:
      fonts are fetched in CORS mode, and a preload without it is fetched twice. -->
-<link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* Critical theme base — applied before the main stylesheet loads so SVG icons
-   (stroke="currentColor") never flash black on dark mode first paint. */
-html[data-theme="dark"]{background:#0A0B0D;color:#e8e8e8;color-scheme:dark}
-html[data-theme="light"]{background:#FAFAFA;color:#0A0A0B;color-scheme:light}
+   (stroke="currentColor") never flash black on dark mode first paint. These
+   MUST track --bg-0/--t0 in global.css or the page repaints on stylesheet
+   arrival; V2 moved both, so both moved here. */
+html[data-theme="dark"]{background:#101012;color:#F2F1EC;color-scheme:dark}
+html[data-theme="light"]{background:#EFEEE9;color:#0F0F10;color-scheme:light}
 body{background:inherit;color:inherit}
 svg{color:inherit}
 #root{min-height:100vh}
-.boot-shell{min-height:100vh;padding:18px clamp(18px,4vw,48px);font-family:Outfit,system-ui,sans-serif}
+.boot-shell{min-height:100vh;padding:18px clamp(18px,4vw,48px);font-family:Manrope,system-ui,sans-serif}
 .boot-status{position:fixed;left:50%;bottom:18px;z-index:1;transform:translateX(-50%);font-size:11px;font-weight:600;letter-spacing:.04em;color:rgba(71,85,105,.72)}
 .boot-nav{display:flex;align-items:center;justify-content:space-between;max-width:1180px;height:52px;margin:0 auto;border:1px solid rgba(15,23,42,.1);border-radius:16px;padding:0 16px;background:rgba(255,255,255,.82)}
 .boot-mark{font-weight:800;letter-spacing:-.04em}
 .boot-nav-lines,.boot-actions{display:flex;gap:10px}
 .boot-line,.boot-action,.boot-copy,.boot-card{display:block;background:rgba(100,116,139,.13);overflow:hidden;position:relative}
 .boot-line::after,.boot-action::after,.boot-copy::after,.boot-card::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:boot-shimmer 1.4s ease-in-out infinite}
-.boot-line{width:72px;height:8px;border-radius:999px}.boot-action{width:76px;height:28px;border-radius:9px}
+.boot-line{width:72px;height:8px;border-radius:999px}.boot-action{width:76px;height:28px;border-radius:999px}
 .boot-main{max-width:980px;margin:0 auto;padding:clamp(72px,12vh,130px) 0 48px;text-align:center}
 .boot-kicker{width:180px;height:10px;margin:0 auto 24px}.boot-title{width:min(680px,88%);height:clamp(52px,8vw,86px);margin:0 auto 18px;border-radius:18px}
 .boot-sub{width:min(520px,72%);height:14px;margin:0 auto 38px;border-radius:999px}

@@ -1,29 +1,61 @@
 /* UIL4B v10 — Editorial, Premium, Refined */
 
-/* ── Outfit, self-hosted ─────────────────────────────────────────────────────
-   Was two sequential third-party round trips: fonts.googleapis.com for the CSS,
-   which only THEN revealed the fonts.gstatic.com URL to fetch. Tracing a cold
-   homepage load showed the consequence — the font landed at ~587ms and swapped,
-   dirtying all 851 boxes in a 262ms full-document relayout, right in the middle
-   of the hero entrance. A warm cache did the same page in 27ms of total layout,
-   which is what proved the cost was arrival time and not the page itself.
+/* ── Manrope + JetBrains Mono, self-hosted (V2) ──────────────────────────────
+   Design Language V2 retires Outfit from all three roles. Two families now:
+   Manrope carries --font/--serif (all UI and display), JetBrains Mono carries
+   --mono, which V2 makes load-bearing — eyebrows, meta, category pills, keycaps
+   and stat lines are the texture that makes the product read as a tool.
+   Spec: docs/reference/design-language-v2.md#type
 
-   Self-hosted, these ship from our own origin alongside the CSS that asks for
-   them, and index.html preloads the latin subset so it is in flight with the
-   stylesheet rather than after it. No DNS, no TLS, no extra origins.
+   Self-hosting is unchanged and is the point. The alternative was two sequential
+   third-party round trips: fonts.googleapis.com for the CSS, which only THEN
+   revealed the fonts.gstatic.com URL to fetch. Tracing a cold homepage load
+   showed the consequence — the font landed at ~587ms and swapped, dirtying all
+   851 boxes in a 262ms full-document relayout, right in the middle of the hero
+   entrance. A warm cache did the same page in 27ms of total layout, which is
+   what proved the cost was arrival time and not the page itself.
 
-   ONE variable file per subset, not nine static instances — global.css authors
-   sixteen weights and ten of them (450, 550, 560, 580, 640, 650, 660, 680, 720,
-   750) are not multiples of 100, so static instances silently rounded them.
+   These ship from our own origin alongside the CSS that asks for them, and
+   index.html preloads the latin subset of BOTH families — V2 puts mono above
+   the fold (nav wordmark, eyebrow, stat line), so it is a first-paint font now,
+   not a detail font. No DNS, no TLS, no extra origins.
 
-   Outfit is licensed SIL OFL 1.1, which permits redistribution; see
+   ONE variable file per subset, not one static instance per weight — global.css
+   authors sixteen weights and ten of them (450, 550, 560, 580, 640, 650, 660,
+   680, 720, 750) are not multiples of 100, so static instances silently round
+   them. The declared ranges are each family's real variable axis: Manrope
+   200–800, JetBrains Mono 100–800. V2 uses 400/500/700/800 and 400/500/700.
+
+   Both are licensed SIL OFL 1.1, which permits redistribution; see
    public/fonts/OFL.txt. Upgrading: refetch both subsets from the css2 API and
-   bump the filenames if the version changes. */
-@font-face{font-family:'Outfit';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/outfit-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@font-face{font-family:'Outfit';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/outfit-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+   bump the filenames if the version changes.
+
+   The Outfit files stay in public/fonts for now — removing them is a separate
+   cleanup, and nothing here references them. */
+@font-face{font-family:'Manrope';font-style:normal;font-weight:200 800;font-display:swap;src:url('/fonts/manrope-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:200 800;font-display:swap;src:url('/fonts/manrope-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url('/fonts/jetbrains-mono-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url('/fonts/jetbrains-mono-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--font:'Outfit',system-ui,-apple-system,sans-serif;--serif:'Outfit',system-ui,-apple-system,sans-serif;--mono:'Outfit',system-ui,-apple-system,sans-serif;--sw:248px;--top-h:56px;--radius-xs:3px;--radius-s:5px;--radius:7px;--radius-l:10px;--radius-xl:13px;--radius-2xl:18px;--radius-pill:999px;--accent-fg:#ffffff;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;--s-9:96px;--s-10:128px;
+:root{
+  /* ── TYPE — two families (V2). Docs: docs/reference/design-language-v2.md#type ──
+     --serif is retired as a distinct role and aliases --font; the name stays so
+     the ~200 existing var(--serif) call sites keep resolving. Fallback stacks
+     are unchanged from the Outfit era. */
+  --font:'Manrope',system-ui,-apple-system,sans-serif;--serif:'Manrope',system-ui,-apple-system,sans-serif;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sw:248px;--top-h:56px;
+  /* ── RADIUS — V2 scale. Docs: design-language-v2.md#panels-remap-the-existing-scale ──
+     Remapped in the TOKEN BLOCK ONLY (6/10/12/14/16/18/24). The ~1000 existing
+     radius call sites inherit V2 rounding from this one edit — that is the whole
+     point of the remap, so do NOT sweep them. --radius-2xl and --radius-pill are
+     unchanged; --radius-3xl is new (full-width feature panels). */
+  --radius-xs:6px;--radius-s:10px;--radius:12px;--radius-l:14px;--radius-xl:16px;--radius-2xl:18px;--radius-3xl:24px;--radius-pill:999px;
+  --accent-fg:#ffffff;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;--s-9:96px;--s-10:128px;
+  /* ── V2 elevation — the two soft, large, low-opacity shadows that carry the
+     design. Theme-independent by design: the spec ships one value each.
+     Docs: design-language-v2.md#elevation ── */
+  --shadow-cmd:0 12px 40px rgba(0,0,0,.07);--shadow-panel:0 24px 70px rgba(0,0,0,.09);
   /* ── MOTION — single authoritative scale. Docs: docs/reference/css-conventions.md#motion ── */
   /* Durations. Geometry (transform/size/position) never goes below --dur-2; the one exception is :active press feedback, which must track the pointer. */
   --dur-1:120ms;--dur-2:200ms;--dur-3:280ms;--dur-4:420ms;--dur-5:600ms;--dur-6:700ms;
@@ -35,8 +67,23 @@
   --t:var(--dur-2) var(--ease-out);--t-fast:var(--dur-1) var(--ease-entrance);--fl-reveal:var(--dur-4) var(--ease-entrance);
   /* Cascade steps + loop timings (loop duration is the effect — not on the duration scale). */
   --fl-stagger:55ms;--stagger:70ms;--fl-shimmer-dur:1.4s}
-[data-theme="dark"]{--bg-0:#0A0B0D;--bg-1:#0F1012;--bg-2:#16181C;--bg-3:#1E2126;--bg-4:#272B31;--border:rgba(255,255,255,.07);--bh:rgba(255,255,255,.13);--t0:#F2F3F5;--t1:#B6BAC2;--t2:#888D97;--t3:#767C86;--cbg:#0F1012;--hvr:rgba(255,255,255,.04);--card:#16181C;--card-grad:#16181C;--inp:#16181C;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--accent:#3B82F6;--accent-strong:#2563EB;--accent-soft:#60A5FA;--accent-bg:rgba(59,130,246,.12);--accent-glow:rgba(59,130,246,.20);--icon-inv:invert(1);--brand:#3B82F6;--brand-soft:#60A5FA;--brand-bg:rgba(59,130,246,.12);--brand-glow:rgba(59,130,246,.18);--info:#3B82F6;--info-bg:rgba(59,130,246,.12);--scrim:rgba(8,9,11,.62);--glass-bg:color-mix(in srgb,var(--bg-1) 72%,transparent);--glass-border:var(--bh);--glass-shadow:0 8px 32px -12px rgba(0,0,0,.6)}
-[data-theme="light"]{--bg-0:#fff;--bg-1:#FCFCFD;--bg-2:#f7f7f7;--bg-3:#ebebeb;--bg-4:#d4d4d4;--border:rgba(0,0,0,.08);--bh:rgba(0,0,0,.12);--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#171717;--t1:#525252;--t2:#737373;--t3:#a3a3a3;--cbg:#f5f5f5;--hvr:rgba(0,0,0,.03);--card:#fff;--card-grad:#fff;--inp:#fff;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#2563EB;--accent-strong:#1D4ED8;--accent-soft:#3B82F6;--accent-bg:rgba(37,99,235,.08);--accent-glow:rgba(37,99,235,.14);--icon-inv:none;--brand:#2563EB;--brand-soft:#3B82F6;--brand-bg:rgba(37,99,235,.08);--brand-glow:rgba(37,99,235,.12);--info:#2563EB;--info-bg:rgba(37,99,235,.08);--scrim:rgba(23,23,23,.32);--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
+/* ── DARK — V2 reseed. Docs: docs/reference/design-language-v2.md#palette ──
+   Page #101012 · surface #191A1D · ink #F2F1EC · mute #8E8E88 · line #2A2B2F.
+   Token NAMES and the M3 role-generation method are unchanged; only the seeds
+   move. The ink ladder stays four steps with the spec's mute anchored at --t3
+   (the faintest) so the existing hierarchy survives — --t1/--t2 are interpolated
+   warm-neutral steps between ink and mute, not new roles. Borders are opaque
+   now (the spec ships a line COLOUR, not an ink alpha), which also stops them
+   compounding unpredictably when surfaces stack. */
+[data-theme="dark"]{--bg-0:#101012;--bg-1:#151619;--bg-2:#191A1D;--bg-3:#212327;--bg-4:#2A2B2F;--border:#2A2B2F;--bh:#3C3D42;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#151619;--hvr:rgba(242,241,236,.05);--card:#191A1D;--card-grad:#191A1D;--inp:#191A1D;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--accent:#9A81FF;--accent-strong:#8061FF;--accent-soft:#B9A8FF;--accent-bg:rgba(154,129,255,.12);--accent-glow:rgba(154,129,255,.20);--icon-inv:invert(1);--brand:#9A81FF;--brand-soft:#B9A8FF;--brand-bg:rgba(154,129,255,.12);--brand-glow:rgba(154,129,255,.18);--info:#9A81FF;--info-bg:rgba(154,129,255,.12);--scrim:rgba(8,8,10,.62);
+  /* --hi is DELIBERATELY the same value in both themes — the highlight does not
+     lighten in dark the way the accent does. Spec: design-language-v2.md#the-highlight-is-a-new-scarce-role
+     Budget: at most one --hi element per viewport. It reads as a marker pen. */
+  --hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,var(--bg-1) 72%,transparent);--glass-border:var(--bh);--glass-shadow:0 8px 32px -12px rgba(0,0,0,.6)}
+/* ── LIGHT — V2 reseed. NOTE: the authoritative light values are the second
+   [data-theme="light"] block further down (same specificity, later wins). Both
+   are kept in agreement so reading either one tells the truth. ── */
+[data-theme="light"]{--bg-0:#EFEEE9;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#6B4EF0;--accent-strong:#5635ED;--accent-soft:#856EF2;--accent-bg:rgba(107,78,240,.08);--accent-glow:rgba(107,78,240,.14);--icon-inv:none;--brand:#6B4EF0;--brand-soft:#856EF2;--brand-bg:rgba(107,78,240,.08);--brand-glow:rgba(107,78,240,.12);--info:#6B4EF0;--info-bg:rgba(107,78,240,.08);--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
 html{scroll-behavior:smooth}
 /* Reduced motion = near-instant, not merely fast. Duration alone is not enough:
    an infinite loop at 0.01ms spins thousands of times a second (CPU burn, and
@@ -47,7 +94,10 @@ html{scroll-behavior:smooth}
 html[data-reduced-motion="true"],html[data-reduced-motion="true"] *,html[data-reduced-motion="true"] *::before,html[data-reduced-motion="true"] *::after{scroll-behavior:auto!important;transition-duration:0.01ms!important;animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-delay:0s!important;animation-delay:0s!important}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]),html:not([data-reduced-motion="false"]) *,html:not([data-reduced-motion="false"]) *::before,html:not([data-reduced-motion="false"]) *::after{scroll-behavior:auto!important;transition-duration:0.01ms!important;animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-delay:0s!important;animation-delay:0s!important}}
 body{font-family:var(--font);font-weight:400;background:var(--bg-0);color:var(--t0);line-height:1.65;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:clip}
-::selection{background:var(--accent);color:var(--accent-fg)}
+/* V2: selection is one of the four sanctioned --hi appearances (with the hero
+   headline mark, the AAA contrast badge and the Pro pricing row). It is global
+   and identical in both themes. Docs: design-language-v2.md#the-highlight-is-a-new-scarce-role */
+::selection{background:var(--hi);color:var(--hi-fg)}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-s)}
 :focus:not(:focus-visible){outline:none}
@@ -459,17 +509,37 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .split>.side{flex:0 1 360px;min-width:0}
 
 /* ─── Buttons ─── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:var(--radius-l);font-size:12.5px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--t0);transition:all var(--dur-3) var(--ease-standard);text-decoration:none!important;letter-spacing:-.005em}
+/* ── BUTTONS — V2 has ONE shape: pill. There is no second button shape.
+   Docs: docs/reference/design-language-v2.md#buttons-pill-always
+   Three treatments and no others:
+     Primary  .btn-accent / .btn-primary — --accent fill, white text
+     Inverse  .btn-inverse               — ink fill, page-coloured text
+     Quiet    .btn (the base)            — --card surface + 1px --border line
+   The base rule below IS the Quiet treatment; don't add a fourth. ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--t0);transition:all var(--dur-3) var(--ease-standard);text-decoration:none!important;letter-spacing:-.005em}
 .btn:hover{border-color:var(--bh);background:var(--bg-2);color:var(--t0)}
 .btn:active{background:var(--bg-3);color:var(--t0);transition-duration:var(--dur-1)}
 .btn-s{padding:6px 12px;font-size:11px}
 .btn-accent,.btn-primary{background:var(--brand);color:var(--accent-fg);border-color:transparent;transition:all var(--dur-2) var(--ease-standard)}
+/* Inverse — the strongest non-accent action. Nav "Start free", in-panel tool
+   links. Ink fill, page-coloured label, so it flips correctly with the theme. */
+.btn.btn-inverse{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
+.btn.btn-inverse:hover{background:var(--t1);border-color:var(--t1);color:var(--bg-0)}
+.btn.btn-inverse:active{background:var(--t0);color:var(--bg-0);transition-duration:var(--dur-1)}
 .btn-accent:hover,.btn-primary:hover{background:var(--brand-soft);transform:translateY(-1px);box-shadow:0 1px 2px rgba(0,0,0,.12),0 4px 10px -3px color-mix(in srgb,var(--brand) 30%,transparent)}
 .btn-accent:active,.btn-primary:active{transform:translateY(0);opacity:.8;transition-duration:var(--dur-1)}
 .btn-accent:disabled,.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none}
 .btn.btn-ghost{background:none;border-color:transparent;color:var(--t1)}
 .btn.btn-ghost:hover{background:var(--hvr);color:var(--t0)}
 .btn-l{padding:14px 28px;font-size:14px}
+/* ── CARD HOVER — the primary hover language across the whole app (V2).
+   border-color → ink AND a 3px lift, together. Both, or it reads as a different
+   interaction. Named on the motion scale, never raw literals.
+   Docs: docs/reference/design-language-v2.md#motion
+   Apply to any raised, bordered, interactive surface; it deliberately sets no
+   background, radius or padding so it composes onto existing card classes. */
+.hover-lift{transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.hover-lift:hover{border-color:var(--t0);transform:translateY(-3px)}
 .btn.is-loading{color:transparent!important;position:relative;pointer-events:none}
 .btn.is-loading>*{visibility:hidden}
 .btn.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;color:var(--t1);animation:fg-spin .7s linear infinite}
@@ -4336,23 +4406,35 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 /* ── Foundry light values (overrides the earlier [data-theme="light"] block;
    same specificity, later wins — only Foundry-changed tokens are re-declared) ── */
 [data-theme="light"]{
-  --bg-0:#FAFAFA;--bg-1:#FFFFFF;--bg-2:#F4F4F5;--bg-3:#E9E9EB;--bg-4:#D9D9DE;
-  --card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--cbg:#F4F4F5;
-  /* CONTRAST: --t3 was #858590, which measures 3.65:1 on white and 3.32:1 on
-     the #f4f4f5 card surface — below the 4.5:1 WCAG 1.4.3 needs for normal
-     text. It was not decoration: it carried the sitewide footer, the /plans
-     "Not included" cells, twelve prompt-card meta labels and nine type-scale
-     row subtitles. The same failure repeated on every route in the product.
-     Both tokens moved together so the HIERARCHY survives — collapsing --t3
-     onto the old --t2 would have made the token pointless. Measured on the
-     three backgrounds each is actually used against (#fff / #fafafa / #f4f4f5):
-       --t2 #5F5F69 → 6.31 / 6.05 / 5.74
-       --t3 #6C6C76 → 5.19 / 4.97 / 4.72
-     Dark theme is unchanged; it was not measured and is not claimed to pass. */
-  --t0:#0A0A0B;--t1:#50505A;--t2:#5F5F69;--t3:#6C6C76;
-  --border:rgba(10,10,11,.08);--bh:rgba(10,10,11,.16);--hvr:rgba(10,10,11,.04);--scrim:rgba(10,10,11,.32);
-  --accent:#2563EB;--accent-strong:#1D4ED8;--accent-soft:#3B82F6;--accent-bg:rgba(37,99,235,.08);
-  --brand:#2563EB;--brand-soft:#3B82F6;--brand-bg:rgba(37,99,235,.08);--info:#2563EB;--info-bg:rgba(37,99,235,.08);
+  /* V2: the page is a warm bone and cards RISE to white above it. That inverts
+     how recession works here, so the ladder is not a straight grey ramp:
+     --bg-2 sits BETWEEN bone and white (subtle fills, .btn:hover), while --bg-3
+     and --bg-4 stay below the page for pressed/inset states. A darker-than-page
+     text surface is what the V1 ramp had, and on a #EFEEE9 ground it cannot
+     carry the V2 mute at AA — see the measurement below. */
+  --bg-0:#EFEEE9;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;
+  --card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--cbg:#F6F5F1;
+  /* CONTRAST — re-measured for V2, 2026-08-16. The V2 page (#EFEEE9) is
+     materially darker than the V1 page (#FAFAFA), so every ink figure had to be
+     re-derived rather than carried over; the old note's numbers are now void.
+     The spec's mute (#6C6C66) is anchored at --t3, the faintest step, and
+     --t1/--t2 are warmed interpolations so the HIERARCHY the previous fix
+     established survives. Measured on the three backgrounds each is actually
+     used against (#FFFFFF / #EFEEE9 / #F6F5F1):
+       --t1 #50504A → 8.12 / 6.99 / 7.44
+       --t2 #5F5F59 → 6.43 / 5.53 / 5.89
+       --t3 #6C6C66 → 5.28 / 4.55 / 4.84   (AA floor is 4.5 — --t3 on the page
+                                            clears it by 0.05, so do not darken
+                                            the page or lighten --t3 further)
+       --t0 #0F0F10 → 19.16 / 16.49 / 17.56
+     Accent #6B4EF0 → 5.29 / 4.55 / 4.84 as text; white on an accent FILL is
+     5.29. Dark theme is measured in the PR, not claimed here. */
+  --t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;
+  --border:#DAD8CF;--bh:#C0BDB0;--hvr:rgba(15,15,16,.04);--scrim:rgba(15,15,16,.32);
+  --accent:#6B4EF0;--accent-strong:#5635ED;--accent-soft:#856EF2;--accent-bg:rgba(107,78,240,.08);--accent-glow:rgba(107,78,240,.14);
+  --brand:#6B4EF0;--brand-soft:#856EF2;--brand-bg:rgba(107,78,240,.08);--brand-glow:rgba(107,78,240,.12);--info:#6B4EF0;--info-bg:rgba(107,78,240,.08);
+  /* Same value as dark — the highlight does not lighten. See the dark block. */
+  --hi:#E9FF64;--hi-fg:#0F0F10;
   /* Default-avatar background: brand-blue → darker. References --brand/--accent-strong so it resolves per-theme at use-site. */
   --avatar-grad:linear-gradient(140deg,var(--brand),var(--accent-strong));
   --ok:#15803D;--warn:#A16207;--err:#DC2626;
