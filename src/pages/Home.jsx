@@ -214,16 +214,20 @@ export default function Home() {
               ))}
             </p>
 
+            {/* The headline and the command bar below it are ONE idea: the
+                highlighted phrase IS the input sitting directly beneath it, so
+                the hero explains itself and the --hi mark has a referent on
+                screen. Copy is the design project's, verbatim. */}
             <h1 className="home-hero-h1">
-              <span className="home-hero-line"><span className="home-hero-line-in">No more tab hoarding.</span></span>
+              <span className="home-hero-line"><span className="home-hero-line-in">Every design tool,</span></span>
               <span className="home-hero-line"><span className="home-hero-line-in">
-                Build your UI system in <mark className="home-mark">one place</mark>.
+                one <mark className="home-mark">search box</mark> away.
               </span></span>
             </h1>
 
             <p className="home-hero-sub">
-              Colour, typography, icons and imagery in one workspace — built, validated and
-              exported without opening eleven tabs. Component tooling is coming next.
+              Stop hunting through twelve bookmarked tabs. Type what you need — colour, type,
+              icons, tokens — and start working. Nothing to install.
             </p>
 
             <HomeCommandBar />
@@ -313,9 +317,15 @@ export default function Home() {
             <div className="htools-head" data-reveal>
               <span className="hbrow">[ THE TOOLSET ]</span>
               <h2 className="hh2" id="htools-title">Six categories. One account.</h2>
+              {/* Canonical founder direction (uil4b-brand-design →
+                  surface-principles.md): component tooling must be NAMED as
+                  coming next, and must never appear as a live preview mode. It
+                  used to ride in the hero sub-copy; the V2 hero is about search,
+                  so the claim moves here — beside the card that carries the Soon
+                  badge, which is where it is actually useful. */}
               <p className="hlede">
                 Every tool reads and writes the same system, so a colour decision in one place
-                is the same colour decision everywhere else.
+                is the same colour decision everywhere else. Component tooling is coming next.
               </p>
             </div>
 

@@ -50,9 +50,11 @@ test.describe('premium homepage', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
+    // The design project's headline — see 10-home-chaos-to-calm for why this
+    // replaced "No more tab hoarding. / Build your UI system in one place."
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText('No more tab hoarding.')
-    await expect(heading).toContainText('Build your UI system in one place.')
+    await expect(heading).toContainText('Every design tool,')
+    await expect(heading).toContainText('one search box away.')
     // V2 replaced the "operating workspace" kicker pill with the mono stat
     // line. Same job — say what this is before the headline lands — so the
     // assertion moved to the element that now does it, and checks the numbers
