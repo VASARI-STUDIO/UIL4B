@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
+import usePopover from '../hooks/usePopover'
 import { UIKIT_GUIDE_KEY } from './UIKitGuide'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -322,10 +323,16 @@ export default function PillNav() {
   // How the current mega-menu got opened ('hover' | 'click') — a click on a
   // hover-opened trigger must pin the menu, not toggle it shut (see toggle()).
   const openedBy = useRef(null)
-  // Section-trigger + account-button elements, so Escape can return focus to the
-  // control that owns the layer it just closed (WCAG 2.4.3 / APG disclosure).
+  // Section-trigger elements, so Escape can return focus to the control that
+  // owns the layer it just closed (WCAG 2.4.3 / APG disclosure).
   const triggerRefs = useRef({})
-  const accountBtnRef = useRef(null)
+  // The account / compact-menu popover runs on the shared popover contract:
+  // focus in on open, Escape closes and returns focus here, an outside press
+  // closes, tabbing off either end closes rather than trapping, and the panel
+  // flips when it would otherwise be clipped by the viewport edge. Only one of
+  // the two buttons that claim accountBtnRef is ever mounted at a time.
+  const closeAccountMenu = useCallback(() => setMenu(null), [])
+  const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu)
   // Latest open/menu mirrored into a ref so the once-bound key handler reads the
   // current layer without re-subscribing. Written in an effect (never during
   // render) to satisfy React's rules-of-refs.
@@ -369,12 +376,15 @@ export default function PillNav() {
     }
     const onKey = (e) => {
       if (e.key === 'Escape') {
-        const { open: wasOpen, menu: wasMenu, sheet: wasSheet } = stateRef.current
+        const { open: wasOpen, sheet: wasSheet } = stateRef.current
         setOpen(null); setSheet(false); setMenu(null)
         // Return focus to the control that owns the layer we just closed, so
         // keyboard/AT users aren't dropped onto <body> (WCAG 2.4.3 / APG).
+        // The account popover is NOT handled here: usePopover owns Escape for
+        // that layer, listens in the capture phase and stops propagation, so
+        // this listener never sees the key. Keeping a second restore here would
+        // be dead code that looks live.
         if (wasOpen) triggerRefs.current[wasOpen]?.focus()
-        else if (wasMenu === 'account') accountBtnRef.current?.focus()
         else if (wasSheet) mobileBtnRef.current?.focus()
       }
       // "/" opens search — but never while the visitor is typing in a field.
@@ -470,7 +480,26 @@ export default function PillNav() {
   const openSearch = () => { closeAll(); setSearchOpen(true) }
   const openExport = () => { closeAll(); setExportOpen(true) }
   const onSignOut = () => { setMenu(null); logout() }
+  const megaItems = () => [...(menuRef.current?.querySelectorAll('[data-pnav-menuitem]') || [])]
+  // The mega panel is rendered AFTER </nav> in the DOM, because one shared node
+  // serves all three sections. That is the right structure — the founder asked
+  // to keep this navigation — but it means a keyboard user who opens "Create"
+  // and presses Tab lands on "Discover" rather than in the panel they just
+  // opened. These two handlers bridge the gap without moving any markup:
+  // forward-Tab off an open trigger enters the panel, Shift+Tab off the panel's
+  // first item comes back to the trigger, and forward-Tab off its last item
+  // closes the menu and continues along the bar. Nothing traps.
+  const focusAfterTrigger = (id) => {
+    const index = visibleSections.findIndex((s) => s.id === id)
+    const next = visibleSections[index + 1]
+    const target = next ? triggerRefs.current[next.id] : accountBtnRef.current || mobileBtnRef.current
+    target?.focus()
+  }
   const onTriggerKeyDown = (event, id, index) => {
+    if (event.key === 'Tab' && !event.shiftKey && open === id) {
+      const first = megaItems()[0]
+      if (first) { event.preventDefault(); first.focus(); return }
+    }
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault()
       const delta = event.key === 'ArrowRight' ? 1 : -1
@@ -491,8 +520,23 @@ export default function PillNav() {
     }
   }
   const onMenuKeyDown = (event) => {
+    if (event.key === 'Tab') {
+      const items = megaItems()
+      if (!items.length || !open) return
+      const active = document.activeElement
+      if (event.shiftKey && active === items[0]) {
+        event.preventDefault()
+        triggerRefs.current[open]?.focus()
+      } else if (!event.shiftKey && active === items[items.length - 1]) {
+        event.preventDefault()
+        const id = open
+        setOpen(null)
+        focusAfterTrigger(id)
+      }
+      return
+    }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
-    const items = [...(menuRef.current?.querySelectorAll('[data-pnav-menuitem]') || [])]
+    const items = megaItems()
     if (!items.length) return
     event.preventDefault()
     const current = items.indexOf(document.activeElement)
@@ -607,7 +651,11 @@ export default function PillNav() {
                 className="pnav-trigger"
                 ref={(el) => { if (el) triggerRefs.current[section.id] = el }}
                 aria-expanded={open === section.id}
-                aria-haspopup="true"
+                // No aria-haspopup. It announces "menu", and what opens is a
+                // region of links, not a menu — the APG disclosure-navigation
+                // pattern is aria-expanded + aria-controls and nothing else.
+                // Claiming "menu" makes a screen reader promise arrow-key menu
+                // semantics this panel does not implement.
                 aria-controls={open === section.id ? 'pnav-mega' : undefined}
                 onClick={() => toggle(section.id)}
                 onMouseEnter={() => hoverOpen(section.id)}
@@ -694,8 +742,13 @@ export default function PillNav() {
                     type="button"
                     className="pnav-avatar-btn"
                     ref={accountBtnRef}
-                    aria-haspopup="true"
+                    // A disclosure, not a menu: the panel holds a segmented
+                    // theme control, links and a live status line. Declaring
+                    // aria-haspopup="true" told assistive tech to expect menu
+                    // semantics — one focusable menuitem at a time, arrow-key
+                    // navigation — which is not what a settings panel is.
                     aria-expanded={menu === 'account'}
+                    aria-controls={menu === 'account' ? 'pnav-account-pop' : undefined}
                     aria-label="Account and settings"
                     onClick={() => toggleMenu('account')}
                   >
@@ -709,7 +762,13 @@ export default function PillNav() {
                     </span>
                   </button>
                   {menu === 'account' && (
-                    <div className="pnav-pop pnav-pop--account" role="menu" aria-label="Account and settings">
+                    <div
+                      className="pop pnav-pop pnav-pop--account"
+                      ref={accountPopRef}
+                      id="pnav-account-pop"
+                      aria-label="Account and settings"
+                      tabIndex={-1}
+                    >
                       <div className="pnav-pop-id">
                         {avatarUrl ? (
                           <img className="pnav-pop-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer" />
@@ -728,24 +787,24 @@ export default function PillNav() {
                       <p className="pnav-pop-head">Appearance</p>
                       <ThemeSeg theme={theme} setTheme={setTheme} />
                       <div className="pnav-pop-sep" />
-                      <Link className="pnav-pop-item" role="menuitem" to="/settings" onClick={closeAll}>
+                      <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
                         <GearIcon />
                         <span>Account &amp; settings</span>
                       </Link>
-                      <Link className="pnav-pop-item" role="menuitem" to={isPro ? '/settings' : '/plans'} state={isPro ? { section: 'support' } : undefined} onClick={closeAll}>
+                      <Link className="pnav-pop-item" to={isPro ? '/settings' : '/plans'} state={isPro ? { section: 'support' } : undefined} onClick={closeAll}>
                         <TagIcon />
                         <span>{isPro ? 'Manage plan' : 'Plans & upgrade'}</span>
                       </Link>
-                      <Link className="pnav-pop-item" role="menuitem" to="/help" onClick={closeAll}>
+                      <Link className="pnav-pop-item" to="/help" onClick={closeAll}>
                         <HelpIcon />
                         <span>Help centre</span>
                       </Link>
-                      <Link className="pnav-pop-item" role="menuitem" to="/feedback" onClick={closeAll}>
+                      <Link className="pnav-pop-item" to="/feedback" onClick={closeAll}>
                         <FeedbackIcon />
                         <span>Send feedback</span>
                       </Link>
                       {isAdmin && (
-                        <Link className="pnav-pop-item" role="menuitem" to="/admin" onClick={closeAll}>
+                        <Link className="pnav-pop-item" to="/admin" onClick={closeAll}>
                           Admin dashboard
                         </Link>
                       )}
@@ -758,7 +817,7 @@ export default function PillNav() {
                               key={acct.uid}
                               type="button"
                               className="pnav-pop-item pnav-pop-acct"
-                              role="menuitem"
+                             
                               onClick={() => onSwitchAccount(acct)}
                               disabled={!!switchingUid}
                               aria-busy={switchingUid === acct.uid}
@@ -782,7 +841,7 @@ export default function PillNav() {
                         </>
                       )}
                       <div className="pnav-pop-sep" />
-                      <button type="button" className="pnav-pop-item pnav-pop-item--danger" role="menuitem" onClick={onSignOut}>
+                      <button type="button" className="pnav-pop-item pnav-pop-item--danger" onClick={onSignOut}>
                         Sign out
                       </button>
                     </div>
@@ -802,15 +861,21 @@ export default function PillNav() {
                   type="button"
                   className="pnav-more"
                   ref={accountBtnRef}
-                  aria-haspopup="true"
                   aria-expanded={menu === 'account'}
+                  aria-controls={menu === 'account' ? 'pnav-account-pop' : undefined}
                   aria-label="Menu"
                   onClick={() => toggleMenu('account')}
                 >
                   <MeatballIcon />
                 </button>
                 {menu === 'account' && (
-                  <div className="pnav-pop" aria-label="Menu">
+                  <div
+                    className="pop pnav-pop"
+                    ref={accountPopRef}
+                    id="pnav-account-pop"
+                    aria-label="Menu"
+                    tabIndex={-1}
+                  >
                     <p className="pnav-pop-head">Appearance</p>
                     <ThemeSeg theme={theme} setTheme={setTheme} />
                     <div className="pnav-pop-sep" />
