@@ -8246,8 +8246,15 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .bill-banner-text{margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .bill-banner-err{margin:6px 0 0;font-size:12px;line-height:1.45;color:var(--err)}
 .bill-banner-actions{display:flex;align-items:center;gap:12px;margin-top:11px;flex-wrap:wrap}
-.bill-banner-cta{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--brand);background:var(--brand);color:var(--accent-fg);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-.bill-banner-cta:hover:not(:disabled){background:var(--accent-strong);border-color:var(--accent-strong)}
+/* Fills with --accent-strong, not --brand. At 12.5px the label is normal-size
+   text, so --accent-fg on --brand (== --accent) measured 4.43:1 against the
+   4.5:1 floor; on --accent-strong it is 5.84:1 light / 6.09:1 dark. Same
+   resting-state fault already fixed on .ui-pill-accent and .btn-accent — this
+   rule reached the readable tone only on HOVER, so the state a user actually
+   reads was the failing one. This banner tells someone their payment failed;
+   it is the last CTA in the product that should be hard to read. */
+.bill-banner-cta{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--accent-strong);background:var(--accent-strong);color:var(--accent-fg);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.bill-banner-cta:hover:not(:disabled){background:var(--accent-strong);border-color:var(--accent-strong);box-shadow:0 3px 10px -3px var(--accent-glow)}
 .bill-banner-cta:disabled{opacity:.6;cursor:progress}
 .bill-banner-link{font-size:12.5px;font-weight:550;color:var(--t2);text-decoration:none}
 .bill-banner-link:hover{color:var(--t0);text-decoration:underline}
