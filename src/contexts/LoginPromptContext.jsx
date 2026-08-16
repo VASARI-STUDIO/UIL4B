@@ -75,6 +75,9 @@ export function LoginPromptProvider({ children }) {
         // Optional plain-language "why an account is needed" list. Callers that
         // pass nothing get exactly the popup they got before.
         reasons: Array.isArray(opts.reasons) ? opts.reasons : undefined,
+        // What signing in unlocks, in the caller's own words. Undefined lets
+        // LoginPopup fall back to its honest default list.
+        unlocks: Array.isArray(opts.unlocks) ? opts.unlocks : undefined,
         free: opts.free !== false,
         initialEmail: typeof opts.email === 'string' ? opts.email : '',
         lockEmail: !!opts.lockEmail,
@@ -103,6 +106,7 @@ export function LoginPromptProvider({ children }) {
           key={prompt.id}
           reason={prompt.reason}
           reasons={prompt.reasons}
+          unlocks={prompt.unlocks}
           free={prompt.free}
           initialEmail={prompt.initialEmail}
           lockEmail={prompt.lockEmail}

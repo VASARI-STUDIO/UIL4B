@@ -2,6 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 
+// What a free account actually gets you. Shown when a gated action raised this
+// popup, so "sign in to continue" answers the obvious next question — what do I
+// get for it? Every line is a real Free capability (see docs/reference/
+// growth-persuasion.md: the taste of power has to be power the user keeps), and
+// the list is overridable per caller via the `unlocks` prop.
+const DEFAULT_UNLOCKS = [
+  'Your work saves and follows you to any device',
+  'Live preview links you can share',
+  'Free — no card, no trial clock',
+]
+
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24">
@@ -25,7 +36,12 @@ function GoogleIcon() {
 // Free" that presents "Welcome Back / Sign In" is telling the visitor they
 // already have an account — the actual signup was a small text link underneath.
 // Defaults to false, so every existing caller keeps the sign-in form it had.
-export default function LoginPopup({ reason, reasons, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, onSuccess, onDismiss }) {
+//
+// `unlocks` is the plain answer to "what do I get for signing in?" — shown only
+// when a gated ACTION raised this popup (i.e. `reason` is set), because a
+// visitor who clicked "Log in" in the nav already knows why they're here.
+// Callers can replace the list; passing `unlocks={[]}` suppresses it.
+export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, onSuccess, onDismiss }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
   const [isSignup, setIsSignup] = useState(openAsSignup)
@@ -136,10 +152,19 @@ export default function LoginPopup({ reason, reasons, free = true, initialEmail 
   const whyList = Array.isArray(reasons) ? reasons.filter(r => typeof r === 'string' && r.trim()) : []
   const showWhy = whyList.length > 0 && !resetMode && !passwordOnly
 
+  // The interrupted-action panel: what you were doing, what an account gives
+  // you, and the promise that you land back on it. Suppressed for the two
+  // popups that are not an interruption (password reset, account switch).
+  const unlockList = Array.isArray(unlocks)
+    ? unlocks.filter(u => typeof u === 'string' && u.trim())
+    : DEFAULT_UNLOCKS
+  const showIntent = !!reason && !resetMode && !passwordOnly
+  const showUnlocks = showIntent && free && unlockList.length > 0 && !showWhy
+
   const title = resetMode ? (t('auth.resetPassword') || 'Reset your password')
     : isSignup ? (t('auth.createAccount') || 'Create your free account')
       : passwordOnly ? 'Switch account'
-        : reason ? 'Log in to continue' : (t('auth.welcomeBack') || 'Welcome back')
+        : reason ? 'Sign in to continue' : (t('auth.welcomeBack') || 'Welcome back')
 
   return (
     <div className="ui-modal-overlay" onMouseDown={() => { if (!loading) onDismiss() }}>
@@ -149,7 +174,8 @@ export default function LoginPopup({ reason, reasons, free = true, initialEmail 
         role="dialog"
         aria-modal="true"
         aria-labelledby="ui-login-title"
-        aria-describedby={showWhy ? 'ui-login-why' : undefined}
+        aria-describedby={showIntent ? 'ui-login-intent' : undefined}
+        tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="ui-modal-head">
@@ -160,11 +186,25 @@ export default function LoginPopup({ reason, reasons, free = true, initialEmail 
         </div>
 
         <div className="ui-modal-body">
-          {reason && free && !resetMode && (
-            <p className="ui-login-note">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
-              <span>You must log in to {reason} — don’t worry, it’s still free.</span>
-            </p>
+          {showIntent && (
+            // Name the interrupted action first. "You must log in to X" reads as
+            // a scold and buries the thing the user was doing; leading with the
+            // action tells them the app didn't lose their place — and the return
+            // promise is literally true: LoginPromptContext resolves a promise
+            // over the current page and never navigates, so the caller resumes
+            // exactly where it was.
+            <div className="ui-login-intent" id="ui-login-intent">
+              <p className="ui-login-intent-h">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
+                <span>You were about to <strong>{reason}</strong>.</span>
+              </p>
+              {showUnlocks && (
+                <ul className="ui-login-unlocks">
+                  {unlockList.map(item => <li key={item}>{item}</li>)}
+                </ul>
+              )}
+              <p className="ui-login-intent-back">We’ll bring you straight back to it.</p>
+            </div>
           )}
           {showWhy && (
             <div className="ui-login-why" id="ui-login-why">
