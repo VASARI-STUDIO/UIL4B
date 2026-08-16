@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TOOLS, CATEGORIES, getCategory, localiseTools, localiseCategories } from '../data/tools'
+import { getCategory, localiseTools, localiseCategories, queryCommandIndex } from '../data/tools'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -45,19 +45,12 @@ export default function CommandPalette({ open, onClose }) {
       return out
     }
 
-    const tools = lTools.filter(tl =>
-      tl.label.toLowerCase().includes(q) ||
-      tl.description.toLowerCase().includes(q) ||
-      tl.keywords.some(k => k.includes(q))
-    ).map(tl => ({ kind: 'tool', ...tl }))
-
-    const cats = lCats.filter(c =>
-      c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
-    ).map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description }))
-
-    const actions = quickActions.filter(a =>
-      a.label.toLowerCase().includes(q) || a.keywords.some(k => k.includes(q))
-    ).map(a => ({ kind: 'action', ...a }))
+    // One shared query implementation — see queryCommandIndex in data/tools.
+    // The homepage command bar calls the same function over the same index.
+    const hit = queryCommandIndex(q, { tools: lTools, categories: lCats, actions: quickActions })
+    const tools = hit.tools.map(tl => ({ kind: 'tool', ...tl }))
+    const cats = hit.categories.map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description }))
+    const actions = hit.actions.map(a => ({ kind: 'action', ...a }))
 
     const out = []
     if (tools.length) out.push({ label: t('common.tools'), items: tools })
