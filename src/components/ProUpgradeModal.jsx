@@ -130,8 +130,14 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
 
           {/* The headline rate. Computed from whichever plan is genuinely the
               cheapest per month — never typed, so it cannot drift from the
-              tiles underneath it. */}
-          <p className="ui-pro-from" aria-live="polite">
+              tiles underneath it.
+
+              It is suppressed outright when the price service is down. Rendered
+              once against a dead /api/get-prices, this quoted the fallback
+              ladder's "from $4/month" directly above "We couldn't load current
+              prices just now" — two contradictory claims about money on the
+              same screen. If we cannot say the real number, we say nothing. */}
+          <p className="ui-pro-from" aria-live="polite" hidden={priceUnavailable}>
             {settled && headline?.perMonthLabel ? (
               <>
                 <span className="ui-pro-from-lead">from</span>
@@ -223,23 +229,30 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
             </ol>
           )}
 
-          <div className="ui-pro-cta">
-            <button
-              type="button"
-              className="btn btn-accent btn-l"
-              onClick={goCheckout}
-              disabled={!choice || !settled || starting || priceUnavailable}
-              aria-busy={starting}
-            >
-              {hasTrial ? `Start ${choice.trialDays}-day free trial` : 'Upgrade to Pro'}
-            </button>
-          </div>
+          {/* No CTA at all while prices are unavailable. A disabled button
+              labelled "Start 7-day free trial" still makes the offer; the error
+              block above already carries the retry and the way out. */}
+          {!priceUnavailable && (
+            <>
+              <div className="ui-pro-cta">
+                <button
+                  type="button"
+                  className="btn btn-accent btn-l"
+                  onClick={goCheckout}
+                  disabled={!choice || !settled || starting}
+                  aria-busy={starting}
+                >
+                  {hasTrial ? `Start ${choice.trialDays}-day free trial` : 'Upgrade to Pro'}
+                </button>
+              </div>
 
-          <p className="ui-pro-note">
-            {user ? 'Cancel any time from Settings.' : 'You’ll create a free account first, then confirm payment.'}
-            {' '}
-            <button type="button" onClick={seeAllPlans}>See all plans</button>
-          </p>
+              <p className="ui-pro-note">
+                {user ? 'Cancel any time from Settings.' : 'You’ll create a free account first, then confirm payment.'}
+                {' '}
+                <button type="button" onClick={seeAllPlans}>See all plans</button>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
