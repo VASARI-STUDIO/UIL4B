@@ -27,7 +27,20 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
 
   useEffect(() => {
     if (!enabled) return undefined
+    // The control that opened us — plus its ancestors.
+    //
+    // A dialog is very often raised from a menu that then unmounts behind it:
+    // the Pro modal's most common opener is a row inside PaletteBuilder's
+    // colour-system menu, and that whole menu is gone by the time the modal
+    // closes. .focus() on a detached node does nothing and reports nothing, so
+    // the restore silently dropped the user on <body> — exactly the failure
+    // this hook exists to prevent, hidden behind code that looks correct.
+    //
+    // Remembering the chain costs a handful of nodes and lets us hand focus to
+    // the nearest thing that still exists.
     const opener = document.activeElement
+    const openerChain = []
+    for (let n = opener; n && n !== document.body; n = n.parentElement) openerChain.push(n)
     const node = ref.current
     document.body.style.overflow = 'hidden'
 
@@ -56,7 +69,21 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     return () => {
       document.removeEventListener('keydown', onKey, true)
       document.body.style.overflow = ''
-      if (opener && typeof opener.focus === 'function') opener.focus()
+      const restore = openerChain.find(el => el.isConnected && typeof el.focus === 'function')
+      if (!restore) return
+      // A surviving ANCESTOR is usually a container, which is not focusable on
+      // its own, so give it tabindex="-1" first.
+      //
+      // The attribute is deliberately LEFT IN PLACE. Removing it straight after
+      // .focus() blurs the element right back to <body> — the browser drops
+      // focus the moment the node stops being focusable — which is a silent
+      // no-op that looks like a working restore in code review. tabindex="-1"
+      // means "reachable by script, never by Tab", so leaving it costs nothing:
+      // it does not join the tab order and it does not change layout.
+      if (restore.tabIndex < 0 && !restore.hasAttribute('tabindex')) {
+        restore.setAttribute('tabindex', '-1')
+      }
+      restore.focus()
     }
   }, [onClose, enabled, initialFocus])
 
