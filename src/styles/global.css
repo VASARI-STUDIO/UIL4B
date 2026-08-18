@@ -8858,3 +8858,41 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .ui-pro-rail{padding:16px}
   .ui-pro-rail-list{grid-template-columns:minmax(0,1fr)}
 }
+
+/* -- Accent-text rule enforcement on the auth + popup surfaces --------------
+   --accent (#0F6FFF) measures 4.43:1 on white and 3.82:1 on the page ground:
+   it fails AA for normal-size text everywhere in the light theme. It is for
+   fills, borders, icons, focus rings and LARGE display text only.
+
+   .auth-links button was the last failure on these surfaces — "Don't have an
+   account? Sign up" and "Forgot password?", 13px, measured 4.43:1 before the
+   rule's own opacity:.85 lightened it further against the white card. The
+   opacity goes with it: dimming accent text to signal "quiet" is buying tone
+   with legibility, and the underline on hover already carries that job. */
+.auth-links button{color:var(--accent-strong);opacity:1}
+.auth-links button:hover{color:var(--accent-strong);text-decoration:underline}
+
+/* -- Coming-soon rows: de-emphasise without making them unreadable ----------
+   .pnav-tool[data-soon] dimmed the WHOLE row to opacity:.45. The intent is
+   right — live tools should lead the eye — but the execution put every
+   not-yet-shipped tool in the mega menu at 1.89:1 to 2.01:1 against white.
+   Fifteen failures in the Create menu alone, and opacity is invisible to a
+   stylesheet grep because the colours it multiplies are themselves fine.
+
+   Dimming is not the only way to say "later". The de-emphasis moves onto the
+   parts that carry no words — the icon loses its hue and half its weight, and
+   the hue rail is already suppressed — while the label and description drop
+   only as far as --t3 / --t2, both of which clear AA. A user who cannot read
+   the name of the tool cannot decide whether to wait for it. */
+.pnav-tool[data-soon]{opacity:1}
+.pnav-tool[data-soon]:hover{opacity:1;background:var(--hvr)}
+.pnav-tool[data-soon] .pnav-tool-label{color:var(--t3)}
+.pnav-tool[data-soon] .pnav-tool-desc{color:var(--t3)}
+.pnav-tool[data-soon] .pnav-tool-ico{opacity:.5;filter:grayscale(1)}
+.pnav-tool[data-soon]:hover .pnav-tool-label,.pnav-tool[data-soon]:focus-visible .pnav-tool-label{color:var(--t0)}
+.pnav-tool[data-soon]:hover .pnav-tool-ico{opacity:.75}
+/* The mobile sheet carries the same treatment, so it inherits the same bug. */
+.pnav-acc-link[data-soon]{opacity:1}
+.pnav-acc-link[data-soon] .pnav-acc-label{color:var(--t3)}
+.pnav-acc-link[data-soon] .pnav-acc-desc{color:var(--t3)}
+.pnav-acc-link[data-soon] .pnav-acc-ico{opacity:.5;filter:grayscale(1)}
