@@ -139,7 +139,6 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
         <ProHarmonyPreview seed={seed} />
 
         <div className="ui-pro-body">
-
           {/* The headline rate. Computed from whichever plan is genuinely the
               cheapest per month — never typed, so it cannot drift from the
               tiles underneath it.
@@ -241,8 +240,8 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
             </ol>
           )}
 
-          {/* No CTA at all while prices are unavailable. A disabled button
-              labelled "Start 7-day free trial" still makes the offer; the error
+          {/* No CTA at all while prices are unavailable. A disabled "Upgrade
+              to Pro" still makes an offer we cannot currently price; the error
               block above already carries the retry and the way out. */}
           {!priceUnavailable && (
             <>
