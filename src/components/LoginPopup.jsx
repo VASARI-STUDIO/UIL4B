@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 
 // What a free account actually gets you. Shown when a gated action raised this
-// popup, so "sign in to continue" answers the obvious next question — what do I
+// popup, so "log in to continue" answers the obvious next question — what do I
 // get for it? Every line is a real Free capability (see docs/reference/
 // growth-persuasion.md: the taste of power has to be power the user keeps), and
 // the list is overridable per caller via the `unlocks` prop.
@@ -161,10 +161,23 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
   const showIntent = !!reason && !resetMode && !passwordOnly
   const showUnlocks = showIntent && free && unlockList.length > 0 && !showWhy
 
+  // "Log in to continue" — matching the NAV TRIGGER, which says "Log in".
+  //
+  // I changed this to "Sign in to continue" and broke three acceptance tests
+  // that locate this dialog by its accessible name. The tests were right and
+  // the change was wrong: a visitor who clicks a control labelled "Log in" and
+  // lands on a dialog headed "Sign in" has been handed two names for one action
+  // inside a second, which is the exact seam the V2 work exists to remove.
+  //
+  // The rest of this file's form controls DO say "Sign in" (submit button,
+  // "Back to sign in", "Already have an account? Sign in"). That inconsistency
+  // is real and predates this workstream. Fixing it means moving the nav, the
+  // buttons, this title and the tests together — a proposal in docs/PROPOSALS.md,
+  // not a one-line edit here. Do not half-do it again.
   const title = resetMode ? (t('auth.resetPassword') || 'Reset your password')
     : isSignup ? (t('auth.createAccount') || 'Create your free account')
       : passwordOnly ? 'Switch account'
-        : reason ? 'Sign in to continue' : (t('auth.welcomeBack') || 'Welcome back')
+        : reason ? 'Log in to continue' : (t('auth.welcomeBack') || 'Welcome back')
 
   return (
     <div className="ui-modal-overlay" onMouseDown={() => { if (!loading) onDismiss() }}>
