@@ -12,6 +12,7 @@ import {
   savingsVsMonthly,
 } from '../config/planLadder'
 import useModalDialog from '../hooks/useModalDialog'
+import ProHarmonyPreview from './ProHarmonyPreview'
 
 // The Pro upgrade modal — a funnel surface, and the only one in the app.
 //
@@ -64,6 +65,10 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     subtitle = 'Keep every tool open and every export clean. Free stays free — Pro removes the ceiling.',
     eyebrow = 'UIL4B Pro',
     features = DEFAULT_FEATURES,
+    // The exact colour the gate fired on, when the caller knows it. The rail
+    // degrades to the last palette this browser worked on, then to the brand
+    // accent, so nothing breaks when a caller passes nothing.
+    seed,
   } = opts
 
   const currency = useMemo(() => detectCurrency(), [])
@@ -117,16 +122,23 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
         tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
       >
+        <button type="button" className="ui-modal-x ui-pro-x" onClick={onClose} aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+
         <div className="ui-pro-head">
           <span className="ui-pro-eyebrow">{eyebrow}</span>
-          <button type="button" className="ui-modal-x" onClick={onClose} aria-label="Close">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-
-        <div className="ui-pro-body">
           <h2 className="ui-pro-title" id={`${uid}-title`}>{title}</h2>
           <p className="ui-pro-sub" id={`${uid}-sub`}>{subtitle}</p>
+        </div>
+
+        {/* The right rail: the systems this subscription actually buys, drawn
+            live from the user's own seed. Placed between the head and the body
+            in DOM order so the single-column layout reads promise -> proof ->
+            price, and grid-template-areas moves it to the right at width. */}
+        <ProHarmonyPreview seed={seed} />
+
+        <div className="ui-pro-body">
 
           {/* The headline rate. Computed from whichever plan is genuinely the
               cheapest per month — never typed, so it cannot drift from the
@@ -234,6 +246,11 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
               block above already carries the retry and the way out. */}
           {!priceUnavailable && (
             <>
+              {/* One primary action, labelled for what it does rather than
+                  for what it costs. "Get started free" used to sit here, which
+                  contradicted the whole surface: this is the upgrade path.
+                  The trial is stated in the steps above and again under the
+                  button, not smuggled into the button label. */}
               <div className="ui-pro-cta">
                 <button
                   type="button"
@@ -242,11 +259,20 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                   disabled={!choice || !settled || starting}
                   aria-busy={starting}
                 >
-                  {hasTrial ? `Start ${choice.trialDays}-day free trial` : 'Upgrade to Pro'}
+                  {starting ? 'Opening checkout…' : 'Upgrade to Pro'}
+                </button>
+                {/* Declining must be exactly as easy as accepting —
+                    growth-persuasion.md guardrail 3. A real button with a real
+                    label, not a grey word hidden in a corner. */}
+                <button type="button" className="ui-pro-later" onClick={onClose}>
+                  Maybe later
                 </button>
               </div>
 
               <p className="ui-pro-note">
+                {hasTrial
+                  ? `Free for ${choice.trialDays} days. `
+                  : ''}
                 {user ? 'Cancel any time from Settings.' : 'You’ll create a free account first, then confirm payment.'}
                 {' '}
                 <button type="button" onClick={seeAllPlans}>See all plans</button>

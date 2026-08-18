@@ -6872,35 +6872,13 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ui-modal-actions--row{flex-direction:row;justify-content:flex-end}
 .ui-modal-actions--row .btn{width:auto}
 
-/* --- Pro-upgrade modal (Image 3): two columns, gradient art panel --- */
-.ui-pro{max-width:760px}
-.ui-pro-grid{display:grid;grid-template-columns:1.1fr .9fr}
-.ui-pro-main{padding:28px 30px}
-.ui-pro-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:640;letter-spacing:.04em;text-transform:uppercase;color:var(--brand);margin-bottom:12px}
-.ui-pro-title{font-size:25px;font-weight:660;line-height:1.15;letter-spacing:-.02em;color:var(--t0);margin:0}
-.ui-pro-sub{margin:9px 0 0;font-size:14px;line-height:1.5;color:var(--t2)}
-.ui-pro-list{list-style:none;margin:20px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
-.ui-pro-li{display:flex;gap:11px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--t1)}
-.ui-pro-tick{flex:none;width:20px;height:20px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--brand-bg);color:var(--brand)}
-.ui-pro-price{margin:22px 0 0;display:flex;align-items:baseline;gap:8px}
-.ui-pro-amount{font-size:26px;font-weight:680;line-height:1;letter-spacing:-.02em;color:var(--t0)}
-.ui-pro-per{font-size:13px;color:var(--t2)}
-.ui-pro-save{font-size:11.5px;font-weight:600;color:var(--brand);background:var(--brand-bg);border-radius:var(--radius-pill);padding:3px 9px}
-/* Placeholder held over the amount until the live price settles — its height
-   matches the real amount's line box (26px, line-height:1) so the swap to the
-   live number doesn't shift the modal layout when it lands. */
-.ui-pro-price-skel{display:inline-block;width:190px;height:26px;border-radius:var(--radius-s)}
-.ui-pro-cta{margin-top:16px}
-.ui-pro-cta .btn{width:100%;justify-content:center}
-.ui-pro-note{margin:12px 0 0;font-size:11.5px;color:var(--t2);text-align:center}
-.ui-pro-note button{background:none;border:none;color:var(--t2);font:inherit;text-decoration:underline;cursor:pointer;padding:0}
-.ui-pro-note button:hover{color:var(--t0)}
-.ui-pro-art{position:relative;overflow:hidden;background:linear-gradient(140deg,var(--brand),#8B5CF6 55%,#EC4899);display:flex;flex-direction:column;justify-content:flex-end;padding:26px}
-.ui-pro-art::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 15% 10%,rgba(255,255,255,.28),transparent 55%);pointer-events:none}
-.ui-pro-art-glyphs{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.9}
-.ui-pro-proof{position:relative;color:#fff}
-.ui-pro-proof-stars{display:flex;gap:2px;margin-bottom:6px;color:#fff}
-.ui-pro-proof-txt{font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.92)}
+/* --- Pro-upgrade modal: see the "W3 - V2 SHARED UI" block at the end of
+       this file. The V1 rules that sat here (a #8B5CF6 -> #EC4899 gradient
+       art panel and a five-star "Loved by designers" proof strip) are
+       deleted rather than overridden: the gradient was off-brand for the
+       blue accent, and the star strip was fabricated social proof. Leaving
+       either in the stylesheet keeps it one class name away from coming
+       back. --- */
 
 /* --- Single-click login popup (reuses .auth-* form styles) --- */
 .ui-login .ui-modal-body{padding-top:8px}
@@ -6914,13 +6892,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ui-login-why-h{margin:0 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--t1)}
 .ui-login-why-list{margin:0;padding-left:16px;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .ui-login-why-list li+li{margin-top:4px}
-
-@media(max-width:600px){
-  .ui-pro{max-width:440px}
-  .ui-pro-grid{grid-template-columns:1fr}
-  .ui-pro-art{display:none}
-  .ui-pro-main{padding:24px 22px}
-}
 
 /* --- User identity: name + owner crown + flair tag (UserName component) --- */
 .uname{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
@@ -8692,9 +8663,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
              that you can cancel before then.
    Deliberately NOT taken: any "most popular" ribbon that isn't backed by real
    data, and every save badge that only appears once you hover the cheaper tab. */
-.ui-pro{max-width:560px}
-.ui-pro-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px 0}
-.ui-pro-body{padding:6px 24px 24px}
 /* Mono eyebrow - V2's tool texture. --accent-strong because it is 11px. */
 .ui-pro-eyebrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
 .ui-pro-title{margin:8px 0 0;font-size:var(--fs-h3);font-weight:800;line-height:1.12;letter-spacing:-.03em;color:var(--t0);text-wrap:balance}
@@ -8818,3 +8786,75 @@ button.plb-varrow:hover{background:var(--bg-2)}
    traps focus. Give it the panel elevation so it reads as the same family as
    the desktop mega panel. */
 .pnav-sheet{box-shadow:var(--shadow-panel)}
+
+/* -- Pro modal: two columns, and a rail that draws the product --------------
+   Founder direction, 2026-08-17: the decorative purple/pink gradient with the
+   abstract circle diagram is gone. In its place the modal renders the actual
+   colour systems the subscription buys, generated live from the user's own
+   seed by generateHarmony() / autoTonalFromSeed().
+
+   Further Mobbin references for this revision (all web):
+   Elicit    https://mobbin.com/screens/9a85989e-62da-4b19-8121-6aa72fb87740
+             - the benefits list IS the visual; "Upgrade to Plus" with a real
+               "Maybe later" beside it and "View all plans" underneath. The
+               structural model for this modal's action row.
+   Wellfound https://mobbin.com/screens/35bdbe6f-557a-4fe5-baaa-e54276a1fd36
+             - Free vs Pro side by side; what you keep, what you gain.
+   Vercel    https://mobbin.com/screens/03df1c90-1e82-4e0d-9146-c8006d8954b0
+             - a "what's included" rail beside the pricing step rather than art.
+   Squarespace https://mobbin.com/screens/ae318022-b2d2-4142-b0fd-73b5a62bd4c4
+             - billing-interval choice presented before the commitment.
+
+   DOM order is head -> rail -> body, so the single-column phone layout reads
+   promise -> proof -> price. grid-template-areas moves the rail to the right
+   at width without moving any markup. */
+.ui-pro{max-width:900px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);grid-template-areas:"head rail" "body rail";align-items:start}
+.ui-pro-x{position:absolute;top:14px;right:14px;z-index:2}
+.ui-pro-head{grid-area:head;padding:26px 28px 0}
+.ui-pro-body{grid-area:body;padding:16px 28px 26px}
+.ui-pro-rail{grid-area:rail;align-self:stretch;display:flex;flex-direction:column;padding:26px 26px 26px 24px;border-left:1px solid var(--border);background:var(--cbg)}
+
+/* Right padding keeps the heading clear of the close button, which is
+   absolutely positioned over this column at wide widths. */
+.ui-pro-rail-h{margin:0;padding-right:34px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.ui-pro-rail-seed{display:flex;align-items:center;gap:7px;margin:8px 0 0;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t1)}
+.ui-pro-rail-chip{width:14px;height:14px;flex:none;border-radius:var(--radius-xs);border:1px solid color-mix(in srgb,var(--t0) 14%,transparent)}
+.ui-pro-rail-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:11px}
+.ui-pro-rail-row{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ui-pro-rail-name{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--t1)}
+.ui-pro-rail-lock{display:inline-grid;place-items:center;color:var(--accent-strong)}
+.ui-pro-rail-free{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;border-radius:var(--radius-pill);border:1px solid var(--border);color:var(--t2);background:var(--bg-1)}
+/* The strip is the product. Five swatches because that is what the palette
+   tools build - a four-swatch preview would be showing a system that does not
+   exist. Rendered in full colour on the locked rows too: the honest version of
+   a taste of Pro is showing exactly what you would get and gating the
+   generator, not blurring a shape. */
+.ui-pro-rail-strip{display:flex;height:26px;border-radius:var(--radius-s);overflow:hidden;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
+.ui-pro-rail-sw{flex:1 1 0;min-width:0}
+.ui-pro-rail-foot{margin:16px 0 0;font-size:11px;line-height:1.45;color:var(--t2)}
+
+/* Actions: accept and decline at the same weight of legibility. */
+.ui-pro-cta{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+.ui-pro-later{align-self:center;padding:8px 14px;border:none;border-radius:var(--radius-pill);background:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.ui-pro-later:hover{background:var(--hvr);color:var(--t0)}
+.ui-pro-later:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* A dialog container is a focus TARGET, not a control. useModalDialog focuses
+   it on open so the label is announced before the contents, which made the
+   whole panel light up with the global focus ring. Only containers carrying
+   tabindex="-1" lose it; every real control keeps its ring. */
+.ui-modal[tabindex="-1"]:focus-visible,.cp-panel[tabindex="-1"]:focus-visible{outline:none}
+
+@media(max-width:780px){
+  .ui-pro{max-width:460px;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "rail" "body"}
+  .ui-pro-rail{border-left:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:18px 22px;margin-top:16px}
+  .ui-pro-rail-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+  .ui-pro-head{padding:22px 22px 0}
+  .ui-pro-body{padding:14px 22px 22px}
+}
+@media(max-width:480px){
+  .ui-pro-head{padding:18px 16px 0}
+  .ui-pro-body{padding:12px 16px 20px}
+  .ui-pro-rail{padding:16px}
+  .ui-pro-rail-list{grid-template-columns:minmax(0,1fr)}
+}
