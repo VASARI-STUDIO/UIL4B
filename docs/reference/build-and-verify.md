@@ -25,7 +25,7 @@ surface is unreachable rather than broken — the file carries the reason and th
 one-word change that re-enables it. Skipped is the honest state; do not "fix"
 the count by deleting the file.
 
-The 32 lint warnings are pre-existing and advisory
+The 31 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
 The previous figures in this table (33 / 185 / 191) were measured at 2026-08-09.
