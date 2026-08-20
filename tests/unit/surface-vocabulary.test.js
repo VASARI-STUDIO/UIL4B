@@ -54,8 +54,13 @@ test('no public page calls a UIL4B surface a "workspace"', () => {
 })
 
 test('the exemptions are real, so this test cannot pass by being toothless', () => {
-  // If the internal code name ever disappears, the ALLOWED list is stale and
-  // the test above has quietly stopped covering the case it was written for.
-  const home = fs.readFileSync(path.join(process.cwd(), 'src/pages/Home.jsx'), 'utf8')
-  assert.match(home, /home-workspace/, 'the internal class name this test exempts should still exist')
+  // If the exempted pattern ever disappears from the file that carries it, the
+  // ALLOWED list is stale and the test above has quietly stopped covering the
+  // case it was written for. The V2 homepage rebuild (2026-08-15+) replaced
+  // Home.jsx's hero wholesale and dropped the `home-workspace-intro` wrapper
+  // along with it, so that anchor no longer exists there — the exemption this
+  // scan still genuinely exercises is SiteMap.jsx's `id: 'workspace'`, a URL
+  // anchor rather than copy.
+  const siteMap = fs.readFileSync(path.join(process.cwd(), 'src/pages/SiteMap.jsx'), 'utf8')
+  assert.match(siteMap, /id: 'workspace'/, "the SiteMap anchor this test exempts should still exist")
 })
