@@ -114,10 +114,14 @@ npm run preview    # Preview production build
 
 ```bash
 npx eslint .       # must report 0 errors
-npx vite build
+npm run build      # vite build + prerender — NOT bare `npx vite build`
 npm run test:unit
 npm run test:users # Playwright acceptance suite (builds first)
 ```
+
+Use `npm run build`, not bare `npx vite build`: four unit tests read the
+prerendered shells and skip *silently* without them, so the bare Vite build
+gives a green run with a quietly smaller test count.
 
 Current expected counts for each gate are in
 [`docs/reference/build-and-verify.md`](docs/reference/build-and-verify.md) —

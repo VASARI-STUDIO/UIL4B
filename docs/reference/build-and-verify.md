@@ -17,7 +17,16 @@ number here, you must have re-run it.
 | Build | `npm run build` | passes (vite + prerender) |
 | Unit | `npm run test:unit` | **484 tests, 484 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **226 tests across 23 spec files**; **213 pass, 13 skipped** (`npx playwright test --list`) |
+| Browser acceptance | `npm run test:users` | **229 tests across 23 spec files**; **216 pass, 13 skipped** (`npx playwright test --list`) |
+
+> **Run `npm run build`, never bare `npx vite build`.** They are not
+> interchangeable: `build` is `vite build && node scripts/prerender.mjs`.
+> Four unit tests read the prerendered shells and **skip silently** when
+> `dist/` has not been prerendered — so the bare Vite build produces a green
+> run with a quietly smaller test count. A gate that passes by skipping is the
+> vacuous-pass failure this project has hit before. Re-measured 2026-08-20:
+> browser acceptance on `main` is **229 tests** (`npx playwright test --list`),
+> not the 226 recorded on 2026-08-08 — `main` advanced and this table did not.
 
 The 13 skipped are the whole of `12-ui-system-builder.spec.js`. UI System mode
 went admin-only in founder batch 4 and this suite runs signed out, so the
