@@ -360,3 +360,48 @@ gap is a single missing media band. `M2` / `M3` / `M4` are one shared decision (
 `minmax(0,1fr) 340px` flip is ~350px too early across four tools) and are best fixed
 together rather than one page at a time. `M1` and `M5` are the two mobile faults a real
 phone user hits immediately. `M6` is a one-line minimum-width change.
+
+---
+
+## Director addendum — 2026-08-20, after the fix landed
+
+**The blocker was worse than this audit recorded.** The audit measured with the
+default harmony selected and found the Palette Builder toolbar clean at 1080px.
+The trigger renders `System · <label>`, so its width depends on the *selected*
+harmony — a free choice any user can make. With **Monochromatic** selected the
+pre-fix build is still partly covered at **1060–1119px**. The crossover is
+therefore content-dependent (1123px with "Auto", 1180px with "Monochromatic")
+and **no fixed media band can be correct for both**, which is why extending the
+769–960px fix upward — the approach this audit and the routing brief both
+assumed — could not have worked.
+
+**Decision (Director): accept the toolbar wrap.** The fix lets the toolbar wrap
+its action group to a second row rather than shrinking a group below its
+content. This is a visible change — the toolbar grows 57px → 105px inside the
+affected band — and it overturns the invariant the old CSS comment asserted
+("a single line, always — it never wraps"). Accepted because:
+
+- A control that **cannot be clicked at all** is a worse defect than a taller
+  toolbar in a narrow width band.
+- The invariant was written before the harmony label could grow the trigger. It
+  was stale, not load-bearing, and it is not recorded in `css-conventions.md`
+  or `design-language-v2.md` — only in the comment, which the fix replaced.
+- The alternative (extending the ≤960 ribbon treatment upward) would push
+  bottom sheets and swipe-to-reach onto 1024–1180px **laptops** that currently
+  show all eleven controls at once. That trades a narrow-band defect for a
+  broad-band regression.
+
+**Threshold decision, also accepted: 1344px with the single column capped at
+940px.** The reasoning is forced rather than chosen: a sidebar appearing at any
+threshold *T* costs the working column `gap + sidebar` (364px) at that exact
+pixel, so moving *T* relocates the cliff and never removes it. "Widening never
+shrinks the working column" is only satisfiable if the single-column band stops
+growing before the sidebar arrives — hence the 940px cap, which is the width
+the column already has at the existing 980px stack point, making 980 → 981
+seamless and changing nothing at or below 980.
+
+**Two residuals were reported and deliberately not fixed**, both pre-existing
+and out of that slice's scope: Font Pair's specimen drifts 889 → 874px (1.7%)
+from `.fpr-panel`'s `clamp(20px,2.5vw,32px)` viewport padding, where pinning it
+would convert a gradual drift into a hard step; and `--page-gutter` costs every
+page ~48px crossing 1440px, which is page-wide and unrelated to this work.
