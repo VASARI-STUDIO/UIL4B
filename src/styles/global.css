@@ -8270,14 +8270,25 @@ button.plb-varrow:hover{background:var(--bg-2)}
        (page gutters), the first width at which the two-column working column is
        at least as wide as the capped single column.
 
-   Measured result, 981px → 4K: 940, 940, … 940, then 941 at 1344 rising to 1036.
-   Monotonic. Widening never shrinks it, and the 1440px page-gutter step (which
-   is page-wide, not ours) leaves 984px — still above the cap.
+   Measured result, 981px → 4K — Type Scale's specimen row: 724, 724, … 724,
+   then 724 at 1344, 725, 768 at 1440, 820 at 1920. Monotonic; widening never
+   shrinks it. Tint's ramp is 888 flat then 889→984, and all 11 stops are inside
+   the panel at every width (the 981–1119 clipping was a symptom of this flip,
+   not a separate fault). Font Pair's specimen still drifts 889→874 across
+   981–1280 — that is .fpr-panel's `clamp(20px,2.5vw,32px)` padding, which keys
+   off the viewport while its container is now fixed. Pre-existing, 1.7%, and
+   left alone: pinning it moves the 15px from a gradual drift to a hard step.
+
+   The cap is on the PAGE, not the grid. Capping only .tt-grid leaves the hero,
+   the intro cards and the status bar at full width with the workbench inset
+   inside them, which reads as a misalignment; capping the page keeps one measure
+   down the whole column.
 
    This block is min-width:981px so the ≤980 stacking rules in each tool's own
    section keep their existing bound and are left untouched. */
 @media(min-width:981px) and (max-width:1343px){
-  .tt-grid,.tsc-grid,.fpr-grid{grid-template-columns:1fr;max-width:940px;margin-inline:auto}
+  .tt-page,.tsc-page,.fpr-page{max-width:940px;margin-inline:auto}
+  .tt-grid,.tsc-grid,.fpr-grid{grid-template-columns:1fr}
   /* Stacked, the config panel is in the page flow — a sticky panel with its own
      scroller is wrong there, and `visible` alongside overflow-x:hidden would
      compute to auto and leave the scrollbar behind. Same reasoning as each
