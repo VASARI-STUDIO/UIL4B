@@ -5415,7 +5415,7 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 /* V2 body: 54ch measure, --mute, line-height 1.65. */
 .home-hero-sub{font-size:var(--fs-lede);font-weight:400;color:var(--t2);line-height:1.6;max-width:54ch;margin:var(--s-5) auto 0;text-wrap:pretty}
 /* C5 rhythm: the mark now occupies more of its line box and the headline's
-   collapsed bottom margin grew from -.14em to -.26em, so the sub-line needs the
+   collapsed bottom margin grew from -.14em to -.28em, so the sub-line needs the
    next spacing step to keep the same optical gap. Declared BEFORE the
    `max-height:900px` block below on purpose — that block's --s-4 override must
    still win on short laptops, where the below-the-fold contract binds. */
