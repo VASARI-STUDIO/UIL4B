@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { GALLERY_PALETTES, paletteBuilderUrl } from '../../data/paletteGallery'
+// paletteCss lives in the data module, not here: the homepage gallery copies the
+// same payload, and two implementations of it would have drifted apart.
+import { GALLERY_PALETTES, paletteBuilderUrl, paletteCss } from '../../data/paletteGallery'
 import { setGradientDraft, resetGradientDraft } from '../../utils/colorHandoff'
 import { useProject } from '../../contexts/ProjectContext'
 
@@ -88,14 +90,6 @@ function HexGlyph() {
       <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
     </svg>
   )
-}
-
-// The CSS a palette copies as. Named from the palette so the variables mean
-// something in the file they are pasted into, rather than --c1…--c5.
-function paletteCss(palette) {
-  const slug = palette.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'palette'
-  const lines = palette.colors.map((hex, i) => `  --${slug}-${(i + 1) * 100}: ${hex.toUpperCase()};`)
-  return `/* ${palette.name} — UIL4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
 }
 
 function CheckGlyph() {
