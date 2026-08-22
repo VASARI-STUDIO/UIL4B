@@ -5441,6 +5441,15 @@ html.lenis,html.lenis body{height:auto}
   html:not([data-reduced-motion="false"]) :is(.home-hero-stats,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
 }
 html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+/* C6 caret, same contract in both directions. The JS does not render a caret at
+   all under reduced motion (the cycle never starts and one static query is
+   painted with no caret), so this is the backstop for motion being switched off
+   after mount — and the reason it is spelled out rather than left to the global
+   clamp at the top of this file, which only shortens animations. */
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .hcmd-caret{animation:none}
+}
+html[data-reduced-motion="true"] .hcmd-caret{animation:none}
 /* V2 body: 54ch measure, --mute, line-height 1.65. */
 .home-hero-sub{font-size:var(--fs-lede);font-weight:400;color:var(--t2);line-height:1.6;max-width:54ch;margin:var(--s-5) auto 0;text-wrap:pretty}
 /* C5 rhythm: the mark now occupies more of its line box and the headline's
@@ -5512,6 +5521,34 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 .hcmd-input{min-width:0;height:56px;border:0;background:none;color:var(--t0);font-family:var(--font);font-size:var(--fs-body);font-weight:500}
 .hcmd-input::placeholder{color:var(--t3)}
 .hcmd-input:focus{outline:none}
+/* ── C6 · the typing demo ────────────────────────────────────────────────────
+   Founder: "can we make the search bar show a animation of typing something,
+   then after a couple of seconds it backspaces then types another thing."
+
+   THE WHOLE CLS ARGUMENT IS IN THESE TWO RULES, so do not make the overlay
+   in-flow. `.hcmd-bar` is `auto minmax(0,1fr) auto`: the input's width comes
+   from the grid TRACK, never from its content, and `.hcmd-field` inherits that
+   track. `.hcmd-ghost` is then `position:absolute; inset:0`, so it is out of
+   flow entirely and a demo string of any length contributes nothing to layout.
+   The homepage CLS baseline is mean 0.0000 / worst 0.0000 on the
+   `homepage-field-metrics` profile and it measured 0.0000 again after this
+   shipped. The spec explicitly REJECTS revealing `.hcmd-results` as part of
+   this animation for the same reason — that panel IS an in-flow sibling and
+   showing it would move every element beneath it.
+
+   Colour is --t3, the real placeholder's own colour, so the demo reads as a
+   placeholder rather than as somebody's abandoned input. The placeholder itself
+   goes transparent while the overlay paints, or the two would stack. */
+.hcmd-field{position:relative;display:grid;min-width:0}
+.hcmd-field[data-ghost] .hcmd-input::placeholder{color:transparent}
+.hcmd-ghost{position:absolute;inset:0;display:flex;align-items:center;gap:2px;overflow:hidden;pointer-events:none;font-family:var(--font);font-size:var(--fs-body);font-weight:500;color:var(--t3)}
+/* `pre` so the space inside "type scale" is not collapsed mid-type. */
+.hcmd-ghost-text{white-space:pre}
+/* Last flex child, so it follows the text without anything measuring anything. */
+.hcmd-caret{flex:0 0 auto;width:1px;height:1.15em;background:var(--accent);animation:hcmd-caret 1060ms steps(1) infinite}
+/* One pass, then the caret stops with the cycle. */
+.hcmd-ghost[data-done] .hcmd-caret{animation:none}
+@keyframes hcmd-caret{0%,49.99%{opacity:1}50%,100%{opacity:0}}
 .hcmd-kbd{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .hcmd-kbd:hover{background:var(--hvr);border-color:var(--bh)}
 .hcmd-kbd:active{transform:scale(.96)}

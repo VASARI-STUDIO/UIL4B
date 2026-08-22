@@ -178,6 +178,20 @@ export default function HomeCommandBar() {
     }
     ghostStopRef.current = settle
 
+    // WCAG 2.2.2, the practical half: the visitor's FIRST interaction of any
+    // kind ends the demo, not only one aimed at the bar. Passive and `once`, so
+    // this costs nothing and cannot delay a scroll. Together with the announced
+    // name on the keycap it means any deliberate action a visitor takes to make
+    // it stop — clicking it, typing, scrolling past, pressing a key — works.
+    const quit = () => settle()
+    const quitEvents = ['pointerdown', 'keydown', 'wheel', 'touchstart']
+    for (const type of quitEvents) {
+      window.addEventListener(type, quit, { once: true, passive: true, capture: true })
+    }
+    const dropQuit = () => {
+      for (const type of quitEvents) window.removeEventListener(type, quit, { capture: true })
+    }
+
     // Burn no frames below the fold. Starting on the first intersection also
     // means a visitor who lands mid-page (a restored scroll position, an anchor)
     // never has the animation running unseen — and it does not resume once the
@@ -200,6 +214,7 @@ export default function HomeCommandBar() {
       cancelled = true
       window.clearTimeout(timer)
       io.disconnect()
+      dropQuit()
       ghostStopRef.current = null
     }
   }, [reduced])
@@ -243,29 +258,74 @@ export default function HomeCommandBar() {
     }
   }
 
+  // The overlay paints only while the field is genuinely empty and untouched.
+  // `query` is in the condition as well as the yield handlers because a
+  // quick-fill chip sets a value programmatically, and a demo query sitting
+  // behind a real one would be nonsense.
+  const showGhost = ghostOn && !query && !!ghost
+
   return (
-    <div className="hcmd" data-open={open || undefined}>
+    <div
+      className="hcmd"
+      data-open={open || undefined}
+      ref={rootRef}
+      /* YIELD, at the container: focus, pointer or key anywhere in the bar is a
+         real visitor, and the demo gets out of the way for the session. These
+         are capture-free React handlers on the wrapper rather than listeners
+         added in the effect, so they cannot outlive the component. */
+      onFocusCapture={stopGhost}
+      onPointerDownCapture={stopGhost}
+      onKeyDownCapture={stopGhost}
+    >
       <div className="hcmd-bar">
         <span className="hcmd-prompt" aria-hidden="true">&gt;</span>
-        <input
-          ref={inputRef}
-          type="text"
-          className="hcmd-input"
-          value={query}
-          spellCheck="false"
-          autoComplete="off"
-          aria-label="Search every UIL4B tool"
-          aria-describedby={`${listId}-count`}
-          placeholder="Search tools — contrast, gradient, type scale…"
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={onInputKeyDown}
-        />
+        {/* The input's own grid track, unchanged: `.hcmd-bar` is
+            `auto minmax(0,1fr) auto`, this wrapper takes the 1fr track, and the
+            overlay inside it is absolutely positioned. The track sizes the box,
+            the box sizes the input, and the demo string is OUT OF FLOW — which
+            is the reserved-width guarantee that keeps CLS at 0.0000 no matter
+            how long a query gets. */}
+        <div className="hcmd-field" data-ghost={showGhost || undefined}>
+          <input
+            ref={inputRef}
+            type="text"
+            className="hcmd-input"
+            value={query}
+            spellCheck="false"
+            autoComplete="off"
+            aria-label="Search every UIL4B tool"
+            aria-describedby={`${listId}-count`}
+            placeholder="Search tools — contrast, gradient, type scale…"
+            onChange={(event) => { stopGhost(); setQuery(event.target.value) }}
+            onKeyDown={onInputKeyDown}
+          />
+          {/* aria-hidden, and the input's `value` stays EMPTY for the whole
+              animation. The accessible name comes from the stable aria-label
+              above, never from the moving string — a search field whose name
+              changes every few seconds is an interruption, not a hint, and a
+              screen reader must never be told the visitor typed this. */}
+          {showGhost && (
+            <span className="hcmd-ghost" aria-hidden="true" data-done={ghostDone || undefined}>
+              <span className="hcmd-ghost-text">{ghost}</span>
+              {!reduced && <i className="hcmd-caret" />}
+            </span>
+          )}
+        </div>
         <button
           type="button"
           className="hcmd-kbd"
           onClick={() => { inputRef.current?.focus(); inputRef.current?.select() }}
         >
-          <span className="sr-only">Focus the tool search</span>
+          {/* WCAG 2.2.2 (Pause, Stop, Hide). The demo auto-starts, runs ~14s
+              and sits alongside other content, so it needs a mechanism to
+              stop it — and a mechanism nobody can find does not satisfy the
+              criterion. This button already IS the stop (it focuses the input,
+              which yields the bar), so the cheapest honest fix is to say so
+              rather than to add another control. The name reverts once there
+              is nothing left to stop. */}
+          <span className="sr-only">
+            {showGhost ? 'Focus the tool search, and stop the search demonstration' : 'Focus the tool search'}
+          </span>
           <kbd aria-hidden="true">⌘K</kbd>
         </button>
       </div>
