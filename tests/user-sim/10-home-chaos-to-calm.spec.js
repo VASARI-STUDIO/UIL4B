@@ -605,7 +605,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await page.keyboard.type('20')
     await page.keyboard.press('Tab')
     await expect(baseInput).toHaveValue('20')
-    await page.getByLabel('Scale ratio').selectOption('1.333')
+    await page.getByRole('button', { name: 'Perfect fourth · 1.333' }).click()
     await page.getByLabel('Preview text').fill('Systems need typographic rhythm')
     await expect(page.locator('.hw-type-row').first()).toContainText('47.4px')
     await expect(page.locator('.hw-type-sample')).toHaveText([
@@ -697,7 +697,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(active).toHaveAttribute('alt', /.{20,}/)
 
     // Changing a reference does not discard edited output choices.
-    await page.locator('#hw-img-fmt').selectOption('image/png')
+    await page.locator('.hw-rail .hw-tile', { hasText: 'PNG' }).click()
     await page.locator('#hw-img-res').selectOption('2k')
     await subtabs.nth(2).click()
     await expect(subtabs.nth(2)).toHaveAttribute('aria-selected', 'true')
@@ -726,7 +726,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="image"]').click()
-    await page.locator('#hw-img-fmt').selectOption('image/png')
+    await page.locator('.hw-rail .hw-tile', { hasText: 'PNG' }).click()
 
     const button = page.getByRole('button', { name: 'Try your image' })
 
@@ -754,7 +754,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="image"]').click()
-    await page.locator('#hw-img-fmt').selectOption('image/png')
+    await page.locator('.hw-rail .hw-tile', { hasText: 'PNG' }).click()
     await page.locator('#hw-img-res').selectOption('2k')
 
     await page.locator('.hw-body input[type="file"]').setInputFiles([png('one.png'), png('two.png')])
@@ -841,8 +841,8 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // 14 · controls mutate the preview and nothing else.
     await page.getByRole('button', { name: /Preview the zap icon/ }).click()
-    await page.locator('#hw-icon-size').selectOption('32')
-    await page.locator('#hw-icon-stroke').selectOption('2')
+    await page.locator('[aria-labelledby="hw-icon-size-label"] .hw-tile', { hasText: '32' }).click()
+    await page.locator('[aria-labelledby="hw-icon-stroke-label"] .hw-tile').filter({ hasText: /^2$/ }).click()
     await expect(page.locator('.hw-icon-meta')).toContainText('zap · 32px · 2 stroke')
     await expect(page.locator('.hw-icon-preview svg')).toHaveAttribute('width', '32')
     expect(await snapshot(), 'no storage, recents or quota write').toBe(before)

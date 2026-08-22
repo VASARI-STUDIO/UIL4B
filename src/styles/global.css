@@ -5736,7 +5736,36 @@ html[data-reduced-motion="true"] .hcmd-caret{animation:none}
      Internal scroll is the FALLBACK, not the plan — the per-mode re-layout that
      makes `image` and `typography` fit outright is spec §4.3 (C4), a separate
      slice. Today those two modes scroll inside a frame that does not move. */
-  .hsteps-sticky .hw-panel{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+  /* C4 · the two zones (spec §4.1 + §4.3), which #262 deferred to this slice.
+     #262 stopped the panel RESIZING; the modes still overflowed inside it and
+     the whole panel scrolled, artefact and all. Now the panel itself does not
+     scroll at all: the stage takes the slack and only the controls may scroll,
+     and only when a mode genuinely needs it. Measured after the per-mode
+     re-layout below, none of the five does at 1440x900. */
+  .hsteps-sticky .hw-panel{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  .hsteps-sticky .hw-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:14px}
+  /* The artefact absorbs the difference between a mode's natural height and the
+     frame. `min-height:240px` is the floor below which a preview stops being a
+     preview; `min-height:0` is what lets a flex child shrink at all. */
+  .hsteps-sticky .hw-stage{flex:1 1 auto;min-height:min(240px,100%);justify-content:center}
+  /* Controls never take more than 46% of the frame, so the artefact always wins
+     the argument. `scrollbar-gutter:stable` reserves the gutter in every mode so
+     the modes that fit are not a few px wider than the ones that do not. */
+  .hsteps-sticky .hw-controls{flex:0 0 auto;max-height:46%;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+  /* When a mode's controls do scroll, the hand-off must not scroll out of
+     reach — "Continue in …" is the whole point of the panel, and a CTA you have
+     to go looking for is a CTA that does not get pressed. Sticky inside the
+     scroll container, on the panel's own ground so the controls pass behind it. */
+  .hsteps-sticky .hw-foot{position:sticky;bottom:0;z-index:1;margin-top:auto;padding-bottom:2px;background:var(--bg-1)}
+  /* The per-mode splits are keyed to VIEWPORT width, so at 1440 they stayed
+     two-column inside a 591px panel — which is what made these modes feel
+     cramped and unlike the real tools. In the sticky column they are always one
+     column: canvas above, controls below. */
+  .hsteps-sticky .hw-icon-split,.hsteps-sticky .hw-img-split,.hsteps-sticky .hw-type-split{grid-template-columns:minmax(0,1fr)}
+  .hsteps-sticky .hw-pal{height:auto;flex:1 1 auto;min-height:120px}
+  .hsteps-sticky .hw-grad-preview{height:auto;flex:1 1 auto;min-height:120px}
+  .hsteps-sticky .hw-ref{min-height:0}
+  .hsteps-sticky .hw-type-preview{flex:1 1 auto;min-height:0;overflow:hidden}
   /* The sticky column is roughly half the page, so the workbench's 118px tab
      floor overflowed its own strip and clipped "Typography". The tabs share the
      width evenly here and the icons carry the recognition. */
@@ -5878,7 +5907,62 @@ html[data-reduced-motion="true"] .hcmd-caret{animation:none}
 }
 
 /* Shared panel furniture */
+/* ── C4 · two zones, and a control language that matches the real tools ──────
+   Founder: "make the live previews look and feel more like the actual app."
+
+   THE TWO ZONES. Canvas above, controls below — the structure every sampled
+   creative app uses, and the thing that makes the rest fall out. `.hw-stage`
+   holds the artefact and NEVER scrolls; `.hw-controls` is the only zone allowed
+   to. Deferred from #262 because it needs the per-mode re-layout below: a fixed
+   frame with no re-layout just moves the overflow inside the panel.
+
+   Zones only bind where the frame is fixed — inside `.hsteps-sticky`. In the
+   `variant="section"` workbench the panel keeps its natural height, so the
+   zones are plain blocks and nothing is capped or scrolled. */
+.hw-stage,.hw-controls{display:flex;flex-direction:column;gap:14px;min-width:0}
 .hw-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+
+/* Properties: label left, control right, one row each. Never mixed with rails.
+   `min-height:34px` clears the 24px target floor with room to spare. */
+.hw-prop{display:grid;grid-template-columns:minmax(72px,auto) minmax(0,1fr) auto;align-items:center;gap:10px;min-height:34px}
+.hw-prop-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
+.hw-prop-range{min-width:0}
+.hw-prop-select,.hw-prop-text{grid-column:2 / -1;width:100%}
+/* The editable numeric readout, in a fixed right-hand column. On a 471px column
+   a slider alone cannot hit a precise value, so the NUMBER is the real input
+   and the slider is the coarse one. --mono for the value, --font for the label. */
+.hw-prop-num{display:inline-flex;align-items:center;justify-content:flex-end;justify-self:end;gap:2px;min-height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
+.hw-prop-num:focus-within{border-color:var(--hue,var(--accent))}
+.hw-prop-num--wide{min-width:96px}
+/* `input.hw-num`, not `.hw-num`. The base rule at the top of this file is
+   `input[type="number"]{...}` — an attribute selector, so (0,1,1) — and it beats
+   a bare class. Measured: the readout inherited --font and `padding:9px 14px`,
+   which left 31px of content box for a 42px value and clipped "16" to "1".
+   Qualifying by element ties the specificity, and this rule is later. */
+input.hw-num:focus{box-shadow:none;border:0}
+input.hw-num{width:4ch;min-width:0;padding:0;border:0;background:none;color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-align:right;-moz-appearance:textfield;appearance:textfield}
+.hw-num::-webkit-outer-spin-button,.hw-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.hw-num:focus{outline:none}
+.hw-num-unit{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2)}
+
+/* Options: a horizontally scrolling rail of pill tiles, active one inverted.
+   Rails and rows are never mixed in one stack — that separation is what buys
+   back the vertical space `image` and `typography` needed to fit the frame. */
+.hw-rail-group{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hw-rail-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
+.hw-rail{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.hw-rail::-webkit-scrollbar{display:none}
+.hw-tile{display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;min-height:32px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;white-space:nowrap;transition:color var(--dur-2) var(--ease-standard),background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
+.hw-tile--wide{font-family:var(--font)}
+.hw-tile-unit{font-family:var(--mono);font-size:var(--fs-micro);opacity:.7}
+.hw-tile:hover{color:var(--t0);border-color:var(--bh)}
+.hw-tile:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:2px}
+/* Inverted, not tinted: at this size a tint is not a strong enough selected
+   signal beside four neighbours. */
+.hw-tile[aria-pressed="true"]{background:var(--t0);border-color:transparent;color:var(--bg-1)}
+.hw-tile[aria-pressed="true"] .hw-tile-unit{opacity:.75}
+/* Names the colour space rather than just "Hex". */
+.hw-label-space{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--t3);text-transform:none}
 .hw-btn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:580;cursor:pointer;transition:background var(--t),border-color var(--t)}
 .hw-btn:hover{background:var(--hvr);border-color:var(--bh)}
 .hw-btn:disabled{opacity:.55;cursor:not-allowed}
