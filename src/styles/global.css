@@ -4640,18 +4640,56 @@ html.lenis,html.lenis body{height:auto}
 .pnav-trigger:hover,.pnav-trigger[aria-expanded="true"]{background:var(--hvr);color:var(--t0)}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
-.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end;transition:gap var(--dur-3) var(--ease-inout)}
+/* min-width:max-content is what actually buys the actions cluster its space, and
+   it has to be here rather than on the pill. .pnav-inner is `1fr auto 1fr`, and
+   two 1fr tracks split the free space EVENLY — but the lead cluster is a 103px
+   logo and this one is ~307px of controls, so from 769px (where the section
+   menus and the Log in pill come back) up to ~962px (where an even split finally
+   clears 307px) the even split is smaller than this cluster needs. A `1fr` track
+   floors at its items' minimum contribution, and every flex item in here except
+   the CTA is nowrap, so that floor was the CTA's near-zero min-content: measured
+   at 769px, the lead track held 201px for 103px of logo while this track was
+   pinned to 219px and the CTA's 1fr label track was crushed to 0px.
+   Pinning flex-shrink on the pill alone does NOT fix it — Chrome still reports
+   this container's min-content as the old 219px, so the track never grows and the
+   overflow just moves outward (measured: the bar overran itself by 68px at 769px
+   and body's overflow-x:clip threw the "..." button away). Raising the item's own
+   min-width is what lifts the track's floor. Above ~962px an even split already
+   exceeds max-content, so this changes nothing there; below it, the lead track
+   yields instead — the right victim, and .pnav-lead keeps min-width:0 so the logo
+   can still compress if a future label makes the whole bar genuinely too wide. */
+.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end;min-width:max-content;transition:gap var(--dur-3) var(--ease-inout)}
 /* Sales-page "Start for Free" pill — hidden until the visitor scrolls to
    section 2 (#create); PillNav toggles .is-waiting from the scroll listener.
-   While waiting the pill also collapses its width (max-width + padding, and
-   margin-left eats the flex gap) so "Log in" nests flush against the right
+   While waiting the pill also collapses its width (the 0fr grid track below,
+   plus padding, and margin-left eats the flex gap) so "Log in" nests flush against the right
    cluster, then slides left as the pill expands in on scroll. */
 /* Signed-out CTA that collapses away until the visitor has scrolled. Same
    grid-track technique as the label reveals: the pill itself is the grid
    container and .pnav-cta-i is its single track item, so the collapse eases
    across the real pill width instead of a made-up max-width ceiling. Padding
    still animates separately — a border-box element can't narrow past its own
-   horizontal padding. See css-conventions.md → Motion. */
+   horizontal padding. See css-conventions.md → Motion.
+
+   WHY THIS PILL WAS THE ONE THAT BROKE (S15, mobile-audit-2026-08). Every other
+   item in .pnav-actions is nowrap, so its min-content contribution equals its
+   full width and it cannot give. This pill could: .pnav-cta-i carries
+   min-width:0 + overflow:hidden — it MUST, or the 0fr waiting track below could
+   never reach zero — which makes the pill's min-content contribution just its
+   own padding. So whenever the bar was short of width the CTA absorbed all of
+   it. Measured at 769px the 1fr label track collapsed to 0px (a 38px unlabelled
+   blob) and at 834px to 23.58px, rendering "tart for Fre".
+   Note what does NOT happen: the label never ellipsises. The inner span is
+   justify-items:center, so it is sized to its own max-content and simply
+   overhangs the pill on both sides, where white text lands on the white bar and
+   disappears. innerText still reads "Start for Free" the whole time, so nothing
+   short of a rendered-geometry check can see the damage.
+   The fix is on .pnav-actions above (the track floor), not here — the shortfall
+   was the grid misallocating width, not the bar running out of it. Adding
+   flex-shrink:0 here as well was measured to change nothing once the floor was
+   right, so it is deliberately absent rather than kept as decoration.
+   Do NOT swap justify-items:center for a stretched track + text-overflow — the
+   label would then ellipsis its way through every frame of the reveal below. */
 .pnav-cta{display:inline-grid;grid-template-columns:1fr;align-items:center;justify-items:center;transition:opacity var(--dur-3) var(--ease-out),transform var(--dur-3) var(--ease-out),grid-template-columns var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),margin var(--dur-3) var(--ease-inout),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-cta-i{overflow:hidden;min-width:0;white-space:nowrap}
 .pnav-cta.is-waiting{opacity:0;transform:translateY(-6px);grid-template-columns:0fr;padding-left:0;padding-right:0;margin-left:-8px;pointer-events:none}
@@ -5887,6 +5925,10 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
      the page the moment that token moved. */
   .pnav-inner{display:flex}
   .pnav-lead{flex:1 1 auto}
+  /* The base min-width:max-content exists to lift a `1fr` GRID track's floor.
+     There is no grid here, so it buys nothing and could only stop the cluster
+     yielding on a 320px phone — hand the width back. */
+  .pnav-actions{min-width:0}
   /* Search collapses to an icon-only tap target hugging the actions cluster;
      sales routes get it back too — on mobile it's the only way into the
      palette. The bookmark / export icon buttons fold away into the sheet. */
