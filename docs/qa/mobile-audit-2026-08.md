@@ -193,4 +193,148 @@ routes are the app-wide sub-24px targets covered in the systemic section.
 
 ---
 
+<!-- SLICE 2: account, legal and system pages -->
+
+### MAJOR · S6 · Information Centre — the page is 37px wider than a 320px phone and the excess is thrown away, not scrolled
+
+- **Page / route:** Information Centre · `/info`
+- **Occurs:** **320px only.** Clean from 360px up (measured 360, 390, 430 and every larger
+  viewport in the matrix).
+- **Screenshot:** `docs/qa/screenshots-mobile/info-320x568-overflow.png`
+
+**What is wrong.** At 320×568, `.ic-wrap` renders **341px wide** inside a 288px content box
+(`.app-page` is 320px with a 16px gutter each side), so its right edge sits at x=357 in a
+320px viewport. `document.documentElement.scrollWidth` is **320** — there is no page
+scrollbar — because `body` carries `overflow-x: clip`. The 37px is therefore **discarded,
+not reachable**.
+
+In the screenshot the `<h1>` reads *"Everything you need to kno"* (the `w` is gone), the
+intro paragraph reads *"Learn what each too"* / *"check how your scr"*, the table-of-contents
+card's right border is off-screen, and the `🖼️ Imagery, Icons & Emoji` pill runs off the
+edge. The text *is* the content of this page, and none of it can be recovered by scrolling.
+
+**Likely cause — isolated by measurement, not inference.** Hiding each child of `.ic-wrap`
+in turn:
+
+| Change | `.ic-wrap` width |
+|---|---|
+| (unchanged) | **341** |
+| `header.ic-head` hidden | 341 |
+| `div.ic-intro` hidden | 341 |
+| `nav.ic-toc` hidden | 341 |
+| `div.ic-sections` hidden | 341 |
+| **`section.ic-stats` hidden** | **288 ✅** |
+| **`.ic-stats-grid` hidden** | **288 ✅** |
+| **`.ic-stats-grid` set to `repeat(2,minmax(0,1fr))`** | **288 ✅** |
+
+`global.css:3421` —
+`@media(max-width:560px){.ic-stats-grid{grid-template-columns:repeat(2,1fr)}}`. A bare `1fr`
+track has an automatic minimum of `auto`, i.e. min-content, so the track cannot shrink below
+the widest `.ic-stat` card (measured min-content 91–99px). Two of those plus the 10px gap
+plus `.ic-stats`'s `padding:22px` (`global.css:3406`) plus borders sets a 341px floor that
+the whole page inherits. Swapping the track to `minmax(0,1fr)` removes the overflow entirely
+— verified live in the page.
+
+This is one instance of a pattern counted across the whole stylesheet in
+[Systemic patterns](#systemic-patterns), item 2.
+
+### MAJOR · S7 · Login — the Sign In button is cut in half on a landscape phone, and sign-up is below the fold
+
+- **Page / route:** Login · `/login` (also every `RequireAuth` route that redirects here —
+  `/projects` was measured and is byte-identical)
+- **Occurs:** short viewports. Measured broken at **844×390** and **932×430**. Clean at
+  360×560, 390×640, 390×844, 430×932 and every tablet viewport.
+- **Screenshot:** `docs/qa/screenshots-mobile/login-844x390-modal.png` (broken) ·
+  `login-390x640-modal.png` (clean)
+
+**What is wrong.** At 844×390 the dialog is capped at 358px tall against 489px of content.
+Measured: `.ui-modal` `scrollHeight` 489 → `clientHeight` 356. The screenshot shows the
+primary submit button **sliced horizontally by the modal's bottom edge** — the word
+`Sign In` is visible, the bottom half of its background is not. Two controls are entirely
+below the fold:
+
+| Control | `top` | `bottom` | Viewport height |
+|---|---|---|---|
+| `Don't have an account? Sign up` | 402 | 440 | 390 |
+| `Forgot password?` | 446 | 484 | 390 |
+
+The modal does scroll internally (`overflow: hidden auto`), so the content is reachable —
+but nothing indicates it: no scrollbar renders under touch emulation, and the button
+sliced at the boundary reads as a rendering fault rather than as "scroll for more". For a
+signed-out visitor on a landscape phone, **the account-creation link is invisible**.
+
+**What is not wrong — tested explicitly.** Escape dismisses the dialog (measured: overlay
+removed, route falls back to `/home`). Focus is trapped: after 12 Tab presses focus was
+still inside the modal, on `Forgot password?`, and the browser had scrolled it into view.
+Both behaviours are correct.
+
+**Likely cause.** `global.css:6854` —
+`.ui-modal{max-height:calc(100dvh - 32px);overflow:hidden auto}` combined with
+`global.css:6853` `.ui-modal-overlay{place-items:center;padding:clamp(16px,4vw,40px)}`.
+The height cap is correct; what is missing is any treatment for the case where content
+exceeds it — a sticky action footer, a scroll shadow, or a short-viewport layout that
+drops the divider and the Google row to buy the ~100px needed.
+
+### MAJOR · S8 · Settings — 3 of 5 sections are off-screen in a scroller with the scrollbar explicitly deleted
+
+- **Page / route:** Settings · `/settings` · `.settings-nav`
+- **Occurs:** ≤~900px (the `.settings-nav` row override). Measured at 320×568, 360×560,
+  390×640, 390×844, 430×932.
+- **Screenshot:** `docs/qa/screenshots-mobile/settings-390x844-nav.png`
+
+**What is wrong.** At 390×844 the section nav holds 5 items; **2 are fully visible**
+(`Subscription`, `Accessibility`) and `Language`, `Data Management` and `Privacy & Legal`
+are cut or entirely off. `scrollWidth` 675 against `clientWidth` 356.
+
+This is worse than the other hidden scrollers in this report because the scrollbar is
+**deliberately removed**: `global.css:1492` — `.settings-nav::-webkit-scrollbar{display:none}`.
+On a phone that is the only affordance the platform would have offered. `Data Management`
+holds account deletion and data export; `Privacy & Legal` holds consent. Those are the two
+sections a user goes to Settings specifically to find, and on a phone neither is visible.
+
+**Likely cause.** `global.css:1491–1493` —
+`.settings-nav{flex-direction:row;overflow-x:auto}` with
+`.settings-nav-item{white-space:nowrap;flex-shrink:0}` and the scrollbar suppressed.
+Duplicated at `global.css:1878–1879` without the scrollbar rule.
+
+### MAJOR · S9 · Information Centre — 8 links inside collapsed accordions stay in the tab order
+
+- **Page / route:** Information Centre · `/info`
+- **Occurs:** **all viewports**, 320 through 1180. Not a breakpoint fault — logged here
+  because it compounds every other mobile problem on the page.
+
+**What is wrong.** The page has 12 accordion panels; 11 are collapsed on load. Tabbing
+through at realistic speed, focus lands **8 times** on links inside a collapsed panel —
+tab stops 20, 25, 27, 29, 31, 33, 34 and 37 of 45. Each focused element sits inside an
+`.ic-acc-body-inner` measured at **zero height with `overflow:hidden`**, so the focus ring
+is invisible; stop 29 (`Projects`) was additionally scrolled entirely off-screen.
+
+A keyboard, switch-control or screen-reader user is repeatedly moved to a target they
+cannot see and cannot tell they are on.
+
+**Likely cause.** `global.css:3396–3398` —
+`.ic-acc-body{display:grid;grid-template-rows:0fr}` + `.ic-acc-body-inner{overflow:hidden;min-height:0}`.
+The `0fr` grid-row collapse animates cleanly, which is why it was chosen, but unlike
+`display:none` it does not remove descendants from the tab order. Nothing sets
+`inert`, `hidden` or `visibility:hidden` on the collapsed panel.
+
+### MINOR · S10 · Sitemap — the feedback FAB sits on a route link at 320px
+
+- **Page / route:** Sitemap · `/sitemap`
+- **Occurs:** 320×568, 360×560, 390×640, 390×844. Clean from 430px up.
+
+**What is wrong.** `.global-feedback-btn` overlaps `a.smap-link-a "Palette /color/palette"`
+by 29×12px. Recoverable by scrolling, so MINOR — same root cause as S5, and the same
+single fix. See [Systemic patterns](#systemic-patterns), item 4.
+
+### Clean on this slice
+
+`/privacy`, `/terms`, `/feedback` and `/help` measured clean at all 11 viewports — no
+overflow, no clipping, no hidden scrollers, no occlusion, no overlapping targets. `/help`
+showed a single transient occlusion at 834×1194 only, which did not reproduce and is not
+logged. `/projects` is a `RequireAuth` route and redirects to `/login` when signed out; its
+authenticated layout was **not reached** (see [Coverage](#coverage)).
+
+---
+
 <!-- further slices appended below -->
