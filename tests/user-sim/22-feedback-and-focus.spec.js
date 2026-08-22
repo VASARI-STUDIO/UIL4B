@@ -114,7 +114,7 @@ test.describe('feedback form is usable and honest', () => {
 test.describe('focus is visible on controls sitting on a user-chosen colour', () => {
   test('every palette control clears 3:1 on at least one ring edge', async ({ page }) => {
     watch(page, 'a keyboard user editing a palette')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('button.plb-tool').first()).toBeVisible()
 
     const result = await page.evaluate(`(() => {
@@ -155,7 +155,7 @@ test.describe('focus is visible on controls sitting on a user-chosen colour', ()
     // The seed colour is user-chosen, so a single-colour ring that passes
     // against today's default is luck rather than a fix.
     watch(page, 'a keyboard user on a palette')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     const el = page.locator('button.plb-tool').first()
     await el.focus()
 

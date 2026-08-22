@@ -2,10 +2,10 @@
 // silently, and only for people who are not looking at the page.
 //
 // docs/audit-2026-08-11.md, P4:
-//   • /privacy, /terms and /emoji went h1 -> h3. A screen-reader user
+//   • /privacy, /terms and /create/emoji went h1 -> h3. A screen-reader user
 //     navigating by heading hears a level-3 with no level-2 above it and cannot
 //     tell where the outline broke (WCAG 1.3.1).
-//   • /icons and /emoji shipped an IDENTICAL <h1>. Two separate indexable URLs
+//   • /create/icons and /create/emoji shipped an IDENTICAL <h1>. Two separate indexable URLs
 //     announcing the same headline, to a crawler and to anyone browsing by
 //     heading.
 //   • /plans' description was 192 chars, so the sentence naming what Pro
@@ -53,7 +53,7 @@ test('the section headings carry no inline styles', () => {
 
 // ── One headline per URL ────────────────────────────────────────────────────
 
-test('/icons and /emoji do not share an h1', () => {
+test('/create/icons and /create/emoji do not share an h1', () => {
   const src = stripComments(read('src/pages/IconEmojiLibrary.jsx'))
   const h1 = /<h1>([\s\S]*?)<\/h1>/.exec(src)?.[1] || ''
   assert.ok(/tab === 'icon'/.test(h1),

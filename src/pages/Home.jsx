@@ -35,9 +35,9 @@ const LIVE_TOOL_COUNT = CREATE_GROUPS
   .flatMap((g) => g.tools)
   .filter((t) => !t.soon).length
 
-// 200k icons: the Iconify catalogue behind /icons, already claimed in
+// 200k icons: the Iconify catalogue behind /create/icons, already claimed in
 // toolTree.js and in the workbench's Icon panel.
-// 1,500+ fonts: the Google Fonts catalogue behind /fontgallery, as described in
+// 1,500+ fonts: the Google Fonts catalogue behind /create/font-gallery, as described in
 // discoverResources.js. Both are the real libraries the tools read.
 const HERO_STATS = [
   `${LIVE_TOOL_COUNT} LIVE TOOLS`,
@@ -58,7 +58,7 @@ const STEPS = [
     title: 'Start with a palette you can defend.',
     body: 'Generate a five-step ramp, lock the colours that are already right, and regenerate the rest. Every value is a real hex you can copy straight out.',
     points: ['Lock and regenerate individual steps', 'Copy any value to the clipboard', 'Carries into the full builder on the free Auto system'],
-    cta: { label: 'Open Palette Builder', to: '/color/palette' },
+    cta: { label: 'Open Palette Builder', to: '/create/palette' },
   },
   {
     tab: 'gradient',
@@ -67,7 +67,7 @@ const STEPS = [
     title: 'Tune a gradient and take the CSS.',
     body: 'Two stops and an angle, previewed live. A half-typed hex never destroys the preview — the field tells you what to correct and keeps the last valid value.',
     points: ['Live preview from real CSS', 'Invalid input explains itself', 'Copy the declaration, not a screenshot'],
-    cta: { label: 'Open Gradient Generator', to: '/color/gradient' },
+    cta: { label: 'Open Gradient Generator', to: '/create/gradient' },
   },
   {
     tab: 'image',
@@ -76,7 +76,7 @@ const STEPS = [
     title: 'Decide the output before you convert.',
     body: 'Set resolution, file type and compression against a reference image, then hand your own files to the converter with that draft already applied.',
     points: ['Honest limits — WebP cannot store lossless, and says so', 'Nothing is encoded here; File Converter does the work', 'Your files never touch storage or the URL'],
-    cta: { label: 'Open File Converter', to: '/file-converter' },
+    cta: { label: 'Open File Converter', to: '/create/file-converter' },
   },
   {
     tab: 'icon',
@@ -85,7 +85,7 @@ const STEPS = [
     title: 'Size and weight an icon before you commit.',
     body: 'Twelve bundled glyphs, three sizes, four stroke widths — a free taste of the editor. Nothing saves, downloads or counts against a plan.',
     points: ['No catalogue call — the preview is local', 'Opens your draft in the real editor', '200k icons once you are there'],
-    cta: { label: 'Open Icon Library', to: '/icons' },
+    cta: { label: 'Open Icon Library', to: '/create/icons' },
   },
   {
     tab: 'typography',
@@ -94,7 +94,7 @@ const STEPS = [
     title: 'Build a scale that actually computes.',
     body: 'Real modular-scale maths from your base size and ratio, previewed at every step, then carried into the full Type Scale generator.',
     points: ['Display, heading, body and caption computed live', 'Edit the specimen text', 'Family choices survive the hand-off'],
-    cta: { label: 'Open Type Scale', to: '/typescale' },
+    cta: { label: 'Open Type Scale', to: '/create/type-scale' },
   },
 ]
 

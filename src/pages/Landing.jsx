@@ -346,10 +346,10 @@ function AnimatedNumber({ value, suffix = '', duration = 1600 }) {
 // inner top-highlight read as depth without a heavy drop shadow; each opens
 // its category.
 const BENTO = [
-  { id: 'color', span: 4, label: 'COLOUR', to: '/color', title: 'Build whole colour systems, not just swatches', body: 'Palettes, tint scales, gradients and WCAG contrast — export to CSS, Tailwind, PNG or SVG.', icon: (<><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 010-20 9 9 0 019 9c0 4-3 4-5 4h-2a2 2 0 00-2 2 2 2 0 01-2 2"/></>) },
-  { id: 'type', span: 2, label: 'TYPE', to: '/typography', title: 'Pair fonts that work', body: '1,200+ Google Fonts, curated pairings, and a modular scale.', icon: (<><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></>) },
-  { id: 'icons', span: 2, label: 'ICONS', to: '/icons-emoji', title: '200K icons + every emoji', body: 'Search, preview, and copy SVG or emoji in one click.', icon: (<><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>) },
-  { id: 'ui', span: 2, label: 'UI', to: '/ui-builder-cat', title: 'Design components live', body: 'Buttons, cards and shadows with production-ready CSS.', icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>) },
+  { id: 'color', span: 4, label: 'COLOUR', to: '/create/color', title: 'Build whole colour systems, not just swatches', body: 'Palettes, tint scales, gradients and WCAG contrast — export to CSS, Tailwind, PNG or SVG.', icon: (<><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 010-20 9 9 0 019 9c0 4-3 4-5 4h-2a2 2 0 00-2 2 2 2 0 01-2 2"/></>) },
+  { id: 'type', span: 2, label: 'TYPE', to: '/create/typography', title: 'Pair fonts that work', body: '1,200+ Google Fonts, curated pairings, and a modular scale.', icon: (<><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></>) },
+  { id: 'icons', span: 2, label: 'ICONS', to: '/create/icons-emoji', title: '200K icons + every emoji', body: 'Search, preview, and copy SVG or emoji in one click.', icon: (<><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>) },
+  { id: 'ui', span: 2, label: 'UI', to: '/create/components', title: 'Design components live', body: 'Buttons, cards and shadows with production-ready CSS.', icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>) },
   { id: 'seo', span: 3, label: 'SEO', to: '/seo', title: 'Rank-ready in one place', body: 'Live SERP + social preview, a scored checklist, JSON-LD and content analysis.', icon: (<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>) },
   { id: 'community', span: 3, label: 'COMMUNITY', to: '/community', title: 'Designs worth saving', body: 'Browse, save and submit inspiration ranked by the community.', icon: (<><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/></>) },
 ]
@@ -588,7 +588,7 @@ export default function Landing() {
 
   const viewIcons = () => {
     try { localStorage.setItem(VISITED_KEY, '1') } catch { /* ignore */ }
-    navigate('/icons')
+    navigate('/create/icons')
   }
 
   const openTool = (path) => {
@@ -948,9 +948,9 @@ export default function Landing() {
             <nav className="landing-footer-col" aria-label="Product">
               <span className="landing-footer-col-title">Product</span>
               <a href="#pricing">Pricing</a>
-              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/color')}>Colour Studio</button>
-              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/fontpairs')}>Font Pair Finder</button>
-              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/icons')}>Icon Library</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/create/color')}>Colour Studio</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/create/font-pair')}>Font Pair Finder</button>
+              <button type="button" className="landing-footer-link-btn" onClick={() => navigate('/create/icons')}>Icon Library</button>
             </nav>
             <nav className="landing-footer-col" aria-label="Resources">
               <span className="landing-footer-col-title">Resources</span>

@@ -27,7 +27,7 @@ export function gradientCss(type, angle, stops) {
 // type and angle alongside, decoded by decodeGradientParams below.
 export function gradientToolUrl(g) {
   const gs = g.stops.map(s => `${s.color.replace('#', '')}-${Math.round(s.position)}`).join('_')
-  return `/color/gradient?gs=${gs}&gt=${g.type.toLowerCase()}&ga=${Math.round(g.angle)}&gn=${encodeURIComponent(g.name)}`
+  return `/create/gradient?gs=${gs}&gt=${g.type.toLowerCase()}&ga=${Math.round(g.angle)}&gn=${encodeURIComponent(g.name)}`
 }
 
 // Parse a gallery hand-off out of the tool's search params. Returns

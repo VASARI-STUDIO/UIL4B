@@ -3,7 +3,7 @@ import zlib from 'node:zlib'
 // Palette share endpoint — gives shared palette links a real social preview.
 //   GET /api/share?c=4338E0,7C6CF0,...        → HTML with OG/Twitter meta whose
 //     og:image points back at this endpoint, plus an instant redirect that
-//     sends humans on to the Palette Builder (/color/palette?c=...).
+//     sends humans on to the Palette Builder (/create/palette?c=...).
 //   GET /api/share?c=...&img=1                → 1200×630 PNG of the palette as
 //     flat colour stripes, generated in pure JS (raw scanlines + node:zlib) so
 //     it needs no canvas/image dependency.
@@ -96,7 +96,7 @@ export default function handler(req, res) {
   const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0]
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'uil4b.com'
   const origin = `${proto}://${host}`
-  const appUrl = `${origin}/color/palette?c=${code}`
+  const appUrl = `${origin}/create/palette?c=${code}`
   const imgUrl = `${origin}/api/share?c=${code}&img=1`
   const title = `${hexes.length}-colour palette — UIL4B`
   const desc = hexes.map(h => `#${h}`).join(' · ')

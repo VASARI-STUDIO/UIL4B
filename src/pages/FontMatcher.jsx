@@ -12,7 +12,7 @@ import {
 } from '../utils/googleFonts'
 import { consumePairDraft, readPairDraft, setScaleDraft } from '../utils/typeHandoff'
 
-// Font Pair — the standalone /fontpairs page. Two families, one specimen, and a
+// Font Pair — the standalone /create/font-pair page. Two families, one specimen, and a
 // reason for every suggestion.
 //
 // The pairing engine (utils/googleFonts → suggestPairings) scores body
@@ -202,7 +202,7 @@ export default function FontMatcher({ onCopy, toast }) {
       },
     })
     if (!staged) { toast?.('Choose a family first — the type scale needs a font to preview.'); return }
-    navigate('/typescale')
+    navigate('/create/type-scale')
   }
 
   if (status === 'loading') {
@@ -250,7 +250,7 @@ export default function FontMatcher({ onCopy, toast }) {
       <header className="fpr-hero fpr-hero--premium" ref={varsRef(specimenVars)}>
         <div className="fpr-hero-topline">
           <span className="sec-h-eyebrow">Create / Typography</span>
-          <NavLink to="/fontgallery" className="fpr-gallery-link">
+          <NavLink to="/create/font-gallery" className="fpr-gallery-link">
             Browse the Font Gallery <span aria-hidden="true">↗</span>
           </NavLink>
         </div>
@@ -451,7 +451,7 @@ export default function FontMatcher({ onCopy, toast }) {
             </div>
           </div>
 
-          <NavLink to="/fontgallery" className="fpr-gallery-callout">
+          <NavLink to="/create/font-gallery" className="fpr-gallery-callout">
             <span className="fpr-gallery-callout-mark" aria-hidden="true">Aa</span>
             <span>
               <strong>Select from the Font Gallery</strong>
@@ -538,9 +538,9 @@ export default function FontMatcher({ onCopy, toast }) {
           <strong>Two faces chosen. Now give them sizes that hold up.</strong>
         </div>
         <div className="fpr-more-links">
-          <NavLink to="/typescale" className="fpr-more-link">Build a type scale &rarr;</NavLink>
-          <NavLink to="/fontgallery" className="fpr-more-link">Browse the font gallery &rarr;</NavLink>
-          <NavLink to="/color/palette" className="fpr-more-link">Build a colour palette &rarr;</NavLink>
+          <NavLink to="/create/type-scale" className="fpr-more-link">Build a type scale &rarr;</NavLink>
+          <NavLink to="/create/font-gallery" className="fpr-more-link">Browse the font gallery &rarr;</NavLink>
+          <NavLink to="/create/palette" className="fpr-more-link">Build a colour palette &rarr;</NavLink>
         </div>
       </nav>
 

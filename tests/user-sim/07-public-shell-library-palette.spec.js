@@ -43,7 +43,7 @@ test.describe('public UI quality release', () => {
     await expect(create).toBeFocused()
 
     await go(page, '/color/ui')
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/color')
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/color')
   })
 
   test('mobile menu restores focus and keeps every route inside the viewport', async ({ page }) => {
@@ -65,11 +65,11 @@ test.describe('public UI quality release', () => {
 
   test('every public surface has one shared footer and a persistent Plans route', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/color', '/discover', '/learn', '/color/palette', '/icons', '/ratio']) {
+    for (const route of ['/', '/create/color', '/discover', '/learn', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
       await go(page, route)
       await expect(page.locator('.app-footer'), `${route} should render one shared footer`).toHaveCount(1)
       await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
-      if (['/color/palette', '/icons', '/ratio'].includes(route)) {
+      if (['/create/palette', '/create/icons', '/create/aspect-ratio'].includes(route)) {
         await expect(page.locator('.app-footer')).toHaveClass(/app-footer--compact/)
       }
     }
@@ -95,7 +95,7 @@ test.describe('public UI quality release', () => {
   test('compact footer stays contained and exposes Plans on a narrow tool route', async ({ page }) => {
     watch(page, 'mobile visitor checking plans after using a tool')
     await page.setViewportSize({ width: 320, height: 720 })
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
 
     const footer = page.locator('.app-footer--compact')
     await footer.scrollIntoViewIfNeeded()
@@ -105,24 +105,24 @@ test.describe('public UI quality release', () => {
     expect(contained, 'Compact footer content should not overflow its mobile column').toBe(true)
     await expect(footer.getByRole('link', { name: 'Plans', exact: true })).toBeVisible()
     // Typography went live: the footer now links it for real, and straight to
-    // the Font Gallery rather than the redirect-only /typography category home.
+    // the Font Gallery rather than the redirect-only /create/typography category home.
     await expect(footer.getByRole('link', { name: 'Typography', exact: true })).toBeVisible()
-    await expect(footer.locator('a[href="/fontgallery"]')).toHaveCount(1)
-    await expect(footer.locator('a[href="/typography"]')).toHaveCount(0)
+    await expect(footer.locator('a[href="/create/font-gallery"]')).toHaveCount(1)
+    await expect(footer.locator('a[href="/create/typography"]')).toHaveCount(0)
   })
 
   test('Icon and Emoji modes switch from the keyboard and explain offline resilience', async ({ page, context }) => {
     watch(page, 'developer sourcing production assets')
-    await go(page, '/icons')
+    await go(page, '/create/icons')
 
     const iconsTab = page.getByRole('tab', { name: /Icons/ })
     await iconsTab.focus()
     await iconsTab.press('ArrowRight')
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/emoji')
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/emoji')
     await expect(page.getByRole('tab', { name: /Emoji/ })).toBeFocused()
 
     // The scenario is "already using the page, then the connection drops", so the
-    // page must be settled first. On a cold CI runner the /emoji panel's lazy
+    // page must be settled first. On a cold CI runner the /create/emoji panel's lazy
     // chunk can still be in flight, and cutting the network mid-fetch tests
     // chunk loading rather than the offline banner.
     //
@@ -197,7 +197,7 @@ test.describe('public UI quality release', () => {
 
   test('Palette Reset then edit then Undo restores the latest mutation before the pre-reset state', async ({ page }) => {
     watch(page, 'designer recovering an accidental palette reset')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const seed = page.getByRole('textbox', { name: 'Seed colour hex' })
     await seed.fill('#FF0000')
@@ -302,7 +302,7 @@ test.describe('public UI quality release', () => {
       name: 'Palette submission',
       author: '@designer',
       category: 'Branding',
-      url: 'https://www.uil4b.com/color/palette?c=fff,000',
+      url: 'https://www.uil4b.com/create/palette?c=fff,000',
     }, storage)
 
     const stored = readCommunitySubmissions(storage)

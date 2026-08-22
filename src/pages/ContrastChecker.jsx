@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { contrastRatio, fixForeground, fixBackground, textColorForBg } from '../utils/colors'
 
-// Colour Contrast Checker — the standalone /color/contrast page. Test a
+// Colour Contrast Checker — the standalone /create/contrast page. Test a
 // foreground/background pair against WCAG 2.2, see the pair in a live preview,
 // and get one-click fixes (binary-searched lightness shifts from
 // fixForeground/fixBackground) that actually pass.
@@ -225,8 +225,8 @@ export default function ContrastChecker({ onCopy }) {
       </div>
 
       <nav className="cc-more" aria-label="More colour tools">
-        <NavLink to="/color/tint" className="cc-more-link">Build a tint scale from this colour →</NavLink>
-        <NavLink to="/color" className="cc-more-link">Open the full Colour Studio →</NavLink>
+        <NavLink to="/create/tint" className="cc-more-link">Build a tint scale from this colour →</NavLink>
+        <NavLink to="/create/color" className="cc-more-link">Open the full Colour Studio →</NavLink>
       </nav>
     </div>
   )
