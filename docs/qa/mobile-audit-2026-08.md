@@ -337,4 +337,263 @@ authenticated layout was **not reached** (see [Coverage](#coverage)).
 
 ---
 
+<!-- SLICE 3: the hover-only pattern, and the tablet class nobody had tested -->
+
+### BLOCKER · S11 · Palette Builder — all 34 per-swatch controls are invisible on every tablet and every landscape phone
+
+- **Page / route:** Palette Builder · `/color/palette`
+- **Occurs:** **769px and wider on any device without hover.** Measured broken at
+  **844×390, 834×1194, 1024×768, 1180×820**. Measured **clean at 768×1024, 390×844,
+  390×640, 320×568** (1 unrelated hidden control only).
+- **Screenshots:** `docs/qa/screenshots-mobile/palette-834x1194-tools-invisible.png` (broken,
+  iPad Air) · `palette-768x1024-tools-visible.png` (clean, iPad mini) ·
+  `palette-1024x768-tools-invisible.png`
+
+**What is wrong.** Put the two screenshots side by side. At 768×1024 every swatch row shows
+its seven controls — drag, lock, adjust, contrast, swap, duplicate, delete. At 834×1194 the
+same page shows **five bare colour columns and nothing else**.
+
+Measured at 834×1194, 1024×768, 1180×820 and 844×390:
+
+| Control | Count | Computed | Size | In tab order |
+|---|---|---|---|---|
+| `button.plb-tool` | **30** | `opacity: 0`, `visibility: visible`, `pointer-events: auto` | 32×32 | yes |
+| `button.plb-gap` | **4** | `opacity: 0`, `visibility: visible`, `pointer-events: auto` | 28×**568** | yes |
+
+At 768×1024 the same query returns **1** (an unrelated ghost button), because
+`global.css:6819` sets `.plb-tool{opacity:1}` and `global.css:6827` sets
+`.plb-gap{display:none}` — but both live inside `@media(max-width:768px)`
+(`global.css:6796`), and a tablet is wider than that while still having no hover.
+
+Two distinct harms:
+
+1. **Undiscoverable.** Lock, delete, duplicate, reorder and HCT edit are the Palette
+   Builder's core interactions. On an iPad there is no hover to reveal them and no
+   `@media(hover:hover)` guard, so a user sees a colour picker with no editing controls at
+   all.
+2. **Invisible but live.** These are not `pointer-events:none`. Thirty 32×32 hit targets
+   and four **28×568px full-column** targets sit under the finger with zero paint. Tapping
+   a swatch to select it can land on `Remove PRIMARY` or insert a swatch, with nothing on
+   screen to explain what happened.
+
+**Severity.** Rated BLOCKER on impact and reach rather than on strict unclickability: the
+controls *can* be activated, which is precisely the problem — a destructive action with no
+visible target is worse than a missing one. It covers the entire tablet class and every
+phone held sideways, on the product's flagship surface. This is also the fault the QA role
+calls out by name — **the working surface gets worse as the screen gets bigger.**
+
+**Likely cause.** `global.css:6323–6324` —
+`.plb-tool{opacity:0}` revealed only by `.plb-col:hover`, `.plb-col:focus-within` or
+`.plb-tool--on`; `global.css:6358–6359` — `.plb-gap{opacity:0}` revealed only by
+`:hover`/`:focus-visible`. The mobile correction exists but is scoped to `max-width:768px`
+instead of to `(hover: none)`. The stylesheet already knows the right idiom — `.grg-like`
+at `global.css:7637` is guarded `@media(hover:hover)` and is correct on every device.
+
+### MAJOR · S12 · Palette Library — five per-card actions are invisible on every touch device
+
+- **Page / route:** Palette Library · `/discover/palettes`
+- **Occurs:** **every viewport tested** (320×568 through 1180×820) on a touch device.
+  Measured **350** hidden controls per page load — the reveal layer across every rendered
+  card.
+- **Screenshots:** `docs/qa/screenshots-mobile/palettes-390x844-rest.png` (at rest) ·
+  `palettes-390x844-after-tap.png` (after tapping a stripe)
+
+**What is wrong.** `.pgal-actions` is `visibility:hidden; opacity:0` at rest and revealed
+only by `.pgal-card:hover` or `.pgal-card:focus-within` (`global.css:4253–4254`). Measured
+in the touch context: `matchMedia('(hover: hover)')` is **false**, so the hover half can
+never fire. The five hidden actions per card are:
+
+`Open … in the Palette Builder` · `Save … to your projects` · `Open …` ·
+`Copy … as CSS` · `Copy all 4 hex codes`
+
+Across a 100-card library that is **every take-away action the surface offers**. What
+remains visible in the card foot is only the like button and the "use" pill.
+
+**The one touch path that works is an accident.** Tapping a `.pgal-stripe` gives the card
+focus, `:focus-within` matches, and the layer appears (measured: `visibility` flips to
+`visible`, `opacity` to `1`). But that same tap fires the stripe's own copy action — so the
+only way to see the actions is to trigger a different action first.
+
+**Likely cause.** `global.css:4253–4254`, with no `@media(hover:hover)` guard and no
+touch-equivalent reveal.
+
+### MAJOR · S13 · The `visibility` reveal is timing-dependent — and the CSS comment explaining it is wrong
+
+This is the pattern the brief asked to be hunted, and the naive diagnosis does not hold.
+It is recorded separately because the fix is different from S12's.
+
+**The claim in the code.** `global.css:4245–4250`:
+
+> *"The layer is always in the DOM … and only its VISIBILITY is CSS, so keyboard reaches
+> every action a pointer does — `:focus-within` is what carries that, and `visibility`
+> rather than `opacity` alone keeps the buttons out of the tab order until the card is
+> actually engaged."*
+
+**The obvious objection is wrong.** "`visibility:hidden` removes the buttons from the tab
+order, so `:focus-within` can never fire" does **not** happen here — the card holds 11
+focusables, 6 of them outside the hidden layer (`.pgal-stripe` ×4, `.pgal-like`,
+`.pgal-use`). Focus reaches one of those first and `:focus-within` does fire. Measured.
+
+**The real fault is that the reveal costs a frame.** `visibility` is listed in the element's
+`transition` (`transition: … , visibility 0.2s`). Measured reachability of the 5 reveal
+buttons on `/discover/palettes` at 390×844, tabbing with **no round-trip between presses**:
+
+| Median gap between focus moves | Reveal buttons reached |
+|---|---|
+| **2 ms** | **0 of 5** |
+| 16 ms | 5 of 5 |
+| 31 ms | 5 of 5 |
+| 46 ms | 5 of 5 |
+| 76 ms | 5 of 5 |
+| 263 ms | 5 of 5 |
+
+At 2ms per Tab the whole 14-stop sequence completes inside one animation frame, style is
+never recomputed, and the browser skips the layer entirely — the recorded sequence is
+`pgal-stripe → pgal-stripe → pgal-stripe → pgal-stripe → pgal-like → pgal-use` with no
+`pgal-act` in it. From one frame (~16ms) upward every button is reached.
+
+**Honest reading:** on this branch a *human* tabbing at any realistic speed **does** reach
+these buttons. The failure window is a single frame, so it bites programmatic focus
+advancement, not fingers. It is logged as MAJOR because it is a real, reproducible
+zero-of-five result and because it makes any measurement of this pattern
+speed-dependent — **a slow scripted tab passes a control a fast one cannot reach**, which
+is how an audit misses it.
+
+**Methodology note for anyone re-testing this.** An `evaluate()` between Tab presses adds
+~100ms of round-trip and silently converts a 0/5 into a 5/5. The same test run naively
+(read `document.activeElement` after each press) reported 5/5 at every speed. Focus moves
+must be recorded **in the page** with a `focusin` listener and read once at the end.
+
+**Same pattern, second instance — `/home`.** 33 links and buttons
+(`a.htool-link` ×18, `a.htool-head` ×6, `a.hcomm-card-link` ×6, `button.hcomm-tab` ×3) are
+`visibility:hidden` at load and revealed on scroll. Tab census at 390×844 over 140 Tab
+presses:
+
+| Median gap | Reached |
+|---|---|
+| fastest possible | **11 of 33** |
+| 30 ms per Tab | 31 of 33 |
+| 120 ms per Tab | 31 of 33 |
+
+Two were not reached at any speed within 140 presses. Same shape as `.pgal-actions`, but
+driven by an IntersectionObserver, which fires later than a CSS transition.
+
+### Every occurrence of the hover-hidden pattern — full census
+
+`global.css` searched for `visibility:hidden`, `opacity:0` at rest, and `transition` lists
+containing `visibility`. Every hit classified:
+
+| # | Selector | Line | Hidden by | Revealed by | Interactive? | Verdict |
+|---|---|---|---|---|---|---|
+| 1 | `.plb-tool` ×30 | 6323–6324 | `opacity:0` | `.plb-col:hover` / `:focus-within` | **yes — 30 buttons** | **DEFECT — S11.** `opacity:1` fix exists but is scoped `max-width:768px`, so it misses every tablet |
+| 2 | `.plb-gap` ×4 | 6358–6359 | `opacity:0` | self `:hover` / `:focus-visible` | **yes — 4 buttons, 28×568px** | **DEFECT — S11.** `display:none` fix scoped `max-width:768px` |
+| 3 | `.pgal-actions` ×5/card | 4253–4254 | `visibility:hidden` + `opacity:0`, **`visibility` in the transition** | `.pgal-card:hover` / `:focus-within` | **yes — 5 links/buttons per card, 350 per page** | **DEFECT — S12 + S13.** No hover guard; reveal costs a frame |
+| 4 | `.pgal-actions` reduced-motion | 4267 | same | same | yes | **DEFECT.** The `prefers-reduced-motion` variant repeats `visibility var(--dur-1)`, so the reduced-motion path has the same frame dependency |
+| 5 | `.ch-heart` ×12 | 3362–3363 | `opacity:0` | `.ch-card:hover` / self `:focus-visible` | **yes — 1 button per card** | **DEFECT — S14.** No hover guard |
+| 6 | `.cs-pb-tools` | 431–433 | `opacity:0` | `.cs-pb-swatch:hover` / `:focus-within` | yes | **Not reproduced.** `ColorStudio` backs `/color/semantic`, but this block did not render on any route in the matrix. Same shape as #1; flagged for the overhaul, not measured as live |
+| 7 | `.pgal-hex` | 4237, 4244 | `opacity:0` + `pointer-events:none` | `.pgal-stripe:hover` / `:focus-visible` | no — label | **Cosmetic.** The hex is also printed in the card foot |
+| 8 | `.grg-pill` | 7631–7632 | `opacity:0` + `pointer-events:none` | `.grg-card:hover` | no — label | **Cosmetic.** Type/angle is repeated in `.grg-meta` |
+| 9 | `.wmap-tip` | 5273–5275 | `visibility:hidden` + `pointer-events:none` | `.wmap-blip:hover` / `:focus-visible` | no — tooltip | **Cosmetic**, but tooltip-only content on touch. Already logged as N4 in the responsive audit |
+| 10 | `.ggn-handle-val` | 7388–7389 | `visibility:hidden` + `pointer-events:none` | `.is-dragging` / `:focus-visible` | no — value bubble | **CORRECT.** Reveals on `.is-dragging`, which touch produces, and the hide is delayed (`visibility 0s linear var(--dur-1)`) so the fade completes |
+| 11 | `.plb-adjust-reset--idle` | 6739 | `visibility:hidden` + `pointer-events:none` | state class | n/a | **CORRECT.** A deliberate idle state, not a hover reveal |
+| 12 | `.btn.is-loading>*` | 558 | `visibility:hidden` | state class | n/a | **CORRECT.** Loading state |
+| 13 | `.grg-like` | 7637–7639 | `opacity:0` **inside `@media(hover:hover)`** | `.grg-card:hover` / `:focus-visible` / `.is-liked` | yes | **CORRECT — this is the reference implementation.** On a touch device the whole rule never applies and the button is simply visible |
+| 14 | `.fg-card-compare` | 7998–8000 | — | — | yes | **CORRECT.** `@media(pointer:coarse)` gives it 44×44 and `opacity:1` |
+| 15 | `a.htool-link` / `.htool-head` / `.hcomm-card-link` / `.hcomm-tab` ×33 | scroll-reveal | `visibility:hidden` | IntersectionObserver on scroll | **yes — 33 links** | **DEFECT — S13.** 11 of 33 reached at fastest tab; 31 of 33 at human speed |
+
+**Five live defects (#1, #2, #3/#4, #5, #15). Two correct implementations already in the
+file (#13, #14) that the other five should copy.**
+
+### MAJOR · S14 · Community — the like button on every card is invisible on touch
+
+- **Page / route:** Community · `/community`
+- **Occurs:** every viewport tested, 320×568 through 1180×820. **12 buttons**, one per card.
+
+**What is wrong.** `button.ch-heart` measures `opacity: 0` at 46×24px on a touch device.
+It is revealed by `.ch-card:hover` — which never fires — or by its own `:focus-visible`,
+which is keyboard-only. The like control is the surface's only engagement action and it is
+invisible on every phone and tablet.
+
+**Likely cause.** `global.css:3362–3363`. Fix shape is `.grg-like`'s: wrap the
+`opacity:0` in `@media(hover:hover)`.
+
+### MAJOR · S15 · The primary nav CTA renders as "tart for Fre" between 769px and ~870px
+
+- **Page / route:** every app-shell and Create route. Measured on `/color/palette` and
+  `/settings`.
+- **Occurs:** **769–~870px.** Measured broken at **769, 800, 834, 844**. Measured clean at
+  **768, 900, 960, 1000, 1024**. Not an animation artefact — re-measured after a 5-second
+  settle, identical.
+- **Screenshots:** `docs/qa/screenshots-mobile/nav-844x390-cta-clipped.png` ·
+  `palette-834x1194-tools-invisible.png` (top-right corner)
+
+**What is wrong.** `.pnav-cta` is an `inline-grid` with one `1fr` track holding
+`.pnav-cta-i{overflow:hidden;min-width:0;white-space:nowrap}`. In this band the nav row
+runs out of space, the track is compressed, and the label is clipped with **no ellipsis**:
+
+| Viewport | Track width | Label needs | Label gets | Renders as |
+|---|---|---|---|---|
+| 768 | `1fr` | 124 | 124 | `Start for Free` |
+| **769** | **`0px`** | 62 | **36** | an unlabelled 38px blob |
+| **800** | — | 65 | **43** | truncated |
+| **834** | **`23.58px`** | 74 | **60** | `tart for Fre` |
+| **844** | **`28.58px`** | 76 | **65** | truncated |
+| 900 | `1fr` | 93 | 93 | `Start for Free` |
+| 1024 | `1fr` | 124 | 124 | `Start for Free` |
+
+This is the site's primary conversion control, in the persistent nav, on every page, and
+this band is iPad-portrait and landscape-phone territory. `innerText` still reads
+`Start for Free`, so a screen reader is fine and only sighted users see the damage.
+
+**Likely cause.** `global.css:4655–4656` — `.pnav-cta{display:inline-grid;
+grid-template-columns:1fr}` with `.pnav-cta-i{overflow:hidden;min-width:0}`. There is no
+`flex-shrink:0` on the CTA in the nav's flex row, so it is the element chosen to absorb the
+shortfall, and `overflow:hidden` on the inner track then hides the evidence.
+
+### MAJOR · S16 · Type Scale — all 9 specimen rows truncate to 192px on a phone
+
+- **Page / route:** Type Scale Generator · `/typescale`
+- **Occurs:** 320×568 (8 of 9), 390×640 and 390×844 (**9 of 9**), 844×390 (4 of 9),
+  768×1024 (5 of 9), 834×1194 and 1180×820 (4 of 9), 1024×768 (6 of 9).
+- **Screenshot:** `docs/qa/screenshots-mobile/typescale-390x844.png`
+
+**What is wrong.** At 390×844 every one of the 9 `.tsc-row-text` specimens is truncated.
+The largest needs **1328px** and is given **192px** — 14% of the string. Every row reads
+`The quick b…`.
+
+This is **not** the same defect as the responsive audit's M3, which covered the 981–1345px
+two-column flip. This is the phone case, which that audit did not reach: the specimen
+column is 192px wide on a 390px phone, so the tool's entire output — *"read it back in a
+real layout"* — is a truncated fragment at every size.
+
+### Escalation of an existing finding — Palette Builder at short heights
+
+The responsive audit's **M1** recorded overlapping control pairs on `.plb-col` at
+heights below 820px. Hit-testing escalates it: at **390×640** the harness found **25
+controls where `elementFromPoint` at 20%, 50% and 80% returns a different element** — they
+are not merely overlapping, they cannot be tapped. 19 at 320×568. Clean at 390×844.
+
+Sample at 390×640: `button.plb-tool "Lock PRIMARY"` → hit returns `div.plb-name`;
+`"Remove PRIMARY"` → returns `section.plb-col`; `"Show contrast guidance"` → returns
+`button.plb-hex`. Not re-reported as a separate defect — the diagnosis and cause in M1
+stand, but the severity there should be read as blocking, not cosmetic.
+
+### Not defects — checked and cleared
+
+Three things the automated pass flagged that measurement cleared, recorded so they are not
+re-investigated:
+
+- **`/discover/gradients` and `/fontgallery` "overlaps"** — `a.grg-swatch` under
+  `button.grg-like`, and `button.fg-card-open` under `button.fg-card-compare`. Both are a
+  small control layered on a full-card control; the top one wins the hit test. Both are
+  also correctly touch-guarded (`@media(hover:hover)` and `@media(pointer:coarse)`).
+- **`/home` "clipping"** — every hit was a `div.sr-only` helper or a decorative
+  `.system-cta-beams` element. Working as designed.
+- **`.pgal-stripe` touch spacing** — 4 stripes per card with **0px** between them, but
+  measured at 92.5px, 38.5px, 38.5px and 38.5px tall. All exceed 24px, so WCAG 2.5.8 is
+  met on size and the zero spacing does not fail it. A mis-tap copies a neighbouring
+  colour; noted, not logged.
+
+---
+
 <!-- further slices appended below -->
