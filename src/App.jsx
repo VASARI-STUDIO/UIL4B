@@ -350,7 +350,6 @@ function AppInner() {
               <Route path="/login" element={<LoginRoute />} />
               <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
               <Route path="/plans" element={<Plans />} />
-              <Route path="/pricing" element={<Navigate to="/plans" replace />} />
               <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
               <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
               <Route path="/settings" element={<Settings toast={toast} />} />
@@ -359,12 +358,9 @@ function AppInner() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/sitemap" element={<SiteMap />} />
-              <Route path="/site-map" element={<Navigate to="/sitemap" replace />} />
               <Route path="/help" element={<HelpCentre />} />
               <Route path="/info" element={<InfoCentre />} />
               <Route path="/seo" element={<SeoInspector onCopy={copy} toast={toast} />} />
-              <Route path="/about" element={<Navigate to="/help#about" replace />} />
-              <Route path="/faq" element={<Navigate to="/help#faq" replace />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
               <Route path="/style-guide" element={<RequireAdmin><StyleGuide toast={toast} /></RequireAdmin>} />
               {/* A real 404, not a redirect. The redirect made every typo and

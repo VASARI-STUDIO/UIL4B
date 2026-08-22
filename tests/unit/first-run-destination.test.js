@@ -18,6 +18,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import path from 'node:path'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -56,8 +57,16 @@ test('a new customer is sent to build, not to a redirect back to the sales page'
 test('/dashboard really is just a redirect, so the fixes above are warranted', () => {
   // Asserted rather than assumed: if it ever becomes a real page, these
   // destinations deserve rethinking rather than silently staying put.
-  const app = stripComments(read('src/App.jsx'))
-  assert.match(app, /path="\/dashboard" element=\{<Navigate to="\/home"/)
+  //
+  // Read from the redirect TABLE, not from App.jsx's source text. This used to
+  // grep for the literal `path="/dashboard" element={<Navigate to="/home"`,
+  // which stopped being true the moment the redirect routes were generated from
+  // src/data/legacyRoutes.js — while /dashboard still redirected to /home
+  // exactly as before. The behaviour is the subject; the spelling was not.
+  assert.deepEqual(
+    LEGACY_REDIRECTS.find(([from]) => from === '/dashboard'),
+    ['/dashboard', '/home'],
+  )
 })
 
 test('the projects empty state still teaches, since it is now the first thing seen', () => {
