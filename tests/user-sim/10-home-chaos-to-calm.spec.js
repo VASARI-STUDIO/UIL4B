@@ -641,8 +641,14 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // The primary action carries the values with it, so the tool opens on the
     // artefact rather than on a blank board.
+    //
+    // The prefix moved from /color/* to /create/* when the Create tools were
+    // flattened onto /create/<pagetitle>. The behaviour being asserted has not
+    // changed at all — this is still "the hand-off names a real tool and carries
+    // the values in the query" — only the prefix the two builders (`paletteBuilderUrl`,
+    // `gradientToolUrl`) now emit. Both query shapes are unchanged.
     const first = page.locator('.hcomm-card').first()
-    await expect(first.locator('.hcomm-act-open')).toHaveAttribute('href', /^\/color\/(palette\?c=|gradient\?gs=)/)
+    await expect(first.locator('.hcomm-act-open')).toHaveAttribute('href', /^\/create\/(palette\?c=|gradient\?gs=)/)
 
     // Both actions are REAL controls in the DOM at all times — the reveal is
     // visual only. A hover-only affordance would put the section's primary
