@@ -6,7 +6,10 @@ import { getLenis } from './useSmoothScroll'
 // (the app deliberately lets a user opt back into motion even if their OS asks to
 // reduce it), so we mirror that here and only fall back to the OS query if the
 // attribute is ever missing.
-function prefersReducedMotion() {
+// Exported so the hero's command bar (C6) reads the SAME contract rather than
+// keeping a fourth copy of it. The homepage now has one definition of "motion
+// is off" and the CSS mirrors it selector-for-selector.
+export function prefersReducedMotion() {
   const attr = document.documentElement.getAttribute('data-reduced-motion')
   if (attr === 'true') return true
   if (attr === 'false') return false
