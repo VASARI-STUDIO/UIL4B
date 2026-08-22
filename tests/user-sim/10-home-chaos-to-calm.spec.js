@@ -697,7 +697,12 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(active).toHaveAttribute('alt', /.{20,}/)
 
     // Changing a reference does not discard edited output choices.
-    await page.locator('.hw-rail .hw-tile', { hasText: 'PNG' }).click()
+    // File type is an OPTIONS rail of toggles now, not a select, so the pressed
+    // state is the thing a screen reader is told and the thing worth asserting —
+    // selectOption used to imply the value, a click does not.
+    const png = page.locator('[aria-labelledby="hw-img-fmt-label"] .hw-tile', { hasText: 'PNG' })
+    await png.click()
+    await expect(png).toHaveAttribute('aria-pressed', 'true')
     await page.locator('#hw-img-res').selectOption('2k')
     await subtabs.nth(2).click()
     await expect(subtabs.nth(2)).toHaveAttribute('aria-selected', 'true')
@@ -726,7 +731,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="image"]').click()
-    await page.locator('.hw-rail .hw-tile', { hasText: 'PNG' }).click()
+    await page.locator('[aria-labelledby="hw-img-fmt-label"] .hw-tile', { hasText: 'PNG' }).click()
 
     const button = page.getByRole('button', { name: 'Try your image' })
 
@@ -754,7 +759,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="image"]').click()
-    await page.locator('.hw-rail .hw-tile', { hasText: 'PNG' }).click()
+    await page.locator('[aria-labelledby="hw-img-fmt-label"] .hw-tile', { hasText: 'PNG' }).click()
     await page.locator('#hw-img-res').selectOption('2k')
 
     await page.locator('.hw-body input[type="file"]').setInputFiles([png('one.png'), png('two.png')])
@@ -841,8 +846,15 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // 14 · controls mutate the preview and nothing else.
     await page.getByRole('button', { name: /Preview the zap icon/ }).click()
-    await page.locator('[aria-labelledby="hw-icon-size-label"] .hw-tile', { hasText: '32' }).click()
-    await page.locator('[aria-labelledby="hw-icon-stroke-label"] .hw-tile').filter({ hasText: /^2$/ }).click()
+    // Size and stroke are OPTIONS rails now. Scoped by the rail's own label so
+    // "32" cannot match a tile in the other rail, and the stroke filter is
+    // anchored so /^2$/ does not also select 2.5.
+    const size32 = page.locator('[aria-labelledby="hw-icon-size-label"] .hw-tile', { hasText: '32' })
+    const stroke2 = page.locator('[aria-labelledby="hw-icon-stroke-label"] .hw-tile').filter({ hasText: /^2$/ })
+    await size32.click()
+    await stroke2.click()
+    await expect(size32).toHaveAttribute('aria-pressed', 'true')
+    await expect(stroke2).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.hw-icon-meta')).toContainText('zap · 32px · 2 stroke')
     await expect(page.locator('.hw-icon-preview svg')).toHaveAttribute('width', '32')
     expect(await snapshot(), 'no storage, recents or quota write').toBe(before)

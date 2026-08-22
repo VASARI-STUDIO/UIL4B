@@ -132,11 +132,22 @@ test('rails keep an accessible name and a pressed state', () => {
 })
 
 test('numeric controls carry an editable readout', () => {
-  const num = rule('.hw-prop-num')
-  assert.ok(num, '.hw-prop-num is gone')
-  assert.match(num, /min-height\s*:\s*32px/)
-  assert.match(rule('.hw-num'), /font-family\s*:\s*var\(--mono\)/,
+  const box = rule('.hw-prop-num')
+  assert.ok(box, '.hw-prop-num is gone')
+  assert.match(box, /min-height\s*:\s*32px/)
+  // `input.hw-num`, NOT `.hw-num`, and the element qualifier is load-bearing.
+  // The base rule near the top of the sheet is `input[type="number"]{...}` —
+  // an attribute selector, so (0,1,1) — and it beats a bare class. MEASURED
+  // with the bare class: the readout inherited --font and `padding:9px 14px`,
+  // leaving 31px of content box for a 42px value, so "16" rendered as "1".
+  // If this lookup ever fails, check whether the selector lost its qualifier
+  // before assuming the declaration moved.
+  const num = rule('input.hw-num')
+  assert.ok(num, 'the readout rule must stay qualified by element to outrank input[type="number"]')
+  assert.match(num, /font-family\s*:\s*var\(--mono\)/,
     'the value is mono; the label is --font')
+  assert.match(num, /padding\s*:\s*0/,
+    'the 9px/14px padding from the base input rule must be cleared or the value clips')
   // The angle slider's number is a real input, not a printed value.
   assert.match(wb, /className="hw-num"[\s\S]{0,200}?aria-label="Gradient angle in degrees"/,
     'the gradient angle has no editable numeric readout')
