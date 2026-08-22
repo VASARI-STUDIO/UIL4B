@@ -92,7 +92,7 @@ are not, so they are not "fixed" by mistake:
 
 **What already works — do not undo it.** Worth naming so the founder can see
 what the difference looks like in his own product: `LIVE_TOOL_COUNT` derived
-from the tool tree so the claim cannot drift; the step rail's `/color/palette`
+from the tool tree so the claim cannot drift; the step rail's `/create/palette`
 route line (#264) replacing a decorative ordinal with a fact the reader cannot
 otherwise see; the export panel's code coming out of `buildCSSVars` /
 `buildTailwindTheme` / `buildStyleGuideHTML` at render time with an honest
@@ -270,4 +270,769 @@ Out of Part 2's scope (this is a hero redesign) but they should not be lost:
 
 ---
 
-*Part 2 follows: the hero specification.*
+# Part 2 — the hero specification
+
+> **Written against the tree as it will be once #262, #264 and #266 have all
+> landed.** #266 moved every Create tool to `/create/<pagetitle>` with 50
+> permanent redirects, so **nothing in this spec types a route literal** — every
+> destination is derived, and §2.3.2 names the exact helper for each. #264
+> shipped the homepage gallery's data layer (`src/data/homeGallery.js`), and
+> this spec **reuses it rather than opening a second path to the same
+> artefacts**.
+
+## 2.0 What changes, and what deliberately does not
+
+**Changes.** The hero's stat line is deleted. The headline and sub-line are
+rewritten. A fixed-height band of real product output — the **specimen band** —
+is added between the chip row and the CTA row. The hero's fine print shrinks to
+one line and changes what it says. The page ground's opacity drops one step.
+
+**Does not change.** The V2 token set, the two families, the display scale, the
+pill vocabulary, the `--hi` budget, `PillNav`, the CTA pair, `HomeCommandBar`'s
+search behaviour and ARIA, the hero's `min-height: min(100svh, 980px)`, the
+entrance keyframes, the reduced-motion guard shape at `global.css:5386–5388`,
+spec §2.2's typing overlay (adopted unchanged, with one accessibility addition
+in §2.8), or anything below the fold.
+
+**`--hw-frame` — read this before building.** The hero does **not** consume
+`--hw-frame`. That token is `clamp(420px, calc(100svh - var(--nav-clear) -
+var(--s-8)), 640px)`, scoped to `.hsteps-sticky` inside `@media(min-width:981px)`,
+and putting a 420–640px object in the hero would push the workbench above the
+fold and fail `tests/user-sim/10-home-chaos-to-calm.spec.js`. The hero gets its
+own, much shorter fixed reserve, `--hero-specimen`. **The two are the same
+idea** — one declared height that content is fitted into, never a height that
+content decides — and #262 already proved the idea works. That is what "work
+within the fixed workbench frame" means here: same principle, its own value.
+Do not promote `--hw-frame` to a page-level token to make the hero read it.
+
+## 2.1 The design logic, in one paragraph
+
+The product makes palettes, gradients, type scales and tokens, and it measures
+them. A hero that shows one of those artefacts, the measurement the product took
+of it, and the file it becomes, is inherently less generic than any arrangement
+of type on a gradient — because no competitor can copy it without building the
+product. So the hero's decoration is deleted and replaced with **one real entry
+from the shipped palette library, rendered as three facts: the artefact, what we
+measured about it, and the CSS it exports as.** It is ruled into the page as a
+band, it never changes size, one quiet control steps to the next entry, and one
+text link hands the current entry to the Palette Builder with its values already
+loaded — the same hand-off the Discover section three screens down performs on
+the same data. That is the working mini-workspace `CLAUDE.md` asks for, hoisted
+above the fold, at a cost of 96–144 vertical pixels.
+
+## 2.2 Composition and reading order
+
+| # | Element | Change |
+|---|---|---|
+| 1 | ~~`.home-hero-stats`~~ | **Deleted** (§2.5) |
+| 2 | `.home-hero-h1` | New copy (§2.4). Structure, sizes, mark and clip maths unchanged |
+| 3 | `.home-hero-sub` | New copy (§2.4). Two lines at the 54ch measure |
+| 4 | `HomeCommandBar` | New placeholder (§2.4). Everything else unchanged, including spec §2.2's typing overlay |
+| 5 | `.hcmd-chips` | Content change only (§2.4). Centring from #262 stays |
+| 6 | **`.home-hero-specimen`** | **New** (§2.3) |
+| 7 | `.home-hero-cta` | Unchanged — the pair is corroborated (Part 1, "Not tells") |
+| 8 | `.home-hero-hint` | One claim instead of three, and it changes kind (§2.4) |
+
+The hero opens on the headline. Five of the strongest captures in the sample do
+the same — Figma
+([creative tools](https://mobbin.com/sites/sections/5f84e90e-f4ae-48e5-bdb0-9b0b9b303f03)),
+Retool ([hero](https://mobbin.com/sites/sections/dcbd55be-58cb-4e0e-9b70-cb4d184fa30a)),
+Descript ([hero](https://mobbin.com/sites/sections/d8d07829-3c7e-4c6e-b7ea-1651b01944ae)),
+Vizcom ([hero](https://mobbin.com/sites/sections/998ec837-65e9-49f7-84f6-bcd40fbf480e))
+and Framer ([hero](https://mobbin.com/sites/sections/b842c72f-733c-4052-b488-b74e9b2c1104)).
+`observed`.
+
+The composition stays centred. Centring is not the tell (Part 1); the empty
+frame was. Element 6 fills the frame.
+
+## 2.3 The specimen band
+
+### 2.3.1 Why this artefact, and not decoration
+
+**The problem.** A product that generates things shows a visitor nothing it has
+generated until they scroll.
+
+**The pattern.** Three references, three variants of one move — *put the
+product's own output in the hero, at the size the product makes it*:
+
+- **Ramp** ([business account hero](https://mobbin.com/sites/sections/4c3bb2de-4b4d-41b6-90d5-8a273bd30011))
+  — the hero's visual is a **computation**: a giant blue `$100,000` with a small
+  `/Year`, a comparison line `vs. national average (0.07%) = $3,500`, and one
+  slider labelled `Balance` driving it. One control, one generated figure, no
+  ornament. `observed`.
+- **Claude Type** ([Romie specimen](https://mobbin.com/sites/sections/87c2dd71-75a5-4bf1-8d12-86e29d509e35))
+  — the hero **is the product's output**: the typeface set at display size, a
+  tiny `12 Styles` pill above, a `Buy Romie` pill below. `observed`.
+- **Firecrawl** ([hero](https://mobbin.com/sites/sections/7374e232-3232-4f76-bf3e-a95a4ee73b8a))
+  — input, instrument and **result** in one screen: a real URL field with mode
+  tabs inside it, and directly beneath, the wireframe it parsed beside the JSON
+  it returned, with mono labels naming each part. `observed`.
+
+Our version is Firecrawl's shape (instrument, then result, ruled into a
+technical ground) driven by Ramp's economy (one control, generated output, no
+ornament) showing Claude Type's subject (our own artefact at the size we make
+it).
+
+**One thing none of them has.** They show output. We can show output **and the
+measurement we took of it** — because contrast validation is a real capability
+with a real function behind it. That fact is what makes this hero uncopyable,
+and it is the single most UIL4B thing available to put above the fold.
+
+### 2.3.2 Data — reuse, not a parallel path
+
+Every value in the band comes from a module that already ships. **No new data
+file. No route literal. No `Math.random()`.**
+
+| What | Source | Notes |
+|---|---|---|
+| The entries | `HOME_CURATED` from `src/data/homeGallery.js` | 64 palettes, the same array the Discover section renders. Import the export, do not re-derive from `GALLERY_PALETTES` |
+| The artefact | `item.colors` — four hexes, dominant → accent | `paletteGallery.js`'s own documented order |
+| The name | `item.name` | |
+| The CSS | `item.css`, produced by `paletteCss()` | **The same bytes the gallery's Copy CSS hands over.** A visitor who copies from the hero and from the gallery must get identical text |
+| The hand-off | `item.to`, produced by `paletteBuilderUrl(item.colors)` | Resolves to `/create/palette?c=…` after #266. **Never typed** |
+| The ratio | `contrastRatio(a, b)` from `src/utils/colors.js` | |
+| The grade | `grade(ratio)` from `src/utils/styleGuideExport.js` | Returns `AAA` / `AA` / `AA Large` / `Fail`. Reusing it is why the hero can never disagree with a style-guide export |
+
+**The two computed facts**, both derived at render from `item.colors` alone:
+
+1. **The best pair.** Of the six unordered pairs among four colours, the one
+   with the highest `contrastRatio`. Rendered lighter-on-darker as
+   `{fg} on {bg}`, with `{ratio.toFixed(2)}:1` and `grade(ratio)`.
+2. **How many pairs are usable.** `n of 6 pairs clear AA` — the count of pairs
+   whose ratio is ≥ 4.5.
+
+Fact 2 is the load-bearing one. Fact 1 alone would read `AAA` on nearly every
+palette and therefore look printed rather than computed; fact 2 genuinely varies
+across the 64 entries, which is what proves to a sceptical designer that a
+function ran. §2.11 makes that a test.
+
+### 2.3.3 Anatomy, tokens and geometry
+
+One band, ruled top and bottom, spanning the full `.home-hero-core` measure
+(1080px cap). No side borders — it is a rule across the page, not a card. It is
+deliberately **not** a `--surf` card: the page already has seven of those below
+the fold, and an eighth in the hero would be the "every idea in an equally
+weighted rounded card" tell.
+
+```
+grid-template-columns: minmax(0,1.25fr) minmax(0,1fr) minmax(0,1.15fr) auto;
+grid-template-rows:    auto 1fr auto;      /* labels · content · caption */
+height:                var(--hero-specimen);
+border-block:          1px solid var(--border);
+column-gap:            var(--s-5);
+```
+
+| Token | Value | Why |
+|---|---|---|
+| `--hero-specimen` | `144px` | 3 × the 48px ground module (§2.6) |
+| `--hero-specimen` @ `max-height:900px` | `96px` | 2 × the module. Declared inside the **existing** `@media(max-height:900px)` block at `global.css:5432` — no new breakpoint |
+
+**Column 1 — `PALETTE`.** Four swatches, `1fr` each, `--radius-xs`, `1px solid
+var(--border)`, `gap: var(--s-1)`, 44px tall (30px in the 96px variant). The
+four hexes sit in a mono row **beneath** the swatches — `--mono`, `--fs-micro`,
+`--t2`, `tabular-nums` — never inside them. Text inside a generated swatch would
+have to pick its own ink at runtime, and `readableInk()`'s 0.58 luminance
+threshold does not guarantee 4.5:1 at 11px. Moving the labels onto `--bg-0`
+deletes the entire failure class.
+
+**Column 2 — `CONTRAST`.** Two lines:
+
+```
+#2E3440 on #ECEFF4        12.63:1   AAA
+4 of 6 pairs clear AA
+```
+
+Line 1: hexes in `--mono` `--fs-micro` `--t2`; the ratio in `--mono`
+`--fs-body-s` `--t0` `tabular-nums`; the grade as a category pill —
+`--radius-pill`, `--bg-2`, `1px solid var(--border)`, `--mono` `--fs-micro`
+weight 700, `--accent-strong`. That is `.hcmd-row-cat`'s existing language.
+**It is not the `--hi` AAA badge**, and that is deliberate: `--hi` is budgeted at
+one element per viewport and it is spent on the headline mark (§2.4). Line 2:
+`--fs-caption`, `--t2`.
+
+**Column 3 — `CSS`.** The first two lines of `item.css` after the comment
+header, in `--mono` `--fs-micro` `--t2`, one line each, clipped. No line
+numbers, no traffic lights, no copy button — the export section two screens down
+owns the full panel treatment and duplicating its chrome here would make the two
+compete. This column is a glimpse, not a panel.
+
+**Column 4 — the control.** `auto` width. A `ui-pill ui-pill-quiet ui-pill-md`
+labelled `Next palette`, and beneath it a `.hstep-cta`-styled text link
+`Open in Palette Builder →`. Both are real; §2.3.4.
+
+**Caption row**, spanning all four columns, `--mono` `--fs-micro` `--t3`, single
+line, clipped:
+
+```
+{item.name} · sRGB · from the UIL4B palette library
+```
+
+`sRGB` is deliberate. Research Topic 10, recommendation 5: *"for a product whose
+entire pitch is defensible colour systems, naming the space is both more correct
+and a credibility signal"* — the iOS system colour sheet writes `sRGB Hex Colour
+#`, not `Hex`. `observed`.
+
+The three column labels (`PALETTE`, `CONTRAST`, `CSS`) are `--mono` `--fs-micro`
+weight 700, `letter-spacing:.1em`, uppercase, `--t3`. They are the same device as
+Firecrawl's mono corner ticks, and they are the reason the band reads as
+measured rather than styled.
+
+### 2.3.4 The one control
+
+`Next palette` advances an index into `HOME_CURATED`, wrapping at the end. That
+is the whole interaction. It is Ramp's `Balance` slider with a different axis:
+one control, and the artefact regenerates from it.
+
+- It is a real `<button type="button">`, `ui-pill-quiet` `ui-pill-md` (44px —
+  clears WCAG 2.5.8 with 20px to spare).
+- It **never auto-advances.** A hero that cycles its own artefact in a reader's
+  peripheral vision while they read the headline is the gimmicky failure the
+  research warns about at Topic 9, and it would also put a second piece of
+  auto-motion in the same viewport as the typing overlay.
+- `Open in Palette Builder →` is a `<Link to={item.to}>`. It stays a real link
+  so middle-click and open-in-new-tab work — the same rule `HomeCommandBar`'s
+  result rows already follow.
+
+**Why this is not a second workbench.** It has one control and no state to lose.
+It grants nothing: no save, no export, no account, no quota. It hands off to the
+real tool the same way every other homepage surface does. The five-mode
+workbench below the fold is untouched and remains the demonstration.
+
+### 2.3.5 CLS reserves, item by item
+
+**The baseline is mean 0.0000 on the `homepage-field-metrics` profile and must
+not move.** Every variable-length string in the band is enumerated here with its
+reserve. Nothing in the band is content-sized.
+
+| What varies | Widest form | Reserve |
+|---|---|---|
+| Band height | — | `--hero-specimen`, a fixed token per breakpoint. **Never `auto`, never `min-height`.** |
+| Swatch colours | — | Four `1fr` cells in a fixed-height row. A colour change is a paint, not a layout |
+| Hex row | always `#RRGGBB`, uppercased | 7 characters exactly. `tabular-nums` so digit width cannot vary |
+| Ratio | `21.00:1` | `min-width: 7ch` + `tabular-nums`. Always `.toFixed(2)` — never a bare `21:1` |
+| Grade pill | `AA Large` | `min-width: 9ch`, text centred. Covers all four `grade()` return values, including the two the best-pair rule should never produce |
+| Pair count | `n of 6` | `n` is a single digit by construction (0–6) |
+| CSS lines | slug length varies with the palette name | Two lines, each `white-space:nowrap; overflow:hidden; text-overflow:ellipsis`, fixed `line-height` |
+| Caption | name length varies | One line, same clip treatment |
+| Control column | labels are constant | Fixed |
+
+**The rule for the engineer:** if a future change makes any cell size on its
+content, the reserve is broken and the CLS gate will catch it — but only after
+it ships. Assert the fixed height in a unit test (§2.11) so it is caught before.
+
+**Why the band makes spec §2.2's rejection *more* correct.** §2.2 declined to
+render the search results panel for the typed query, because `.hcmd-results` is
+an in-flow sibling and showing it moves everything below. With the band directly
+beneath the chips, that "everything below" now includes a 144px object and the
+primary CTA. **Do not revisit that decision.** The typing overlay stays exactly
+as §2.2 specifies: an out-of-flow, `aria-hidden`, `pointer-events:none` overlay
+in the existing `minmax(0,1fr)` grid track, with the input's `value` empty at
+every moment.
+
+### 2.3.6 Determinism, prerender and hydration
+
+The build prerenders 27 shells. The band must therefore render identically on
+the server and on the first client paint.
+
+- The index starts at `0`. Not random, not date-seeded, not
+  `localStorage`-seeded.
+- `HOME_CURATED` is a module-scope constant built from static arrays.
+- `contrastRatio` and `grade` are pure.
+- Hex strings are uppercased with `.toUpperCase()`, not with a locale-aware
+  method.
+
+**The trap, stated plainly.** `HomeWorkbench.makePalette()`
+(`HomeWorkbench.jsx:138–147`) uses `Math.random()`. It generates a different
+ramp on every load, which is fine below the fold in a client-only panel and is
+**not** fine in prerendered markup. Do not hoist it, do not copy its approach,
+and do not "improve" the band by randomising the starting index.
+
+## 2.4 Copy
+
+Australian English throughout. No denial-then-assertion. No superlatives. No
+invented numbers.
+
+### The headline — two options
+
+**Option A — recommended.**
+
+```
+A UI system that
+survives the [handoff].
+```
+
+- **Why it is the recommendation.** "Survives the handoff" is the sentence a
+  designer who has done the job writes, and it is not a sentence a generator
+  reaches for. It names the pain `growth-persuasion.md` names verbatim
+  (*"palettes that don't survive handoff"*), so it is describing a problem the
+  reader already has rather than inventing one — the ethical line that document
+  draws. It uses the product's own noun (`CLAUDE.md`: *"the operating workspace
+  for UI system creation"*). It is backable: the export section renders the
+  actual exporter's output two screens down. And it spends the mark on the
+  moment of value.
+- **The `--hi` mark sits on `handoff`** — the one word in the sentence that
+  carries the claim. This is Firecrawl's use of the same device
+  ([hero](https://mobbin.com/sites/sections/7374e232-3232-4f76-bf3e-a95a4ee73b8a),
+  marker on `It's also open source.`) and Sketch's
+  ([feature card](https://mobbin.com/sites/sections/0aa61d33-7cfb-43eb-b005-55c4718fb1f5),
+  inverted mono box on `Inside Sketch:`). `observed`. It is the correction for
+  Part 1's tell 4: the marker now carries information rather than naming a
+  widget that is visible 200px below it.
+- **The risk, stated.** "UI system" and "handoff" are both trade words. Our
+  audience is product and web designers and front-end developers
+  (`positioning.md`), who use both daily — but `CLAUDE.md` also says a
+  first-time visitor should understand the product immediately. The sub-line
+  carries that load. If the founder judges the headline too inside-baseball,
+  Option B is the plainer one.
+
+**Option B — the alternative.**
+
+```
+Design the system.
+Leave with the [code].
+```
+
+Leads with the deliverable rather than the risk removed. Mark on `code`.
+Backable by the same export section. **Its weakness:** it edges close to #264's
+sticky-section H2, "Use the tools here, then take the values with you." Two
+statements of the same promise, two screens apart, is the "generated section by
+section" pattern. If the founder prefers B, move that H2 — #264 is still open.
+
+**Line-length constraint, for whichever is chosen.** Each `.home-hero-line` is
+`display:block`, so the break is authored, not computed, and `text-wrap:balance`
+has no effect across the two block children. The shipped headline's own lines are
+18 and 20 characters and fit inside `.home-hero-core`'s 1080px at the 95.04px
+computed cap. **Treat 21 characters per line as the ceiling** and check the
+render at 1440 before merging. `inferred` — calibrated from the shipped
+headline, not measured directly. Option A is 16 / 21; Option B is 18 / 21.
+
+**The clip maths does not change.** #262 derived `.28em` on `.home-hero-line`
+from `.194em` of half-leading plus `.home-mark`'s `.06em` `padding-block`, and
+its unit test enforces the relationship rather than the number. Both options keep
+the mark on line 2, exactly as today. Because #262 compensates with
+`padding-block` (both edges), a headline that puts the mark on line 1 instead
+would also be covered. **Do not re-derive it, and do not touch
+`tests/unit/hero-entrance.test.js`.**
+
+### The sub-line
+
+> Every tool here writes to one set of values, so the contrast you check is the
+> contrast you hand over.
+
+100 characters — two lines at the existing 54ch measure at every viewport ≥981px.
+It fixes Part 1's tell 7 in both halves: no four-noun inventory, and the invented
+"twelve bookmarked tabs" is gone. It names a consequence, it explains the band
+directly beneath it, and it echoes the headline's `handoff` deliberately — the
+headline states the outcome, the sub-line states the mechanism.
+
+### The command bar placeholder
+
+> `Search 13 live tools`
+
+Derived, never typed: the number is `LIVE_TOOL_COUNT`, which `Home.jsx:36–38`
+already computes from `CREATE_GROUPS`. This does three things at once. It fixes
+tell 13 — the current placeholder prints three of the five chips sitting directly
+beneath it, so the chip row was two thirds redundant with its own neighbour. It
+gives the deleted stat line's one honest number a place where it is doing a job:
+telling the reader how large the index is. And it is Dropbox's move from research
+Topic 1 — `506 Articles — Page 1 of 57`, quantity rather than a bare claim.
+`observed`.
+
+**Spec §2.2's static fallback placeholder changes with it.** §2.2 specifies the
+input keeps a static `placeholder` for the moment the typing overlay is hidden;
+that string becomes this one. The overlay's cycled queries (`contrast` →
+`gradient` → `type scale` → `icons`) are unchanged.
+
+### The chips
+
+Unchanged in behaviour and styling. Two content edits, both fixing the
+unevenness in tell 13:
+
+- `convert` → `file converter`. It was the only verb among four nouns, and the
+  tool it resolves to is now `/create/file-converter`.
+- The `Try` label stays, stays `aria-hidden`, stays first.
+
+**Verify before merging** that both edited strings still return results from
+`queryCommandIndex`. `HomeCommandBar.jsx:23–24` states the rule: chips are real
+queries against the real index, asserted by `tests/user-sim`. A chip that
+returns nothing is worse than no chip.
+
+### The fine print
+
+> No account needed to try the tools.
+
+One claim, not three, and it changes kind. The current line — "No credit card ·
+No setup · Your first system stays free" — is a payment reassurance repeated
+almost verbatim in the pricing lede (`Home.jsx:471`) and again in `SystemCTA`
+(`Home.jsx:518`). `growth-persuasion.md` puts risk reversal *next to the ask*;
+three copies of it down one page reads as anxiety. The replacement is a
+**capability** statement, it is true (the workbench, the band and the search all
+work signed out), and it is the sentence most likely to make a visitor try
+rather than bounce.
+
+Margin drops from `--s-4` to `--s-2` so it reads as attached to the CTA row
+rather than as a fifth stacked block.
+
+**The other two copies stay for now.** `SystemCTA`'s is correctly placed next to
+the final ask. The pricing lede's is the one to cut if the founder wants it down
+to one — flagged in §2.12, not changed here, because `.hprice` is outside this
+spec's surface.
+
+## 2.5 What is deleted, and where each thing goes
+
+| Deleted | Was | Goes to |
+|---|---|---|
+| `13 LIVE TOOLS` | stat line | The command bar placeholder, derived (§2.4) |
+| `200K ICONS` | stat line | **Nowhere.** It is the Iconify catalogue. `toolTree.js` and the workbench's Icon panel already claim it in context, where it is true and attributable |
+| `1,500+ FONTS` | stat line | **Nowhere.** It is the Google Fonts catalogue. `discoverResources.js` already describes it in context |
+| `ONE WORKSPACE` | stat line | **Nowhere.** `CLAUDE.md` forbids the word in UI copy, and #264 already changed the section eyebrow below it to `[ CREATE ]`. This closes spec §14 open decision 4 |
+| `.home-hero-stats` rule + its entrance keyframe entry | `global.css` | Removed from the `:is(…)` selector lists in **both** reduced-motion blocks at `global.css:5386–5388` |
+
+Deleting the two borrowed catalogue numbers is the point of the exercise, not a
+side effect. They are the two items that made the strip read as a manufactured
+proof line, and neither is ours to claim in a hero.
+
+## 2.6 The ground
+
+`global.css:5302–5306` — the 48×48px grid, 4% ink, `opacity:.46`, 760px tall,
+masked to transparent at 82%.
+
+**Keep it. Two changes.**
+
+1. **`opacity: .46` → `.32`.** There is now a real object competing for the eye
+   in the same region; the texture should lose. `judgement`.
+2. **The band's height is a whole multiple of the grid module** — 144px = 3 × 48,
+   96px = 2 × 48. This is the actual fix for tell 5. The grid stops being
+   wallpaper not because it gains ornament but because something is now built on
+   it, in its own units, in the same hairline language. Firecrawl's grid works
+   for exactly that reason: a wireframe sits on its lines and mono labels name
+   the parts.
+
+**Do not** chase pixel alignment between the band's rules and the grid lines.
+The band's vertical offset depends on how the headline and sub-line wrap, so any
+alignment would be true at one viewport and false at the next — false precision,
+which is its own kind of slop. The shared module is the relationship; that is
+enough.
+
+**Do not** add corner ticks or margin labels. The band's three mono column
+labels already are that device, and doing it twice in one viewport spends the
+mono texture that `design-language-v2.md` calls load-bearing.
+
+## 2.7 Motion register
+
+Every animation, with its reduced-motion behaviour, in the shape spec §10 uses.
+**Mobbin is a stills library and gave no timing evidence of any kind.** Every
+duration below is either an existing project token or `judgement`; none is
+`observed`.
+
+| # | What | Property | Duration | Easing | Reduced motion (BOTH directions) |
+|---|---|---|---|---|---|
+| **H1** | Hero entrance (existing) | `transform`, `opacity` | existing | `--ease-entrance` | `animation:none`. The `:is(…)` lists at `global.css:5386–5388` **drop `.home-hero-stats` and gain `.home-hero-specimen`** |
+| **H2** | Specimen band arrival | `opacity`, `translate3d(0,18px,0)→0` | `.6s` (matches the existing `home-hero-rise` family) | `--ease-entrance` | `animation:none`. **The band's fixed height is layout, not motion, and stays in force** — same reasoning #262 used to keep `--hw-frame` under reduced motion |
+| **H3** | Reseed value cross-fade | `opacity` on the swatches, hex row, contrast lines, CSS lines and caption | `--dur-2` | `--ease-standard` | `transition:none`. **The values still change** — instantly, and completely. Reduced motion removes the transition, never the update |
+| **H4** | Reseed pill press | `transform: scale(.97)` | `--dur-1` | `--ease-standard` | Global clamp handles it; keep the colour change, drop the transform |
+| **H5** | Typing overlay (spec §2.2) | text substitution | per spec §2.2 | none (discrete) | per spec §2.2, plus the 2.2.2 addition in §2.8 |
+| **H6** | Typing caret (spec §2.2) | `opacity` | per spec §2.2 | — | per spec §2.2 |
+
+**Entrance order.** With the stat line gone, the band takes the delay slot after
+the CTAs so the hero still resolves top-to-bottom: line 1 `.08s` → line 2 `.18s`
+→ sub `.42s` → command bar `.52s` → CTAs `.64s`/`.72s` → **band `.70s`** → hint
+`.86s`. Total run lengthens by ~60ms. `judgement`.
+
+**Explicitly not added: the swatch-grow hover.** `design-language-v2.md` names
+`flex: 1 → 1.8` on swatch hover as a signature worth preserving. **It must not
+be used here.** It is a layout-changing hover inside a fixed-height band above
+the fold — the exact class of thing the CLS baseline exists to prevent — and it
+is a hover-only affordance on a decorative element, which is unreachable by
+keyboard and by touch. The signature stays where it belongs, in the palette
+tools. This is a deliberate, documented exception, not an oversight.
+
+**The guard pattern is mandatory for every CSS row above**, mirroring
+`global.css:5386–5388` so an explicit in-app toggle beats the OS query in both
+directions:
+
+```
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) <selector>{ … }
+}
+html[data-reduced-motion="true"] <selector>{ … }
+```
+
+Any JavaScript-driven motion reads the same contract `prefersReducedMotion()`
+implements in `useHomeMotion.js` — attribute first, OS query as fallback.
+
+## 2.8 Accessibility
+
+**Focus order.** Skip link → `PillNav` → command bar input → `⌘K` keycap →
+result rows (when open) → `Try` chips → **`Next palette`** → **`Open in Palette
+Builder`** → primary CTA → secondary CTA → (below the fold, unchanged).
+
+The band sits between the chips and the CTAs visually and in the DOM, so the tab
+order matches the reading order with no `tabindex` anywhere. Nothing in the band
+is a focus trap, a hover-only affordance, or a focusable element that is
+visually hidden.
+
+**Target sizes (WCAG 2.5.8, ≥24×24 CSS px).**
+
+| Component | Min | ≤480px |
+|---|---|---|
+| `Next palette` pill | 44px (`ui-pill-md`) | 44px |
+| `Open in Palette Builder` link | 32px | 40px, per the existing `≤480px` rule that lifts small targets |
+| Swatches | n/a — not interactive | n/a |
+
+**Assistive-technology treatment.** The band is a `<figure>` with a
+`<figcaption>`. That gives AT one coherent object instead of fifteen fragments.
+
+| Element | Treatment | Why |
+|---|---|---|
+| The four swatches | `aria-hidden="true"` | The hex row beneath carries the same information as text. Same rule spec §11 applies to the gallery's swatch renders |
+| Column labels (`PALETTE`, `CONTRAST`, `CSS`) | **real text, not `aria-hidden`** | They are the band's structure, and a screen-reader user needs them to make sense of the values that follow |
+| Hex row | real text | |
+| Ratio, grade, pair count | real text | The measurement is the point; it must reach AT |
+| The two CSS lines | real text inside `<code>` | |
+| `<figcaption>` | real text | Names the artefact and its colour space |
+| Typing overlay + caret | `aria-hidden="true"` | Unchanged from spec §2.2 |
+
+**The status region.** `Next palette` announces the new artefact through a
+`role="status" aria-live="polite"` node **scoped to the band**, empty at rest,
+e.g. `Nordic Frost — 4 of 6 pairs clear AA`. `HomeCommandBar` already owns a
+separate polite status for its result count. Two live regions in one viewport is
+normally a mistake; it is safe here because **both are empty until the user acts,
+and no single action can populate both** — one fires on typing, the other on a
+button press. State that in the code comment so it is not "tidied" into one.
+
+**Contrast.** The band introduces no accent-coloured small text except the grade
+pill, which takes `--accent-strong` (never `--accent` — `#0F6FFF` measures
+≈3.85:1 on the page ground and fails the 4.5:1 floor for normal text). The hex
+row and the CSS lines are `--t2`. No text is ever painted on a generated swatch
+(§2.3.3). **Dark mode needs its own pass — confirm, don't assume.**
+
+**Reduced motion.** Every row of §2.7 must be verified in both mechanisms: OS
+query with no attribute, and `data-reduced-motion="true"` with the OS query off.
+
+**WCAG 2.2.2 — an exposure in spec §2.2 that this pass should close.** §2.2's
+typing overlay auto-starts 1200ms after mount and runs one pass of four queries
+for roughly 16 seconds. Success Criterion 2.2.2 requires a mechanism to pause,
+stop or hide motion that starts automatically and runs beyond five seconds
+alongside other content. §2.2 does specify a permanent stop on `focus`, `input`,
+`pointerdown` or any keypress — so **the mechanism exists**; what is missing is
+that nothing tells the user it does.
+
+The cheapest honest fix adds no UI. The `⌘K` keycap button is already in the
+bar, already focusable, and already carries an `sr-only` name ("Focus the tool
+search"). **While the cycle is running, that name becomes "Stop the
+demonstration and focus the tool search."** One conditional string, one existing
+control, criterion satisfied without a second control above the fold.
+
+Sana ([hero](https://mobbin.com/sites/sections/7f35e77e-e242-4333-809d-49fc3156ba43))
+ships the explicit alternative — a visible pause button sitting in the tab row of
+an auto-cycling hero. `observed`. That is the fallback if an accessibility
+reviewer rejects the label-only approach. **Which of the two ships is a
+§2.12 decision**, and the sufficiency of the label-only version is `judgement`,
+not a verified pass.
+
+## 2.9 Responsive intent
+
+| Band | Composition | `--hero-specimen` |
+|---|---|---|
+| **Desktop ≥981px, viewport height >900px** | Four columns as specified, caption spanning | `144px` |
+| **Desktop ≥981px, viewport height ≤900px** | Identical four columns; swatches 44px → 30px, row gaps tighten | `96px` — set inside the existing `@media(max-height:900px)` block |
+| **Tablet 641–980px** | Two columns × two rows: `PALETTE` and `CONTRAST` on row 1, `CSS` and the control on row 2. Caption spans both | `192px` (4 × 48) |
+| **Phone ≤640px** | Two rows: `PALETTE` full width, then `CSS` with the control beside it. **`CONTRAST` drops to a single line under the hexes** rather than being cut — the measurement is the reason the band exists | `144px` (3 × 48) |
+
+**Nothing is hidden on phone.** Every fact survives; only the arrangement
+changes. The `CSS` column is the one that could reasonably be dropped, and it is
+kept because the export section is a long way down on a phone.
+
+**Tablet is the weakest band here, as it is in spec §12.** Mobbin returned no
+tablet-sized captures in either research pass, and the 641–980px range is being
+reworked by PR #263 anyway. Treat the tablet row as a hypothesis and verify it
+against #263's band once that lands. `judgement`.
+
+## 2.10 The vertical budget
+
+The hero must keep two contracts from
+`tests/user-sim/10-home-chaos-to-calm.spec.js`: **the workbench starts below the
+fold**, and **the primary CTA stays above it**, at 1440×900, 1512×982, 1920×1080
+and 1280×800. The band is the only thing this spec adds to that stack, so the
+arithmetic is stated in full.
+
+All values read from the stylesheet, not from a browser — `inferred`, and the
+engineer must confirm the totals in a real render before merging.
+
+**1280×800** — the binding case. `@media(max-height:900px)` applies, so
+`--hero-specimen` is 96px:
+
+| Item | px |
+|---|---|
+| `.home-hero` padding-top — `--nav-top` 0 + `--nav-h` 60 + `--s-6` 32 | 92 |
+| H1 — 2 × (6.6vw = 84.48 × 0.98) | 165.6 |
+| sub margin-top `--s-4` | 16 |
+| sub — 2 × (21 × 1.6) | 67.2 |
+| `.hcmd` margin-top `--s-4` | 16 |
+| `.hcmd-bar` min-height | 60 |
+| `.hcmd-chips` margin-top `--s-3` | 12 |
+| chip min-height | 34 |
+| band margin-top `--s-5` | 24 |
+| **band `--hero-specimen`** | **96** |
+| `.home-hero-cta` margin-top `--s-5` | 24 |
+| `ui-pill-lg` | 52 |
+| hint margin-top `--s-2` | 8 |
+| hint — 11 × 1.65 | 18.2 |
+| `.home-hero` padding-bottom `--s-8` | 64 |
+| **Total** | **749** |
+
+749 ≤ 800, so the hero fits inside `min-height: min(100svh, 980px)` and the
+workbench still begins at exactly 800px. **51px of slack.** Running the column down to the
+CTA — 92 + 165.6 + 16 + 67.2 + 16 + 60 + 12 + 34 = 462.8 at the chip row, + 24
++ 96 = 582.8 at the band's foot, + 24 + 52 — puts the primary CTA's bottom edge
+at **658.8px**, 141px clear of the fold.
+
+| Viewport | `--hero-specimen` | Hero content total | Fold | Slack |
+|---|---|---|---|---|
+| 1280×800 | 96 | 749 | 800 | **51** |
+| 1440×900 | 96 | 770 | 900 | 130 |
+| 1512×982 | 144 | 872 | 982 | 110 |
+| 1920×1080 | 144 | 872 | 1080 | 208 |
+
+The 1512 and 1920 rows drop the `max-height:900px` overrides, so padding-top is
+108, the sub takes `--s-6`, `.hcmd` takes `--s-5`, chips take `--s-4` and the CTA
+row takes `--s-6`; the H1 is at its 96px cap in both.
+
+**Reading of the result.** The 96px variant is what makes this fit. Specifying a
+single 144px band at every height would put 1280×800 at 797px against an 800px
+fold — three pixels, which is not a margin, it is a coin toss. The two-step token
+is not a nicety.
+
+## 2.11 Acceptance criteria
+
+Observable and checkable. Numbers 1–4 are the ones that would catch a
+regression silently reintroducing the problem.
+
+1. **CLS** — homepage CLS stays at **0.0000 mean** on the existing
+   `homepage-field-metrics` profile (4× CPU throttle, 1440×900, ten cold loads,
+   cache disabled). Any regression is a fail, not a rounding argument.
+2. **Fixed height** — `.home-hero-specimen` measures the same height across all
+   64 entries at 1440×900 and at 1920×1080. Stepping through every entry with
+   `Next palette` moves nothing below the band by a single pixel.
+3. **The fold contract** — `tests/user-sim/10-home-chaos-to-calm.spec.js` passes
+   unmodified at all four viewports: `.hw-shell` starts at or below the fold, and
+   `.home-hero-cta .ui-pill-accent` ends above it.
+4. **The number is computed, not printed** — a unit test asserts that across the
+   64 entries in `HOME_CURATED`, the `n of 6 pairs clear AA` value takes **at
+   least three distinct values**. If it ever collapses to one, the fact has
+   stopped being evidence and the band has become decoration.
+5. **No route literal** — no string beginning `/create/` or `/color/` appears in
+   the band's source. The hand-off is `item.to`; the chips resolve through the
+   search index. The existing route tests stay green.
+6. **The bytes match** — the CSS shown in the band is a prefix of the string
+   `paletteCss(palette)` returns, and copying the same palette from the Discover
+   gallery yields text that starts with the same two lines.
+7. **The grade cannot disagree with an export** — the badge is `grade(ratio)`
+   from `styleGuideExport.js`, not a local threshold table.
+8. **Prerender parity** — the prerendered HTML for `/` and the first client
+   render produce identical band markup. No hydration warning in the console.
+9. **Deletions** — no `200K ICONS`, `1,500+ FONTS` or `ONE WORKSPACE` string
+   remains anywhere on the page. `.home-hero-stats` is gone from the markup and
+   from both reduced-motion `:is(…)` lists.
+10. **`--hi` budget** — exactly one `--hi` element in the hero viewport: the
+    headline mark. The grade pill is `--accent-strong` on `--bg-2`.
+11. **Reduced motion** — every row of §2.7 verified in both mechanisms. Under
+    reduced motion the band renders at rest, at full height, and `Next palette`
+    still changes every value instantly.
+12. **Keyboard** — `Next palette` and `Open in Palette Builder` are reachable in
+    the §2.8 order, operable by keyboard, and visibly focused. `Open in Palette
+    Builder` middle-clicks into a new tab.
+13. **Chips still hit** — every `Try` chip, including the edited `file
+    converter`, returns at least one result from `queryCommandIndex`.
+14. **2.2.2** — while the typing cycle runs, the `⌘K` keycap's accessible name
+    names the stop. Focusing or clicking it stops the cycle permanently.
+15. **Contrast** — the grade pill, hex row, CSS lines and caption all clear
+    4.5:1 in light **and** dark. No text is painted on a generated swatch.
+16. **Headline** — neither line of the chosen option wraps at 1440×900; the mark
+    is unclipped at top and bottom; the entrance still plays and still settles
+    instantly under both reduced-motion paths.
+
+**Still unrun, and must not be claimed as passed** (`homepage-field-metrics`):
+keyboard-only, screen-reader name, 200% zoom and forced-colours passes. This
+spec defines the intent; it is not evidence any of it was verified.
+
+## 2.12 Open decisions — founder judgement required
+
+1. **Which headline.** Option A (`A UI system that survives the handoff.` —
+   recommended) or Option B (`Design the system. Leave with the code.`). A is
+   the more authored sentence and does not collide with #264's H2; B is the
+   plainer one for a visitor who does not already know the vocabulary. **One
+   call, and it sets the tone of the whole page.**
+2. **Deleting the stat line.** The two catalogue numbers (200K icons, 1,500+
+   fonts) are real libraries and are honest *in context* — this spec removes
+   them from the hero because in a stat strip they read as ours. If the founder
+   wants a number above the fold, `13` survives in the placeholder and the band
+   carries `n of 6 pairs clear AA`. Confirm that is enough.
+3. **WCAG 2.2.2 on the typing cycle.** The label-only fix (§2.8) or Sana's
+   visible pause control. Recommended: label-only, because it adds no control to
+   a viewport that already has six interactive elements. An accessibility
+   reviewer should confirm sufficiency — this is `judgement`.
+4. **The third risk-reversal copy.** The hero's shrinks to a capability
+   statement and `SystemCTA` keeps its payment one. The pricing lede's *"no card
+   and no trial clock"* is the remaining duplicate. Cut it or keep it —
+   `.hprice` is outside this spec's surface, so it is flagged, not changed.
+5. **The three below-the-fold items from Part 1 §1.5** — the tool cards, the
+   five templated step titles, and `[ THE TOOLSET ]` → `[ TOOLSET ]`. None is in
+   this spec. All three are cheap, and the tool-card fix is the largest
+   remaining anti-slop win on the page after the hero.
+6. **Ordering against the open PRs.** This spec assumes #262, #264 and #266 have
+   all landed. #262 is a hard precondition (the mark's clip maths and the chip
+   centring). #264 is a hard precondition (`homeGallery.js` is the band's data
+   source). #266 is a hard precondition (`paletteBuilderUrl` must already return
+   `/create/palette`). **Build order: #262 → #264 → #266 → this.**
+
+---
+
+## Sources
+
+**Read for this pass.** `src/pages/Home.jsx` · `src/components/HomeCommandBar.jsx`
+· `src/components/HomeWorkbench.jsx` · `src/styles/global.css` (`:root` tokens,
+`.home-*`, `.h*`, both reduced-motion blocks) · `src/data/toolTree.js` ·
+`src/data/paletteGallery.js` · `src/data/gradientGallery.js` ·
+`src/data/paletteLibrary.js` · `src/utils/colors.js` ·
+`src/utils/styleGuideExport.js` · `src/utils/uiSystem.js` ·
+`src/utils/exportBuilder.js` ·
+`tests/user-sim/10-home-chaos-to-calm.spec.js` ·
+`tests/unit/hero-entrance.test.js` · and the full diffs of **PR #262**, **PR
+#264** and **PR #266**.
+
+**Reference.** `docs/design/homepage-spec-2026-08.md` ·
+`docs/research/homepage-patterns-2026-08.md` ·
+`docs/reference/design-language-v2.md` · `docs/reference/growth-persuasion.md` ·
+`docs/reference/positioning.md` · `CLAUDE.md` ·
+`.claude/skills/uil4b-brand-design/references/` (brand-foundation,
+anti-slop-quality-bar, surface-principles).
+
+**Mobbin — twelve new captures, gathered 2026-08-22**, on top of the 95 in the
+research document. Four searches: developer-tool heroes with a live demo;
+design-tool heroes showing real colour output; heroes with an inline interactive
+control; heroes built around a search field.
+
+| App | Capture | Used for |
+|---|---|---|
+| Firecrawl | [hero](https://mobbin.com/sites/sections/7374e232-3232-4f76-bf3e-a95a4ee73b8a) | The closest analogue to our hero in either pass — instrument + result + technical ground + marker on the sub-line |
+| Ramp | [business account hero](https://mobbin.com/sites/sections/4c3bb2de-4b4d-41b6-90d5-8a273bd30011) | One control driving one generated figure |
+| Claude Type | [Romie specimen](https://mobbin.com/sites/sections/87c2dd71-75a5-4bf1-8d12-86e29d509e35) | The product's own output as the entire hero |
+| Antimetal | [hero](https://mobbin.com/sites/sections/a8eb47a5-9254-4e58-bdc9-ab44b8259ae5) | A demo panel dimmed so it reads as a demonstration |
+| Sana | [hero](https://mobbin.com/sites/sections/7f35e77e-e242-4333-809d-49fc3156ba43) | An explicit pause control on an auto-cycling hero (WCAG 2.2.2) |
+| V7 | [hero](https://mobbin.com/sites/sections/26660d92-77ce-470d-a481-fa9873bd1b3e) | The only capture in either pass showing typed text with a live caret — into the *headline*, which is why we do not copy it |
+| TinyWins | [hero](https://mobbin.com/sites/sections/eb379572-6bc5-4f91-8ad9-ef6a2ff09f11) | Stat strips written as complete phrases |
+| Voiceflow | [context engine](https://mobbin.com/sites/sections/55a5e8f2-1e4b-4641-ad6d-52e0d15e62e9) | Numeral over a unit label |
+| Maze | [platform hero](https://mobbin.com/sites/sections/3de86c04-135e-4a67-af1a-c9c869778759) | Asymmetric hero; the A-to-B headline as real practice |
+| Retool | [hero](https://mobbin.com/sites/sections/dcbd55be-58cb-4e0e-9b70-cb4d184fa30a) | Headline-first opening; artefact bleeding off the edge |
+| Vercel | [resources hero](https://mobbin.com/sites/sections/bfdd6f6e-3296-4d9c-9041-413c0a935926) | A labelled tile grid as the chip row's grown-up form |
+| Figma | [creative tools](https://mobbin.com/sites/sections/5f84e90e-f4ae-48e5-bdb0-9b0b9b303f03) | Decoration as a flat colour field, not a gradient |
+
+Also cited from the earlier research where a claim needed corroboration: Grok,
+BitcoinOS, Sketch, ElevenLabs, ClickUp, Copy.ai, Campsite, Airbnb, Craft,
+Browserbase, Vizcom, Framer, Descript.
+
+**Mobbin gave no motion, timing or easing evidence, and none is attributed to
+it.** Every duration in §2.7 is either an existing project token or
+`judgement`.
