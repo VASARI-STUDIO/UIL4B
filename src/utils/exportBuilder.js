@@ -2,7 +2,9 @@
 // HTML export is styled using the user's chosen palette + fonts as the
 // actual page styling so it serves as a live preview / brand reference.
 
-import { hexToRgb } from './colors'
+// Explicit .js extension: exportBuilder is imported directly by the Node test
+// runner, which does not do extensionless resolution. Vite resolves either form.
+import { hexToRgb } from './colors.js'
 
 function lum(hex) {
   try {
@@ -25,7 +27,9 @@ function googleFontUrl(families) {
   return `https://fonts.googleapis.com/css2?${params}&display=swap`
 }
 
-const PALETTE_LABELS = ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight']
+// Exported so a surface that DISPLAYS the palette beside its generated CSS uses
+// the same role names the CSS is written with, instead of a second list.
+export const PALETTE_LABELS = ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight']
 const TINT_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
 
 const ROUNDING_MAP = {
@@ -88,6 +92,24 @@ export function buildCSSVars({ palette, tints, fonts, typeScale, stateShades, ap
 
   lines.push('}')
   return lines.join('\n')
+}
+
+const TAILWIND_NAMES = ['primary', 'secondary', 'accent', 'neutral', 'surface']
+
+// The Tailwind theme extension the Export menu downloads as tailwind.config.js.
+// It used to be written inline inside TopBar; it moved here so the homepage's
+// export section can show the REAL output rather than a hand-written sample of
+// it. Byte-for-byte the same file it always produced — the only change is where
+// the function lives.
+export function buildTailwindTheme({ palette, fonts }) {
+  const colors = palette?.colors || []
+  const colorEntries = colors
+    .map((c, i) => `        '${TAILWIND_NAMES[i] || `color-${i + 1}`}': '${c}',`)
+    .join('\n')
+  const fontSection = fonts?.heading
+    ? `      fontFamily: {\n        heading: ['${fonts.heading.family}', 'system-ui', 'sans-serif'],\n${fonts?.body ? `        body: ['${fonts.body.family}', 'system-ui', 'sans-serif'],\n` : ''}      },\n`
+    : ''
+  return `/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n${colorEntries}\n      },\n${fontSection}    },\n  },\n}\n`
 }
 
 // Style guide HTML — uses the user's actual palette + fonts as page styling.

@@ -1,20 +1,23 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
 import HomeCommandBar from '../components/HomeCommandBar'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
+import HomeGallery from '../components/HomeGallery'
+import HomeExport from '../components/HomeExport'
 import { useHomeMotion } from '../hooks/useHomeMotion'
-import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS } from '../data/toolTree'
-import { COMMUNITY_DESIGNS } from '../data/communityDesigns'
+import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, LEARN_GROUPS } from '../data/toolTree'
 
 // ── The V2 homepage ──────────────────────────────────────────────────────────
 //
 // A sales page built around the real product, in the order the visitor's
 // questions arrive: what is this (hero + command bar) → show me it working
 // (sticky scroll over the live workbench) → what else is in it (tools grid) →
-// who else uses it (community) → what does it cost (pricing) → start.
+// what can I start from (the Discover gallery) → what do I get out of it
+// (export) → where do I learn the rest (Learn) → what does it cost (pricing)
+// → start.
 //
 // Three things the founder asked to keep, and this page keeps all three:
 //   · PillNav is the navigation system, untouched;
@@ -48,55 +51,65 @@ const HERO_STATS = [
 
 /* ── The sticky scroll narrative ──────────────────────────────────────────── */
 
+// Tool id → the route the router actually serves.
+//
+// CREATE_GROUPS is the canonical owner: `createRoutes()` builds the router's
+// Create route table from exactly these `tool.route` values (toolTree.js), so a
+// route that is not in here does not exist. Deriving instead of hard-coding
+// matters right now — every Create tool is migrating to `/create/<pagetitle>`,
+// and a literal '/color/palette' in this file would ship a dead URL the day
+// that lands. `tools.jsx` is NOT the owner: it is the Sidebar/search registry
+// and still lists retired `/docs-*` paths.
+const ROUTE_BY_TOOL = Object.fromEntries(
+  CREATE_GROUPS.flatMap((g) => g.tools).map((t) => [t.id, t.route]),
+)
+
 // One step per workbench mode, in tab order — the left column narrates, the
-// right column IS that mode of the real workbench. `tab` is the binding.
+// right column IS that mode of the real workbench. `tab` is the binding to the
+// workbench; `tool` is the binding to the route table above, and it feeds BOTH
+// the visible route line and the CTA so the two can never disagree.
 const STEPS = [
   {
     tab: 'palette',
-    num: '01',
-    kicker: 'COLOUR',
+    tool: 'palette',
     title: 'Start with a palette you can defend.',
     body: 'Generate a five-step ramp, lock the colours that are already right, and regenerate the rest. Every value is a real hex you can copy straight out.',
     points: ['Lock and regenerate individual steps', 'Copy any value to the clipboard', 'Carries into the full builder on the free Auto system'],
-    cta: { label: 'Open Palette Builder', to: '/color/palette' },
+    ctaLabel: 'Open Palette Builder',
   },
   {
     tab: 'gradient',
-    num: '02',
-    kicker: 'GRADIENT',
+    tool: 'gradient',
     title: 'Tune a gradient and take the CSS.',
     body: 'Two stops and an angle, previewed live. A half-typed hex never destroys the preview — the field tells you what to correct and keeps the last valid value.',
     points: ['Live preview from real CSS', 'Invalid input explains itself', 'Copy the declaration, not a screenshot'],
-    cta: { label: 'Open Gradient Generator', to: '/color/gradient' },
+    ctaLabel: 'Open Gradient Generator',
   },
   {
     tab: 'image',
-    num: '03',
-    kicker: 'IMAGERY',
+    tool: 'file-converter',
     title: 'Decide the output before you convert.',
     body: 'Set resolution, file type and compression against a reference image, then hand your own files to the converter with that draft already applied.',
     points: ['Honest limits — WebP cannot store lossless, and says so', 'Nothing is encoded here; File Converter does the work', 'Your files never touch storage or the URL'],
-    cta: { label: 'Open File Converter', to: '/file-converter' },
+    ctaLabel: 'Open File Converter',
   },
   {
     tab: 'icon',
-    num: '04',
-    kicker: 'ICONS',
+    tool: 'icons',
     title: 'Size and weight an icon before you commit.',
     body: 'Twelve bundled glyphs, three sizes, four stroke widths — a free taste of the editor. Nothing saves, downloads or counts against a plan.',
     points: ['No catalogue call — the preview is local', 'Opens your draft in the real editor', '200k icons once you are there'],
-    cta: { label: 'Open Icon Library', to: '/icons' },
+    ctaLabel: 'Open Icon Library',
   },
   {
     tab: 'typography',
-    num: '05',
-    kicker: 'TYPE',
+    tool: 'type-scale',
     title: 'Build a scale that actually computes.',
     body: 'Real modular-scale maths from your base size and ratio, previewed at every step, then carried into the full Type Scale generator.',
     points: ['Display, heading, body and caption computed live', 'Edit the specimen text', 'Family choices survive the hand-off'],
-    cta: { label: 'Open Type Scale', to: '/typescale' },
+    ctaLabel: 'Open Type Scale',
   },
-]
+].map((step) => ({ ...step, route: ROUTE_BY_TOOL[step.tool] }))
 
 /* ── Pricing ──────────────────────────────────────────────────────────────────
  *
@@ -134,29 +147,27 @@ const PRO_INCLUDES = [
   'Community submissions and the full prompt library',
 ]
 
-/* ── Community ────────────────────────────────────────────────────────────────
- * The seam for the community rebuild. `COMMUNITY_DESIGNS` is today's source —
- * curated platform links with REAL save counts, which start at zero. There are
- * no trending or recency signals in it yet, so `orderDesigns` returns the seed
- * order for those two modes and the strip says so rather than inventing a rank.
- * When the community backend lands, this function is the single place that
- * changes.
+/* ── Learn ────────────────────────────────────────────────────────────────────
+ *
+ * The constraint that shapes this section: there is almost nothing to link to.
+ * App.jsx redirects all eight /docs-* paths to /learn, and every LEARN_GROUPS
+ * entry is `soon: true` with `route: '/learn'`. The only live Learn-surface
+ * destinations are /learn itself (the honest coming-soon landing) and /help.
+ *
+ * So exactly one row here navigates. The rest are non-navigable preview rows
+ * with a visible Soon badge — never links that loop back to /learn, which is
+ * the standing rule in pipeline.js (`learn-content`), and never read times: a
+ * "6 min read" for an unwritten guide is a fabricated number.
+ *
+ * The labels and descriptions come from LEARN_GROUPS so the list cannot drift
+ * from the product. Only the Help row's destination is stated here, because
+ * LEARN_GROUPS still points it at the surface landing while HelpCentre is
+ * already live at /help.
  */
-const COMMUNITY_TABS = [
-  { id: 'trending', label: 'Trending' },
-  { id: 'newest', label: 'Newest' },
-  { id: 'saved', label: 'Most saved' },
-]
-
-function orderDesigns(items, mode) {
-  if (mode === 'saved') return [...items].sort((a, b) => (b.saves || 0) - (a.saves || 0))
-  if (mode === 'newest') return [...items].slice().reverse()
-  return items
-}
-
-// True only for `saved`, which sorts on a real field. The other two have no
-// signal in today's data and must not pretend otherwise.
-const RANK_IS_REAL = { trending: false, newest: false, saved: true }
+const LEARN_ROWS = ['principles', 'brand', 'typography', 'help']
+  .map((id) => LEARN_GROUPS.find((g) => g.id === id))
+  .filter(Boolean)
+  .map((group) => (group.id === 'help' ? { ...group, to: '/help' } : group))
 
 /* ── Tool → workbench-mode relationship ──────────────────────────────────────
  * The old hero carried this with `aria-describedby` on each of eleven satellite
@@ -172,7 +183,6 @@ export default function Home() {
   // Once the visitor drives the tablist themselves, scroll stops overriding
   // them. Nothing is more irritating than a control that keeps changing back.
   const pinnedRef = useRef(false)
-  const [community, setCommunity] = useState('trending')
 
   const onStepChange = useCallback((tab) => {
     if (pinnedRef.current) return
@@ -185,11 +195,6 @@ export default function Home() {
   }, [])
 
   useHomeMotion(rootRef, { onStepChange })
-
-  const designs = useMemo(
-    () => orderDesigns(COMMUNITY_DESIGNS, community).slice(0, 6),
-    [community],
-  )
 
   const activeStep = STEPS.findIndex((s) => s.tab === mode)
 
@@ -257,7 +262,7 @@ export default function Home() {
             <div className="hsteps-head" data-reveal>
               <span className="hbrow">[ CREATE ]</span>
               <h2 className="hh2" id="hsteps-title">
-                Not a screenshot. The actual tools, running here.
+                Use the tools here, then take the values with you.
               </h2>
               <p className="hlede">
                 Everything below is live: real generated values, real keyboard handling, real
@@ -275,10 +280,19 @@ export default function Home() {
                     data-step={step.tab}
                     data-active={index === activeStep}
                   >
-                    <p className="hstep-num">
-                      <span>{step.num}</span>
-                      <span className="hstep-num-sep" aria-hidden="true">/</span>
-                      <span>{step.kicker}</span>
+                    {/* The numeral is gone. Position now comes from two
+                        places, neither of them a decorative ordinal: the rail
+                        is an <ol>, so assistive tech announces "2 of 5"
+                        natively, and the connector dot puts the same fact on
+                        screen spatially. What replaces the numeral is the one
+                        thing a reader cannot otherwise see — the route this
+                        step's panel actually lives at, which is also the
+                        crumb the sticky panel renders in its own chrome. It is
+                        aria-hidden because "slash colour slash palette" is
+                        noise, and the CTA below already names the destination. */}
+                    <p className="hstep-route" aria-hidden="true">
+                      <span className="hstep-dot" />
+                      {step.route}
                     </p>
                     <h3 className="hstep-title">{step.title}</h3>
                     <p className="hstep-body">{step.body}</p>
@@ -292,8 +306,8 @@ export default function Home() {
                         </li>
                       ))}
                     </ul>
-                    <Link className="hstep-cta" to={step.cta.to}>
-                      {step.cta.label}
+                    <Link className="hstep-cta" to={step.route}>
+                      {step.ctaLabel}
                       <span aria-hidden="true">&rarr;</span>
                     </Link>
                   </li>
@@ -316,7 +330,11 @@ export default function Home() {
           <div className="home-container">
             <div className="htools-head" data-reveal>
               <span className="hbrow">[ THE TOOLSET ]</span>
-              <h2 className="hh2" id="htools-title">Six categories. One account.</h2>
+              {/* Was "Six categories. One account." — an inventory and a
+                  billing fact, which is why it read as skippable. The promise
+                  that was buried in the lede is now the heading; the inventory
+                  drops to the lede where it belongs. */}
+              <h2 className="hh2" id="htools-title">A value you set in one tool is set in all of them.</h2>
               {/* Canonical founder direction (uil4b-brand-design →
                   surface-principles.md): component tooling must be NAMED as
                   coming next, and must never appear as a live preview mode. It
@@ -324,8 +342,8 @@ export default function Home() {
                   so the claim moves here — beside the card that carries the Soon
                   badge, which is where it is actually useful. */}
               <p className="hlede">
-                Every tool reads and writes the same system, so a colour decision in one place
-                is the same colour decision everywhere else. Component tooling is coming next.
+                Six categories, one account, and one system underneath them. Component tooling
+                is coming next.
               </p>
             </div>
 
@@ -377,79 +395,56 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Community ── */}
-        <section className="hcomm" aria-labelledby="hcomm-title">
+        {/* ── The Discover gallery ──
+            Was a strip of twelve outbound links to Dribbble, Awwwards, Behance
+            and Mobbin. It now renders the shipped UIL4B galleries and every
+            card links inward. See HomeGallery.jsx for the full reasoning. */}
+        <HomeGallery />
+
+        {/* ── Export ──
+            Input and output in one frame. Every character in the code panel is
+            produced by the shipped exporter; see HomeExport.jsx. */}
+        <HomeExport />
+
+        {/* ── Learn ──
+            Four rows, exactly one of which navigates. See LEARN_ROWS above for
+            why: /help is the only live Learn destination the router has. */}
+        <section className="hlearn" aria-labelledby="hlearn-title">
           <div className="home-container">
-            <div className="hcomm-head" data-reveal>
-              <div>
-                <span className="hbrow">[ COMMUNITY ]</span>
-                <h2 className="hh2" id="hcomm-title">Systems worth stealing.</h2>
-              </div>
-              <div className="hcomm-tabs" role="tablist" aria-label="Community ordering">
-                {COMMUNITY_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    className="hcomm-tab"
-                    aria-selected={tab.id === community}
-                    tabIndex={tab.id === community ? 0 : -1}
-                    onClick={() => setCommunity(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+            <div className="hlearn-head" data-reveal>
+              <span className="hbrow">[ LEARN ]</span>
+              <h2 className="hh2" id="hlearn-title">Guides for the part the tools can&rsquo;t do for you.</h2>
+              <p className="hlede">
+                Learn is being written now. The Help Centre is live today; everything else below
+                is on the way.
+              </p>
             </div>
 
-            {/* Honest about what the ordering can and cannot do yet. */}
-            <p className="hcomm-note">
-              {RANK_IS_REAL[community]
-                ? 'Ordered by real saves. Counts start at zero — nothing here is inflated.'
-                : 'Ranking arrives with member submissions. Until then these are curated starting points, in a fixed order.'}
-            </p>
-
-            <ul className="hcomm-grid" data-reveal-group>
-              {designs.map((design) => (
-                <li className="hcomm-card" key={design.id}>
-                  <a
-                    className="hcomm-card-link"
-                    href={design.url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                  >
-                    <span
-                      className="hcomm-card-art"
-                      aria-hidden="true"
-                      ref={(node) => {
-                        // Generated gradient thumbnails — no external assets, no
-                        // Storage dependency, renders offline. The two stops are
-                        // data, so they arrive as custom properties rather than
-                        // as an inline background declaration.
-                        if (!node) return
-                        node.style.setProperty('--hcomm-c1', design.c1)
-                        node.style.setProperty('--hcomm-c2', design.c2)
-                      }}
-                    />
-                    <span className="hcomm-card-body">
-                      <span className="hcomm-card-name">{design.name}</span>
-                      <span className="hcomm-card-meta">
-                        <span className="hcomm-card-source">{design.source}</span>
-                        <span className="hcomm-card-cat">{design.category}</span>
-                      </span>
-                    </span>
-                    <span className="hcomm-card-foot">
-                      <span className="hcomm-card-saves">{design.saves} saves</span>
-                      {design.curated && <span className="hcomm-card-tag">Curated</span>}
-                    </span>
-                  </a>
+            <ul className="hlearn-list" data-reveal>
+              {LEARN_ROWS.map((row) => (
+                <li className="hlearn-row" key={row.id}>
+                  <span className="hlearn-name">
+                    {row.to
+                      ? <Link className="hlearn-link" to={row.to}>{row.label}</Link>
+                      : row.label}
+                  </span>
+                  <span className="hlearn-desc">{row.desc}</span>
+                  {/* The status column tells the truth instead of inventing a
+                      read time for a guide nobody has written. A Soon row is
+                      plain text plus the same badge the nav uses — never a
+                      disabled button, which would be a focusable dead end. */}
+                  <span className="hlearn-status">
+                    {row.to
+                      ? <span className="hlearn-chev" aria-hidden="true">&rarr;</span>
+                      : <em className="htool-soon">Soon</em>}
+                  </span>
                 </li>
               ))}
             </ul>
 
-            <div className="hcomm-cta">
-              <Link className="ui-pill ui-pill-quiet ui-pill-md" to="/discover">
-                Explore Discover
+            <div className="hlearn-cta">
+              <Link className="ui-pill ui-pill-quiet ui-pill-md" to="/learn">
+                See what&rsquo;s coming
                 <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
               </Link>
             </div>

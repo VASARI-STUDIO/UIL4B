@@ -559,15 +559,209 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.locator('.hprice-title')).not.toContainText('$6')
     expect(ladder[1], 'quarterly is the only $6/month row').toContain('$6')
 
-    // The community strip states real counts and never a fabricated rank.
+    // The gallery still refuses to invent proof.
+    //
+    // CHANGED WITH THE DATA, NOT DELETED. This block used to click a
+    // "Most saved" tab and assert every card read "0 saves". Both of those
+    // belonged to COMMUNITY_DESIGNS, which the section no longer renders: the
+    // grid is now the shipped palette/gradient galleries, and those carry no
+    // save, trending or recency signal at all. So the ordering tabs became KIND
+    // filters — which sort on a property the data really has — and the cards
+    // show the artefact's own facts instead of a count.
+    //
+    // The assertion that mattered is intact and is now stronger: it used to
+    // check that one metric was honest about being zero; it now checks that no
+    // fabricated metric appears anywhere in the grid.
     await expect(page.locator('.hcomm-note')).toContainText('curated starting points')
-    await page.locator('.hcomm-tab', { hasText: 'Most saved' }).click()
-    await expect(page.locator('.hcomm-note')).toContainText('real saves')
-    // Every count is a real count, which starts at zero. A visible zero is
-    // honest; an invented 342 is not. (`text-transform` uppercases these, so
-    // the match is deliberately case-insensitive.)
-    const saves = await page.locator('.hcomm-card-saves').allInnerTexts()
-    expect(saves.every((s) => /^0 saves$/i.test(s.trim())), JSON.stringify(saves)).toBe(true)
+    const facts = await page.locator('.hcomm-fact').allInnerTexts()
+    expect(facts.length, 'the cards state their own facts').toBeGreaterThan(0)
+    expect(
+      facts.filter((f) => /save|like|remix|view|download/i.test(f)),
+      JSON.stringify(facts.slice(0, 12)),
+    ).toEqual([])
+  })
+
+  // C8 / C9 / C10. The three things the founder read as AI-written, and the
+  // shape of what replaced them.
+  test('the rejected headlines are gone and the step rail names real routes', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, 'founder re-reading the page')
+    await go(page, '/')
+
+    const body = await page.locator('main').innerText()
+    // C8: "this just sounds stupid". C10: "makes me feel like skipping over it".
+    // C11: "'Systems worth stealing.' is bad copy."
+    for (const rejected of ['Not a screenshot', 'Six categories. One account.', 'Systems worth stealing']) {
+      expect(body, `"${rejected}" was rejected and must not come back`).not.toContain(rejected)
+    }
+    await expect(page.locator('#hsteps-title')).toHaveText('Use the tools here, then take the values with you.')
+    await expect(page.locator('#htools-title')).toHaveText('A value you set in one tool is set in all of them.')
+
+    // C9: `02 / GRADIENT` is gone. No NN / WORD ordinal survives anywhere.
+    expect(body, body.slice(0, 400)).not.toMatch(/\b0[1-5]\s*\/\s*[A-Z]{3,}/)
+
+    // What replaced it: the tool's real route, and a rail that still announces
+    // position natively because it is an <ol>. The route line is decorative to
+    // assistive tech — "slash colour slash palette" is noise, and the CTA below
+    // already names the destination.
+    const routes = await page.locator('.hstep-route').evaluateAll(
+      (els) => els.map((el) => ({ text: el.textContent.trim(), hidden: el.getAttribute('aria-hidden') })),
+    )
+    expect(routes).toHaveLength(5)
+    for (const route of routes) {
+      expect(route.text, JSON.stringify(route)).toMatch(/^\//)
+      expect(route.hidden).toBe('true')
+    }
+    // Each route line matches the CTA beside it, because both read one source.
+    const ctas = await page.locator('.hstep-cta').evaluateAll((els) => els.map((a) => a.getAttribute('href')))
+    expect(ctas).toEqual(routes.map((r) => r.text))
+    expect(await page.locator('.hsteps-rail').evaluate((el) => el.tagName)).toBe('OL')
+  })
+
+  // C11. The consequential one: a section headed [ DISCOVER ] must send people
+  // INTO the product. It used to render twelve outbound links to Dribbble,
+  // Awwwards, Behance and Mobbin in a block labelled [ COMMUNITY ].
+  test('the gallery links inward, and every card action is reachable without a pointer', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, 'visitor looking for somewhere to start')
+    await go(page, '/')
+
+    await expect(page.locator('.hcomm .hbrow')).toHaveText('[ DISCOVER ]')
+
+    // Not one anchor in this section may leave the site or open a new tab.
+    const links = await page.locator('.hcomm a').evaluateAll(
+      (els) => els.map((a) => ({ href: a.getAttribute('href'), target: a.getAttribute('target'), rel: a.getAttribute('rel') })),
+    )
+    expect(links.length, 'the section links somewhere').toBeGreaterThan(6)
+    for (const link of links) {
+      expect(link.href, JSON.stringify(link)).toMatch(/^\//)
+      expect(link.target, JSON.stringify(link)).toBeNull()
+      expect(link.rel || '', JSON.stringify(link)).not.toContain('nofollow')
+    }
+
+    // The primary action carries the values with it, so the tool opens on the
+    // artefact rather than on a blank board.
+    const first = page.locator('.hcomm-card').first()
+    await expect(first.locator('.hcomm-act-open')).toHaveAttribute('href', /^\/color\/(palette\?c=|gradient\?gs=)/)
+
+    // Both actions are REAL controls in the DOM at all times — the reveal is
+    // visual only. A hover-only affordance would put the section's primary
+    // action out of reach of the keyboard, which is the failure this guards.
+    //
+    // `toBeVisible()` cannot express this: Playwright treats an opacity-0
+    // element as visible, and an element hidden with `visibility` cannot be
+    // focused at all — which is the trap this section fell into on the first
+    // pass. Assert the two things that actually matter: focus lands, and the
+    // layer is genuinely opaque once it has.
+    await first.locator('.hcomm-act-open').focus()
+    await expect(first.locator('.hcomm-act-open')).toBeFocused()
+    // Polled, not read once: the reveal is a transition, and a single
+    // getComputedStyle immediately after focus can read the start value before
+    // the transition clock has advanced a frame.
+    await expect.poll(
+      () => first.locator('.hcomm-acts').evaluate((el) => Number(getComputedStyle(el).opacity)),
+      { message: 'focusing a card action must reveal the layer it lives in' },
+    ).toBe(1)
+    await first.locator('.hcomm-act-open').press('Tab')
+    await expect(first.locator('.hcomm-act-copy')).toBeFocused()
+
+    // Show more expands in place rather than navigating away.
+    const before = await page.locator('.hcomm-card').count()
+    await page.locator('.hcomm-more button').click()
+    await expect.poll(() => page.locator('.hcomm-card').count()).toBeGreaterThan(before)
+    expect(new URL(page.url()).pathname).toBe('/')
+  })
+
+  // C11, the touch half. A reveal driven by :hover is invisible forever on a
+  // device that has no hover, so the gallery's primary action would be
+  // unreachable for every phone visitor while looking perfectly correct in the
+  // stylesheet. A narrow desktop window does NOT reproduce this — Chromium
+  // still reports `hover: hover` at 390px — so this needs real mobile
+  // emulation, which is why it is its own context rather than a resize.
+  test('on a device with no hover, the card actions are visible without interaction', async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+      reducedMotion: 'reduce',
+    })
+    const page = await context.newPage()
+    try {
+      await go(page, '/')
+      expect(
+        await page.evaluate(() => window.matchMedia('(hover: none)').matches),
+        'the emulation must actually report a hoverless device',
+      ).toBe(true)
+
+      const acts = page.locator('.hcomm-card').first().locator('.hcomm-acts')
+      expect(await acts.evaluate((el) => Number(getComputedStyle(el).opacity))).toBe(1)
+      // …and they sit BELOW the artefact rather than covering it, so the card
+      // still shows the thing it is offering.
+      const art = await page.locator('.hcomm-card').first().locator('.hcomm-art').boundingBox()
+      const box = await acts.boundingBox()
+      expect(box.y, 'the actions must not cover the artefact on touch').toBeGreaterThanOrEqual(art.y + art.height - 1)
+      expect(box.height, 'the actions are a real target').toBeGreaterThanOrEqual(40)
+    } finally {
+      await context.close()
+    }
+  })
+
+  // C12 + C13. The two new sections, each guarding the specific claim it could
+  // most easily get wrong: the export panel must not resize the page when the
+  // format changes, and Learn must not link to a guide that does not exist.
+  test('export switches format without resizing, and Learn links only where something exists', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, 'developer checking what actually comes out')
+    await go(page, '/')
+
+    const tabs = page.locator('.hexp-tab')
+    await expect(tabs).toHaveCount(3)
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+
+    const panelHeight = async () => (await page.locator('.hexp-panel').boundingBox()).height
+    const heights = { 'design.css': await panelHeight() }
+
+    // The ARIA tabs pattern, same contract as the workbench tablist above.
+    await tabs.first().focus()
+    expect(await page.locator('.hexp-tab[tabindex="0"]').count()).toBe(1)
+    await tabs.first().press('ArrowRight')
+    await expect(tabs.nth(1)).toBeFocused()
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('.hexp-file')).toHaveText('tailwind.config.js')
+    heights['tailwind.config.js'] = await panelHeight()
+
+    await tabs.nth(1).press('End')
+    await expect(page.locator('.hexp-file')).toHaveText('style-guide.html')
+    heights['style-guide.html'] = await panelHeight()
+
+    // All three, measured. Three files of very different length must not
+    // resize the section — that is the CLS guarantee the fixed panel height
+    // exists for, and dropping it (height → auto) fails here by ~450px.
+    //
+    // Worth knowing if you are mutation-testing this: swapping `height` for
+    // `max-height` does NOT fail, and that is correct rather than a gap. All
+    // three outputs are longer than the clamp ceiling at every tested
+    // viewport, so the two rules produce identical geometry — there is no
+    // behaviour to catch.
+    expect(new Set(Object.values(heights)).size, JSON.stringify(heights)).toBe(1)
+
+    // The panel shows the exporter's real output, so the first line is the
+    // exporter's, not a marketing sample.
+    await tabs.first().click()
+    await expect(page.locator('.hexp-line').first()).toHaveText(':root {')
+
+    // Exports are free with a credit — never Pro-only (founder, 2026-08-20).
+    await expect(page.locator('.hexp-plan')).toContainText('free to export')
+
+    // Learn: four rows, exactly one of which is navigable, and it is /help.
+    await expect(page.locator('.hlearn-row')).toHaveCount(4)
+    const learnLinks = page.locator('.hlearn-list a')
+    await expect(learnLinks).toHaveCount(1)
+    await expect(learnLinks).toHaveAttribute('href', '/help')
+    await expect(page.locator('.hlearn-row .htool-soon')).toHaveCount(3)
+    // No read time may be invented for a guide nobody has written.
+    const learnText = await page.locator('.hlearn-list').innerText()
+    expect(learnText, learnText).not.toMatch(/\d+\s*min/i)
   })
 
   test('typography mode previews real scale maths and hands the draft to Type Scale', async ({ page }) => {

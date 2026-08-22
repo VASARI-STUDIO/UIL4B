@@ -5486,12 +5486,24 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 .hsteps{padding-top:var(--sec-pad);scroll-margin-top:calc(var(--nav-clear) + var(--s-4))}
 .hsteps-head{max-width:720px}
 .hsteps-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-7);margin-top:var(--s-8)}
-.hsteps-rail{list-style:none;display:flex;flex-direction:column;gap:var(--s-8)}
+.hsteps-rail{list-style:none;position:relative;display:flex;flex-direction:column;gap:var(--s-8);padding-left:var(--s-5)}
+/* The connector. The steps used to be numbered `01 / COLOUR`; order is now
+   SPATIAL instead, so the ordinal has nothing left to do. Purely decorative —
+   the rail is an <ol>, which is what actually announces "2 of 5". The ends fade
+   rather than stopping hard, because the first and last dots sit at the centre
+   of their (tall) steps and a hard-cut line would appear to start nowhere. */
+.hsteps-rail::before{content:"";position:absolute;left:11px;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,transparent 0,var(--border) 48px,var(--border) calc(100% - 48px),transparent 100%)}
 .hsteps-sticky{min-width:0}
 
-.hstep{max-width:54ch;transition:opacity var(--dur-3) var(--ease-standard)}
-.hstep-num{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
-.hstep-num-sep{opacity:.5}
+.hstep{position:relative;max-width:54ch;transition:opacity var(--dur-3) var(--ease-standard)}
+/* The tool's real route, in place of the ordinal. It is derived from
+   CREATE_GROUPS in Home.jsx, never typed here or there. */
+.hstep-route{position:relative;display:flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.08em;color:var(--t3)}
+/* 9px dot centred on the 1px connector: the rail indents 24px and the dot is
+   pulled back 17px, putting its centre at 11.5px — the centre of the 11→12px
+   line. Colour only, so reduced motion clamps it with everything else. */
+.hstep-dot{position:absolute;left:-17px;width:9px;height:9px;border-radius:50%;background:var(--bg-1);border:1px solid var(--border);transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
+.hstep[data-active="true"] .hstep-dot{background:var(--accent);border-color:var(--accent)}
 .hstep-title{margin-top:var(--s-3);font-size:clamp(26px,2.8vw,36px);font-weight:800;letter-spacing:-.03em;line-height:1.08;color:var(--t0);text-wrap:balance}
 .hstep-body{margin-top:var(--s-3);font-size:var(--fs-body);line-height:1.65;color:var(--t2);text-wrap:pretty}
 .hstep-points{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:var(--s-4)}
@@ -5527,31 +5539,141 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 .htool-open{margin-top:auto;padding-top:var(--s-4);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);transition:color var(--dur-2) var(--ease-standard)}
 .htool:hover .htool-open{color:var(--t0)}
 
-/* ── Community strip ── */
+/* ── The Discover gallery ────────────────────────────────────────────────────
+   Was a strip of six outbound cards whose thumbnail was a decorative two-stop
+   gradient. Every card is now a real UIL4B artefact, the thumbnail IS that
+   artefact (real swatches / real gradientCss), and every link points inward.
+   Still no external asset and no Storage dependency: renders offline. */
 .hcomm{padding-top:var(--sec-pad)}
 .hcomm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-5);flex-wrap:wrap}
 .hcomm-tabs{display:flex;gap:6px}
 .hcomm-tab{min-height:36px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t2);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .hcomm-tab:hover{color:var(--t0);border-color:var(--bh)}
 .hcomm-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.hcomm-tab[aria-selected="true"]{background:var(--t0);border-color:var(--t0);color:var(--bg-0)}
-.hcomm-note{margin-top:var(--s-4);font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
-.hcomm-grid{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-4);margin-top:var(--s-5)}
-.hcomm-card{display:flex}
-.hcomm-card-link{display:flex;flex:1;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--bg-1);overflow:hidden;text-decoration:none;transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.hcomm-card-link:hover{border-color:var(--t0);transform:translateY(-3px);text-decoration:none}
-.hcomm-card-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-/* Generated thumbnails — the two stops arrive as runtime custom properties
-   (--hcomm-c1/--hcomm-c2, set from the data in Home.jsx), so no external asset
-   and no Storage dependency. Renders offline. */
-.hcomm-card-art{display:block;height:132px;background:linear-gradient(135deg,var(--hcomm-c1,var(--accent)),var(--hcomm-c2,var(--accent-soft)))}
-.hcomm-card-body{display:flex;flex-direction:column;gap:6px;padding:16px 16px 0}
+.hcomm-tab[aria-pressed="true"]{background:var(--t0);border-color:var(--t0);color:var(--bg-0)}
+.hcomm-note{margin-top:var(--s-4);max-width:70ch;font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
+.hcomm-grid{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s-4);margin-top:var(--s-5)}
+/* The card is a container, not a link. The primary action and Copy CSS are real
+   controls inside it, so nothing here nests interactive elements. */
+.hcomm-card{position:relative;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--bg-1);overflow:hidden;transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.hcomm-card:hover{border-color:var(--t0);transform:translateY(-3px)}
+.hcomm-card:focus-within{border-color:var(--t0)}
+/* The artefact itself. Palette cards lay their swatches out as equal columns;
+   gradient cards paint the real gradientCss() value. Both arrive as custom
+   properties set from the data, so the declarations stay in this file. */
+.hcomm-art{display:flex;height:132px}
+.hcomm-sw{flex:1 1 0;min-width:0;background:var(--hcomm-sw,var(--bg-2))}
+.hcomm-grad{flex:1 1 0;background:var(--hcomm-grad,var(--bg-2))}
+/* The action layer. Revealed visually on hover/focus-within, but the controls
+   are always present and always focusable — a keyboard user reaches exactly
+   what a pointer reveals.
+   NOT `visibility:hidden`, and this is the whole trick: visibility takes an
+   element OUT of the tab order, so the buttons could never be focused, so
+   :focus-within could never fire to reveal them. The reveal would have been
+   pointer-only in practice while looking correct in the stylesheet. Opacity
+   keeps them focusable; pointer-events stops the invisible layer swallowing
+   clicks meant for the card. */
+.hcomm-acts{position:absolute;top:0;left:0;right:0;height:132px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 12px;background:color-mix(in srgb,var(--bg-0) 78%,transparent);opacity:0;pointer-events:none;transition:opacity var(--dur-2) var(--ease-standard)}
+.hcomm-card:hover .hcomm-acts,.hcomm-card:focus-within .hcomm-acts{opacity:1;pointer-events:auto}
+.hcomm-act{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center;cursor:pointer;text-decoration:none;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.hcomm-act:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hcomm-act-open{border:1px solid var(--accent);background:var(--accent);color:var(--bg-1)}
+.hcomm-act-open:hover{background:var(--accent-strong);border-color:var(--accent-strong);text-decoration:none}
+/* min-width reserves the swap to "Copied" / "Copy failed" so the label change
+   never resizes the pill. */
+.hcomm-act-copy{min-width:132px;border:1px solid var(--border);background:var(--bg-1);color:var(--t1)}
+.hcomm-act-copy:hover{border-color:var(--t0);color:var(--t0)}
+.hcomm-card-foot{display:flex;flex-direction:column;gap:8px;padding:14px 14px 16px}
 .hcomm-card-name{font-size:var(--fs-body-s);font-weight:700;letter-spacing:-.01em;line-height:1.35;color:var(--t0)}
-.hcomm-card-meta{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;color:var(--t2)}
-.hcomm-card-cat{padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-pill)}
-.hcomm-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding:14px 16px 16px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;color:var(--t3)}
-.hcomm-card-tag{padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-pill);color:var(--t2)}
-.hcomm-cta{margin-top:var(--s-6)}
+/* The artefact's own facts — a palette's hex values, a gradient's type and
+   angle. Never a save count: it would honestly be zero on every card. */
+.hcomm-card-facts{display:flex;flex-wrap:wrap;gap:4px 6px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.03em;color:var(--t3)}
+.hcomm-fact{white-space:nowrap}
+.hcomm-more{display:flex;align-items:center;gap:var(--s-4);flex-wrap:wrap;margin-top:var(--s-5)}
+.hcomm-count{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.hcomm-cta{margin-top:var(--s-5)}
+
+/* ── Export (hexp-) ──────────────────────────────────────────────────────────
+   Input and output in one frame: the system as the designer sees it beside the
+   same system as a file. Every character in the code panel comes from the
+   shipped exporter, so the panel height is FIXED across all three formats —
+   three files of wildly different length must not resize the section. Content
+   scrolls inside instead. */
+.hexp{padding-top:var(--sec-pad)}
+.hexp-head{max-width:720px}
+.hexp-pair{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-4);margin-top:var(--s-7)}
+.hexp-in{display:flex;flex-direction:column;padding:22px;border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1)}
+.hexp-in-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.hexp-ramp{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:var(--s-4)}
+.hexp-token{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:12px}
+.hexp-chip{width:34px;height:34px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--hexp-chip,var(--bg-2))}
+.hexp-token-name{font-size:var(--fs-body-s);font-weight:700;color:var(--t0)}
+.hexp-token-hex{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;color:var(--t2)}
+.hexp-ladder{list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:var(--s-5);padding-top:var(--s-4);border-top:1px solid var(--border)}
+.hexp-ladder-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.hexp-ladder-name{font-size:var(--fs-body-s);color:var(--t1)}
+.hexp-ladder-size{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+.hexp-in-foot{margin-top:var(--s-4);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;color:var(--t3)}
+.hexp-out{display:flex;flex-direction:column;min-width:0;border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1);box-shadow:var(--shadow-panel);overflow:hidden}
+/* The sticky demo panel's window chrome, with one addition: the mono label is
+   the REAL filename the download carries, which is a free extra signal that
+   what you are looking at is a file rather than a marketing snippet. */
+.hexp-chrome{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px 0 14px;border-bottom:1px solid var(--border)}
+.hexp-dots{display:inline-flex;gap:5px;flex-shrink:0}
+.hexp-dots i{width:8px;height:8px;border-radius:50%;background:var(--border);border:1px solid var(--bh)}
+.hexp-file{min-width:0;font-family:var(--mono);font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Visible at rest, not on hover: a copy affordance you have to discover isn't
+   an affordance. min-width reserves the Copy → Copied → Failed swap. */
+.hexp-copy{flex:0 0 auto;min-height:32px;min-width:82px;margin-left:auto;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-0);color:var(--t1);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.hexp-copy:hover{color:var(--t0);border-color:var(--t0)}
+.hexp-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hexp-panel{height:clamp(320px,42vh,480px);overflow:auto;background:var(--bg-2)}
+.hexp-panel:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* Line numbers are drawn by a CSS counter, never written as text, so selecting
+   the block copies the code and not the gutter. The swap animation is clamped
+   to an instant by the global reduced-motion block at the top of this file —
+   which covers the OS query and the explicit attribute, both directions. */
+.hexp-code{counter-reset:hexp-l;display:block;padding:14px 0;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--t1);animation:hexp-swap var(--dur-3) var(--ease-entrance)}
+.hexp-line{position:relative;counter-increment:hexp-l;display:block;padding-left:56px;white-space:pre}
+.hexp-line::before{content:counter(hexp-l);position:absolute;left:0;width:44px;text-align:right;color:var(--t3);opacity:.7;user-select:none;-webkit-user-select:none}
+@keyframes hexp-swap{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.hexp-trunc{padding:10px 14px;border-top:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;color:var(--t3)}
+/* A scrolling pill rail on narrow screens, matching .hw-tabs. */
+.hexp-tabs{display:flex;gap:8px;margin-top:var(--s-5);overflow-x:auto;scrollbar-width:none}
+.hexp-tabs::-webkit-scrollbar{display:none}
+.hexp-tab{flex:0 0 auto;min-height:40px;padding:0 18px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t2);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.hexp-tab:hover{color:var(--t0);border-color:var(--bh)}
+.hexp-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hexp-tab[aria-selected="true"]{background:var(--t0);border-color:var(--t0);color:var(--bg-0)}
+.hexp-foot{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-5);flex-wrap:wrap;margin-top:var(--s-5)}
+.hexp-exit{display:inline-flex;align-items:center;gap:8px;min-height:24px;padding-bottom:4px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t0);text-decoration:none;transition:border-color var(--dur-2) var(--ease-standard),gap var(--dur-2) var(--ease-standard)}
+.hexp-exit:hover{border-color:var(--t0);gap:12px;text-decoration:none}
+.hexp-exit:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.hexp-plan{max-width:52ch;font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
+
+/* ── Learn (hlearn-) ─────────────────────────────────────────────────────────
+   A four-row list, not a grid of cards. Exactly one row navigates, because
+   /help is the only live Learn destination the router has; the other three are
+   non-navigable preview rows carrying the same Soon badge the nav uses. The
+   status column tells the truth rather than inventing a read time. */
+.hlearn{padding-top:var(--sec-pad)}
+.hlearn-head{max-width:720px}
+.hlearn-list{list-style:none;max-width:54ch;margin-top:var(--s-6);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);overflow:hidden}
+.hlearn-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name status" "desc status";align-items:center;gap:2px 16px;padding:8px 18px 12px;border-top:1px solid var(--border)}
+.hlearn-row:first-child{border-top:0}
+.hlearn-row:focus-within{background:var(--bg-2)}
+/* 44px on the name cell, not just on the link: the live row's target height
+   would otherwise make it taller than the three Soon rows, and a row that is
+   bigger because of an implementation detail reads as an accident. */
+.hlearn-name{grid-area:name;display:flex;align-items:center;min-height:44px;font-size:var(--fs-body-s);font-weight:700;line-height:1.35;color:var(--t0)}
+.hlearn-link{display:inline-flex;align-items:center;min-height:44px;color:var(--t0);text-decoration:none}
+.hlearn-link:hover{text-decoration:underline;text-underline-offset:3px}
+.hlearn-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-xs)}
+.hlearn-desc{grid-area:desc;font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
+.hlearn-status{grid-area:status;display:inline-flex;align-items:center;justify-content:flex-end;min-width:52px;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+.hlearn-chev{color:var(--t2);transition:transform var(--dur-2) var(--ease-standard)}
+.hlearn-row:hover .hlearn-chev{transform:translateX(3px)}
+.hlearn-cta{margin-top:var(--s-5)}
 
 /* ── Pricing — the inverted panel (structural pattern 6). One per page. ── */
 .hprice{padding-top:var(--sec-pad)}
@@ -5594,9 +5716,22 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
      width evenly here and the icons carry the recognition. */
   .hsteps-sticky .hw-tab{min-width:0;padding:0 8px;gap:6px}
   .hprice-panel{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:var(--s-8);align-items:center}
+  /* The pairing that is the whole pitch: input on the left, the same system as
+     a file on the right. The output half gets the wider track — it is the half
+     doing the arguing. */
+  .hexp-pair{grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:var(--s-5);align-items:start}
 }
 @media(max-width:1180px){
   .htools-grid,.hcomm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* Touch has no hover, so a hover-revealed action layer would be permanently
+   invisible. Rather than pin the overlay open — which would hide the artefact
+   the card exists to show — the actions drop into the card's flow underneath
+   it. Both stay visible, and nothing depends on a pointer. */
+@media(hover:none){
+  .hcomm-acts{position:static;height:auto;flex-direction:row;padding:12px 12px 0;background:none;opacity:1;pointer-events:auto}
+  .hcomm-act{flex:1 1 0;min-width:0;padding:0 10px}
+  .hcomm-act-copy{min-width:0}
 }
 @media(max-width:768px){
   .hcmd-bar{min-height:54px;padding-left:14px}
@@ -5606,6 +5741,9 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 }
 @media(max-width:640px){
   .htools-grid,.hcomm-grid{grid-template-columns:minmax(0,1fr)}
+  .hexp-panel{height:clamp(240px,38vh,320px)}
+  .hexp-line{padding-left:44px}
+  .hexp-line::before{width:32px}
   .hprice-row{grid-template-columns:minmax(0,1fr);grid-template-areas:"cadence" "amount" "total" "note"}
   .hprice-note{text-align:left}
 }

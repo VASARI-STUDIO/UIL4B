@@ -86,3 +86,12 @@ export const GALLERY_PALETTES = [
 export function paletteBuilderUrl(colors) {
   return `/color/palette?c=${colors.map(c => c.replace('#', '')).join(',')}`
 }
+
+// The "Copy CSS" payload for a palette. Lives here rather than in a component
+// because two surfaces copy it — the Discover grid and the homepage gallery —
+// and a visitor who copies the same palette from both must get the same bytes.
+export function paletteCss(palette) {
+  const slug = palette.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'palette'
+  const lines = palette.colors.map((hex, i) => `  --${slug}-${(i + 1) * 100}: ${hex.toUpperCase()};`)
+  return `/* ${palette.name} — UIL4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
+}

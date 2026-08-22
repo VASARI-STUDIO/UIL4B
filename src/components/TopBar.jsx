@@ -9,7 +9,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { TOOLS } from '../data/tools'
 import { SECTIONS, resolveSection } from '../data/sections'
-import { buildStyleGuideHTML, buildCSSVars } from '../utils/exportBuilder'
+import { buildStyleGuideHTML, buildCSSVars, buildTailwindTheme } from '../utils/exportBuilder'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import UIPreviewModal from './UIPreviewModal'
@@ -132,11 +132,7 @@ function ExportDropdown({ onSaveProject }) {
   }
 
   const exportTailwind = () => {
-    const colors = design.palette?.colors || []
-    const names = ['primary', 'secondary', 'accent', 'neutral', 'surface']
-    const colorEntries = colors.map((c, i) => `        '${names[i] || `color-${i + 1}`}': '${c}',`).join('\n')
-    const fontSection = design.fonts?.heading ? `      fontFamily: {\n        heading: ['${design.fonts.heading.family}', 'system-ui', 'sans-serif'],\n${design.fonts?.body ? `        body: ['${design.fonts.body.family}', 'system-ui', 'sans-serif'],\n` : ''}      },\n` : ''
-    const tw = `/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n${colorEntries}\n      },\n${fontSection}    },\n  },\n}\n`
+    const tw = buildTailwindTheme({ palette: design.palette, fonts: design.fonts })
     downloadFile(tw, 'tailwind.config.js', 'text/javascript')
     setOpen(false)
   }
