@@ -214,10 +214,12 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
               action layer would compete with it.
 
               These are real buttons in the DOM at all times, not injected on
-              hover: the layer is revealed with CSS (opacity/visibility on
+              hover: the layer is revealed with CSS (opacity + pointer-events on
               .pgal-card:hover and :focus-within), so keyboard users tab into
               exactly the same actions a pointer reveals, and a screen reader
-              never meets a control that appears only under a mouse. Pro brand
+              never meets a control that appears only under a mouse. It must NOT
+              be visibility/display — either one drops the buttons out of the tab
+              order, which is what made :focus-within unreachable before. Pro brand
               systems are excluded — the builder owns that gate, and handing the
               colours over here would route around it. */}
           {!onPick && !p.pro && (

@@ -4245,13 +4245,34 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .pgal-stripe:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 /* Hover / focus actions over the swatch. The layer is always in the DOM (see
    PaletteGalleryGrid) and only its VISIBILITY is CSS, so keyboard reaches every
-   action a pointer does — :focus-within is what carries that, and `visibility`
-   rather than `opacity` alone keeps the buttons out of the tab order until the
-   card is actually engaged. Anchored to the stripes, not the card, so it never
-   covers the name and like control in the foot. */
+   action a pointer does — :focus-within is what carries that. Anchored to the
+   stripes, not the card, so it never covers the name and like control in the
+   foot.
+
+   `opacity:0` + `pointer-events:none`, NOT `visibility:hidden`. This rule used
+   to hide with `visibility` AND transition it, and MEASURED IN CHROMIUM that
+   lost the five actions to a keyboard.
+
+   The mechanism is not the obvious one, so it is worth writing down. It is NOT
+   that :focus-within can never fire — `.pgal-card` has five focusable stripe
+   buttons outside this layer, so tabbing into the card does fire it. The fault
+   is that `visibility` is a DISCRETE property: putting it in a `transition`
+   makes it flip at 50% of the duration, i.e. 100ms after the card takes focus.
+   A keyboard user tabbing at any normal speed outruns that, so every Tab lands
+   while the buttons are still `hidden` and the browser skips them — focus goes
+   stripe5 → the foot's like button, and Builder / Project / Gradient / CSS /
+   Hex are never reached. Probed with a Chromium tab-walk over this exact DOM:
+   0 of 5 reached tabbing normally, 5 of 5 with a 250ms pause per Tab. An
+   intermittent, speed-dependent loss is worse than a hard block, because it
+   looks fine whenever anyone slows down to check it.
+
+   `opacity` is not discrete and never removes anything from the tab order:
+   5 of 5 at every tabbing speed. `pointer-events` stops the invisible layer
+   swallowing clicks meant for the stripes underneath. Same fix, same reasoning
+   as `.hcomm-acts`. */
 .pgal-shot{position:relative;display:flex;flex-direction:column;min-width:0}
-.pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance),visibility var(--dur-2)}
-.pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;visibility:visible;transform:none}
+.pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;opacity:0;pointer-events:none;transform:translateY(4px);transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance)}
+.pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;pointer-events:auto;transform:none}
 .pgal-act{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.16);background:rgba(10,10,14,.72);color:#fff;font-family:var(--font);font-size:11px;font-weight:600;line-height:1;cursor:pointer;text-decoration:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pgal-act:hover{background:rgba(10,10,14,.9);border-color:rgba(255,255,255,.34)}
 .pgal-act:focus-visible{outline:2px solid #fff;outline-offset:2px}
@@ -4264,7 +4285,15 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
    surface — no action layer is rendered there, and this guards the case where a
    future caller passes palettes without onPick into a small grid. */
 .plb-galpopup-body .pgal-actions{display:none}
-@media (prefers-reduced-motion:reduce){.pgal-actions{transition:opacity var(--dur-1) linear,visibility var(--dur-1);transform:none}}
+@media (prefers-reduced-motion:reduce){.pgal-actions{transition:opacity var(--dur-1) linear;transform:none}}
+/* Touch has no hover. A hover-revealed layer on a hoverless device is reachable
+   by keyboard (there may not be one) and by nothing else, so rather than pin the
+   overlay open over the swatch it exists to show, the actions drop into the
+   card's flow beneath it. Both stay visible and nothing depends on a pointer.
+   Same resolution as `.hcomm-acts`. */
+@media(hover:none){
+  .pgal-actions{position:static;padding-top:8px;opacity:1;pointer-events:auto;transform:none}
+}
 .pgal-foot{display:flex;align-items:center;gap:8px;min-width:0;padding:0 2px}
 .pgal-like{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pgal-like:hover{color:var(--t0);border-color:var(--bh)}
