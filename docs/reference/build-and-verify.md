@@ -28,6 +28,26 @@ number here, you must have re-run it.
 > browser acceptance on `main` is **229 tests** (`npx playwright test --list`),
 > not the 226 recorded on 2026-08-08 — `main` advanced and this table did not.
 
+## Open-stack test deltas — 2026-08-20
+
+**`main` is 484 unit / 229 browser.** Seven PRs are open and most add tests, so
+the "current baseline" differs per branch. Check your own base before concluding
+you caused a regression — that confusion has already cost time twice.
+
+| PR | Adds | Unit on its branch | Browser on its branch |
+|---|---|---|---|
+| #257 workspace copy | +2 unit | 486 | 229 |
+| #261 price ladder | +5 unit | 489 | 229 |
+| #262 homepage motion | +1 unit | 485 | 229 |
+| #263 responsive | +7 browser | 484 | 236 (223 pass) |
+| #264 homepage copy | +11 unit, +4 browser | 497 | 233 (220 pass) |
+| #266 route migration | +17 unit | 501 | 229 |
+
+**Projected once the whole stack merges: 520 unit, 240 browser** (13 skipped
+throughout — the admin-gated UI System suite). That projection is arithmetic on
+reported deltas, **not a measured number**; re-measure after the merges and
+replace this section with the real figure.
+
 The 13 skipped are the whole of `12-ui-system-builder.spec.js`. UI System mode
 went admin-only in founder batch 4 and this suite runs signed out, so the
 surface is unreachable rather than broken — the file carries the reason and the
