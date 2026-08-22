@@ -21,7 +21,7 @@ test.describe('first-time visitor', () => {
     }
 
     // There must be at least one obvious call to action above the fold.
-    const cta = page.locator('a[href="/login"], a[href="/plans"], a[href^="/color"], a[href="/home"]').first()
+    const cta = page.locator('a[href="/login"], a[href="/plans"], a[href^="/create/color"], a[href="/home"]').first()
     if (!(await cta.count())) {
       fb.note('improve', 'No obvious CTA link found on the landing page (login / plans / a tool).')
     }
@@ -41,7 +41,7 @@ test.describe('first-time visitor', () => {
     const tool = page.locator('.pnav-tool', { hasText: 'Aspect & Resolution' }).first()
     await expect(tool).toBeVisible()
     await tool.click()
-    await expect(page).toHaveURL(/\/ratio/)
+    await expect(page).toHaveURL(/\/create\/aspect-ratio/)
     await expect(page.locator('h1', { hasText: /Aspect & Resolution/i })).toBeVisible()
   })
 

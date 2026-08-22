@@ -143,7 +143,7 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
       return
     }
     try {
-      navigate('/color/gradient')
+      navigate('/create/gradient')
     } catch {
       resetGradientDraft()
       toast?.('Couldn’t open the Gradient Generator — try again')
@@ -307,7 +307,7 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
               // that gate rather than handing the colours over via ?c=.
               <Link
                 className="pgal-use pgal-use--pro"
-                to="/color/palette"
+                to="/create/palette"
                 aria-label={`${p.name} is a Pro brand system — open the Palette Builder to load it`}
                 title="Pro brand system — load it from the Palette Builder"
               >

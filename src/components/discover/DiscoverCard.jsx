@@ -74,7 +74,7 @@ export default function DiscoverCard({ resource, saved, broken, offline, onToggl
   const menuRef = useRef(null)
   const cat = CATEGORY_MAP[resource.category]
   // Only offer a "Use in tool" CTA for a PUBLIC tool; admin-gated routes
-  // (/ui-builder, /file-converter) would dead-end on <ComingSoon/> for normal
+  // (/create/component-designer, /create/file-converter) would dead-end on <ComingSoon/> for normal
   // users, so we fall back to the no-tool "Visit site" path instead.
   const primaryTool = primaryAvailableTool(resource)
 

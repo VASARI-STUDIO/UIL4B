@@ -731,7 +731,7 @@ export default function Projects({ toast }) {
           </div>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No projects yet</h3>
           <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16, maxWidth: 360, margin: '0 auto 16px' }}>
-            Build a palette in <NavLink to="/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/fontpairs">Font Pair Finder</NavLink>, then save your design as a project.
+            Build a palette in <NavLink to="/create/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/create/font-pair">Font Pair Finder</NavLink>, then save your design as a project.
           </p>
           <button className="btn btn-accent" onClick={() => setShowNewModal(true)}>Create your first project</button>
         </div>

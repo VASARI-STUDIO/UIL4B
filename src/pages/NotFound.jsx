@@ -21,9 +21,9 @@ import { NavLink, useLocation } from 'react-router-dom'
 // happened plus where to go instead.
 
 const SUGGESTIONS = [
-  { to: '/color/palette', label: 'Palette Generator', desc: 'Build a colour system from one seed' },
-  { to: '/typescale', label: 'Type Scale', desc: 'A responsive type ladder with real breakpoints' },
-  { to: '/icons', label: 'Icon Library', desc: 'Search, customise and copy clean SVG' },
+  { to: '/create/palette', label: 'Palette Generator', desc: 'Build a colour system from one seed' },
+  { to: '/create/type-scale', label: 'Type Scale', desc: 'A responsive type ladder with real breakpoints' },
+  { to: '/create/icons', label: 'Icon Library', desc: 'Search, customise and copy clean SVG' },
   { to: '/discover', label: 'Discover', desc: 'Community palettes, gradients and prompts' },
 ]
 

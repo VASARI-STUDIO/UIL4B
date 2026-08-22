@@ -20,7 +20,7 @@ export const MODULE_BOARD = [
       'Closed the seed/swatch, gutter, stable-toolbar, slider, HCT, contrast, directional-swap and multi-insert defect set',
       'Palette Builder gained full reset with immediate Undo and a clearer Save / export action hierarchy',
       'Gradient, tint and semantic-colour workbenches received responsive workflow and UI-quality passes',
-      'Retired the standalone UI Colour page from public IA while preserving a safe /color redirect',
+      'Retired the standalone UI Colour page from public IA while preserving a safe /create/color redirect',
       'Undo now covers all palette-wiping actions; surfaced image-extract errors; ARIA tablist + keyboard-operable swatches; dead code removed',
       'Fixed production crash on Color Studio (TDZ violation in Rolldown bundle)',
       'Lock colors + spacebar regen + drag reorder (CS-15)',
@@ -102,7 +102,7 @@ export const MODULE_BOARD = [
     area: 'AI',
     status: 'live',
     health: 'watch',
-    summary: 'Live at /alt-text and reachable from the AI Studio menu — the only live AI tool. This entry previously said the implementation "is not activated in the public route tree", which had stopped being true: toolTree.js carries it with soon: false in both the menu and the satellite set.',
+    summary: 'Live at /create/alt-text and reachable from the AI Studio menu — the only live AI tool. This entry previously said the implementation "is not activated in the public route tree", which had stopped being true: toolTree.js carries it with soon: false in both the menu and the satellite set.',
     recentChanges: [
       'End-to-end QA: auth + upload + batch + retry + CSV + tone (ALT-01)',
       'Strengthened WCAG/alt-text guidance in prompt (ALT-02)',

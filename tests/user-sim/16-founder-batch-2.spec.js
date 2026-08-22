@@ -41,7 +41,7 @@ function measureIconButton(button) {
 test.describe('Palette Builder · toolbar labels expand the button', () => {
   test('the button itself grows and the label lands inside its bounding box', async ({ page }) => {
     watch(page, 'designer exploring the toolbar')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const button = page.getByRole('button', { name: 'Preview' })
     await expect(button).toBeVisible()
@@ -75,7 +75,7 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
 
   test('every icon button expands in place, on hover and on keyboard focus', async ({ page }) => {
     watch(page, 'keyboard user in the toolbar')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible()
 
     const buttons = page.locator('.plb-icobtn:visible')
@@ -112,7 +112,7 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
 
   test('an expanding label never pushes the page into horizontal overflow', async ({ page }) => {
     watch(page, 'designer on a small laptop')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible()
 
     for (const width of [1440, 1100, 981, 961]) {
@@ -131,7 +131,7 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
 
   test('below 961px every label is pinned open inside its own button', async ({ page }) => {
     watch(page, 'designer on a tablet and a phone')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible()
 
     // Below 961px the toolbar's action group is a horizontal scroller, so the
@@ -145,7 +145,7 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
       // tablet actually arrives, and it does not depend on the engine's
       // incremental relayout after a viewport change.
       await page.setViewportSize({ width, height: 900 })
-      await go(page, '/color/palette')
+      await go(page, '/create/palette')
       await expect(page.locator('.plb-icobtn').first()).toBeVisible()
       const state = await page.evaluate(() => {
         const rows = [...document.querySelectorAll('.plb-icobtn')].map((el) => {
@@ -193,10 +193,10 @@ test.describe('Home mini-builder · Continue in Palette Builder', () => {
 
     const cont = page.getByRole('link', { name: /Continue in Palette Builder/ })
     // The link keeps a real href, so open-in-new-tab still works.
-    await expect(cont).toHaveAttribute('href', '/color/palette')
+    await expect(cont).toHaveAttribute('href', '/create/palette')
     await cont.click()
 
-    await page.waitForURL('**/color/palette')
+    await page.waitForURL('**/create/palette')
     await expect(page.locator('.plb-col').first()).toBeVisible()
 
     // THE regression: the colour system the board lands on.
@@ -213,7 +213,7 @@ test.describe('Home mini-builder · Continue in Palette Builder', () => {
     await page.locator('.hw-tab[data-tab="palette"]').click()
     await expect(page.locator('.hw-pal-hex')).toHaveCount(5)
     await page.getByRole('link', { name: /Continue in Palette Builder/ }).click()
-    await page.waitForURL('**/color/palette')
+    await page.waitForURL('**/create/palette')
     await expect(page.locator('.plb-harm')).toContainText('Auto')
     const delivered = await page.locator('.plb-hex').allInnerTexts()
 
@@ -229,7 +229,7 @@ test.describe('Home mini-builder · Continue in Palette Builder', () => {
     await page.goBack()              // client-side: back to the homepage
     await expect(page.locator('.hw-shell')).toBeVisible()
     await page.goForward()           // …and back onto the board, same module instance
-    await expect(page).toHaveURL(/\/color\/palette/)
+    await expect(page).toHaveURL(/\/create\/palette/)
     await expect(page.locator('.plb-col').first()).toBeVisible()
     expect(await page.locator('.plb-hex').allInnerTexts(), 'the draft was not re-delivered').toEqual(edited)
   })
@@ -248,7 +248,7 @@ test.describe('Palette Builder · colour titles', () => {
     // A fixed board via the share-link parser, so the before/after colours —
     // and therefore the titles — are the same on every run. A random session
     // palette would make this test's outcome depend on the seed.
-    await go(page, '/color/palette?c=4338E0,3881E0,9738E0,8494DB,A084DB')
+    await go(page, '/create/palette?c=4338E0,3881E0,9738E0,8494DB,A084DB')
     await expect(page.locator('.plb-col').first()).toBeVisible()
 
     const titles = page.locator('.plb-name')
@@ -306,7 +306,7 @@ test.describe('Palette Builder · colour titles', () => {
 
   test('a re-render that does not change the palette does not churn the titles', async ({ page }) => {
     watch(page, 'designer opening and closing a toolbar menu')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('.plb-col').first()).toBeVisible()
 
     const titles = page.locator('.plb-name')
@@ -336,7 +336,7 @@ test.describe('Palette Builder · colour titles', () => {
 test.describe('SnapSlider · keyboard stepping', () => {
   test('THE TRAP: an arrow key moves the slider off a snap point and it stays there', async ({ page }) => {
     watch(page, 'keyboard-only designer adjusting a palette')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const hue = page.getByRole('slider', { name: 'Hue adjustment' })
     await expect(hue).toBeVisible()
@@ -370,7 +370,7 @@ test.describe('SnapSlider · keyboard stepping', () => {
 
   test('Home, End and Page keys behave sensibly', async ({ page }) => {
     watch(page, 'keyboard-only designer jumping across a track')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const hue = page.getByRole('slider', { name: 'Hue adjustment' })
     await hue.focus()
@@ -392,7 +392,7 @@ test.describe('SnapSlider · keyboard stepping', () => {
 
   test('a POINTER drag still snaps — magnetism is a pointer affordance', async ({ page }) => {
     watch(page, 'designer dragging the adjust sliders')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const hue = page.getByRole('slider', { name: 'Hue adjustment' })
     await expect(hue).toBeVisible()
@@ -461,7 +461,7 @@ test.describe('SnapSlider · keyboard stepping', () => {
     watch(page, 'keyboard-only designer tuning a tint ramp')
     // TintTool's hue-shift track snaps every 15° with a 5.4° radius, so it had
     // exactly the same trap at 0.
-    await go(page, '/color/tint')
+    await go(page, '/create/tint')
 
     const shift = page.getByRole('slider', { name: /Hue shift/ })
     await expect(shift).toBeVisible()

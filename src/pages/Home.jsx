@@ -38,9 +38,9 @@ const LIVE_TOOL_COUNT = CREATE_GROUPS
   .flatMap((g) => g.tools)
   .filter((t) => !t.soon).length
 
-// 200k icons: the Iconify catalogue behind /icons, already claimed in
+// 200k icons: the Iconify catalogue behind /create/icons, already claimed in
 // toolTree.js and in the workbench's Icon panel.
-// 1,500+ fonts: the Google Fonts catalogue behind /fontgallery, as described in
+// 1,500+ fonts: the Google Fonts catalogue behind /create/font-gallery, as described in
 // discoverResources.js. Both are the real libraries the tools read.
 const HERO_STATS = [
   `${LIVE_TOOL_COUNT} LIVE TOOLS`,
@@ -55,11 +55,12 @@ const HERO_STATS = [
 //
 // CREATE_GROUPS is the canonical owner: `createRoutes()` builds the router's
 // Create route table from exactly these `tool.route` values (toolTree.js), so a
-// route that is not in here does not exist. Deriving instead of hard-coding
-// matters right now — every Create tool is migrating to `/create/<pagetitle>`,
-// and a literal '/color/palette' in this file would ship a dead URL the day
-// that lands. `tools.jsx` is NOT the owner: it is the Sidebar/search registry
-// and still lists retired `/docs-*` paths.
+// route that is not in here does not exist. Deriving instead of hard-coding is
+// what carried this file through the flattening of every Create tool onto
+// `/create/<pagetitle>` without a single edit — a typed-out pre-migration path
+// would have shipped a dead URL the day that landed. `tools.jsx` is NOT the
+// owner: it is the Sidebar/search registry and still lists retired `/docs-*`
+// paths.
 const ROUTE_BY_TOOL = Object.fromEntries(
   CREATE_GROUPS.flatMap((g) => g.tools).map((t) => [t.id, t.route]),
 )

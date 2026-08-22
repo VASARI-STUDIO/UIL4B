@@ -81,7 +81,7 @@ test.describe('premium homepage', () => {
     await expect(workbench).toBeVisible()
     await expect(page.locator('.hw-tab')).toHaveCount(5)
     await expect(page.getByRole('link', { name: /Continue in Palette Builder/ }))
-      .toHaveAttribute('href', '/color/palette')
+      .toHaveAttribute('href', '/create/palette')
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

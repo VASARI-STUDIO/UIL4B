@@ -3,6 +3,16 @@ import { Link } from 'react-router-dom'
 import { PALETTE_LABELS, buildCSSVars, buildStyleGuideHTML, buildTailwindTheme } from '../utils/exportBuilder'
 import { DEFAULT_DESIGN } from '../contexts/ProjectContext'
 import { GALLERY_PALETTES } from '../data/paletteGallery'
+import { CREATE_GROUPS } from '../data/toolTree'
+
+// The Colour surface's own home, read from the tool tree rather than typed.
+// This link carried the pre-migration colour path until the Create routes were
+// flattened onto /create/<pagetitle>; that older path is now a 301 source, so a
+// literal here would have shipped an internal link into a redirect.
+// CREATE_GROUPS owns every Create URL, so reading it is the only version that
+// cannot go stale — and `tests/unit/redirects.test.js` fails the build on any
+// retired Create path still named in src/.
+const COLOUR_HOME = CREATE_GROUPS.find((g) => g.id === 'colour').home
 
 // ── The export section ───────────────────────────────────────────────────────
 //
@@ -241,7 +251,7 @@ export default function HomeExport() {
         </div>
 
         <div className="hexp-foot">
-          <Link className="hexp-exit" to="/color">
+          <Link className="hexp-exit" to={COLOUR_HOME}>
             Open the Colour System Generator
             <span aria-hidden="true">&rarr;</span>
           </Link>
