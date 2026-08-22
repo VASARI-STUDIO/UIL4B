@@ -226,6 +226,44 @@ the same defect, already live.
 the migration must land **before or with** the numbering change, or the rail
 ships showing URLs that are about to move.
 
+### F-9 · The app ignored `prefers-reduced-motion` for every default visitor. `measured`
+
+Found 2026-08-20 by the C6 slice, whose acceptance criterion was otherwise
+unsatisfiable. Verified independently by the Director.
+
+`index.html:86` bootstraps appearance from `localStorage` and ends with:
+
+```js
+r.setAttribute('data-reduced-motion', String(!!a.reducedMotion))
+```
+
+For anyone who has never opened Settings, `vs-appearance` has no
+`reducedMotion` key, so `!!undefined` is `false` and the attribute is stamped
+as the **explicit string `"false"`**. Every reduced-motion rule in the
+stylesheet is guarded by `html:not([data-reduced-motion="false"])`, and an
+explicit `"false"` beats the OS media query by contract.
+
+**Consequence: 10 rule sites were dead code for every default visitor**, the
+first of which (`global.css:101`) is the *global* reset — the one that forces
+`transition-duration:0.01ms`, `animation-duration:0.01ms` and
+`scroll-behavior:auto` across the entire document. So a visitor with reduced
+motion enabled at OS level got the full motion treatment everywhere in the app,
+not merely on the homepage.
+
+Measured: OS reduce on, fresh profile, attribute reads `"false"` at
+`DOMContentLoaded`.
+
+**Fixed** in PR #269 because C6 could not otherwise meet its criterion. But note
+what that implies and do not gloss it: **those ten reduced-motion branches have
+never actually executed for a default visitor, so none of them is verified.**
+They are newly-live code paths, not restored ones. Each needs a rendered pass
+before anyone claims reduced motion works.
+
+Related, same PR: **WCAG 2.2.2 is only partially met** for the new typing
+animation. The stop is real and announced to assistive tech, and any first
+interaction ends it — but there is **no visible stop affordance for a sighted
+user**. Stated rather than implied.
+
 ---
 
 ## The batch, regrouped
