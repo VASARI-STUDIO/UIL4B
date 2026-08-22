@@ -163,34 +163,59 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // 1 · the design project's headline, and the mark that ties it to the bar.
+    // 1 · the headline, and the one marked word that carries its claim.
     //
-    // This replaces "No more tab hoarding. / Build your UI system in one place."
-    // The V2 design makes the headline and the command bar ONE idea: the
-    // highlighted phrase names the input directly beneath it. The old copy
-    // never mentioned searching, so the bar arrived unintroduced and the --hi
-    // mark pointed at nothing. Founder instruction, 2026-08-16.
+    // ⚠️ FOUNDER DECISION STILL OPEN — anti-slop-and-hero-2026-08.md §2.12 item
+    // 1 offers two headlines and no verdict is recorded. The recommended one
+    // ships. If the alternative is chosen, Home.jsx's HERO_HEADLINE and these
+    // three strings are the whole change.
+    //
+    // It replaces "Every design tool, / one search box away." for three reasons,
+    // all of them documented rather than taste: that is the exact framing
+    // positioning.md retired as selling "a grab-bag of tools"; "Every" is a
+    // quantifier this page's own data contradicts (13 tools are live and 23 tool
+    // tree entries are soon:true, and the deleted stat line printed the 13 two
+    // lines above the word); and "one X away" is a spatial cliché with no
+    // referent. The replacement names a consequence instead.
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText('Every design tool,')
-    await expect(heading).toContainText('one search box away.')
+    await expect(heading).toContainText('A UI system that')
+    await expect(heading).toContainText('survives the handoff.')
 
-    // The mark is on "search box" specifically — that is the whole point of the
-    // pairing, and a mark on any other phrase is the bug this guards.
+    // The mark moved from "search box" to "handoff". This is the same assertion
+    // doing the same job — the marker pen must sit on the phrase that carries
+    // the claim — against a headline where that phrase is a different one. The
+    // old placement failed the rule design-language-v2.md sets for --hi ("spend
+    // it on the single most important thing on screen"): it named a widget that
+    // was rendered, literally, 200px below it.
     const mark = heading.locator('.home-mark')
     await expect(mark).toHaveCount(1)
-    await expect(mark).toHaveText('search box')
+    await expect(mark).toHaveText('handoff')
 
-    // …and the thing it names is really there, directly below it.
-    const geometry = await page.evaluate(() => {
-      const m = document.querySelector('.home-hero-h1 .home-mark').getBoundingClientRect()
-      const bar = document.querySelector('.hcmd-bar').getBoundingClientRect()
-      return { markBottom: m.bottom, barTop: bar.top }
+    // REPLACES the old geometry check that the command bar sat below the mark.
+    // That check existed only to prove the mark's referent was on screen, and
+    // the mark no longer has a widget for a referent — so the assertion is
+    // replaced by the rule the mark must now satisfy instead: design-language-v2.md
+    // budgets --hi at ONE element per viewport. This is a strictly wider net
+    // than the geometry check was: it fails if anything else in the hero starts
+    // painting itself with the marker pen, which the old assertion could not see.
+    const hiCount = await page.evaluate(() => {
+      const hi = getComputedStyle(document.documentElement).getPropertyValue('--hi').trim()
+      const norm = (c) => {
+        const el = document.createElement('span')
+        el.style.color = c
+        return el.style.color
+      }
+      const target = norm(hi)
+      return [...document.querySelectorAll('.home-hero *')]
+        .filter((el) => norm(getComputedStyle(el).backgroundColor) === target).length
     })
-    expect(geometry.barTop, 'the command bar must sit below its own headline mark')
-      .toBeGreaterThan(geometry.markBottom)
+    expect(hiCount, 'exactly one --hi element in the hero viewport: the headline mark').toBe(1)
 
-    // The sub-copy sets up typing a query rather than describing a workspace.
-    await expect(page.locator('.home-hero-sub')).toContainText('Type what you need')
+    // The sub-copy names a CONSEQUENCE and explains the specimen band beneath
+    // it. The line it replaces opened on "Stop hunting through twelve bookmarked
+    // tabs" — a manufactured specific about the reader that nothing supports —
+    // and then listed four nouns where a payoff belongs.
+    await expect(page.locator('.home-hero-sub')).toContainText('the contrast you check is the contrast you hand over')
 
     // 2 · every route the old hero exposed is still reachable, with a real
     // href — that is what makes open-in-new-tab and copy-link behave. They now

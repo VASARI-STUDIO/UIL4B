@@ -30,24 +30,36 @@ import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, LEARN_GROUPS } fro
 // The command bar searches the real tool registry through the same
 // `queryCommandIndex` the ⌘K palette uses. There is no second index.
 
-/* ── Hero stat line — every number derived, none invented ─────────────────── */
+/* ── The hero headline ────────────────────────────────────────────────────────
+ *
+ * ⚠️ FOUNDER DECISION STILL OPEN — anti-slop-and-hero-2026-08.md §2.12 item 1.
+ * No verdict is recorded in PROPOSALS.md or CHANGELOG.md. The spec's RECOMMENDED
+ * option ships; its alternative is written out below. Swapping them is an edit to
+ * THIS array and nothing else — the string exists in exactly one place on purpose.
+ *
+ *   Option A, shipped:  'A UI system that'   'survives the [handoff].'
+ *   Option B:           'Design the system.' 'Leave with the [code].'
+ *
+ * Why A: "survives the handoff" names the pain growth-persuasion.md names
+ * verbatim ("palettes that don't survive handoff"), so it describes a problem the
+ * reader already has rather than inventing one, and the export section renders
+ * the real exporter's output two screens down, so it is backable. It also does
+ * not collide with the sticky section's H2 the way B would.
+ *
+ * The word in [square brackets] takes the --hi marker pen. design-language-v2.md
+ * budgets --hi at ONE element per viewport, so exactly one pair of brackets may
+ * appear across the whole headline — tests/unit/hero-headline.test.js enforces
+ * that, and enforces the 21-character-per-line ceiling too. Each line is
+ * display:block, so the break is AUTHORED, not computed by text-wrap:balance; a
+ * longer line falls to three lines at the 96px cap and breaks the fold budget.
+ */
+const HERO_HEADLINE = ['A UI system that', 'survives the [handoff].']
 
-// Counted from the tool tree at module load, so the claim can never drift from
-// the product. The mock's "40+ TOOLS" was invented; this is what is live.
-const LIVE_TOOL_COUNT = CREATE_GROUPS
-  .flatMap((g) => g.tools)
-  .filter((t) => !t.soon).length
-
-// 200k icons: the Iconify catalogue behind /create/icons, already claimed in
-// toolTree.js and in the workbench's Icon panel.
-// 1,500+ fonts: the Google Fonts catalogue behind /create/font-gallery, as described in
-// discoverResources.js. Both are the real libraries the tools read.
-const HERO_STATS = [
-  `${LIVE_TOOL_COUNT} LIVE TOOLS`,
-  '200K ICONS',
-  '1,500+ FONTS',
-  'ONE ACCOUNT',
-]
+// Split `a [b] c` into the plain text either side of the one marked phrase.
+function headlineParts(line) {
+  const m = /^(.*?)\[(.+?)\](.*)$/.exec(line)
+  return m ? { before: m[1], mark: m[2], after: m[3] } : { before: line, mark: '', after: '' }
+}
 
 /* ── The sticky scroll narrative ──────────────────────────────────────────── */
 
@@ -205,35 +217,49 @@ export default function Home() {
 
       <main id="main" tabIndex={-1}>
         {/* ── Hero ──
-            Reading order is the argument: what is live (stats), the promise
-            (headline), the qualifier (sub), the way in (command bar), the two
-            actions, the honest terms. Nothing here waits on GSAP — the
-            entrance is CSS keyframes and the command bar is plain React. */}
+            Reading order is the argument: the promise (headline), the mechanism
+            (sub), the way in (command bar), a real artefact the product made
+            (specimen band), the two actions, one honest term. Nothing here waits
+            on GSAP — the entrance is CSS keyframes and both the command bar and
+            the band are plain React.
+
+            The stat line that used to open this block is GONE (spec §2.5). Three
+            of its four items were not ours to print in a hero: 200K icons is the
+            Iconify catalogue and 1,500+ fonts is the Google Fonts catalogue —
+            both real, both already claimed in context in toolTree.js and
+            discoverResources.js, and neither an achievement of ours — while
+            "ONE ACCOUNT" was not a number at all. The one honest number, the
+            live tool count, survives DERIVED in the command bar's placeholder,
+            where it does a job: it tells the reader how large the index is. */}
         <header className="home-hero">
           <div className="home-hero-core">
-            <p className="home-hero-stats">
-              {HERO_STATS.map((stat, i) => (
-                <span className="home-hero-stat" key={stat}>
-                  {i > 0 && <span className="home-hero-stat-sep" aria-hidden="true">·</span>}
-                  {stat}
-                </span>
-              ))}
-            </p>
-
-            {/* The headline and the command bar below it are ONE idea: the
-                highlighted phrase IS the input sitting directly beneath it, so
-                the hero explains itself and the --hi mark has a referent on
-                screen. Copy is the design project's, verbatim. */}
+            {/* The mark is the hero's single --hi element and it now carries the
+                claim rather than naming a widget. It used to sit on the words
+                "search box" with the literal search box rendered 200px below —
+                a marker pointing at something already visible. */}
             <h1 className="home-hero-h1">
-              <span className="home-hero-line"><span className="home-hero-line-in">Every design tool,</span></span>
-              <span className="home-hero-line"><span className="home-hero-line-in">
-                one <mark className="home-mark">search box</mark> away.
-              </span></span>
+              {HERO_HEADLINE.map((line) => {
+                const { before, mark, after } = headlineParts(line)
+                return (
+                  <span className="home-hero-line" key={line}>
+                    <span className="home-hero-line-in">
+                      {before}
+                      {mark ? <mark className="home-mark">{mark}</mark> : null}
+                      {after}
+                    </span>
+                  </span>
+                )
+              })}
             </h1>
 
+            {/* Names a consequence, not an inventory, and explains the band
+                directly beneath it. The line it replaces opened on "Stop hunting
+                through twelve bookmarked tabs" — a manufactured specific about
+                the reader that nothing supports, which growth-persuasion.md
+                rules out — and then listed four nouns where a payoff belongs. */}
             <p className="home-hero-sub">
-              Stop hunting through twelve bookmarked tabs. Type what you need — colour, type,
-              icons, tokens — and start working. Nothing to install.
+              Every tool here writes to one set of values, so the contrast you check is the
+              contrast you hand over.
             </p>
 
             <HomeCommandBar />
@@ -249,7 +275,14 @@ export default function Home() {
               <a className="ui-pill ui-pill-quiet ui-pill-lg" href="#workbench">See it working</a>
             </div>
 
-            <p className="home-hero-hint">No credit card · No setup · Your first system stays free</p>
+            {/* One claim, and it changes KIND. The line it replaces was a
+                payment reassurance repeated almost verbatim in the pricing lede
+                and again in SystemCTA — three copies of one reassurance down one
+                page, which reads as anxiety. growth-persuasion.md puts risk
+                reversal next to the ask, so SystemCTA keeps its copy and this
+                becomes a capability statement instead. It is true: the search,
+                the band and the whole workbench work signed out. */}
+            <p className="home-hero-hint">No account needed to try the tools.</p>
           </div>
         </header>
 

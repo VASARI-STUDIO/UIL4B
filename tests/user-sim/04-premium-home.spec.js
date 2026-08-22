@@ -50,18 +50,33 @@ test.describe('premium homepage', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // The design project's headline — see 10-home-chaos-to-calm for why this
-    // replaced "No more tab hoarding. / Build your UI system in one place."
+    // The headline — see 10-home-chaos-to-calm for the full reasoning. It no
+    // longer says "Every design tool, / one search box away.": that is the
+    // framing positioning.md retired as selling "a grab-bag of tools", and
+    // "Every" was contradicted by this page's own data.
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText('Every design tool,')
-    await expect(heading).toContainText('one search box away.')
-    // V2 replaced the "operating workspace" kicker pill with the mono stat
-    // line. Same job — say what this is before the headline lands — so the
-    // assertion moved to the element that now does it, and checks the numbers
-    // are the derived ones rather than the mock's invented "40+ TOOLS".
-    await expect(page.locator('.home-hero-stats')).toContainText('LIVE TOOLS')
-    await expect(page.locator('.home-hero-stats')).toContainText('ONE ACCOUNT')
-    await expect(page.locator('.home-hero-stats')).not.toContainText('40+')
+    await expect(heading).toContainText('A UI system that')
+    await expect(heading).toContainText('survives the handoff.')
+
+    // The stat line is DELETED. The assertion that lived here checked the
+    // numbers were derived rather than the mock's invented "40+ TOOLS", and
+    // that job moves with the one honest number: the live tool count is now in
+    // the command bar's placeholder, still derived from the tool tree.
+    //
+    // Asserting a NUMBER rather than the literal 13 on purpose — the point is
+    // that a function counted the tool tree, and hard-coding today's answer
+    // here would just move the drift from the page into the test.
+    const placeholder = await page.locator('.hcmd-input').getAttribute('placeholder')
+    expect(placeholder).toMatch(/^Search \d+ live tools$/)
+    expect(placeholder).not.toContain('40+')
+
+    // …and the two BORROWED catalogue numbers are gone from the page entirely.
+    // 200K is Iconify's catalogue and 1,500+ is Google Fonts' — both real, both
+    // already claimed in context deeper in the product, and neither ours to
+    // print in a hero as though it were an achievement of this product.
+    const body = await page.locator('body').innerText()
+    expect(body).not.toContain('200K ICONS')
+    expect(body).not.toContain('1,500+ FONTS')
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
     await expect(page.getByText(/Component tooling is coming next/)).toBeVisible()
 

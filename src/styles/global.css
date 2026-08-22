@@ -5299,7 +5299,16 @@ html.lenis,html.lenis body{height:auto}
    as a colour cast rather than as depth.
    Docs: docs/reference/design-language-v2.md#page-background */
 .home{position:relative;overflow-x:clip;background:var(--bg-0)}
-.home::before{content:"";position:absolute;inset:0 0 auto;height:760px;pointer-events:none;opacity:.46;background-image:
+/* opacity .46 -> .32. There is now a real object competing for the eye in the
+   same region — the specimen band — and the texture should lose. The grid is
+   KEPT rather than deleted: it stops reading as wallpaper not by gaining
+   ornament but because something is now built on it, in its own units. The
+   band's height is a whole multiple of this 48px module (144px = 3x, 96px = 2x,
+   192px = 4x). Do NOT chase pixel alignment between the band's rules and these
+   lines — the band's vertical offset depends on how the headline wraps, so any
+   such alignment would be true at one viewport and false at the next. The
+   shared module is the relationship, and that is enough. */
+.home::before{content:"";position:absolute;inset:0 0 auto;height:760px;pointer-events:none;opacity:.32;background-image:
   linear-gradient(color-mix(in srgb,var(--t0) 4%,transparent) 1px,transparent 1px),
   linear-gradient(90deg,color-mix(in srgb,var(--t0) 4%,transparent) 1px,transparent 1px);
   background-size:48px 48px;mask-image:linear-gradient(to bottom,#000,transparent 82%)}
@@ -5393,7 +5402,6 @@ html.lenis,html.lenis body{height:auto}
 
 /* `both` fill supplies the pre-paint hidden state, so no JS arming class is
    needed to prevent a flash. */
-.home-hero-stats{animation:home-hero-rise .5s var(--ease-entrance) both}
 .home-hero-line-in{animation:home-hero-clip-up .92s var(--ease-entrance) .08s both}
 .home-hero-line:nth-of-type(2) .home-hero-line-in{animation-delay:.18s}
 .home-hero-sub{animation:home-hero-rise .66s var(--ease-entrance) .42s both}
@@ -5409,9 +5417,9 @@ html.lenis,html.lenis body{height:auto}
    over the OS query in BOTH directions, so a visitor who turned motion back on
    inside the app still gets the entrance. */
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.home-hero-stats,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+  html:not([data-reduced-motion="false"]) :is(.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
 }
-html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
 /* V2 body: 54ch measure, --mute, line-height 1.65. */
 .home-hero-sub{font-size:var(--fs-lede);font-weight:400;color:var(--t2);line-height:1.6;max-width:54ch;margin:var(--s-5) auto 0;text-wrap:pretty}
 /* C5 rhythm: the mark now occupies more of its line box and the headline's
@@ -5423,7 +5431,10 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
   .home-hero-sub{margin-top:var(--s-6)}
 }
 .home-hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:var(--s-6)}
-.home-hero-hint{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:var(--s-4)}
+/* --s-2, not --s-4: the hint is one short capability line now, and at --s-4 it
+   read as a fifth stacked block in its own right rather than as fine print
+   attached to the CTA row above it. */
+.home-hero-hint{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:var(--s-2)}
 
 /* Trust / stat strip (honest — no fabricated logos) */
 
@@ -5451,9 +5462,12 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 /* ── Hero ────────────────────────────────────────────────────────────────────
    Composition is the page's existing centred measure; every TYPE and SPACING
    value is the V2 display scale. */
-.home-hero-stats{display:flex;flex-wrap:wrap;justify-content:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
-.home-hero-stat{display:inline-flex;align-items:center;white-space:nowrap}
-.home-hero-stat-sep{padding:0 10px;opacity:.5}
+/* `.home-hero-stats` / `.home-hero-stat` / `.home-hero-stat-sep` were deleted
+   here, and from both reduced-motion :is() lists above, with the markup that
+   used them — anti-slop-and-hero-2026-08.md §2.5. Do not reinstate the strip to
+   put a number above the fold: the live tool count is now derived into the
+   command bar's placeholder, and the specimen band carries a measurement that
+   is genuinely ours. */
 
 /* The single --hi element on this viewport. It is a marker pen, and the budget
    is one per screen — see design-language-v2.md. `box-decoration-break:clone`
@@ -5830,7 +5844,6 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
   .hprice-note{text-align:left}
 }
 @media(max-width:480px){
-  .home-hero-stat-sep{padding:0 7px}
   .hcmd{margin-top:var(--s-5)}
   .hcmd-bar{grid-template-columns:auto minmax(0,1fr);padding-right:14px}
   /* The keycap names a shortcut a phone has no keyboard for. */

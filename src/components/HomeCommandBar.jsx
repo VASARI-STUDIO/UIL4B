@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getCategory, localiseCategories, localiseTools, queryCommandIndex } from '../data/tools'
+import { CREATE_GROUPS } from '../data/toolTree'
 import { useI18n } from '../contexts/I18nContext'
 
 // The V2 hero's command bar — the "front door" the design gives the ⌘K palette.
@@ -20,9 +21,36 @@ import { useI18n } from '../contexts/I18nContext'
 
 const MAX_ROWS = 5
 
+// Counted from the tool tree at module load, so the claim can never drift from
+// the product. This is the ONE honest number the deleted hero stat line carried,
+// and it is here rather than there because here it is doing a job: it tells the
+// reader how large the index in front of them is. Dropbox's `506 Articles —
+// Page 1 of 57` is the same move.
+const LIVE_TOOL_COUNT = CREATE_GROUPS
+  .flatMap((g) => g.tools)
+  .filter((tl) => !tl.soon).length
+
 // Quick-fills are real queries against the real index — each one is asserted to
 // return results by tests/user-sim. They are prompts, not promises.
-const CHIPS = ['contrast', 'gradient', 'icons', 'type scale', 'convert']
+//
+// `convert` was replaced by `palette`. TWO faults, one of them measured:
+//
+//  1. `convert` returned NOTHING. The only entry carrying that keyword is File
+//     Converter, which is `alpha: true`, and this bar filters alpha tools out —
+//     so the chip had been offering a query with an empty state behind it.
+//     Verified in a browser against this index, not reasoned about: `convert`
+//     → "No tools match convert". The hero spec proposed renaming it to
+//     `file converter`; that was checked the same way and returns nothing
+//     either, for the same reason, so the rename would have kept the fault.
+//     `palette` returns three. The spec's own rule decides it — "a chip that
+//     returns nothing is worse than no chip".
+//  2. It was the only verb among four nouns, which is the kind of small
+//     unevenness that reads as generated. All five are nouns now.
+//
+// None of the five is printed in the placeholder any more, which was the other
+// half of the same tell: the old placeholder named contrast, gradient and type
+// scale, so three of the five chips were redundant with the field above them.
+const CHIPS = ['contrast', 'gradient', 'icons', 'type scale', 'palette']
 
 function RowIcon({ item }) {
   const cat = item.kind === 'tool' ? getCategory(item.category) : getCategory(item.id)
@@ -129,7 +157,7 @@ export default function HomeCommandBar() {
           autoComplete="off"
           aria-label="Search every UIL4B tool"
           aria-describedby={`${listId}-count`}
-          placeholder="Search tools — contrast, gradient, type scale…"
+          placeholder={`Search ${LIVE_TOOL_COUNT} live tools`}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={onInputKeyDown}
         />
