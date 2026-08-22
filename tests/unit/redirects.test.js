@@ -189,6 +189,51 @@ test('the slugs are unique, so no two tools claim one URL', () => {
     `two Create entries share a route: ${routes.filter((r, i) => routes.indexOf(r) !== i).join(', ')}`)
 })
 
+test('nothing shipped still links to a retired Create URL', () => {
+  // FOUND THIS WAY, which is why it is a test and not a comment. The migration
+  // sweep matched on file extension and so walked straight past
+  // `public/llms.txt`, which listed twelve Create tools by absolute URL. Every
+  // one of them would still have RESOLVED — that is what the 301s are for — so
+  // no other test here, and no gate, would have gone red. It would simply have
+  // shipped a curated index of our own site pointing at the old names.
+  //
+  // Scoped to the 24 Create paths on purpose. `tools.jsx` legitimately still
+  // carries retired /docs-* and /resources entries (it is the stale
+  // Sidebar/search registry, retired separately), and App.jsx names /color/ui
+  // because it is a redirect SOURCE.
+  const roots = ['src', 'public', 'api']
+  const skip = new Set([path.join('src', 'data', 'legacyRoutes.js')])
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const full = path.join(dir, e.name)
+    if (e.isDirectory()) return walk(full)
+    return /\.(js|jsx|mjs|json|xml|txt|html|md)$/.test(e.name) ? [full] : []
+  })
+
+  const offences = []
+  for (const root of roots) {
+    for (const file of walk(path.join(process.cwd(), root))) {
+      const rel = path.relative(process.cwd(), file)
+      if (skip.has(rel)) continue
+      const body = fs.readFileSync(file, 'utf8')
+      for (const old of PRE_MIGRATION_CREATE_ROUTES) {
+        // The same boundary rule the migration itself was performed with:
+        //  · a following word char, hyphen or slash means a different, longer
+        //    path — /icons must not match inside /icons-emoji, and /color must
+        //    not match inside /color/ui, which is a redirect SOURCE and belongs
+        //    in App.jsx. Every deeper retired path is in this list in its own
+        //    right, so nothing is lost by requiring an exact segment match;
+        //  · a preceding word char or hyphen means a deeper segment, so /color
+        //    does NOT match inside /create/color — EXCEPT after `.com`, which
+        //    is an absolute URL and exactly the case llms.txt got wrong.
+        const re = new RegExp(`(?<=\\.com|[^\\w-]|^)${old.replace(/[-/]/g, '\\$&')}(?![\\w/-])`)
+        if (re.test(body)) offences.push(`${rel} → ${old}`)
+      }
+    }
+  }
+  assert.deepEqual(offences, [],
+    `these still name a retired Create URL:\n  ${offences.join('\n  ')}`)
+})
+
 /* ── The redirect layer against the rewrite layer ─────────────────────────── */
 
 test('no path is both redirected and rewritten', async () => {
