@@ -7,7 +7,7 @@ import {
 } from '../utils/colors'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 
-// Tint Scale Generator — the standalone /color/tint page. Turns one OR MORE base
+// Tint Scale Generator — the standalone /create/tint page. Turns one OR MORE base
 // colours into production-ready tonal ramps. Every ramp shares one set of
 // controls (mode, hue drift, chroma, step range) so a multi-colour system stays
 // internally consistent — the same ethos as the rest of the colour suite.
@@ -280,7 +280,7 @@ export default function TintTool({ onCopy, toast }) {
   return (
     <div className="sec tt-page">
       <header className="tt-hero">
-        <NavLink to="/color/palette" className="tt-back" aria-label="Back to Palette Builder">
+        <NavLink to="/create/palette" className="tt-back" aria-label="Back to Palette Builder">
           <span aria-hidden="true">←</span> Palette Builder
         </NavLink>
         <div className="sec-h-eyebrow">Colour system workspace</div>
@@ -666,9 +666,9 @@ export default function TintTool({ onCopy, toast }) {
           <strong>Move from a useful scale to a complete interface foundation.</strong>
         </div>
         <div className="tt-more-links">
-          <NavLink to="/color/palette" className="tt-more-link">Build a full palette &rarr;</NavLink>
-          <NavLink to="/color/contrast" className="tt-more-link">Check contrast &rarr;</NavLink>
-          <NavLink to="/color" className="tt-more-link">All colour tools &rarr;</NavLink>
+          <NavLink to="/create/palette" className="tt-more-link">Build a full palette &rarr;</NavLink>
+          <NavLink to="/create/contrast" className="tt-more-link">Check contrast &rarr;</NavLink>
+          <NavLink to="/create/color" className="tt-more-link">All colour tools &rarr;</NavLink>
         </div>
       </nav>
     </div>

@@ -67,6 +67,6 @@ test('the projects empty state still teaches, since it is now the first thing se
   const src = read('src/pages/Projects.jsx')
   assert.match(src, /No projects yet/)
   assert.match(src, /Create your first project/)
-  assert.ok(/to="\/color"/.test(src) && /to="\/fontpairs"/.test(src),
+  assert.ok(/to="\/create\/color"/.test(src) && /to="\/create\/font-pair"/.test(src),
     'the empty state should still point at the tools that produce a project')
 })

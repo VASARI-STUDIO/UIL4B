@@ -51,7 +51,7 @@ async function installFontEvidenceMock(page, { fontApi, mode }) {
 test.describe('Type Scale Generator', () => {
   test('a designer generates a scale from a base size and a ratio', async ({ page }) => {
     watch(page, 'designer building a type scale')
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Type Scale Generator' })).toBeVisible()
     // Default scale: 6 steps up + base + 2 down.
@@ -81,7 +81,7 @@ test.describe('Type Scale Generator', () => {
 
   test('a developer copies CSS custom properties for the whole scale', async ({ page }) => {
     watch(page, 'front-end developer shipping type tokens')
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
 
     await page.getByRole('button', { name: 'Developer handoff' }).click()
     await expect(page.getByRole('heading', { name: 'Prepare the handoff' })).toBeVisible()
@@ -118,7 +118,7 @@ test.describe('Type Scale Generator', () => {
 
   test('the audience tabs are a real tablist for the keyboard', async ({ page }) => {
     watch(page, 'keyboard-only visitor')
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
 
     const designer = page.getByRole('tab', { name: /For designers/i })
     await designer.focus()
@@ -132,7 +132,7 @@ test.describe('Type Scale Generator', () => {
   test('the scale stays contained on a small phone', async ({ page }) => {
     watch(page, 'mobile designer')
     await page.setViewportSize({ width: 320, height: 720 })
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
 
     await expect(page.locator('.tsc-row').first()).toBeVisible()
     const overflowed = await page.evaluate(
@@ -143,7 +143,7 @@ test.describe('Type Scale Generator', () => {
 
   test('extreme 40px, ratio 3, nine-step tokens stay exact while the preview is fitted', async ({ page }) => {
     watch(page, 'designer stress-testing an extreme modular scale')
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
 
     await page.getByLabel('Scale ratio').selectOption('custom')
     await page.locator('#tsc-custom + .snapv-value').click()
@@ -175,12 +175,12 @@ test.describe('Type Scale Generator', () => {
 test.describe('Font Pair', () => {
   test('a designer gets reasoned body suggestions and a live specimen', async ({ page }) => {
     watch(page, 'designer choosing a font pairing')
-    await go(page, '/fontpairs')
+    await go(page, '/create/font-pair')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Font Pair' })).toBeVisible()
     await expect(page.locator('.fpr-specimen')).toBeVisible()
-    await expect(page.getByRole('link', { name: /Browse the Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
-    await expect(page.getByRole('link', { name: /Select from the Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
+    await expect(page.getByRole('link', { name: /Browse the Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
+    await expect(page.getByRole('link', { name: /Select from the Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
 
     const cards = page.locator('.fpr-card')
     await expect(cards).toHaveCount(6)
@@ -199,7 +199,7 @@ test.describe('Font Pair', () => {
 
   test('the specimen re-lays out and honours custom preview text', async ({ page }) => {
     watch(page, 'designer testing brand words')
-    await go(page, '/fontpairs')
+    await go(page, '/create/font-pair')
 
     await page.getByRole('button', { name: 'Product page' }).click()
     await expect(page.locator('.fpr-product')).toBeVisible()
@@ -213,7 +213,7 @@ test.describe('Font Pair', () => {
 
   test('a developer copies one import and one block of CSS', async ({ page }) => {
     watch(page, 'front-end developer wiring up two families')
-    await go(page, '/fontpairs')
+    await go(page, '/create/font-pair')
 
     const code = page.locator('#fpr-export')
     await expect(code).toContainText('@import url(')
@@ -238,7 +238,7 @@ test.describe('Font Gallery', () => {
 
   test('a designer browses, filters and opens a specimen', async ({ page }) => {
     watch(page, 'designer looking for a typeface')
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Font Gallery' })).toBeVisible()
     await expect(page.locator('.fg-card')).toHaveCount(48)
@@ -281,7 +281,7 @@ test.describe('Font Gallery', () => {
       ],
     } }))
 
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
     await expect(page.locator('.fg-card')).toHaveCount(1)
     await expect(page.locator('.fg-card-name')).toHaveText('Lora')
     await expect(page.getByRole('button', { name: 'Mono', exact: true })).toHaveCount(0)
@@ -289,7 +289,7 @@ test.describe('Font Gallery', () => {
 
   test('a search that matches nothing shows a real empty state with a way out', async ({ page }) => {
     watch(page, 'designer searching for a font that is not there')
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
 
     await page.getByLabel('Search font families').fill('zzzzzznotafont')
     await expect(page.locator('.fg-empty')).toBeVisible()
@@ -300,7 +300,7 @@ test.describe('Font Gallery', () => {
 
   test('the detail dialog is closable from the keyboard and restores focus', async ({ page }) => {
     watch(page, 'keyboard-only visitor')
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
 
     const card = page.locator('.fg-card-open').first()
     await card.click()
@@ -315,7 +315,7 @@ test.describe('Font Gallery', () => {
 
   test('cards reserve their metrics so the grid never reflows as faces load', async ({ page }) => {
     watch(page, 'designer on a slow connection')
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
 
     await expect(page.locator('.fg-card').first()).toBeVisible()
     const heights = await page.locator('.fg-card').evaluateAll(
@@ -350,7 +350,7 @@ test.describe('Font Gallery', () => {
       await route.fulfill({ contentType: 'text/css', body: '/* registered by the test FontFaceSet */' })
     })
 
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
     const preview = page.locator('.fg-card-preview').first()
     await expect(preview).toHaveClass(/fg-card-preview--pending/)
     await expect(preview.locator('.fg-card-sample')).toHaveCount(0)
@@ -384,7 +384,7 @@ test.describe('Font Gallery', () => {
         : route.fulfill({ contentType: 'text/css', body: '/* retry success */' })
     ))
 
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
     await page.locator('.fg-card-open').first().click()
     const dialog = page.getByRole('dialog')
     await expect(dialog.locator('.typ-notice')).toContainText('fallback is shown')
@@ -404,7 +404,7 @@ test.describe('Font Gallery', () => {
       route.fulfill({ contentType: 'text/css', body: '/* stylesheet settled */' })
     ))
 
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
     const preview = page.locator('.fg-card-preview').first()
     await expect(preview).toHaveClass(/fg-card-preview--pending/)
     await expect(preview.locator('.fg-card-sample')).toHaveCount(0)
@@ -425,7 +425,7 @@ test.describe('Font Gallery', () => {
       route.fulfill({ contentType: 'text/css', body: '/* binary intentionally missing */' })
     ))
 
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
     const preview = page.locator('.fg-card-preview').first()
     await expect(preview).toHaveClass(/fg-card-preview--pending/)
     await expect(preview.locator('.fg-card-sample')).toHaveCount(0)
@@ -442,19 +442,19 @@ test.describe('Font Gallery', () => {
 test.describe('typography hand-offs', () => {
   test('a family carries from the gallery into Font Pair and on into the Type Scale', async ({ page }) => {
     watch(page, 'designer building a whole typography system')
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
 
     await page.getByLabel('Search font families').fill('Merriweather')
     await page.locator('.fg-card-open').first().click()
     await page.getByRole('dialog').getByRole('button', { name: /Find a pairing/ }).click()
 
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/fontpairs')
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/font-pair')
     // Never an empty tool: the chosen family arrives as the heading.
     await expect(page.locator('.fpr-status')).toContainText('Merriweather')
     await expect(page.locator('.fpr-card')).not.toHaveCount(0)
 
     await page.getByRole('button', { name: /Build a scale from this pair/ }).click()
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/typescale')
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/type-scale')
     await expect(page.locator('.tsc-row').first()).toBeVisible()
     const family = await page.locator('.tsc-row-text--heading').first().evaluate(
       (el) => getComputedStyle(el).fontFamily,
@@ -464,7 +464,7 @@ test.describe('typography hand-offs', () => {
 
   test('a direct visit to a destination inherits nothing from an earlier hand-off', async ({ page }) => {
     watch(page, 'visitor arriving from a bookmark')
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
     // The slot is one-consumption and in-memory only: a fresh load has no draft,
     // so the tool opens on the saved kit rather than someone else's leftovers.
     await expect(page.locator('.tsc-row')).toHaveCount(9)
@@ -484,7 +484,7 @@ test.describe('typography tools under a failing font catalogue', () => {
       await route.abort().catch(() => {})
     })
 
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
     await expect.poll(() => sourceStartedAt).not.toBeNull()
     await expect(page.locator('.typ-notice')).toContainText('bundled list', { timeout: 4500 })
     expect(sourceReleased, 'the request bound must beat the deliberately held upstream').toBe(false)
@@ -497,7 +497,7 @@ test.describe('typography tools under a failing font catalogue', () => {
 
   test('a blocked catalogue degrades visibly and still lets the tools work', async ({ page }) => {
     watch(page, 'visitor behind a content blocker')
-    await go(page, '/fontgallery')
+    await go(page, '/create/font-gallery')
 
     // The sandbox blocks googleapis.com, so this is the real fallback path.
     const notice = page.locator('.typ-notice')
@@ -513,7 +513,7 @@ test.describe('typography tools under a failing font catalogue', () => {
 
   test('going offline is reported without losing the workbench', async ({ page, context }) => {
     watch(page, 'visitor whose connection drops mid-session')
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
     await expect(page.locator('.tsc-row').first()).toBeVisible()
 
     await context.setOffline(true)
@@ -545,18 +545,18 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
     expect(box.height, `${label} height`).toBeGreaterThanOrEqual(44)
   }
 
-  await go(page, '/fontgallery')
+  await go(page, '/create/font-gallery')
   await expect(page.locator('.fg-card').first()).toBeVisible()
   await expectTarget(page.locator('.fg-card-compare').first(), 'Font Gallery compare')
   await expectTarget(page.locator('.fg-sort-btn').first(), 'Font Gallery sort')
   await page.locator('.fg-card-compare').first().click()
   await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery clear')
 
-  await go(page, '/fontpairs')
+  await go(page, '/create/font-pair')
   await expect(page.locator('.fpr-card').first()).toBeVisible()
   await expectTarget(page.locator('.fpr-card-apply').first(), 'Font Pair apply')
 
-  await go(page, '/typescale')
+  await go(page, '/create/type-scale')
   await expect(page.locator('.tsc-width-btn').first()).toBeVisible()
   await expectTarget(page.locator('.tsc-width-btn').first(), 'Type Scale width')
   await context.close()

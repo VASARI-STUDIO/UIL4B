@@ -30,7 +30,7 @@ import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, 
 // colours and the slider values are persisted separately.
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
 
-// Palette Builder — the standalone /color/palette workbench. A full-bleed
+// Palette Builder — the standalone /create/palette workbench. A full-bleed
 // board so the columns are the page, not a panel floating in chrome: a
 // toolbar (seed + harmony + brands/variations/preview + vision + randomise +
 // save/share), full-height colour columns with per-column tools (drag-reorder,
@@ -207,7 +207,7 @@ function midColor(a, b) {
   return stepColor(a, b, 0.5)
 }
 
-// Shared palettes arrive as /color/palette?c=4338E0,7C6CF0,… — parse or null.
+// Shared palettes arrive as /create/palette?c=4338E0,7C6CF0,… — parse or null.
 function colorsFromQuery() {
   try {
     const c = new URLSearchParams(window.location.search).get('c')
@@ -1712,7 +1712,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     }
     setLiveMsg('Opening your palette in the Gradient Generator')
     try {
-      navigate('/color/gradient')
+      navigate('/create/gradient')
     } catch {
       resetGradientDraft()
       toast?.('Couldn’t open the Gradient Generator — try again')
@@ -1724,7 +1724,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setTintsIdx(null)
     setLiveMsg(`Opening ${hex} in the Tint Generator`)
     try {
-      navigate('/color/tint')
+      navigate('/create/tint')
     } catch {
       resetTintDraft()
       toast?.('Couldn’t open the Tint Generator — try again')
@@ -1733,7 +1733,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   // Short share URL — /p/:code hits /api/share (vercel.json rewrite), which
   // serves social-preview OG meta + a palette-card image, then redirects
-  // humans on to /color/palette?c=... where the ?c= parser picks it up.
+  // humans on to /create/palette?c=... where the ?c= parser picks it up.
   const shareLink = () => `${window.location.origin}/p/${adjusted.map(c => c.slice(1)).join(',')}`
 
   // Social-card PNG (1200×630) of the palette — the shareable mini version,

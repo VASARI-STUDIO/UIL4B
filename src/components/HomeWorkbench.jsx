@@ -222,7 +222,7 @@ function PalettePanel({ swatches, onChange, announce }) {
             finds no staged draft and opens the builder in its normal state. */}
         <Link
           className="hw-continue"
-          to="/color/palette"
+          to="/create/palette"
           onClick={() => setBoardDraft(swatches.map((s) => s.hex), HANDOFF_SYSTEM)}
         >
           Continue in Palette Builder
@@ -341,7 +341,7 @@ function GradientPanel({ gradient, onChange, announce }) {
       )}
 
       <div className="hw-foot">
-        <Link className="hw-continue" to="/color/gradient">
+        <Link className="hw-continue" to="/create/gradient">
           Continue in Gradient Generator
           <span aria-hidden="true">→</span>
         </Link>
@@ -466,7 +466,7 @@ function ImagePanel({ state, onChange, announce }) {
       return
     }
     try {
-      navigate('/file-converter')
+      navigate('/create/file-converter')
     } catch {
       // The destination will never mount, so drop the staged record rather than
       // leave it to surprise a later visit. The visitor keeps the draft and can
@@ -687,7 +687,7 @@ function IconPanel({ state, onChange, announce }) {
     }
     announce(`Opening ${state.name} in the Icon Editor.`)
     try {
-      navigate('/icons')
+      navigate('/create/icons')
     } catch {
       resetIconDraft()
       lockRef.current = false
@@ -832,7 +832,7 @@ function TypographyPanel({ state, onChange, announce }) {
     }
     announce(`Opening a ${base}px type scale in the Type Scale Generator.`)
     try {
-      navigate('/typescale')
+      navigate('/create/type-scale')
     } catch {
       resetScaleDraft()
       lockRef.current = false
@@ -920,12 +920,12 @@ function TypographyPanel({ state, onChange, announce }) {
           </div>
 
           <nav className="hw-type-tools" aria-label="Typography tools">
-            <Link className="hw-type-tool" to="/fontgallery">
+            <Link className="hw-type-tool" to="/create/font-gallery">
               <NavIcon id="type" />
               <span><strong>Font Gallery</strong><small>Browse and compare families</small></span>
               <span aria-hidden="true">→</span>
             </Link>
-            <Link className="hw-type-tool" to="/fontpairs">
+            <Link className="hw-type-tool" to="/create/font-pair">
               <NavIcon id="font-pair" />
               <span><strong>Font Pair</strong><small>Build a reasoned pairing</small></span>
               <span aria-hidden="true">→</span>

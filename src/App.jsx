@@ -20,6 +20,7 @@ import { LoginPromptProvider, useLoginPrompt } from './contexts/LoginPromptConte
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { createRoutes } from './data/toolTree'
+import { CLIENT_REDIRECT_ROUTES } from './data/legacyRoutes'
 
 // Static imports — small or always-visited pages (instant load)
 import Home from './pages/Home'
@@ -267,7 +268,7 @@ function AppInner() {
     return <Onboarding />
   }
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/color/ui') {
-    return <Navigate to="/color" replace />
+    return <Navigate to="/create/color" replace />
   }
   if (location.pathname === '/') {
     // Render the sales page immediately — first paint must not depend on Firebase
@@ -300,13 +301,13 @@ function AppInner() {
   // observer re-scans when switching between them (they share one component).
   const bare = location.pathname.toLowerCase().replace(/\/+$/, '') || '/'
   if (CHROMELESS_PATHS.has(bare)) {
-    // /color is the colour sales page (the old merged studio is being reworked
+    // /create/color is the colour sales page (the old merged studio is being reworked
     // into the Design System Builder walkthrough); /discover and /learn are the
     // surface landings; everything else is a live Create tool shell.
     const surface = bare === '/discover' ? 'discover' : bare === '/learn' ? 'learn' : null
     return (
       <>
-        {bare === '/color'
+        {bare === '/create/color'
           ? <><ColorLanding /><AppFooter /></>
           : surface ? <><SurfaceLanding key={surface} surface={surface} /><AppFooter /></> : <CreateTool />}
         <GoogleOneTap />
@@ -322,30 +323,21 @@ function AppInner() {
         <ErrorBoundary>
           <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
             <Routes location={location}>
-              {/* Legacy tool URLs → the merged, canonical routes (all chromeless,
-                  caught by the early return above once redirected). */}
-              <Route path="/dashboard" element={<Navigate to="/home" replace />} />
-              <Route path="/color-studio" element={<Navigate to="/color" replace />} />
-              <Route path="/palette" element={<Navigate to="/color/palette" replace />} />
-              <Route path="/tints" element={<Navigate to="/color/tint" replace />} />
-              <Route path="/gradients" element={<Navigate to="/color/gradient" replace />} />
-              <Route path="/contrast" element={<Navigate to="/color/contrast" replace />} />
-              <Route path="/export" element={<Navigate to="/color" replace />} />
-              <Route path="/imgconvert" element={<Navigate to="/file-converter" replace />} />
-              <Route path="/video-frames" element={<Navigate to="/file-converter" replace />} />
-              <Route path="/docs" element={<Navigate to="/learn" replace />} />
-              <Route path="/docs-design" element={<Navigate to="/learn" replace />} />
-              <Route path="/docs-social" element={<Navigate to="/learn" replace />} />
-              <Route path="/docs-themes" element={<Navigate to="/learn" replace />} />
-              <Route path="/docs-brand" element={<Navigate to="/learn" replace />} />
-              <Route path="/docs-seo" element={<Navigate to="/learn" replace />} />
-              <Route path="/docs-marketing" element={<Navigate to="/learn" replace />} />
-              <Route path="/docs-ai" element={<Navigate to="/learn" replace />} />
-              <Route path="/design-reference" element={<Navigate to="/learn" replace />} />
-              <Route path="/resources" element={<Navigate to="/discover" replace />} />
-              {/* The Prompt Library moved from Create to Discover. Any existing
-                  link, bookmark or indexed URL still lands on it. */}
-              <Route path="/prompts" element={<Navigate to="/discover/prompts" replace />} />
+              {/* Every retired URL → its live replacement, rendered from the one
+                  table in src/data/legacyRoutes.js that also generates
+                  vercel.json's 301s. Two answers to the same question used to be
+                  written out twice; now the edge and the client cannot disagree,
+                  and a unit test fails the build if they do.
+
+                  These are the FALLBACK, not the primary answer: in production
+                  the 301 fires at the edge and the visitor never reaches this
+                  router. They still matter — `vite preview` does not apply
+                  vercel.json, so this is the only redirect the browser-acceptance
+                  suite can observe, and it is what catches an in-app <Link> that
+                  still names a retired path. */}
+              {CLIENT_REDIRECT_ROUTES.map(([from, to]) => (
+                <Route key={from} path={from} element={<Navigate to={to} replace />} />
+              ))}
 
               {/* Curated gradient gallery — copy CSS or hand a gradient to the
                   Gradient Generator (?gs= scheme). Renders inside the app-shell. */}

@@ -11,7 +11,7 @@ import {
 import { filterGalleryTypefaces } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 
-// Font Gallery — the standalone /fontgallery page. Browse the Google Fonts
+// Font Gallery — the standalone /create/font-gallery page. Browse the Google Fonts
 // catalogue, read a specimen, then carry the choice into Font Pair or Type
 // Scale. This is the entry point of the typography suite, so it is the one that
 // has to survive a bad network gracefully.
@@ -237,7 +237,7 @@ function GalleryHero({ families, classifications, weights, pending }) {
     <header className="fg-hero fg-hero--premium">
       <div className="fg-hero-topline">
         <span className="sec-h-eyebrow">Discover / Typography</span>
-        <NavLink to="/fontpairs" className="fg-hero-pair-link">Build a font pair <span aria-hidden="true">↗</span></NavLink>
+        <NavLink to="/create/font-pair" className="fg-hero-pair-link">Build a font pair <span aria-hidden="true">↗</span></NavLink>
       </div>
       <div className="fg-hero-copy">
         <h1>Font<br />Gallery</h1>
@@ -597,7 +597,7 @@ export default function FontGallery({ onCopy, toast }) {
   const { setFonts } = useProject()
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
-  // Arriving via /fontgallery?font=Family (e.g. a deep link) seeds the search
+  // Arriving via /create/font-gallery?font=Family (e.g. a deep link) seeds the search
   // so the family is already on screen rather than buried in the grid.
   const [query, setQuery] = useState(() => {
     try { return new URLSearchParams(window.location.search).get('font') || '' } catch { return '' }
@@ -686,7 +686,7 @@ export default function FontGallery({ onCopy, toast }) {
     })
     if (!setPairDraft(draft)) { toast?.('Couldn’t carry that selection over — try again.'); return }
     setSelected(null)
-    navigate('/fontpairs')
+    navigate('/create/font-pair')
   }, [navigate, setFonts, toast])
 
   const sendToScale = useCallback((font) => {
@@ -697,7 +697,7 @@ export default function FontGallery({ onCopy, toast }) {
     setFonts(draft)
     if (!setScaleDraft(draft)) { toast?.('Couldn’t carry that selection over — try again.'); return }
     setSelected(null)
-    navigate('/typescale')
+    navigate('/create/type-scale')
   }, [navigate, setFonts, toast])
 
   // The workbench is still withheld until the catalogue resolves — half-working
@@ -916,9 +916,9 @@ export default function FontGallery({ onCopy, toast }) {
           <strong>Found a family? Give it a partner and a set of sizes.</strong>
         </div>
         <div className="fg-more-links">
-          <NavLink to="/fontpairs" className="fg-more-link">Pair two families &rarr;</NavLink>
-          <NavLink to="/typescale" className="fg-more-link">Build a type scale &rarr;</NavLink>
-          <NavLink to="/color/palette" className="fg-more-link">Build a colour palette &rarr;</NavLink>
+          <NavLink to="/create/font-pair" className="fg-more-link">Pair two families &rarr;</NavLink>
+          <NavLink to="/create/type-scale" className="fg-more-link">Build a type scale &rarr;</NavLink>
+          <NavLink to="/create/palette" className="fg-more-link">Build a colour palette &rarr;</NavLink>
         </div>
       </nav>
     </div>

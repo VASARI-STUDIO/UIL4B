@@ -5,7 +5,7 @@ import { useI18n } from '../contexts/I18nContext'
 const IconLibrary = lazy(() => import('./IconLibrary'))
 const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
 
-// Merged Icon + Emoji surface. Both /icons and /emoji mount THIS component, so the
+// Merged Icon + Emoji surface. Both /create/icons and /create/emoji mount THIS component, so the
 // mega-menu deep-links stay valid; the active tab is derived from the path and the
 // large segmented pill (styled as the page title) flips between the two libraries.
 // Each child renders `embedded` so it drops its own <h1> — this wrapper owns the
@@ -45,7 +45,7 @@ export default function IconEmojiLibrary({ onCopy }) {
     }
   }, [])
 
-  const activateTab = (next) => navigate(next === 'icon' ? '/icons' : '/emoji')
+  const activateTab = (next) => navigate(next === 'icon' ? '/create/icons' : '/create/emoji')
   const onTabKeyDown = (event, current) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
@@ -70,7 +70,7 @@ export default function IconEmojiLibrary({ onCopy }) {
       <header className="lib-head">
         <div className="lib-head-copy">
           <span className="lib-eyebrow">Asset library</span>
-          {/* /icons and /emoji are two separate indexable URLs sharing this
+          {/* /create/icons and /create/emoji are two separate indexable URLs sharing this
               component, and they shared this headline verbatim — so both pages
               announced "Find the right symbol. Keep building." to a crawler and
               to anyone navigating by heading. The subtitle below already

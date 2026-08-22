@@ -4,42 +4,322 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
+  "redirects": [
+    {
+      "source": "/color",
+      "destination": "/create/color",
+      "permanent": true
+    },
+    {
+      "source": "/color/palette",
+      "destination": "/create/palette",
+      "permanent": true
+    },
+    {
+      "source": "/color/semantic",
+      "destination": "/create/semantic-color",
+      "permanent": true
+    },
+    {
+      "source": "/color/tint",
+      "destination": "/create/tint",
+      "permanent": true
+    },
+    {
+      "source": "/color/gradient",
+      "destination": "/create/gradient",
+      "permanent": true
+    },
+    {
+      "source": "/color/contrast",
+      "destination": "/create/contrast",
+      "permanent": true
+    },
+    {
+      "source": "/icons-emoji",
+      "destination": "/create/icons-emoji",
+      "permanent": true
+    },
+    {
+      "source": "/icons",
+      "destination": "/create/icons",
+      "permanent": true
+    },
+    {
+      "source": "/emoji",
+      "destination": "/create/emoji",
+      "permanent": true
+    },
+    {
+      "source": "/typography",
+      "destination": "/create/typography",
+      "permanent": true
+    },
+    {
+      "source": "/fontgallery",
+      "destination": "/create/font-gallery",
+      "permanent": true
+    },
+    {
+      "source": "/fontpairs",
+      "destination": "/create/font-pair",
+      "permanent": true
+    },
+    {
+      "source": "/typescale",
+      "destination": "/create/type-scale",
+      "permanent": true
+    },
+    {
+      "source": "/ui-builder-cat",
+      "destination": "/create/components",
+      "permanent": true
+    },
+    {
+      "source": "/ui-builder",
+      "destination": "/create/component-designer",
+      "permanent": true
+    },
+    {
+      "source": "/box-shadow",
+      "destination": "/create/box-shadow",
+      "permanent": true
+    },
+    {
+      "source": "/auto-builder",
+      "destination": "/create/auto-builder",
+      "permanent": true
+    },
+    {
+      "source": "/imagery",
+      "destination": "/create/imagery",
+      "permanent": true
+    },
+    {
+      "source": "/file-converter",
+      "destination": "/create/file-converter",
+      "permanent": true
+    },
+    {
+      "source": "/ratio",
+      "destination": "/create/aspect-ratio",
+      "permanent": true
+    },
+    {
+      "source": "/ai-tools",
+      "destination": "/create/ai-tools",
+      "permanent": true
+    },
+    {
+      "source": "/alt-text",
+      "destination": "/create/alt-text",
+      "permanent": true
+    },
+    {
+      "source": "/ai-prompt",
+      "destination": "/create/ai-prompt",
+      "permanent": true
+    },
+    {
+      "source": "/landing-prompts",
+      "destination": "/create/landing-prompts",
+      "permanent": true
+    },
+    {
+      "source": "/welcome",
+      "destination": "/home",
+      "permanent": true
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/home",
+      "permanent": true
+    },
+    {
+      "source": "/color/ui",
+      "destination": "/create/color",
+      "permanent": true
+    },
+    {
+      "source": "/color-studio",
+      "destination": "/create/color",
+      "permanent": true
+    },
+    {
+      "source": "/export",
+      "destination": "/create/color",
+      "permanent": true
+    },
+    {
+      "source": "/palette",
+      "destination": "/create/palette",
+      "permanent": true
+    },
+    {
+      "source": "/tints",
+      "destination": "/create/tint",
+      "permanent": true
+    },
+    {
+      "source": "/gradients",
+      "destination": "/create/gradient",
+      "permanent": true
+    },
+    {
+      "source": "/contrast",
+      "destination": "/create/contrast",
+      "permanent": true
+    },
+    {
+      "source": "/imgconvert",
+      "destination": "/create/file-converter",
+      "permanent": true
+    },
+    {
+      "source": "/video-frames",
+      "destination": "/create/file-converter",
+      "permanent": true
+    },
+    {
+      "source": "/docs",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/docs-design",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/docs-social",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/docs-themes",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/docs-brand",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/docs-seo",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/docs-marketing",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/docs-ai",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/design-reference",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/resources",
+      "destination": "/discover",
+      "permanent": true
+    },
+    {
+      "source": "/prompts",
+      "destination": "/discover/prompts",
+      "permanent": true
+    },
+    {
+      "source": "/pricing",
+      "destination": "/plans",
+      "permanent": true
+    },
+    {
+      "source": "/site-map",
+      "destination": "/sitemap",
+      "permanent": true
+    },
+    {
+      "source": "/about",
+      "destination": "/help#about",
+      "permanent": true
+    },
+    {
+      "source": "/faq",
+      "destination": "/help#faq",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/p/:code",
       "destination": "/api/share?c=:code"
     },
     {
-      "source": "/alt-text",
-      "destination": "/alt-text/index.html"
-    },
-    {
-      "source": "/color",
-      "destination": "/color/index.html"
-    },
-    {
-      "source": "/color/contrast",
-      "destination": "/color/contrast/index.html"
-    },
-    {
-      "source": "/color/gradient",
-      "destination": "/color/gradient/index.html"
-    },
-    {
-      "source": "/color/palette",
-      "destination": "/color/palette/index.html"
-    },
-    {
-      "source": "/color/semantic",
-      "destination": "/color/semantic/index.html"
-    },
-    {
-      "source": "/color/tint",
-      "destination": "/color/tint/index.html"
-    },
-    {
       "source": "/community",
       "destination": "/community/index.html"
+    },
+    {
+      "source": "/create/alt-text",
+      "destination": "/create/alt-text/index.html"
+    },
+    {
+      "source": "/create/aspect-ratio",
+      "destination": "/create/aspect-ratio/index.html"
+    },
+    {
+      "source": "/create/color",
+      "destination": "/create/color/index.html"
+    },
+    {
+      "source": "/create/contrast",
+      "destination": "/create/contrast/index.html"
+    },
+    {
+      "source": "/create/emoji",
+      "destination": "/create/emoji/index.html"
+    },
+    {
+      "source": "/create/file-converter",
+      "destination": "/create/file-converter/index.html"
+    },
+    {
+      "source": "/create/font-gallery",
+      "destination": "/create/font-gallery/index.html"
+    },
+    {
+      "source": "/create/font-pair",
+      "destination": "/create/font-pair/index.html"
+    },
+    {
+      "source": "/create/gradient",
+      "destination": "/create/gradient/index.html"
+    },
+    {
+      "source": "/create/icons",
+      "destination": "/create/icons/index.html"
+    },
+    {
+      "source": "/create/palette",
+      "destination": "/create/palette/index.html"
+    },
+    {
+      "source": "/create/semantic-color",
+      "destination": "/create/semantic-color/index.html"
+    },
+    {
+      "source": "/create/tint",
+      "destination": "/create/tint/index.html"
+    },
+    {
+      "source": "/create/type-scale",
+      "destination": "/create/type-scale/index.html"
     },
     {
       "source": "/discover",
@@ -58,32 +338,12 @@
       "destination": "/discover/prompts/index.html"
     },
     {
-      "source": "/emoji",
-      "destination": "/emoji/index.html"
-    },
-    {
       "source": "/feedback",
       "destination": "/feedback/index.html"
     },
     {
-      "source": "/file-converter",
-      "destination": "/file-converter/index.html"
-    },
-    {
-      "source": "/fontgallery",
-      "destination": "/fontgallery/index.html"
-    },
-    {
-      "source": "/fontpairs",
-      "destination": "/fontpairs/index.html"
-    },
-    {
       "source": "/help",
       "destination": "/help/index.html"
-    },
-    {
-      "source": "/icons",
-      "destination": "/icons/index.html"
     },
     {
       "source": "/info",
@@ -98,10 +358,6 @@
       "destination": "/privacy/index.html"
     },
     {
-      "source": "/ratio",
-      "destination": "/ratio/index.html"
-    },
-    {
       "source": "/seo",
       "destination": "/seo/index.html"
     },
@@ -112,10 +368,6 @@
     {
       "source": "/terms",
       "destination": "/terms/index.html"
-    },
-    {
-      "source": "/typescale",
-      "destination": "/typescale/index.html"
     },
     {
       "source": "/((?!api/|assets/).*)",

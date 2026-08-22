@@ -280,9 +280,9 @@ export default function Plans() {
         title="Build first. Upgrade when your workflow asks for it."
         description="The complete toolkit is ready without a card. Pro adds capacity, advanced colour control and fuller handoff."
         primaryLabel={user ? 'Open the workspace' : 'Start building free'}
-        primaryTo={user ? '/color' : '/login'}
+        primaryTo={user ? '/create/color' : '/login'}
         secondaryLabel="Explore colour tools"
-        secondaryTo="/color"
+        secondaryTo="/create/color"
         hint="No trial clock on Free"
       />
     </div>

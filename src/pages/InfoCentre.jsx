@@ -47,7 +47,7 @@ const SECTIONS = [
     body: (
       <>
         <p>Build a complete colour system: generate palettes and harmonies, produce tint/shade scales, design gradients, and verify WCAG contrast — then export to CSS, Tailwind, PNG, or SVG.</p>
-        <p>Press <kbd>Space</kbd> on the palette to roll a fresh random set. Use the live <Link to="/color">Preview</Link> to see your colours on real UI.</p>
+        <p>Press <kbd>Space</kbd> on the palette to roll a fresh random set. Use the live <Link to="/create/color">Preview</Link> to see your colours on real UI.</p>
       </>
     ),
   },

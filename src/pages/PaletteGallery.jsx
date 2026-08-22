@@ -92,7 +92,7 @@ export default function PaletteGallery({ toast }) {
             </button>
           ))}
         </div>
-        <Link className="pgl-build-link" to="/color/palette">Create a palette <span aria-hidden="true">↗</span></Link>
+        <Link className="pgl-build-link" to="/create/palette">Create a palette <span aria-hidden="true">↗</span></Link>
       </div>
 
       <DiscoverResultHead

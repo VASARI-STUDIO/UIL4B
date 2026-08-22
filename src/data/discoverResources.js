@@ -37,8 +37,8 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'A fast way to find a tasteful gradient without fiddling with stops. Browse, then bring a starting point straight into the Gradient Generator to fine-tune the angle, stops and export the CSS.',
     relatedTools: [
-      { label: 'Gradient Generator', route: '/color/gradient', preset: 'sunset', tab: 'gradient' },
-      { label: 'Colour System Builder', route: '/color' },
+      { label: 'Gradient Generator', route: '/create/gradient', preset: 'sunset', tab: 'gradient' },
+      { label: 'Colour System Builder', route: '/create/color' },
     ],
     added: '2026-06-20',
     featured: true,
@@ -55,7 +55,7 @@ export const DISCOVER_RESOURCES = [
     useCase: 'Quick two-tone backgrounds',
     whyUseful: 'Great when you want a clean two-stop gradient fast. Pick one you like and rebuild it in the Gradient Generator to adjust direction and add stops.',
     relatedTools: [
-      { label: 'Gradient Generator', route: '/color/gradient', preset: 'malibu', tab: 'gradient' },
+      { label: 'Gradient Generator', route: '/create/gradient', preset: 'malibu', tab: 'gradient' },
     ],
     added: '2026-06-12',
   },
@@ -72,7 +72,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Intermediate',
     whyUseful: 'For when a plain linear gradient is too flat. Use it for inspiration, then recreate the radial or conic type in the Gradient Generator.',
     relatedTools: [
-      { label: 'Gradient Generator', route: '/color/gradient', preset: 'aurora-conic', tab: 'gradient' },
+      { label: 'Gradient Generator', route: '/create/gradient', preset: 'aurora-conic', tab: 'gradient' },
     ],
     added: '2026-06-08',
   },
@@ -91,7 +91,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'Perfect for kicking off a brand or UI palette. Find a set you like, then drop a colour into the Colour System Builder to generate the full tonal system and check contrast.',
     relatedTools: [
-      { label: 'Colour System Builder', route: '/color' },
+      { label: 'Colour System Builder', route: '/create/color' },
     ],
     // Representative sample palette (static, local — rendered as real swatches
     // on the Discover card face instead of the generated monogram).
@@ -111,7 +111,7 @@ export const DISCOVER_RESOURCES = [
     useCase: 'Generating palettes fast',
     whyUseful: 'Good for exploring quickly. Once you have a base colour, build the production-ready scale and exports in the Colour System Builder.',
     relatedTools: [
-      { label: 'Colour System Builder', route: '/color' },
+      { label: 'Colour System Builder', route: '/create/color' },
     ],
     palette: ['#264653', '#2A9D8F', '#E9C46A', '#F4A261', '#E76F51'],
     added: '2026-06-05',
@@ -129,7 +129,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'The role-based presentation maps cleanly onto how the Colour System Builder assigns colours — a great reference before you commit.',
     relatedTools: [
-      { label: 'Colour System Builder', route: '/color' },
+      { label: 'Colour System Builder', route: '/create/color' },
     ],
     palette: ['#16161A', '#7F5AF0', '#2CB67D', '#FFFFFE'],
     added: '2026-05-28',
@@ -149,7 +149,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Intermediate',
     whyUseful: 'When you need to see motion done well — page transitions, scroll effects, micro-interactions. Use it to brief animation, then build the static system in the UI Builder.',
     relatedTools: [
-      { label: 'UI Builder', route: '/ui-builder' },
+      { label: 'UI Builder', route: '/create/component-designer' },
     ],
     added: '2026-06-22',
     featured: true,
@@ -166,7 +166,7 @@ export const DISCOVER_RESOURCES = [
     useCase: 'Landing-page inspiration',
     whyUseful: 'A high bar for visual craft. Study the layouts and type, then assemble your own in the UI Builder.',
     relatedTools: [
-      { label: 'UI Builder', route: '/ui-builder' },
+      { label: 'UI Builder', route: '/create/component-designer' },
     ],
     added: '2026-06-10',
   },
@@ -183,7 +183,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'When you need to see how a real product solves a flow (onboarding, checkout, settings). Pair it with the UI Builder to lay out your own version.',
     relatedTools: [
-      { label: 'UI Builder', route: '/ui-builder' },
+      { label: 'UI Builder', route: '/create/component-designer' },
     ],
     added: '2026-05-30',
   },
@@ -200,7 +200,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'The navbar sets the tone for the whole product, and it is the one component most sites get wrong. Study how shipped sites structure their navigation, mega-menus and mobile drawers here, then rebuild the pattern that fits your system in the UI Builder.',
     relatedTools: [
-      { label: 'UI Builder', route: '/ui-builder' },
+      { label: 'UI Builder', route: '/create/component-designer' },
     ],
     added: '2026-07-08',
     featured: true,
@@ -220,7 +220,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'Skip the trial-and-error on shadow values — grab a base look here, then dial in blur, spread and layered shadows precisely in the Box Shadow Generator.',
     relatedTools: [
-      { label: 'Box Shadow Generator', route: '/box-shadow' },
+      { label: 'Box Shadow Generator', route: '/create/box-shadow' },
     ],
     added: '2026-06-19',
     featured: true,
@@ -238,7 +238,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Intermediate',
     whyUseful: 'The fastest way to get a natural-feeling transition curve. Hand the value off into any CSS you export from the toolkit.',
     relatedTools: [
-      { label: 'Box Shadow Generator', route: '/box-shadow' },
+      { label: 'Box Shadow Generator', route: '/create/box-shadow' },
     ],
     added: '2026-06-02',
   },
@@ -254,7 +254,7 @@ export const DISCOVER_RESOURCES = [
     useCase: 'Quick format conversions',
     whyUseful: 'Handy whenever you need to move between formats while wiring up components. Complements the in-app File Converter for code-shaped data.',
     relatedTools: [
-      { label: 'File Converter', route: '/file-converter' },
+      { label: 'File Converter', route: '/create/file-converter' },
     ],
     added: '2026-05-25',
   },
@@ -273,7 +273,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'The go-to for a tasteful background video. Grab a clip, then use the File Converter to pull a poster frame or convert the format for the web.',
     relatedTools: [
-      { label: 'File Converter', route: '/file-converter' },
+      { label: 'File Converter', route: '/create/file-converter' },
     ],
     added: '2026-06-17',
     featured: true,
@@ -290,7 +290,7 @@ export const DISCOVER_RESOURCES = [
     useCase: 'Free photography',
     whyUseful: 'A staple. Download a photo, then convert or compress it for the web with the File Converter before shipping.',
     relatedTools: [
-      { label: 'File Converter', route: '/file-converter' },
+      { label: 'File Converter', route: '/create/file-converter' },
     ],
     added: '2026-06-04',
   },
@@ -307,7 +307,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'Match the illustration accent to your palette. Pull your brand colour from the Colour System Builder and apply it here.',
     relatedTools: [
-      { label: 'Colour System Builder', route: '/color' },
+      { label: 'Colour System Builder', route: '/create/color' },
     ],
     added: '2026-05-22',
   },
@@ -326,8 +326,8 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'Where most real projects get their type. Find candidates here, then test combinations in Font Pairs and lock a scale in Type Scale.',
     relatedTools: [
-      { label: 'Font Pairs', route: '/fontpairs' },
-      { label: 'Type Scale', route: '/typescale' },
+      { label: 'Font Pairs', route: '/create/font-pair' },
+      { label: 'Type Scale', route: '/create/type-scale' },
     ],
     added: '2026-06-15',
     featured: true,
@@ -344,7 +344,7 @@ export const DISCOVER_RESOURCES = [
     useCase: 'Premium-feeling free type',
     whyUseful: 'When Google Fonts feels overused, Fontshare has fresher faces. Pair your pick in Font Pairs.',
     relatedTools: [
-      { label: 'Font Pairs', route: '/fontpairs' },
+      { label: 'Font Pairs', route: '/create/font-pair' },
     ],
     added: '2026-06-01',
   },
@@ -361,7 +361,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Intermediate',
     whyUseful: 'The best source for "what pairs with this font" thinking. Take its suggestions into Font Pairs to preview them live.',
     relatedTools: [
-      { label: 'Font Pairs', route: '/fontpairs' },
+      { label: 'Font Pairs', route: '/create/font-pair' },
     ],
     added: '2026-05-20',
   },
@@ -380,8 +380,8 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Beginner',
     whyUseful: 'A shortcut to a polished button, including interaction states. Use it as a reference and rebuild it in the UI Builder so it fits your design system.',
     relatedTools: [
-      { label: 'UI Builder', route: '/ui-builder' },
-      { label: 'Box Shadow Generator', route: '/box-shadow' },
+      { label: 'UI Builder', route: '/create/component-designer' },
+      { label: 'Box Shadow Generator', route: '/create/box-shadow' },
     ],
     added: '2026-06-21',
     featured: true,
@@ -399,7 +399,7 @@ export const DISCOVER_RESOURCES = [
     difficulty: 'Intermediate',
     whyUseful: 'A fast way to block out a page. Drop in a section, then theme it to your system in the UI Builder.',
     relatedTools: [
-      { label: 'UI Builder', route: '/ui-builder' },
+      { label: 'UI Builder', route: '/create/component-designer' },
     ],
     added: '2026-06-07',
   },
@@ -415,7 +415,7 @@ export const DISCOVER_RESOURCES = [
     useCase: 'App & marketing components',
     whyUseful: 'Solid, accessible component starting points. Bring the structure into the UI Builder and apply your tokens.',
     relatedTools: [
-      { label: 'UI Builder', route: '/ui-builder' },
+      { label: 'UI Builder', route: '/create/component-designer' },
     ],
     added: '2026-05-18',
   },

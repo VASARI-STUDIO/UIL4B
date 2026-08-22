@@ -9,7 +9,7 @@ const PERSONA = 'knowledgeable new user'
 test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
   test('“What size is an Instagram portrait post?”', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
     await page.getByRole('button', { name: 'Social', exact: true }).click()
     await page.getByRole('button', { name: /YouTube video/ }).click()
     await page.getByRole('option', { name: /Instagram post \(portrait\)/ }).click()
@@ -21,7 +21,7 @@ test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
 
   test('“What aspect ratio is my 1179×2556 screenshot?”', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
     await page.getByRole('button', { name: /Width × height/ }).click()
     await page.getByRole('spinbutton', { name: 'Width in pixels' }).fill('1179')
     await page.getByRole('spinbutton', { name: 'Height in pixels' }).fill('2556')
@@ -30,7 +30,7 @@ test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
 
   test('“What PPI is a 27-inch QHD monitor?”', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
     await page.getByRole('button', { name: 'Screens', exact: true }).click()
     await page.getByRole('button', { name: /1920 × 1080/ }).first().click()
     await page.getByRole('option', { name: /QHD/ }).first().click()
@@ -39,7 +39,7 @@ test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
 
   test('“What are the iPhone 16 screen specs?”', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
     await page.getByRole('button', { name: 'Devices', exact: true }).click()
     await page.getByRole('button', { name: /Pick a device/ }).click()
     await page.getByRole('option', { name: /^iPhone 16/ }).first().click()
@@ -52,7 +52,7 @@ test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
 
   test('“Show me standard 4:5 sizes” (ratio-first exploration)', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
     await page.getByRole('button', { name: 'Ratios', exact: true }).click()
     await page.getByRole('button', { name: /4:5/ }).first().click()
     await page.getByRole('button', { name: /Pick a standard 4:5 size/ }).click()
@@ -64,9 +64,9 @@ test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
 
 test.describe('goal-driven checks on the other live tools', () => {
   const LIVE_TOOLS = [
-    { url: '/color', expectText: /colou?r/i, goal: 'open the colour tool' },
-    { url: '/icons', expectText: /icon/i, goal: 'open the icon library' },
-    { url: '/file-converter', expectText: /convert/i, goal: 'open the file converter' },
+    { url: '/create/color', expectText: /colou?r/i, goal: 'open the colour tool' },
+    { url: '/create/icons', expectText: /icon/i, goal: 'open the icon library' },
+    { url: '/create/file-converter', expectText: /convert/i, goal: 'open the file converter' },
   ]
   for (const { url, expectText, goal } of LIVE_TOOLS) {
     test(`“I want to ${goal}” — ${url} is alive and on-topic`, async ({ page }) => {

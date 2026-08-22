@@ -84,5 +84,5 @@ export const GALLERY_PALETTES = [
 // Build the Palette Builder hand-off URL for a set of colours — matches the
 // ?c=4338E0,7C6CF0 format colorsFromQuery() already parses (no '#' prefixes).
 export function paletteBuilderUrl(colors) {
-  return `/color/palette?c=${colors.map(c => c.replace('#', '')).join(',')}`
+  return `/create/palette?c=${colors.map(c => c.replace('#', '')).join(',')}`
 }

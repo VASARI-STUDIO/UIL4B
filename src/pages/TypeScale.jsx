@@ -11,7 +11,7 @@ import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHa
 import { fitTypePreviewSize, typePreviewNeedsFitting } from '../utils/typeScalePreview'
 import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepPx } from '../utils/fluidType'
 
-// Type Scale Generator — the standalone /typescale page. One base size and one
+// Type Scale Generator — the standalone /create/type-scale page. One base size and one
 // ratio generate a whole modular scale, previewed in a real article and handed
 // off as CSS custom properties, a Tailwind fontSize map or SCSS variables.
 //
@@ -417,7 +417,7 @@ export default function TypeScale({ onCopy, toast }) {
       scale: { base, ratio },
     })
     if (!staged) { toast?.('Choose a family first — the pairing tool needs somewhere to start.'); return }
-    navigate('/fontpairs')
+    navigate('/create/font-pair')
   }
 
   const handleAudienceKeyDown = (event) => {
@@ -999,9 +999,9 @@ export default function TypeScale({ onCopy, toast }) {
           <strong>A scale is half the system — the families carry the rest.</strong>
         </div>
         <div className="tsc-more-links">
-          <NavLink to="/fontpairs" className="tsc-more-link">Pair two families &rarr;</NavLink>
-          <NavLink to="/fontgallery" className="tsc-more-link">Browse the font gallery &rarr;</NavLink>
-          <NavLink to="/color/palette" className="tsc-more-link">Build a colour palette &rarr;</NavLink>
+          <NavLink to="/create/font-pair" className="tsc-more-link">Pair two families &rarr;</NavLink>
+          <NavLink to="/create/font-gallery" className="tsc-more-link">Browse the font gallery &rarr;</NavLink>
+          <NavLink to="/create/palette" className="tsc-more-link">Build a colour palette &rarr;</NavLink>
         </div>
       </nav>
 

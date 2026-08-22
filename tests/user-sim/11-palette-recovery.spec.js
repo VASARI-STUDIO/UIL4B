@@ -14,7 +14,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('a first session starts from one random seed and every seed representation matches', async ({ page }) => {
     watch(page, 'first-time palette designer')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const seed = page.getByRole('textbox', { name: 'Seed colour hex' })
     const firstHex = page.locator('.plb-col .plb-hex').first()
@@ -38,7 +38,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   test('the shell aligns, controls stay level, and a hover label grows its own button', async ({ page }) => {
     watch(page, 'precision-focused desktop designer')
     await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('.plb-toolbar')).toBeVisible()
 
     const geometry = await page.evaluate(() => {
@@ -115,7 +115,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   test('shared chrome uses the wide desktop span', async ({ page }) => {
     watch(page, 'designer using a large desktop display')
     await page.setViewportSize({ width: 1909, height: 900 })
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('.plb-toolbar')).toBeVisible()
     await expect(page.locator('.plb-adjust')).toBeVisible()
 
@@ -140,7 +140,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   test('temperature stays under the pointer for the entire first drag', async ({ page }) => {
     watch(page, 'designer warming and cooling a palette with the pointer')
     await page.setViewportSize({ width: 1909, height: 900 })
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const temperature = page.getByRole('slider', { name: 'Temperature adjustment' })
     const reset = page.locator('.plb-adjust-reset')
@@ -181,7 +181,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('adjustment tracks are equal, explanatory, and mark the neutral centre', async ({ page }) => {
     watch(page, 'designer tuning colour relationships')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const tracks = page.locator('.plb-adjust input[type="range"]')
     await expect(tracks).toHaveCount(4)
@@ -198,7 +198,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('Space activates interactive Palette controls without invoking the global randomise shortcut', async ({ page }) => {
     watch(page, 'keyboard designer using controls, popovers and modals')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('.plb-col .plb-hex')).toHaveCount(5)
     const before = await page.locator('.plb-col .plb-hex').allTextContents()
 
@@ -219,7 +219,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('swap direction, right-click insertion and preview gating are explicit', async ({ page }) => {
     watch(page, 'keyboard-and-pointer palette editor')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const swatchHexes = page.locator('.plb-col .plb-hex')
     await expect(swatchHexes).toHaveCount(5)
@@ -260,7 +260,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('contrast and HCT stay attached to each swatch with clear Pro explanations', async ({ page }) => {
     watch(page, 'free designer discovering advanced colour checks')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     await expect(page.locator('.plb-toolbar').getByRole('button', { name: /Contrast/i })).toHaveCount(0)
     await page.getByRole('button', { name: 'Show contrast guidance for PRIMARY' }).click()
@@ -275,7 +275,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     test(`the shared shell remains contained at ${width}px`, async ({ page }) => {
       watch(page, `palette designer at ${width}px`)
       await page.setViewportSize({ width, height: 820 })
-      await go(page, '/color/palette')
+      await go(page, '/create/palette')
       await expect(page.locator('.plb-toolbar')).toBeVisible()
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
@@ -293,10 +293,10 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('Tint Generator offers an immediate route back to the Palette Builder', async ({ page }) => {
     watch(page, 'designer moving between colour tools')
-    await go(page, '/color/tint')
+    await go(page, '/create/tint')
     const back = page.getByRole('link', { name: 'Back to Palette Builder' })
     await expect(back).toBeVisible()
     await back.click()
-    await expect(page).toHaveURL(/\/color\/palette$/)
+    await expect(page).toHaveURL(/\/create\/palette$/)
   })
 })
