@@ -450,7 +450,7 @@ export default function TypeScale({ onCopy, toast }) {
   return (
     <div className="sec tsc-page">
       <header className="tsc-hero">
-        <div className="sec-h-eyebrow">Typography system workspace</div>
+        <div className="sec-h-eyebrow">Create / Typography</div>
         <div className="tsc-hero-copy">
           <h1>Type Scale Generator</h1>
           <p>
@@ -540,7 +540,7 @@ export default function TypeScale({ onCopy, toast }) {
           >
             {previewIsFitted && (
               <p className="tsc-fit-note" role="status">
-                Preview sizes are fitted between 8px and 96px to keep the workspace usable. Labels and exports retain the exact scale.
+                Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
               </p>
             )}
             {steps.map(s => (
