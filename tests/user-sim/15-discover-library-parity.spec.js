@@ -150,9 +150,20 @@ test.describe('the Palette Library carries the brand systems', () => {
     await page.getByRole('button', { name: 'Brand', exact: true }).click()
 
     // Free brands hand off straight to the builder with their colours.
+    //
+    // Targets `.pgal-use` — the foot CTA — the same way the Pro branch below
+    // targets `.pgal-use--pro`, rather than going by accessible name. A card
+    // carries TWO links to the builder with the same colours: this one and the
+    // Builder chip in the hover/focus action layer, and they share an accessible
+    // name because they share a destination (which is conformant — it is
+    // same-name/DIFFERENT-destination that fails WCAG). Matching by role+name
+    // resolved to one element only while the action layer was hidden with
+    // `visibility:hidden`, i.e. only while those actions were unreachable by
+    // keyboard. That was the bug, not the fixture; the assertion has to name the
+    // control it means.
     const freeBrand = BRAND_PALETTES.find((brand) => brand.free)
     const freeCard = page.locator('.pgal-card', { hasText: freeBrand.name }).first()
-    await expect(freeCard.getByRole('link', { name: new RegExp(`Open ${freeBrand.name}`) }))
+    await expect(freeCard.locator('.pgal-use'))
       .toHaveAttribute('href', /^\/color\/palette\?c=/)
 
     // Pro-gated brands do NOT: the builder still owns that decision, so the
