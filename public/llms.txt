@@ -3,20 +3,20 @@
 > UIL4B is a free, browser-based design toolkit and UI-inspiration platform for designers and developers. Build colour systems, pair fonts, browse 200k+ icons, convert images and video, generate accessible alt text and AI image/landing prompts, and export production-ready CSS and design tokens — all client-side, with a free tier and a $4.99/mo Pro plan.
 
 ## Tools
-- [Colour Palette Generator](https://www.uil4b.com/color): Build palettes with harmony modes, tint scales, gradients, image extraction, named colour libraries, and CSS/Tailwind/PNG/SVG export.
-- [Font Pair Finder](https://www.uil4b.com/fontpairs): Discover and preview Google Font pairings for headings and body, with live samples and CSS import export.
-- [Font Gallery](https://www.uil4b.com/fontgallery): Browse and compare 1,200+ Google Fonts by category, weight, and style.
-- [Type Scale Generator](https://www.uil4b.com/typescale): Create modular type scales and export CSS/Tailwind/SCSS custom properties.
-- [Icon Library](https://www.uil4b.com/icons): Search 200,000+ open-source icons and copy SVG or JSX instantly.
-- [Box Shadow Generator](https://www.uil4b.com/box-shadow): Design layered CSS box shadows with live preview and Tailwind output.
-- [File Converter](https://www.uil4b.com/file-converter): Convert images (PNG/JPEG/WebP/AVIF), turn video into GIFs, and extract video frames — fully in-browser, nothing uploaded.
-- [Emoji Library](https://www.uil4b.com/emoji): Search and copy emoji by category with skin-tone variants.
-- [UI Builder](https://www.uil4b.com/ui-builder): Assemble a complete design system (colour, type, scale, tokens) and export production-ready CSS.
+- [Colour Palette Generator](https://www.uil4b.com/create/color): Build palettes with harmony modes, tint scales, gradients, image extraction, named colour libraries, and CSS/Tailwind/PNG/SVG export.
+- [Font Pair Finder](https://www.uil4b.com/create/font-pair): Discover and preview Google Font pairings for headings and body, with live samples and CSS import export.
+- [Font Gallery](https://www.uil4b.com/create/font-gallery): Browse and compare 1,200+ Google Fonts by category, weight, and style.
+- [Type Scale Generator](https://www.uil4b.com/create/type-scale): Create modular type scales and export CSS/Tailwind/SCSS custom properties.
+- [Icon Library](https://www.uil4b.com/create/icons): Search 200,000+ open-source icons and copy SVG or JSX instantly.
+- [Box Shadow Generator](https://www.uil4b.com/create/box-shadow): Design layered CSS box shadows with live preview and Tailwind output.
+- [File Converter](https://www.uil4b.com/create/file-converter): Convert images (PNG/JPEG/WebP/AVIF), turn video into GIFs, and extract video frames — fully in-browser, nothing uploaded.
+- [Emoji Library](https://www.uil4b.com/create/emoji): Search and copy emoji by category with skin-tone variants.
+- [UI Builder](https://www.uil4b.com/create/component-designer): Assemble a complete design system (colour, type, scale, tokens) and export production-ready CSS.
 
 ## AI tools
-- [AI Image Prompt Generator](https://www.uil4b.com/ai-prompt): Build structured, high-quality image prompts; scan a reference photo to extract its style.
-- [AI Landing Page Prompts](https://www.uil4b.com/landing-prompts): Generate landing-page copy and structure prompts for AI website builders.
-- [Alt Text Generator](https://www.uil4b.com/alt-text): Generate WCAG-compliant alt text for images with AI.
+- [AI Image Prompt Generator](https://www.uil4b.com/create/ai-prompt): Build structured, high-quality image prompts; scan a reference photo to extract its style.
+- [AI Landing Page Prompts](https://www.uil4b.com/create/landing-prompts): Generate landing-page copy and structure prompts for AI website builders.
+- [Alt Text Generator](https://www.uil4b.com/create/alt-text): Generate WCAG-compliant alt text for images with AI.
 
 ## Documentation
 - [SEO for Small Business](https://www.uil4b.com/docs-seo): Practical SEO fundamentals — local SEO, on-page, technical, and 2026 AI-search guidance.
