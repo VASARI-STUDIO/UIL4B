@@ -161,3 +161,94 @@ test('S15 · the .is-waiting reveal still animates its grid track open', async (
 
   await ctx.close()
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// S11 / S12 / S14 · nothing may be invisible at rest AND still take taps
+// ─────────────────────────────────────────────────────────────────────────────
+// One property, asserted the same way everywhere, because the audit found one
+// mistake repeated across four surfaces: a control hidden at rest and revealed
+// by :hover, on a device that has no hover. `display:none` is NOT counted — a
+// control deliberately removed at a breakpoint is a design decision. A control
+// painted at opacity 0 or visibility:hidden while still accepting pointer events
+// is the defect: it is undiscoverable AND live, which is worse than missing,
+// because a tap meant for the swatch underneath can run Remove or Duplicate with
+// nothing on screen to explain what happened.
+
+/** Controls that are invisible at rest but still hit-testable. */
+async function ghostTargets(page, selector) {
+  return page.evaluate((sel) => {
+    const out = []
+    for (const el of document.querySelectorAll(sel)) {
+      const cs = getComputedStyle(el)
+      if (cs.display === 'none') continue
+      const r = el.getBoundingClientRect()
+      if (!r.width || !r.height) continue
+      const invisible = parseFloat(cs.opacity) === 0 || cs.visibility === 'hidden'
+      if (invisible && cs.pointerEvents !== 'none') {
+        out.push(`${el.getAttribute('aria-label') || el.className} (${cs.opacity}/${cs.visibility}, ${Math.round(r.width)}x${Math.round(r.height)})`)
+      }
+    }
+    return out
+  }, selector)
+}
+
+const TOUCH_MATRIX = [
+  // The audit measured these BROKEN — tablet portrait and landscape, and both
+  // landscape phones. 769px is where the old max-width:768px correction stopped
+  // being true, which is why a tablet got a worse surface than a phone.
+  [844, 390], [932, 430], [834, 1194], [1024, 768], [1180, 820],
+  // And these CLEAN. They must stay clean.
+  [768, 1024], [390, 844], [320, 568],
+]
+
+const REVEAL_CASES = [
+  { route: '/color/palette', sel: '.plb-tool', what: 'S11 · Palette Builder per-swatch tools' },
+  { route: '/color/palette', sel: '.plb-gap', what: 'S11 · Palette Builder insert-between buttons' },
+]
+
+for (const c of REVEAL_CASES) {
+  test(`${c.what} are never invisible-but-live on a touch device`, async ({ browser }) => {
+    const damage = []
+    for (const [w, h] of TOUCH_MATRIX) {
+      const { ctx, page } = await openTouch(browser, w, h, c.route, w >= 700)
+      // Prove the emulation is doing its job before trusting the result. A
+      // desktop Chromium narrowed to 390px still reports hover:hover, and would
+      // pass every assertion below on the broken build.
+      const caps = await page.evaluate(() => ({
+        hover: matchMedia('(hover: hover)').matches,
+        coarse: matchMedia('(pointer: coarse)').matches,
+      }))
+      expect(caps, `${w}x${h}: device emulation lost — this test is meaningless without hover:none`).toEqual({ hover: false, coarse: true })
+      const ghosts = await ghostTargets(page, c.sel)
+      await ctx.close()
+      if (ghosts.length) damage.push(`${w}x${h}: ${ghosts.length} invisible-but-live ${c.sel} — e.g. ${ghosts[0]}`)
+    }
+    expect(damage, damage.join('\n')).toEqual([])
+  })
+}
+
+test('the hover reveal itself is preserved on pointer devices', async ({ browser }) => {
+  // The cheap way to pass the four tests above is to delete the hover reveal
+  // outright. That would be a regression in the other direction — a resting
+  // swatch is meant to be a clean colour field on a device that CAN hover. So
+  // assert the pointer behaviour explicitly: hidden at rest, shown on hover.
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false })
+  const page = await ctx.newPage()
+  watch(page, 'pointer user on the palette builder')
+  await page.goto('/color/palette', { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('load').catch(() => {})
+  await page.waitForTimeout(600)
+
+  expect(await page.evaluate(() => matchMedia('(hover: hover)').matches)).toBe(true)
+
+  const tool = page.locator('.plb-tool').first()
+  expect(await tool.evaluate((el) => parseFloat(getComputedStyle(el).opacity)),
+    'a pointer device should still get a clean swatch at rest').toBe(0)
+
+  await page.locator('.plb-col').first().hover()
+  await page.waitForTimeout(350)
+  expect(await tool.evaluate((el) => parseFloat(getComputedStyle(el).opacity)),
+    'hovering the column must still reveal its tools').toBe(1)
+
+  await ctx.close()
+})

@@ -6362,7 +6362,18 @@ button.plb-varrow:hover{background:var(--bg-2)}
    --plb-ink is computed against --plb-sim. */
 .plb-col--split{background:linear-gradient(to bottom,var(--plb-c) 0 50%,var(--plb-sim) 50% 100%)}
 .plb-col-tools{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px}
-.plb-tool{display:flex;align-items:center;justify-content:center;width:32px;height:32px;color:inherit;background:none;border:none;border-radius:8px;cursor:pointer;opacity:0;transition:opacity var(--t),background var(--t)}
+/* The per-swatch controls are visible AT REST by default and hidden only where
+   a hover can bring them back. That direction matters: the old rule hid them at
+   rest for everyone and corrected it in @media(max-width:768px), which is a
+   proxy for "touch" that stops being true at exactly 769px — so every tablet and
+   every phone held sideways got a colour picker with no editing controls on it
+   at all (S11, mobile-audit-2026-08: 30 buttons measured opacity:0 with
+   pointer-events:auto at 834x1194, 1024x768, 1180x820 and 844x390, i.e. live
+   32x32 targets with zero paint, where a mis-tap runs Remove or Duplicate with
+   nothing on screen to explain it). Guard on the capability, not the width —
+   .grg-like at the bottom of this file is the pattern this copies. */
+.plb-tool{display:flex;align-items:center;justify-content:center;width:32px;height:32px;color:inherit;background:none;border:none;border-radius:8px;cursor:pointer;transition:opacity var(--t),background var(--t)}
+@media(hover:hover){.plb-tool{opacity:0}}
 .plb-col:hover .plb-tool,.plb-col:focus-within .plb-tool,.plb-tool--on{opacity:1}
 .plb-tool:hover{background:color-mix(in srgb,var(--plb-ink) 14%,transparent)}
 .plb-tool--on{background:color-mix(in srgb,var(--plb-ink) 18%,transparent)}
@@ -6397,8 +6408,19 @@ button.plb-varrow:hover{background:var(--bg-2)}
    children (buttons, ramp, hex) keep their own pointer cursor. */
 .plb-col[draggable="true"]{cursor:grab}
 .plb-col[draggable="true"]:active{cursor:grabbing}
-.plb-gap{position:absolute;top:0;right:-14px;bottom:0;width:28px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;z-index:5;opacity:0;transition:opacity var(--t)}
-.plb-gap:hover,.plb-gap:focus-visible{opacity:1}
+/* Insert-between-swatches, on the seam. Same inversion as .plb-tool above, plus
+   a size change, because this one had two faults and painting it only fixes one.
+   Its resting form on a pointer device is the full column height (measured
+   28x990 at 834x1194) — a generous hover target that costs nothing, since
+   hovering the seam is what reveals the dot. With no hover it can never reveal
+   itself, so all that full-height strip does is sit invisibly over every column
+   edge and swallow taps meant for the swatch. So on touch it paints its dot AND
+   contracts to the dot: 28x44, still clear of the 24px floor in WCAG 2.5.8. */
+.plb-gap{position:absolute;top:50%;right:-14px;height:44px;transform:translateY(-50%);width:28px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;z-index:5;transition:opacity var(--t)}
+@media(hover:hover){
+  .plb-gap{top:0;bottom:0;height:auto;transform:none;opacity:0}
+  .plb-gap:hover,.plb-gap:focus-visible{opacity:1}
+}
 .plb-gap-dot{display:flex;align-items:center;justify-content:center;width:26px;height:26px;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow-xs)}
 
 /* Shared popover shell — columns paint color:var(--plb-ink), so reset to tokens */
@@ -6858,6 +6880,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
   .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}
+  /* Redundant on touch now that the base rule is visible-at-rest, but still
+     doing work for a HOVER device at this width — a narrowed desktop window, or
+     a small laptop — where @media(hover:hover) still hides them and this
+     stacked row has no room for a reveal-on-hover affordance. */
   .plb-tool{opacity:1}
   .plb-ramp{display:none}
   .plb-hex{font-size:13px;padding:2px 6px}
