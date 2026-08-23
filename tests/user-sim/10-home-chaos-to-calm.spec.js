@@ -638,7 +638,16 @@ test.describe('homepage: eleven tools, five ways of working', () => {
       expect(route.hidden).toBe('true')
     }
     // Each route line matches the CTA beside it, because both read one source.
-    const ctas = await page.locator('.hstep-cta').evaluateAll((els) => els.map((a) => a.getAttribute('href')))
+    //
+    // SCOPED TO THE RAIL. This read `.hstep-cta` page-wide, which was only ever
+    // correct while the step rail was the sole user of that class — an implicit
+    // assumption, not the thing being asserted. The hero's specimen band now
+    // borrows the same text-link treatment for its Palette Builder hand-off, so
+    // the unscoped locator collected six hrefs and compared them against five
+    // route lines. The subject of this assertion is unchanged: the rail's five
+    // CTAs must equal the rail's five route lines, because both derive from
+    // ROUTE_BY_TOOL. Scoping states that rather than relying on it.
+    const ctas = await page.locator('.hsteps .hstep-cta').evaluateAll((els) => els.map((a) => a.getAttribute('href')))
     expect(ctas).toEqual(routes.map((r) => r.text))
     expect(await page.locator('.hsteps-rail').evaluate((el) => el.tagName)).toBe('OL')
   })
