@@ -204,6 +204,8 @@ const TOUCH_MATRIX = [
 const REVEAL_CASES = [
   { route: '/color/palette', sel: '.plb-tool', what: 'S11 · Palette Builder per-swatch tools' },
   { route: '/color/palette', sel: '.plb-gap', what: 'S11 · Palette Builder insert-between buttons' },
+  { route: '/discover/palettes', sel: '.pgal-act', what: 'S12 · Palette Library per-card actions' },
+  { route: '/community', sel: '.ch-heart', what: 'S14 · Community like buttons' },
 ]
 
 for (const c of REVEAL_CASES) {
@@ -251,4 +253,103 @@ test('the hover reveal itself is preserved on pointer devices', async ({ browser
     'hovering the column must still reveal its tools').toBe(1)
 
   await ctx.close()
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// S13 · `visibility` must never be inside a transition, on any path
+// ─────────────────────────────────────────────────────────────────────────────
+// `visibility` is a DISCRETE property: transitioning it does not fade anything,
+// it flips the value at 50% of the duration. So the reveal costs a frame, and a
+// focus advance faster than one frame skips the control entirely. This is a
+// property of the stylesheet, so assert it directly on the computed style —
+// including under reduced motion, where the same mistake was duplicated in the
+// prefers-reduced-motion variant and therefore survived a reduced-motion retest.
+const REVEAL_LAYERS = [
+  ['/discover/palettes', '.pgal-actions'],
+  ['/community', '.ch-heart'],
+  ['/color/palette', '.plb-tool'],
+]
+
+for (const [route, sel] of REVEAL_LAYERS) {
+  test(`S13 · ${sel} never transitions visibility (normal and reduced motion)`, async ({ browser }) => {
+    for (const reduced of [false, true]) {
+      const ctx = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        reducedMotion: reduced ? 'reduce' : 'no-preference',
+      })
+      const page = await ctx.newPage()
+      await page.goto(route, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('load').catch(() => {})
+      await page.waitForTimeout(500)
+      const props = await page.locator(sel).first().evaluate((el) => getComputedStyle(el).transitionProperty)
+      await ctx.close()
+      expect(props, `${sel} (reduced motion: ${reduced}) still lists visibility in its transition: ${props}`)
+        .not.toMatch(/visibility/)
+    }
+  })
+}
+
+test('S13 · the palette card actions are reachable by keyboard at any tab speed', async ({ browser }) => {
+  // METHODOLOGY, and it is load-bearing (see the audit): focus moves must be
+  // recorded IN THE PAGE with a focusin listener and read once at the end. An
+  // evaluate() between Tab presses adds ~100ms of round-trip and silently turns
+  // a 0-of-5 into a 5-of-5 — the naive version of this test reports a pass at
+  // every speed on the broken build.
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, 'keyboard user in the palette library')
+  await page.goto('/discover/palettes', { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('load').catch(() => {})
+  await page.waitForTimeout(600)
+
+  await page.evaluate(() => {
+    window.__seq = []
+    document.addEventListener('focusin', (e) => {
+      window.__seq.push((e.target.className || e.target.tagName).toString().split(' ')[0])
+    })
+    document.querySelector('.pgal-card').scrollIntoView({ block: 'center', behavior: 'instant' })
+  })
+  await page.waitForTimeout(250)
+
+  // 0ms is the case that failed: the whole sequence completes inside one
+  // animation frame, style is never recomputed, and the browser skipped the
+  // layer. 250ms is a relaxed human speed and always passed, so it proves
+  // nothing on its own — both are asserted so the result cannot be speed-luck.
+  const reachedAt = {}
+  for (const gap of [0, 250]) {
+    await page.evaluate(() => { window.__seq = []; document.querySelector('.pgal-stripe').focus() })
+    for (let i = 0; i < 26; i++) {
+      await page.keyboard.press('Tab')
+      if (gap) await page.waitForTimeout(gap)
+    }
+    reachedAt[gap] = await page.evaluate(() => window.__seq.filter((s) => s === 'pgal-act').length)
+  }
+  await ctx.close()
+
+  expect(reachedAt[0], `only ${reachedAt[0]} action buttons reached at full tab speed — the reveal is costing a frame again`).toBeGreaterThan(0)
+  expect(reachedAt[0], `reachability is speed-dependent: ${reachedAt[0]} at 0ms vs ${reachedAt[250]} at 250ms`).toBe(reachedAt[250])
+})
+
+test('S12 · the touch action row does not cover the palette it acts on', async ({ browser }) => {
+  // The first shape of this fix left the actions as a permanent overlay, which
+  // hid 85% of the fourth stripe and 35% of the third at tablet widths. A
+  // control layer that obscures the artefact it operates on is a different
+  // defect, not a fix — so assert the swatch is intact, not merely that the
+  // buttons are visible.
+  for (const [w, h] of [[390, 844], [834, 1194], [1180, 820]]) {
+    const { ctx, page } = await openTouch(browser, w, h, '/discover/palettes', w >= 700)
+    const covered = await page.evaluate(() => {
+      const card = document.querySelector('.pgal-card')
+      const acts = card.querySelector('.pgal-actions').getBoundingClientRect()
+      return [...card.querySelectorAll('.pgal-stripe')]
+        .map((s, i) => {
+          const r = s.getBoundingClientRect()
+          const ov = Math.max(0, Math.min(r.bottom, acts.bottom) - Math.max(r.top, acts.top))
+          return ov > 1 ? `stripe ${i + 1}: ${Math.round(ov)}px of ${Math.round(r.height)}px hidden` : null
+        })
+        .filter(Boolean)
+    })
+    await ctx.close()
+    expect(covered, `${w}x${h}: ${covered.join(', ')}`).toEqual([])
+  }
 })

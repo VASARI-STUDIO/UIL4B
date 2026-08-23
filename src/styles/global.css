@@ -3359,9 +3359,19 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .ch-card:hover{border-color:var(--bh);transform:translateY(-3px)}
 .ch-thumb{display:flex;align-items:center;justify-content:center;height:150px;text-decoration:none!important;position:relative;background:linear-gradient(135deg,var(--c1,var(--accent)),var(--c2,var(--accent-strong)))}
 .ch-thumb-mono{font-family:var(--mono);font-size:30px;font-weight:700;color:rgba(255,255,255,.92);letter-spacing:.04em;text-shadow:0 1px 8px rgba(0,0,0,.25)}
-.ch-heart{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-pill);border:none;cursor:pointer;background:rgba(0,0,0,.5);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;opacity:0;transform:translateY(-2px);transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.ch-card:hover .ch-heart,.ch-heart:focus-visible{opacity:1;transform:translateY(0)}
-.ch-heart.is-saved{opacity:1;transform:translateY(0);color:#fb7185}
+/* Visible at rest; the hover reveal is an enhancement for devices that have a
+   hover, exactly as .grg-like does it. It used to hide for everyone and come
+   back on .ch-card:hover or its own :focus-visible — one of which never fires on
+   a phone and the other of which is keyboard-only, so the surface's ONLY
+   engagement action was invisible on every touch device at every width
+   (S14, mobile-audit-2026-08: 12 buttons, one per card, measured opacity 0 with
+   pointer-events:auto at 320x568 through 1180x820). */
+.ch-heart{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-pill);border:none;cursor:pointer;background:rgba(0,0,0,.5);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+@media(hover:hover){
+  .ch-heart{opacity:0;transform:translateY(-2px)}
+  .ch-card:hover .ch-heart,.ch-heart:focus-visible,.ch-heart.is-saved{opacity:1;transform:translateY(0)}
+}
+.ch-heart.is-saved{color:#fb7185}
 .ch-heart:hover{background:rgba(0,0,0,.7)}
 .ch-heart-count{font-variant-numeric:tabular-nums;line-height:1}
 .ch-card-body{padding:12px 14px 14px}
@@ -4243,15 +4253,52 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .pgal-use--pro{color:var(--brand)}
 .pgal-stripe:hover .pgal-hex,.pgal-stripe:focus-visible .pgal-hex{opacity:1}
 .pgal-stripe:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
-/* Hover / focus actions over the swatch. The layer is always in the DOM (see
-   PaletteGalleryGrid) and only its VISIBILITY is CSS, so keyboard reaches every
-   action a pointer does — :focus-within is what carries that, and `visibility`
-   rather than `opacity` alone keeps the buttons out of the tab order until the
-   card is actually engaged. Anchored to the stripes, not the card, so it never
-   covers the name and like control in the foot. */
+/* Actions over the swatch. The layer is always in the DOM (see
+   PaletteGalleryGrid); it is visible at rest, and only a device that can hover
+   gets the hide-until-engaged treatment. Anchored to the stripes, not the card,
+   so it never covers the name and like control in the foot.
+
+   THE COMMENT THAT USED TO BE HERE WAS WRONG, in a way that mattered, so here is
+   what actually happens. It claimed `visibility` rather than `opacity` alone
+   "keeps the buttons out of the tab order until the card is actually engaged",
+   and offered that as the reason to prefer it. Two faults followed from it:
+
+   1. `visibility` is a DISCRETE property. Listing it in a transition does not
+      fade it — it flips at 50% of the duration. So the reveal cost a frame, and
+      a focus advance faster than one frame skipped the layer entirely: measured
+      on /discover/palettes at 390x844, 0 of 5 reveal buttons reached with no
+      round-trip between Tab presses, 5 of 5 from ~16ms up. A control whose
+      reachability depends on how fast you tab is not reachable (S13).
+   2. It was never guarded on hover capability, so on a phone or tablet the
+      hover half can never fire at all — 350 actions per page load on a 70-card
+      grid, every take-away action the surface offers, unreachable except by an
+      accident: tapping a stripe gives the card focus and :focus-within matches,
+      but that same tap fires the stripe's own copy action (S12).
+
+   So: opacity + pointer-events, both continuous, and the buttons STAY in the tab
+   order — which is the honest trade. They are reachable by keyboard at any
+   speed, and focusing one reveals the layer through :focus-within, so the focus
+   ring is on something the user can see. That is the opposite of the collapsed
+   accordions in S9, where the focused link has no visible box at all. */
 .pgal-shot{position:relative;display:flex;flex-direction:column;min-width:0}
-.pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance),visibility var(--dur-2)}
-.pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;visibility:visible;transform:none}
+.pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance)}
+@media(hover:hover){
+  .pgal-actions{opacity:0;pointer-events:none;transform:translateY(4px)}
+  .pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;pointer-events:auto;transform:none}
+}
+/* No hover, so the layer is permanent — and a permanent overlay is the wrong
+   shape for it. Measured as an overlay on touch it covered 85% of the fourth
+   stripe and 35% of the third at 768-1180px (22% of the whole swatch), i.e. a
+   browsing surface for four colours that only ever showed two and a half of
+   them. Obscuring the artefact the actions act on is a different defect, not a
+   fix. So on touch it leaves the swatch and becomes a real row in the card:
+   nothing is covered, and the card grows by the height of the row instead. */
+@media(hover:none){
+  /* gap goes 4px -> 8px here for the same reason: the 4px was paid to keep the
+     row narrow enough to float on the swatch. Off the swatch that constraint is
+     gone, and 4px between adjacent 27-29px targets is thin for a finger. */
+  .pgal-actions{position:static;margin-top:8px;gap:8px}
+}
 .pgal-act{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.16);background:rgba(10,10,14,.72);color:#fff;font-family:var(--font);font-size:11px;font-weight:600;line-height:1;cursor:pointer;text-decoration:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pgal-act:hover{background:rgba(10,10,14,.9);border-color:rgba(255,255,255,.34)}
 .pgal-act:focus-visible{outline:2px solid #fff;outline-offset:2px}
@@ -4264,7 +4311,10 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
    surface — no action layer is rendered there, and this guards the case where a
    future caller passes palettes without onPick into a small grid. */
 .plb-galpopup-body .pgal-actions{display:none}
-@media (prefers-reduced-motion:reduce){.pgal-actions{transition:opacity var(--dur-1) linear,visibility var(--dur-1);transform:none}}
+/* The reduced-motion variant carried the same `visibility var(--dur-1)` and so
+   had the same discrete mid-transition flip — the frame dependency above was
+   present on BOTH paths, which is why it survived a reduced-motion re-test. */
+@media (prefers-reduced-motion:reduce){.pgal-actions{transition:opacity var(--dur-1) linear;transform:none}}
 .pgal-foot{display:flex;align-items:center;gap:8px;min-width:0;padding:0 2px}
 .pgal-like{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pgal-like:hover{color:var(--t0);border-color:var(--bh)}
