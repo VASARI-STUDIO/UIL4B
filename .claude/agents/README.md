@@ -65,6 +65,23 @@ general-purpose agent briefed by hand.
 single most expensive defect in the old tree, because it silently produced
 taste-based design work while looking like researched design work.
 
+### ⚠ Pending: grant `motionsites` to `research` and `design`
+
+The founder registered a **`motionsites`** MCP server on 2026-08-23 specifically
+to close the gap Mobbin cannot: **Mobbin is a stills library and is silent on
+motion, timing and easing.** Two deliverables have already had to label their
+motion recommendations `judgement` for exactly this reason — the workbench
+tab-switch transition and the search-bar typing animation.
+
+**This is not done yet.** The server's tool names must be read from a live
+connection and added to the `tools:` line of `research.md` and `design.md`. Do
+not guess them — guessing is how the Mobbin grant was missing in the first
+place. Once granted, the standing rule is:
+
+> **Mobbin for structure, layout, labelling and state. `motionsites` for motion,
+> timing and easing.** A motion recommendation that cites neither is
+> `judgement`, and must say so.
+
 | Agent | Writes files | Runs commands | Browser | Web | Mobbin |
 |---|---|---|---|---|---|
 | research | no | no | no | yes | **yes** |
