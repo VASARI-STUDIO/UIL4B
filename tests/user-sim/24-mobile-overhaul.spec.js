@@ -41,7 +41,7 @@ async function touch(browser, width, height, tablet = false) {
   })
 }
 
-async function openTouch(browser, width, height, path, tablet = false) {
+async function openTouch(browser, width, height, path, tablet = false, waitFor = null) {
   const ctx = await touch(browser, width, height, tablet)
   const page = await ctx.newPage()
   watch(page, `mobile overhaul ${width}x${height}`)
@@ -55,7 +55,14 @@ async function openTouch(browser, width, height, path, tablet = false) {
   }).catch(() => {}))
   await page.goto(path, { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('load').catch(() => {})
-  await page.waitForTimeout(600)
+  // Wait for the thing under test to exist, rather than sleeping and hoping.
+  // A fixed 600ms was enough against a `vite build` bundle and NOT enough
+  // against the `vite build --mode test` bundle the acceptance suite actually
+  // serves, so the login tests passed in isolation and failed in the suite with
+  // a null element. A settle pause is still useful for layout, but it must not
+  // be the thing that decides whether the element is there.
+  if (waitFor) await page.locator(waitFor).first().waitFor({ state: 'attached', timeout: 15000 })
+  await page.waitForTimeout(400)
   return { ctx, page }
 }
 
@@ -351,5 +358,92 @@ test('S12 · the touch action row does not cover the palette it acts on', async 
     })
     await ctx.close()
     expect(covered, `${w}x${h}: ${covered.join(', ')}`).toEqual([])
+  }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// S7 · the login dialog on a short viewport
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYOUT ONLY. Nothing here touches the auth flow, the sign-in methods or any
+// file listed in docs/reference/human-validation-zones.md — the Google button,
+// the divider and both links are all still rendered, because winning back
+// vertical space by removing a sign-in method would be an auth change wearing a
+// layout change's clothes.
+//
+// The dialog genuinely cannot fit its content at 390px of viewport height, so
+// it has to scroll; the defect was that nothing said so, and the primary submit
+// was sliced across the scroll boundary, which reads as a rendering fault.
+
+async function loginGeometry(page) {
+  return page.evaluate(() => {
+    const m = document.querySelector('.ui-modal')
+    const mr = m.getBoundingClientRect()
+    const visibleHeight = (el) => {
+      const r = el.getBoundingClientRect()
+      return Math.max(0, Math.min(r.bottom, mr.bottom) - Math.max(r.top, mr.top))
+    }
+    const submit = m.querySelector('.auth-submit')
+    const signup = m.querySelector('.auth-links button')
+    const controls = [...m.querySelectorAll('button,a,input')].filter((e) => {
+      const r = e.getBoundingClientRect()
+      return r.width > 0 && r.height > 0
+    })
+    return {
+      hiddenPx: Math.max(0, m.scrollHeight - m.clientHeight),
+      submitH: Math.round(submit.getBoundingClientRect().height),
+      submitVisibleH: Math.round(visibleHeight(submit)),
+      signupVisibleH: Math.round(visibleHeight(signup)),
+      // Controls with NOTHING showing at the initial scroll position. A control
+      // peeking at the boundary is an affordance; one with zero pixels is not
+      // there at all.
+      entirelyBelowFold: controls.filter((e) => visibleHeight(e) === 0)
+        .map((e) => (e.innerText || e.getAttribute('aria-label') || e.type || e.tagName).trim().slice(0, 30).replace(/\s+/g, ' ')),
+      // The cue is the two `local` layers masking the two `scroll` layers.
+      // Rendered proof that it appears only when there IS more is in the PR.
+      hasScrollCue: /local/.test(getComputedStyle(m).backgroundAttachment),
+    }
+  })
+}
+
+// maxBuried is measured, not chosen. At 844x390 the dialog holds 451px of
+// content in 372px, so ONE control (Forgot password?) still starts below the
+// fold — the sign-up link above it peeks, which is the affordance that says so.
+// Before the fix that number was 2: sign-up was buried with it. At 932x430
+// nothing should be buried at all; before the fix Forgot password? was.
+for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
+  test(`S7 · Login at ${w}x${h} shows a whole Sign In button and does not bury sign-up`, async ({ browser }) => {
+    const { ctx, page } = await openTouch(browser, w, h, '/login', w >= 700, '.ui-modal')
+    const g = await loginGeometry(page)
+    await ctx.close()
+
+    // The audit's headline: "the word Sign In is visible, the bottom half of its
+    // background is not". Sliced, not merely small — so compare against its own
+    // height rather than a magic number.
+    expect(g.submitVisibleH, `the submit button is sliced by the dialog edge: ${g.submitVisibleH}px of ${g.submitH}px showing`)
+      .toBe(g.submitH)
+
+    // "For a signed-out visitor on a landscape phone, the account-creation link
+    // is invisible." It does not have to be whole — peeking at the boundary IS
+    // the affordance — but zero is a conversion path that does not exist.
+    expect(g.signupVisibleH, 'the sign-up link is entirely below the fold with nothing to suggest it exists')
+      .toBeGreaterThan(0)
+
+    expect(g.entirelyBelowFold.length,
+      `${g.entirelyBelowFold.length} control(s) start with zero pixels showing: ${g.entirelyBelowFold.join(' | ')}`)
+      .toBeLessThanOrEqual(maxBuried)
+
+    expect(g.hasScrollCue, 'the dialog scrolls with no scroll cue').toBe(true)
+  })
+}
+
+test('S7 · portrait viewports still need no scrolling at all', async ({ browser }) => {
+  // The short-height rules must not leak upward. These four were measured clean
+  // by the audit and are the regression guard for the max-height:460px block.
+  for (const [w, h] of [[360, 560], [390, 640], [390, 844], [768, 1024]]) {
+    const { ctx, page } = await openTouch(browser, w, h, '/login', w >= 700, '.ui-modal')
+    const g = await loginGeometry(page)
+    await ctx.close()
+    expect(g.hiddenPx, `${w}x${h}: the login dialog scrolls by ${g.hiddenPx}px and should not`).toBe(0)
+    expect(g.submitVisibleH).toBe(g.submitH)
   }
 })
