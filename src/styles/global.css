@@ -4275,16 +4275,32 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
       accident: tapping a stripe gives the card focus and :focus-within matches,
       but that same tap fires the stripe's own copy action (S12).
 
-   So: opacity + pointer-events, both continuous, and the buttons STAY in the tab
-   order — which is the honest trade. They are reachable by keyboard at any
-   speed, and focusing one reveals the layer through :focus-within, so the focus
-   ring is on something the user can see. That is the opposite of the collapsed
-   accordions in S9, where the focused link has no visible box at all. */
+   The fix is to keep `visibility` as a plain state property and NEVER put it in
+   a transition. It then flips on the first style recalc after :focus-within or
+   :hover matches, with no 50% point to be outrun — measured 11 of 11 reached at
+   0ms, 16ms and 250ms, on both pointer and touch.
+
+   Dropping `visibility` altogether for opacity + pointer-events was tried first
+   and is WRONG here, which is worth recording because it looks tidier.
+   `visibility:hidden` also removes a node from the ACCESSIBILITY TREE; opacity
+   does not. On a 70-card grid that swap put 350 action links into the a11y tree
+   and the tab order permanently — measured as 70 spurious "Open ..." links
+   exposed at rest, which broke an existing acceptance test by making the
+   accessible name ambiguous, and which would make a screen reader announce five
+   extra actions on every card while browsing. Hidden-until-engaged is the right
+   behaviour; the bug was only ever the transition, so only the transition
+   changed.
+
+   The one thing given up: on hover-out `visibility` snaps rather than waiting
+   for the opacity fade, so the layer vanishes instead of fading. The idiom that
+   buys the fade back is `visibility 0s linear var(--dur-1)` (see .ggn-handle-val)
+   — deliberately not used, because a hide that nobody watches is not worth
+   putting a discrete property back into a transition list for. */
 .pgal-shot{position:relative;display:flex;flex-direction:column;min-width:0}
 .pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance)}
 @media(hover:hover){
-  .pgal-actions{opacity:0;pointer-events:none;transform:translateY(4px)}
-  .pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;pointer-events:auto;transform:none}
+  .pgal-actions{opacity:0;visibility:hidden;transform:translateY(4px)}
+  .pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;visibility:visible;transform:none}
 }
 /* No hover, so the layer is permanent — and a permanent overlay is the wrong
    shape for it. Measured as an overlay on touch it covered 85% of the fourth
