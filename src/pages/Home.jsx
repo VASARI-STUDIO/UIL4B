@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
 import HomeCommandBar from '../components/HomeCommandBar'
+import HomeSpecimen from '../components/HomeSpecimen'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import HomeGallery from '../components/HomeGallery'
@@ -263,6 +264,15 @@ export default function Home() {
             </p>
 
             <HomeCommandBar />
+
+            {/* The product's own output, above the fold, between the chips and
+                the CTAs. It does NOT consume --hw-frame: that token is
+                420–640px and scoped to the sticky workbench, and an object that
+                tall here would push the workbench into the first screen and
+                fail the fold contract. It gets --hero-specimen instead — the
+                same idea at its own value: one declared height that content is
+                fitted into, never a height that content decides. */}
+            <HomeSpecimen />
 
             <div className="home-hero-cta">
               {/* ?signup=1 so the popup opens on the sign-up form. A real

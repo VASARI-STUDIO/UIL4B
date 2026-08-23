@@ -5417,9 +5417,9 @@ html.lenis,html.lenis body{height:auto}
    over the OS query in BOTH directions, so a visitor who turned motion back on
    inside the app still gets the entrance. */
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+  html:not([data-reduced-motion="false"]) :is(.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-specimen,.hspec-cell,.hspec-cap,.home-hero-cta>*,.home-hero-hint){animation:none}
 }
-html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-specimen,.hspec-cell,.hspec-cap,.home-hero-cta>*,.home-hero-hint){animation:none}
 /* V2 body: 54ch measure, --mute, line-height 1.65. */
 .home-hero-sub{font-size:var(--fs-lede);font-weight:400;color:var(--t2);line-height:1.6;max-width:54ch;margin:var(--s-5) auto 0;text-wrap:pretty}
 /* C5 rhythm: the mark now occupies more of its line box and the headline's
@@ -5469,6 +5469,120 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.ho
    command bar's placeholder, and the specimen band carries a measurement that
    is genuinely ours. */
 
+/* ── The specimen band ───────────────────────────────────────────────────────
+   One real palette from the shipped library, rendered as three facts: the
+   artefact, the contrast we measured on it, and the CSS it exports as.
+
+   IT IS A RULE ACROSS THE PAGE, NOT A CARD. Ruled top and bottom, no side
+   borders, no fill, no shadow. Deliberately NOT a --surf card: the page already
+   has seven of those below the fold, and an eighth in the hero would be the
+   "every idea in an equally weighted rounded card" tell this redesign exists to
+   remove.
+
+   ── The height is a TOKEN, and that is the whole CLS story ─────────────────
+   `height:var(--hero-specimen)` — never `auto`, never `min-height`. The
+   homepage CLS baseline is mean 0.0000 on a 4x-throttled 1440x900 profile over
+   ten cold loads, and every variable-length string in here is reserved rather
+   than content-sized:
+
+     · the band       a fixed token per breakpoint (below);
+     · swatches       four 1fr cells in a fixed-height row, so a colour change
+                      is a PAINT, not a layout;
+     · hexes          always 7 characters, tabular-nums so digit width is fixed;
+     · ratio          min-width 7ch + tabular-nums, always toFixed(2) — a bare
+                      "21:1" is narrower than "12.78:1" and would resize the cell;
+     · grade pill     min-width 9ch, centred — covers all four grade() returns
+                      including "AA Large", the widest;
+     · CSS + caption  one line each, nowrap + ellipsis, fixed line-height.
+
+   The 144/96/192px values are whole multiples of the 48px ground module (3x, 2x,
+   4x). That is the actual fix for the decorative grid: it stops being wallpaper
+   not because it gained ornament but because something is now built on it, in
+   its own units.
+
+   ── Two things deliberately NOT done ───────────────────────────────────────
+   No `flex:1 -> 1.8` swatch-grow on hover, even though design-language-v2.md
+   names it as a signature worth preserving. It is a LAYOUT-changing hover inside
+   a fixed-height band above the fold — precisely what the CLS baseline exists to
+   prevent — and it is a hover-only affordance on a non-interactive element, so
+   it is unreachable by keyboard and by touch anyway. The signature stays in the
+   palette tools where it belongs. This is a documented exception, not an
+   oversight.
+
+   No corner ticks or margin labels on the grid. The three mono column labels
+   already ARE that device, and doing it twice in one viewport spends the mono
+   texture design-language-v2.md calls load-bearing. */
+.home-hero-specimen{
+  --hero-specimen:144px;
+  display:grid;
+  grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1.15fr) auto;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  /* The control column spans all three rows. It carries a 44px pill above a
+     link, which is 72px of constant-height furniture — more than the middle
+     content row is given at the 96px variant, so confining it to that row made
+     it overflow into the caption. Spanning, it is centred against the whole
+     band and needs no per-breakpoint height of its own. */
+  grid-template-areas:
+    "la  lb  lc  act"
+    "ca  cb  cc  act"
+    "cap cap cap act";
+  height:var(--hero-specimen);
+  margin-top:var(--s-5);
+  padding-block:var(--s-3);
+  border-block:1px solid var(--border);
+  column-gap:var(--s-5);
+  text-align:left;
+}
+/* The three mono column labels. Same device as Firecrawl's corner ticks, and
+   the reason the band reads as MEASURED rather than styled. Real text, never
+   aria-hidden — they are the band's structure, and a screen-reader user needs
+   them to make sense of the values that follow. */
+.hspec-lab{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);white-space:nowrap;overflow:hidden}
+.hspec-lab-a{grid-area:la}
+.hspec-lab-b{grid-area:lb}
+.hspec-lab-c{grid-area:lc}
+.hspec-cell{display:flex;flex-direction:column;justify-content:center;gap:var(--s-2);min-width:0;overflow:hidden}
+.hspec-cell-a{grid-area:ca}
+.hspec-cell-b{grid-area:cb}
+.hspec-cell-c{grid-area:cc}
+
+.hspec-swatches{display:flex;gap:var(--s-1);height:44px}
+.hspec-swatch{flex:1 1 0;min-width:0;border:1px solid var(--border);border-radius:var(--radius-xs)}
+/* The hexes sit BENEATH the swatches, on the page ground — never inside them.
+   Text painted on a generated colour would have to pick its own ink at runtime,
+   and no luminance threshold guarantees 4.5:1 at this size. */
+.hspec-hexes{display:flex;gap:var(--s-2);min-width:0;overflow:hidden}
+.hspec-hex{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.hspec-pair{display:flex;align-items:center;gap:var(--s-2);min-width:0;flex-wrap:nowrap;overflow:hidden}
+.hspec-on{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+.hspec-ratio{font-family:var(--mono);font-size:var(--fs-body-s);font-weight:700;color:var(--t0);font-variant-numeric:tabular-nums;min-width:7ch;white-space:nowrap}
+.hspec-grade{flex:0 0 auto;min-width:9ch;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-2);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong);text-align:center;white-space:nowrap}
+.hspec-count{font-size:var(--fs-caption);color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.hspec-code{display:block;font-family:var(--mono);font-size:var(--fs-micro);line-height:1.5;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.hspec-act{grid-area:act;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:var(--s-2)}
+/* .hstep-cta ships a --s-5 top margin for the sticky rail it was written for. */
+.hspec-open{margin-top:0;align-self:auto}
+
+.hspec-cap{grid-area:cap;align-self:end;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* H2 — the band arrives after the CTAs so the hero still resolves top-to-bottom.
+   H3 — the value cells fade as they are replaced. The animation replays because
+   React remounts each cell on the entry key, so no class-toggling is needed. */
+/* Both rows are switched off in BOTH reduced-motion directions by the hero's
+   existing :is() lists further up this file, which `.home-hero-specimen`,
+   `.hspec-cell` and `.hspec-cap` have been added to. The band's fixed HEIGHT is
+   layout, not motion, and stays in force under both — the same reasoning #262
+   used to keep --hw-frame under reduced motion. `Next palette` still changes
+   every value, instantly: the fade is removed, the update never is. The press
+   feedback is .ui-pill:active's own scale(.98), which the global reduced-motion
+   clamp at the top of this file already handles. */
+@keyframes hspec-value-in{from{opacity:0}to{opacity:1}}
+.home-hero-specimen{animation:home-hero-rise .6s var(--ease-entrance) .7s both}
+.hspec-cell,.hspec-cap{animation:hspec-value-in var(--dur-2) var(--ease-standard) both}
+
 /* The single --hi element on this viewport. It is a marker pen, and the budget
    is one per screen — see design-language-v2.md. `box-decoration-break:clone`
    keeps both halves of a wrapped mark rounded and padded. */
@@ -5490,6 +5604,20 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.ho
   .hcmd{margin-top:var(--s-4)}
   .hcmd-chips{margin-top:var(--s-3)}
   .home-hero-cta{margin-top:var(--s-5)}
+  /* 96px = 2 x the 48px ground module. THIS IS WHAT MAKES THE HERO FIT.
+     A single 144px band at every height puts 1280x800 at 797px against an
+     800px fold — three pixels is not a margin, it is a coin toss. At 96px the
+     column totals 749px, 51px of slack, with the primary CTA's bottom edge at
+     658.8px. The two-step token is not a nicety. Declared inside the EXISTING
+     short-laptop block rather than a new breakpoint. */
+  /* padding --s-3 -> --s-2 with the height. MEASURED: at 96px with --s-3 the
+     content row is left 45.6px, and the palette cell needs 48 (30px swatches +
+     4 gap + the hex row) while the contrast cell needs the same for its pair
+     line and count — so both clipped their last line against the caption.
+     --s-2 leaves 53.6px and both fit with room. */
+  .home-hero-specimen{--hero-specimen:96px;padding-block:var(--s-2)}
+  .hspec-swatches{height:30px}
+  .hspec-cell{gap:var(--s-1)}
 }
 .hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .hcmd-bar:focus-within{border-color:var(--accent)}
@@ -5835,8 +5963,79 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.ho
   .hcmd-row-desc{white-space:normal}
   .hcomm-head{align-items:flex-start}
 }
+/* Tablet — two columns, two content rows. PALETTE and CONTRAST on the first,
+   CSS and the control on the second, caption spanning. Declared AFTER the
+   max-height:900px block on purpose: a short tablet matches both, and this
+   arrangement is the one that has to win.
+   ⚠️ This band is the weakest row in the spec's responsive table — no tablet
+   captures existed in either research pass, and PR #263 is reworking the
+   961–1343px range. Treat it as a hypothesis and re-verify against #263. */
+@media(max-width:980px) and (min-width:641px){
+  .home-hero-specimen{
+    --hero-specimen:240px;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows:auto auto auto minmax(0,1fr) auto;
+    grid-template-areas:
+      "la  lb"
+      "ca  cb"
+      "lc  act"
+      "cc  act"
+      "cap act";
+    row-gap:var(--s-3);
+  }
+}
 @media(max-width:640px){
   .htools-grid,.hcomm-grid{grid-template-columns:minmax(0,1fr)}
+  /* Phone — PALETTE full width with the measurement on one line beneath its
+     hexes, then CSS with the control beside it. NOTHING IS HIDDEN: every fact
+     survives and only the arrangement changes. The CSS column is the one that
+     could reasonably have been dropped, and it is kept precisely because the
+     export section is a very long way down on a phone. */
+  .home-hero-specimen{
+    /* 240px = 5 x the 48px module, NOT the 192px the spec's responsive table
+       proposed and NOT its 144px. That table is marked `inferred` and it is
+       wrong here: MEASURED, the phone composition it specifies needs 230px of
+       content — label 13 + swatches and hexes 47 + the measurement line 25 +
+       the CSS block beside a 92px control column + caption 17, plus gaps and
+       padding. At 192px the hex row clipped mid-glyph and the CSS lines
+       collapsed to nothing behind their own label. Nothing here is dropped to
+       make a smaller number fit: every fact survives, which is the rule. */
+    --hero-specimen:240px;
+    /* Labels move into their own narrow left column here. Giving the control
+       an `auto` column beside the CSS instead cost ~200px of a 390px phone and
+       squeezed the code to "--midnight-t…", which is not a glimpse of anything.
+       On its own row the control costs 44px of height and the code gets the
+       full measure. */
+    grid-template-columns:auto minmax(0,1fr);
+    grid-template-rows:auto auto auto minmax(0,1fr) auto auto;
+    grid-template-areas:
+      "la  la"
+      "ca  ca"
+      "lb  cb"
+      "lc  cc"
+      "act act"
+      "cap cap";
+    row-gap:var(--s-1);
+    column-gap:var(--s-3);
+    padding-block:var(--s-2);
+    /* --s-3 rather than --s-5: the phone rhythm is tighter through the whole
+       hero, and every pixel above the CTA is worth having at this height. */
+    margin-top:var(--s-3);
+  }
+  .hspec-lab-b,.hspec-lab-c{align-self:center}
+  /* The control becomes a ROW on its own line: 44px of height instead of the
+     92px a stacked column needs, and it leaves the CSS its full measure. Both
+     targets clear WCAG 2.5.8 comfortably — the pill is 44px and the link is
+     lifted to 40px by the ≤480px rule further down. */
+  .hspec-act{flex-direction:row;align-items:center;justify-content:space-between;gap:var(--s-3)}
+  /* The measurement collapses to ONE row here. The two hexes naming the best
+     pair are dropped from this line and nothing is lost by it — they are exact
+     duplicates of two of the four hexes printed directly above, in the same
+     cell, so neither a sighted reader nor a screen reader loses a fact. The
+     measurement itself — ratio, grade, and the pair count — survives whole,
+     because the measurement is the reason the band exists. */
+  .hspec-cell-b{flex-direction:row;align-items:center;gap:var(--s-2);overflow:hidden}
+  .hspec-pair .hspec-hex,.hspec-on{display:none}
   .hexp-panel{height:clamp(240px,38vh,320px)}
   .hexp-line{padding-left:44px}
   .hexp-line::before{width:32px}
