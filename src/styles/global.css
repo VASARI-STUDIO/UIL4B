@@ -5564,7 +5564,13 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.ho
 
 .hspec-act{grid-area:act;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:var(--s-2)}
 /* .hstep-cta ships a --s-5 top margin for the sticky rail it was written for. */
-.hspec-open{margin-top:0;align-self:auto}
+/* Scoped to the band on purpose, NOT a bare `.hspec-open`. `.hstep-cta` is
+   declared further down this file and carries a --s-5 top margin for the
+   sticky rail it was written for; at equal specificity the later rule wins,
+   so a bare override lost silently and the link sat 24px below the pill.
+   MEASURED on a phone, where it pushed the control row from 44px to 64px
+   and clipped it against the fixed band height. */
+.home-hero-specimen .hspec-open{margin-top:0;align-self:auto}
 
 .hspec-cap{grid-area:cap;align-self:end;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
@@ -5610,13 +5616,17 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.ho
      column totals 749px, 51px of slack, with the primary CTA's bottom edge at
      658.8px. The two-step token is not a nicety. Declared inside the EXISTING
      short-laptop block rather than a new breakpoint. */
-  /* padding --s-3 -> --s-2 with the height. MEASURED: at 96px with --s-3 the
-     content row is left 45.6px, and the palette cell needs 48 (30px swatches +
-     4 gap + the hex row) while the contrast cell needs the same for its pair
-     line and count — so both clipped their last line against the caption.
-     --s-2 leaves 53.6px and both fit with room. */
-  .home-hero-specimen{--hero-specimen:96px;padding-block:var(--s-2)}
-  .hspec-swatches{height:30px}
+  /* 96px is a tight budget and every value here was MEASURED against it, not
+     chosen. The band gives the label row 18.1px and the caption row 18.1px, so
+     at padding --s-1 the middle content row is left 51.8px. Into that:
+       palette   26 swatches + 4 gap + 18.1 hex row = 48.1
+       contrast  24.5 pair line (the grade pill sets it) + 4 + 19.5 count = 48
+       css       two 16.5px code lines + 4 = 37
+     At --s-3 padding and 30px swatches the row was 41.7px and the palette and
+     contrast cells clipped ~10px each — invisible in a screenshot until you
+     look for it, which is why this is measured rather than eyeballed. */
+  .home-hero-specimen{--hero-specimen:96px;padding-block:var(--s-1)}
+  .hspec-swatches{height:26px}
   .hspec-cell{gap:var(--s-1)}
 }
 .hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
@@ -6007,7 +6017,12 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.ho
        On its own row the control costs 44px of height and the code gets the
        full measure. */
     grid-template-columns:auto minmax(0,1fr);
-    grid-template-rows:auto auto auto minmax(0,1fr) auto auto;
+    /* The CSS row is `auto` and the CONTROL row is the flexible one. The other
+       way round, the 1fr row was handed 23.4px for two 16.5px code lines and
+       clipped them — MEASURED. Nothing that has a fixed content height should
+       be the row that absorbs the slack; the control row can, because its two
+       labels never change and it only ever needs its 44px pill. */
+    grid-template-rows:auto auto auto auto minmax(0,1fr) auto;
     grid-template-areas:
       "la  la"
       "ca  ca"

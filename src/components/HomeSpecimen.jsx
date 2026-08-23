@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { HOME_CURATED } from '../data/homeGallery'
-import { contrastRatio, hexToRgb, luminance } from '../utils/colors'
-import { grade } from '../utils/styleGuideExport'
+import { cssGlimpse, measurePalette } from '../data/heroSpecimen'
 
 // ── The hero specimen band ───────────────────────────────────────────────────
 //
@@ -13,79 +12,37 @@ import { grade } from '../utils/styleGuideExport'
 // generator produces, which is why the founder was told the site "instantly
 // looks like AI built it".
 //
-// So the decoration is deleted and the product's own output stands in its place:
-// ONE real entry from the shipped palette library, rendered as three facts —
-// the artefact, the measurement we took of it, and the file it exports as.
+// So the decoration is deleted and the product's own output stands in its
+// place: ONE real entry from the shipped palette library, rendered as three
+// facts — the artefact, the measurement we took of it, and the file it exports
+// as.
 //
-// WHY THIS IS UNCOPYABLE, which is the whole point. Plenty of sites can put a
-// swatch row in a hero. What no competitor can copy without building the product
-// is the middle column: the contrast figures come out of the same functions the
-// style-guide export runs, so the hero can never disagree with a file a customer
-// downloads. Showing output is table stakes; showing the measurement you took of
-// your own output is the thing only the real tool can do.
+// WHY THIS IS UNCOPYABLE, which is the point. Plenty of sites can put a swatch
+// row in a hero. What no competitor can copy without building the product is
+// the middle column: the contrast figures come out of the same functions the
+// style-guide export runs, so the hero can never disagree with a file a
+// customer downloads. Showing output is table stakes; showing the measurement
+// you took of your own output is the thing only the real tool can do.
 //
-// EVERY VALUE COMES FROM A MODULE THAT ALREADY SHIPS. No new data file, no route
-// literal, no Math.random():
+// EVERY VALUE COMES FROM A MODULE THAT ALREADY SHIPS. No new data file, no
+// route literal, no Math.random():
 //
 //   entries   HOME_CURATED (data/homeGallery.js) — the same 64 the Discover
 //             section renders three screens down.
-//   artefact  item.colors, in paletteGallery.js's documented dominant→accent order.
-//   CSS       item.css, from paletteCss() — the same BYTES the gallery's Copy CSS
-//             hands over, so a visitor who copies from both gets identical text.
-//   hand-off  item.to, from paletteBuilderUrl(). NEVER a typed route: the Create
-//             tools moved to /create/<pagetitle> and tests/unit/redirects.test.js
-//             fails the build on a retired path anywhere in src/.
-//   ratio     contrastRatio() (utils/colors.js).
-//   grade     grade() (utils/styleGuideExport.js) — reusing the exporter's own
-//             thresholds rather than a local table is what makes the sentence
-//             above true.
+//   artefact  item.colors, in paletteGallery.js's documented dominant→accent
+//             order.
+//   CSS       item.css, from paletteCss() — the same BYTES the gallery's Copy
+//             CSS hands over, so a visitor who copies from both gets identical
+//             text.
+//   hand-off  item.to, from paletteBuilderUrl(). NEVER a typed route: the
+//             Create tools moved to /create/<pagetitle> and
+//             tests/unit/redirects.test.js fails the build on a retired path
+//             anywhere in src/.
+//   measure   measurePalette() (data/heroSpecimen.js), which reads
+//             contrastRatio() from utils/colors.js and grade() from
+//             utils/styleGuideExport.js.
 
 const ENTRIES = HOME_CURATED
-
-// The four colours make six unordered pairs. Both facts below come from that
-// one list, computed at render from item.colors alone.
-function measure(colors) {
-  const pairs = []
-  for (let i = 0; i < colors.length; i += 1) {
-    for (let j = i + 1; j < colors.length; j += 1) {
-      pairs.push({ a: colors[i], b: colors[j], ratio: contrastRatio(colors[i], colors[j]) })
-    }
-  }
-  const best = pairs.reduce((top, p) => (p.ratio > top.ratio ? p : top), pairs[0])
-  const lum = (hex) => {
-    const [r, g, b] = hexToRgb(hex)
-    return luminance(r, g, b)
-  }
-  // Named ink-on-ground: the darker of the best pair is the ink, the lighter is
-  // the ground. Ordering by luminance rather than by array position so the line
-  // reads the same way round on every one of the 64 entries.
-  const [ink, ground] = lum(best.a) <= lum(best.b) ? [best.a, best.b] : [best.b, best.a]
-  return {
-    ink: ink.toUpperCase(),
-    ground: ground.toUpperCase(),
-    // Always toFixed(2). A bare "21:1" would be narrower than "12.78:1" and the
-    // cell would resize on it — see the CLS note below.
-    ratio: best.ratio.toFixed(2),
-    grade: grade(best.ratio),
-    // THE LOAD-BEARING FACT. The best-pair ratio alone reads AAA on 42 of the 64
-    // entries, which looks printed rather than computed. This count takes five
-    // distinct values across the library (0,1,2,3,4 — measured), and that
-    // variation is the only thing that proves to a sceptical designer that a
-    // function actually ran. tests/unit/hero-specimen.test.js fails if it ever
-    // collapses to fewer than three.
-    clear: pairs.filter((p) => p.ratio >= 4.5).length,
-    total: pairs.length,
-  }
-}
-
-// The first two lines of the export after its comment header — the selector and
-// the first custom property. A GLIMPSE, deliberately: no line numbers, no
-// traffic lights, no copy button. The export section two screens down owns the
-// full panel treatment, and duplicating its chrome here would make the two
-// compete instead of one leading to the other.
-function cssGlimpse(css) {
-  return css.split('\n').slice(1, 3)
-}
 
 export default function HomeSpecimen() {
   // Starts at 0. NOT random, not date-seeded, not localStorage-seeded — the
@@ -99,14 +56,15 @@ export default function HomeSpecimen() {
   const [announcement, setAnnouncement] = useState('')
 
   const item = ENTRIES[index]
-  const m = useMemo(() => measure(item.colors), [item])
+  const m = useMemo(() => measurePalette(item.colors), [item])
   const glimpse = useMemo(() => cssGlimpse(item.css), [item])
 
   const next = () => {
     const at = (index + 1) % ENTRIES.length
     const entry = ENTRIES[at]
     setIndex(at)
-    setAnnouncement(`${entry.name} — ${measure(entry.colors).clear} of 6 pairs clear AA`)
+    const facts = measurePalette(entry.colors)
+    setAnnouncement(`${entry.name} — ${facts.clear} of ${facts.total} pairs clear AA`)
   }
 
   return (
