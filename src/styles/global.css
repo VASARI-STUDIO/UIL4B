@@ -5570,7 +5570,12 @@ html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.ho
    so a bare override lost silently and the link sat 24px below the pill.
    MEASURED on a phone, where it pushed the control row from 44px to 64px
    and clipped it against the fixed band height. */
-.home-hero-specimen .hspec-open{margin-top:0;align-self:auto}
+/* min-height 32px is a WCAG 2.5.8 fix, not styling. MEASURED at 1440x900:
+   `.hstep-cta` computes to 23.14px here (its 11px mono line box plus 4px of
+   padding and a 1px rule), which is under the 24x24 floor. The spec's
+   accessibility table asserted 32px for this control; it was not 32px until
+   this line. Below 480px the existing target-size rule lifts it to 40px. */
+.home-hero-specimen .hspec-open{margin-top:0;align-self:auto;min-height:32px}
 
 .hspec-cap{grid-area:cap;align-self:end;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 

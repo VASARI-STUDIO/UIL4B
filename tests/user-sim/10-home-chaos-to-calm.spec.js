@@ -1179,6 +1179,233 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect((await scrollCalls(page)).filter((c) => c.top > 0), 'a manual upload scrolled').toEqual([])
   })
 
+  /* ── 17 · the hero specimen band ───────────────────────────────────────────
+     The hero's answer to "the first screen contains no product artefact". The
+     unit suite proves the numbers are computed; these prove the RENDERED
+     guarantees a data test cannot see — that the band never resizes, that both
+     of its controls are reachable without a pointer, and that the hand-off
+     carries the artefact into the real tool. */
+
+  test('17 · the band shows a real artefact, and stepping it moves nothing', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const band = page.locator('.home-hero-specimen')
+    await expect(band).toBeVisible()
+
+    // The three column labels are the device that makes the band read as
+    // measured rather than styled, and they are real text — a screen-reader
+    // user needs them to make sense of the values that follow.
+    await expect(band.locator('.hspec-lab')).toHaveCount(3)
+    await expect(band.locator('.hspec-swatch')).toHaveCount(4)
+
+    const readState = () => page.evaluate(() => {
+      const b = document.querySelector('.home-hero-specimen')
+      const cta = document.querySelector('.home-hero-cta').getBoundingClientRect()
+      return {
+        height: b.getBoundingClientRect().height,
+        ctaTop: cta.top,
+        hexes: [...b.querySelectorAll('.hspec-cell-a .hspec-hex')].map((e) => e.textContent),
+        ratio: b.querySelector('.hspec-ratio').textContent,
+        count: b.querySelector('.hspec-count').textContent,
+        code: [...b.querySelectorAll('.hspec-code')].map((e) => e.textContent),
+        caption: b.querySelector('.hspec-cap').textContent,
+        href: b.querySelector('.hspec-open').getAttribute('href'),
+      }
+    })
+
+    const first = await readState()
+
+    // Four uppercase hexes, as text, on the page ground — never painted on a
+    // generated swatch, where no luminance threshold guarantees 4.5:1 at 11px.
+    expect(first.hexes).toHaveLength(4)
+    for (const hex of first.hexes) expect(hex).toMatch(/^#[0-9A-F]{6}$/)
+
+    // The measurement. The ratio always carries two decimals (a bare "21:1" is
+    // narrower and would resize the cell) and the count is the fact that varies.
+    expect(first.ratio).toMatch(/^\d+\.\d{2}:1$/)
+    expect(first.count).toMatch(/^\d of 6 pairs clear AA$/)
+    // The grade is one of grade()'s four returns — never invented here.
+    await expect(band.locator('.hspec-grade')).toHaveText(/^(AAA|AA|AA Large|Fail)$/)
+
+    // The CSS is the exporter's own opening lines, not a hand-typed sample.
+    expect(first.code[0].trim()).toBe(':root {')
+    expect(first.code[1]).toMatch(/^\s*--[a-z0-9-]+: #[0-9A-F]{6};$/)
+    expect(first.caption).toContain('· sRGB · from the UIL4B palette library')
+
+    // THE CLS GUARANTEE, asserted as behaviour rather than as a number: step
+    // through entries and neither the band's height nor the position of the
+    // thing below it may move by a single pixel. The homepage CLS baseline is
+    // mean 0.0000 and this is the mechanism that keeps it there.
+    const seen = new Set([first.count])
+    for (let i = 0; i < 8; i += 1) {
+      await band.getByRole('button', { name: 'Next palette' }).click()
+      const next = await readState()
+      expect(next.height, 'the band must never resize').toBe(first.height)
+      expect(next.ctaTop, 'nothing below the band may move').toBe(first.ctaTop)
+      expect(next.hexes).toHaveLength(4)
+      expect(next.count).toMatch(/^\d of 6 pairs clear AA$/)
+      seen.add(next.count)
+    }
+
+    // …and the values genuinely changed. A band that showed the same palette
+    // forever would pass every assertion above.
+    const last = await readState()
+    expect(last.hexes, 'stepping must change the artefact').not.toEqual(first.hexes)
+    expect(last.href, 'the hand-off must follow the artefact').not.toBe(first.href)
+    // The count varies across the library — the proof that a function ran
+    // rather than a value being printed. (The unit suite pins this across all
+    // 64 entries; nine consecutive entries is what a visitor could see.)
+    expect(seen.size, `the pair count never changed across nine entries: ${[...seen]}`)
+      .toBeGreaterThan(1)
+  })
+
+  test('17a · the hand-off carries the artefact into the real Palette Builder', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const open = page.locator('.home-hero-specimen .hspec-open')
+    // A real <Link> with a real href, so middle-click and open-in-new-tab work —
+    // the same rule the command bar's result rows follow. The path is DERIVED
+    // from paletteBuilderUrl(), never typed, which is why it survived the Create
+    // route migration untouched.
+    const href = await open.getAttribute('href')
+    expect(href).toMatch(/^\/create\/palette\?c=[0-9A-Fa-f]{6}(,[0-9A-Fa-f]{6}){3}$/)
+
+    const hexes = await page.locator('.hspec-cell-a .hspec-hex').allTextContents()
+    for (const hex of hexes) {
+      expect(href.toUpperCase(), 'every colour on screen travels in the URL')
+        .toContain(hex.replace('#', ''))
+    }
+
+    await open.click()
+    await page.waitForURL('**/create/palette**')
+    await expect(page.locator('h1').first()).toBeVisible()
+  })
+
+  test('17b · both band controls are reachable and visible from the keyboard', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    // Tab order must match reading order with no tabindex anywhere: the band
+    // sits between the chips and the CTAs, visually and in the DOM.
+    await page.locator('.hcmd-chip').last().focus()
+    await page.keyboard.press('Tab')
+    await expect(page.locator('.hspec-next')).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.locator('.hspec-open')).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.locator('.home-hero-cta .ui-pill-accent')).toBeFocused()
+
+    // Operable, not merely reachable.
+    const before = await page.locator('.hspec-cap').textContent()
+    await page.locator('.hspec-next').focus()
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.hspec-cap')).not.toHaveText(before)
+
+    // Both targets clear WCAG 2.5.8's 24px floor. Asserted rather than assumed
+    // because the link's height comes from a rule written for a different
+    // section and only lifts to 40px below 480px.
+    for (const sel of ['.hspec-next', '.hspec-open']) {
+      const box = await page.locator(sel).boundingBox()
+      expect(box.height, `${sel} is ${Math.round(box.height)}px tall`).toBeGreaterThanOrEqual(24)
+      expect(box.width, `${sel} is ${Math.round(box.width)}px wide`).toBeGreaterThanOrEqual(24)
+    }
+
+    // `visibility` must never appear in a transition on either control — it is
+    // discrete, flips at 50% of the duration, and a keyboard user outruns it.
+    // Measured on the Discover cards: 0 of 5 controls were reachable.
+    for (const sel of ['.hspec-next', '.hspec-open']) {
+      const props = await page.locator(sel).evaluate((el) => getComputedStyle(el).transitionProperty)
+      expect(props, `${sel} transitions visibility`).not.toContain('visibility')
+    }
+  })
+
+  test('17c · under reduced motion the band is at rest, full height, and still updates', async ({ page }) => {
+    // Both mechanisms are covered: this one is the explicit in-app attribute,
+    // which must beat the OS query in both directions. The OS-query path is
+    // asserted in 17d by clearing the attribute the boot script stamps.
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const band = page.locator('.home-hero-specimen')
+    const settled = await band.evaluate((el) => ({
+      animation: getComputedStyle(el).animationName,
+      opacity: Number(getComputedStyle(el).opacity),
+      height: el.getBoundingClientRect().height,
+    }))
+    expect(settled.animation, 'the arrival animation must not run').toBe('none')
+    expect(settled.opacity, 'the band renders at rest, not mid-entrance').toBe(1)
+
+    // The fixed height is LAYOUT, not motion, and stays in force — the same
+    // reasoning #262 used to keep --hw-frame under reduced motion.
+    const token = await band.evaluate((el) => getComputedStyle(el).getPropertyValue('--hero-specimen').trim())
+    expect(settled.height).toBe(parseFloat(token))
+
+    // Reduced motion removes the TRANSITION, never the UPDATE.
+    const before = await page.locator('.hspec-cap').textContent()
+    await band.getByRole('button', { name: 'Next palette' }).click()
+    await expect(page.locator('.hspec-cap')).not.toHaveText(before)
+    const afterHeight = await band.evaluate((el) => el.getBoundingClientRect().height)
+    expect(afterHeight).toBe(settled.height)
+  })
+
+  test('17d · the OS reduced-motion query alone also settles the band', async ({ page }) => {
+    // The SECOND mechanism, and it needs a note, because it cannot be reached
+    // the way a visitor would reach it.
+    //
+    // index.html's boot script runs `setAttribute('data-reduced-motion',
+    // String(!!a.reducedMotion))` — so a visitor who has never opened the
+    // appearance settings is stamped "false", and every OS-query block in this
+    // stylesheet is guarded by `html:not([data-reduced-motion="false"])`. On a
+    // default visit that guard therefore excludes them, and the OS query alone
+    // does nothing. That is an app-wide defect in the boot script — it makes
+    // the same block dead everywhere it appears, not only here — and fixing it
+    // is outside a hero slice.
+    //
+    // So the attribute is removed at READ time rather than at boot (the app
+    // re-stamps it, so an init script loses the race), and what is asserted is
+    // the rule itself: with the OS query on and no attribute present, every
+    // animation the band adds is off. If the boot script is ever corrected,
+    // this is the behaviour a reduced-motion visitor will get.
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    await expect(page.locator('.home-hero-specimen')).toBeVisible()
+    const state = await page.evaluate(() => {
+      const root = document.documentElement
+      const stamped = root.getAttribute('data-reduced-motion')
+      root.removeAttribute('data-reduced-motion')
+      const name = (sel) => getComputedStyle(document.querySelector(sel)).animationName
+      const read = {
+        stamped,
+        attr: root.getAttribute('data-reduced-motion'),
+        band: name('.home-hero-specimen'),
+        cell: name('.hspec-cell'),
+        cap: name('.hspec-cap'),
+        line: name('.home-hero-line-in'),
+      }
+      if (stamped !== null) root.setAttribute('data-reduced-motion', stamped)
+      return read
+    })
+
+    // Recorded, not asserted away: this is what a default visitor is stamped
+    // with today, and it is why the block under test does not currently fire.
+    expect(state.stamped, 'the boot script stamps every visitor').toBe('false')
+    expect(state.attr, 'the attribute must be absent for this to be the path under test').toBeNull()
+    expect(state.band, 'the band must settle on the OS query alone').toBe('none')
+    expect(state.cell, 'the value cells must settle on the OS query alone').toBe('none')
+    expect(state.cap, 'the caption must settle on the OS query alone').toBe('none')
+    // …and the rule the hero already had behaves the same way, which is the
+    // evidence that the band was added to the right selector list.
+    expect(state.line, 'the headline entrance must settle on the OS query alone').toBe('none')
+  })
+
   test('16 · offline: no catalogue or remote image calls, and every panel still works', async ({ page }) => {
     await reducedMotion(page)
     watch(page, 'designer working on a train')
