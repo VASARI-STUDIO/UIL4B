@@ -2078,8 +2078,20 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 /* Reduced motion: a static ring, stated explicitly rather than left to the
    global clamp. The clamp alone leaves an infinite spin at 0.01ms duration —
    which lands wherever the single allowed iteration ends, not necessarily at
-   rest — and those global rule sites only began executing recently, so this
-   does not lean on them. Both selectors, per the house pattern on .sk::after. */
+   rest. Both selectors, per the house pattern on .sk::after.
+   VERIFIED: the [data-reduced-motion="true"] branch computes animation:none,
+   and ="false" still animates under an OS reduce preference (the opt-out wins).
+   NOT LIVE, and not because of this rule: the media branch below cannot match
+   for anyone who has not used the Settings toggle, because AppearanceContext.jsx
+   (line 28) and the index.html boot script both write data-reduced-motion="false"
+   unconditionally rather than leaving it ABSENT when the user has expressed no
+   preference. The CSS here expects a tri-state — "true" / "false" / absent — and
+   both writers collapse absent into "false", so html:not([data-reduced-motion=
+   "false"]) never matches. That kills every media-query reduced-motion rule in
+   this file, including the global clamp above, not just this one. Measured on a
+   fresh profile with the OS preference on: this spinner runs 0.7s infinite.
+   Upstream fix, not made here because it changes motion app-wide including the
+   homepage: only set the attribute when a choice has actually been stored. */
 html[data-reduced-motion="true"] .fg-loader{animation:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .fg-loader{animation:none}
