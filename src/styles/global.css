@@ -6203,14 +6203,29 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 .plb{display:flex;flex-direction:column;min-height:calc(100vh - var(--nav-top) - var(--nav-h));margin:calc(-24px - var(--nav-clear) + var(--nav-top) + var(--nav-h)) calc(-1*var(--page-inline)) calc(-1*var(--s-9))}
 /* Horizontal padding mirrors .pnav-inner (same --page-inline token) so the
    toolbar's content edge lines up with the pill nav's at every width. */
-.plb-toolbar{position:sticky;top:calc(var(--nav-top) + var(--nav-h));z-index:30;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:nowrap;padding:10px var(--page-inline);background:var(--bg-0);border-bottom:1px solid var(--border)}
-/* The toolbar is a single line, always — it never wraps to a second row. Groups
-   stay on one line; the title group may shrink (min-width:0) so its controls give
-   way before the action group ever drops below it. Popovers open absolutely from
-   .plb-menuwrap, so the toolbar must NOT scroll/clip its overflow. */
+.plb-toolbar{position:sticky;top:calc(var(--nav-top) + var(--nav-h));z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px 18px;flex-wrap:wrap;padding:10px var(--page-inline);background:var(--bg-0);border-bottom:1px solid var(--border)}
+/* Neither group ever shrinks below its content, and the toolbar wraps the action
+   group onto a second row when the two no longer share one line. That is the ONLY
+   content-aware mechanism CSS offers here, and the width at which they stop
+   sharing a line is content-dependent, not viewport-dependent: the harmony
+   trigger reads "System · <label>", so the toolbar's natural width is 1123px with
+   "Auto" selected and 1180px with "Monochromatic" — no fixed media band can be
+   right for both. The previous base rules let the title group shrink below its
+   content (flex:0 1 auto + min-width:0) while the action group refused to shrink
+   at all; because overflow here must stay visible (popovers open absolutely from
+   .plb-menuwrap, so the toolbar must NOT scroll/clip), the squeezed title group
+   spilled to the right and the action group painted straight over the System
+   button — completely unclickable at 961–1000px. Wrapping trades ~47px of
+   toolbar height, in a band that is short of width and not of height, for every
+   control staying visible, hit-testable and popover-capable.
+   769–960 opts back out of wrapping — see the mid-band block below. */
 .plb-toolbar-group{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;position:relative}
-.plb-toolbar-group:first-child{min-width:0;flex:0 1 auto}
-.plb-toolbar-group:last-child{flex:0 0 auto}
+.plb-toolbar-group:first-child{min-width:0;flex:0 0 auto}
+/* margin-left:auto keeps the action group right-aligned on a row of its own;
+   justify-content:space-between only right-aligns it while both groups share a
+   line. On a shared line the auto margin eats the free space first and the
+   result is identical, so one rule covers both. */
+.plb-toolbar-group:last-child{flex:0 0 auto;margin-left:auto}
 .plb-toolbar-sep{width:1px;height:22px;background:var(--border)}
 .plb-title{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--t0);margin:0 6px 0 0}
 /* Seed picker: reuses ColorPickerPop; the popover opens left-aligned because the
@@ -6737,17 +6752,18 @@ button.plb-varrow:hover{background:var(--bg-2)}
    state out of both pointer and keyboard interaction. The slider grid no
    longer changes size during the first drag. */
 .plb-adjust-reset--idle{visibility:hidden;pointer-events:none}
-/* Mid-band (tablet-ish): the toolbar stays one row, but the action group holds a
-   fixed ~885px of controls that won't shrink, so between the mobile stack (≤768)
-   and full desktop it would push the page wider than the viewport. Fix: keep the
-   single row, let the title group give way, and turn ONLY the action group into a
-   horizontally swipeable ribbon — the board layout is left untouched. Because a
-   scroll container clips overflow on both axes, its dropdowns must escape as fixed
-   bottom sheets (same treatment as ≤768). */
+/* Mid-band (tablet-ish): here the action group carries its labels pinned open
+   (see the ≤960 block below), so it holds a fixed ~1116px of controls that won't
+   shrink — wider than the whole viewport. Wrapping it onto a second row therefore
+   buys nothing: the second row would overflow on its own. So this band alone opts
+   out of the base's wrap and keeps the single row, turning ONLY the action group
+   into a horizontally swipeable ribbon — the board layout is left untouched.
+   Because a scroll container clips overflow on both axes, its dropdowns must
+   escape as fixed bottom sheets (same treatment as ≤768).
+   The title group's "never yields" rule used to live here; it is now the base
+   rule for every width, which is what closed the 961–1079 overlap. */
 @media(min-width:769px) and (max-width:960px){
-  /* Title group keeps its natural width (never squeezed into overlap); the action
-     group alone absorbs the shortfall by shrinking and scrolling internally. */
-  .plb-toolbar-group:first-child{flex:0 0 auto;min-width:0}
+  .plb-toolbar{flex-wrap:nowrap}
   .plb-toolbar-group:last-child{flex:0 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;margin:0 -4px;padding:2px 4px}
   .plb-toolbar-group:last-child::-webkit-scrollbar{display:none}
   .plb-toolbar-group:last-child>*{flex:0 0 auto;scroll-snap-align:start}
@@ -8192,7 +8208,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .fpr-status{gap:8px;margin:0 0 18px;padding:8px;border:1px solid var(--border);border-radius:15px;background:var(--bg-1)}
 .fpr-status span{min-height:42px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px}
 .fpr-status span+span{border-left:1px solid var(--border)}
-.fpr-grid{grid-template-columns:minmax(0,1fr) 390px;gap:18px}
+/* .fpr-grid is NOT redefined here. It used to be — `minmax(0,1fr) 390px;gap:18px`
+   on top of the base `minmax(0,1fr) 340px;gap:var(--s-5)`, plus a third value
+   (350px) in the 1050px block below — which gave Font Pair two "wider window,
+   narrower specimen" steps instead of one: at 981 when the sidebar appeared, and
+   again at 1051 when it grew 350→390. One definition, shared with Tint and Type
+   Scale, is what makes the single threshold below apply to all three. */
 .fpr-panel{padding:clamp(20px,2.5vw,32px);border-radius:20px;box-shadow:0 16px 44px rgba(10,10,18,.055)}
 .fpr-config{--fpr-sticky-top:calc(var(--nav-clear) + 18px)}
 .fpr-section-num{background:#111113;border-color:#111113;color:#fff}
@@ -8219,13 +8240,62 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .pgl-search{grid-column:1/-1}
   .fg-command{grid-template-columns:1fr 1fr}
   .fg-command-size{order:3}
-  .fpr-grid{grid-template-columns:minmax(0,1fr) 350px}
 }
 @media(max-width:980px){
   .fg-hero--premium .fg-hero-copy,.fpr-hero--premium .fpr-hero-copy{grid-template-columns:1fr}
   .fg-hero--premium h1{line-height:.84}
   .fpr-hero-signature{left:auto;right:-.05em;bottom:-.32em}
   .fpr-grid{grid-template-columns:1fr}
+}
+
+/* ══════════ The workbench two-column threshold — ONE decision, three tools ══════════
+   Tint Scale (.tt-grid), Type Scale (.tsc-grid) and Font Pair (.fpr-grid) share
+   one layout: a fluid working column beside a 340px config panel. They used to
+   flip to it the instant the viewport passed 980px, which made the working
+   column NARROWER as the window got WIDER — Type Scale's specimen halved from
+   724px to 361px across a single pixel, and Tint pushed 3 of its 11 stops out of
+   the ramp's scroller with no scroll affordance (the hint only shows ≤560px)
+   while the status bar still read "11 stops per scale".
+
+   The arithmetic is unavoidable: a sidebar that appears at threshold T costs the
+   working column gap+sidebar (364px here) at that exact pixel, whatever T is —
+   so moving the threshold alone can never satisfy "widening must never shrink
+   the working column". It only satisfies it if the single-column band stops
+   growing first. So:
+
+     · the single column is capped at 940px — the width these grids already have
+       at 980px, the existing stack point, so nothing at or below 980 changes and
+       980→981 is now seamless (940px → 940px);
+     · two columns start at 1344px = 940 (cap) + 24 (gap) + 340 (sidebar) + 40
+       (page gutters), the first width at which the two-column working column is
+       at least as wide as the capped single column.
+
+   Measured result, 981px → 4K — Type Scale's specimen row: 724, 724, … 724,
+   then 724 at 1344, 725, 768 at 1440, 820 at 1920. Monotonic; widening never
+   shrinks it. Tint's ramp is 888 flat then 889→984, and all 11 stops are inside
+   the panel at every width (the 981–1119 clipping was a symptom of this flip,
+   not a separate fault). Font Pair's specimen still drifts 889→874 across
+   981–1280 — that is .fpr-panel's `clamp(20px,2.5vw,32px)` padding, which keys
+   off the viewport while its container is now fixed. Pre-existing, 1.7%, and
+   left alone: pinning it moves the 15px from a gradual drift to a hard step.
+
+   The cap is on the PAGE, not the grid. Capping only .tt-grid leaves the hero,
+   the intro cards and the status bar at full width with the workbench inset
+   inside them, which reads as a misalignment; capping the page keeps one measure
+   down the whole column.
+
+   This block is min-width:981px so the ≤980 stacking rules in each tool's own
+   section keep their existing bound and are left untouched. */
+@media(min-width:981px) and (max-width:1343px){
+  .tt-page,.tsc-page,.fpr-page{max-width:940px;margin-inline:auto}
+  .tt-grid,.tsc-grid,.fpr-grid{grid-template-columns:1fr}
+  /* Stacked, the config panel is in the page flow — a sticky panel with its own
+     scroller is wrong there, and `visible` alongside overflow-x:hidden would
+     compute to auto and leave the scrollbar behind. Same reasoning as each
+     tool's ≤980 block, which is where these three lines come from. */
+  .tt-config,.fpr-config{position:static;max-height:none;overflow-y:hidden}
+  .tsc-config{position:static}
+  .tt-output,.tt-config{grid-column:auto;grid-row:auto}
 }
 @media(max-width:720px){
   .pgl-toolbar{position:static;grid-template-columns:1fr;padding:8px}
