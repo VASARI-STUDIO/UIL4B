@@ -346,11 +346,17 @@ export default function EmojiLibrary({ onCopy, embedded }) {
           so a screen reader hears the result count — which the grid, being a
           wall of unlabelled buttons, does not otherwise convey. */}
       <p id="emoji-search-status" className="sr-only" role="status" aria-live="polite">
-        {query
-          ? indexState === 'ready'
+        {!query
+          ? `Showing all ${results.count} emojis`
+          : index
             ? `${results.count} ${results.count === 1 ? 'emoji' : 'emojis'} for ${query}`
-            : 'Loading emoji names'
-          : `Showing all ${results.count} emojis`}
+            // Without these two the region announced "Loading emoji names"
+            // underneath a visible failure alert, which contradicts it.
+            : indexState === 'offline'
+              ? 'Search unavailable while offline'
+              : indexState === 'error'
+                ? 'Emoji names could not be loaded'
+                : 'Loading emoji names'}
       </p>
 
       {/* Loading — the index chunk is in flight. */}

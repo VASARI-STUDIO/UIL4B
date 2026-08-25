@@ -1,8 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { EMOJI_DATA } from '../../src/data/emojiData.js'
-import { EMOJI_TERMS } from '../../src/data/emojiIndex.js'
+import { parseEmojiIndex } from '../../src/data/emojiIndex.js'
 import { normaliseQuery, scoreEmoji, searchEmoji } from '../../src/data/emojiSearch.js'
+
+// The app fetches this file as a hashed asset; the tests read the same bytes
+// off disk and run them through the same parser, so a packing or generation
+// fault fails here rather than only in a browser.
+const INDEX_TEXT = fs.readFileSync(
+  fileURLToPath(new URL('../../src/data/emojiIndex.txt', import.meta.url)),
+  'utf8',
+)
+const EMOJI_TERMS = parseEmojiIndex(INDEX_TEXT)
 
 // The catalogue, in the shape the page passes to searchEmoji.
 const GROUPS = EMOJI_DATA.map((g) => ({
@@ -163,6 +174,18 @@ test('every emoji in the catalogue is searchable', () => {
   // An emoji in the grid with no terms is invisible to search — the exact
   // fault this index exists to fix, reintroduced one character at a time.
   assert.deepEqual(missing, [], `${missing.length} emoji have no search terms`)
+})
+
+test('the parser rejects junk rather than returning a half-built index', () => {
+  assert.equal(parseEmojiIndex('').size, 0)
+  assert.equal(parseEmojiIndex(undefined).size, 0)
+  assert.equal(parseEmojiIndex('no tab on this line').size, 0)
+  // A line whose name field is empty is skipped, not stored as a nameless
+  // entry that scoreEmoji would then have to defend against.
+  assert.equal(parseEmojiIndex('🍕\t').size, 0)
+  const one = parseEmojiIndex('🍕\tpizza|cheese|slice')
+  assert.equal(one.size, 1)
+  assert.deepEqual(one.get('🍕'), { name: 'pizza', terms: 'pizza cheese slice' })
 })
 
 test('every index entry can find itself by its own name', () => {

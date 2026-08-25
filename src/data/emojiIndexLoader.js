@@ -1,15 +1,26 @@
 // Loads the generated per-emoji search index on demand.
 //
-// WHY NOT BUNDLED. The index is 88 KB raw / ~31 KB gzipped — three times the
-// rest of the Emoji Library chunk. The founder's report on this surface was
+// WHY IT IS NOT BUNDLED. The index is 88 KB raw / ~31 KB gzipped — three times
+// the rest of the Emoji Library chunk. The founder's report on this surface was
 // "slow to render/load", so paying that on every visit to make the search box
 // work would fix one complaint by worsening the other. Instead the grid renders
 // from the catalogue alone (unchanged first paint) and the index is fetched the
 // moment the user shows intent to search — on focus, before the first keystroke
 // — so by the time a character is typed it is normally already resolved.
 //
-// The promise is cached, so concurrent callers share one request and a repeat
-// visit within the session is synchronous.
+// WHY fetch() AND NOT import(). It was a lazily-imported module first, and the
+// retry was untestable-by-inspection but broken in fact: once a dynamic import
+// rejects, the browser's module map caches the FAILURE, and every later
+// import() of that URL re-rejects from cache without touching the network. So
+// "Try again" could never succeed, and neither could coming back online — both
+// were verified failing in a browser before this was changed. A fetch() has no
+// such cache, so a retry is a real request. As a hashed `?url` asset it is
+// still content-addressed and still outside the JS graph, and it no longer
+// trips main.jsx's vite:preloadError reload, which is for stale deploys and
+// would have thrown away a working page here.
+
+import indexUrl from './emojiIndex.txt?url'
+import { parseEmojiIndex } from './emojiIndex.js'
 
 let cached = null
 let inflight = null
@@ -24,15 +35,23 @@ export function getLoadedEmojiIndex() {
 export function loadEmojiIndex() {
   if (cached) return Promise.resolve(cached)
   if (!inflight) {
-    inflight = import('./emojiIndex.js')
-      .then((mod) => {
-        cached = mod.EMOJI_TERMS
+    inflight = fetch(indexUrl)
+      .then((res) => {
+        // A 404 resolves rather than rejecting, and would otherwise parse to an
+        // empty Map — a search box that finds nothing and says nothing.
+        if (!res.ok) throw new Error(`emoji index: HTTP ${res.status}`)
+        return res.text()
+      })
+      .then((text) => {
+        const parsed = parseEmojiIndex(text)
+        if (!parsed.size) throw new Error('emoji index: empty')
+        cached = parsed
         inflight = null
         return cached
       })
       .catch((err) => {
-        // Clear the in-flight promise so a retry (or coming back online) can
-        // genuinely re-attempt rather than re-await the same rejection forever.
+        // Clear the in-flight promise so a retry, or coming back online, is a
+        // genuine new attempt rather than a re-await of the same rejection.
         inflight = null
         throw err
       })
