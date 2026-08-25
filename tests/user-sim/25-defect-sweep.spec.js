@@ -55,6 +55,68 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// M6 · Gradient Library card footers
+// ─────────────────────────────────────────────────────────────────────────────
+// The name is the only way to identify a gradient and the meta line is the only
+// way to tell a 2-stop from a 3-stop without opening it, so a truncated footer
+// makes a 100-card library unbrowsable. 440px was clean and 450px was not,
+// because that is where the grid takes a second column.
+//
+// The widths below straddle both edges of the band on purpose. 440 and 1180 were
+// already clean and must stay clean — the fix that the audit proposed (raise the
+// grid minimum) would also have passed a test that only looked inside 450–579,
+// while quietly making the grid 262% taller, and this suite has been caught by a
+// fix that helped the page and hurt the cards before.
+
+const GRG_WIDTHS = [320, 440, 450, 480, 530, 560, 640, 700, 1180]
+
+test('M6 · no gradient name or meta line is truncated at any width', async ({ browser }) => {
+  const damage = []
+  for (const w of GRG_WIDTHS) {
+    const { ctx, page } = await open(browser, w, 900, '/discover/gradients', '.grg-card')
+    const r = await page.evaluate(() => {
+      const cut = (sel) => {
+        const out = []
+        for (const el of document.querySelectorAll(sel)) {
+          if (el.scrollWidth > el.clientWidth + 1) {
+            out.push(`"${el.textContent.trim()}" needs ${el.scrollWidth}px, has ${el.clientWidth}px`)
+          }
+        }
+        return out
+      }
+      // The footer must not fix itself by shrinking its own actions below the
+      // 2.5.8 floor, or by stacking them on top of each other.
+      let tiny = 0, collided = 0
+      for (const card of document.querySelectorAll('.grg-card')) {
+        const acts = [...card.querySelectorAll('.grg-copy, .grg-open')]
+        for (const a of acts) {
+          const b = a.getBoundingClientRect()
+          if (b.width < 24 || b.height < 24) tiny++
+        }
+        for (let i = 0; i < acts.length; i++) {
+          for (let j = i + 1; j < acts.length; j++) {
+            const a = acts[i].getBoundingClientRect(), b = acts[j].getBoundingClientRect()
+            if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+                Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) collided++
+          }
+        }
+      }
+      return {
+        cards: document.querySelectorAll('.grg-card').length,
+        names: cut('.grg-name'), metas: cut('.grg-meta'), tiny, collided,
+      }
+    })
+    await ctx.close()
+    expect(r.cards, `${w}px: expected the 100-card library`).toBe(100)
+    if (r.names.length) damage.push(`${w}px: ${r.names.length} of ${r.cards} gradient names truncated — ${r.names[0]}`)
+    if (r.metas.length) damage.push(`${w}px: ${r.metas.length} of ${r.cards} meta lines truncated — ${r.metas[0]}`)
+    if (r.tiny) damage.push(`${w}px: ${r.tiny} footer action(s) under 24px`)
+    if (r.collided) damage.push(`${w}px: ${r.collided} footer action pair(s) overlapping`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Founder report 2026-08-24 · Palette Builder on a short DESKTOP viewport
 // ─────────────────────────────────────────────────────────────────────────────
 // "there are still clipping issues on the pallete builder on smaller desktop
