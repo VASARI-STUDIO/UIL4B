@@ -451,7 +451,6 @@
       "signInRequired": "Accedi per cambiare piano",
       "free": {
         "name": "Gratuito",
-        "price": "0 €",
         "f1": "Tutti gli strumenti principali",
         "f2": "Esportazione HTML e CSS standard",
         "f3": "Supporto community",
@@ -459,7 +458,6 @@
       },
       "pro": {
         "name": "Pro",
-        "price": "4,99 €",
         "period": "/ mese",
         "f1": "Tutto del Gratuito",
         "f2": "Esportazione premium con barra laterale e cambio formato",
