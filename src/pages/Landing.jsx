@@ -60,7 +60,7 @@ const FEATURES = [
 const HIGHLIGHTS = [
   {
     title: 'Replace a dozen browser tabs',
-    body: 'Colour palettes, type scales, font pairing, icon search, image conversion, alt text, and CSS export — all in one workspace with zero context switching.',
+    body: 'Colour palettes, type scales, font pairing, icon search, image conversion, alt text, and CSS export — all in one place with zero context switching.',
     icon: (<><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>),
   },
   {
@@ -358,7 +358,7 @@ function LandingBento({ onOpen }) {
   return (
     <Reveal className="landing-bento-section">
       <div className="landing-bento-head">
-        <span className="landing-eyebrow">Everything in one workspace</span>
+        <span className="landing-eyebrow">Everything in one place</span>
         <h2>Every tool you reach for, together.</h2>
       </div>
       <div className="landing-bento">
@@ -750,7 +750,7 @@ export default function Landing() {
             </span>
             <h1 className="landing-title">
               Colours, type, icons, exports.<br />
-              <em>One workspace.</em>
+              <em>One place.</em>
             </h1>
             <p className="landing-lede">
               Build production-ready colour systems, pair fonts, search 200K+ icons,
@@ -759,7 +759,7 @@ export default function Landing() {
             </p>
             <div className="landing-cta-row">
               <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
-                {loggedIn ? 'Open your workspace' : 'Start building — free'}
+                {loggedIn ? 'Open Create' : 'Start building — free'}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
               </button>
               <button type="button" className="btn landing-cta-secondary" onClick={signIn}>
@@ -927,7 +927,7 @@ export default function Landing() {
           <p>
             {loggedIn
               ? 'Your projects and design tokens are ready and waiting. Jump back into the toolkit any time.'
-              : 'Colour, type, icons, images and AI — all in one workspace. Your work saves locally, and an account unlocks synced projects whenever you are ready.'}
+              : 'Colour, type, icons, images and AI — all in one place. Your work saves locally, and an account unlocks synced projects whenever you are ready.'}
           </p>
           <div className="landing-cta-row">
             <button type="button" className="btn btn-accent landing-cta-primary" onClick={enter}>
