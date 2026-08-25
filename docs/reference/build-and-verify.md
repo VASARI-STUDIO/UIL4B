@@ -17,7 +17,36 @@ number here, you must have re-run it.
 | Build | `npm run build` | passes (vite + prerender) |
 | Unit | `npm run test:unit` | **484 tests, 484 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **226 tests across 23 spec files**; **213 pass, 13 skipped** (`npx playwright test --list`) |
+| Browser acceptance | `npm run test:users` | **229 tests across 23 spec files**; **216 pass, 13 skipped** (`npx playwright test --list`) |
+
+> **Run `npm run build`, never bare `npx vite build`.** They are not
+> interchangeable: `build` is `vite build && node scripts/prerender.mjs`.
+> Four unit tests read the prerendered shells and **skip silently** when
+> `dist/` has not been prerendered — so the bare Vite build produces a green
+> run with a quietly smaller test count. A gate that passes by skipping is the
+> vacuous-pass failure this project has hit before. Re-measured 2026-08-20:
+> browser acceptance on `main` is **229 tests** (`npx playwright test --list`),
+> not the 226 recorded on 2026-08-08 — `main` advanced and this table did not.
+
+## Open-stack test deltas — 2026-08-20
+
+**`main` is 484 unit / 229 browser.** Seven PRs are open and most add tests, so
+the "current baseline" differs per branch. Check your own base before concluding
+you caused a regression — that confusion has already cost time twice.
+
+| PR | Adds | Unit on its branch | Browser on its branch |
+|---|---|---|---|
+| #257 workspace copy | +2 unit | 486 | 229 |
+| #261 price ladder | +5 unit | 489 | 229 |
+| #262 homepage motion | +1 unit | 485 | 229 |
+| #263 responsive | +7 browser | 484 | 236 (223 pass) |
+| #264 homepage copy | +11 unit, +4 browser | 497 | 233 (220 pass) |
+| #266 route migration | +17 unit | 501 | 229 |
+
+**Projected once the whole stack merges: 520 unit, 240 browser** (13 skipped
+throughout — the admin-gated UI System suite). That projection is arithmetic on
+reported deltas, **not a measured number**; re-measure after the merges and
+replace this section with the real figure.
 
 The 13 skipped are the whole of `12-ui-system-builder.spec.js`. UI System mode
 went admin-only in founder batch 4 and this suite runs signed out, so the
@@ -25,7 +54,7 @@ surface is unreachable rather than broken — the file carries the reason and th
 one-word change that re-enables it. Skipped is the honest state; do not "fix"
 the count by deleting the file.
 
-The 32 lint warnings are pre-existing and advisory
+The 31 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
 The previous figures in this table (33 / 185 / 191) were measured at 2026-08-09.
