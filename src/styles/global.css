@@ -3456,10 +3456,27 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .ic-acc-body-inner a{color:var(--accent);font-weight:500}
 .ic-acc-body-inner kbd{font-family:var(--mono);font-size:11px;padding:2px 6px;border-radius:4px;background:var(--bg-3);border:1px solid var(--border);color:var(--t1)}
 .ic-kbd-list{list-style:none;padding-left:0!important}
-.ic-stats{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:22px;box-shadow:var(--warm-shadow);scroll-margin-top:72px}
+/* display:block is the fix for S6, and it is not cosmetic. `.ic-stats` is also
+   the class of an orphaned Image Converter component further up this file
+   (search "Image converter stats", whose .ic-stat-val / .ic-stat-label are in no
+   markup any more), and THAT rule declares display:grid. This section is the
+   only `.ic-stats` left in the app, so it was silently inheriting a 4-column
+   (2-column below 600px) grid it was never meant to have: measured at 320px,
+   section.ic-stats laid out as two 116px columns and put .ic-stats-grid inside
+   ONE of them, which then subdivided 116px into two 53px cards. A bare `1fr`
+   track floors at min-content, so those columns could not shrink and the whole
+   page was forced to 341px inside a 288px content box - 37px thrown away, not
+   scrolled, because body carries overflow-x:clip.
+   The audit diagnoses this as .ic-stats-grid's bare 1fr and proposes
+   minmax(0,1fr). That does remove the overflow, but it treats the symptom: with
+   the phantom grid still in place the cards then collapse instead, and their own
+   text escapes the card box (measured +23px at 320px, +43px at 768px). Taking
+   the section out of grid layout removes the cause, and .ic-stats-grid gets the
+   full width it was always supposed to have. */
+.ic-stats{display:block;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:22px;box-shadow:var(--warm-shadow);scroll-margin-top:72px}
 .ic-stats-head h2{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:var(--t0);margin:0 0 4px}
 .ic-stats-head p{font-size:13px;color:var(--t2);line-height:1.55;margin:0 0 18px}
-.ic-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.ic-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px}
 .ic-stat{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
 .ic-stat-num{font-size:24px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
 .ic-stat-num span{font-size:13px;color:var(--t3);font-weight:500;margin-left:2px}
@@ -3471,7 +3488,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .ic-bp-tick{position:absolute;top:50%;width:2px;height:8px;background:var(--border);transform:translate(-50%,-50%)}
 .ic-bp-tick-lbl{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
 .ic-bp-tick-px{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;color:var(--t3)}
-@media(max-width:560px){.ic-stats-grid{grid-template-columns:repeat(2,1fr)}.ic-head-title{font-size:24px}}
+@media(max-width:560px){.ic-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ic-head-title{font-size:24px}}
 
 /* SEO Specialist — Meta & SERP Inspector */
 .seo-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin-bottom:24px}

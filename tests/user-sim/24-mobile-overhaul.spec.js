@@ -522,3 +522,84 @@ test('S8 · no Settings section label spills outside its own card', async ({ bro
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// S6 · the Information Centre fits the narrowest phone we support
+// ─────────────────────────────────────────────────────────────────────────────
+// body carries overflow-x:clip site-wide, so anything wider than the viewport is
+// CUT OFF rather than scrolled to. "Is it wider" is therefore the wrong question
+// on its own — the question is whether it is reachable, and whether the text
+// survived. Both are asserted, because the fix for the first can cause the
+// second: taking the floor off a grid track stops the page overflowing and
+// starts the cards overflowing instead, which is what a first pass at this did.
+const INFO_VIEWPORTS = [[320, 568], [360, 560], [390, 844], [430, 932], [560, 800], [768, 1024]]
+
+test('S6 · nothing on /info is pushed outside a 320px phone', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of INFO_VIEWPORTS) {
+    const { ctx, page } = await openTouch(browser, w, h, '/info', w >= 700, '.ic-wrap')
+    const r = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth
+      const hasScrollableAncestor = (el) => {
+        let n = el.parentElement
+        while (n && n !== document.body) {
+          const cs = getComputedStyle(n)
+          if ((cs.overflowX === 'auto' || cs.overflowX === 'scroll') && n.scrollWidth > n.clientWidth + 1) return true
+          n = n.parentElement
+        }
+        return false
+      }
+      const unreachable = []
+      for (const el of document.querySelectorAll('.ic-wrap, .ic-wrap *')) {
+        const b = el.getBoundingClientRect()
+        if (!b.width || !b.height) continue
+        if (b.right > vw + 0.5 && !hasScrollableAncestor(el)) {
+          unreachable.push(`${el.tagName.toLowerCase()}.${(el.className || '').toString().split(' ')[0]}`)
+        }
+      }
+      // Glyph-level: text is the content of this page, and none of it can be
+      // recovered by scrolling.
+      const cut = []
+      for (const el of document.querySelectorAll('.ic-wrap h1, .ic-wrap h2, .ic-wrap p, .ic-toc a')) {
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        const tr = range.getBoundingClientRect()
+        if (tr.right > vw + 0.5) cut.push(`"${el.textContent.trim().slice(0, 24)}" +${Math.round(tr.right - vw)}px`)
+      }
+      return { unreachable: unreachable.slice(0, 4), unreachableCount: unreachable.length, cut: cut.slice(0, 3) }
+    })
+    await ctx.close()
+    if (r.unreachableCount) damage.push(`${w}x${h}: ${r.unreachableCount} element(s) outside the viewport with no scroller — ${r.unreachable.join(', ')}`)
+    if (r.cut.length) damage.push(`${w}x${h}: text past the viewport edge — ${r.cut.join(', ')}`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+test('S6 · the screen-stat cards keep their own text inside their own box', async ({ browser }) => {
+  // The counter-guard. minmax(0,1fr) removes a track's min-content floor, which
+  // is right for the page and wrong for the card if the card is then starved.
+  const damage = []
+  for (const [w, h] of INFO_VIEWPORTS) {
+    const { ctx, page } = await openTouch(browser, w, h, '/info', w >= 700, '.ic-stat')
+    const r = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('.ic-stat')]
+      const escapes = []
+      for (const card of cards) {
+        const br = card.getBoundingClientRect()
+        for (const el of [card, ...card.children]) {
+          const range = document.createRange()
+          range.selectNodeContents(el)
+          const tr = range.getBoundingClientRect()
+          const past = Math.round(Math.max(0, tr.right - br.right) + Math.max(0, br.left - tr.left))
+          if (past > 1) escapes.push(`"${el.textContent.trim().slice(0, 18)}" +${past}px`)
+        }
+      }
+      return { count: cards.length, minW: cards.length ? Math.round(Math.min(...cards.map(c => c.getBoundingClientRect().width))) : 0, escapes: escapes.slice(0, 3) }
+    })
+    await ctx.close()
+    expect(r.count, `${w}x${h}: expected the four screen-stat cards`).toBe(4)
+    if (r.escapes.length) damage.push(`${w}x${h}: card text outside its card (narrowest card ${r.minW}px) — ${r.escapes.join(', ')}`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
