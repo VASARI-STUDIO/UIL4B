@@ -43,7 +43,7 @@ const HERO_STATS = [
   `${LIVE_TOOL_COUNT} LIVE TOOLS`,
   '200K ICONS',
   '1,500+ FONTS',
-  'ONE WORKSPACE',
+  'ONE ACCOUNT',
 ]
 
 /* ── The sticky scroll narrative ──────────────────────────────────────────── */
@@ -255,7 +255,7 @@ export default function Home() {
         <section className="hsteps" id="workbench" aria-labelledby="hsteps-title">
           <div className="home-container">
             <div className="hsteps-head" data-reveal>
-              <span className="hbrow">[ THE WORKSPACE ]</span>
+              <span className="hbrow">[ CREATE ]</span>
               <h2 className="hh2" id="hsteps-title">
                 Not a screenshot. The actual tools, running here.
               </h2>
