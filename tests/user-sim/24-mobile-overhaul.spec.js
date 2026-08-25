@@ -603,3 +603,80 @@ test('S6 · the screen-stat cards keep their own text inside their own box', asy
   expect(damage, damage.join('\n')).toEqual([])
 })
 
+// ─────────────────────────────────────────────────────────────────────────────
+// S9 · collapsed accordions must not hold tab stops
+// ─────────────────────────────────────────────────────────────────────────────
+// The panel collapses with grid-template-rows 0fr, which animates well but,
+// unlike display:none, leaves its descendants focusable. A keyboard, switch or
+// screen-reader user was moved 8 times onto links inside a box of ZERO height
+// with overflow:hidden — a focus ring on nothing.
+
+test('S9 · no tab stop lands inside a collapsed /info panel', async ({ browser }) => {
+  const { ctx, page } = await openTouch(browser, 390, 844, '/info', false, '.ic-acc-body')
+
+  const shape = await page.evaluate(() => ({
+    collapsed: [...document.querySelectorAll('.ic-acc-body')].filter((b) => !b.classList.contains('is-open')).length,
+    focusables: [...document.querySelectorAll('.ic-acc-body:not(.is-open)')]
+      .reduce((n, b) => n + b.querySelectorAll('a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])').length, 0),
+  }))
+  expect(shape.collapsed, 'expected most panels collapsed on load').toBeGreaterThan(0)
+  expect(shape.focusables, 'expected collapsed panels to contain focusable links — otherwise this test proves nothing').toBeGreaterThan(0)
+
+  // Recorded in the page: reading activeElement between presses would add a
+  // round-trip, and this is the same class of timing-sensitive measurement S13
+  // was ruined by.
+  await page.evaluate(() => {
+    window.__inCollapsed = []
+    document.addEventListener('focusin', (e) => {
+      const body = e.target.closest('.ic-acc-body')
+      if (!body || body.classList.contains('is-open')) return
+      const inner = body.querySelector('.ic-acc-body-inner')
+      window.__inCollapsed.push(`${(e.target.textContent || '').trim().slice(0, 24)} (panel height ${Math.round(inner.getBoundingClientRect().height)}px)`)
+    })
+    document.body.focus()
+  })
+  for (let i = 0; i < 60; i++) await page.keyboard.press('Tab')
+  const landed = await page.evaluate(() => window.__inCollapsed)
+  await ctx.close()
+
+  expect(landed, `focus landed ${landed.length} time(s) inside a collapsed panel: ${landed.slice(0, 3).join(' | ')}`).toEqual([])
+})
+
+test('S9 · opening a panel gives its links back to the keyboard', async ({ browser }) => {
+  // The counter-guard: it would be trivial to pass the test above by making
+  // those links permanently unreachable.
+  const { ctx, page } = await openTouch(browser, 390, 844, '/info', false, '.ic-acc-body')
+
+  const id = await page.evaluate(() => {
+    const target = [...document.querySelectorAll('.ic-acc-body')]
+      .find((b) => !b.classList.contains('is-open') && b.querySelector('a[href]'))
+    target.closest('.ic-acc').querySelector('.ic-acc-head').click()
+    return target.id
+  })
+  await page.waitForTimeout(600)
+
+  const state = await page.evaluate((pid) => {
+    const b = document.getElementById(pid)
+    return {
+      open: b.classList.contains('is-open'),
+      inert: b.hasAttribute('inert'),
+      height: Math.round(b.querySelector('.ic-acc-body-inner').getBoundingClientRect().height),
+    }
+  }, id)
+  expect(state.open).toBe(true)
+  expect(state.inert, 'inert must lift when the panel opens').toBe(false)
+  expect(state.height, 'an open panel should have real height').toBeGreaterThan(0)
+
+  await page.evaluate((pid) => {
+    window.__reached = 0
+    document.addEventListener('focusin', (e) => {
+      if (e.target.closest('#' + CSS.escape(pid))) window.__reached++
+    })
+    document.querySelector('.ic-acc-head').focus()
+  }, id)
+  for (let i = 0; i < 70; i++) await page.keyboard.press('Tab')
+  const reached = await page.evaluate(() => window.__reached)
+  await ctx.close()
+
+  expect(reached, 'focus never reached inside the opened panel').toBeGreaterThan(0)
+})

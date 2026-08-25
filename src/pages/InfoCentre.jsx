@@ -266,7 +266,21 @@ export default function InfoCentre() {
                 <svg className="ic-acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
               </button>
             </h2>
-            <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-body-${s.id}`}>
+            {/* `inert` on the collapsed panel, and it has to be an attribute
+                rather than CSS. The panel collapses with grid-template-rows
+                0fr -> 1fr, which animates cleanly and is why it was chosen, but
+                unlike display:none it leaves every descendant focusable: tabbing
+                /info landed on 8 links inside collapsed panels, each in a box
+                measured at ZERO height with overflow:hidden, so the focus ring
+                was invisible (S9, mobile-audit-2026-08). visibility:hidden would
+                also fix the tab order, but it would have to flip the instant the
+                panel starts closing - the content would vanish and then an empty
+                box would animate shut - and putting `visibility` in the
+                transition to delay it is the exact discrete-property trap S13
+                records. `inert` removes the subtree from the tab order AND the
+                accessibility tree with no paint of its own, so the collapse
+                animation is untouched. */}
+            <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-body-${s.id}`} inert={!open[s.id]}>
               <div className="ic-acc-body-inner">{s.body}</div>
             </div>
           </section>
