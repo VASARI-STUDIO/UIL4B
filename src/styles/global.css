@@ -9526,9 +9526,30 @@ button.plb-varrow:hover{background:var(--bg-2)}
    The 2-line clamp is the tempting middle and it is not worth it: it buys 7
    percentage points and still hides three quarters of the specimen.
 
-   Scoped to <=768px. Landscape phones and tablets (769px and up) still truncate
-   at 31-45% shown; they are wider, this band is where the tool is unusable, and
-   769+ is where PR #263 is reworking these grids. */
+   The STACKING is scoped to <=768px; the WRAPPING is not, and that split is the
+   completion of S16 above 768px. When this was first written the rest was left
+   because 769+ is wider and because PR #263 is reworking those grids. Measured,
+   being wider was not enough: 3 to 5 of the 9 specimens were still cut from
+   769px all the way up, showing 31-59% of the string —
+
+     769x900  5 of 9, largest 39%      1024x768  5 of 9, largest 31%
+     834x1194 4 of 9, largest 44%      1180x820  4 of 9, largest 43%
+     900x900  4 of 9, largest 49%      1280x900  4 of 9, largest 51%
+     980x900  3 of 9, largest 55%      1440x900  3 of 9, largest 59%
+
+   1024x768 is the worst of them, worse than 769, because the two-column grid
+   arrives at 981px and takes 340px back out — the wider-is-narrower step. That
+   grid is #263's to fix and this change does not touch it; wrapping composes
+   with whatever column width the grid ends up handing over.
+
+   Above 768 the row does NOT stack. There is horizontal room for the meta
+   column at these widths, and stacking would spend it: measured on a phone that
+   choice cost +945px of ladder, where wrapping alone here costs +156 to +491
+   depending on width (944 -> 1100 at 1440, 944 -> 1435 at 1024). Wrapping alone
+   takes every one of those rows to 0 cut. */
+@media(min-width:769px){
+  .tsc-row-text{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
+}
 @media(max-width:768px){
   .tsc-row{align-items:flex-start;flex-direction:column;gap:6px}
   .tsc-row-meta{flex-direction:row;flex-basis:auto;gap:8px;flex-wrap:wrap}

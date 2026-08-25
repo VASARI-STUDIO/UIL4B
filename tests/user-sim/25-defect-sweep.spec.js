@@ -98,6 +98,50 @@ test('/info · every accordion panel is a region with its section name', async (
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
+// S16 above 768px · the half of it PR #271 scoped out
+// ─────────────────────────────────────────────────────────────────────────────
+// 24-mobile-overhaul.spec.js pins the phone half of S16 (≤768px). This is the
+// rest: 3 to 5 of the 9 specimens were still cut from 769px upward, showing
+// 31–59% of the string, on the reasoning that those viewports are wider. Being
+// wider was not enough.
+//
+// Measured on BOTH axes for the same reason the phone test does: the old fault
+// clipped horizontally, a line clamp would clip vertically, and a width-only
+// check calls the second one clean. The assertion is the fraction of the string
+// that renders.
+//
+// 1024x768 is in the list and is the worst case — worse than 769 — because the
+// two-column grid arrives at 981px and takes 340px back. That grid belongs to
+// PR #263; this test asserts the specimen is whole whatever width the grid ends
+// up giving it, so it should hold across that merge rather than fight it.
+
+const TSC_WIDE = [[769, 900], [800, 600], [834, 1194], [844, 390], [900, 900], [980, 900], [1024, 768], [1180, 820], [1280, 900], [1440, 900]]
+
+test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of TSC_WIDE) {
+    const { ctx, page } = await open(browser, w, h, '/typescale', '.tsc-row-text', { touch: w < 1000 })
+    const r = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.tsc-row-text')]
+      const hidden = []
+      for (const el of rows) {
+        const vScale = el.scrollHeight > el.clientHeight + 1 ? el.scrollHeight / el.clientHeight : 1
+        const needs = el.scrollWidth * vScale
+        const gets = el.clientWidth
+        if (needs > gets + 1) {
+          hidden.push(`${getComputedStyle(el).fontSize}: ${Math.round((gets / needs) * 100)}% shown (${gets} of ${Math.round(needs)}px)`)
+        }
+      }
+      return { rows: rows.length, hidden }
+    })
+    await ctx.close()
+    expect(r.rows, `${w}x${h}: expected the 9 specimen rows`).toBe(9)
+    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 9 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // S3 / S4 · chip rows that were scrollers with no affordance
 // ─────────────────────────────────────────────────────────────────────────────
 // Fifth and sixth instances of one shape in this stylesheet: a row of options
