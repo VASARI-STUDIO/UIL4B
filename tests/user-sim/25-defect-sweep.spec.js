@@ -55,6 +55,49 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// /info accordion regions have an accessible name
+// ─────────────────────────────────────────────────────────────────────────────
+// Found while landing S9 in PR #271 and deliberately left for its own commit.
+// Each panel's `aria-labelledby` named the panel's OWN id, so the region was
+// labelled by itself and computed no accessible name — a screen-reader user
+// opening one heard "region" and nothing that said which of the twelve it was.
+//
+// The assertion goes through the ROLE and NAME, resolved by the browser's own
+// ARIA computation on the rendered page, rather than by reading the attribute
+// back. Reading the attribute would have passed on the broken build: it was
+// present, well-formed, and pointed at an element that genuinely existed.
+
+test('/info · every accordion panel is a region with its section name', async ({ browser }) => {
+  const { ctx, page } = await open(browser, 1280, 900, '/info', '.ic-acc-head', { touch: false })
+
+  const headings = await page.locator('.ic-acc-title').allInnerTexts()
+  expect(headings.length, 'expected the /info accordion sections').toBeGreaterThan(5)
+
+  // A region labelled by its own id resolves to no name, so this count is 0 on
+  // the broken build and equals the number of panels once it is fixed.
+  const named = []
+  const unnamed = []
+  for (const title of headings) {
+    const region = page.getByRole('region', { name: title, exact: true })
+    if (await region.count() > 0) named.push(title)
+    else unnamed.push(title)
+  }
+
+  // And the name must not be the panel's own body text leaking in as a fallback.
+  const selfLabelled = await page.evaluate(() =>
+    [...document.querySelectorAll('.ic-acc-body')]
+      .filter((el) => el.getAttribute('aria-labelledby') === el.id)
+      .map((el) => el.id))
+
+  await ctx.close()
+  // Name first: it is the property that matters, and it is the one a future
+  // wrong-but-not-self-referential id would break.
+  expect(unnamed, `accordion panels with no accessible region name: ${unnamed.join(', ')}`).toEqual([])
+  expect(selfLabelled, `panels labelled by their own id: ${selfLabelled.join(', ')}`).toEqual([])
+  expect(named.length).toBe(headings.length)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // N8 · WCAG 2.5.8 Target Size (Minimum) on the Palette Builder
 // ─────────────────────────────────────────────────────────────────────────────
 // 2.5.8 is not "every target is 24x24". A smaller target still conforms under

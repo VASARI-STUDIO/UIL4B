@@ -256,6 +256,7 @@ export default function InfoCentre() {
           <section key={s.id} id={s.id} className="ic-acc">
             <h2 className="ic-acc-h">
               <button
+                id={`ic-head-${s.id}`}
                 className={`ic-acc-head${open[s.id] ? ' is-open' : ''}`}
                 onClick={() => toggle(s.id)}
                 aria-expanded={!!open[s.id]}
@@ -280,7 +281,14 @@ export default function InfoCentre() {
                 records. `inert` removes the subtree from the tab order AND the
                 accessibility tree with no paint of its own, so the collapse
                 animation is untouched. */}
-            <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-body-${s.id}`} inert={!open[s.id]}>
+            {/* aria-labelledby points at the HEADER BUTTON, not at this panel.
+                It used to name `ic-body-${s.id}` — the panel's own id — so the
+                region was labelled by itself and had no accessible name at all.
+                A screen-reader user landing in an opened panel heard "region"
+                with nothing to say which of the twelve it was. The button is
+                what carries the section title, which is what an accordion
+                region is supposed to be named by. */}
+            <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-head-${s.id}`} inert={!open[s.id]}>
               <div className="ic-acc-body-inner">{s.body}</div>
             </div>
           </section>
