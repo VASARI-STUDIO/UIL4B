@@ -8815,9 +8815,28 @@ button.plb-varrow:hover{background:var(--bg-2)}
    Wrapping the tools onto their own line keeps every control at full touch
    size. The alternative — shrinking five buttons into the ~206px left after the
    hex — would have pushed them toward the 24px floor (2.5.8) to avoid breaking
-   1.4.10, which is trading one failure for another. */
+   1.4.10, which is trading one failure for another.
+
+   `min-height:auto` is doing real work and is not a no-op: it used to read `0`,
+   and that is the second half of M1 (responsive-audit-2026-08), escalated to
+   unclickable by the mobile audit's hit-testing. `.plb-col` is a flex ITEM of a
+   column-direction `.plb-board`, and `min-height:0` suppresses the automatic
+   minimum size that would otherwise stop it shrinking below its own content.
+   Wrapping DOUBLES that content height at exactly the moment the floor was
+   removed, so the two lines sat on top of each other on every real phone.
+   Measured `.plb-col` height at 390px wide: 24px at 568 tall, 35px at 640,
+   76px at 844 — against the 85px the wrapped content needs (12 + 21 hex + 8
+   row-gap + 32 tools + 12). At 390x640 that put 24 of 35 controls under a
+   DIFFERENT element at `elementFromPoint`: "Lock PRIMARY" hit `.plb-name`,
+   "Show contrast guidance" hit `.plb-hex`.
+
+   `auto`, not a hard `85px`, and the difference is load-bearing: `.plb-col--out`
+   closes a removed column by animating `flex-grow` to `.02`, and it carries
+   `overflow:hidden`, which zeroes the automatic minimum size. Measured — under
+   `auto` the closing column reaches 25px; pinned at `85px` it freezes at 85 and
+   the slide-close stops working. */
 @media(max-width:430px){
-  .plb-col{flex-wrap:wrap;row-gap:8px;min-height:0;padding-top:12px;padding-bottom:12px}
+  .plb-col{flex-wrap:wrap;row-gap:8px;min-height:auto;padding-top:12px;padding-bottom:12px}
   .plb-col-tools{width:100%;margin-left:0;justify-content:flex-start}
 }
 
