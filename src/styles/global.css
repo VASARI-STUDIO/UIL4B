@@ -933,6 +933,11 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2);z-index:2}
 .emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent);z-index:2}
 .emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap;font-family:var(--font)}
+/* Recovery action inside the search empty/error states (Try again · Search all
+   categories). 40px tall — comfortably over the 24px WCAG 2.5.8 floor, and it
+   matches .emoji-tone-btn so the two controls on this surface agree. */
+.emoji-retry-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
+.emoji-retry-btn:hover{border-color:var(--bh);background:var(--hvr)}
 /* Skin-tone popover — one compact toolbar button opens the six tone swatches */
 .emoji-tone-wrap{position:relative;flex-shrink:0}
 .emoji-tone-btn{display:flex;align-items:center;gap:7px;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t2);font-size:18px;line-height:1;cursor:pointer;font-family:var(--font);transition:border-color var(--t),background var(--t),color var(--t)}
@@ -2070,6 +2075,27 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 /* Loader */
 .fg-loader{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:fg-spin .7s linear infinite;margin:0 auto}
 @keyframes fg-spin{to{transform:rotate(360deg)}}
+/* Reduced motion: a static ring, stated explicitly rather than left to the
+   global clamp. The clamp alone leaves an infinite spin at 0.01ms duration —
+   which lands wherever the single allowed iteration ends, not necessarily at
+   rest. Both selectors, per the house pattern on .sk::after.
+   VERIFIED: the [data-reduced-motion="true"] branch computes animation:none,
+   and ="false" still animates under an OS reduce preference (the opt-out wins).
+   NOT LIVE, and not because of this rule: the media branch below cannot match
+   for anyone who has not used the Settings toggle, because AppearanceContext.jsx
+   (line 28) and the index.html boot script both write data-reduced-motion="false"
+   unconditionally rather than leaving it ABSENT when the user has expressed no
+   preference. The CSS here expects a tri-state — "true" / "false" / absent — and
+   both writers collapse absent into "false", so html:not([data-reduced-motion=
+   "false"]) never matches. That kills every media-query reduced-motion rule in
+   this file, including the global clamp above, not just this one. Measured on a
+   fresh profile with the OS preference on: this spinner runs 0.7s infinite.
+   Upstream fix, not made here because it changes motion app-wide including the
+   homepage: only set the attribute when a choice has actually been stored. */
+html[data-reduced-motion="true"] .fg-loader{animation:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .fg-loader{animation:none}
+}
 
 /* Page-level loading fallback (Suspense) */
 .page-loading{display:flex;align-items:center;justify-content:center;min-height:60vh;width:100%;opacity:.6}
