@@ -10,6 +10,7 @@ import { ADMIN_EMAILS } from '../utils/constants'
 import { MODULE_BOARD } from '../data/moduleBoard'
 import { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../data/pipeline'
 import { resolvePromptProfileLink } from '../utils/promptSubmission'
+import { toCsv } from '../utils/csv'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 const STATUSES = ['new', 'in-progress', 'done']
@@ -1050,10 +1051,13 @@ function UsersPanel({ localUsers, toast }) {
 
   const exportUsersCSV = () => {
     const cols = ['email', 'displayName', 'provider', 'emailVerified', 'plan', 'role', 'use', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
-    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
-    const csv = [cols.join(','), ...filtered.map(r => cols.map(c =>
-      c === 'role' || c === 'use' ? esc(r.onboarding?.[c]) : c === 'country' ? esc(r.country ? countryName(r.country) : '') : esc(r[c])
-    ).join(','))].join('\n')
+    // displayName, company and location are user-controlled profile fields, so
+    // the cells go through csvCell rather than bare quote-escaping. See utils/csv.js.
+    const csv = toCsv(cols, filtered, (r, c) => (
+      c === 'role' || c === 'use' ? r.onboarding?.[c]
+        : c === 'country' ? (r.country ? countryName(r.country) : '')
+          : r[c]
+    ))
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
     a.href = url
@@ -1490,9 +1494,11 @@ export default function Admin({ toast }) {
 
   const exportCSV = () => {
     const cols = ['createdAt', 'type', 'status', 'subject', 'message', 'email', 'source', 'adminNotes']
-    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
     const rows = [...feedback].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-    const csv = [cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\n')
+    // The sharpest of the three: /api/support accepts subject, message and
+    // email UNAUTHENTICATED, and this file is opened by an admin — the attacker
+    // picks the payload and someone with elevated access runs it. utils/csv.js.
+    const csv = toCsv(cols, rows)
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

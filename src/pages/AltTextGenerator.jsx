@@ -6,6 +6,7 @@ import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
 import { auth as firebaseAuth } from '../utils/firebase'
+import { toCsv } from '../utils/csv'
 
 const ALT_TEXT_TOOL_ID = 'alt-text'
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif'
@@ -256,9 +257,12 @@ export default function AltTextGenerator({ toast }) {
   const downloadCSV = () => {
     const done = items.filter(it => it.altText)
     if (!done.length) return
-    const csv = 'filename,alt_text\n' + done.map(it =>
-      `"${it.name.replace(/"/g, '""')}","${it.altText.replace(/"/g, '""')}"`
-    ).join('\n')
+    // Quoting alone was not enough: alt text is model output derived from a
+    // user-supplied image, so a result beginning = + - or @ was executed as a
+    // formula when the file was opened. See utils/csv.js.
+    const csv = toCsv(['filename', 'alt_text'], done, (item, column) => (
+      column === 'filename' ? item.name : item.altText
+    ))
     const blob = new Blob([csv], { type: 'text/csv' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
