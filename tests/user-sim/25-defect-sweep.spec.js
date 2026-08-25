@@ -98,6 +98,96 @@ test('/info · every accordion panel is a region with its section name', async (
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
+// S5 · the feedback FAB on a short viewport
+// ─────────────────────────────────────────────────────────────────────────────
+// READ THIS BEFORE STRENGTHENING THIS TEST. The obvious assertion — "the FAB
+// occludes nothing at the initial scroll position" — is one this fix does not
+// deliver and CANNOT deliver, and asserting it would just be a red test.
+//
+// Sweeping /discover/prompts at 844px wide from 900px tall down to 360, the
+// count of occluded controls goes 0,0,0,0,0,0,1,1,0,0,0,0,0,0,3,3,3,0: present
+// at 530–500, gone at 480–430, back at 420–390, gone again at 360. It tracks
+// where the page happens to lay controls out at that particular height, not the
+// height itself. A `position:fixed` element over scrolling content covers
+// whatever is beneath it; there is no threshold that makes that untrue.
+//
+// So the two properties worth pinning are the ones that are actually true and
+// actually matter: the compact form fires on the axis that was missing, and
+// nothing is ever PERMANENTLY covered.
+
+const FAB_SHORT = [[844, 390], [932, 430], [844, 420], [844, 500]]
+const FAB_ROOMY = [[1366, 600], [1280, 720], [1440, 900]]
+
+async function fabState(page) {
+  return page.evaluate(() => {
+    const fab = document.querySelector('.global-feedback-btn')
+    if (!fab) return null
+    const r = fab.getBoundingClientRect()
+    const label = fab.querySelector('span')
+    return {
+      w: Math.round(r.width), h: Math.round(r.height),
+      compact: label ? getComputedStyle(label).display === 'none' : false,
+    }
+  })
+}
+
+test('S5 · the feedback FAB compacts on a short viewport and keeps its label on a roomy one', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of FAB_SHORT) {
+    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-chip')
+    const f = await fabState(page)
+    await ctx.close()
+    expect(f, `${w}x${h}: no feedback FAB`).not.toBeNull()
+    if (!f.compact) damage.push(`${w}x${h}: FAB still carries its label at ${f.w}x${f.h} on a short viewport`)
+    // Shrinking it must not push it under the 2.5.8 floor.
+    if (f.w < 24 || f.h < 24) damage.push(`${w}x${h}: compact FAB is ${f.w}x${f.h}, under the 24px floor`)
+  }
+  for (const [w, h] of FAB_ROOMY) {
+    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-chip', { touch: false })
+    const f = await fabState(page)
+    await ctx.close()
+    if (f.compact) damage.push(`${w}x${h}: FAB dropped its label on a viewport with room for it`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+test('S5 / S10 · the FAB never permanently covers a control', async ({ browser }) => {
+  const damage = []
+  for (const [path, waitFor, shapes] of [
+    ['/discover/prompts', '.pl-chip', [...FAB_SHORT, [390, 844]]],
+    ['/sitemap', '.smap-link-a', [[320, 568], [360, 560], [390, 640], [390, 844], [844, 390]]],
+  ]) {
+    for (const [w, h] of shapes) {
+      const { ctx, page } = await open(browser, w, h, path, waitFor)
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
+      await page.waitForTimeout(500)
+      const covered = await page.evaluate(() => {
+        const fab = document.querySelector('.global-feedback-btn')
+        const out = []
+        for (const el of document.querySelectorAll('a[href], button, input, select, textarea')) {
+          if (el === fab || fab.contains(el)) continue
+          const s = getComputedStyle(el)
+          if (s.display === 'none' || s.visibility === 'hidden') continue
+          const r = el.getBoundingClientRect()
+          if (r.width === 0 || r.height === 0) continue
+          // Every sampled point blocked = no way to press it here.
+          let blocked = 0
+          for (const f of [0.2, 0.5, 0.8]) {
+            const top = document.elementFromPoint(r.left + r.width * f, r.top + r.height / 2)
+            if (top && (top === fab || fab.contains(top))) blocked++
+          }
+          if (blocked === 3) out.push((el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24))
+        }
+        return [...new Set(out)]
+      })
+      await ctx.close()
+      if (covered.length) damage.push(`${path} ${w}x${h}: ${covered.length} control(s) still fully covered at the scroll end — ${covered.join(', ')}`)
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // N8 · WCAG 2.5.8 Target Size (Minimum) on the Palette Builder
 // ─────────────────────────────────────────────────────────────────────────────
 // 2.5.8 is not "every target is 24x24". A smaller target still conforms under

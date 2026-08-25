@@ -2423,7 +2423,29 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .global-feedback-btn{position:fixed;right:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(0,0,0,.3);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .global-feedback-btn:hover{background:var(--brand);border-color:var(--brand);color:var(--accent-fg);transform:translateY(-2px)}
 .global-feedback-btn svg{flex-shrink:0}
-@media(max-width:640px){.global-feedback-btn span{display:none}.global-feedback-btn{padding:12px;right:14px;bottom:14px}}
+/* The compact form fires on EITHER axis. It used to be width-only, so the one
+   device class with the least vertical room — a phone held sideways, 844–932px
+   WIDE — never got it and carried the full 117x38 labelled bar on a 390px-tall
+   viewport (S5, mobile-audit-2026-08).
+
+   500px is measured, not inherited, and that matters: PR #271 established
+   `max-height:460px` for the login modal and reusing it here would have been
+   wrong — occlusion was measured at a 500px-tall viewport, which 460 does not
+   reach. Every landscape phone in the audit matrix (390 and 430 tall) sits well
+   inside 500, and every ordinary laptop keeps its label (verified: 1366x600 and
+   1280x720 still render the labelled form).
+
+   WHAT THIS DOES NOT DO, because the audit implies otherwise. S5 reads as though
+   a short-viewport rule removes the overlap. It does not, and no threshold can:
+   sweeping 844px wide from 900px tall down to 360px, occluded controls go
+   0,0,0,0,0,0,1,1,0,0,0,0,0,0,3,3,3,0 — the fault appears at 530–500, clears at
+   480–430, returns at 420–390 and clears again at 360. It tracks where the page
+   happens to put controls at that height, not the height itself, so there is no
+   boundary to draw. What this rule does is shrink the footprint: at 844x390
+   three covered controls become two, and each drops from 2 of 3 sampled points
+   blocked to 1 of 3. Nothing is ever permanently covered — measured 0 occluded
+   at the scroll extremity at every viewport tested. */
+@media(max-width:640px),(max-height:500px){.global-feedback-btn span{display:none}.global-feedback-btn{padding:12px;right:14px;bottom:14px}}
 
 /* ─── Feedback modal (global floating feedback button popup) ─── */
 .fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance)}
