@@ -57,7 +57,7 @@ public summary.
 - **Command Palette** — `Cmd/Ctrl + K` to search and jump to any tool
 - **Dark / Light Theme** — System-aware with manual toggle, CSS custom property theming
 - **Internationalisation** — 10 locales with browser auto-detection: English (AU), English (US), Deutsch, Español, Français, Italiano, Português, 日本語, 中文, 한국어
-- **Design System Export** — Export palette + tint scale + state colours as a styled HTML page, CSS custom properties file, or copy to clipboard; free exports include a watermark, Pro unlocks all formats
+- **Design System Export** — Export palette + tint scale + state colours as a styled HTML page, CSS custom properties file, or copy to clipboard; every format is available on the free tier with a visible footer credit; Pro removes the credit
 - **Accounts** — Firebase auth with Google One Tap, profile management, cross-device Firestore sync
 - **Admin Dashboard** — Analytics, feedback triage, community prompt review with inline editing, design analytics (most copied fonts / picked colours), server-verified admin access
 - **Admin Style Guide** — Internal design system reference at `/style-guide` (tokens, type scale, components, patterns). Admin-only: it was behind sign-in alone, so every account on the site could read it
@@ -114,10 +114,14 @@ npm run preview    # Preview production build
 
 ```bash
 npx eslint .       # must report 0 errors
-npx vite build
+npm run build      # vite build + prerender — NOT bare `npx vite build`
 npm run test:unit
 npm run test:users # Playwright acceptance suite (builds first)
 ```
+
+Use `npm run build`, not bare `npx vite build`: four unit tests read the
+prerendered shells and skip *silently* without them, so the bare Vite build
+gives a green run with a quietly smaller test count.
 
 Current expected counts for each gate are in
 [`docs/reference/build-and-verify.md`](docs/reference/build-and-verify.md) —
