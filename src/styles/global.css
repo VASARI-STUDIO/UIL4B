@@ -8241,8 +8241,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .tsc-status{grid-template-columns:1fr}
   .tsc-status span+span{border-left:0;border-top:1px solid var(--border)}
   .tsc-panel{padding:16px}
-  .tsc-row{align-items:flex-start;flex-direction:column;gap:6px}
-  .tsc-row-meta{flex-direction:row;flex-basis:auto;gap:8px;flex-wrap:wrap}
   .tsc-width-btn{font-size:10px;padding:7px 6px}
   .tsc-more-links{align-items:flex-start;flex-direction:column;gap:12px}
 }
@@ -9152,3 +9150,36 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .pnav-acc-link[data-soon] .pnav-acc-label{color:var(--t3)}
 .pnav-acc-link[data-soon] .pnav-acc-desc{color:var(--t3)}
 .pnav-acc-link[data-soon] .pnav-acc-ico{opacity:.5;filter:grayscale(1)}
+
+/* Type-scale specimens on a phone: stack the row and let the specimen WRAP.
+   The reflow-320 fix above made the specimen truncate rather than overflow
+   unreachably, which was right about reachability and left the tool useless:
+   measured at 390x844, all 9 rows truncated and the largest showed 192px of a
+   1305px string - 15% of the specimen, so every row read "The quick b..." while
+   the page promises you can read the scale back in a real layout (S16,
+   mobile-audit-2026-08).
+
+   Two changes, and the first is what makes the second affordable. Stacking the
+   row (the treatment that already existed below 380px) gives the specimen the
+   full row width instead of the ~192px left over beside the meta column. Then
+   wrapping shows the whole string at its TRUE size, which is the one property a
+   type scale exists to demonstrate.
+
+   The cost is height, and it is real: the ladder goes 986px -> 1931px at 390px
+   wide, and the page 5635px -> 6580px (+17%). Measured alternatives, so the
+   trade is on the record rather than asserted:
+     - wrap without stacking      100% shown, ladder 2546px (+1560)
+     - clamp to 2 lines           22% shown, ladder 1105px (+119)
+     - stack + wrap (this)        100% shown, ladder 1931px (+945)
+     - do nothing                 15% shown, ladder 986px
+   The 2-line clamp is the tempting middle and it is not worth it: it buys 7
+   percentage points and still hides three quarters of the specimen.
+
+   Scoped to <=768px. Landscape phones and tablets (769px and up) still truncate
+   at 31-45% shown; they are wider, this band is where the tool is unusable, and
+   769+ is where PR #263 is reworking these grids. */
+@media(max-width:768px){
+  .tsc-row{align-items:flex-start;flex-direction:column;gap:6px}
+  .tsc-row-meta{flex-direction:row;flex-basis:auto;gap:8px;flex-wrap:wrap}
+  .tsc-row-text{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
+}

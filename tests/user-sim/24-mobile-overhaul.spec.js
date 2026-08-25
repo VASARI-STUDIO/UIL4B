@@ -761,3 +761,37 @@ test('S2 · all seven starting bundles are visible without swiping', async ({ br
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// S16 · the Type Scale specimens are readable on a phone
+// ─────────────────────────────────────────────────────────────────────────────
+// The measurement has to cover BOTH axes. The specimen used to be clipped
+// horizontally (nowrap + ellipsis); a two-line clamp would clip it vertically
+// instead, and a width-only check reports that as clean. So "hidden" here is
+// scrollWidth OR scrollHeight exceeding the box, and the assertion is on the
+// FRACTION of the string that renders, not on whether an ellipsis appeared.
+
+test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of [[320, 568], [360, 560], [390, 640], [390, 844], [430, 932], [768, 1024]]) {
+    const { ctx, page } = await openTouch(browser, w, h, '/typescale', w >= 700, '.tsc-row-text')
+    const r = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.tsc-row-text')]
+      const hidden = []
+      for (const el of rows) {
+        // Horizontal clipping, and vertical clipping (a line clamp), in one number.
+        const vScale = el.scrollHeight > el.clientHeight + 1 ? el.scrollHeight / el.clientHeight : 1
+        const needs = el.scrollWidth * vScale
+        const gets = el.clientWidth
+        if (needs > gets + 1) {
+          hidden.push(`${getComputedStyle(el).fontSize}: ${Math.round((gets / needs) * 100)}% shown (${gets} of ${Math.round(needs)}px)`)
+        }
+      }
+      return { rows: rows.length, hidden }
+    })
+    await ctx.close()
+    expect(r.rows, `${w}x${h}: expected the 9 specimen rows`).toBe(9)
+    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 9 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
