@@ -130,5 +130,16 @@ Assets; landing-page copy sits with Discover/Learn. Both remain alpha-gated.
   who assemble and hand off UI systems.
 - **Core promise:** create, organize, validate, and export a UI system in one
   place — no tab-hopping.
-- **Free vs Pro:** Free = save projects + share a live preview URL. Pro = all
-  file exports. (See `human-validation-zones.md` for the Stripe surface.)
+- **Free vs Pro:** Free = save projects (capped), share a live preview URL, and
+  **export in every format with a visible footer credit**. Pro removes the
+  credit and lifts the caps. (See `human-validation-zones.md` for the Stripe
+  surface.)
+
+> **Corrected 2026-08-20, founder-approved.** This line read "Pro = all file
+> exports", which the product does not do and has not done. `ExportPanel.jsx`
+> passes `watermark: !isPro` to every builder — a free user gets the same
+> formats, credited. The doc was changed to match the code rather than the code
+> changed to match the doc, on the founder's decision, because credited-free
+> export is the better expression of the approved "foot in the door" free tier
+> (P-003). Any surface currently implying exports are Pro-only is now the thing
+> that is wrong.

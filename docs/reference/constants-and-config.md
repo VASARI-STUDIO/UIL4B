@@ -28,11 +28,19 @@ vars. The web `apiKey` here is **public by design** (see
 
 | Theme | `--brand` |
 |---|---|
-| Dark | `#3B82F6` |
-| Light | `#2563EB` |
+| Dark | `#6FA8FF` |
+| Light | `#0F6FFF` |
 
-`--accent` tracks `--brand` (dark `#3B82F6` / light `#2563EB`). Full token set
-is in `css-conventions.md`.
+`--accent` tracks `--brand` (dark `#6FA8FF` / light `#0F6FFF`). This is the
+founder-selected blue recorded in `design-language-v2.md`; the design file's
+default violet is not used anywhere. Full token set is in `css-conventions.md`.
+
+Design Language V2 also added `--hi` (`#E9FF64`) with `--hi-fg`, deliberately
+identical in both themes — the accent lightens in dark, the highlight does not.
+
+> Corrected 2026-08-20. This table read `#3B82F6` / `#2563EB` — the pre-V2
+> accent — for four days after V2 shipped. Values verified by reading
+> `src/styles/global.css`, not by trusting the previous entry.
 
 ## Dark contrast tokens (current values)
 
