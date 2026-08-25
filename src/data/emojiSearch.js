@@ -25,10 +25,9 @@ function startsWord(haystack, token) {
   return haystack.startsWith(token) || haystack.includes(` ${token}`)
 }
 
-// 0 = no match. Higher is a better match. The ladder is ordered so that an
-// exact name always outranks a keyword hit: searching "cat" must put 🐱 above
-// 🏳️ (whose terms mention "category"-adjacent words) and above every emoji
-// that merely lists "cat" as a related term.
+// 0 = no match. Higher is a better match. A hit on the emoji's NAME always
+// outranks a hit on its keywords, so "cat" puts 🐱 above every emoji that
+// merely lists "cat" as a related term.
 export function scoreEmoji(entry, query, tokens) {
   if (!entry) return 0
   const { name, terms } = entry
@@ -39,12 +38,24 @@ export function scoreEmoji(entry, query, tokens) {
     if (!hit) return 0
   }
 
-  if (name === query) return 1000
-  if (name.startsWith(query)) return 800
-  if (startsWord(name, query)) return 650
-  if (name.includes(query)) return 600
-  if (tokens.every((t) => startsWord(name, t))) return 500
-  if (tokens.every((t) => name.includes(t))) return 400
+  // How much of the name the query accounts for. This is what decides which of
+  // several equally-valid name hits is the canonical emoji: "heart" covers 5 of
+  // the 9 characters of ❤️ "red heart" but only 5 of the 17 of 💝 "heart with
+  // ribbon", so the plain red heart ranks first. Ordering on the band alone put
+  // ❤️ seventh, behind five compound hearts that merely began with the word.
+  const coverage = Math.round((200 * query.length) / Math.max(name.length, 1))
+
+  if (name === query) return 1000 + coverage
+  if (startsWord(name, query)) return 700 + coverage
+  if (name.includes(query)) return 600 + coverage
+  if (tokens.every((t) => startsWord(name, t))) return 500 + coverage
+  if (tokens.every((t) => name.includes(t))) return 400 + coverage
+
+  // Keyword-level hits. No coverage term here — measuring the query against a
+  // name it did not match is noise, and it actively misranks: it would put
+  // 🪠 "plunger" above 💩 for "poop", since both carry the keyword and
+  // "plunger" is the shorter name. Flat bands instead, so these fall through
+  // to catalogue order, which puts the Smileys pile of poo first.
   if (startsWord(terms, query)) return 300
   if (tokens.every((t) => startsWord(terms, t))) return 200
   return 100

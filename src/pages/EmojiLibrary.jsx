@@ -1,33 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useI18n } from '../contexts/I18nContext'
-
-const CATEGORY_KEYWORDS = {
-  Smileys: ['smile', 'happy', 'sad', 'angry', 'face', 'laugh', 'cry', 'love', 'think', 'sick', 'cool', 'wink', 'tongue', 'skull', 'ghost', 'robot', 'devil', 'poop', 'scared', 'nervous', 'silly', 'party', 'nerd', 'sleepy', 'disguise', 'vomit', 'hot', 'cold', 'dizzy', 'explode', 'cowboy', 'clown', 'alien', 'demon', 'kiss', 'cat'],
-  Hands: ['hand', 'wave', 'point', 'thumb', 'fist', 'clap', 'finger', 'muscle', 'pray', 'shake', 'peace', 'ok', 'punch', 'pinch', 'rock', 'call', 'nail', 'selfie', 'write', 'ear', 'nose', 'brain', 'eye', 'tooth', 'bone', 'leg', 'foot', 'lip', 'tongue'],
-  People: ['person', 'man', 'woman', 'boy', 'girl', 'baby', 'old', 'walk', 'run', 'dance', 'swim', 'climb', 'ninja', 'prince', 'princess', 'santa', 'hero', 'fairy', 'zombie', 'mage', 'elf', 'genie', 'vampire', 'mermaid', 'troll', 'angel', 'guard', 'detective', 'construction', 'bride', 'groom', 'doctor', 'nurse', 'health', 'teacher', 'student', 'graduate', 'judge', 'farmer', 'cook', 'chef', 'mechanic', 'worker', 'factory', 'office', 'business', 'scientist', 'technologist', 'coder', 'developer', 'programmer', 'singer', 'artist', 'painter', 'pilot', 'astronaut', 'firefighter', 'police', 'officer', 'soldier', 'wizard', 'witch', 'superhero', 'villain', 'family', 'couple', 'parent', 'mother', 'father', 'wedding', 'pregnant', 'feeding', 'kneel', 'stand', 'shrug', 'facepalm', 'blind', 'wheelchair', 'deaf', 'bald', 'beard', 'massage', 'haircut'],
-  Animals: ['animal', 'dog', 'cat', 'bird', 'fish', 'bear', 'monkey', 'horse', 'cow', 'pig', 'chicken', 'snake', 'rabbit', 'bug', 'spider', 'whale', 'shark', 'elephant', 'lion', 'tiger', 'frog', 'fox', 'panda', 'unicorn', 'butterfly', 'bee', 'turtle', 'octopus', 'penguin', 'koala', 'wolf', 'bat', 'owl', 'crab', 'snail', 'ant', 'dragon', 'dinosaur', 'mouse', 'hamster', 'deer', 'giraffe', 'gorilla', 'parrot', 'duck'],
-  Food: ['food', 'fruit', 'vegetable', 'meat', 'drink', 'beer', 'wine', 'coffee', 'tea', 'pizza', 'burger', 'cake', 'ice cream', 'bread', 'cheese', 'rice', 'sushi', 'candy', 'apple', 'banana', 'grape', 'strawberry', 'taco', 'donut', 'cookie', 'egg', 'bacon', 'fries', 'chocolate', 'pie', 'lemon', 'watermelon', 'avocado', 'corn', 'carrot', 'tomato', 'salad', 'noodle', 'soup'],
-  Activities: ['activity', 'activities', 'sport', 'ball', 'game', 'play', 'music', 'art', 'medal', 'trophy', 'award', 'win', 'soccer', 'football', 'basketball', 'baseball', 'tennis', 'golf', 'ski', 'skate', 'guitar', 'piano', 'drum', 'trumpet', 'violin', 'paint', 'theatre', 'theater', 'dice', 'chess', 'dart', 'bowling', 'party', 'celebrate', 'birthday', 'christmas', 'gift', 'balloon', 'firework', 'circus', 'juggle', 'controller', 'joystick', 'arcade', 'puzzle', 'card'],
-  Travel: ['travel', 'car', 'bus', 'train', 'plane', 'boat', 'ship', 'house', 'building', 'city', 'mountain', 'beach', 'rocket', 'helicopter', 'taxi', 'truck', 'bike', 'motorcycle', 'tent', 'church', 'castle', 'bridge', 'tower', 'statue', 'sunset', 'sunrise', 'firework', 'camping', 'island', 'volcano'],
-  Objects: ['object', 'phone', 'computer', 'camera', 'clock', 'watch', 'money', 'key', 'tool', 'hammer', 'wrench', 'bulb', 'battery', 'pill', 'knife', 'book', 'pencil', 'guitar', 'piano', 'game', 'joystick', 'tv', 'radio', 'candle', 'lock', 'magnet', 'gem', 'diamond', 'toilet', 'shower', 'bed', 'chair', 'door', 'lamp', 'microscope', 'telescope', 'syringe', 'dna', 'shirt', 'dress', 'shoe', 'hat', 'clothes', 'clothing', 'glasses', 'crown', 'ring', 'bag', 'jacket', 'sock', 'glove', 'boot', 'wear'],
-  Symbols: ['symbol', 'heart', 'star', 'arrow', 'warning', 'check', 'cross', 'circle', 'square', 'diamond', 'sign', 'number', 'letter', 'music', 'zodiac', 'love', 'peace', 'recycle', 'infinity', 'question', 'exclamation', 'triangle', 'color', 'colour', 'red', 'blue', 'green', 'purple', 'orange', 'yellow', 'black', 'white', 'pink', 'brown'],
-  Flags: ['flag', 'country', 'nation', 'australia', 'usa', 'america', 'uk', 'britain', 'england', 'japan', 'france', 'germany', 'canada', 'brazil', 'india', 'china', 'korea', 'mexico', 'rainbow', 'pirate', 'pride', 'trans', 'ireland', 'italy', 'spain', 'sweden', 'norway', 'finland', 'denmark', 'portugal', 'russia', 'vietnam', 'thailand', 'turkey', 'ukraine', 'argentina', 'austria', 'belgium', 'switzerland', 'netherlands', 'greece', 'poland', 'egypt', 'israel', 'saudi', 'emirates', 'qatar', 'kuwait', 'iran', 'iraq', 'pakistan', 'bangladesh', 'indonesia', 'malaysia', 'philippines', 'singapore', 'taiwan', 'hong kong', 'chile', 'colombia', 'peru', 'venezuela', 'uruguay', 'nigeria', 'kenya', 'ghana', 'morocco', 'south africa', 'ethiopia', 'czech', 'hungary', 'romania', 'slovakia', 'croatia', 'serbia', 'iceland', 'jamaica', 'cuba', 'panama', 'costa rica', 'ecuador', 'bolivia', 'paraguay', 'nepal', 'sri lanka', 'cambodia', 'laos', 'mongolia', 'kazakhstan', 'lebanon', 'jordan', 'oman', 'yemen', 'syria', 'afghanistan', 'palestine', 'monaco', 'luxembourg', 'malta', 'cyprus', 'estonia', 'latvia', 'lithuania', 'slovenia'],
-  Nature: ['nature', 'flower', 'tree', 'plant', 'leaf', 'sun', 'moon', 'star', 'cloud', 'rain', 'snow', 'wind', 'fire', 'water', 'rainbow', 'mushroom', 'earth', 'globe', 'rose', 'tulip', 'cherry', 'blossom', 'cactus', 'clover', 'lightning', 'thunder', 'umbrella', 'wave', 'ocean', 'weather', 'storm', 'tornado'],
-}
-
-const EMOJI_DATA = [
-  { cat: 'Smileys', emojis: '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 🫠 😉 😊 😇 🥰 😍 🤩 😘 😗 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🫢 🫣 🤫 🤔 🫡 🤐 🤨 😐 😑 😶 🫥 😶‍🌫️ 😏 😒 🙄 😬 😮‍💨 🤥 🫨 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 😵‍💫 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 🫤 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 🥹 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊 💋' },
-  { cat: 'Hands', emojis: '👋 🤚 🖐️ ✋ 🖖 🫱 🫲 🫳 🫴 🫷 🫸 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 🫵 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🦿 🦵 🦶 👂 🦻 👃 🧠 🫀 🫁 🦷 🦴 👀 👁️ 👅 👄 🫦' },
-  { cat: 'People', emojis: '👶 🧒 👦 👧 🧑 👱 👨 🧔 🧔‍♂️ 🧔‍♀️ 👩 🧓 👴 👵 🧑‍🦰 👨‍🦰 👩‍🦰 🧑‍🦱 👨‍🦱 👩‍🦱 🧑‍🦳 👨‍🦳 👩‍🦳 🧑‍🦲 👨‍🦲 👩‍🦲 🙍 🙍‍♂️ 🙍‍♀️ 🙎 🙎‍♂️ 🙎‍♀️ 🙅 🙅‍♂️ 🙅‍♀️ 🙆 🙆‍♂️ 🙆‍♀️ 💁 💁‍♂️ 💁‍♀️ 🙋 🙋‍♂️ 🙋‍♀️ 🧏 🧏‍♂️ 🧏‍♀️ 🙇 🙇‍♂️ 🙇‍♀️ 🤦 🤦‍♂️ 🤦‍♀️ 🤷 🤷‍♂️ 🤷‍♀️ 🧑‍⚕️ 👨‍⚕️ 👩‍⚕️ 🧑‍🎓 👨‍🎓 👩‍🎓 🧑‍🏫 👨‍🏫 👩‍🏫 🧑‍⚖️ 👨‍⚖️ 👩‍⚖️ 🧑‍🌾 👨‍🌾 👩‍🌾 🧑‍🍳 👨‍🍳 👩‍🍳 🧑‍🔧 👨‍🔧 👩‍🔧 🧑‍🏭 👨‍🏭 👩‍🏭 🧑‍💼 👨‍💼 👩‍💼 🧑‍🔬 👨‍🔬 👩‍🔬 🧑‍💻 👨‍💻 👩‍💻 🧑‍🎤 👨‍🎤 👩‍🎤 🧑‍🎨 👨‍🎨 👩‍🎨 🧑‍✈️ 👨‍✈️ 👩‍✈️ 🧑‍🚀 👨‍🚀 👩‍🚀 🧑‍🚒 👨‍🚒 👩‍🚒 👮 👮‍♂️ 👮‍♀️ 🕵️ 🕵️‍♂️ 🕵️‍♀️ 💂 💂‍♂️ 💂‍♀️ 🥷 👷 👷‍♂️ 👷‍♀️ 🫅 🤴 👸 👳 👳‍♂️ 👳‍♀️ 👲 🧕 🤵 🤵‍♂️ 🤵‍♀️ 👰 👰‍♂️ 👰‍♀️ 🤰 🫃 🫄 🤱 🧑‍🍼 👨‍🍼 👩‍🍼 👼 🎅 🤶 🧑‍🎄 🦸 🦸‍♂️ 🦸‍♀️ 🦹 🦹‍♂️ 🦹‍♀️ 🧙 🧙‍♂️ 🧙‍♀️ 🧚 🧚‍♂️ 🧚‍♀️ 🧛 🧛‍♂️ 🧛‍♀️ 🧜 🧜‍♂️ 🧜‍♀️ 🧝 🧝‍♂️ 🧝‍♀️ 🧞 🧞‍♂️ 🧞‍♀️ 🧟 🧟‍♂️ 🧟‍♀️ 🧌 🧑‍🦯 👨‍🦯 👩‍🦯 🧑‍🦼 👨‍🦼 👩‍🦼 🧑‍🦽 👨‍🦽 👩‍🦽 💆 💆‍♂️ 💆‍♀️ 💇 💇‍♂️ 💇‍♀️ 🚶 🚶‍♂️ 🚶‍♀️ 🧍 🧍‍♂️ 🧍‍♀️ 🧎 🧎‍♂️ 🧎‍♀️ 🏃 🏃‍♂️ 🏃‍♀️ 💃 🕺 🕴️ 👯 👯‍♂️ 👯‍♀️ 🧖 🧗 🤸 ⛹️ 🏋️ 🚴 🚵 🤼 🤽 🤾 🤺 ⛷️ 🏂 🏌️ 🏄 🚣 🏊 🤿 🧘 🧑‍🤝‍🧑 👭 👫 👬 💏 💑 👪 👨‍👩‍👦 👨‍👩‍👧 👨‍👩‍👧‍👦 👨‍👩‍👦‍👦 👨‍👩‍👧‍👧 👩‍👩‍👦 👩‍👩‍👧 👨‍👨‍👦 👨‍👨‍👧 👩‍👦 👩‍👧 👨‍👦 👨‍👧' },
-  { cat: 'Animals', emojis: '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐻‍❄️ 🐨 🐯 🦁 🐮 🐷 🐽 🐸 🐵 🙈 🙉 🙊 🐒 🐔 🐧 🐦 🐦‍⬛ 🐤 🐣 🐥 🦆 🦢 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🐝 🪱 🐛 🦋 🐌 🐞 🐜 🪰 🪲 🪳 🦟 🦗 🕷️ 🦂 🐢 🐍 🦎 🦖 🦕 🐙 🦑 🦐 🦞 🦀 🪼 🐡 🐠 🐟 🐬 🐳 🐋 🦈 🐊 🐅 🐆 🦓 🦍 🦧 🦣 🐘 🦛 🦏 🐪 🐫 🦒 🦘 🦬 🐃 🐂 🐄 🐎 🐖 🐏 🐑 🦙 🐐 🦌 🐕 🐩 🦮 🐕‍🦺 🐈 🐈‍⬛ 🪶 🪽 🐓 🦃 🦤 🦚 🦜 🦩 🕊️ 🐇 🦝 🦨 🦡 🦫 🦦 🦥 🐁 🐀 🐿️ 🦔 🪿 🫎 🫏' },
-  { cat: 'Food', emojis: '🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🍆 🥑 🥦 🥬 🥒 🌶️ 🫑 🌽 🥕 🫒 🧄 🧅 🥔 🍠 🫘 🫛 🫚 🥐 🥯 🍞 🥖 🥨 🧀 🥚 🍳 🧈 🥞 🧇 🥓 🥩 🍗 🍖 🦴 🌭 🍔 🍟 🍕 🫓 🥪 🥙 🧆 🌮 🌯 🫔 🥗 🥘 🫕 🥫 🍝 🍜 🍲 🍛 🍣 🍱 🥟 🦪 🍤 🍙 🍚 🍘 🍥 🥠 🥮 🍢 🍡 🍧 🍨 🍦 🥧 🧁 🍰 🎂 🍮 🍭 🍬 🍫 🍿 🍩 🍪 🌰 🥜 🍯 🥛 🫗 🍼 🫖 ☕ 🍵 🧃 🥤 🧋 🍶 🍺 🍻 🥂 🍷 🥃 🍸 🍹 🧉 🍾 🧊 🥄 🍴 🍽️ 🥢 🧂' },
-  { cat: 'Activities', emojis: '⚽ 🏀 🏈 ⚾ 🥎 🎾 🏐 🏉 🥏 🎱 🪀 🏓 🏸 🏒 🏑 🥍 🏏 🪃 🥅 ⛳ 🪁 🏹 🎣 🤿 🥊 🥋 🎽 🛹 🛼 🛷 ⛸️ 🥌 🎿 🏆 🥇 🥈 🥉 🏅 🎖️ 🏵️ 🎗️ 🎫 🎟️ 🎪 🤹 🎭 🩰 🎨 🎬 🎤 🎧 🎼 🎵 🎶 📯 🥁 🪘 🪇 🎷 🎺 🪗 🎸 🪕 🎻 🪈 🎲 ♟️ 🎯 🎳 🎮 🕹️ 🎰 🧩 🃏 🀄 🎴 🎠 🎡 🎢 🎉 🎊 🎈 🎂 🎁 🎏 🎐 🎀' },
-  { cat: 'Travel', emojis: '🚗 🚕 🚙 🚌 🚎 🏎️ 🚓 🚑 🚒 🚐 🛻 🚚 🚛 🚜 🏍️ 🛵 🦽 🦼 🛺 🚲 🛴 🛹 🛼 🚏 🛣️ 🛤️ ⛽ 🛞 🚨 🚥 🚦 🛑 🚧 ⚓ 🛟 ⛵ 🛶 🚤 🛳️ ⛴️ 🛥️ 🚢 ✈️ 🛩️ 🛫 🛬 🪂 💺 🚁 🚟 🚠 🚡 🛰️ 🚀 🛸 🏠 🏡 🏢 🏣 🏤 🏥 🏦 🏨 🏩 🏪 🏫 🏬 🏭 🏯 🏰 💒 🗼 🗽 ⛪ 🕌 🛕 🕍 ⛩️ 🕋 ⛲ ⛺ 🌁 🏔️ ⛰️ 🌋 🗻 🏕️ 🏖️ 🏜️ 🏝️ 🏞️ 🗾 🌅 🌄 🌠 🎇 🎆 🌇 🌆 🏙️ 🌃 🌌 🌉' },
-  { cat: 'Objects', emojis: '⌚ 📱 📲 💻 ⌨️ 🖥️ 🖨️ 🖱️ 🖲️ 🕹️ 🗜️ 💽 💾 💿 📀 📼 📷 📸 📹 🎥 📽️ 🎞️ 📞 ☎️ 📟 📠 📺 📻 🎙️ 🎚️ 🎛️ 🧭 ⏱️ ⏲️ ⏰ 🕰️ ⌛ ⏳ 🕐 🕑 🕒 🕓 🕔 🕕 🕖 🕗 🕘 🕙 🕚 🕛 📡 🔋 🪫 🔌 💡 🔦 🕯️ 🪔 🧯 🛢️ 💸 💵 💴 💶 💷 🪙 💰 💳 🧾 💎 ⚖️ 🪜 🧰 🪛 🔧 🔨 ⚒️ 🛠️ ⛏️ 🪚 🔩 ⚙️ 🪤 🧱 ⛓️ 🧲 🔫 💣 🧨 🪓 🔪 🗡️ ⚔️ 🛡️ 🚬 ⚰️ 🪦 ⚱️ 🏺 🔮 📿 🧿 🪬 💈 ⚗️ 🔭 🔬 🕳️ 🩹 🩺 🩻 🩼 💊 💉 🩸 🧬 🦠 🧫 🧪 🌡️ 🧹 🪠 🧺 🧻 🚽 🚰 🚿 🛁 🛀 🧼 🪥 🪒 🧽 🪣 🧴 🛎️ 🔑 🗝️ 🚪 🪑 🛋️ 🛏️ 🛌 🪞 🪟 🖼️ 🪆 🕰️ 🧸 🪅 🪩 🎎 🎐 🎏 🧧 ✉️ 📩 📨 📧 💌 📮 📪 📫 📬 📭 📦 🏷️ 🪧 📄 📃 📑 🧾 📊 📈 📉 🗒️ 🗓️ 📆 📅 🗑️ 📇 🗃️ 🗳️ 🗄️ 📋 📁 📂 🗂️ 🗞️ 📰 📓 📔 📒 📕 📗 📘 📙 📚 📖 🔖 🧷 🔗 📎 🖇️ 📐 📏 🧮 📌 📍 ✂️ 🖊️ 🖋️ ✒️ 🖌️ 🖍️ 📝 ✏️ 🔍 🔎 🔏 🔐 🔒 🔓 👓 🕶️ 🥽 🥼 🦺 👔 👕 👖 🧣 🧤 🧥 🧦 👗 👘 🥻 🩱 🩲 🩳 👙 👚 👛 👜 👝 🛍️ 🎒 🩴 👞 👟 🥾 🥿 👠 👡 👢 👑 👒 🎩 🎓 🧢 🪖 ⛑️ 📿 💄 💍 💼' },
-  { cat: 'Symbols', emojis: '❤️ 🧡 💛 💚 💙 🩵 💜 🖤 🩶 🤍 🤎 💔 ❤️‍🔥 ❤️‍🩹 💕 💞 💓 💗 💖 💘 💝 💟 🩷 ❣️ ☮️ ✝️ ☪️ 🕉️ ☸️ ✡️ 🔯 🕎 ☯️ ☦️ 🛐 ⛎ ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 🆔 ⚛️ 🉑 ☢️ ☣️ 📴 📳 🈶 🈚 🈸 🈺 🈷️ ✴️ 🆚 💮 🉐 ㊙️ ㊗️ 🈴 🈵 🈹 🈲 🅰️ 🅱️ 🆎 🆑 🅾️ 🆘 ❌ ⭕ 🛑 ⛔ 📛 🚫 💯 💢 ♨️ 🚷 🚯 🚳 🚱 🔞 📵 🚭 ❗ ❕ ❓ ❔ ‼️ ⁉️ 🔅 🔆 〽️ ⚠️ 🚸 🔱 ⚜️ 🔰 ♻️ ✅ 🈯 💹 ❇️ ✳️ ❎ 🌐 💠 Ⓜ️ 🌀 💤 🏧 🚾 ♿ 🅿️ 🛗 🈳 🈂️ 🛂 🛃 🛄 🛅 🛜 ⬆️ ↗️ ➡️ ↘️ ⬇️ ↙️ ⬅️ ↖️ ↕️ ↔️ ↩️ ↪️ ⤴️ ⤵️ 🔃 🔄 🔙 🔚 🔛 🔜 🔝 ▶️ ⏸️ ⏯️ ⏹️ ⏺️ ⏭️ ⏮️ ⏩ ⏪ ⏫ ⏬ ◀️ 🔼 🔽 🔀 🔁 🔂 🔊 🔉 🔈 🔇 📢 📣 🔔 🔕 ➕ ➖ ➗ ✖️ 🟰 ♾️ 💲 💱 ™️ ©️ ®️ 〰️ ➰ ➿ 🔚 🔙 ✔️ ☑️ 🔘 🔳 🔲 ▪️ ▫️ ◾ ◽ ◼️ ◻️ 🟥 🟧 🟨 🟩 🟦 🟪 🟫 ⬛ ⬜ 🔺 🔻 🔸 🔹 🔶 🔷 🔴 🟠 🟡 🟢 🔵 🟣 🟤 ⚪ ⚫ #️⃣ *️⃣ 0️⃣ 1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟' },
-  { cat: 'Flags', emojis: '🏁 🚩 🎌 🏴 🏳️ 🏳️‍🌈 🏳️‍⚧️ 🏴‍☠️ 🇦🇫 🇦🇱 🇩🇿 🇦🇩 🇦🇴 🇦🇬 🇦🇷 🇦🇲 🇦🇼 🇦🇺 🇦🇹 🇦🇿 🇧🇸 🇧🇭 🇧🇩 🇧🇧 🇧🇾 🇧🇪 🇧🇿 🇧🇯 🇧🇹 🇧🇴 🇧🇦 🇧🇼 🇧🇷 🇧🇳 🇧🇬 🇧🇫 🇧🇮 🇰🇭 🇨🇲 🇨🇦 🇨🇻 🇨🇫 🇹🇩 🇨🇱 🇨🇳 🇨🇴 🇰🇲 🇨🇬 🇨🇩 🇨🇷 🇨🇮 🇭🇷 🇨🇺 🇨🇾 🇨🇿 🇩🇰 🇩🇯 🇩🇲 🇩🇴 🇪🇨 🇪🇬 🇸🇻 🇬🇶 🇪🇷 🇪🇪 🇸🇿 🇪🇹 🇫🇯 🇫🇮 🇫🇷 🇬🇦 🇬🇲 🇬🇪 🇩🇪 🇬🇭 🇬🇷 🇬🇩 🇬🇹 🇬🇳 🇬🇼 🇬🇾 🇭🇹 🇭🇳 🇭🇰 🇭🇺 🇮🇸 🇮🇳 🇮🇩 🇮🇷 🇮🇶 🇮🇪 🇮🇱 🇮🇹 🇯🇲 🇯🇵 🇯🇴 🇰🇿 🇰🇪 🇰🇮 🇰🇼 🇰🇬 🇱🇦 🇱🇻 🇱🇧 🇱🇸 🇱🇷 🇱🇾 🇱🇮 🇱🇹 🇱🇺 🇲🇴 🇲🇬 🇲🇼 🇲🇾 🇲🇻 🇲🇱 🇲🇹 🇲🇭 🇲🇷 🇲🇺 🇲🇽 🇫🇲 🇲🇩 🇲🇨 🇲🇳 🇲🇪 🇲🇦 🇲🇿 🇲🇲 🇳🇦 🇳🇵 🇳🇱 🇳🇿 🇳🇮 🇳🇪 🇳🇬 🇰🇵 🇲🇰 🇳🇴 🇴🇲 🇵🇰 🇵🇼 🇵🇸 🇵🇦 🇵🇬 🇵🇾 🇵🇪 🇵🇭 🇵🇱 🇵🇹 🇵🇷 🇶🇦 🇷🇴 🇷🇺 🇷🇼 🇼🇸 🇸🇲 🇸🇦 🇸🇳 🇷🇸 🇸🇨 🇸🇱 🇸🇬 🇸🇰 🇸🇮 🇸🇧 🇸🇴 🇿🇦 🇰🇷 🇸🇸 🇪🇸 🇱🇰 🇸🇩 🇸🇷 🇸🇪 🇨🇭 🇸🇾 🇹🇼 🇹🇯 🇹🇿 🇹🇭 🇹🇱 🇹🇬 🇹🇴 🇹🇹 🇹🇳 🇹🇷 🇹🇲 🇺🇬 🇺🇦 🇦🇪 🇬🇧 🇺🇸 🇺🇾 🇺🇿 🇻🇺 🇻🇦 🇻🇪 🇻🇳 🇾🇪 🇿🇲 🇿🇼' },
-  { cat: 'Nature', emojis: '🌸 💐 🌷 🌹 🥀 🌺 🌻 🌼 🪷 🪻 🏵️ 🌱 🪴 🌲 🌳 🌴 🌵 🌾 🌿 ☘️ 🍀 🍁 🍂 🍃 🍄 🐚 🪸 🪹 🪺 🌰 🌍 🌎 🌏 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔 🌚 🌝 🌛 🌜 🌞 ⭐ 🌟 💫 ✨ ☄️ ☀️ 🌤️ ⛅ 🌥️ 🌦️ 🌧️ ⛈️ 🌩️ 🌨️ ❄️ ☃️ ⛄ 🌬️ 💨 🌪️ 🌫️ 🌈 🌂 ☂️ ☔ ⚡ 🔥 💧 🌊 🎄 🎋 🎍' },
-]
+import { EMOJI_DATA } from '../data/emojiData'
+import { normaliseQuery, searchEmoji } from '../data/emojiSearch'
+import { getLoadedEmojiIndex, loadEmojiIndex } from '../data/emojiIndexLoader'
 
 function parseEmojis(str) {
   return str.split(/\s+/).filter(Boolean)
@@ -118,25 +93,43 @@ export default function EmojiLibrary({ onCopy, embedded }) {
   const [toneOpen, setToneOpen] = useState(false)
   const [gridW, setGridW] = useState(0)
   const [range, setRange] = useState({ start: 0, end: 0 })
+  // The search index is a separate chunk. Seeded from the loader's cache so a
+  // second search in the same session is ready on the first render, with no
+  // loading flash for an index that is already in memory.
+  const [index, setIndex] = useState(getLoadedEmojiIndex)
+  const [indexState, setIndexState] = useState(() => (getLoadedEmojiIndex() ? 'ready' : 'idle'))
   const virtRef = useRef(null)
   const toneRef = useRef(null)
 
   const allCategories = EMOJI_DATA.map(d => d.cat)
+  const query = normaliseQuery(search)
 
-  const filteredGroups = useMemo(() => {
-    const q = search.toLowerCase().trim()
+  // Fetch the index. Called on focus, so it is normally resolved before the
+  // first keystroke, and again on each keystroke as a backstop for anyone who
+  // reaches the field without a focus event — paste, autofill, or a browser
+  // restoring the value on back-navigation. Repeat calls are free: the loader
+  // caches the promise.
+  const requestIndex = useCallback(() => {
+    if (getLoadedEmojiIndex()) return
+    setIndexState('loading')
+    loadEmojiIndex().then(
+      (loaded) => { setIndex(loaded); setIndexState('ready') },
+      // "You are offline" and "that request failed" get different messages and
+      // different recovery. Both beat a search box that silently does nothing.
+      () => setIndexState(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error'),
+    )
+  }, [])
+
+  // A search produces ONE flat ranked list, not categories. Re-grouping ranked
+  // results by category would bury the best match again — the exact fault this
+  // replaces, where "thumbs up" returned all 61 Hands in catalogue order.
+  const results = useMemo(() => {
     const base = activeCat ? PARSED_EMOJI_DATA.filter(g => g.cat === activeCat) : PARSED_EMOJI_DATA
-    if (!q) return base
-    return base.filter(group => {
-      const keywords = CATEGORY_KEYWORDS[group.cat] || []
-      return group.cat.toLowerCase().includes(q) || keywords.some(k => k.includes(q) || q.includes(k))
-    })
-  }, [search, activeCat])
-
-  const filteredCount = useMemo(
-    () => filteredGroups.reduce((sum, g) => sum + g.items.length, 0),
-    [filteredGroups]
-  )
+    if (!query) return { groups: base, count: base.reduce((sum, g) => sum + g.items.length, 0) }
+    if (!index) return { groups: [], count: 0 }
+    const items = searchEmoji(base, index, query)
+    return { groups: items.length ? [{ cat: 'Results', items }] : [], count: items.length }
+  }, [query, activeCat, index])
 
   // Column count + square cell size from the measured container width — the
   // same result the old CSS grid produced with repeat(auto-fill, minmax(42px,1fr)).
@@ -152,7 +145,7 @@ export default function EmojiLibrary({ onCopy, embedded }) {
     if (!cols) return { rows: [], height: 0 }
     const rows = []
     let y = 0
-    for (const g of filteredGroups) {
+    for (const g of results.groups) {
       if (!g.items.length) continue
       if (y > 0) y += SECTION_GAP
       rows.push({ type: 'head', key: `h:${g.cat}`, cat: g.cat, count: g.items.length, top: y, h: HEAD_H })
@@ -164,7 +157,7 @@ export default function EmojiLibrary({ onCopy, embedded }) {
       y -= CELL_GAP
     }
     return { rows, height: y }
-  }, [filteredGroups, cols, cellW])
+  }, [results, cols, cellW])
 
   // Track the container width (also fires when the keep-alive tab un-hides).
   useEffect(() => {
@@ -208,6 +201,16 @@ export default function EmojiLibrary({ onCopy, embedded }) {
     }
   }, [layout])
 
+  // Offline is recoverable without the user doing anything: when the network
+  // returns, fetch the index they already asked for. The Try again button stays
+  // for the failed-request case, which coming back online will not fix.
+  useEffect(() => {
+    if (indexState !== 'offline') return
+    const retry = () => requestIndex()
+    window.addEventListener('online', retry)
+    return () => window.removeEventListener('online', retry)
+  }, [indexState, requestIndex])
+
   // Close the skin-tone popover on any press outside it.
   useEffect(() => {
     if (!toneOpen) return
@@ -246,8 +249,10 @@ export default function EmojiLibrary({ onCopy, embedded }) {
             className="pl-search"
             placeholder="Search emojis..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onFocus={requestIndex}
+            onChange={e => { setSearch(e.target.value); requestIndex() }}
             aria-label="Search emoji"
+            aria-describedby="emoji-search-status"
           />
           {search && (
             <button type="button" className="pl-search-clear" aria-label="Clear emoji search" onClick={() => setSearch('')}>
@@ -337,12 +342,58 @@ export default function EmojiLibrary({ onCopy, embedded }) {
         )}
       </div>
 
-      {search.trim() && filteredCount === 0 && (
+      {/* Always rendered so the input's aria-describedby always resolves, and
+          so a screen reader hears the result count — which the grid, being a
+          wall of unlabelled buttons, does not otherwise convey. */}
+      <p id="emoji-search-status" className="sr-only" role="status" aria-live="polite">
+        {query
+          ? indexState === 'ready'
+            ? `${results.count} ${results.count === 1 ? 'emoji' : 'emojis'} for ${query}`
+            : 'Loading emoji names'
+          : `Showing all ${results.count} emojis`}
+      </p>
+
+      {/* Loading — the index chunk is in flight. */}
+      {query && !index && indexState === 'loading' && (
+        <div className="lib-loading" role="status" aria-live="polite">
+          <div className="fg-loader" />
+          <strong>Looking up emoji names</strong>
+          <span>Searching {TOTAL_COUNT} emojis by name and keyword.</span>
+        </div>
+      )}
+
+      {/* Offline / error — browsing by category still works without the index,
+          so say that rather than implying the whole surface is broken. */}
+      {query && !index && (indexState === 'offline' || indexState === 'error') && (
+        <div className="pl-empty" role="alert">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <p>
+            {indexState === 'offline'
+              ? 'You are offline, so emoji names could not be loaded.'
+              : 'Emoji names could not be loaded, so search is unavailable.'}
+            {' '}Browsing by category still works.
+          </p>
+          <button type="button" className="emoji-retry-btn" onClick={requestIndex}>Try again</button>
+        </div>
+      )}
+
+      {/* Empty — the index is loaded and genuinely matched nothing. */}
+      {query && index && results.count === 0 && (
         <div className="pl-empty">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <p>No emoji found for &ldquo;{search.trim()}&rdquo;</p>
+          <p>
+            No emoji found for &ldquo;{search.trim()}&rdquo;
+            {activeCat ? ` in ${activeCat}` : ''}
+          </p>
+          {activeCat && (
+            <button type="button" className="emoji-retry-btn" onClick={() => setActiveCat(null)}>
+              Search all categories
+            </button>
+          )}
         </div>
       )}
     </div>
