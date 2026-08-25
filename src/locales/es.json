@@ -451,7 +451,6 @@
       "signInRequired": "Inicia sesión para cambiar de plan",
       "free": {
         "name": "Gratis",
-        "price": "$0",
         "f1": "Todas las herramientas principales",
         "f2": "Exportación HTML y CSS estándar",
         "f3": "Soporte comunitario",
@@ -459,7 +458,6 @@
       },
       "pro": {
         "name": "Pro",
-        "price": "$4.99",
         "period": "/ mes",
         "f1": "Todo lo de Gratis",
         "f2": "Exportación premium con barra lateral y cambio de formato",

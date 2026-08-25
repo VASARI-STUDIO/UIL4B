@@ -3,18 +3,28 @@
 // checkout. Every surface that quotes a plan price imports from here.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// ⚠️  FLAG FOR THE FOUNDER — these display amounts are NOT yet the amounts
-//     Stripe will charge, and two of them cannot be reconciled from the client.
+// ⚠️  FLAG FOR THE FOUNDER — these display amounts are still NOT the amounts
+//     Stripe will charge.
 //
 //     `approvedTotal` below is the ladder recorded in
 //     docs/reference/design-language-v2.md ("Deviations from the mock",
-//     founder-approved 2026-08-16): $7 monthly · $18 quarterly · $48 yearly.
+//     founder-approved 2026-08-16) and re-approved as decision 2 of
+//     docs/build-plan/founder-batch-2026-08-20.md: $7 monthly · $18 quarterly ·
+//     $48 yearly.
 //
-//     The server-side defaults in api/_lib/pricing.js currently read
-//     monthly.usd 4.99 and yearly.usd 39.99, and have NO quarterly interval at
-//     all — no DEFAULT_PRICES row, no LOOKUP_KEYS entry, no INTERVAL_MAP entry.
-//     api/_lib/pricing.js is founder-gated (human-validation-zones.md), so this
-//     file does not and must not try to fix that.
+//     SETTLED 2026-08-20: api/_lib/pricing.js used to disagree with this file —
+//     its DEFAULT_PRICES read monthly.usd 4.99 and yearly.usd 39.99 with no
+//     quarterly interval at all, so the same visitor could be shown either
+//     number. Its USD fallbacks are now this ladder, and quarterly has its
+//     DEFAULT_PRICES row, LOOKUP_KEYS entry and INTERVAL_MAP entry.
+//     tests/unit/price-ladder.test.js fails the build if they drift again.
+//
+//     STILL OPEN, and the reason this flag stays: both files hold DISPLAY
+//     fallbacks. The amounts Stripe charges live in Stripe price objects
+//     (STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY, or the lookup keys), which
+//     are founder-configured in the dashboard and are not in this repository.
+//     Creating/confirming $7/$18/$48 there — a RISE on yearly, $39.99 → $48 —
+//     is tracked in docs/OWNER-ACTIONS.md.
 //
 //     Consequences, by design rather than by accident:
 //       1. Live prices WIN. When /api/get-prices returns an amount for an
@@ -29,7 +39,10 @@
 //          renderable, never typed. If the ladder changes, the headline follows.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { PRICE_SYMBOLS } from '../utils/currency'
+// Extension is explicit so plain Node ESM can load this module too — that is
+// what lets tests/unit/price-ladder.test.js import the REAL ladder rather than
+// regex-scraping this file's source. Vite resolves it identically.
+import { PRICE_SYMBOLS } from '../utils/currency.js'
 
 // `trialDays` mirrors src/pages/Checkout.jsx, which grants the 7-day trial on
 // the YEARLY plan only. Saying "start your free trial" over a monthly plan that

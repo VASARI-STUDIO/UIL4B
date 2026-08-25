@@ -15,18 +15,31 @@ number here, you must have re-run it.
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
 | Build | `npm run build` | passes (vite + prerender) |
-| Unit | `npm run test:unit` | **484 tests, 484 pass** |
+| Unit | `npm run test:unit` | **489 tests, 489 pass** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
 | Browser acceptance | `npm run test:users` | **229 tests across 23 spec files**; **216 pass, 13 skipped** (`npx playwright test --list`) |
 
+Price-ladder drift guard (2026-08-20) moved unit 484 → **489** (+5: the client
+`approvedTotal` and the server `DEFAULT_PRICES` agreeing in USD, quarterly being
+fully described on the server, every subscription row pricing every supported
+currency, per-month rates falling as commitment lengthens, and the tripwire that
+quarterly is described but not sellable). Lint unchanged at 0 errors / 31
+warnings.
+
+**Browser acceptance was already 229 before that slice, not the 226 written
+here.** The +3 came from `4c077ca` *test(home): move the homepage contract onto
+the V2 surface* (2026-08-17), which this table was never updated for — so the
+figure had been stale for three days and the next slice to run the suite would
+have had to decide whether it had caused a regression. It had not. Corrected
+from a measured run rather than inferred: **216 pass, 13 skipped, 0 fail.**
+
 > **Run `npm run build`, never bare `npx vite build`.** They are not
-> interchangeable: `build` is `vite build && node scripts/prerender.mjs`.
-> Four unit tests read the prerendered shells and **skip silently** when
-> `dist/` has not been prerendered — so the bare Vite build produces a green
-> run with a quietly smaller test count. A gate that passes by skipping is the
-> vacuous-pass failure this project has hit before. Re-measured 2026-08-20:
-> browser acceptance on `main` is **229 tests** (`npx playwright test --list`),
-> not the 226 recorded on 2026-08-08 — `main` advanced and this table did not.
+> interchangeable: `build` is `vite build && node scripts/prerender.mjs`, and
+> `npx vite build` does not prerender. Four soft-404 shell tests then self-skip
+> with `# run \`npm run build\` first`, the suite reports **485 pass / 4
+> skipped**, and it looks green while the shell assertions never execute.
+> A gate that passes by skipping is exactly the "silence is not a pass" failure
+> this document exists to prevent.
 
 ## Open-stack test deltas — 2026-08-20
 

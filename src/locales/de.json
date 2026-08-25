@@ -451,7 +451,6 @@
       "signInRequired": "Anmelden um den Plan zu ändern",
       "free": {
         "name": "Kostenlos",
-        "price": "0 €",
         "f1": "Alle Design-Kerntools",
         "f2": "Standard-HTML- & CSS-Export",
         "f3": "Community-Support",
@@ -459,7 +458,6 @@
       },
       "pro": {
         "name": "Pro",
-        "price": "4,99 €",
         "period": "/ Monat",
         "f1": "Alles aus Kostenlos",
         "f2": "Premium-Export mit Seitenleiste & Formatwechsel",
