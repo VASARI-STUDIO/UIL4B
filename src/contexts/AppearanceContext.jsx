@@ -79,8 +79,19 @@ export function AppearanceProvider({ children }) {
   const resolved = { ...state, reducedMotion }
 
   useEffect(() => {
+    // The attribute goes on FIRST and unguarded — it is the accessibility
+    // guarantee, and it must not be hostage to storage.
     applyToDocument(resolved)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    // `load()` has always been try/catch'd because localStorage throws when
+    // storage is blocked (Safari private browsing, "block all cookies", a
+    // sandboxed iframe) or the quota is full. The WRITE was not, so the same
+    // throw escaped this effect and took the provider down — the read was
+    // hardened and the write was forgotten, the same one-of-two-sites mistake
+    // that caused the reduced-motion defect. A visitor who cannot persist a
+    // choice still gets the OS-resolved one; they just start from auto each load.
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    } catch { /* storage unavailable — the resolved attribute above still stands */ }
     window.dispatchEvent(new CustomEvent('vs-appearance-changed', { detail: resolved }))
     // `resolved` is rebuilt every render; the two values it is made of are the
     // real dependencies.
