@@ -1,113 +1,231 @@
 # UIL4B agent roster
 
-UIL4B uses specialised agents for accountable roles and project-scoped skills
-for reusable methods and knowledge. The main thread is the **Director**: it
-understands the request, loads current context, and routes the fewest agents
-needed for the outcome. Its operating doc is
-[`docs/reference/director.md`](../../docs/reference/director.md).
+The main thread is the **Director** — the agent Dylan talks to. Its operating
+doc is [`docs/reference/director.md`](../../docs/reference/director.md). It
+routes the fewest agents needed and never writes code.
 
-## Agent and skill boundary
+**Five agents.** Reset from thirteen on 2026-08-20 at the founder's instruction
+("simplify our agent tree… we need a soft reset"). What changed and why is in
+[Retired roles](#retired-roles-2026-08-20) at the bottom — read it before
+proposing a sixth.
 
-| Layer | Owns | Must not own |
+## The rule that keeps this small
+
+**Agents are roles. Skills are knowledge.**
+
+| | Owns | Count |
 |---|---|---|
-| Agent | Role, judgement, evidence, hand-off, stop conditions | Replaceable brand values, framework details, duplicated project facts |
-| Skill | Reusable workflow, quality bar, and domain knowledge | Task status or a fictional persona |
-| Project docs | Current product, architecture, constraints, and policy | Generic methods already expressed by a skill |
-| Live code | Implemented behaviour and tokens | Unreviewed product or brand strategy |
-| Private wiki | Long-term research, synthesis, and learning | A hidden runtime dependency for the repository |
+| **Agent** | Accountability, judgement, hand-off, stop conditions | Few, stable |
+| **Skill** | A reusable method, checklist or quality bar | Many, on demand |
 
-Knowledge from the private Vasari Studio wiki must be distilled into a
-repository-local skill or project document before an app agent depends on it.
-Never add an absolute vault path to an agent.
+Most of the thirteen were **methods wearing a role's clothes**. An SEO audit, a
+usability protocol, an accessibility sweep and a release checklist are things an
+accountable agent *does*; they are not separate accountabilities. Several of
+them duplicated skills that already existed, so the roster carried the
+maintenance cost of thirteen briefs to deliver five real roles.
 
-Brand literals and visual-system decisions belong to
-`.claude/skills/uil4b-brand-design/` and the live sources it references. They do
-not belong in `design.md`.
+Before adding an agent, ask: *is this a new kind of accountability, or a method
+an existing role should load?* If it is a method, write a skill.
+
+## The five
+
+| Agent | Model | Accountable outcome |
+|---|---|---|
+| **research** | `claude-opus-5` | Cited, decision-ready evidence — market, users, and **interface patterns via Mobbin** — with every claim carrying its evidence class. |
+| **design** | `claude-opus-5` | Direction, flows, specifications and anti-slop critique that an engineer can build without guessing. |
+| **engineer** | `claude-opus-5` | The smallest complete implementation, with a green gate and rendered proof. |
+| **reviewer** | `claude-opus-5` | One severity-ranked verdict covering correctness, security and secrets, with line-level evidence. |
+| **qa** | `claude-sonnet-5` | Whether it actually works — rendered, across viewports, keyboard and assistive paths. |
+
+**Model assignments are a founder decision.** Three changed in this reset and
+each is flagged for Dylan to overrule:
+
+- **research** sonnet → **opus**. It absorbs `ux-researcher` (was opus), and the
+  Mobbin pattern research on 2026-08-20 ran on opus and produced 95 cited
+  references with honest confidence labelling.
+- **reviewer** → **opus**, taking the highest of the three it merges
+  (`security-reviewer` was opus). A merged reviewer that misses a security
+  finding is worse than three that overlap.
+- **qa** stays **sonnet**. Rendered verification is mechanical and high-volume.
+
+Keep this table and each agent's `model:` field in sync. Three files previously
+drifted to bare `opus` / `sonnet` while the rest used full ids; all five now use
+full ids.
+
+## Tools — and the gap this reset fixes
+
+**Not one of the previous thirteen agents could use Mobbin.** `design` and
+`research` were granted `WebSearch, WebFetch, Read, Grep, Glob` and no
+`mcp__mobbin__*` tool at all. So when the founder asked on 2026-08-20 to "let
+the design agent use mobbin and the research agents", the roster made that
+structurally impossible — every Mobbin result that day came from a
+general-purpose agent briefed by hand.
+
+`research` and `design` now hold the Mobbin tools explicitly. That was the
+single most expensive defect in the old tree, because it silently produced
+taste-based design work while looking like researched design work.
+
+### ⚠ Pending: grant `motionsites` to `research` and `design`
+
+The founder registered a **`motionsites`** MCP server on 2026-08-23 specifically
+to close the gap Mobbin cannot: **Mobbin is a stills library and is silent on
+motion, timing and easing.** Two deliverables have already had to label their
+motion recommendations `judgement` for exactly this reason — the workbench
+tab-switch transition and the search-bar typing animation.
+
+**This is not done yet.** The server's tool names must be read from a live
+connection and added to the `tools:` line of `research.md` and `design.md`. Do
+not guess them — guessing is how the Mobbin grant was missing in the first
+place. Once granted, the standing rule is:
+
+> **Mobbin for structure, layout, labelling and state. `motionsites` for motion,
+> timing and easing.** A motion recommendation that cites neither is
+> `judgement`, and must say so.
+
+| Agent | Writes files | Runs commands | Browser | Web | Mobbin |
+|---|---|---|---|---|---|
+| research | no | no | no | yes | **yes** |
+| design | no | no | no | yes | **yes** |
+| engineer | **yes** | **yes** | yes | no | no |
+| reviewer | no | yes | no | no | no |
+| qa | no | yes | **yes** | no | no |
+
+Only `engineer` writes. A reviewer that can edit is not a reviewer.
+
+## Skills, loaded on demand
+
+Knowledge lives here, not in a persona.
+
+| Need | Skill |
+|---|---|
+| Brand identity, anti-slop critique | `uil4b-brand-design` |
+| Building UI | `frontend-ui-engineering` |
+| Landing a change in slices | `incremental-implementation` |
+| Root-causing a failure | `debugging-and-error-recovery` |
+| Rendered browser testing | `browser-testing-with-devtools` |
+| Performance work | `performance-optimization` |
+| Writing a spec first | `spec-driven-development` |
+| SEO audit | `skene-seo-audit` |
+| Accessibility audit | `skene-accessibility-audit` |
+| Usability testing protocol | `usability-testing` |
+| Conversion review | `skene-page-cro` |
+
+The last four are why four agents were retired: the method already existed as a
+skill, so the agent added a brief to maintain and nothing else.
+
+Loading a skill grants no authority outside the role. The reviewer may use the
+brand quality bar and still cannot edit a file.
 
 ## Sources of truth
 
 Resolve conflicts in this order:
 
-1. The user's current explicit instruction.
+1. The founder's current explicit instruction.
 2. `CLAUDE.md` and canonical `docs/reference/` decisions.
-3. The approved task specification and acceptance criteria.
+3. The approved specification and acceptance criteria.
 4. Relevant project skills.
 5. The current implementation and tests.
-6. General best practice and external references.
+6. General best practice.
 
-Current delivery state has two homes: `src/data/pipeline.js` for the queue,
-blockers and known-unfixed bugs, and `CHANGELOG.md` for shipped history and the
-founder decisions behind each release. Product direction is in `CLAUDE.md`.
-Agents should read source documents rather than copying facts that will drift.
+Delivery state has two homes: `src/data/pipeline.js` for the queue, blockers and
+known-unfixed bugs, and `CHANGELOG.md` for shipped history and the founder
+decisions behind it. Read source documents; do not copy facts that will drift.
 
-## The thirteen agents
+## What UIL4B is
 
-The last three were added in founder batch 4 to cover the redesign programme:
-research decides what a surface must achieve, the tester finds out whether it
-does, and monetisation keeps the pricing page and `api/_lib/plans.js` telling
-the same story.
+The **operating workspace for UI system creation** — build, organise, validate
+and export interface foundations without tab-hopping. Three surfaces: **Create**
+(build; the primary live surface), **Discover** (community + curated resources),
+**Learn** (honest coming-soon).
 
-| Agent | Model | Accountable outcome |
+> Do not describe this as a "UI-inspiration platform" — that framing is retired.
+> `CLAUDE.md` Direction is canonical; if this file disagrees with it, this file
+> is the bug.
+
+## Evidence boundaries — binding on every agent
+
+Four kinds of evidence answer four different questions. No agent may present one
+as another, and no agent may produce the two we currently cannot gather.
+
+| Branch | Answers | Available to agents |
 |---|---|---|
-| **research** | claude-sonnet-5 | Cited, decision-ready evidence about a defined market, user, or technical question. |
-| **design** | claude-opus-5 | Coherent user flows, experience direction, anti-slop critique, and buildable acceptance criteria. |
-| **seo** | claude-sonnet-5 | Prioritised technical and content search improvements supported by current evidence. |
-| **engineer** | claude-opus-5 | The smallest complete implementation with runtime and build evidence. |
-| **code-reviewer** | claude-sonnet-5 | Severity-ranked outcome and code-quality findings with line-level evidence. |
-| **security-reviewer** | claude-opus-5 | Threat-focused review and concrete remediation for security-sensitive changes. |
-| **secret-scanner** | claude-sonnet-5 | Pre-commit secret and credential-leak verdict with safe redaction. |
-| **qa** | claude-sonnet-5 | End-to-end functional verdict across requirements, states, viewports, and accessibility. |
-| **release-captain** | claude-sonnet-5 | Evidence-based release readiness and prepared hand-off to the Director. |
-| **analytics** | claude-sonnet-5 | Measurement plans and instrumentation that answer defined product questions. |
-| **ux-researcher** | claude-opus-5 | Segment first-wins, task scripts, and severity-ranked findings that say what a redesign must achieve. |
-| **usability-tester** | claude-sonnet-5 | A persona's honest attempt at a real task in a real browser, and where it broke. |
-| **monetisation** | claude-opus-5 | Plan limits the infrastructure can honour, and pricing claims that match the enforcing code. |
+| Rendered verification | Does it do what it claims in a real browser? | **Yes** — `qa`, and any agent with `Bash` + Playwright |
+| Accessibility evaluation | Does it meet access requirements? | **Yes**, except screen-reader output and physical touch devices |
+| Usability evidence | Can representative people complete and understand the task? | **No** — requires observed participants |
+| Discovery / demand | What do people need, and would they pay? | **No** |
 
-Model assignments are a founder decision. Keep this table and each agent's
-`model:` field in sync.
+**UIL4B has no shipped activation instrumentation and no user-feedback intake**
+(P-001 and P-002 are approved but unbuilt). Until they land, an agent asked for
+"user testing" delivers rendered and accessibility verification and **says so**;
+it does not invent participants, sessions, quotes, satisfaction levels or
+task-success rates. Predicted user confusion is a hypothesis and must carry that
+label. "Not run" is always a valid answer; a fabricated finding never is.
 
-## Core-agent skill routing
+**Severity is five dimensions, not one.** Impact, frequency (with its
+denominator), recovery, reach and confidence are judged independently before a
+tier is assigned. A rare safety, privacy, data-loss or accessibility blocker can
+stop a release on impact alone; a constant cosmetic wobble does not become a P0
+by being constant.
 
-| Agent | Always or conditionally load |
+**Reject proxy substitution.** Tour completion is not value; time-on-page is not
+success; aesthetic preference is not task performance; a green build is not a
+working feature.
+
+### Evidence classes
+
+Every claim carries one, honestly. Weakest is allowed; disguised is not.
+
+| Class | Means |
 |---|---|
-| **design** | `uil4b-brand-design` for all brand-facing work; target project sources; accessibility and research standards as needed |
-| **engineer** | `incremental-implementation` or `debugging-and-error-recovery`; `frontend-ui-engineering` and `uil4b-brand-design` for user-facing UI; browser and performance skills when relevant |
-| **code-reviewer** | Approved criteria and diff; `frontend-ui-engineering` and `uil4b-brand-design` for user-facing changes |
-| **qa** | Build-and-verify and Murphy-state references; browser-testing workflow for rendered flows |
-| **research** | Primary-source and citation discipline; product positioning before interpreting external material |
+| `measured` | Instrumentation, a metric, a test, a reproduction |
+| `observed` | A founder or user report, a review, a support message |
+| `inferred` | Derived from code, a competitor, or a known pattern |
+| `judgement` | Taste and experience, nothing behind it yet |
 
-Loading a skill does not give an agent authority outside its role. For example,
-the reviewer may use the brand quality bar but remains read-only.
+If the honest label is `judgement`, write `judgement` — and say what evidence
+would settle it.
 
 ## Routing
 
-There is no mandatory agent chain. Use the fewest agents that cover the task:
+No mandatory chain. Use the fewest agents that cover the task.
 
-- Advisory work normally needs one accountable specialist.
-- Product or brand ambiguity goes to `design` before implementation.
-- A clear, bounded implementation goes directly to `engineer`.
-- A related cluster receives one combined `code-reviewer` and `qa` pass before
-  release, not one pass per micro-edit.
-- Changes involving API boundaries, authentication, billing, uploads, user
-  content, or credentials receive the specialist security gates required by
-  `docs/reference/director.md`.
-- `release-captain` prepares release evidence; the main thread performs external
-  GitHub actions only when the user authorises them.
+| Task | Route |
+|---|---|
+| Pattern, market or user question | `research` |
+| Ambiguous product or brand direction | `design` (after `research` if references are missing) |
+| A clear, bounded change | `engineer` |
+| A new end-to-end surface | `research` → `design` → `engineer` → `reviewer` + `qa` |
+| A diff to check | `reviewer` |
+| Does it actually work? | `qa` |
 
-## Non-negotiable gates
+**Security is never batched away.** Anything touching `/api`, auth, Stripe or
+user-generated content takes a `reviewer` pass every time, and the reviewer runs
+its secret scan on every diff rather than as a separate invocation.
 
-- Follow `docs/reference/build-and-verify.md`; compilation alone is not runtime
-  verification.
-- Follow `docs/reference/human-validation-zones.md`; do not duplicate or guess
-  its protected scope.
-- Critical security findings, leaked secrets, and a red required build are hard
-  release blockers.
-- Preserve unrelated local work and state assumptions or untested boundaries.
-- Never fabricate research, analytics, product proof, testimonials, or success.
+**Brief properly.** Most failures in this project came from briefs, not models:
+scope too large to finish in one session, or so loose the agent invented work.
+State the scope, the known root cause if there is one, what is out of bounds,
+the current gate baselines, and that merging is the Director's job.
 
-## Keeping the system current
+**Commit early.** Session limits have killed slices mid-flight. A committed
+partial slice is recoverable; an uncommitted one is not.
 
-When project truth changes, update its canonical document or code source. When a
-reusable method improves, update its skill. When founder feedback reveals a
-durable identity preference, use the brand skill's learning loop. Change an agent
-only when its role, judgement, evidence standard, or hand-off needs to change.
+## Retired roles, 2026-08-20
+
+Nothing here was deleted for being bad. Each was a method that belongs in a
+skill, or an accountability another role already held.
+
+| Retired | Where it went |
+|---|---|
+| `ux-researcher` | → `research`. Two research roles split evidence for no gain. |
+| `usability-tester` | → `qa` + the `usability-testing` skill. Its real output was rendered verification, which `qa` owns — and the evidence boundaries above forbid it claiming more. |
+| `code-reviewer` | → `reviewer` |
+| `security-reviewer` | → `reviewer`, which inherits opus for this reason |
+| `secret-scanner` | → `reviewer`, run on **every** diff rather than as a separate step it was easy to skip |
+| `seo` | → `research` + the `skene-seo-audit` skill |
+| `analytics` | → `research` for measurement design, `engineer` for instrumentation |
+| `monetisation` | → `design` for the offer, `engineer` for the limits. It also held `Write` + `Bash` over Human Validation Zone files, which is authority a specialist advisory role should not have carried |
+| `release-captain` | → the **Director**, which already owns verification and merging per `director.md`. This one duplicated the main thread outright |
+
+**Git history is the archive.** These files are recoverable from it; they were
+not copied into a parallel doc.

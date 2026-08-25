@@ -308,8 +308,9 @@ Founder rule (2026-06-30): **don't over-route.** The build/lint gate is cheap
 - **After a cluster of related changes** → run **one combined code-review + qa**
   over the whole batch, then merge. Not a fresh review per micro-edit.
 - **Security-sensitive code is never batched away.** Anything touching `/api`,
-  auth, Stripe, or user-generated content gets **secret-scanner +
-  security-reviewer before merge**, every time — no matter how small.
+  auth, Stripe, or user-generated content gets a **`reviewer` pass before
+  merge**, every time — no matter how small. `reviewer` scans for secrets and
+  weighs security on every diff, so there is no separate step to forget.
 
 Rule of thumb: *simple check after completing a new thing; a bigger scan/test
 after several changes have landed.*

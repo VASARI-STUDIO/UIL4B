@@ -40,8 +40,11 @@ Before a PR is prepared, the branch passes the quality gates:
 1. Clean tree, on the feature branch (not `main`).
 2. `npx vite build` passes.
 3. `npx eslint .` is clean.
-4. Secret-scan + code review + security review — **BLOCK on any critical**.
+4. One `reviewer` pass — secrets, correctness and security in a single
+   verdict — **BLOCK on any critical**.
 5. Version + CHANGELOG updated.
 
-The `release-captain` agent drives this and hands a GO/NO-GO + prepared PR
-title/body to the Director, who executes the merge.
+The **Director** drives this and executes the merge. The former
+`release-captain` agent was retired on 2026-08-20 because it duplicated the
+Director, which already owns release verification and merging — see
+[`.claude/agents/README.md`](../../.claude/agents/README.md).

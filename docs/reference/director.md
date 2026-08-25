@@ -122,15 +122,21 @@ No fixed chain; route per task. Every unnecessary agent burns context.
 
 | Task type | Route |
 |---|---|
-| SEO instruction | `seo` only |
-| Market/strategy question | `research` only |
-| Pure design / UI spec | `design` (research first only if references are missing) |
+| Pattern, market, competitor or user question | `research` |
+| SEO instruction | `research` + the `skene-seo-audit` skill |
+| Pure design / UI spec | `design` (`research` first only if references are missing) |
 | Approved spec, bug fix, small change | `engineer` |
-| New end-to-end feature | `research` → `design`/`seo` → `engineer` → reviews → `qa` |
-| Code review of a diff | `code-reviewer` (+ `security-reviewer` for `/api`, auth, UGC, uploads) |
-| Pre-commit secret check | `secret-scanner` |
-| Final sign-off before merge | `qa` |
-| Analytics / instrumentation audit | `analytics` |
+| New end-to-end feature | `research` → `design` → `engineer` → `reviewer` + `qa` |
+| Code review of a diff | `reviewer` — it scans for secrets and weighs security on every diff |
+| Does it actually work? | `qa` |
+| Analytics / instrumentation | `research` to design the measure, `engineer` to build it |
+
+> **The roster was reset from thirteen agents to five on 2026-08-20** at the
+> founder's instruction. Agents are roles; skills are knowledge. Nine retired
+> roles and where each went are listed in
+> [`.claude/agents/README.md`](../../.claude/agents/README.md) — read that
+> before proposing a sixth. `release-captain` was one of them: the Director
+> already owned release verification and merging, so it duplicated this thread.
 
 **Heuristics.** Advisory tasks usually need one agent. Code changes always end at
 a green gate. Anything touching a Human Validation Zone is flagged to Dylan for
@@ -146,11 +152,13 @@ of bounds, and that merging is the PM's job, not theirs.
 
 - **Per change** — the engineer runs the local gate. That is enough to keep
   moving; no review subagent per micro-edit.
-- **Per cluster** — one combined `code-reviewer` + `qa` pass over the batch
-  before merging.
+- **Per cluster** — one combined `reviewer` + `qa` pass over the batch before
+  merging.
 - **Non-negotiable** — anything touching `/api`, auth, Stripe or user-generated
-  content gets `secret-scanner` + `security-reviewer` before merge, every time.
-  Security is never batched away.
+  content gets a `reviewer` pass before merge, every time. Security is never
+  batched away. `reviewer` scans for secrets and weighs security on **every**
+  diff rather than as separate invocations, precisely because a separate step is
+  one that gets skipped.
 
 See `build-and-verify.md` for the same policy from the build side.
 
