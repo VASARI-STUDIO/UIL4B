@@ -16,8 +16,9 @@ import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
 // than the way the router lists them. Kept in sync with App.jsx by hand.
 const FLAT_SECTIONS = [
   {
+    // `id` is the section anchor and stays as it is — it is a URL, not copy.
     id: 'workspace',
-    label: 'Your workspace',
+    label: 'Your account',
     desc: 'Where your work and account live.',
     links: [
       { label: 'Home', route: '/home', note: 'The overview and starting point.' },
@@ -161,7 +162,7 @@ export default function SiteMap() {
       <section className="smap-surface" aria-labelledby="smap-account">
         <div className="smap-surface-h">
           <h2 id="smap-account">Account &amp; more</h2>
-          <p>Your workspace, support and the fine print.</p>
+          <p>Your account, support and the fine print.</p>
         </div>
         <div className="smap-grid">
           {FLAT_SECTIONS.map((section) => (

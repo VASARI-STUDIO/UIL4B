@@ -74,7 +74,7 @@ function AboutTab() {
           <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)' }}>What is UIL4B?</span>
         </div>
         <p style={{ fontSize: 13.5, color: 'var(--t1)', lineHeight: 1.75, marginBottom: 14 }}>
-          UIL4B (pronounced "UI LAB") is a free design toolkit that combines the graphic design tools you use most into a single, unified workspace. Instead of bouncing between dozens of bookmarks and browser tabs, everything lives in one place: colour systems, typography tools, image converters, AI generators, prompt libraries, and more.
+          UIL4B (pronounced "UI LAB") is a free design toolkit that combines the graphic design tools you use most into a single, unified toolkit. Instead of bouncing between dozens of bookmarks and browser tabs, everything lives in one place: colour systems, typography tools, image converters, AI generators, prompt libraries, and more.
         </p>
         <p style={{ fontSize: 13.5, color: 'var(--t1)', lineHeight: 1.75 }}>
           The goal is simple: help designers and developers build websites (AI-generated or handcrafted) at a quality above the rest, while saving real time in the process.

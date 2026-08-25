@@ -806,7 +806,7 @@ export default function GradientGenerator({ onCopy, toast }) {
       {/* Header */}
       <header className="ggn-head">
         <div className="ggn-head-id">
-          <span className="ggn-eyebrow">Colour system workspace</span>
+          <span className="ggn-eyebrow">Create / Colour</span>
           <div className="ggn-title-row">
             <h1 className="ggn-title">Gradient Generator</h1>
           </div>

@@ -60,7 +60,7 @@ test.describe('premium homepage', () => {
     // assertion moved to the element that now does it, and checks the numbers
     // are the derived ones rather than the mock's invented "40+ TOOLS".
     await expect(page.locator('.home-hero-stats')).toContainText('LIVE TOOLS')
-    await expect(page.locator('.home-hero-stats')).toContainText('ONE WORKSPACE')
+    await expect(page.locator('.home-hero-stats')).toContainText('ONE ACCOUNT')
     await expect(page.locator('.home-hero-stats')).not.toContainText('40+')
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
     await expect(page.getByText(/Component tooling is coming next/)).toBeVisible()
