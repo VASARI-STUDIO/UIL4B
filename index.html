@@ -83,7 +83,17 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 // to light and never auto-follows the OS. Keeping the two in agreement is what
 // kills the first-time visitor theme flip. The rebuilt design ships light-first;
 // dark returns later as an explicit opt-in.
-(function(){try{var r=document.documentElement;var t=localStorage.getItem('vs-t');if(t!=='dark'&&t!=='light'){t='light'}if(localStorage.getItem('vs-t-lightreset')!=='1'){t='light';localStorage.setItem('vs-t','light');localStorage.setItem('vs-t-lightreset','1')}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a=JSON.parse(localStorage.getItem('vs-appearance')||'{}');r.setAttribute('data-reduced-motion',String(!!a.reducedMotion))}catch(e){}})();
+//
+// data-reduced-motion is THREE-state and motion is the opposite of theme here:
+// it DOES auto-follow the OS. Only a boolean in vs-appearance counts as an
+// explicit choice; absent one we mirror the OS query. Writing String(!!a.reducedMotion)
+// unconditionally — which this line used to do — fabricates an explicit "false"
+// for every visitor who has never opened Settings, and by the contract in
+// global.css an explicit "false" BEATS `@media (prefers-reduced-motion:reduce)`.
+// That single `!!` disabled every reduced-motion rule in the stylesheet app-wide.
+// Keep this in step with AppearanceContext.jsx: the same fabricated "false" lived
+// in both files, and fixing only one leaves the defect alive.
+(function(){try{var r=document.documentElement;var t=localStorage.getItem('vs-t');if(t!=='dark'&&t!=='light'){t='light'}if(localStorage.getItem('vs-t-lightreset')!=='1'){t='light';localStorage.setItem('vs-t','light');localStorage.setItem('vs-t-lightreset','1')}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a=JSON.parse(localStorage.getItem('vs-appearance')||'{}');var m=typeof a.reducedMotion==='boolean'?a.reducedMotion:!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);r.setAttribute('data-reduced-motion',String(m))}catch(e){}})();
 </script>
 </head>
 <body>
