@@ -633,7 +633,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .stc-hue-row{display:flex;align-items:center;gap:12px}
 .stc-hue-row .cs-hue-slider{flex:1;width:auto}
 .stc-hue-val{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t1);min-width:34px;text-align:right}
-@media(max-width:640px){.stc-cell{min-height:52px}.stc-cell-hex{display:none}}
+@media(max-width:640px){.stc-cell{min-height:52px}}
 
 /* Semantic colour workbench */
 .stc-head.solo{padding-bottom:var(--s-5);border-bottom:1px solid var(--border)}
@@ -701,6 +701,21 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
   .stc-handoff{grid-template-columns:1fr}
 }
 @media(max-width:768px){
+  /* S1: the ten tone cells WRAP instead of scrolling off the side. As a single
+     row they were `flex:1 0 64px`, and that 0 flex-shrink pinned a 640px floor
+     under a container measured at 252px on a 320px phone - 3 of 10 cells
+     visible, 28 of 40 tones across the four ramps unreachable without
+     discovering a swipe there was no cue for. There was no cue: overlay
+     scrollbars render nothing under touch, and .stc-ramp's border-radius draws
+     the right edge ROUNDED AND CLOSED, so the control actively signalled "this
+     is the end of the scale" while the toolbar said "40 canonical tokens".
+     Five columns, two rows, every tone on screen and none below 24px.
+     overflow stays `hidden` rather than becoming `visible`: this element also
+     sets overflow-y, and `visible` on one axis beside a clipping value on the
+     other computes to `auto` - which would leave the scroller behind, i.e. the
+     defect, while looking like the fix. See css-conventions.md. */
+  .stc-ramp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));overflow:hidden}
+  .stc-cell{flex:none;min-width:0}
   .stc-preview-grid{grid-template-columns:1fr}
   .stc-preview+.stc-preview{border-left:0;border-top:1px solid var(--border)}
   .stc-next{flex-direction:column}
@@ -709,8 +724,20 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 @media(max-width:560px){
   .stc-head.solo .stc-toolbar{align-items:flex-start;flex-direction:column}
   .stc-copy-btn{width:100%;margin-left:0}
-  .stc-bundles{display:flex;overflow-x:auto;scroll-snap-type:x proximity}
-  .stc-bundle{flex:0 0 210px;scroll-snap-align:start}
+  /* S2: the bundle picker keeps the two-column grid it already uses at
+     561-980px instead of becoming a seven-wide scroller. As a scroller it
+     measured scrollWidth 1518 against clientWidth 288 on a 320px phone: ONE of
+     seven presets fully visible, 79% of the control off-screen, and the seventh
+     bundle 1160px away. Choosing a starting bundle is the first decision this
+     page asks for, so six of the seven options being undiscoverable is the
+     whole task failing, not a rough edge. scroll-snap was present, so the
+     scroller was intended - what was never there is any indication that it
+     scrolls. Wrapping needs no indication.
+     Deliberately NOT replaced with a scroll cue: seven cards wrap into four
+     rows on the narrowest phone, which costs height on a page that already
+     scrolls vertically, and buys every option being seen without a gesture. */
+  .stc-bundles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stc-bundle{min-height:0}
   .stc-role{padding:16px}
   .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto}
   .stc-preview{padding:16px}

@@ -680,3 +680,84 @@ test('S9 · opening a panel gives its links back to the keyboard', async ({ brow
 
   expect(reached, 'focus never reached inside the opened panel').toBeGreaterThan(0)
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// S1 / S2 · Semantic Colours must show the scale it says it is showing
+// ─────────────────────────────────────────────────────────────────────────────
+// Both defects were the same shape: a control turned into a horizontal scroller
+// with nothing to say it scrolls. What made S1 worse than an ordinary overflow
+// is that the ramp's own border-radius drew its right edge rounded and CLOSED,
+// so the control actively signalled "this is the end of the scale" while the
+// page copy promised "every state gets a full 50–900 ramp" and the toolbar read
+// "40 canonical tokens". Neither is asserted by counting DOM nodes — the cells
+// were always in the DOM. What is asserted is how many are inside their own
+// container's box.
+const STC_VIEWPORTS = [[320, 568], [360, 560], [390, 844], [430, 932], [560, 800], [640, 800], [700, 800], [768, 1024]]
+
+test('S1 · every tone in every ramp is on screen, with its hex', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of STC_VIEWPORTS) {
+    const { ctx, page } = await openTouch(browser, w, h, '/color/semantic', w >= 700, '.stc-ramp')
+    const r = await page.evaluate(() => {
+      const ramps = [...document.querySelectorAll('.stc-ramp')]
+      let hiddenCells = 0, scrollers = 0, tiny = 0, clipped = 0, sample = ''
+      for (const ramp of ramps) {
+        const rb = ramp.getBoundingClientRect()
+        if (ramp.scrollWidth > ramp.clientWidth + 1) scrollers++
+        for (const cell of ramp.querySelectorAll('.stc-cell')) {
+          const cr = cell.getBoundingClientRect()
+          if (cr.left < rb.left - 0.5 || cr.right > rb.right + 0.5) hiddenCells++
+          if (cr.width < 24 || cr.height < 24) tiny++
+          // The tone number and the hex are the output; a clipped one is the
+          // S15 fault in a new place.
+          for (const t of cell.querySelectorAll('.stc-cell-tone, .stc-cell-hex')) {
+            const range = document.createRange()
+            range.selectNodeContents(t)
+            const tr = range.getBoundingClientRect()
+            const past = Math.round(Math.max(0, tr.right - cr.right) + Math.max(0, cr.left - tr.left))
+            if (past > 1) { clipped++; if (!sample) sample = `"${t.textContent.trim()}" +${past}px in a ${Math.round(cr.width)}px cell` }
+          }
+        }
+      }
+      return {
+        ramps: ramps.length,
+        cells: document.querySelectorAll('.stc-cell').length,
+        hexShown: [...document.querySelectorAll('.stc-cell-hex')].filter((e) => getComputedStyle(e).display !== 'none').length,
+        hiddenCells, scrollers, tiny, clipped, sample,
+      }
+    })
+    await ctx.close()
+    expect(r.cells, `${w}x${h}: expected 40 tone cells (4 ramps x 10)`).toBe(40)
+    if (r.hiddenCells) damage.push(`${w}x${h}: ${r.hiddenCells} tone cell(s) outside their ramp`)
+    if (r.scrollers) damage.push(`${w}x${h}: ${r.scrollers} ramp(s) are horizontal scrollers again`)
+    if (r.hexShown !== 40) damage.push(`${w}x${h}: only ${r.hexShown} of 40 hex values rendered — the tool's output is unreadable here`)
+    if (r.tiny) damage.push(`${w}x${h}: ${r.tiny} tone cell(s) under 24px`)
+    if (r.clipped) damage.push(`${w}x${h}: ${r.clipped} clipped label(s), e.g. ${r.sample}`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+test('S2 · all seven starting bundles are visible without swiping', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of STC_VIEWPORTS) {
+    const { ctx, page } = await openTouch(browser, w, h, '/color/semantic', w >= 700, '.stc-bundles')
+    const r = await page.evaluate(() => {
+      const box = document.querySelector('.stc-bundles')
+      const bb = box.getBoundingClientRect()
+      const bundles = [...box.querySelectorAll('.stc-bundle')]
+      return {
+        total: bundles.length,
+        outside: bundles.filter((b) => {
+          const r2 = b.getBoundingClientRect()
+          return r2.left < bb.left - 0.5 || r2.right > bb.right + 0.5
+        }).length,
+        scrolls: box.scrollWidth > box.clientWidth + 1,
+      }
+    })
+    await ctx.close()
+    expect(r.total, `${w}x${h}: expected 7 preset bundles`).toBe(7)
+    if (r.outside) damage.push(`${w}x${h}: ${r.outside} of 7 bundles outside the picker`)
+    if (r.scrolls) damage.push(`${w}x${h}: the bundle picker is a horizontal scroller again`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
