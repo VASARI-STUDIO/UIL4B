@@ -414,6 +414,33 @@ function truncationCensus(page, selector) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// N3 · the Palette Builder swatch name
+// ─────────────────────────────────────────────────────────────────────────────
+// The audit records this at 480px only. It is 431–499, and the reason it looked
+// like one width is that the names are generated per page load, so which of the
+// five clip changes between runs. That also means this test cannot assert a
+// specific name — it asserts that no name, whichever five turn up, is rendered
+// narrower than the string it holds.
+//
+// 430 and 500+ are in the list because they were already clean: 430 because the
+// reflow block below it wraps the tool row, 500+ because there is room. The fix
+// must not disturb either.
+
+test('N3 · no Palette Builder swatch name is crushed by the tool row', async ({ browser }) => {
+  const damage = []
+  for (const w of [430, 440, 450, 460, 480, 500, 560, 640, 768]) {
+    const { ctx, page } = await open(browser, w, 900, '/color/palette', '.plb-name')
+    const r = await truncationCensus(page, '.plb-name')
+    await ctx.close()
+    expect(r.total, `${w}px: expected the five swatch names`).toBe(5)
+    if (r.cut.length) {
+      damage.push(`${w}px: ${r.cut.length} of 5 swatch names truncated — "${r.cut[0].text}" needs ${r.cut[0].needs}px, has ${r.cut[0].has}px`)
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // N2 · the gradient stop's hex input
 // ─────────────────────────────────────────────────────────────────────────────
 // It clipped its own value in two bands, rendering "#7C3AED" as "#7C3AE" — a

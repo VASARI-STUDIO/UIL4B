@@ -7156,7 +7156,26 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-hex{font-size:13px;padding:2px 6px}
   /* The row is 64px tall, so the colour title stays (it is the thing the
      founder asked for) and only the slot eyebrow drops. */
-  .plb-name{margin-bottom:0;padding:0;font-size:12px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* N3 (responsive-audit-2026-08): the swatch name was crushed by the tool row
+     beside it. The audit records it at 480px only and calls it cosmetic; it is
+     the 431–499px band, and it is not one width — the names are generated per
+     load, so which of the five clip changes run to run. Measured: 5 of 5 cut at
+     440px ("Antique Bathhouse", 108px into 60px), 4 of 5 at 450, 1–2 of 5 at
+     460–480, clean from 500.
+
+     Below 431px the reflow block already wraps the tools onto their own line,
+     which is why 430px was clean and 440px was not — the fix simply stopped one
+     pixel too early. Rather than extend that band to another hand-picked width,
+     the row wraps whenever it has to: `min-width` on the name gives it a floor
+     to defend, and `flex-wrap` lets the tool row drop instead of the name
+     shrinking. Where there is room nothing moves.
+
+     This is free. Row and board heights are byte-identical before and after at
+     every width from 430 to 768 (97/97, 96/96, 100/100, 111/111) — the board's
+     flex layout was already that tall, and the tools were simply refusing to
+     use the second line. */
+  .plb-col{flex-wrap:wrap;row-gap:8px}
+  .plb-name{margin-bottom:0;padding:0;min-width:12ch;font-size:12px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .plb-role{display:none}
   .plb-badge{margin-top:0}
   .plb-gap{display:none}
