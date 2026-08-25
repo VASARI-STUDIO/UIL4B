@@ -54,6 +54,53 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
   return { ctx, page }
 }
 
+/**
+ * How many elements matching `selector` are clipped by their own box, and the
+ * worst example. `scrollWidth` against `clientWidth` is geometry — the DOM text
+ * of a truncated label is complete and identical to an untruncated one, so
+ * nothing here can be asserted by reading it.
+ */
+function truncationCensus(page, selector) {
+  return page.evaluate((sel) => {
+    const cut = []
+    let total = 0
+    for (const el of document.querySelectorAll(sel)) {
+      const s = getComputedStyle(el)
+      if (s.display === 'none' || s.visibility === 'hidden') continue
+      total++
+      if (el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1) {
+        cut.push({
+          text: (el.value || el.textContent || '').trim().slice(0, 26),
+          needs: el.scrollWidth, has: el.clientWidth,
+        })
+      }
+    }
+    cut.sort((a, b) => (b.needs - b.has) - (a.needs - a.has))
+    return { total, cut }
+  }, selector)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// N1 · Font Gallery family names
+// ─────────────────────────────────────────────────────────────────────────────
+// The family name IS the content of a font gallery, and 320px is a hard floor
+// this project has committed to. 380 and 430 are in the list because they were
+// already clean and the fix must not disturb them.
+
+test('N1 · no font family name is truncated down to the 320px floor', async ({ browser }) => {
+  const damage = []
+  for (const w of [320, 360, 380, 430]) {
+    const { ctx, page } = await open(browser, w, 900, '/fontgallery', '.fg-card-name')
+    const r = await truncationCensus(page, '.fg-card-name')
+    await ctx.close()
+    expect(r.total, `${w}px: expected the font cards to have rendered`).toBeGreaterThan(20)
+    if (r.cut.length) {
+      damage.push(`${w}px: ${r.cut.length} of ${r.total} family names truncated — "${r.cut[0].text}" needs ${r.cut[0].needs}px, has ${r.cut[0].has}px`)
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
 // ─────────────────────────────────────────────────────────────────────────────
 // M6 · Gradient Library card footers
 // ─────────────────────────────────────────────────────────────────────────────

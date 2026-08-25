@@ -8754,13 +8754,34 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .fg-card-sample,.fg-card-skeleton--sample{height:66px;line-height:66px}
   .fg-card-sample{font-size:clamp(30px,var(--fg-card-size),52px)}
   /* Stacked, the meta goes back to a single line under the specimen: the name
-     has the full column width there, so it does not need its own row. */
+     has the full column width there, so it does not need its own row.
+     True down to about 380px, and NOT below it — see the ≤380px block. */
   .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0 52px 18px 0;border-left:0}
   .fg-skel-row{height:130px;padding:18px 24px 12px 34px}
   .fpr-hero-pair{grid-template-columns:1fr auto 1fr}
   .fpr-status{grid-template-columns:1fr 1fr}
   .fpr-status span:nth-child(3){border-left:1px solid var(--border)}
   .fpr-status span:nth-child(n+3){border-top:1px solid var(--border)}
+}
+/* N1 (responsive-audit-2026-08): the family name is the content of a font
+   gallery, and 7 of 48 were truncated at 320px — "Roboto Condensed" needing
+   151px and getting 94.
+
+   The premium block above already solved exactly this once, for the wide
+   layout, and its own comment says why: side by side, the classification tag
+   takes a fixed width and the name gets the remainder. The stacked layout then
+   puts the meta back on one row, reasoning that "the name has the full column
+   width there". That holds at 380px and stops holding below it — `.fg-card-info`
+   is `flex-shrink:0`, so at 320px it keeps ~98px of the 202px available and the
+   name gets what is left. Same fault as the wide layout, same fix: give the name
+   its own row back, and the full 202px with it.
+
+   This block must stay AFTER the ≤720px one. It was first written earlier in the
+   file, next to the other ≤380px rules, where it lost the cascade to
+   `.fg-card-meta{flex-direction:row}` at equal specificity and changed nothing —
+   caught by measuring rather than by reading, since the rule looked right. */
+@media(max-width:380px){
+  .fg-card-meta{flex-direction:column;align-items:flex-start;gap:4px}
 }
 @media(max-width:480px){
   .pgl-page .pgal-stripes{height:210px}
