@@ -414,6 +414,40 @@ function truncationCensus(page, selector) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// N2 · the gradient stop's hex input
+// ─────────────────────────────────────────────────────────────────────────────
+// It clipped its own value in two bands, rendering "#7C3AED" as "#7C3AE" — a
+// plausible but wrong colour, which is worse than an obviously truncated one.
+//
+// The cause was specificity, not width: `.ggn-stop-hex` is (0,1,0) and loses to
+// the global `input[type="text"]` rule at (0,1,1), so the field never got its
+// mono font or its zero padding. The test therefore also asserts the FONT, not
+// just the fit — a future width tweak could make the value fit while leaving the
+// field in the wrong family, and this defect would come back the next time a
+// value got one character longer.
+
+test('N2 · the gradient stop hex input shows its whole value', async ({ browser }) => {
+  const damage = []
+  for (const w of [320, 340, 350, 390, 769, 780, 800, 900]) {
+    const { ctx, page } = await open(browser, w, 900, '/color/gradient', '.ggn-stop-hex', { touch: w < 800 })
+    const r = await page.evaluate(() => {
+      const inputs = [...document.querySelectorAll('.ggn-stop-hex')]
+      return {
+        total: inputs.length,
+        cut: inputs.filter((el) => el.scrollWidth > el.clientWidth + 1)
+          .map((el) => `"${el.value}" needs ${el.scrollWidth}px, has ${el.clientWidth}px`),
+        family: inputs.length ? getComputedStyle(inputs[0]).fontFamily : '',
+      }
+    })
+    await ctx.close()
+    expect(r.total, `${w}px: expected the gradient stops`).toBeGreaterThan(1)
+    if (r.cut.length) damage.push(`${w}px: ${r.cut.length} of ${r.total} hex inputs clip their value — ${r.cut[0]}`)
+    if (!/mono/i.test(r.family)) damage.push(`${w}px: hex input is not rendering in the mono face (${r.family})`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // N1 · Font Gallery family names
 // ─────────────────────────────────────────────────────────────────────────────
 // The family name IS the content of a font gallery, and 320px is a hard floor
