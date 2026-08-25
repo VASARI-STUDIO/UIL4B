@@ -414,6 +414,43 @@ function truncationCensus(page, selector) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// N4 · the tool-map tooltip
+// ─────────────────────────────────────────────────────────────────────────────
+// The tip is centred on its blip, so the rightmost one ran past `.home`, which
+// carries `overflow-x:clip` — the last characters were cut and unreachable,
+// since a clip does not scroll. The tip is focus-revealed, so the test drives it
+// with keyboard focus rather than hover: on a touch device there is no hover,
+// and a test that only hovered would be measuring a state a phone never reaches.
+
+test('N4 · no tool-map tooltip is clipped by the page container', async ({ browser }) => {
+  const damage = []
+  for (const path of ['/discover', '/learn']) {
+    for (const w of [320, 360, 390, 400, 430, 480]) {
+      const { ctx, page } = await open(browser, w, 900, path, '.wmap-blip')
+      await page.locator('.wmap-blip').first().focus().catch(() => {})
+      await page.waitForTimeout(300)
+      const r = await page.evaluate(() => {
+        const host = document.querySelector('.home') || document.body
+        const hb = host.getBoundingClientRect()
+        const tips = [...document.querySelectorAll('.wmap-tip')]
+        let worst = 0, n = 0
+        for (const t of tips) {
+          const r2 = t.getBoundingClientRect()
+          if (r2.width === 0) continue
+          const past = Math.max(0, r2.right - hb.right, hb.left - r2.left)
+          if (past > 0.5) { n++; worst = Math.max(worst, Math.round(past)) }
+        }
+        return { tips: tips.length, n, worst }
+      })
+      await ctx.close()
+      expect(r.tips, `${path} @${w}: expected the tool-map tooltips`).toBeGreaterThan(5)
+      if (r.n) damage.push(`${path} @${w}px: ${r.n} of ${r.tips} tooltips clipped, by up to ${r.worst}px`)
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // N3 · the Palette Builder swatch name
 // ─────────────────────────────────────────────────────────────────────────────
 // The audit records this at 480px only. It is 431–499, and the reason it looked

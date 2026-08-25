@@ -5524,6 +5524,23 @@ html.lenis,html.lenis body{height:auto}
 .wmap-blip.is-home .wmap-tip{bottom:calc(100% + 9px)}
 .wmap-blip:hover .wmap-tip,.wmap-blip:focus-visible .wmap-tip{opacity:1;visibility:visible}
 .wmap-tip::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--t0)}
+/* N4 (responsive-audit-2026-08): the tip is centred on its blip with
+   `left:50%; translateX(-50%)`, so the rightmost blip's tip ran past `.home`,
+   which carries `overflow-x:clip` — the last few characters were cut and could
+   not be scrolled to. Measured 9px past at 320px, 6px at 360, 4px at 390, 3px at
+   400, 1px at 430, clean from 480.
+
+   Clamping the tip to its container is not expressible from here: its containing
+   block is the blip, not the map, so no `inset` value can see the map's edge.
+   What is available is making the tip narrow enough that being centred cannot
+   push it out — letting it take two lines instead of one. Measured after: 0 of
+   15 tips past the edge at every width on both /discover and /learn.
+
+   Note `visibility` stays a plain state property on the rule above and is NOT in
+   its transition — that pairing is deliberate and is left exactly as it is. */
+@media(max-width:480px){
+  .wmap-tip{white-space:normal;max-width:min(130px,36vw);text-align:center}
+}
 .wmap-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px 18px;margin-top:var(--s-5);text-align:center;min-height:34px}
 .wmap-cap{font-size:var(--fs-caption);color:var(--t3);max-width:56ch;line-height:1.5}
 .wmap-callout{display:inline-flex;align-items:center;gap:10px;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);box-shadow:var(--shadow-xs)}
