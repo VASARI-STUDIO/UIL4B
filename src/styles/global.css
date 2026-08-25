@@ -1488,9 +1488,7 @@ img,svg,video{max-width:100%;height:auto}
 
   /* Settings */
   .settings-grid{grid-template-columns:1fr;gap:20px}
-  .settings-nav{position:static;flex-direction:row;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px;gap:2px}
-  .settings-nav::-webkit-scrollbar{display:none}
-  .settings-nav-item{white-space:nowrap;flex-shrink:0;padding:9px 14px;font-size:12.5px;min-height:40px}
+  /* .settings-nav / .settings-nav-item moved: see the block after the base rule. */
   .settings-section-h h2{font-size:24px}
   .settings-card-h,.settings-card-body,.settings-profile{padding-left:18px!important;padding-right:18px!important}
   .settings-profile{flex-wrap:wrap;gap:14px}
@@ -1873,10 +1871,55 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .danger-confirm-go:disabled{opacity:.65;cursor:progress}
 .danger-confirm-err{font-size:12px;line-height:1.5;color:var(--err);margin-top:8px}
 
+/* Below the two-column layout the section nav lies down into a row. It used to
+   become a horizontal SCROLLER, which hid three of its five sections off-screen
+   with nothing to say so (S8, mobile-audit-2026-08: 2 of 5 fully visible at
+   390x844, scrollWidth 675 against clientWidth 356). Worse, the <=640px block
+   deleted the scrollbar with ::-webkit-scrollbar{display:none}, which on a phone
+   is the only affordance the platform would have offered - and the two sections
+   left off-screen were Data Management (account deletion, data export) and
+   Privacy & Legal (consent), i.e. the two people open Settings specifically to
+   find.
+   Five short items do not need a scroller. Wrapping shows all five at once and
+   costs one or two rows of height, which is the right trade on a page whose
+   content is far longer than its nav. Both overrides now wrap; neither scrolls,
+   so there is no scrollbar left to delete. */
 @media(max-width:900px){
   .settings-grid{grid-template-columns:1fr;gap:24px}
-  .settings-nav{position:static;flex-direction:row;overflow-x:auto;padding:4px}
-  .settings-nav-item{white-space:nowrap;flex-shrink:0}
+  .settings-nav{position:static;flex-direction:row;flex-wrap:wrap;padding:4px}
+  .settings-nav-item{white-space:nowrap;flex:0 0 auto}
+}
+/* These live here, after the base .settings-nav rule, and not in the mobile
+   blocks higher up the file where the rest of the Settings overrides sit. That
+   is not tidiness: the base rule at .settings-nav declares display, position,
+   flex-direction, gap and padding, and it appears LATER in the stylesheet than
+   the max-width:640px block, so every one of those properties set up there was
+   silently overridden. Verified by computed style, not by reading: a grid rule
+   placed in the 640/480 blocks reported `display: flex` on a 320px phone.
+   Worth knowing when reading the audit, too - it cites global.css:1491 for the
+   scroller, but `overflow-x:auto` there was dead for the same reason; the
+   scroller that actually shipped came from the max-width:900px block above. */
+@media(max-width:640px){
+  .settings-nav{gap:2px}
+  .settings-nav-item{padding:9px 14px;font-size:12.5px;min-height:40px}
+}
+@media(max-width:480px){
+  /* Ragged wrapping costs a whole extra row on a small phone (measured 4 rows,
+     173px, at 320px). A 2-up grid packs the same five sections into 3 rows and
+     lines their icons up. minmax(0,1fr) rather than a bare 1fr: a bare 1fr track
+     floors at min-content and would push the page wider than the viewport, which
+     is the exact fault S6 records on /info. */
+  .settings-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* The label must be allowed to wrap once the cell is this narrow. The base
+     rule sets white-space:nowrap, which at 320px pushed "Data Management" 10px
+     past its own button and 5px past the nav card's border - measured with a
+     Range over the glyphs, and the rendered result was "Data Managemen" with the
+     final t painted outside the card. Exactly the S15 failure mode: innerText
+     still reads correctly, and only a sighted user sees the damage.
+     Wrapping rather than trimming the padding, because padding arithmetic only
+     holds for these five English strings - every label here comes through t(),
+     so a longer translation would reopen it. */
+  .settings-nav-item{white-space:normal}
 }
 
 /* ─── Font Gallery (/fontgallery) — fg- ─────────────────────────────────────

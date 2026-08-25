@@ -447,3 +447,78 @@ test('S7 · portrait viewports still need no scrolling at all', async ({ browser
     expect(g.submitVisibleH).toBe(g.submitH)
   }
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// S8 · every Settings section is on screen, and no label loses a letter
+// ─────────────────────────────────────────────────────────────────────────────
+// Two properties, because fixing the first is what created the risk of the
+// second. The nav used to be a horizontal scroller with its scrollbar deleted,
+// hiding Data Management (account deletion, data export) and Privacy & Legal
+// (consent) — the two sections people open Settings specifically to find. It now
+// wraps. Wrapping into narrow cells is exactly where a nowrap label starts
+// spilling past its own card, which is the S15 fault in a different place, so
+// the glyph check below is not belt-and-braces — it caught a real "Data
+// Managemen" at 320px during this very fix.
+// 560x800 and 640x800 sit in the 481-900 band, where the layout is the wrapping
+// FLEX row rather than the <=480 grid. Without one of them a reintroduced
+// overflow-x:auto is invisible: at <=480 the grid masks it, and at >=768 the five
+// items already fit on one line. Found by mutation, not by inspection.
+const SETTINGS_VIEWPORTS = [[320, 568], [360, 560], [390, 640], [390, 844], [430, 932], [560, 800], [640, 800], [768, 1024], [844, 390]]
+
+test('S8 · all five Settings sections are reachable without swiping', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of SETTINGS_VIEWPORTS) {
+    const { ctx, page } = await openTouch(browser, w, h, '/settings', w >= 700, '.settings-nav')
+    const r = await page.evaluate(() => {
+      const nav = document.querySelector('.settings-nav')
+      const nr = nav.getBoundingClientRect()
+      const items = [...nav.querySelectorAll('.settings-nav-item')]
+      const offscreen = items.filter((i) => {
+        const b = i.getBoundingClientRect()
+        return b.right > nr.right + 0.5 || b.left < nr.left - 0.5
+      }).map((i) => i.textContent.trim())
+      return {
+        count: items.length,
+        offscreen,
+        scrolls: nav.scrollWidth > nav.clientWidth + 1,
+        under24: items.filter((i) => {
+          const b = i.getBoundingClientRect()
+          return b.width < 24 || b.height < 24
+        }).length,
+      }
+    })
+    await ctx.close()
+    expect(r.count, `${w}x${h}: expected 5 section items`).toBe(5)
+    if (r.offscreen.length) damage.push(`${w}x${h}: ${r.offscreen.length} section(s) outside the nav: ${r.offscreen.join(', ')}`)
+    if (r.scrolls) damage.push(`${w}x${h}: the section nav is a horizontal scroller again`)
+    if (r.under24) damage.push(`${w}x${h}: ${r.under24} section target(s) under 24px`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+test('S8 · no Settings section label spills outside its own card', async ({ browser }) => {
+  // Range over the rendered glyphs, not innerText — innerText reads
+  // "Data Management" whether or not the final t is on screen.
+  const damage = []
+  for (const [w, h] of SETTINGS_VIEWPORTS) {
+    const { ctx, page } = await openTouch(browser, w, h, '/settings', w >= 700, '.settings-nav')
+    const escapes = await page.evaluate(() => {
+      const nav = document.querySelector('.settings-nav')
+      const nr = nav.getBoundingClientRect()
+      const out = []
+      for (const it of nav.querySelectorAll('.settings-nav-item')) {
+        const br = it.getBoundingClientRect()
+        const range = document.createRange()
+        range.selectNodeContents(it)
+        const tr = range.getBoundingClientRect()
+        const past = Math.round(Math.max(0, tr.right - br.right) + Math.max(0, br.left - tr.left))
+        const pastNav = Math.round(Math.max(0, tr.right - nr.right) + Math.max(0, nr.left - tr.left))
+        if (past || pastNav) out.push(`${it.textContent.trim()} (${past}px outside its button, ${pastNav}px outside the card)`)
+      }
+      return out
+    })
+    await ctx.close()
+    if (escapes.length) damage.push(`${w}x${h}: ${escapes.join(' | ')}`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
