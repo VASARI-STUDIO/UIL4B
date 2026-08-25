@@ -55,6 +55,80 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Founder report 2026-08-24 · Palette Builder on a short DESKTOP viewport
+// ─────────────────────────────────────────────────────────────────────────────
+// "there are still clipping issues on the pallete builder on smaller desktop
+// screens and other shapes like 4:3".
+//
+// Both audits swept WIDTH at a fixed 900px height and only went short at PHONE
+// widths, so this combination — desktop width, short viewport — was never
+// tested. It is not exotic: a 1024x768 or 1366x768 screen with browser chrome
+// leaves roughly a 608px viewport, and that is inside the broken band.
+//
+// The fault is vertical, and it is the same SHAPE as the two blockers this
+// surface has already produced — a number that stopped being true just outside
+// where it was written. `.plb-board` asserted `min-height:420px`; a column
+// needs 428 (tool stack 18..278, in-flow stack 124, padding-bottom 26). Because
+// an explicit min-height REPLACES a flex item's content-derived minimum, the
+// board stayed pinned at 420 and the two ends of the column grew into each
+// other. So the assertion is not "the board is at least N px" — that would just
+// re-assert a magic number, and it is the assertion that failed us. It is "the
+// tool stack does not reach the content stack", which stays true whatever the
+// tool stack later becomes.
+//
+// Tall shapes are included on purpose: the fix moves the tool stack into flow,
+// and a fix that quietly changed the desktop layout would pass a
+// short-viewport-only test.
+
+const PLB_DESKTOP = [
+  [1024, 768], [1024, 608], [1152, 864], [1152, 704],
+  [1280, 960], [1280, 800], [1280, 720],
+  [1366, 768], [1366, 608], [1440, 900], [1600, 1200],
+]
+
+test('Palette Builder swatch tools never reach the swatch content on a short desktop viewport', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of PLB_DESKTOP) {
+    // Deliberately NOT a touch context: this is a desktop/laptop defect, and the
+    // tools are opacity:0 until hover on a pointer device — which changes
+    // nothing about their box, and is exactly why it goes unnoticed.
+    const { ctx, page } = await open(browser, w, h, '/color/palette', '.plb-col', { touch: false })
+    const r = await page.evaluate(() => {
+      const cols = [...document.querySelectorAll('.plb-col')]
+      const board = document.querySelector('.plb-board')
+      const hits = []
+      for (const col of cols) {
+        const tools = col.querySelector('.plb-col-tools')
+        if (!tools) continue
+        const tb = tools.getBoundingClientRect()
+        for (const sel of ['.plb-ramp', '.plb-name', '.plb-hex', '.plb-role', '.plb-badge']) {
+          const el = col.querySelector(sel)
+          if (!el) continue
+          const s = getComputedStyle(el)
+          if (s.display === 'none') continue
+          const r2 = el.getBoundingClientRect()
+          if (r2.height === 0) continue
+          const over = Math.min(tb.bottom, r2.bottom) - Math.max(tb.top, r2.top)
+          const across = Math.min(tb.right, r2.right) - Math.max(tb.left, r2.left)
+          if (over > 1 && across > 1) hits.push(`${sel} by ${Math.round(over)}px`)
+        }
+      }
+      return {
+        cols: cols.length,
+        boardH: Math.round(board.getBoundingClientRect().height),
+        hits,
+      }
+    })
+    await ctx.close()
+    expect(r.cols, `${w}x${h}: expected the five palette columns`).toBe(5)
+    if (r.hits.length) {
+      damage.push(`${w}x${h}: the tool stack overlaps swatch content ${r.hits.length}x in a ${r.boardH}px board — ${[...new Set(r.hits)].join(', ')}`)
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // M1 · Palette Builder swatch controls on a real phone
 // ─────────────────────────────────────────────────────────────────────────────
 // This is a HEIGHT defect, not a width one, which is why the responsive audit's

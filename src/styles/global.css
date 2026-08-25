@@ -6526,14 +6526,48 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-imgclear{display:block;width:100%;margin-top:8px;padding:6px;font-size:11.5px;font-weight:600;color:var(--t2);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
 .plb-imgclear:hover{color:#B91C1C;background:var(--bg-2)}
 .plb-tgl--on{color:var(--brand);border-color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,transparent)}
-/* ── The board ── */
-.plb-board{display:flex;flex:1;min-height:420px}
+/* ── The board ──
+   `min-height:auto` is a CONSEQUENCE of the fix below, not the fix itself, and
+   the distinction was found by mutation rather than reasoning — restoring the
+   old `420px` alone does not bring the defect back.
+
+   While `.plb-col-tools` was out of flow, `420px` was the only thing reserving
+   room for the 260px tool stack: a column's own in-flow content is just 170px
+   (20 padding + 124 name/hex/ramp + 26 padding), so nothing else was holding
+   the board open. It was a hand-tuned stand-in for a height the layout could
+   not see, and it was 8px short of the 428px a column actually needs — which
+   is the founder's 2026-08-24 report ("still clipping issues on the palette
+   builder on smaller desktop screens and other shapes like 4:3").
+
+   With the stack in flow the board's content minimum is real and this floor no
+   longer binds. Verified, not assumed: the board measures 436px at 1366x608 and
+   688px at 1366x900 with this declaration set to either `auto` or `420px`. It
+   is dropped because a stale magic number that currently does nothing is worse
+   than none — shorten the tool stack by 17px and 420 silently starts binding
+   again, which is precisely how this defect was born. */
+.plb-board{display:flex;flex:1;min-height:auto}
 .plb-col{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;padding:20px 8px 26px;background:var(--plb-c);color:var(--plb-ink)}
 /* Vision type split: top half the real palette colour, bottom half the
    colour-vision simulation. Content sits in the bottom half (justify-end), so
    --plb-ink is computed against --plb-sim. */
 .plb-col--split{background:linear-gradient(to bottom,var(--plb-c) 0 50%,var(--plb-sim) 50% 100%)}
-.plb-col-tools{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px}
+/* IN FLOW, not absolute. It was `position:absolute;top:18px;left:50%` with a
+   translate to centre it, and out-of-flow content contributes nothing to its
+   container's height — so the board's floor could not see the 260px this stack
+   occupies and the two ends of the column grew into each other from opposite
+   directions (tools down from the top, name/hex/ramp up from the bottom).
+   `margin-bottom:auto` on the FIRST child reproduces the same visual placement
+   through flex instead: it eats the free space below, pinning the stack to the
+   top while `justify-content:flex-end` keeps everything else at the bottom, and
+   `.plb-col`'s own `align-items:center` supplies the centring the translate
+   used to do. Measured shift at a tall viewport: 18..278 becomes 20..280, i.e.
+   2px, which is the difference between `top:18px` and the column's 20px
+   padding. The payoff is that the stack is now part of the content minimum, so
+   nothing has to assert a floor for it.
+   The ≤768px block below returns this to a row and clears the auto margin — in
+   a row-direction flex container an auto BLOCK margin would push the stack to
+   the top of the cross axis instead of centring it. */
+.plb-col-tools{margin-bottom:auto;display:flex;flex-direction:column;gap:6px}
 /* The per-swatch controls are visible AT REST by default and hidden only where
    a hover can bring them back. That direction matters: the old rule hid them at
    rest for everyone and corrected it in @media(max-width:768px), which is a
@@ -7052,7 +7086,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
   /* Labels are already pinned open by the max-width:960px block above. */
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
-  .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}
+  .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto;margin-bottom:0}
   /* Redundant on touch now that the base rule is visible-at-rest, but still
      doing work for a HOVER device at this width — a narrowed desktop window, or
      a small laptop — where @media(hover:hover) still hides them and this
