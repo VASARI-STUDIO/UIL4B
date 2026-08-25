@@ -98,6 +98,81 @@ test('/info · every accordion panel is a region with its section name', async (
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
+// S3 / S4 · chip rows that were scrollers with no affordance
+// ─────────────────────────────────────────────────────────────────────────────
+// Fifth and sixth instances of one shape in this stylesheet: a row of options
+// turned into `overflow-x:auto` with the scrollbar suppressed, which under touch
+// emulation paints nothing at all to say it scrolls. S1, S2 and S8 were the same
+// and were fixed by wrapping in PR #271.
+//
+// Counting chips in the DOM proves nothing — they were all present the whole
+// time. What is asserted is how many sit inside their own container's box.
+//
+// The route list is wider than the audit's, on purpose: `.pl-chips` is shared by
+// four surfaces and S4 only records the Emoji Library, so /icons (4 of 7 off at
+// 320px) and /discover/prompts (3 of 6) were never written down.
+
+const CHIP_ROWS = [
+  ['/emoji', '.pl-chips', '.pl-chip', 12],
+  ['/icons', '.pl-chips', '.pl-chip', 7],
+  ['/discover/prompts', '.pl-chips', '.pl-chip', 6],
+  ['/discover/gradients', '.pl-chips', '.pl-chip', 8],
+]
+
+test('S4 · every filter chip is inside its own row, on every surface that shares it', async ({ browser }) => {
+  const damage = []
+  for (const [path, box, item, expected] of CHIP_ROWS) {
+    for (const w of [320, 390, 768, 1180]) {
+      const { ctx, page } = await open(browser, w, 900, path, box, { touch: w < 800 })
+      const r = await page.evaluate(([boxSel, itemSel]) => {
+        const row = document.querySelector(boxSel)
+        const rb = row.getBoundingClientRect()
+        const kids = [...row.querySelectorAll(itemSel)]
+        return {
+          total: kids.length,
+          outside: kids.filter((k) => {
+            const b = k.getBoundingClientRect()
+            return b.right > rb.right + 0.5 || b.left < rb.left - 0.5
+          }).length,
+          scrolls: row.scrollWidth > row.clientWidth + 1,
+        }
+      }, [box, item])
+      await ctx.close()
+      expect(r.total, `${path} @${w}: expected ${expected} chips`).toBe(expected)
+      if (r.outside) damage.push(`${path} @${w}px: ${r.outside} of ${r.total} chips outside the row`)
+      if (r.scrolls) damage.push(`${path} @${w}px: the chip row is a horizontal scroller again`)
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+test('S3 · every Semantic Colours role preset is inside its own row', async ({ browser }) => {
+  const damage = []
+  for (const w of [320, 360, 390, 430, 480, 560, 768]) {
+    const { ctx, page } = await open(browser, w, 900, '/color/semantic', '.stc-role-presets', { touch: w < 800 })
+    const r = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.stc-role-presets')]
+      let outside = 0, total = 0, scrollers = 0
+      for (const row of rows) {
+        const rb = row.getBoundingClientRect()
+        if (row.scrollWidth > row.clientWidth + 1) scrollers++
+        for (const chip of row.querySelectorAll('.pt-t')) {
+          total++
+          const b = chip.getBoundingClientRect()
+          if (b.right > rb.right + 0.5 || b.left < rb.left - 0.5) outside++
+        }
+      }
+      return { rows: rows.length, outside, total, scrollers }
+    })
+    await ctx.close()
+    expect(r.rows, `${w}px: expected the four role rows`).toBe(4)
+    if (r.outside) damage.push(`${w}px: ${r.outside} of ${r.total} preset chips outside their row`)
+    if (r.scrollers) damage.push(`${w}px: ${r.scrollers} preset row(s) are horizontal scrollers again`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // S5 · the feedback FAB on a short viewport
 // ─────────────────────────────────────────────────────────────────────────────
 // READ THIS BEFORE STRENGTHENING THIS TEST. The obvious assertion — "the FAB

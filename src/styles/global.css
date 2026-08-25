@@ -739,7 +739,16 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
   .stc-bundles{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stc-bundle{min-height:0}
   .stc-role{padding:16px}
-  .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto}
+  /* Wraps, like .stc-bundles above and for the same reason (S3,
+     mobile-audit-2026-08). The base rule at the top of this section already
+     says flex-wrap:wrap; this override used to replace it with
+     nowrap + overflow-x:auto, which turned each role's 7 preset chips into a
+     scroller with no affordance. Measured at 320px: 11 chips across the four
+     role rows sat outside their box, the worst row showing 4 of 7, and "Custom"
+     — the last chip, and the only one that opens the free-choice path — was
+     always one of the hidden ones. Wrapping costs a row of height per role and
+     needs no gesture to discover. */
+  .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start}
   .stc-preview{padding:16px}
   .stc-example{grid-template-columns:32px minmax(0,1fr)}
   .stc-example button{grid-column:2;justify-self:start}
@@ -865,8 +874,30 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-search:focus{box-shadow:none}
 .pl-search-clear{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px;display:flex;border-radius:50%;transition:color var(--t)}
 .pl-search-clear:hover{color:var(--t0)}
-.pl-chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1;min-width:0}
-.pl-chips::-webkit-scrollbar{display:none}
+/* The category row WRAPS (S4, mobile-audit-2026-08). It was
+   `flex-wrap:nowrap; overflow-x:auto` with the scrollbar suppressed on both
+   `scrollbar-width` and `::-webkit-scrollbar`, which under touch emulation
+   renders no affordance at all — the same "hidden scroller" shape as S1, S2, S3
+   and S8, and the fifth instance of it in this stylesheet.
+
+   Measured chips sitting outside their own box, before → after, per consumer of
+   this shared class (it is not only the Emoji Library, which is all S4 records):
+
+     /emoji              320px  9 of 12 → 0     390px  9 of 12 → 0
+     /icons              320px  4 of 7  → 0     768px  5 of 7  → 0
+     /discover/prompts   320px  3 of 6  → 0     768px  4 of 6  → 0
+     /discover/gradients 320px  4 of 8  → 0     390px  3 of 8  → 0
+
+   The Emoji Library was still hiding 5 of 12 at 1180px, so this was never only
+   a phone defect. Category is the primary navigation for a 1,655-item library.
+
+   The cost is height and it is the largest this sweep has spent: the emoji row
+   goes 29px → 169px at 320px wide, 29 → 134 at 390, 29 → 64 at 1180. That is
+   accepted on the same reasoning PR #271 recorded for .stc-bundles — a page
+   that already scrolls vertically can afford rows; an undiscoverable gesture
+   costs the option entirely. .grg-chips already wraps at ≥821px, so this is the
+   established look on one of the four surfaces rather than a new one. */
+.pl-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
 .pl-chip{padding:6px 14px;border-radius:var(--radius);font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--t);white-space:nowrap;flex-shrink:0}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
 .pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
@@ -1484,7 +1515,9 @@ img,svg,video{max-width:100%;height:auto}
   .pl-toolbar{flex-direction:column;align-items:stretch}
   .pl-search-wrap{max-width:100%}
   .pl-add-btn{width:100%}
-  .pl-chips{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  /* This used to re-impose the nowrap scroller the base rule has now dropped —
+     see the .pl-chips comment above. Left as a no-op-free reminder that the
+     narrow band is exactly where wrapping matters most. */
   .pl-drop-zone{flex:1 1 100%}
   .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}
 
@@ -7988,7 +8021,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-submit-preview{height:88px;margin-bottom:var(--s-4);border-radius:var(--radius);border:1px solid var(--border)}
 @media(max-width:820px){
   .grg-search{flex:1 1 100%}
-  .grg-chips{flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto}
+  /* Keeps its own row, but keeps wrapping too — the nowrap scroller this used
+     to impose put 4 of 8 mood filters outside the box at 320px and 3 of 8 at
+     390px, with no affordance. Same fault as S4 on the shared .pl-chips. */
+  .grg-chips{flex:1 1 100%}
 }
 /* M6 (responsive-audit-2026-08): every gradient name and meta line truncated
    between 450 and 579px. Measured across the 100-card library: at 450px, 78 of
