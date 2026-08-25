@@ -54,6 +54,87 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
   return { ctx, page }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// N8 · WCAG 2.5.8 Target Size (Minimum) on the Palette Builder
+// ─────────────────────────────────────────────────────────────────────────────
+// 2.5.8 is not "every target is 24x24". A smaller target still conforms under
+// the SPACING exception: if a 24px-diameter circle centred on each undersized
+// target touches no other target's circle, it passes. That distinction is the
+// whole finding here — the audit listed eight controls as failures, and when the
+// exception is applied only one of them actually fails.
+//
+// So the test implements the criterion, not the headline. It would otherwise
+// fail on controls that conform, and this project does not need a test that
+// cries wolf about the footer links on every route.
+//
+// The tonal ramp failed both halves: 14px wide with a 4px gap puts adjacent
+// centres 18px apart, under the 24 the exception requires. It was also five
+// identical buttons — same aria-label, same handler — so it is now one.
+
+async function targetSizeFailures(page) {
+  return page.evaluate(() => {
+    const sel = 'a[href], button, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])'
+    const shown = [...document.querySelectorAll(sel)].filter((el) => {
+      const s = getComputedStyle(el)
+      if (s.display === 'none' || s.visibility === 'hidden' || el.disabled) return false
+      if (el.type === 'hidden' || el.type === 'file') return false
+      const r = el.getBoundingClientRect()
+      return r.width > 0 && r.height > 0
+    })
+    const boxes = shown.map((el) => ({ el, r: el.getBoundingClientRect() }))
+    const fails = []
+    for (const { el, r } of boxes) {
+      if (r.width >= 24 && r.height >= 24) continue
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2
+      for (const o of boxes) {
+        if (o.el === el) continue
+        const ox = o.r.left + o.r.width / 2, oy = o.r.top + o.r.height / 2
+        if (Math.hypot(cx - ox, cy - oy) < 24) {
+          const c = typeof el.className === 'string' ? el.className.split(' ')[0] : el.tagName.toLowerCase()
+          fails.push(`${el.tagName.toLowerCase()}.${c} "${(el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 20)}" ${Math.round(r.width)}x${Math.round(r.height)}`)
+          break
+        }
+      }
+    }
+    return { total: boxes.length, fails: [...new Set(fails)] }
+  })
+}
+
+test('N8 · no Palette Builder target is both under 24px and crowded', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of [[390, 844], [769, 900], [834, 1194], [1024, 768], [1280, 900]]) {
+    const { ctx, page } = await open(browser, w, h, '/color/palette', '.plb-col')
+    const r = await targetSizeFailures(page)
+    await ctx.close()
+    expect(r.total, `${w}x${h}: expected interactive controls to have rendered`).toBeGreaterThan(20)
+    if (r.fails.length) damage.push(`${w}x${h}: ${r.fails.length} target(s) fail 2.5.8 — ${r.fails.slice(0, 3).join(', ')}`)
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+test('N8 · the tonal ramp is one target per swatch and still opens the tints', async ({ browser }) => {
+  const { ctx, page } = await open(browser, 1280, 900, '/color/palette', '.plb-ramp')
+  const before = await page.evaluate(() => ({
+    ramps: document.querySelectorAll('.plb-ramp').length,
+    // The bars must be decorative, not five copies of the same control.
+    barButtons: document.querySelectorAll('button.plb-ramp-bar').length,
+    box: (() => { const r = document.querySelector('.plb-ramp').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)] })(),
+    tintsOpen: document.querySelectorAll('.plb-tintpop').length,
+  }))
+  expect(before.ramps, 'expected one ramp per swatch column').toBe(5)
+  expect(before.barButtons, 'the ramp bars must not be buttons — they were five identical ones').toBe(0)
+  expect(before.box[0], `ramp target width ${before.box[0]}px`).toBeGreaterThanOrEqual(24)
+  expect(before.box[1], `ramp target height ${before.box[1]}px`).toBeGreaterThanOrEqual(24)
+  expect(before.tintsOpen).toBe(0)
+
+  // The function has to survive the restructure, not just the geometry.
+  await page.locator('.plb-ramp').first().click()
+  await page.waitForTimeout(400)
+  const after = await page.evaluate(() => document.querySelectorAll('.plb-tintpop').length)
+  await ctx.close()
+  expect(after, 'clicking the ramp must still open the tints popup').toBe(1)
+})
+
 /**
  * How many elements matching `selector` are clipped by their own box, and the
  * worst example. `scrollWidth` against `clientWidth` is geometry — the DOM text

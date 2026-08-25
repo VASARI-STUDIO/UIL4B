@@ -6583,9 +6583,14 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-col:hover .plb-tool,.plb-col:focus-within .plb-tool,.plb-tool--on{opacity:1}
 .plb-tool:hover{background:color-mix(in srgb,var(--plb-ink) 14%,transparent)}
 .plb-tool--on{background:color-mix(in srgb,var(--plb-ink) 18%,transparent)}
-.plb-ramp{display:flex;gap:4px;margin-bottom:10px}
-.plb-ramp-bar{width:14px;height:34px;background:var(--plb-rc);border:none;border-radius:4px;cursor:pointer;transition:transform var(--t)}
-.plb-ramp-bar:hover{transform:translateY(-2px)}
+/* The ramp is ONE button (N8, responsive-audit-2026-08). It was five, and the
+   five were identical — same label, same handler — so a 14px-wide target that
+   also failed 2.5.8's spacing exception (14 + 4 gap = 18px between centres,
+   against the 24px the exception needs) was being offered five times over.
+   The button is 86x34; the bars inside it are decorative. */
+.plb-ramp{display:flex;gap:4px;margin-bottom:10px;padding:0;border:none;background:none;cursor:pointer}
+.plb-ramp-bar{width:14px;height:34px;background:var(--plb-rc);border:none;border-radius:4px;transition:transform var(--t)}
+.plb-ramp:hover .plb-ramp-bar{transform:translateY(-2px)}
 .plb-hex{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.01em;text-transform:uppercase;color:inherit;background:none;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;transition:background var(--t)}
 .plb-hex:hover{background:color-mix(in srgb,var(--plb-ink) 12%,transparent)}
 /* The column title names the COLOUR (utils/paletteNames.js, deterministic per
@@ -8990,7 +8995,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
    The homepage swatch overlays (.hw-pal-lock / .hw-pal-copy) sit on the same
    kind of user-chosen fill and get the same treatment. */
 .plb-tool:focus-visible,
-.plb-ramp-bar:focus-visible,
+.plb-ramp:focus-visible,
 .hw-pal-lock:focus-visible,
 .hw-pal-copy:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}
 
