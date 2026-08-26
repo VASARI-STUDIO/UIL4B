@@ -739,7 +739,16 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
   .stc-bundles{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stc-bundle{min-height:0}
   .stc-role{padding:16px}
-  .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto}
+  /* Wraps, like .stc-bundles above and for the same reason (S3,
+     mobile-audit-2026-08). The base rule at the top of this section already
+     says flex-wrap:wrap; this override used to replace it with
+     nowrap + overflow-x:auto, which turned each role's 7 preset chips into a
+     scroller with no affordance. Measured at 320px: 11 chips across the four
+     role rows sat outside their box, the worst row showing 4 of 7, and "Custom"
+     — the last chip, and the only one that opens the free-choice path — was
+     always one of the hidden ones. Wrapping costs a row of height per role and
+     needs no gesture to discover. */
+  .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start}
   .stc-preview{padding:16px}
   .stc-example{grid-template-columns:32px minmax(0,1fr)}
   .stc-example button{grid-column:2;justify-self:start}
@@ -865,8 +874,30 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-search:focus{box-shadow:none}
 .pl-search-clear{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px;display:flex;border-radius:50%;transition:color var(--t)}
 .pl-search-clear:hover{color:var(--t0)}
-.pl-chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1;min-width:0}
-.pl-chips::-webkit-scrollbar{display:none}
+/* The category row WRAPS (S4, mobile-audit-2026-08). It was
+   `flex-wrap:nowrap; overflow-x:auto` with the scrollbar suppressed on both
+   `scrollbar-width` and `::-webkit-scrollbar`, which under touch emulation
+   renders no affordance at all — the same "hidden scroller" shape as S1, S2, S3
+   and S8, and the fifth instance of it in this stylesheet.
+
+   Measured chips sitting outside their own box, before → after, per consumer of
+   this shared class (it is not only the Emoji Library, which is all S4 records):
+
+     /emoji              320px  9 of 12 → 0     390px  9 of 12 → 0
+     /icons              320px  4 of 7  → 0     768px  5 of 7  → 0
+     /discover/prompts   320px  3 of 6  → 0     768px  4 of 6  → 0
+     /discover/gradients 320px  4 of 8  → 0     390px  3 of 8  → 0
+
+   The Emoji Library was still hiding 5 of 12 at 1180px, so this was never only
+   a phone defect. Category is the primary navigation for a 1,655-item library.
+
+   The cost is height and it is the largest this sweep has spent: the emoji row
+   goes 29px → 169px at 320px wide, 29 → 134 at 390, 29 → 64 at 1180. That is
+   accepted on the same reasoning PR #271 recorded for .stc-bundles — a page
+   that already scrolls vertically can afford rows; an undiscoverable gesture
+   costs the option entirely. .grg-chips already wraps at ≥821px, so this is the
+   established look on one of the four surfaces rather than a new one. */
+.pl-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
 .pl-chip{padding:6px 14px;border-radius:var(--radius);font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--t);white-space:nowrap;flex-shrink:0}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
 .pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
@@ -1484,7 +1515,9 @@ img,svg,video{max-width:100%;height:auto}
   .pl-toolbar{flex-direction:column;align-items:stretch}
   .pl-search-wrap{max-width:100%}
   .pl-add-btn{width:100%}
-  .pl-chips{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  /* This used to re-impose the nowrap scroller the base rule has now dropped —
+     see the .pl-chips comment above. Left as a no-op-free reminder that the
+     narrow band is exactly where wrapping matters most. */
   .pl-drop-zone{flex:1 1 100%}
   .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}
 
@@ -2423,7 +2456,29 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .global-feedback-btn{position:fixed;right:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(0,0,0,.3);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .global-feedback-btn:hover{background:var(--brand);border-color:var(--brand);color:var(--accent-fg);transform:translateY(-2px)}
 .global-feedback-btn svg{flex-shrink:0}
-@media(max-width:640px){.global-feedback-btn span{display:none}.global-feedback-btn{padding:12px;right:14px;bottom:14px}}
+/* The compact form fires on EITHER axis. It used to be width-only, so the one
+   device class with the least vertical room — a phone held sideways, 844–932px
+   WIDE — never got it and carried the full 117x38 labelled bar on a 390px-tall
+   viewport (S5, mobile-audit-2026-08).
+
+   500px is measured, not inherited, and that matters: PR #271 established
+   `max-height:460px` for the login modal and reusing it here would have been
+   wrong — occlusion was measured at a 500px-tall viewport, which 460 does not
+   reach. Every landscape phone in the audit matrix (390 and 430 tall) sits well
+   inside 500, and every ordinary laptop keeps its label (verified: 1366x600 and
+   1280x720 still render the labelled form).
+
+   WHAT THIS DOES NOT DO, because the audit implies otherwise. S5 reads as though
+   a short-viewport rule removes the overlap. It does not, and no threshold can:
+   sweeping 844px wide from 900px tall down to 360px, occluded controls go
+   0,0,0,0,0,0,1,1,0,0,0,0,0,0,3,3,3,0 — the fault appears at 530–500, clears at
+   480–430, returns at 420–390 and clears again at 360. It tracks where the page
+   happens to put controls at that height, not the height itself, so there is no
+   boundary to draw. What this rule does is shrink the footprint: at 844x390
+   three covered controls become two, and each drops from 2 of 3 sampled points
+   blocked to 1 of 3. Nothing is ever permanently covered — measured 0 occluded
+   at the scroll extremity at every viewport tested. */
+@media(max-width:640px),(max-height:500px){.global-feedback-btn span{display:none}.global-feedback-btn{padding:12px;right:14px;bottom:14px}}
 
 /* ─── Feedback modal (global floating feedback button popup) ─── */
 .fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance)}
@@ -5469,6 +5524,23 @@ html.lenis,html.lenis body{height:auto}
 .wmap-blip.is-home .wmap-tip{bottom:calc(100% + 9px)}
 .wmap-blip:hover .wmap-tip,.wmap-blip:focus-visible .wmap-tip{opacity:1;visibility:visible}
 .wmap-tip::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--t0)}
+/* N4 (responsive-audit-2026-08): the tip is centred on its blip with
+   `left:50%; translateX(-50%)`, so the rightmost blip's tip ran past `.home`,
+   which carries `overflow-x:clip` — the last few characters were cut and could
+   not be scrolled to. Measured 9px past at 320px, 6px at 360, 4px at 390, 3px at
+   400, 1px at 430, clean from 480.
+
+   Clamping the tip to its container is not expressible from here: its containing
+   block is the blip, not the map, so no `inset` value can see the map's edge.
+   What is available is making the tip narrow enough that being centred cannot
+   push it out — letting it take two lines instead of one. Measured after: 0 of
+   15 tips past the edge at every width on both /discover and /learn.
+
+   Note `visibility` stays a plain state property on the rule above and is NOT in
+   its transition — that pairing is deliberate and is left exactly as it is. */
+@media(max-width:480px){
+  .wmap-tip{white-space:normal;max-width:min(130px,36vw);text-align:center}
+}
 .wmap-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px 18px;margin-top:var(--s-5);text-align:center;min-height:34px}
 .wmap-cap{font-size:var(--fs-caption);color:var(--t3);max-width:56ch;line-height:1.5}
 .wmap-callout{display:inline-flex;align-items:center;gap:10px;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);box-shadow:var(--shadow-xs)}
@@ -6526,14 +6598,48 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-imgclear{display:block;width:100%;margin-top:8px;padding:6px;font-size:11.5px;font-weight:600;color:var(--t2);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
 .plb-imgclear:hover{color:#B91C1C;background:var(--bg-2)}
 .plb-tgl--on{color:var(--brand);border-color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,transparent)}
-/* ── The board ── */
-.plb-board{display:flex;flex:1;min-height:420px}
+/* ── The board ──
+   `min-height:auto` is a CONSEQUENCE of the fix below, not the fix itself, and
+   the distinction was found by mutation rather than reasoning — restoring the
+   old `420px` alone does not bring the defect back.
+
+   While `.plb-col-tools` was out of flow, `420px` was the only thing reserving
+   room for the 260px tool stack: a column's own in-flow content is just 170px
+   (20 padding + 124 name/hex/ramp + 26 padding), so nothing else was holding
+   the board open. It was a hand-tuned stand-in for a height the layout could
+   not see, and it was 8px short of the 428px a column actually needs — which
+   is the founder's 2026-08-24 report ("still clipping issues on the palette
+   builder on smaller desktop screens and other shapes like 4:3").
+
+   With the stack in flow the board's content minimum is real and this floor no
+   longer binds. Verified, not assumed: the board measures 436px at 1366x608 and
+   688px at 1366x900 with this declaration set to either `auto` or `420px`. It
+   is dropped because a stale magic number that currently does nothing is worse
+   than none — shorten the tool stack by 17px and 420 silently starts binding
+   again, which is precisely how this defect was born. */
+.plb-board{display:flex;flex:1;min-height:auto}
 .plb-col{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;padding:20px 8px 26px;background:var(--plb-c);color:var(--plb-ink)}
 /* Vision type split: top half the real palette colour, bottom half the
    colour-vision simulation. Content sits in the bottom half (justify-end), so
    --plb-ink is computed against --plb-sim. */
 .plb-col--split{background:linear-gradient(to bottom,var(--plb-c) 0 50%,var(--plb-sim) 50% 100%)}
-.plb-col-tools{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px}
+/* IN FLOW, not absolute. It was `position:absolute;top:18px;left:50%` with a
+   translate to centre it, and out-of-flow content contributes nothing to its
+   container's height — so the board's floor could not see the 260px this stack
+   occupies and the two ends of the column grew into each other from opposite
+   directions (tools down from the top, name/hex/ramp up from the bottom).
+   `margin-bottom:auto` on the FIRST child reproduces the same visual placement
+   through flex instead: it eats the free space below, pinning the stack to the
+   top while `justify-content:flex-end` keeps everything else at the bottom, and
+   `.plb-col`'s own `align-items:center` supplies the centring the translate
+   used to do. Measured shift at a tall viewport: 18..278 becomes 20..280, i.e.
+   2px, which is the difference between `top:18px` and the column's 20px
+   padding. The payoff is that the stack is now part of the content minimum, so
+   nothing has to assert a floor for it.
+   The ≤768px block below returns this to a row and clears the auto margin — in
+   a row-direction flex container an auto BLOCK margin would push the stack to
+   the top of the cross axis instead of centring it. */
+.plb-col-tools{margin-bottom:auto;display:flex;flex-direction:column;gap:6px}
 /* The per-swatch controls are visible AT REST by default and hidden only where
    a hover can bring them back. That direction matters: the old rule hid them at
    rest for everyone and corrected it in @media(max-width:768px), which is a
@@ -6549,9 +6655,14 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-col:hover .plb-tool,.plb-col:focus-within .plb-tool,.plb-tool--on{opacity:1}
 .plb-tool:hover{background:color-mix(in srgb,var(--plb-ink) 14%,transparent)}
 .plb-tool--on{background:color-mix(in srgb,var(--plb-ink) 18%,transparent)}
-.plb-ramp{display:flex;gap:4px;margin-bottom:10px}
-.plb-ramp-bar{width:14px;height:34px;background:var(--plb-rc);border:none;border-radius:4px;cursor:pointer;transition:transform var(--t)}
-.plb-ramp-bar:hover{transform:translateY(-2px)}
+/* The ramp is ONE button (N8, responsive-audit-2026-08). It was five, and the
+   five were identical — same label, same handler — so a 14px-wide target that
+   also failed 2.5.8's spacing exception (14 + 4 gap = 18px between centres,
+   against the 24px the exception needs) was being offered five times over.
+   The button is 86x34; the bars inside it are decorative. */
+.plb-ramp{display:flex;gap:4px;margin-bottom:10px;padding:0;border:none;background:none;cursor:pointer}
+.plb-ramp-bar{width:14px;height:34px;background:var(--plb-rc);border:none;border-radius:4px;transition:transform var(--t)}
+.plb-ramp:hover .plb-ramp-bar{transform:translateY(-2px)}
 .plb-hex{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.01em;text-transform:uppercase;color:inherit;background:none;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;transition:background var(--t)}
 .plb-hex:hover{background:color-mix(in srgb,var(--plb-ink) 12%,transparent)}
 /* The column title names the COLOUR (utils/paletteNames.js, deterministic per
@@ -7052,7 +7163,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
   /* Labels are already pinned open by the max-width:960px block above. */
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
-  .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}
+  .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto;margin-bottom:0}
   /* Redundant on touch now that the base rule is visible-at-rest, but still
      doing work for a HOVER device at this width — a narrowed desktop window, or
      a small laptop — where @media(hover:hover) still hides them and this
@@ -7062,7 +7173,26 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-hex{font-size:13px;padding:2px 6px}
   /* The row is 64px tall, so the colour title stays (it is the thing the
      founder asked for) and only the slot eyebrow drops. */
-  .plb-name{margin-bottom:0;padding:0;font-size:12px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* N3 (responsive-audit-2026-08): the swatch name was crushed by the tool row
+     beside it. The audit records it at 480px only and calls it cosmetic; it is
+     the 431–499px band, and it is not one width — the names are generated per
+     load, so which of the five clip changes run to run. Measured: 5 of 5 cut at
+     440px ("Antique Bathhouse", 108px into 60px), 4 of 5 at 450, 1–2 of 5 at
+     460–480, clean from 500.
+
+     Below 431px the reflow block already wraps the tools onto their own line,
+     which is why 430px was clean and 440px was not — the fix simply stopped one
+     pixel too early. Rather than extend that band to another hand-picked width,
+     the row wraps whenever it has to: `min-width` on the name gives it a floor
+     to defend, and `flex-wrap` lets the tool row drop instead of the name
+     shrinking. Where there is room nothing moves.
+
+     This is free. Row and board heights are byte-identical before and after at
+     every width from 430 to 768 (97/97, 96/96, 100/100, 111/111) — the board's
+     flex layout was already that tall, and the tools were simply refusing to
+     use the second line. */
+  .plb-col{flex-wrap:wrap;row-gap:8px}
+  .plb-name{margin-bottom:0;padding:0;min-width:12ch;font-size:12px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .plb-role{display:none}
   .plb-badge{margin-top:0}
   .plb-gap{display:none}
@@ -7723,6 +7853,27 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-stop-swatch{position:relative;flex-shrink:0}
 .ggn-stop-swatch .cpk-pop{left:0;right:auto}
 .ggn-stop-hex{flex:1;min-width:0;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ggn-t0);background:transparent;border:none;outline:none;letter-spacing:.02em}
+/* N2 (responsive-audit-2026-08): the stop's hex input clipped its own value at
+   320–349px and again at 769–799px, rendering "#7C3AED" as "#7C3AE" — a
+   plausible but wrong colour.
+
+   The audit reads this as a width problem ("needs 91px and gets 77–87px"). It is
+   not. The rule ABOVE never applied its font or its padding: `.ggn-stop-hex` is
+   (0,1,0) and the global `input[type="text"],…` rule is (0,1,1), so the field
+   was rendering in Manrope with the global form padding of 9px/14px — and at
+   ≤640px in Manrope at 16px with 11px/14px — instead of the mono 13px it asks
+   for. Measured at 320px: 103px of text in a 78px box. Its own sibling
+   `.ggn-stop-pos input` is written as class+element, ties that specificity, wins
+   on source order and has always rendered correctly, which is the tell.
+
+   Raising the selector to `input.ggn-stop-hex` ties (0,1,1) and wins on source
+   order. Measured after: scrollWidth equals clientWidth at 320, 769 and 900.
+
+   `font-size` is deliberately NOT restated here. The 16px at ≤640px comes from
+   the shared Forms / inputs block and exists to stop iOS zooming the page on
+   focus; mono at 16px with no padding fits the box (78px of 78px), so the
+   protection is kept rather than traded away for the designed 13px. */
+input.ggn-stop-hex{font-family:var(--mono);padding:0}
 .ggn-stop-pos{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .ggn-stop-pos input{width:46px;font-family:var(--mono);font-size:13px;color:var(--ggn-t1);background:var(--ggn-bg);border:1px solid var(--ggn-line);border-radius:var(--radius-xs);padding:5px 6px;outline:none;text-align:right;-moz-appearance:textfield}
 .ggn-stop-pos input::-webkit-outer-spin-button,.ggn-stop-pos input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -7927,11 +8078,40 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ggn-submit-preview{height:88px;margin-bottom:var(--s-4);border-radius:var(--radius);border:1px solid var(--border)}
 @media(max-width:820px){
   .grg-search{flex:1 1 100%}
-  .grg-chips{flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto}
+  /* Keeps its own row, but keeps wrapping too — the nowrap scroller this used
+     to impose put 4 of 8 mood filters outside the box at 320px and 3 of 8 at
+     390px, with no affordance. Same fault as S4 on the shared .pl-chips. */
+  .grg-chips{flex:1 1 100%}
 }
+/* M6 (responsive-audit-2026-08): every gradient name and meta line truncated
+   between 450 and 579px. Measured across the 100-card library: at 450px, 78 of
+   100 names and 100 of 100 meta lines were cut, e.g. "Sunset Blaze" needing 86px
+   and getting 47.
+
+   THE AUDIT'S DIAGNOSIS IS WRONG, and the difference is worth 250% of the page
+   height. It blamed the 200px grid minimum below ("well below the ~245px the
+   card footer actually needs") and proposed raising it to the desktop 280px.
+   That does clear the truncation, because it stops there being two columns at
+   all until 608px — measured, the grid goes from 17,849px to 64,658px tall at
+   450px, +262%, to browse the same 100 cards one enormous 619px card at a time.
+
+   The actual cause is in the footer, not the grid. `.grg-actions` is
+   `flex-shrink:0`, so Copy CSS + Open take a fixed ~142px however narrow the
+   card is, and `.grg-id` gets what is left — 47px in a 201px column. The name is
+   not being denied width by the column; it is being denied width by the action
+   row beside it. Stacking the two clears every truncation at every width for
+   +11% card height (330px to 368px at 450px), and keeps two columns.
+
+   Below 450px the grid is already a single 288-408px column and nothing was
+   truncated there, so this is not needed for correctness — it is applied to the
+   whole ≤640px band anyway so that a phone card has ONE footer shape rather than
+   changing arrangement at an invisible seam, and it gives the two actions a
+   full-width row, which is the friendlier touch target of the two layouts. */
 @media(max-width:640px){
   .grg-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:28px 16px}
   .grg-toolbar{gap:10px;margin-bottom:24px}
+  .grg-foot{flex-direction:column;align-items:stretch;gap:8px}
+  .grg-actions{justify-content:space-between}
 }
 
 /* ─── Typography tools — shared chrome (typ-) ───────────────────────────────
@@ -8402,12 +8582,30 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .lbry-search-clear:hover{color:var(--t0);background:var(--hvr)}
 .lbry-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
-.lbry-filters{position:relative;display:flex;gap:3px;flex-shrink:0;max-width:100%;padding:3px;background:var(--bg-2);border-radius:var(--radius-xl);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.lbry-filters::-webkit-scrollbar{display:none}
+/* The tray WRAPS. It was `overflow-x:auto` with the scrollbar suppressed on
+   both `scrollbar-width` and `::-webkit-scrollbar` — the seventh instance of the
+   hidden-scroller shape in this stylesheet, after S1, S2, S8 (PR #271) and S3 +
+   the four `.pl-chips` surfaces above. Under touch emulation nothing at all
+   paints to say the row scrolls, so the options past the fold are simply gone.
+
+   Measured filter buttons sitting outside their own tray, before → after:
+
+     /discover/gradients  320px  3 of 8 → 0     390px  1 of 8 → 0
+     /discover/palettes   320px  1 of 6 → 0
+     /fontgallery         clean at every width, and stays clean
+
+   Cost is one wrapped line on the narrowest phones, which is what the rest of
+   this stylesheet already pays for the same class of fix. */
+.lbry-filters{position:relative;display:flex;flex-wrap:wrap;gap:3px;flex-shrink:0;max-width:100%;padding:3px;background:var(--bg-2);border-radius:var(--radius-xl)}
 /* Decoration only — aria-pressed on each button is what reports state. The
    fallbacks matter: until JS measures, opacity 0 keeps it off the first option
-   rather than claiming a selection at x=0. */
-.lbry-filter-ind{position:absolute;top:3px;bottom:3px;left:0;width:var(--lbry-ind-w,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-xs);transform:translateX(var(--lbry-ind-x,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
+   rather than claiming a selection at x=0.
+
+   Positioned on BOTH axes, because the tray above can wrap: `top:3px;bottom:3px`
+   stretched the indicator down every line of a wrapped tray and left it sitting
+   under options that are not selected. Height and Y come from the active
+   button's own box, so the padding is measured rather than hard-coded. */
+.lbry-filter-ind{position:absolute;top:0;left:0;width:var(--lbry-ind-w,0px);height:var(--lbry-ind-h,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-xs);transform:translate(var(--lbry-ind-x,0px),var(--lbry-ind-y,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),height var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
 .lbry-filter{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:7px 13px;color:var(--t2);background:transparent;border:0;border-radius:var(--radius);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .lbry-filter:hover{color:var(--t0)}
 .lbry-filter[data-active="true"]{color:var(--t0)}
@@ -8694,13 +8892,34 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .fg-card-sample,.fg-card-skeleton--sample{height:66px;line-height:66px}
   .fg-card-sample{font-size:clamp(30px,var(--fg-card-size),52px)}
   /* Stacked, the meta goes back to a single line under the specimen: the name
-     has the full column width there, so it does not need its own row. */
+     has the full column width there, so it does not need its own row.
+     True down to about 380px, and NOT below it — see the ≤380px block. */
   .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0 52px 18px 0;border-left:0}
   .fg-skel-row{height:130px;padding:18px 24px 12px 34px}
   .fpr-hero-pair{grid-template-columns:1fr auto 1fr}
   .fpr-status{grid-template-columns:1fr 1fr}
   .fpr-status span:nth-child(3){border-left:1px solid var(--border)}
   .fpr-status span:nth-child(n+3){border-top:1px solid var(--border)}
+}
+/* N1 (responsive-audit-2026-08): the family name is the content of a font
+   gallery, and 7 of 48 were truncated at 320px — "Roboto Condensed" needing
+   151px and getting 94.
+
+   The premium block above already solved exactly this once, for the wide
+   layout, and its own comment says why: side by side, the classification tag
+   takes a fixed width and the name gets the remainder. The stacked layout then
+   puts the meta back on one row, reasoning that "the name has the full column
+   width there". That holds at 380px and stops holding below it — `.fg-card-info`
+   is `flex-shrink:0`, so at 320px it keeps ~98px of the 202px available and the
+   name gets what is left. Same fault as the wide layout, same fix: give the name
+   its own row back, and the full 202px with it.
+
+   This block must stay AFTER the ≤720px one. It was first written earlier in the
+   file, next to the other ≤380px rules, where it lost the cascade to
+   `.fg-card-meta{flex-direction:row}` at equal specificity and changed nothing —
+   caught by measuring rather than by reading, since the rule looked right. */
+@media(max-width:380px){
+  .fg-card-meta{flex-direction:column;align-items:flex-start;gap:4px}
 }
 @media(max-width:480px){
   .pgl-page .pgal-stripes{height:210px}
@@ -8815,9 +9034,28 @@ button.plb-varrow:hover{background:var(--bg-2)}
    Wrapping the tools onto their own line keeps every control at full touch
    size. The alternative — shrinking five buttons into the ~206px left after the
    hex — would have pushed them toward the 24px floor (2.5.8) to avoid breaking
-   1.4.10, which is trading one failure for another. */
+   1.4.10, which is trading one failure for another.
+
+   `min-height:auto` is doing real work and is not a no-op: it used to read `0`,
+   and that is the second half of M1 (responsive-audit-2026-08), escalated to
+   unclickable by the mobile audit's hit-testing. `.plb-col` is a flex ITEM of a
+   column-direction `.plb-board`, and `min-height:0` suppresses the automatic
+   minimum size that would otherwise stop it shrinking below its own content.
+   Wrapping DOUBLES that content height at exactly the moment the floor was
+   removed, so the two lines sat on top of each other on every real phone.
+   Measured `.plb-col` height at 390px wide: 24px at 568 tall, 35px at 640,
+   76px at 844 — against the 85px the wrapped content needs (12 + 21 hex + 8
+   row-gap + 32 tools + 12). At 390x640 that put 24 of 35 controls under a
+   DIFFERENT element at `elementFromPoint`: "Lock PRIMARY" hit `.plb-name`,
+   "Show contrast guidance" hit `.plb-hex`.
+
+   `auto`, not a hard `85px`, and the difference is load-bearing: `.plb-col--out`
+   closes a removed column by animating `flex-grow` to `.02`, and it carries
+   `overflow:hidden`, which zeroes the automatic minimum size. Measured — under
+   `auto` the closing column reaches 25px; pinned at `85px` it freezes at 85 and
+   the slide-close stops working. */
 @media(max-width:430px){
-  .plb-col{flex-wrap:wrap;row-gap:8px;min-height:0;padding-top:12px;padding-bottom:12px}
+  .plb-col{flex-wrap:wrap;row-gap:8px;min-height:auto;padding-top:12px;padding-bottom:12px}
   .plb-col-tools{width:100%;margin-left:0;justify-content:flex-start}
 }
 
@@ -8890,7 +9128,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
    The homepage swatch overlays (.hw-pal-lock / .hw-pal-copy) sit on the same
    kind of user-chosen fill and get the same treatment. */
 .plb-tool:focus-visible,
-.plb-ramp-bar:focus-visible,
+.plb-ramp:focus-visible,
 .hw-pal-lock:focus-visible,
 .hw-pal-copy:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}
 
@@ -9363,9 +9601,30 @@ button.plb-varrow:hover{background:var(--bg-2)}
    The 2-line clamp is the tempting middle and it is not worth it: it buys 7
    percentage points and still hides three quarters of the specimen.
 
-   Scoped to <=768px. Landscape phones and tablets (769px and up) still truncate
-   at 31-45% shown; they are wider, this band is where the tool is unusable, and
-   769+ is where PR #263 is reworking these grids. */
+   The STACKING is scoped to <=768px; the WRAPPING is not, and that split is the
+   completion of S16 above 768px. When this was first written the rest was left
+   because 769+ is wider and because PR #263 is reworking those grids. Measured,
+   being wider was not enough: 3 to 5 of the 9 specimens were still cut from
+   769px all the way up, showing 31-59% of the string —
+
+     769x900  5 of 9, largest 39%      1024x768  5 of 9, largest 31%
+     834x1194 4 of 9, largest 44%      1180x820  4 of 9, largest 43%
+     900x900  4 of 9, largest 49%      1280x900  4 of 9, largest 51%
+     980x900  3 of 9, largest 55%      1440x900  3 of 9, largest 59%
+
+   1024x768 is the worst of them, worse than 769, because the two-column grid
+   arrives at 981px and takes 340px back out — the wider-is-narrower step. That
+   grid is #263's to fix and this change does not touch it; wrapping composes
+   with whatever column width the grid ends up handing over.
+
+   Above 768 the row does NOT stack. There is horizontal room for the meta
+   column at these widths, and stacking would spend it: measured on a phone that
+   choice cost +945px of ladder, where wrapping alone here costs +156 to +491
+   depending on width (944 -> 1100 at 1440, 944 -> 1435 at 1024). Wrapping alone
+   takes every one of those rows to 0 cut. */
+@media(min-width:769px){
+  .tsc-row-text{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
+}
 @media(max-width:768px){
   .tsc-row{align-items:flex-start;flex-direction:column;gap:6px}
   .tsc-row-meta{flex-direction:row;flex-basis:auto;gap:8px;flex-wrap:wrap}
