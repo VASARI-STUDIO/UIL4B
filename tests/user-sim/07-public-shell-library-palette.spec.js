@@ -1,6 +1,6 @@
 // Focused release coverage for the public shell, asset-library command surface
 // and Palette Builder recovery controls.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { appendCommunitySubmission, readCommunitySubmissions } from '../../src/utils/communitySubmissions.js'
 import { buildCommunityPromptRecord, resolvePromptProfileLink } from '../../src/utils/promptSubmission.js'

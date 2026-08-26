@@ -3,7 +3,7 @@
 // Each block names the bug it guards, because each of these shipped once and
 // the reason they shipped is that nothing measured the RENDERED result. These
 // tests measure the rendered result.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 // The near-black outer ring. The production minifier may serialise

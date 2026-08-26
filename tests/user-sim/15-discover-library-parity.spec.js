@@ -3,7 +3,7 @@
 // (rendered by the shared DiscoverGalleryHero / DiscoverResultHead components)
 // and use the same "… Library" vocabulary. These tests exist so a future edit
 // to one page cannot silently drift the other.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { LIBRARY_PALETTES, BRAND_LIBRARY_PALETTES, CURATED_LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'

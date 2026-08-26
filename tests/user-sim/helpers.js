@@ -29,25 +29,18 @@ const EXPECTED_NOISE = [
   /ERR_CONNECTION|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|ERR_TUNNEL/,
 ]
 
+// Everything this used to special-case for Google One Tap — the [GSI_LOGGER]
+// FedCM AbortError/NetworkError pairs, and the document-level "Error retrieving
+// a token." / "Provider's accounts list is empty" noise — is gone, because One
+// Tap no longer loads at all: base.js stubs accounts.google.com for every
+// browser context in the suite. Leaving the suppression in place would mean a
+// stub that quietly stopped covering a spec produced no visible symptom, which
+// is the exact failure this file is meant to surface. If GSI_LOGGER errors ever
+// come back, they are findings again — and the run fails outright in
+// assertOneTapNeverLeft().
 function isExpectedNoise(text, url) {
   const hay = `${text} ${url || ''}`
-  const knownGsiTeardownAbort = /AbortError.*signal is aborted|signal is aborted.*AbortError/i.test(hay)
-    && /accounts\.google\.com\/gsi|fedcm|google one tap|\bgsi\b/i.test(hay)
-  const knownFedCmTokenFailure = /\[GSI_LOGGER\]: FedCM get\(\) rejects with NetworkError: Error retrieving a token/i.test(hay)
-    && /accounts\.google\.com\/gsi/i.test(hay)
-  if (knownGsiTeardownAbort || knownFedCmTokenFailure) return true
   return EXPECTED_NOISE.some((re) => re.test(hay))
-}
-
-function isKnownGsiDocumentNoise(page, text, location, gsiRequested) {
-  if (!gsiRequested) return false
-  const documentLevel = (location.lineNumber || 0) === 0
-    && (location.columnNumber || 0) === 0
-    && location.url === page.url()
-  if (text === 'Error retrieving a token.') return documentLevel
-  if (text === 'The request has been aborted.') return documentLevel
-  if (!/Provider's accounts list is empty/i.test(text)) return false
-  return documentLevel || /\[GSI_LOGGER\]|\bFedCM\b/i.test(text)
 }
 
 export function record(finding) {
@@ -60,10 +53,6 @@ export function record(finding) {
  * Returns { note } for recording soft UX observations mid-flow.
  */
 export function watch(page, persona) {
-  let gsiRequested = false
-  page.on('request', (request) => {
-    if (request.url().startsWith('https://accounts.google.com/gsi/')) gsiRequested = true
-  })
   page.on('pageerror', (err) => {
     record({
       persona,
@@ -82,7 +71,6 @@ export function watch(page, persona) {
       && /assets\/(?:gsap|ScrollTrigger)-/.test(url)
     if (deliberateMotionAbort) return
     if (isExpectedNoise(msg.text(), url)) return
-    if (isKnownGsiDocumentNoise(page, msg.text(), location, gsiRequested)) return
     const source = url
       ? ` (${url}${location.lineNumber != null ? `:${location.lineNumber}:${location.columnNumber || 0}` : ''})`
       : ''

@@ -1,7 +1,7 @@
 // Adversarial acceptance coverage for the Gradient and Semantic Colour tools.
 // These flows deliberately use invalid values, repeated actions, keyboard-only
 // adjustments, and narrow screens so the workbenches fail safely under pressure.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { normalizeClipboardText } from '../../src/hooks/useClipboard.js'
 

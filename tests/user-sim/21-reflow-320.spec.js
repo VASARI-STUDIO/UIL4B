@@ -25,7 +25,7 @@
 //   /create/type-scale          .tsc-row-text at 1328px inside a 247px row. The rule
 //                       already asked for an ellipsis; `min-width: auto` on the
 //                       parent flex item meant it never applied.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 // 320px is the narrowest viewport WCAG 1.4.10 requires (it is 400px CSS at

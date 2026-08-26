@@ -2,7 +2,7 @@
 // for the product. Goals: understand what the product is within seconds,
 // reach a real tool through the navigation alone, find the price, and never
 // hit a blank or broken page while wandering.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { watch, expectRendered, go } from './helpers.js'
 
 const PERSONA = 'first-time visitor'
