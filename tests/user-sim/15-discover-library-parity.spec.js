@@ -64,6 +64,81 @@ test.describe('Discover libraries share one header', () => {
     expect(shapes[0]).toEqual(shapes[1])
   })
 
+  // The masthead test above proves the two pages LOOK alike. These prove they
+  // are the same implementation — which is the only version of that claim a
+  // future edit cannot quietly break. Before the shared Library language the
+  // two toolbars were separate CSS: one sticky and one not, one glass and one
+  // flat, with three filter idioms between them.
+  test('both libraries render the one shared toolbar, filter and empty implementation', async ({ page }) => {
+    const shapes = []
+    for (const library of LIBRARIES) {
+      await go(page, library.route)
+      await expect(page.locator('.lbry-toolbar')).toBeVisible()
+      shapes.push(await page.evaluate(() => {
+        const bar = getComputedStyle(document.querySelector('.lbry-toolbar'))
+        const tray = getComputedStyle(document.querySelector('.lbry-filters'))
+        return {
+          // Sticky is the one that actually mattered: on ~100 cards the
+          // Gradient Library's filters scrolled away exactly when you wanted them.
+          position: bar.position,
+          radius: bar.borderTopLeftRadius,
+          padding: bar.paddingTop,
+          trayRadius: tray.borderTopLeftRadius,
+          trayBackground: tray.backgroundColor,
+          searchHeight: getComputedStyle(document.querySelector('.lbry-search')).minHeight,
+        }
+      }))
+    }
+    expect(shapes[0].position).toBe('sticky')
+    expect(shapes[0]).toEqual(shapes[1])
+  })
+
+  test('the filter indicator measures itself onto the active option', async ({ page }) => {
+    watch(page, 'designer switching filters in the Gradient Library')
+    await go(page, '/discover/gradients')
+
+    const tray = page.locator('.lbry-filters').first()
+    await expect(tray.locator('.lbry-filter-ind')).toHaveCount(1)
+
+    // An index-derived offset passes a test that only checks "it moved". This
+    // checks it lands on the real box, which is the part that breaks when the
+    // options reflow or the label widths change.
+    // Polled, not sampled once: the indicator TRANSITIONS onto its target, so a
+    // single read lands mid-flight and measures the easing curve rather than
+    // the resting position. Poll until it settles, and compare there.
+    const settled = async () => page.evaluate(() => {
+      const t = document.querySelector('.lbry-filters')
+      const ind = t.querySelector('.lbry-filter-ind')
+      const active = t.querySelector('[data-active="true"]')
+      const style = getComputedStyle(ind)
+      const m = new DOMMatrixReadOnly(style.transform)
+      return [
+        Math.round(m.m41) - active.offsetLeft,
+        Math.round(parseFloat(style.width)) - active.offsetWidth,
+        style.opacity,
+      ].join('/')
+    })
+
+    for (const label of ['Cool', 'Dark', 'All']) {
+      await tray.getByRole('button', { name: label, exact: true }).click()
+      // "0/0/1" = zero offset error, zero width error, fully visible.
+      await expect.poll(settled, { timeout: 2000 }).toBe('0/0/1')
+    }
+  })
+
+  test('every library empty state offers the way back unconditionally', async ({ page }) => {
+    // The Gradient Library used to render its reset only when it could prove a
+    // filter was set, hiding it in the one case where undoing by hand is hardest.
+    for (const library of LIBRARIES) {
+      await go(page, library.route)
+      await page.locator('.lbry-search input').fill('zzzzz-no-such-thing')
+      const empty = page.locator('.lbry-empty')
+      await expect(empty).toBeVisible()
+      await expect(empty).toHaveAttribute('role', 'status')
+      await expect(empty.getByRole('button', { name: 'Clear filters' })).toBeVisible()
+    }
+  })
+
   test('the Gradient Library keeps its no-results recovery path', async ({ page }) => {
     watch(page, 'designer filtering the Gradient Library down to nothing')
     await go(page, '/discover/gradients')
