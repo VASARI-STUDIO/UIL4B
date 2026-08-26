@@ -6,7 +6,7 @@
 // the sections became real panels it meant the page opened showing NOTHING.
 // That is the class of bug this file exists to catch: a default that matches no
 // panel is a blank page, and a blank page is indistinguishable from a crash.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 test.describe('settings panels', () => {

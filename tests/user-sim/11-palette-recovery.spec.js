@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 test.describe('Palette Builder recovery and tool continuity', () => {

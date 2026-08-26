@@ -19,7 +19,7 @@
 // Likewise the touch tests below assert computed `opacity` and hit-testing under
 // REAL device metrics (isMobile + hasTouch), because a desktop Chromium narrowed
 // to 390px still reports `hover: hover` and hides this entire class of defect.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { watch } from './helpers.js'
 
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -45,14 +45,9 @@ async function openTouch(browser, width, height, path, tablet = false, waitFor =
   const ctx = await touch(browser, width, height, tablet)
   const page = await ctx.newPage()
   watch(page, `mobile overhaul ${width}x${height}`)
-  // Google One Tap is live on app-shell routes signed out, and it would sit over
-  // the very controls these tests hit-test. Served as an empty script rather
-  // than aborted: an abort raises a console error that the feedback loop then
-  // reports as a finding on every single viewport, and the point is to make One
-  // Tap absent, not to make the network fail.
-  await page.route('**accounts.google.com/gsi/**', (r) => r.fulfill({
-    status: 200, contentType: 'application/javascript', body: '',
-  }).catch(() => {}))
+  // One Tap used to be stubbed here, per page. It is now stubbed for the whole
+  // suite in base.js — including contexts built by hand like this one — so this
+  // spec's own copy went with it rather than racing it. See base.js for why.
   await page.goto(path, { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('load').catch(() => {})
   // Wait for the thing under test to exist, rather than sleeping and hoping.
@@ -146,9 +141,7 @@ for (const path of ['/color/palette', '/settings']) {
     const ctx = await touch(browser, 768, 800, true)
     const page = await ctx.newPage()
     watch(page, `cta first paint ${path}`)
-    await page.route('**accounts.google.com/gsi/**', (r) => r.fulfill({
-      status: 200, contentType: 'application/javascript', body: '',
-    }).catch(() => {}))
+    // One Tap is stubbed suite-wide in base.js; this spec's own copy is gone.
     await page.goto(path, { waitUntil: 'domcontentloaded' })
     await page.locator('.pnav-cta').first().waitFor({ state: 'attached', timeout: 15000 })
     const first = await page.evaluate(() => {

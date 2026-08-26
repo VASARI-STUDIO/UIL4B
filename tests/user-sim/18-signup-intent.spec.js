@@ -11,7 +11,7 @@
 // The popup is one component either way; only which form it OPENS on changed.
 // So these tests assert the opening state, and that "Log in" — which shares the
 // same popup — still opens on sign-in.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 const PERSONA = 'a first-time visitor clicking the primary call to action'
