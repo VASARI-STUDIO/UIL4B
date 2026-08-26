@@ -120,6 +120,58 @@ for (const path of ['/color/palette', '/settings']) {
   })
 }
 
+/**
+ * The tests above take their reading a fixed 400ms after `load`, which only
+ * measures the finished layout if the pill is not still animating then. It was.
+ *
+ * PillNav seeded `ctaReady` to a flat `false`, so the CTA mounted in .is-waiting
+ * on EVERY route and the scroll effect revealed it one tick after hydration —
+ * playing a 280ms grid-track reveal on app-shell routes that have no #workbench
+ * gate to wait for. MEASURED at 768px on /settings: track 0 → 87.55px, settling
+ * at load+310ms idle and load+440ms under a 4× CPU throttle. Past 400ms the
+ * reading above is a frame of the animation, which is why CI reported a
+ * different short track at every width and a different one per shard for the
+ * same width (1024px read 85.97 on one and 50.20 on the other) while `needs`
+ * never moved. A layout fault is the same number every time; that was not one.
+ *
+ * So this asserts the property the width tests assume rather than test: on a
+ * route with no scroll gate the pill is CORRECT AT FIRST PAINT — no waiting
+ * class, full track, and in the tab order — read the instant it attaches, with
+ * no settle pause to hide a reveal behind. Deliberately not a "wait until it
+ * stops moving" check: that would go green on a pill that animates in late,
+ * which is the defect.
+ */
+for (const path of ['/color/palette', '/settings']) {
+  test(`S15 · the CTA is painted on arrival, not animated in, on ${path}`, async ({ browser }) => {
+    const ctx = await touch(browser, 768, 800, true)
+    const page = await ctx.newPage()
+    watch(page, `cta first paint ${path}`)
+    await page.route('**accounts.google.com/gsi/**', (r) => r.fulfill({
+      status: 200, contentType: 'application/javascript', body: '',
+    }).catch(() => {}))
+    await page.goto(path, { waitUntil: 'domcontentloaded' })
+    await page.locator('.pnav-cta').first().waitFor({ state: 'attached', timeout: 15000 })
+    const first = await page.evaluate(() => {
+      const b = document.querySelector('.pnav-cta')
+      const inner = b.querySelector('.pnav-cta-i')
+      const range = document.createRange()
+      range.selectNodeContents(inner)
+      return {
+        waiting: b.classList.contains('is-waiting'),
+        track: Math.round(parseFloat(getComputedStyle(b).gridTemplateColumns) * 100) / 100,
+        needs: Math.round(range.getBoundingClientRect().width * 100) / 100,
+        hidden: b.getAttribute('aria-hidden'),
+        tabIndex: b.tabIndex,
+      }
+    })
+    await ctx.close()
+    expect(first.waiting, `${path} has no #workbench gate, so the CTA must never mount in the waiting state`).toBe(false)
+    expect(first.track + 0.5, `the CTA's label track was ${first.track}px for a ${first.needs}px label on arrival — it is still animating open`).toBeGreaterThanOrEqual(first.needs)
+    expect(first.hidden, 'a painted CTA must not be aria-hidden, not even for the length of an entrance').toBeNull()
+    expect(first.tabIndex, 'a painted CTA must be reachable by keyboard from the first paint').toBe(0)
+  })
+}
+
 test('S15 · the .is-waiting reveal still animates its grid track open', async ({ browser }) => {
   // The fix pins flex-shrink and raises the actions cluster's min-width. Neither
   // may disturb the deliberate hide-on-load state, which collapses the SAME
