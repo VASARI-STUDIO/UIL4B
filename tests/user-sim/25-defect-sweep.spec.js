@@ -144,49 +144,124 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 // ─────────────────────────────────────────────────────────────────────────────
 // S3 / S4 · chip rows that were scrollers with no affordance
 // ─────────────────────────────────────────────────────────────────────────────
-// Fifth and sixth instances of one shape in this stylesheet: a row of options
-// turned into `overflow-x:auto` with the scrollbar suppressed, which under touch
-// emulation paints nothing at all to say it scrolls. S1, S2 and S8 were the same
-// and were fixed by wrapping in PR #271.
+// Fifth, sixth and — via the shared Library tray PR #254 introduced — seventh
+// instances of one shape in this stylesheet: a row of options turned into
+// `overflow-x:auto` with the scrollbar suppressed, which under touch emulation
+// paints nothing at all to say it scrolls. S1, S2 and S8 were the same and were
+// fixed by wrapping in PR #271.
 //
 // Counting chips in the DOM proves nothing — they were all present the whole
 // time. What is asserted is how many sit inside their own container's box.
 //
-// The route list is wider than the audit's, on purpose: `.pl-chips` is shared by
-// four surfaces and S4 only records the Emoji Library, so /icons (4 of 7 off at
-// 320px) and /discover/prompts (3 of 6) were never written down.
+// The route list is wider than the audit's, on purpose: S4 only records the
+// Emoji Library, but the defect is a property of a SHARED filter row, and every
+// surface that mounts one has it. /icons (4 of 7 off at 320px) and
+// /discover/prompts (3 of 6) were never written down.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// WHY THIS TEST CARRIES A SELECTOR PER SURFACE
+// ─────────────────────────────────────────────────────────────────────────────
+// It used to hard-code `.pl-chips` / `.pl-chip` for all four routes, because all
+// four genuinely shared that markup when it was written. PR #254 then rebuilt
+// /discover/gradients on the shared Library components while this branch waited
+// to merge, and that surface now renders `.lbry-filters` / `.lbry-filter` and no
+// `.pl-chips` at all. The old selector stopped matching anything.
+//
+// Two idioms are live, so the table names each surface's own container and item
+// classes rather than assuming one shape for all of them. That is the part that
+// went stale, so it is the part the table has to record.
+//
+// THE ROW AND ITEM COUNTS ARE BOTH ASSERTED, and that is deliberate:
+//
+//   - `rows` is the guard against the failure that produced this repair. A
+//     selector that matches NOTHING measures nothing, reports no damage, and
+//     passes. Asserting how many containers the selector found turns that into a
+//     red test with a message that says which surface changed shape.
+//   - `items` is the total across all of them, because a surface can mount more
+//     than one filter group — /discover/gradients mounts two (mood, then type),
+//     and the old single-row `expected` could not describe that. A total plus
+//     "no row is empty" pins both the sum and the split, where a per-row
+//     expectation would have to be re-derived every time an option is added.
+//
+// The item selector also has to exclude the tray's own furniture:
+// `.lbry-filter-ind` is a decorative sliding indicator and `.lbry-filter-dot` is
+// a colour swatch inside a button. Neither is a chip. Neither carries the
+// `lbry-filter` class token, so `.lbry-filter` already excludes them — and the
+// `items` total is what would catch it if a future rename folded one back in.
 
+// [path, container selector, item selector, rows, items across all rows]
 const CHIP_ROWS = [
-  ['/emoji', '.pl-chips', '.pl-chip', 12],
-  ['/icons', '.pl-chips', '.pl-chip', 7],
-  ['/discover/prompts', '.pl-chips', '.pl-chip', 6],
-  ['/discover/gradients', '.pl-chips', '.pl-chip', 8],
+  // The original `.pl-chips` idiom: one wrapping row of outlined pills.
+  ['/emoji', '.pl-chips', '.pl-chip', 1, 12],
+  ['/icons', '.pl-chips', '.pl-chip', 1, 7],
+  ['/discover/prompts', '.pl-chips', '.pl-chip', 1, 6],
 ]
 
-test('S4 · every filter chip is inside its own row, on every surface that shares it', async ({ browser }) => {
+// The shared Library segmented tray (PR #254), which replaced the chip row on
+// the browse surfaces. /discover/gradients mounts TWO trays — 8 mood options and
+// 4 type options — so it is the surface the single-row shape could not describe.
+// /discover/palettes and /fontgallery are here for the reason the list above is
+// wider than the audit: the tray is shared CSS, and a fix measured on one
+// consumer has already been shown to leave another broken.
+const FILTER_TRAYS = [
+  ['/discover/gradients', '.lbry-filters', '.lbry-filter', 2, 12],
+  ['/discover/palettes', '.lbry-filters', '.lbry-filter', 1, 6],
+  ['/fontgallery', '.lbry-filters', '.lbry-filter', 2, 8],
+]
+
+/**
+ * Measure every filter row `box` finds on `path`, at each of the S4 widths.
+ *
+ * Nothing here counts what is in the DOM: every chip was in the DOM through the
+ * whole defect. It measures which of them sit inside their own container's box,
+ * and whether that container has quietly become a scroller again.
+ */
+async function chipRowDamage(browser, surfaces) {
   const damage = []
-  for (const [path, box, item, expected] of CHIP_ROWS) {
+  for (const [path, box, item, rows, items] of surfaces) {
     for (const w of [320, 390, 768, 1180]) {
       const { ctx, page } = await open(browser, w, 900, path, box, { touch: w < 800 })
       const r = await page.evaluate(([boxSel, itemSel]) => {
-        const row = document.querySelector(boxSel)
-        const rb = row.getBoundingClientRect()
-        const kids = [...row.querySelectorAll(itemSel)]
-        return {
-          total: kids.length,
-          outside: kids.filter((k) => {
+        const found = [...document.querySelectorAll(boxSel)]
+        let total = 0, outside = 0
+        const scrollers = []
+        const empty = []
+        for (const row of found) {
+          const rb = row.getBoundingClientRect()
+          const kids = [...row.querySelectorAll(itemSel)]
+          const name = row.getAttribute('aria-label') || row.className
+          if (!kids.length) empty.push(name)
+          total += kids.length
+          for (const k of kids) {
             const b = k.getBoundingClientRect()
-            return b.right > rb.right + 0.5 || b.left < rb.left - 0.5
-          }).length,
-          scrolls: row.scrollWidth > row.clientWidth + 1,
+            if (b.right > rb.right + 0.5 || b.left < rb.left - 0.5) outside++
+          }
+          if (row.scrollWidth > row.clientWidth + 1) {
+            scrollers.push(`${name} (${row.scrollWidth}px of content in a ${row.clientWidth}px row)`)
+          }
         }
+        return { rows: found.length, total, outside, scrollers, empty }
       }, [box, item])
       await ctx.close()
-      expect(r.total, `${path} @${w}: expected ${expected} chips`).toBe(expected)
+      // Structure first. A selector that has gone stale reports zero of
+      // everything below, so it has to fail HERE rather than pass quietly.
+      expect(r.rows, `${path} @${w}px: expected ${rows} “${box}” row(s), found ${r.rows} — the markup for this surface has changed shape`).toBe(rows)
+      expect(r.total, `${path} @${w}px: expected ${items} “${item}” chips across ${rows} row(s), found ${r.total}`).toBe(items)
+      expect(r.empty, `${path} @${w}px: filter row(s) with no chips in them at all — ${r.empty.join(', ')}`).toEqual([])
       if (r.outside) damage.push(`${path} @${w}px: ${r.outside} of ${r.total} chips outside the row`)
-      if (r.scrolls) damage.push(`${path} @${w}px: the chip row is a horizontal scroller again`)
+      if (r.scrollers.length) damage.push(`${path} @${w}px: the chip row is a horizontal scroller again — ${r.scrollers.join('; ')}`)
     }
   }
+  return damage
+}
+
+test('S4 · every filter chip is inside its own row, on every surface that shares it', async ({ browser }) => {
+  const damage = await chipRowDamage(browser, CHIP_ROWS)
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+test('S4 · every shared Library filter is inside its own tray, on every surface that shares it', async ({ browser }) => {
+  const damage = await chipRowDamage(browser, FILTER_TRAYS)
   expect(damage, damage.join('\n')).toEqual([])
 })
 
@@ -545,6 +620,16 @@ test('N1 · no font family name is truncated down to the 320px floor', async ({ 
 // grid minimum) would also have passed a test that only looked inside 450–579,
 // while quietly making the grid 262% taller, and this suite has been caught by a
 // fix that helped the page and hurt the cards before.
+//
+// THE NAME AND META SELECTORS WERE STALE, in the same way and by the same PR as
+// S4's above. PR #254 moved this card's anatomy onto the shared `LibraryCard`,
+// so the footer lines are `.lbry-card-name` / `.lbry-card-meta` and `.grg-name`
+// / `.grg-meta` no longer exist. Unlike S4 that did not fail: the census loops
+// over `querySelectorAll`, which returned nothing, so it found no truncation and
+// reported none, at all nine widths, for as long as it took to notice. Both are
+// scoped through `.grg-card` — the shared class is on four surfaces now, and
+// this test is about this one — and the per-card counts below are asserted so a
+// third rename cannot make it vacuous again instead of red.
 
 const GRG_WIDTHS = [320, 440, 450, 480, 530, 560, 640, 700, 1180]
 
@@ -581,11 +666,17 @@ test('M6 · no gradient name or meta line is truncated at any width', async ({ b
       }
       return {
         cards: document.querySelectorAll('.grg-card').length,
-        names: cut('.grg-name'), metas: cut('.grg-meta'), tiny, collided,
+        nameCount: document.querySelectorAll('.grg-card .lbry-card-name').length,
+        metaCount: document.querySelectorAll('.grg-card .lbry-card-meta').length,
+        names: cut('.grg-card .lbry-card-name'), metas: cut('.grg-card .lbry-card-meta'), tiny, collided,
       }
     })
     await ctx.close()
     expect(r.cards, `${w}px: expected the 100-card library`).toBe(100)
+    // One name and one meta line per card, or the census below measured nothing
+    // and its silence means nothing.
+    expect(r.nameCount, `${w}px: expected a name on each of the ${r.cards} cards, found ${r.nameCount} — the card footer has changed shape`).toBe(r.cards)
+    expect(r.metaCount, `${w}px: expected a meta line on each of the ${r.cards} cards, found ${r.metaCount} — the card footer has changed shape`).toBe(r.cards)
     if (r.names.length) damage.push(`${w}px: ${r.names.length} of ${r.cards} gradient names truncated — ${r.names[0]}`)
     if (r.metas.length) damage.push(`${w}px: ${r.metas.length} of ${r.cards} meta lines truncated — ${r.metas[0]}`)
     if (r.tiny) damage.push(`${w}px: ${r.tiny} footer action(s) under 24px`)

@@ -8582,12 +8582,30 @@ input.ggn-stop-hex{font-family:var(--mono);padding:0}
 .lbry-search-clear:hover{color:var(--t0);background:var(--hvr)}
 .lbry-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
-.lbry-filters{position:relative;display:flex;gap:3px;flex-shrink:0;max-width:100%;padding:3px;background:var(--bg-2);border-radius:var(--radius-xl);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.lbry-filters::-webkit-scrollbar{display:none}
+/* The tray WRAPS. It was `overflow-x:auto` with the scrollbar suppressed on
+   both `scrollbar-width` and `::-webkit-scrollbar` — the seventh instance of the
+   hidden-scroller shape in this stylesheet, after S1, S2, S8 (PR #271) and S3 +
+   the four `.pl-chips` surfaces above. Under touch emulation nothing at all
+   paints to say the row scrolls, so the options past the fold are simply gone.
+
+   Measured filter buttons sitting outside their own tray, before → after:
+
+     /discover/gradients  320px  3 of 8 → 0     390px  1 of 8 → 0
+     /discover/palettes   320px  1 of 6 → 0
+     /fontgallery         clean at every width, and stays clean
+
+   Cost is one wrapped line on the narrowest phones, which is what the rest of
+   this stylesheet already pays for the same class of fix. */
+.lbry-filters{position:relative;display:flex;flex-wrap:wrap;gap:3px;flex-shrink:0;max-width:100%;padding:3px;background:var(--bg-2);border-radius:var(--radius-xl)}
 /* Decoration only — aria-pressed on each button is what reports state. The
    fallbacks matter: until JS measures, opacity 0 keeps it off the first option
-   rather than claiming a selection at x=0. */
-.lbry-filter-ind{position:absolute;top:3px;bottom:3px;left:0;width:var(--lbry-ind-w,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-xs);transform:translateX(var(--lbry-ind-x,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
+   rather than claiming a selection at x=0.
+
+   Positioned on BOTH axes, because the tray above can wrap: `top:3px;bottom:3px`
+   stretched the indicator down every line of a wrapped tray and left it sitting
+   under options that are not selected. Height and Y come from the active
+   button's own box, so the padding is measured rather than hard-coded. */
+.lbry-filter-ind{position:absolute;top:0;left:0;width:var(--lbry-ind-w,0px);height:var(--lbry-ind-h,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-xs);transform:translate(var(--lbry-ind-x,0px),var(--lbry-ind-y,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),height var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
 .lbry-filter{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:7px 13px;color:var(--t2);background:transparent;border:0;border-radius:var(--radius);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .lbry-filter:hover{color:var(--t0)}
 .lbry-filter[data-active="true"]{color:var(--t0)}
