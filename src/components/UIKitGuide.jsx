@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useModalDialog from '../hooks/useModalDialog'
 
 const isGuideActive = () => {
   try { return sessionStorage.getItem(UIKIT_GUIDE_KEY) === '1' } catch { return false }
@@ -33,10 +34,19 @@ export default function UIKitGuide({ step }) {
   const idx = UIKIT_STEPS.findIndex(s => s.id === step)
   const next = idx >= 0 ? UIKIT_STEPS[idx + 1] : null
 
-  const dismissIntro = () => {
+  // useCallback is load-bearing, not tidiness: useModalDialog keys its effect on
+  // the close handler, so a new function identity each render would tear down
+  // and re-apply the scroll lock — and re-run focus restoration — on every
+  // render while the dialog is open.
+  const dismissIntro = useCallback(() => {
     setShowIntro(false)
     try { sessionStorage.setItem(UIKIT_GUIDE_KEY + '-seen', '1') } catch { /* ignore */ }
-  }
+  }, [])
+
+  // This dialog had no Escape handler, no scroll lock, no focus trap and no
+  // focus restoration — only a click-the-scrim dismiss — while announcing
+  // itself as aria-modal="true". It is the first thing a new user meets.
+  const introRef = useModalDialog(dismissIntro, { enabled: showIntro })
 
   const finish = () => {
     try { sessionStorage.removeItem(UIKIT_GUIDE_KEY) } catch { /* ignore */ }
@@ -49,8 +59,8 @@ export default function UIKitGuide({ step }) {
   return (
     <>
       {showIntro && (
-        <div className="uikit-intro-overlay" onClick={dismissIntro}>
-          <div className="uikit-intro" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Build a UI Kit">
+        <div className="uikit-intro-overlay" onClick={dismissIntro} role="presentation">
+          <div className="uikit-intro" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Build a UI Kit" tabIndex={-1} ref={introRef}>
             <div className="uikit-intro-eyebrow">Build a UI Kit</div>
             <h2 className="uikit-intro-title">Let&rsquo;s build your kit, step by step.</h2>
             <p className="uikit-intro-body">

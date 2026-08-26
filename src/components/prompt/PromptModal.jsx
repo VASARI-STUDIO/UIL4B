@@ -1,22 +1,20 @@
-import { useEffect } from 'react'
 import { parseTags } from '../../utils/promptStore'
 import UserName from '../UserName'
 import { resolvePromptProfileLink } from '../../utils/promptSubmission'
+import useModalDialog from '../../hooks/useModalDialog'
 
 // Full prompt detail modal — works for both community and personal prompts.
 export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove, isCommunity, isSaved }) {
   const pTags = parseTags(prompt.tags)
   const profileLink = resolvePromptProfileLink(prompt)
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  // Was Escape only — no focus trap, no scroll lock, no focus restoration,
+  // while declaring aria-modal="true".
+  const dialogRef = useModalDialog(onClose)
 
   return (
     <div className="pl-modal-backdrop" onClick={onClose} role="presentation">
-      <div className="pl-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="pl-modal-title">
+      <div className="pl-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="pl-modal-title" tabIndex={-1} ref={dialogRef}>
         <button className="pl-modal-close" onClick={onClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

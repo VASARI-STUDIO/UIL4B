@@ -5,6 +5,7 @@ import { buildReportContext, withReportContext } from '../utils/reportContext'
 import { resolveTool } from '../data/toolTree'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
+import useModalDialog from '../hooks/useModalDialog'
 
 // Type selector — mirrors HelpCentre's CONTACT_TYPES. Each type reveals its own
 // routing dropdown(s) so submissions land with the right team/triage label.
@@ -98,29 +99,25 @@ export default function FeedbackModal({ open, onClose }) {
     setSending(false)
   }, [])
 
+  // Scroll lock, Escape, the focus trap and focus restoration all come from the
+  // shared hook. This modal had the first two and neither of the last two: it
+  // declared aria-modal="true" while Tab walked straight out of it, and closing
+  // dropped focus to the top of the document rather than back to the button
+  // that opened it — from a dialog reachable on every page in the app.
+  const dialogRef = useModalDialog(onClose, { enabled: open })
+
   // Fully reset (including the chosen type) whenever the modal is freshly opened,
-  // and focus the first control. Body scroll is locked while open.
+  // and focus the first control.
   useEffect(() => {
-    if (!open) return
+    if (!open) return undefined
     setTypeId('feedback')
     resetFields()
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    // Focus after paint so the element is actually in the DOM.
+    // Focus after paint so the element is actually in the DOM. This runs after
+    // the hook has focused the dialog itself, which is the intended order: the
+    // dialog is announced, then the first control takes focus.
     const raf = requestAnimationFrame(() => firstControlRef.current?.focus())
-    return () => {
-      document.body.style.overflow = prevOverflow
-      cancelAnimationFrame(raf)
-    }
+    return () => cancelAnimationFrame(raf)
   }, [open, resetFields])
-
-  // Escape closes the modal.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
 
   if (!open) return null
 
@@ -203,6 +200,8 @@ export default function FeedbackModal({ open, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
+        ref={dialogRef}
       >
         <div className="fb-head">
           <h2 id={titleId} className="fb-title">{sent ? 'Thanks for reaching out' : 'Share feedback'}</h2>
