@@ -2558,19 +2558,27 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 </div>
               )}
 
-              <div className="plb-ramp" role="group" aria-label={`Tonal ramp of ${adjusted[i]} — click to view all tints`}>
+              {/* ONE button, five decorative bars — it used to be five buttons.
+                  They were identical: same aria-label, same onClick, no
+                  per-bar behaviour, so the ramp offered one function through
+                  five targets. That cost a WCAG 2.5.8 failure (14px wide with a
+                  4px gap puts the centres 18px apart, so the 24px spacing
+                  exception cannot apply either), 20 redundant tab stops per
+                  page, and "View the tints of #009549, button" announced five
+                  times per swatch. As one button the target is 86x34, and the
+                  bars become the same aria-hidden chip-strip idiom already used
+                  by .plb-strip-c and .plb-pvg-sw. */}
+              <button
+                type="button"
+                className="plb-ramp"
+                title="View tints"
+                aria-label={`Tonal ramp of ${adjusted[i]} — view all tints`}
+                onClick={() => { setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
+              >
                 {ramp.map((rc, k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    className="plb-ramp-bar"
-                    ref={barRef(rc)}
-                    title="View tints"
-                    aria-label={`View the tints of ${adjusted[i]}`}
-                    onClick={() => { setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
-                  />
+                  <span key={k} className="plb-ramp-bar" ref={barRef(rc)} aria-hidden="true" />
                 ))}
-              </div>
+              </button>
               {/* The title describes the COLOUR in this slot, so it changes
                   with the colour system. The role below it describes the SLOT
                   — it is what exports, tints and the UI preview key off, so it
