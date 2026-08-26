@@ -36,3 +36,6 @@ pubsub-debug.log
 # Env
 .env
 .env.local
+
+# QA evidence screenshots (regenerable Playwright captures, not referenced by any doc)
+docs/qa/screenshots/
