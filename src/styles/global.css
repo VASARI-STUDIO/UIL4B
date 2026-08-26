@@ -1210,7 +1210,29 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
    content is simply present — no transforms, no blur. Preserve the information
    (layout) while dropping the decoration (motion). The global reduced-motion
    rule already zeroes durations; these make the static-ghost intent explicit and
-   avoid a 0.01ms shimmer/blur flicker. */
+   avoid a 0.01ms shimmer/blur flicker.
+
+   ORPHANED, NOT WRONG — checked 2026-08-26, left in place deliberately.
+   The `.sk::after` half is live. The two `.bento` halves are not, for two
+   independent reasons, and neither is repairable by repointing:
+
+     1. Nothing renders `.bento`, `.bento-card` or `.bento-hero-name-in`.
+        Their page, src/pages/Dashboard.jsx, was DELETED in PR #196 (549c6c6),
+        not renamed. The two families that do ship — `grad-bento-` in
+        ColorStudio and `landing-bento-` in Landing.jsx — are a naming
+        coincidence: these selectors cannot match them, neither declares an
+        `animation` at all (their reveals are transitions, already covered by
+        the global clamp at the top of this file), and Landing.jsx is itself
+        imported nowhere.
+     2. The animation the first selector guards was deleted by the same PR.
+        Before 549c6c6 the rule at global.css:1158 read
+        `.bento.is-ready:not(.has-entered) > .bento-card` with
+        `animation: bentoIn ...` plus six nth-child delays. That went; the
+        guard stayed. So this half guarded nothing even while the class shipped.
+
+   `.bento-hero-name-in{animation:fl-name-in}` above is still declared, so if
+   the dashboard bento is ever rebuilt the guard is correct and waiting.
+   Deleting is a founder call, not a drive-by. */
 html[data-reduced-motion="true"] .sk::after{animation:none;background:none}
 html[data-reduced-motion="true"] .bento.is-ready:not(.has-entered)>.bento-card,
 html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
@@ -4577,7 +4599,25 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 
 /* Reduced motion: the global rule (top of file) already collapses transitions
    and animations; we additionally drop the scroll-snap so motion-sensitive
-   users aren't pulled by the rail. */
+   users aren't pulled by the rail.
+
+   ORPHANED, NOT WRONG — checked 2026-08-26, left in place deliberately.
+   Nothing renders `.dsc-rail-track`, so all four of its rules are dead: the
+   base rule above, the `max-width:480px` override, and both halves of this
+   guard. Confirmed in a browser on the built app — absent on /discover at 390,
+   900 and 1440px, as is the whole `.dsc-featured` / `.dsc-feat-` family it
+   belongs to. Its component, src/components/discover/FeaturedRail.jsx, was
+   DELETED in PR #196 (549c6c6) along with five other Discover components; the
+   stylesheet block outlived it. There is no element to repoint at: no other
+   `.dsc-` selector declares `scroll-snap-type`.
+
+   Left rather than deleted because it is the only written record that this
+   rail was meant to be guarded — and the reasoning above it is what the two
+   rails that DO ship were missing. Those are now guarded (see
+   `.plb-toolbar-group:last-child` and `.ggn-presets`, and
+   tests/user-sim/27-motion-guards.spec.js). Deleting is a founder call.
+   Note the base rule is `x mandatory`, the only one in the file — the four
+   live rails are all `x proximity`. */
 html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .dsc-rail-track{scroll-snap-type:none}
@@ -7200,6 +7240,23 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-swappop{top:calc(100% + 4px)}
   .plb-copycss{margin-left:0;width:100%}
 }
+/* Reduced motion: drop the action ribbon's scroll snapping. One unscoped pair
+   covers BOTH scrolling bands (769–960 and ≤768) — the guard is more specific
+   than either `.plb-toolbar-group:last-child` rule, so it wins without being
+   nested in, or duplicated across, their media queries.
+
+   `proximity` is gentler than `mandatory`, not exempt from the contract. The
+   global clamp at the top of this file zeroes durations and forces
+   `scroll-behavior:auto`, but it does NOT touch `scroll-snap-type` — snapping
+   is a scroll displacement the engine applies on its own, after the gesture
+   ends, and no duration token is involved. Measured on the built app under
+   touch device metrics, scrollLeft set to 42px and read back after settling:
+   769–960 lands at 4px (a 38px pull), ≤768 lands at 12px (a 30px pull); with
+   snapping off it stays at 42px at both. That displacement is the motion. */
+html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .plb-toolbar-group:last-child{scroll-snap-type:none}
+}
 @keyframes plb-sheet-up{from{transform:translateY(100%)}to{transform:none}}
 
 /* ============================================================
@@ -7977,6 +8034,17 @@ input.ggn-stop-hex{font-family:var(--mono);padding:0}
 .ggn-starting{margin-top:var(--s-4)}
 .ggn-presets{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(142px,1fr);grid-template-columns:none;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity;scrollbar-width:thin}
 .ggn-preset{scroll-snap-align:start}
+/* Reduced motion: drop the preset rail's scroll snapping. Unlike every other
+   rail in this stylesheet this one is NOT scoped to a phone width — the strip
+   is a single-row `grid-auto-flow:column` of 16 presets, so it overflows at
+   every width measured (2196px of overflow at 320, still 1280px at 1440). The
+   snap pull is +74px at all of them: scrollLeft set to 78px settles at 152px,
+   and stays at 78px with snapping off. See the note on
+   `.plb-toolbar-group:last-child` for why the global clamp does not cover this. */
+html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .ggn-presets{scroll-snap-type:none}
+}
 .ggn-preset-swatch{aspect-ratio:16/9}
 .ggn-preset:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:3px}
 .ggn-import:focus-visible,.ggn-css:focus-visible,.ggn-btn:focus-visible,.ggn-seg-btn:focus-visible,.ggn-copy:focus-visible,.ggn-stop-x:focus-visible,.ggn-angle-input:focus-visible,.ggn-stop-pos input:focus-visible,.ggn-stop-hex:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
