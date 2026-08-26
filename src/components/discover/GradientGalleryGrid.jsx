@@ -1,12 +1,19 @@
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import LibraryCard from '../library/LibraryCard'
+import LibraryGrid from '../library/LibraryGrid'
 import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from '../../data/gradientGallery'
 
-// Designgradients-style gradient gallery — the browse grid on
-// /discover/gradients. Everything is local + static (src/data/gradientGallery.js):
-// swatches are plain CSS backgrounds, likes live in localStorage, "CSS" copies
-// the production background rule and "Open" hands the gradient to the Gradient
-// Generator via the ?gs= URL scheme.
+// The browse grid on /discover/gradients. Everything is local + static
+// (src/data/gradientGallery.js): swatches are plain CSS backgrounds, likes live
+// in localStorage, "CSS" copies the production background rule and "Open" hands
+// the gradient to the Gradient Generator via the ?gs= URL scheme.
+//
+// Card anatomy comes from the shared Library language (components/library), so
+// this grid and the Palette Library's now agree on where a badge, a like button
+// and a card's actions live. `.grg-` classes remain for the deltas that are
+// genuinely specific to a gradient — chiefly the 3:4 swatch, which is a
+// gradient's most useful shape and a palette's least.
 
 const LIKES_KEY = 'vs-gradient-likes'
 
@@ -46,20 +53,24 @@ export default function GradientGalleryGrid({ toast, gradients = GALLERY_GRADIEN
   }, [toast])
 
   return (
-    <div className="grg-grid">
+    <LibraryGrid className="grg-grid" min={280}>
       {gradients.map(g => (
-        <article key={g.id} className="grg-card">
-          <div className="grg-thumb">
+        <LibraryCard
+          key={g.id}
+          className="grg-card"
+          // The type used to appear only on hover. It is a filterable property,
+          // so hiding it at rest meant the one place you could confirm what the
+          // "Radial" filter had actually selected was under the pointer.
+          badge={g.type === 'Linear' ? `${g.angle}°` : g.type}
+          media={(
             <Link
               className="grg-swatch"
               to={gradientToolUrl(g)}
               style={{ background: gradientCss(g.type, g.angle, g.stops) }}
               aria-label={`Open ${g.name} in the Gradient Generator`}
-            >
-              <span className="grg-pill" aria-hidden="true">
-                {g.type === 'Linear' ? `${g.angle}°` : g.type}
-              </span>
-            </Link>
+            />
+          )}
+          float={(
             <button
               type="button"
               className={`grg-like${likes.has(g.id) ? ' is-liked' : ''}`}
@@ -70,14 +81,11 @@ export default function GradientGalleryGrid({ toast, gradients = GALLERY_GRADIEN
             >
               <HeartGlyph filled={likes.has(g.id)} />
             </button>
-          </div>
-
-          <div className="grg-foot">
-            <div className="grg-id">
-              <span className="grg-name">{g.name}</span>
-              <span className="grg-meta">{g.type} · {g.stops.length} stops</span>
-            </div>
-            <div className="grg-actions">
+          )}
+          name={g.name}
+          meta={`${g.type} · ${g.stops.length} stops`}
+          tail={(
+            <>
               <button
                 type="button"
                 className="grg-copy"
@@ -94,10 +102,10 @@ export default function GradientGalleryGrid({ toast, gradients = GALLERY_GRADIEN
               >
                 Open <span aria-hidden="true">→</span>
               </Link>
-            </div>
-          </div>
-        </article>
+            </>
+          )}
+        />
       ))}
-    </div>
+    </LibraryGrid>
   )
 }
