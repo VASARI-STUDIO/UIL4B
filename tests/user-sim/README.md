@@ -64,7 +64,7 @@ the loop.
 Google One Tap is live on every signed-out page (`src/components/GoogleOneTap.jsx`,
 with a hardcoded fallback client ID in `src/utils/firebase.js`), so before
 `base.js` existed this suite made a real round trip to `accounts.google.com` on
-**every page load** — 335 of them in one run — and filled CI logs with
+**every page load** — 461 of them in one measured run — and filled CI logs with
 `[GSI_LOGGER]` FedCM errors. `base.js` serves that script empty for every
 browser context in the run, `26-one-tap-stub.spec.js` proves it by observation,
 and the global teardown **fails the run** if a single request gets out. Empty,

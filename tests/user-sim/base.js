@@ -6,8 +6,9 @@
 // `src/components/GoogleOneTap.jsx` injects https://accounts.google.com/gsi/client
 // on every signed-out page, and `src/utils/firebase.js` carries a hardcoded
 // fallback client ID, so it loads with no secrets configured — in CI too.
-// 23 of the 24 spec files therefore made a live third-party round trip on every
-// single page load: a dependency on Google's uptime inside a suite whose whole
+// Of the 26 specs this landed on, 24 had no stub at all, so the suite made a
+// live third-party round trip on every single page load — 461 of them in one
+// measured run: a dependency on Google's uptime inside a suite whose whole
 // point is to walk this app in isolation, hundreds of [GSI_LOGGER] FedCM errors
 // in the CI log, and a One Tap card sitting over the controls being hit-tested.
 //
@@ -17,7 +18,9 @@
 // GoogleOneTap.jsx's `loadGis()` resolve normally; its own
 // `if (!window.google?.accounts?.id) return` guard stops the component before it
 // initialises anything. Nothing errors, and One Tap is simply absent. That is
-// the same reasoning the two per-spec stubs this file replaced carried.
+// the same reasoning the per-spec stubs this file replaced carried. Those are
+// gone rather than left in place: a page route takes precedence over a context
+// route, so keeping one would have made the per-spec copy the silent winner.
 //
 // WHY ON THE BROWSER AND NOT ON `page`
 // Several specs build their own contexts with `browser.newContext()` inside the
