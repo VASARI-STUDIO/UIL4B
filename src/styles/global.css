@@ -8353,7 +8353,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .pgl-page .pgal-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:34px 18px}
 .pgl-page .pgal-stripes{height:260px;border-radius:18px;box-shadow:0 8px 26px rgba(10,10,18,.06)}
 .pgl-page .pgal-card:hover .pgal-stripes{transform:translateY(-4px);box-shadow:0 22px 48px rgba(10,10,18,.14)}
-.pgl-page .pgal-foot{padding:4px 3px 0}
+.pgl-page .lbry-card-foot{padding:4px 3px 0}
 .pgl-page .pgal-name{font-size:13px;color:var(--t0)}
 .pgl-note{margin:-8px 0 22px;font-size:12.5px;line-height:1.55;color:var(--t2)}
 .pgl-note strong{color:var(--t1);font-weight:700}
@@ -8418,9 +8418,69 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .lbry-card-badge{position:absolute;top:10px;left:10px;z-index:2;padding:3px 9px;color:#fff;background:rgba(10,10,14,.62);border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.05em;text-transform:uppercase;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);pointer-events:none}
 .lbry-card-float{position:absolute;top:10px;right:10px;z-index:2;display:flex;align-items:center;gap:6px}
 /* Real DOM at all times, revealed with CSS — never mounted on hover, so the
-   keyboard route and the pointer route expose exactly the same controls. */
-.lbry-card-actions{position:absolute;inset:auto 8px 8px;z-index:2;display:flex;flex-wrap:wrap;gap:6px;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-out),visibility var(--dur-2) var(--ease-standard)}
-.lbry-card:hover .lbry-card-actions,.lbry-card:focus-within .lbry-card-actions{opacity:1;visibility:visible;transform:none}
+   keyboard route and the pointer route expose exactly the same controls.
+
+   TWO WRONG FIXES ARE RECORDED HERE, and this is their only record. Both were
+   measured on the Palette Library, which is where this layer was first built
+   and which now renders it through this shared card — so the invariants belong
+   to the card, not to that page, and every future consumer inherits them.
+
+   1. `visibility` is a DISCRETE property. Listing it in a transition does not
+      fade it — it flips at 50% of the duration. So the reveal cost a frame, and
+      a focus advance faster than one frame skipped the layer entirely: measured
+      on /discover/palettes at 390x844, 0 of 5 reveal buttons reached with no
+      round-trip between Tab presses, 5 of 5 from ~16ms up. A control whose
+      reachability depends on how fast you tab is not reachable (S13). The
+      prefers-reduced-motion variant carried the same `visibility` entry, so the
+      frame dependency was present on BOTH paths — which is exactly why it once
+      survived a reduced-motion re-test.
+   2. The reveal was never guarded on hover capability, so on a phone or tablet
+      the hover half can never fire at all — 350 actions per page load on a
+      70-card grid, every take-away action the surface offers, unreachable
+      except by an accident: tapping the preview gives the card focus and
+      :focus-within matches, but that same tap fires the preview's own action
+      (S12).
+
+   The fix is below, and it is two things. `visibility` stays a plain state
+   property and is NEVER in a transition list, so it flips on the first style
+   recalc after :hover or :focus-within matches, with no 50% point to outrun.
+   And the whole hide-at-rest treatment lives inside @media(hover:hover), so a
+   device that cannot hover never hides anything in the first place.
+
+   Dropping `visibility` altogether for opacity + pointer-events was tried first
+   and is WRONG here, which is worth recording because it looks tidier.
+   `visibility:hidden` also removes a node from the ACCESSIBILITY TREE; opacity
+   does not. On a 70-card grid that swap put 350 action links into the a11y tree
+   and the tab order permanently — measured as 70 spurious "Open ..." links
+   exposed at rest, which broke an existing acceptance test by making the
+   accessible name ambiguous, and which would make a screen reader announce five
+   extra actions on every card while browsing. Hidden-until-engaged is the right
+   behaviour; the bug was only ever the transition, so only the transition
+   changed.
+
+   The one thing given up: on hover-out `visibility` snaps rather than waiting
+   for the opacity fade, so the layer vanishes instead of fading. The idiom that
+   buys the fade back is `visibility 0s linear var(--dur-1)` (see .ggn-handle-val)
+   — deliberately not used, because a hide that nobody watches is not worth
+   putting a discrete property back into a transition list for. */
+.lbry-card-actions{position:absolute;inset:auto 8px 8px;z-index:2;display:flex;flex-wrap:wrap;gap:6px;transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-out)}
+@media(hover:hover){
+  .lbry-card-actions{opacity:0;visibility:hidden;transform:translateY(4px)}
+  .lbry-card:hover .lbry-card-actions,.lbry-card:focus-within .lbry-card-actions{opacity:1;visibility:visible;transform:none}
+}
+/* No hover, so the layer would be permanent — and a permanent overlay is the
+   wrong shape for it. Measured as an overlay on touch it covered 85% of the
+   fourth palette stripe and 35% of the third at 768-1180px (22% of the whole
+   swatch), i.e. a browsing surface for four colours that only ever showed two
+   and a half of them. Obscuring the artefact the actions act on is a different
+   defect, not a fix. So on touch the layer leaves the preview and becomes a
+   real row in the card: nothing is covered, and the card grows by the height of
+   the row instead. */
+@media(hover:none){
+  .lbry-card-actions{position:static;margin-top:8px;gap:8px}
+}
+/* Same fade, no movement — and still no `visibility` in the list. */
+@media(prefers-reduced-motion:reduce){.lbry-card-actions{transition:opacity var(--dur-1) linear;transform:none}}
 .lbry-card-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-width:0;padding:0 1px}
 .lbry-card-id{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
 .lbry-card-name{font-size:var(--fs-body-s);font-weight:600;letter-spacing:-.005em;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

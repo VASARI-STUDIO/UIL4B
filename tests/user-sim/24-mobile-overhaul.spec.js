@@ -347,7 +347,7 @@ test('the hover reveal itself is preserved on pointer devices', async ({ browser
 // including under reduced motion, where the same mistake was duplicated in the
 // prefers-reduced-motion variant and therefore survived a reduced-motion retest.
 const REVEAL_LAYERS = [
-  ['/discover/palettes', '.pgal-actions'],
+  ['/discover/palettes', '.lbry-card-actions'],
   ['/community', '.ch-heart'],
   ['/color/palette', '.plb-tool'],
 ]
@@ -429,7 +429,7 @@ test('S12 · the touch action row does not cover the palette it acts on', async 
     const { ctx, page } = await openTouch(browser, w, h, '/discover/palettes', w >= 700, '.pgal-card')
     const covered = await page.evaluate(() => {
       const card = document.querySelector('.pgal-card')
-      const acts = card.querySelector('.pgal-actions').getBoundingClientRect()
+      const acts = card.querySelector('.lbry-card-actions').getBoundingClientRect()
       return [...card.querySelectorAll('.pgal-stripe')]
         .map((s, i) => {
           const r = s.getBoundingClientRect()
