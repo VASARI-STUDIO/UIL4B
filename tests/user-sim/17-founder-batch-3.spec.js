@@ -2,7 +2,7 @@
 //
 // Same rule as batches 1 and 2 (14- and 16-): each of these reached the founder
 // because nothing measured the rendered result. These tests measure it.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 /* ── D5 · Auth from the nav must not navigate ────────────────────────────────

@@ -15,7 +15,7 @@
 // 1.80:1, against the 3:1 that 1.4.11 requires. Structural rather than a bad
 // colour choice — the background is whatever the user picked, so no single
 // accent passes against all of it.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 /** WCAG relative luminance contrast, computed in the page. */

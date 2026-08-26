@@ -59,9 +59,25 @@ Beyond hard pass/fail, every test streams *findings* into
 a severity-ranked to-do list. Fix what it reports, re-run, repeat — that is
 the loop.
 
+## No third party is on the critical path
+
+Google One Tap is live on every signed-out page (`src/components/GoogleOneTap.jsx`,
+with a hardcoded fallback client ID in `src/utils/firebase.js`), so before
+`base.js` existed this suite made a real round trip to `accounts.google.com` on
+**every page load** — 461 of them in one measured run — and filled CI logs with
+`[GSI_LOGGER]` FedCM errors. `base.js` serves that script empty for every
+browser context in the run, `26-one-tap-stub.spec.js` proves it by observation,
+and the global teardown **fails the run** if a single request gets out. Empty,
+not aborted: an abort raises a console error the feedback loop then reports on
+every viewport.
+
+That is why specs import `test` from `./base.js` and never from
+`@playwright/test` — `tests/unit/one-tap-stub.test.js` enforces it.
+
 ## Adding a persona / goal
 
-1. Create a `NN-name.spec.js` file, taking the next free number.
+1. Create a `NN-name.spec.js` file, taking the next free number, and start it
+   `import { test, expect } from './base.js'` (never `@playwright/test`).
 2. `const fb = watch(page, 'persona name')` at the top of each test —
    crashes and console errors are then recorded automatically.
 3. Assert the user's *goal*, not implementation details, and use

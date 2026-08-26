@@ -1,7 +1,7 @@
 // Persona: FRESH USER — on a phone, impatient, types the wrong things,
 // presses the wrong keys. This file covers mobile usability, keyboard
 // behaviour, and garbage-input resilience (Murphy's-law states).
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { watch, expectRendered, go } from './helpers.js'
 
 const PERSONA = 'fresh user (mobile & edge cases)'

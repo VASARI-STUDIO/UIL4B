@@ -1,7 +1,7 @@
 // Persona: KNOWLEDGEABLE NEW USER — a designer who knows exactly what answer
 // they need and lands straight on a tool. Every test is one concrete goal;
 // the pass condition is "the user got their answer", not "the page loaded".
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { watch, go } from './helpers.js'
 
 const PERSONA = 'knowledgeable new user'

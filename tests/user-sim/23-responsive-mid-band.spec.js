@@ -27,7 +27,7 @@
 //
 // Mutation-verified — with the fixes reverted, the first test fails at 961/980/
 // 981/999/1000/1024/1051 and the workbench tests fail on the 980→981 step.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 // The audit's exact widths, plus the two neighbours that were already correct

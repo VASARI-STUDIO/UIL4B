@@ -3,7 +3,7 @@
 // Same rule as batch 1 (14-founder-batch-regressions.spec.js): each of these
 // shipped once because nothing measured the RENDERED result. These tests
 // measure the rendered result.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 /** Move the pointer well clear of the toolbar so the next hover is a real
