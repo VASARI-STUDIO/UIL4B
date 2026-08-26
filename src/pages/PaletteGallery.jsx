@@ -3,14 +3,20 @@ import { Link } from 'react-router-dom'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import DiscoverResultHead from '../components/discover/DiscoverResultHead'
+import LibraryToolbar from '../components/library/LibraryToolbar'
+import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
+import LibraryEmpty from '../components/library/LibraryEmpty'
 import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 
+// `dot` on the two lightness filters only. Curated/Brand describe provenance
+// and Vivid describes saturation — none of the three has a colour to show, and
+// inventing one would suggest the filter selects by hue.
 const FILTERS = [
   { id: 'all', label: 'All palettes' },
   { id: 'curated', label: 'Curated' },
   { id: 'brand', label: 'Brand' },
-  { id: 'dark', label: 'Dark' },
-  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark', dot: 'dark' },
+  { id: 'light', label: 'Light', dot: 'light' },
   { id: 'vivid', label: 'Vivid' },
 ]
 
@@ -77,23 +83,18 @@ export default function PaletteGallery({ toast }) {
         mark={{ label: '#4338E0', value: LIBRARY_PALETTES.length, caption: 'palettes' }}
       />
 
-      <div className="pgl-toolbar">
-        <label className="pgl-search">
-          <span className="sr-only">Search palettes</span>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-          </svg>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name or hex…" />
-        </label>
-        <div className="pgl-filters" role="group" aria-label="Filter palettes">
-          {FILTERS.map((item) => (
-            <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <Link className="pgl-build-link" to="/color/palette">Create a palette <span aria-hidden="true">↗</span></Link>
-      </div>
+      <LibraryToolbar
+        className="pgl-toolbar"
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: 'Search by name or hex…',
+          label: 'Search palettes',
+        }}
+        action={<Link className="pgl-build-link" to="/color/palette">Create a palette <span aria-hidden="true">↗</span></Link>}
+      >
+        <LibraryFilterGroup label="Filter palettes" value={filter} onChange={setFilter} options={FILTERS} />
+      </LibraryToolbar>
 
       <DiscoverResultHead
         eyebrow={filter === 'brand' ? 'Brand systems' : 'Curated collection'}
@@ -114,11 +115,12 @@ export default function PaletteGallery({ toast }) {
           <PaletteGalleryGrid toast={toast} palettes={visible} />
         </section>
       ) : (
-        <div className="pgl-empty" role="status">
-          <strong>No palettes match that combination.</strong>
-          <span>Try a broader search, or reset the mood and collection filters.</span>
-          <button type="button" onClick={clear}>Clear filters</button>
-        </div>
+        <LibraryEmpty
+          className="pgl-empty"
+          title="No palettes match that combination."
+          detail="Try a broader search, or reset the mood and collection filters."
+          onClear={clear}
+        />
       )}
     </div>
   )

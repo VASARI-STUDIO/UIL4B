@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import GradientGalleryGrid from '../components/discover/GradientGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import DiscoverResultHead from '../components/discover/DiscoverResultHead'
+import LibraryToolbar from '../components/library/LibraryToolbar'
+import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
+import LibraryEmpty from '../components/library/LibraryEmpty'
 import { GALLERY_GRADIENTS, GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
 import { mergeSubmissions } from '../utils/communityQueue'
@@ -21,6 +24,27 @@ import { useAuth } from '../contexts/AuthContext'
 // construction rather than by copy-paste.
 
 const TYPES = ['Linear', 'Radial', 'Conic']
+
+// Filter options are built once at module scope: they are pure functions of
+// static data, and rebuilding them per render would hand LibraryFilterGroup a
+// new array identity every keystroke and re-measure the sliding indicator.
+//
+// The four mood tags that name a colour carry a colour dot. The other three
+// (pastel, vivid, mono) describe saturation rather than hue, so a single
+// swatch would misrepresent them — a dot is only added where it can be honest.
+const MOOD_OPTIONS = [
+  { id: 'all', label: 'All' },
+  ...GRADIENT_TAGS.map(t => ({
+    id: t,
+    label: t[0].toUpperCase() + t.slice(1),
+    ...(['warm', 'cool', 'dark', 'light'].includes(t) ? { dot: t } : {}),
+  })),
+]
+
+const TYPE_OPTIONS = [
+  { id: 'all', label: 'All types' },
+  ...TYPES.map(t => ({ id: t, label: t })),
+]
 
 export default function GradientGallery({ toast }) {
   const { user } = useAuth()
@@ -76,7 +100,6 @@ export default function GradientGallery({ toast }) {
     return true
   }), [query, tag, type])
 
-  const filtered = query || tag !== 'all' || type !== 'all'
   const clearAll = () => { setRawQuery(''); setTag('all'); setType('all') }
 
   return (
@@ -130,67 +153,33 @@ export default function GradientGallery({ toast }) {
         </section>
       )}
 
-      {/* Toolbar — search joins the tag + type filters (AND semantics) */}
-      <div className="grg-toolbar">
-        <div className="pl-search-wrap grg-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            className="pl-search"
-            type="search"
-            value={rawQuery}
-            onChange={e => setRawQuery(e.target.value)}
-            placeholder="Search gradients by name, hex or mood…"
-            aria-label="Search gradients"
-          />
-          {rawQuery && (
-            <button className="pl-search-clear" onClick={() => setRawQuery('')} aria-label="Clear search">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </button>
-          )}
-        </div>
-
-        <div className="pl-chips grg-chips" role="group" aria-label="Filter by mood">
-          <button
-            className={`pl-chip${tag === 'all' ? ' active' : ''}`}
-            onClick={() => setTag('all')}
-            aria-pressed={tag === 'all'}
-          >
-            All
-          </button>
-          {GRADIENT_TAGS.map(t => (
-            <button
-              key={t}
-              className={`pl-chip${tag === t ? ' active' : ''}`}
-              onClick={() => setTag(t)}
-              aria-pressed={tag === t}
-            >
-              {t[0].toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        <div className="ch-sort grg-types" role="group" aria-label="Filter by gradient type">
-          <button
-            className={`ch-sort-btn${type === 'all' ? ' is-active' : ''}`}
-            onClick={() => setType('all')}
-            aria-pressed={type === 'all'}
-          >
-            All types
-          </button>
-          {TYPES.map(t => (
-            <button
-              key={t}
-              className={`ch-sort-btn${type === t ? ' is-active' : ''}`}
-              onClick={() => setType(t)}
-              aria-pressed={type === t}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Toolbar — search joins the mood + type filters (AND semantics).
+          Both filter groups now use the one shared segmented idiom. This
+          toolbar previously ran outlined pills for mood and a filled segmented
+          control for type, side by side, so a single row asked "which subset?"
+          in two visually unrelated ways. */}
+      <LibraryToolbar
+        className="grg-toolbar"
+        search={{
+          value: rawQuery,
+          onChange: setRawQuery,
+          placeholder: 'Search gradients by name, hex or mood…',
+          label: 'Search gradients',
+        }}
+      >
+        <LibraryFilterGroup
+          label="Filter by mood"
+          value={tag}
+          onChange={setTag}
+          options={MOOD_OPTIONS}
+        />
+        <LibraryFilterGroup
+          label="Filter by gradient type"
+          value={type}
+          onChange={setType}
+          options={TYPE_OPTIONS}
+        />
+      </LibraryToolbar>
 
       <DiscoverResultHead
         eyebrow="Curated collection"
@@ -205,15 +194,15 @@ export default function GradientGallery({ toast }) {
           <GradientGalleryGrid toast={toast} gradients={visible} />
         </section>
       ) : (
-        <div className="pl-empty grg-empty" role="status">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <p>No gradients match {query ? <>“{rawQuery.trim()}”</> : 'those filters'}.</p>
-          {filtered && (
-            <button className="btn btn-ghost" onClick={clearAll}>Clear filters</button>
-          )}
-        </div>
+        // The reset is unconditional now. It used to render only when the page
+        // could prove a filter was set, which hid it in precisely the case
+        // where working out what to undo by hand was hardest.
+        <LibraryEmpty
+          className="grg-empty"
+          title={`No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
+          detail="Try a broader search, or reset the mood and type filters to see all of them again."
+          onClear={clearAll}
+        />
       )}
     </div>
   )
