@@ -11,11 +11,16 @@ import { useCallback, useEffect, useRef } from 'react'
 // am I looking at?" — in two visually unrelated ways.
 //
 // The indicator is MEASURED off the active button rather than computed from its
-// index: options have different label widths, and the tray wraps and scrolls on
-// narrow screens, so an index-derived offset is wrong the moment anything
-// reflows. It is `aria-hidden` decoration — `aria-pressed` on each button is
-// what actually reports state, so the control is complete with CSS disabled and
-// correct to a screen reader whether or not the measurement ever runs.
+// index: options have different label widths, and the tray wraps on narrow
+// screens, so an index-derived offset is wrong the moment anything reflows. It
+// is `aria-hidden` decoration — `aria-pressed` on each button is what actually
+// reports state, so the control is complete with CSS disabled and correct to a
+// screen reader whether or not the measurement ever runs.
+//
+// BOTH AXES are measured, not just X. The tray wraps rather than scrolling (see
+// `.lbry-filters` in global.css), so on a phone the active option is often not
+// on the first line — an X-only offset would leave the indicator on line one,
+// highlighting an option nobody chose.
 
 export default function LibraryFilterGroup({
   label,
@@ -37,8 +42,12 @@ export default function LibraryFilterGroup({
       tray.style.setProperty('--lbry-ind-opacity', '0')
       return
     }
+    // offsetLeft/offsetTop are relative to the tray, which is the offsetParent
+    // (`position:relative`), so the tray's own padding is already included.
     tray.style.setProperty('--lbry-ind-x', `${active.offsetLeft}px`)
+    tray.style.setProperty('--lbry-ind-y', `${active.offsetTop}px`)
     tray.style.setProperty('--lbry-ind-w', `${active.offsetWidth}px`)
+    tray.style.setProperty('--lbry-ind-h', `${active.offsetHeight}px`)
     tray.style.setProperty('--lbry-ind-opacity', '1')
   }, [])
 
