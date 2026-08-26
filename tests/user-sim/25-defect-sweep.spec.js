@@ -37,6 +37,56 @@ const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1
 // 301s is dropped the test would start measuring a 404 shell instead.
 
 /**
+ * Wait until the page is geometrically settled, rather than for a fixed number
+ * of milliseconds.
+ *
+ * This was `waitForTimeout(400)` on every iteration. Measured per phase, that
+ * was ~405ms of a 580–930ms iteration — over half the cost of this whole file —
+ * and it was never the right condition anyway. What every assertion here
+ * depends on is the WEB FONTS having resolved: all of them measure a box whose
+ * width is a function of the face rendering it, which is the entire subject of
+ * N1, N3 and M6. A blind sleep neither guarantees that nor stretches when the
+ * machine is slow, which is the wrong behaviour in both directions.
+ * `document.fonts.ready` is the thing itself, and it measured 22–143ms.
+ *
+ * Two rounds, not one: a face first REQUESTED by the layout that round one
+ * settled would otherwise be measured mid-swap. The paired frames let the
+ * layout each swap triggers land before anything is read.
+ */
+async function settle(page) {
+  await page.evaluate(async () => {
+    for (let round = 0; round < 2; round++) {
+      await document.fonts.ready
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    }
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIMEOUT BUDGETS
+// ─────────────────────────────────────────────────────────────────────────────
+// Playwright's 30s default (playwright.config.js) is a budget for a test that
+// opens ONE page. Nothing in this file opens one page as a rule: the cheapest
+// test here opens one, the dearest opens twelve, and every open is a fresh
+// `browser.newContext()` with real device metrics, a navigation, a lazy route
+// chunk and a render. Measured on this machine a warm iteration costs 0.58–0.93s
+// and a cold route chunk 2.0s; on a contended CI runner the same iteration cost
+// roughly four times that. Three tests here hit exactly 30.000s on CI while
+// passing in 10s locally. That is not an assertion failing — it is a
+// single-load budget being applied to a twelve-load test.
+//
+// So the budget is DERIVED from how many pages the test actually opens, off the
+// very arrays that drive its own loops. Adding a width or a surface raises the
+// budget in the same edit, which is the property a hand-tuned number does not
+// have, and it is what stops this being "the timeout somebody nudges up every
+// time CI trips".
+//
+// Headroom, not permission to be slow. The per-iteration cost is held down by
+// `settle()` above; a test that blows even this budget is hung, not busy.
+const LOAD_BUDGET_MS = 6000
+const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
+
+/**
  * Open `path` at an exact viewport under real touch device metrics.
  * `waitFor` is a selector that must be attached before the measurement runs —
  * a fixed sleep is not allowed to be the thing that decides whether the element
@@ -59,7 +109,7 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
   await page.goto(path, { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('load').catch(() => {})
   if (waitFor) await page.locator(waitFor).first().waitFor({ state: 'attached', timeout: 15000 })
-  await page.waitForTimeout(400)
+  await settle(page)
   // Landed on the route it asked for, not on a redirect's destination. This is
   // the guard for the staleness above: without it a retired path in the table
   // keeps passing, silently, on whatever the 301 sends it to.
@@ -81,6 +131,7 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
 // present, well-formed, and pointed at an element that genuinely existed.
 
 test('/info · every accordion panel is a region with its section name', async ({ browser }) => {
+  budget(1)
   const { ctx, page } = await open(browser, 1280, 900, '/info', '.ic-acc-head', { touch: false })
 
   const headings = await page.locator('.ic-acc-title').allInnerTexts()
@@ -131,6 +182,7 @@ test('/info · every accordion panel is a region with its section name', async (
 const TSC_WIDE = [[769, 900], [800, 600], [834, 1194], [844, 390], [900, 900], [980, 900], [1024, 768], [1180, 820], [1280, 900], [1440, 900]]
 
 test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser }) => {
+  budget(TSC_WIDE.length)
   const damage = []
   for (const [w, h] of TSC_WIDE) {
     const { ctx, page } = await open(browser, w, h, '/create/type-scale', '.tsc-row-text', { touch: w < 1000 })
@@ -203,6 +255,8 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 // `items` total is what would catch it if a future rename folded one back in.
 
 // [path, container selector, item selector, rows, items across all rows]
+const CHIP_WIDTHS = [320, 390, 768, 1180]
+
 const CHIP_ROWS = [
   // The original `.pl-chips` idiom: one wrapping row of outlined pills.
   ['/create/emoji', '.pl-chips', '.pl-chip', 1, 12],
@@ -232,7 +286,7 @@ const FILTER_TRAYS = [
 async function chipRowDamage(browser, surfaces) {
   const damage = []
   for (const [path, box, item, rows, items] of surfaces) {
-    for (const w of [320, 390, 768, 1180]) {
+    for (const w of CHIP_WIDTHS) {
       const { ctx, page } = await open(browser, w, 900, path, box, { touch: w < 800 })
       const r = await page.evaluate(([boxSel, itemSel]) => {
         const found = [...document.querySelectorAll(boxSel)]
@@ -269,18 +323,23 @@ async function chipRowDamage(browser, surfaces) {
 }
 
 test('S4 · every filter chip is inside its own row, on every surface that shares it', async ({ browser }) => {
+  budget(CHIP_ROWS.length * CHIP_WIDTHS.length)
   const damage = await chipRowDamage(browser, CHIP_ROWS)
   expect(damage, damage.join('\n')).toEqual([])
 })
 
 test('S4 · every shared Library filter is inside its own tray, on every surface that shares it', async ({ browser }) => {
+  budget(FILTER_TRAYS.length * CHIP_WIDTHS.length)
   const damage = await chipRowDamage(browser, FILTER_TRAYS)
   expect(damage, damage.join('\n')).toEqual([])
 })
 
+const STC_WIDTHS = [320, 360, 390, 430, 480, 560, 768]
+
 test('S3 · every Semantic Colours role preset is inside its own row', async ({ browser }) => {
+  budget(STC_WIDTHS.length)
   const damage = []
-  for (const w of [320, 360, 390, 430, 480, 560, 768]) {
+  for (const w of STC_WIDTHS) {
     const { ctx, page } = await open(browser, w, 900, '/create/semantic-color', '.stc-role-presets', { touch: w < 800 })
     const r = await page.evaluate(() => {
       const rows = [...document.querySelectorAll('.stc-role-presets')]
@@ -339,6 +398,7 @@ async function fabState(page) {
 }
 
 test('S5 · the feedback FAB compacts on a short viewport and keeps its label on a roomy one', async ({ browser }) => {
+  budget(FAB_SHORT.length + FAB_ROOMY.length)
   const damage = []
   for (const [w, h] of FAB_SHORT) {
     const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-chip')
@@ -358,12 +418,15 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
   expect(damage, damage.join('\n')).toEqual([])
 })
 
+const FAB_COVER = [
+  ['/discover/prompts', '.pl-chip', [...FAB_SHORT, [390, 844]]],
+  ['/sitemap', '.smap-link-a', [[320, 568], [360, 560], [390, 640], [390, 844], [844, 390]]],
+]
+
 test('S5 / S10 · the FAB never permanently covers a control', async ({ browser }) => {
+  budget(FAB_COVER.reduce((n, [, , shapes]) => n + shapes.length, 0))
   const damage = []
-  for (const [path, waitFor, shapes] of [
-    ['/discover/prompts', '.pl-chip', [...FAB_SHORT, [390, 844]]],
-    ['/sitemap', '.smap-link-a', [[320, 568], [360, 560], [390, 640], [390, 844], [844, 390]]],
-  ]) {
+  for (const [path, waitFor, shapes] of FAB_COVER) {
     for (const [w, h] of shapes) {
       const { ctx, page } = await open(browser, w, h, path, waitFor)
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
@@ -440,9 +503,12 @@ async function targetSizeFailures(page) {
   })
 }
 
+const PLB_TARGET_VIEWPORTS = [[390, 844], [769, 900], [834, 1194], [1024, 768], [1280, 900]]
+
 test('N8 · no Palette Builder target is both under 24px and crowded', async ({ browser }) => {
+  budget(PLB_TARGET_VIEWPORTS.length)
   const damage = []
-  for (const [w, h] of [[390, 844], [769, 900], [834, 1194], [1024, 768], [1280, 900]]) {
+  for (const [w, h] of PLB_TARGET_VIEWPORTS) {
     const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col')
     const r = await targetSizeFailures(page)
     await ctx.close()
@@ -453,6 +519,7 @@ test('N8 · no Palette Builder target is both under 24px and crowded', async ({ 
 })
 
 test('N8 · the tonal ramp is one target per swatch and still opens the tints', async ({ browser }) => {
+  budget(1)
   const { ctx, page } = await open(browser, 1280, 900, '/create/palette', '.plb-ramp')
   const before = await page.evaluate(() => ({
     ramps: document.querySelectorAll('.plb-ramp').length,
@@ -510,10 +577,14 @@ function truncationCensus(page, selector) {
 // with keyboard focus rather than hover: on a touch device there is no hover,
 // and a test that only hovered would be measuring a state a phone never reaches.
 
+const WMAP_PATHS = ['/discover', '/learn']
+const WMAP_WIDTHS = [320, 360, 390, 400, 430, 480]
+
 test('N4 · no tool-map tooltip is clipped by the page container', async ({ browser }) => {
+  budget(WMAP_PATHS.length * WMAP_WIDTHS.length)
   const damage = []
-  for (const path of ['/discover', '/learn']) {
-    for (const w of [320, 360, 390, 400, 430, 480]) {
+  for (const path of WMAP_PATHS) {
+    for (const w of WMAP_WIDTHS) {
       const { ctx, page } = await open(browser, w, 900, path, '.wmap-blip')
       await page.locator('.wmap-blip').first().focus().catch(() => {})
       await page.waitForTimeout(300)
@@ -551,9 +622,12 @@ test('N4 · no tool-map tooltip is clipped by the page container', async ({ brow
 // reflow block below it wraps the tool row, 500+ because there is room. The fix
 // must not disturb either.
 
+const PLB_NAME_WIDTHS = [430, 440, 450, 460, 480, 500, 560, 640, 768]
+
 test('N3 · no Palette Builder swatch name is crushed by the tool row', async ({ browser }) => {
+  budget(PLB_NAME_WIDTHS.length)
   const damage = []
-  for (const w of [430, 440, 450, 460, 480, 500, 560, 640, 768]) {
+  for (const w of PLB_NAME_WIDTHS) {
     const { ctx, page } = await open(browser, w, 900, '/create/palette', '.plb-name')
     const r = await truncationCensus(page, '.plb-name')
     await ctx.close()
@@ -578,9 +652,12 @@ test('N3 · no Palette Builder swatch name is crushed by the tool row', async ({
 // field in the wrong family, and this defect would come back the next time a
 // value got one character longer.
 
+const GGN_WIDTHS = [320, 340, 350, 390, 769, 780, 800, 900]
+
 test('N2 · the gradient stop hex input shows its whole value', async ({ browser }) => {
+  budget(GGN_WIDTHS.length)
   const damage = []
-  for (const w of [320, 340, 350, 390, 769, 780, 800, 900]) {
+  for (const w of GGN_WIDTHS) {
     const { ctx, page } = await open(browser, w, 900, '/create/gradient', '.ggn-stop-hex', { touch: w < 800 })
     const r = await page.evaluate(() => {
       const inputs = [...document.querySelectorAll('.ggn-stop-hex')]
@@ -606,9 +683,12 @@ test('N2 · the gradient stop hex input shows its whole value', async ({ browser
 // this project has committed to. 380 and 430 are in the list because they were
 // already clean and the fix must not disturb them.
 
+const FG_WIDTHS = [320, 360, 380, 430]
+
 test('N1 · no font family name is truncated down to the 320px floor', async ({ browser }) => {
+  budget(FG_WIDTHS.length)
   const damage = []
-  for (const w of [320, 360, 380, 430]) {
+  for (const w of FG_WIDTHS) {
     const { ctx, page } = await open(browser, w, 900, '/create/font-gallery', '.fg-card-name')
     const r = await truncationCensus(page, '.fg-card-name')
     await ctx.close()
@@ -647,6 +727,7 @@ test('N1 · no font family name is truncated down to the 320px floor', async ({ 
 const GRG_WIDTHS = [320, 440, 450, 480, 530, 560, 640, 700, 1180]
 
 test('M6 · no gradient name or meta line is truncated at any width', async ({ browser }) => {
+  budget(GRG_WIDTHS.length)
   const damage = []
   for (const w of GRG_WIDTHS) {
     const { ctx, page } = await open(browser, w, 900, '/discover/gradients', '.grg-card')
@@ -731,6 +812,7 @@ const PLB_DESKTOP = [
 ]
 
 test('Palette Builder swatch tools never reach the swatch content on a short desktop viewport', async ({ browser }) => {
+  budget(PLB_DESKTOP.length)
   const damage = []
   for (const [w, h] of PLB_DESKTOP) {
     // Deliberately NOT a touch context: this is a desktop/laptop defect, and the
@@ -790,6 +872,7 @@ test('Palette Builder swatch tools never reach the swatch content on a short des
 const PLB_VIEWPORTS = [[320, 568], [360, 560], [390, 640], [390, 760], [390, 844], [430, 932]]
 
 test('M1 · every Palette Builder swatch control is tappable on a short phone', async ({ browser }) => {
+  budget(PLB_VIEWPORTS.length)
   const damage = []
   for (const [w, h] of PLB_VIEWPORTS) {
     const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col')
