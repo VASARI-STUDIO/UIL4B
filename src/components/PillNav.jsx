@@ -304,7 +304,25 @@ export default function PillNav() {
   // Sales pages hide the signed-out "Start for Free" pill until the visitor has
   // scrolled down to section 2 (the homepage mini-workbench, #workbench; older
   // sales sections use #create); routes without that section show it straight away.
-  const [ctaReady, setCtaReady] = useState(false)
+  //
+  // "Straight away" has to mean the FIRST PAINT, which is why this seeds from
+  // isSalesPage instead of a flat `false`. Seeded false everywhere, the pill
+  // mounted in .is-waiting on every route — 0fr grid track, opacity 0,
+  // aria-hidden, tabIndex -1 — and the scroll effect below then corrected it one
+  // tick later, so an app-shell route played the whole 280ms reveal (grid track,
+  // padding, margin, opacity, transform) for a gate that does not exist there.
+  // MEASURED at 768px on /settings: the track ran 0 → 87.55px over ~280ms and
+  // only settled at load+310ms on an idle machine, load+440ms under a 4× CPU
+  // throttle. Two costs, one cause: the primary CTA arrives late and shifts on a
+  // slow device, and for that whole window it is aria-hidden + untabbable while
+  // being painted, so a keyboard visitor tabbing at load skips a control they can
+  // see. It also made the rendered geometry a function of hydration timing, which
+  // is what tests/user-sim/24-mobile-overhaul.spec.js S15 was reading.
+  // isSalesPage is a SUPERSET of the gated routes (only Home renders #workbench),
+  // so this can seed "hidden" on a sales page that has no gate — the effect then
+  // reveals it exactly as before — but it can never seed "shown" on a page that
+  // does gate, which would be the bad direction: a visible pill collapsing away.
+  const [ctaReady, setCtaReady] = useState(!isSalesPage)
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [switchingUid, setSwitchingUid] = useState(null)

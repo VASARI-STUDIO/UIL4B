@@ -633,7 +633,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .stc-hue-row{display:flex;align-items:center;gap:12px}
 .stc-hue-row .cs-hue-slider{flex:1;width:auto}
 .stc-hue-val{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t1);min-width:34px;text-align:right}
-@media(max-width:640px){.stc-cell{min-height:52px}.stc-cell-hex{display:none}}
+@media(max-width:640px){.stc-cell{min-height:52px}}
 
 /* Semantic colour workbench */
 .stc-head.solo{padding-bottom:var(--s-5);border-bottom:1px solid var(--border)}
@@ -701,6 +701,21 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
   .stc-handoff{grid-template-columns:1fr}
 }
 @media(max-width:768px){
+  /* S1: the ten tone cells WRAP instead of scrolling off the side. As a single
+     row they were `flex:1 0 64px`, and that 0 flex-shrink pinned a 640px floor
+     under a container measured at 252px on a 320px phone - 3 of 10 cells
+     visible, 28 of 40 tones across the four ramps unreachable without
+     discovering a swipe there was no cue for. There was no cue: overlay
+     scrollbars render nothing under touch, and .stc-ramp's border-radius draws
+     the right edge ROUNDED AND CLOSED, so the control actively signalled "this
+     is the end of the scale" while the toolbar said "40 canonical tokens".
+     Five columns, two rows, every tone on screen and none below 24px.
+     overflow stays `hidden` rather than becoming `visible`: this element also
+     sets overflow-y, and `visible` on one axis beside a clipping value on the
+     other computes to `auto` - which would leave the scroller behind, i.e. the
+     defect, while looking like the fix. See css-conventions.md. */
+  .stc-ramp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));overflow:hidden}
+  .stc-cell{flex:none;min-width:0}
   .stc-preview-grid{grid-template-columns:1fr}
   .stc-preview+.stc-preview{border-left:0;border-top:1px solid var(--border)}
   .stc-next{flex-direction:column}
@@ -709,8 +724,20 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 @media(max-width:560px){
   .stc-head.solo .stc-toolbar{align-items:flex-start;flex-direction:column}
   .stc-copy-btn{width:100%;margin-left:0}
-  .stc-bundles{display:flex;overflow-x:auto;scroll-snap-type:x proximity}
-  .stc-bundle{flex:0 0 210px;scroll-snap-align:start}
+  /* S2: the bundle picker keeps the two-column grid it already uses at
+     561-980px instead of becoming a seven-wide scroller. As a scroller it
+     measured scrollWidth 1518 against clientWidth 288 on a 320px phone: ONE of
+     seven presets fully visible, 79% of the control off-screen, and the seventh
+     bundle 1160px away. Choosing a starting bundle is the first decision this
+     page asks for, so six of the seven options being undiscoverable is the
+     whole task failing, not a rough edge. scroll-snap was present, so the
+     scroller was intended - what was never there is any indication that it
+     scrolls. Wrapping needs no indication.
+     Deliberately NOT replaced with a scroll cue: seven cards wrap into four
+     rows on the narrowest phone, which costs height on a page that already
+     scrolls vertically, and buys every option being seen without a gesture. */
+  .stc-bundles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stc-bundle{min-height:0}
   .stc-role{padding:16px}
   .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto}
   .stc-preview{padding:16px}
@@ -1493,9 +1520,7 @@ img,svg,video{max-width:100%;height:auto}
 
   /* Settings */
   .settings-grid{grid-template-columns:1fr;gap:20px}
-  .settings-nav{position:static;flex-direction:row;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px;gap:2px}
-  .settings-nav::-webkit-scrollbar{display:none}
-  .settings-nav-item{white-space:nowrap;flex-shrink:0;padding:9px 14px;font-size:12.5px;min-height:40px}
+  /* .settings-nav / .settings-nav-item moved: see the block after the base rule. */
   .settings-section-h h2{font-size:24px}
   .settings-card-h,.settings-card-body,.settings-profile{padding-left:18px!important;padding-right:18px!important}
   .settings-profile{flex-wrap:wrap;gap:14px}
@@ -1878,10 +1903,55 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .danger-confirm-go:disabled{opacity:.65;cursor:progress}
 .danger-confirm-err{font-size:12px;line-height:1.5;color:var(--err);margin-top:8px}
 
+/* Below the two-column layout the section nav lies down into a row. It used to
+   become a horizontal SCROLLER, which hid three of its five sections off-screen
+   with nothing to say so (S8, mobile-audit-2026-08: 2 of 5 fully visible at
+   390x844, scrollWidth 675 against clientWidth 356). Worse, the <=640px block
+   deleted the scrollbar with ::-webkit-scrollbar{display:none}, which on a phone
+   is the only affordance the platform would have offered - and the two sections
+   left off-screen were Data Management (account deletion, data export) and
+   Privacy & Legal (consent), i.e. the two people open Settings specifically to
+   find.
+   Five short items do not need a scroller. Wrapping shows all five at once and
+   costs one or two rows of height, which is the right trade on a page whose
+   content is far longer than its nav. Both overrides now wrap; neither scrolls,
+   so there is no scrollbar left to delete. */
 @media(max-width:900px){
   .settings-grid{grid-template-columns:1fr;gap:24px}
-  .settings-nav{position:static;flex-direction:row;overflow-x:auto;padding:4px}
-  .settings-nav-item{white-space:nowrap;flex-shrink:0}
+  .settings-nav{position:static;flex-direction:row;flex-wrap:wrap;padding:4px}
+  .settings-nav-item{white-space:nowrap;flex:0 0 auto}
+}
+/* These live here, after the base .settings-nav rule, and not in the mobile
+   blocks higher up the file where the rest of the Settings overrides sit. That
+   is not tidiness: the base rule at .settings-nav declares display, position,
+   flex-direction, gap and padding, and it appears LATER in the stylesheet than
+   the max-width:640px block, so every one of those properties set up there was
+   silently overridden. Verified by computed style, not by reading: a grid rule
+   placed in the 640/480 blocks reported `display: flex` on a 320px phone.
+   Worth knowing when reading the audit, too - it cites global.css:1491 for the
+   scroller, but `overflow-x:auto` there was dead for the same reason; the
+   scroller that actually shipped came from the max-width:900px block above. */
+@media(max-width:640px){
+  .settings-nav{gap:2px}
+  .settings-nav-item{padding:9px 14px;font-size:12.5px;min-height:40px}
+}
+@media(max-width:480px){
+  /* Ragged wrapping costs a whole extra row on a small phone (measured 4 rows,
+     173px, at 320px). A 2-up grid packs the same five sections into 3 rows and
+     lines their icons up. minmax(0,1fr) rather than a bare 1fr: a bare 1fr track
+     floors at min-content and would push the page wider than the viewport, which
+     is the exact fault S6 records on /info. */
+  .settings-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* The label must be allowed to wrap once the cell is this narrow. The base
+     rule sets white-space:nowrap, which at 320px pushed "Data Management" 10px
+     past its own button and 5px past the nav card's border - measured with a
+     Range over the glyphs, and the rendered result was "Data Managemen" with the
+     final t painted outside the card. Exactly the S15 failure mode: innerText
+     still reads correctly, and only a sighted user sees the damage.
+     Wrapping rather than trimming the padding, because padding arithmetic only
+     holds for these five English strings - every label here comes through t(),
+     so a longer translation would reopen it. */
+  .settings-nav-item{white-space:normal}
 }
 
 /* ─── Font Gallery (/fontgallery) — fg- ─────────────────────────────────────
@@ -3363,9 +3433,19 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .ch-card:hover{border-color:var(--bh);transform:translateY(-3px)}
 .ch-thumb{display:flex;align-items:center;justify-content:center;height:150px;text-decoration:none!important;position:relative;background:linear-gradient(135deg,var(--c1,var(--accent)),var(--c2,var(--accent-strong)))}
 .ch-thumb-mono{font-family:var(--mono);font-size:30px;font-weight:700;color:rgba(255,255,255,.92);letter-spacing:.04em;text-shadow:0 1px 8px rgba(0,0,0,.25)}
-.ch-heart{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-pill);border:none;cursor:pointer;background:rgba(0,0,0,.5);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;opacity:0;transform:translateY(-2px);transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.ch-card:hover .ch-heart,.ch-heart:focus-visible{opacity:1;transform:translateY(0)}
-.ch-heart.is-saved{opacity:1;transform:translateY(0);color:#fb7185}
+/* Visible at rest; the hover reveal is an enhancement for devices that have a
+   hover, exactly as .grg-like does it. It used to hide for everyone and come
+   back on .ch-card:hover or its own :focus-visible — one of which never fires on
+   a phone and the other of which is keyboard-only, so the surface's ONLY
+   engagement action was invisible on every touch device at every width
+   (S14, mobile-audit-2026-08: 12 buttons, one per card, measured opacity 0 with
+   pointer-events:auto at 320x568 through 1180x820). */
+.ch-heart{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-pill);border:none;cursor:pointer;background:rgba(0,0,0,.5);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+@media(hover:hover){
+  .ch-heart{opacity:0;transform:translateY(-2px)}
+  .ch-card:hover .ch-heart,.ch-heart:focus-visible,.ch-heart.is-saved{opacity:1;transform:translateY(0)}
+}
+.ch-heart.is-saved{color:#fb7185}
 .ch-heart:hover{background:rgba(0,0,0,.7)}
 .ch-heart-count{font-variant-numeric:tabular-nums;line-height:1}
 .ch-card-body{padding:12px 14px 14px}
@@ -3407,10 +3487,27 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .ic-acc-body-inner a{color:var(--accent);font-weight:500}
 .ic-acc-body-inner kbd{font-family:var(--mono);font-size:11px;padding:2px 6px;border-radius:4px;background:var(--bg-3);border:1px solid var(--border);color:var(--t1)}
 .ic-kbd-list{list-style:none;padding-left:0!important}
-.ic-stats{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:22px;box-shadow:var(--warm-shadow);scroll-margin-top:72px}
+/* display:block is the fix for S6, and it is not cosmetic. `.ic-stats` is also
+   the class of an orphaned Image Converter component further up this file
+   (search "Image converter stats", whose .ic-stat-val / .ic-stat-label are in no
+   markup any more), and THAT rule declares display:grid. This section is the
+   only `.ic-stats` left in the app, so it was silently inheriting a 4-column
+   (2-column below 600px) grid it was never meant to have: measured at 320px,
+   section.ic-stats laid out as two 116px columns and put .ic-stats-grid inside
+   ONE of them, which then subdivided 116px into two 53px cards. A bare `1fr`
+   track floors at min-content, so those columns could not shrink and the whole
+   page was forced to 341px inside a 288px content box - 37px thrown away, not
+   scrolled, because body carries overflow-x:clip.
+   The audit diagnoses this as .ic-stats-grid's bare 1fr and proposes
+   minmax(0,1fr). That does remove the overflow, but it treats the symptom: with
+   the phantom grid still in place the cards then collapse instead, and their own
+   text escapes the card box (measured +23px at 320px, +43px at 768px). Taking
+   the section out of grid layout removes the cause, and .ic-stats-grid gets the
+   full width it was always supposed to have. */
+.ic-stats{display:block;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:22px;box-shadow:var(--warm-shadow);scroll-margin-top:72px}
 .ic-stats-head h2{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:var(--t0);margin:0 0 4px}
 .ic-stats-head p{font-size:13px;color:var(--t2);line-height:1.55;margin:0 0 18px}
-.ic-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.ic-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px}
 .ic-stat{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
 .ic-stat-num{font-size:24px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
 .ic-stat-num span{font-size:13px;color:var(--t3);font-weight:500;margin-left:2px}
@@ -3422,7 +3519,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .ic-bp-tick{position:absolute;top:50%;width:2px;height:8px;background:var(--border);transform:translate(-50%,-50%)}
 .ic-bp-tick-lbl{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
 .ic-bp-tick-px{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;color:var(--t3)}
-@media(max-width:560px){.ic-stats-grid{grid-template-columns:repeat(2,1fr)}.ic-head-title{font-size:24px}}
+@media(max-width:560px){.ic-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ic-head-title{font-size:24px}}
 
 /* SEO Specialist — Meta & SERP Inspector */
 .seo-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin-bottom:24px}
@@ -4247,15 +4344,68 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .pgal-use--pro{color:var(--brand)}
 .pgal-stripe:hover .pgal-hex,.pgal-stripe:focus-visible .pgal-hex{opacity:1}
 .pgal-stripe:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
-/* Hover / focus actions over the swatch. The layer is always in the DOM (see
-   PaletteGalleryGrid) and only its VISIBILITY is CSS, so keyboard reaches every
-   action a pointer does — :focus-within is what carries that, and `visibility`
-   rather than `opacity` alone keeps the buttons out of the tab order until the
-   card is actually engaged. Anchored to the stripes, not the card, so it never
-   covers the name and like control in the foot. */
+/* Actions over the swatch. The layer is always in the DOM (see
+   PaletteGalleryGrid); it is visible at rest, and only a device that can hover
+   gets the hide-until-engaged treatment. Anchored to the stripes, not the card,
+   so it never covers the name and like control in the foot.
+
+   THE COMMENT THAT USED TO BE HERE WAS WRONG, in a way that mattered, so here is
+   what actually happens. It claimed `visibility` rather than `opacity` alone
+   "keeps the buttons out of the tab order until the card is actually engaged",
+   and offered that as the reason to prefer it. Two faults followed from it:
+
+   1. `visibility` is a DISCRETE property. Listing it in a transition does not
+      fade it — it flips at 50% of the duration. So the reveal cost a frame, and
+      a focus advance faster than one frame skipped the layer entirely: measured
+      on /discover/palettes at 390x844, 0 of 5 reveal buttons reached with no
+      round-trip between Tab presses, 5 of 5 from ~16ms up. A control whose
+      reachability depends on how fast you tab is not reachable (S13).
+   2. It was never guarded on hover capability, so on a phone or tablet the
+      hover half can never fire at all — 350 actions per page load on a 70-card
+      grid, every take-away action the surface offers, unreachable except by an
+      accident: tapping a stripe gives the card focus and :focus-within matches,
+      but that same tap fires the stripe's own copy action (S12).
+
+   The fix is to keep `visibility` as a plain state property and NEVER put it in
+   a transition. It then flips on the first style recalc after :focus-within or
+   :hover matches, with no 50% point to be outrun — measured 11 of 11 reached at
+   0ms, 16ms and 250ms, on both pointer and touch.
+
+   Dropping `visibility` altogether for opacity + pointer-events was tried first
+   and is WRONG here, which is worth recording because it looks tidier.
+   `visibility:hidden` also removes a node from the ACCESSIBILITY TREE; opacity
+   does not. On a 70-card grid that swap put 350 action links into the a11y tree
+   and the tab order permanently — measured as 70 spurious "Open ..." links
+   exposed at rest, which broke an existing acceptance test by making the
+   accessible name ambiguous, and which would make a screen reader announce five
+   extra actions on every card while browsing. Hidden-until-engaged is the right
+   behaviour; the bug was only ever the transition, so only the transition
+   changed.
+
+   The one thing given up: on hover-out `visibility` snaps rather than waiting
+   for the opacity fade, so the layer vanishes instead of fading. The idiom that
+   buys the fade back is `visibility 0s linear var(--dur-1)` (see .ggn-handle-val)
+   — deliberately not used, because a hide that nobody watches is not worth
+   putting a discrete property back into a transition list for. */
 .pgal-shot{position:relative;display:flex;flex-direction:column;min-width:0}
-.pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance),visibility var(--dur-2)}
-.pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;visibility:visible;transform:none}
+.pgal-actions{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:4px;transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-entrance)}
+@media(hover:hover){
+  .pgal-actions{opacity:0;visibility:hidden;transform:translateY(4px)}
+  .pgal-card:hover .pgal-actions,.pgal-card:focus-within .pgal-actions{opacity:1;visibility:visible;transform:none}
+}
+/* No hover, so the layer is permanent — and a permanent overlay is the wrong
+   shape for it. Measured as an overlay on touch it covered 85% of the fourth
+   stripe and 35% of the third at 768-1180px (22% of the whole swatch), i.e. a
+   browsing surface for four colours that only ever showed two and a half of
+   them. Obscuring the artefact the actions act on is a different defect, not a
+   fix. So on touch it leaves the swatch and becomes a real row in the card:
+   nothing is covered, and the card grows by the height of the row instead. */
+@media(hover:none){
+  /* gap goes 4px -> 8px here for the same reason: the 4px was paid to keep the
+     row narrow enough to float on the swatch. Off the swatch that constraint is
+     gone, and 4px between adjacent 27-29px targets is thin for a finger. */
+  .pgal-actions{position:static;margin-top:8px;gap:8px}
+}
 .pgal-act{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.16);background:rgba(10,10,14,.72);color:#fff;font-family:var(--font);font-size:11px;font-weight:600;line-height:1;cursor:pointer;text-decoration:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pgal-act:hover{background:rgba(10,10,14,.9);border-color:rgba(255,255,255,.34)}
 .pgal-act:focus-visible{outline:2px solid #fff;outline-offset:2px}
@@ -4268,7 +4418,10 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    surface — no action layer is rendered there, and this guards the case where a
    future caller passes palettes without onPick into a small grid. */
 .plb-galpopup-body .pgal-actions{display:none}
-@media (prefers-reduced-motion:reduce){.pgal-actions{transition:opacity var(--dur-1) linear,visibility var(--dur-1);transform:none}}
+/* The reduced-motion variant carried the same `visibility var(--dur-1)` and so
+   had the same discrete mid-transition flip — the frame dependency above was
+   present on BOTH paths, which is why it survived a reduced-motion re-test. */
+@media (prefers-reduced-motion:reduce){.pgal-actions{transition:opacity var(--dur-1) linear;transform:none}}
 .pgal-foot{display:flex;align-items:center;gap:8px;min-width:0;padding:0 2px}
 .pgal-like{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .pgal-like:hover{color:var(--t0);border-color:var(--bh)}
@@ -4644,18 +4797,56 @@ html.lenis,html.lenis body{height:auto}
 .pnav-trigger:hover,.pnav-trigger[aria-expanded="true"]{background:var(--hvr);color:var(--t0)}
 .pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
-.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end;transition:gap var(--dur-3) var(--ease-inout)}
+/* min-width:max-content is what actually buys the actions cluster its space, and
+   it has to be here rather than on the pill. .pnav-inner is `1fr auto 1fr`, and
+   two 1fr tracks split the free space EVENLY — but the lead cluster is a 103px
+   logo and this one is ~307px of controls, so from 769px (where the section
+   menus and the Log in pill come back) up to ~962px (where an even split finally
+   clears 307px) the even split is smaller than this cluster needs. A `1fr` track
+   floors at its items' minimum contribution, and every flex item in here except
+   the CTA is nowrap, so that floor was the CTA's near-zero min-content: measured
+   at 769px, the lead track held 201px for 103px of logo while this track was
+   pinned to 219px and the CTA's 1fr label track was crushed to 0px.
+   Pinning flex-shrink on the pill alone does NOT fix it — Chrome still reports
+   this container's min-content as the old 219px, so the track never grows and the
+   overflow just moves outward (measured: the bar overran itself by 68px at 769px
+   and body's overflow-x:clip threw the "..." button away). Raising the item's own
+   min-width is what lifts the track's floor. Above ~962px an even split already
+   exceeds max-content, so this changes nothing there; below it, the lead track
+   yields instead — the right victim, and .pnav-lead keeps min-width:0 so the logo
+   can still compress if a future label makes the whole bar genuinely too wide. */
+.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end;min-width:max-content;transition:gap var(--dur-3) var(--ease-inout)}
 /* Sales-page "Start for Free" pill — hidden until the visitor scrolls to
    section 2 (#create); PillNav toggles .is-waiting from the scroll listener.
-   While waiting the pill also collapses its width (max-width + padding, and
-   margin-left eats the flex gap) so "Log in" nests flush against the right
+   While waiting the pill also collapses its width (the 0fr grid track below,
+   plus padding, and margin-left eats the flex gap) so "Log in" nests flush against the right
    cluster, then slides left as the pill expands in on scroll. */
 /* Signed-out CTA that collapses away until the visitor has scrolled. Same
    grid-track technique as the label reveals: the pill itself is the grid
    container and .pnav-cta-i is its single track item, so the collapse eases
    across the real pill width instead of a made-up max-width ceiling. Padding
    still animates separately — a border-box element can't narrow past its own
-   horizontal padding. See css-conventions.md → Motion. */
+   horizontal padding. See css-conventions.md → Motion.
+
+   WHY THIS PILL WAS THE ONE THAT BROKE (S15, mobile-audit-2026-08). Every other
+   item in .pnav-actions is nowrap, so its min-content contribution equals its
+   full width and it cannot give. This pill could: .pnav-cta-i carries
+   min-width:0 + overflow:hidden — it MUST, or the 0fr waiting track below could
+   never reach zero — which makes the pill's min-content contribution just its
+   own padding. So whenever the bar was short of width the CTA absorbed all of
+   it. Measured at 769px the 1fr label track collapsed to 0px (a 38px unlabelled
+   blob) and at 834px to 23.58px, rendering "tart for Fre".
+   Note what does NOT happen: the label never ellipsises. The inner span is
+   justify-items:center, so it is sized to its own max-content and simply
+   overhangs the pill on both sides, where white text lands on the white bar and
+   disappears. innerText still reads "Start for Free" the whole time, so nothing
+   short of a rendered-geometry check can see the damage.
+   The fix is on .pnav-actions above (the track floor), not here — the shortfall
+   was the grid misallocating width, not the bar running out of it. Adding
+   flex-shrink:0 here as well was measured to change nothing once the floor was
+   right, so it is deliberately absent rather than kept as decoration.
+   Do NOT swap justify-items:center for a stretched track + text-overflow — the
+   label would then ellipsis its way through every frame of the reveal below. */
 .pnav-cta{display:inline-grid;grid-template-columns:1fr;align-items:center;justify-items:center;transition:opacity var(--dur-3) var(--ease-out),transform var(--dur-3) var(--ease-out),grid-template-columns var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),margin var(--dur-3) var(--ease-inout),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-cta-i{overflow:hidden;min-width:0;white-space:nowrap}
 .pnav-cta.is-waiting{opacity:0;transform:translateY(-6px);grid-template-columns:0fr;padding-left:0;padding-right:0;margin-left:-8px;pointer-events:none}
@@ -5891,6 +6082,10 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
      the page the moment that token moved. */
   .pnav-inner{display:flex}
   .pnav-lead{flex:1 1 auto}
+  /* The base min-width:max-content exists to lift a `1fr` GRID track's floor.
+     There is no grid here, so it buys nothing and could only stop the cluster
+     yielding on a 320px phone — hand the width back. */
+  .pnav-actions{min-width:0}
   /* Search collapses to an icon-only tap target hugging the actions cluster;
      sales routes get it back too — on mobile it's the only way into the
      palette. The bookmark / export icon buttons fold away into the sheet. */
@@ -6339,7 +6534,18 @@ button.plb-varrow:hover{background:var(--bg-2)}
    --plb-ink is computed against --plb-sim. */
 .plb-col--split{background:linear-gradient(to bottom,var(--plb-c) 0 50%,var(--plb-sim) 50% 100%)}
 .plb-col-tools{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px}
-.plb-tool{display:flex;align-items:center;justify-content:center;width:32px;height:32px;color:inherit;background:none;border:none;border-radius:8px;cursor:pointer;opacity:0;transition:opacity var(--t),background var(--t)}
+/* The per-swatch controls are visible AT REST by default and hidden only where
+   a hover can bring them back. That direction matters: the old rule hid them at
+   rest for everyone and corrected it in @media(max-width:768px), which is a
+   proxy for "touch" that stops being true at exactly 769px — so every tablet and
+   every phone held sideways got a colour picker with no editing controls on it
+   at all (S11, mobile-audit-2026-08: 30 buttons measured opacity:0 with
+   pointer-events:auto at 834x1194, 1024x768, 1180x820 and 844x390, i.e. live
+   32x32 targets with zero paint, where a mis-tap runs Remove or Duplicate with
+   nothing on screen to explain it). Guard on the capability, not the width —
+   .grg-like at the bottom of this file is the pattern this copies. */
+.plb-tool{display:flex;align-items:center;justify-content:center;width:32px;height:32px;color:inherit;background:none;border:none;border-radius:8px;cursor:pointer;transition:opacity var(--t),background var(--t)}
+@media(hover:hover){.plb-tool{opacity:0}}
 .plb-col:hover .plb-tool,.plb-col:focus-within .plb-tool,.plb-tool--on{opacity:1}
 .plb-tool:hover{background:color-mix(in srgb,var(--plb-ink) 14%,transparent)}
 .plb-tool--on{background:color-mix(in srgb,var(--plb-ink) 18%,transparent)}
@@ -6374,8 +6580,19 @@ button.plb-varrow:hover{background:var(--bg-2)}
    children (buttons, ramp, hex) keep their own pointer cursor. */
 .plb-col[draggable="true"]{cursor:grab}
 .plb-col[draggable="true"]:active{cursor:grabbing}
-.plb-gap{position:absolute;top:0;right:-14px;bottom:0;width:28px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;z-index:5;opacity:0;transition:opacity var(--t)}
-.plb-gap:hover,.plb-gap:focus-visible{opacity:1}
+/* Insert-between-swatches, on the seam. Same inversion as .plb-tool above, plus
+   a size change, because this one had two faults and painting it only fixes one.
+   Its resting form on a pointer device is the full column height (measured
+   28x990 at 834x1194) — a generous hover target that costs nothing, since
+   hovering the seam is what reveals the dot. With no hover it can never reveal
+   itself, so all that full-height strip does is sit invisibly over every column
+   edge and swallow taps meant for the swatch. So on touch it paints its dot AND
+   contracts to the dot: 28x44, still clear of the 24px floor in WCAG 2.5.8. */
+.plb-gap{position:absolute;top:50%;right:-14px;height:44px;transform:translateY(-50%);width:28px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;z-index:5;transition:opacity var(--t)}
+@media(hover:hover){
+  .plb-gap{top:0;bottom:0;height:auto;transform:none;opacity:0}
+  .plb-gap:hover,.plb-gap:focus-visible{opacity:1}
+}
 .plb-gap-dot{display:flex;align-items:center;justify-content:center;width:26px;height:26px;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow-xs)}
 
 /* Shared popover shell — columns paint color:var(--plb-ink), so reset to tokens */
@@ -6836,6 +7053,10 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .plb-board{flex-direction:column;min-height:0}
   .plb-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;padding:10px 16px}
   .plb-col-tools{position:static;transform:none;flex-direction:row;order:2;margin-left:auto}
+  /* Redundant on touch now that the base rule is visible-at-rest, but still
+     doing work for a HOVER device at this width — a narrowed desktop window, or
+     a small laptop — where @media(hover:hover) still hides them and this
+     stacked row has no room for a reveal-on-hover affordance. */
   .plb-tool{opacity:1}
   .plb-ramp{display:none}
   .plb-hex{font-size:13px;padding:2px 6px}
@@ -6871,7 +7092,24 @@ button.plb-varrow:hover{background:var(--bg-2)}
    above every tool overlay (.icust-overlay/.cp-overlay are 9998), or e.g. the
    "log in to continue" popup opened from the icon customizer stacks underneath. */
 .ui-modal-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);backdrop-filter:blur(6px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
-.ui-modal{position:relative;width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance);max-height:calc(100dvh - 32px);overflow:hidden auto}
+/* The max-height cap is correct and stays. What was missing is any sign that
+   the dialog scrolls when its content exceeds it (S7, mobile-audit-2026-08).
+   At 844x390 the login dialog holds 489px of content in 356px: the submit
+   button was sliced in half by the bottom edge, and BOTH the sign-up link and
+   "Forgot password?" sat below the fold. No scrollbar renders under touch
+   emulation, so a signed-out visitor on a landscape phone had no way to know
+   account creation existed — the sliced button read as a rendering fault
+   rather than as "there is more below".
+
+   This is the pure-CSS scroll shadow: two `local` gradients scroll with the
+   content and mask the cue at each extremity, two `scroll` gradients stay put
+   and paint it. So the cue appears only when there IS more, on either edge,
+   and it costs no JS and no measurement — which matters because these dialogs
+   have variable content (the intent block, the reset state, signup vs signin)
+   and any fixed height threshold would be wrong for some of them.
+   Applied to .ui-modal, not to the login dialog, so all four modals that use
+   this shell get it. */
+.ui-modal{position:relative;width:100%;max-width:440px;background:linear-gradient(var(--card) 30%,rgba(0,0,0,0)) top/100% 26px no-repeat local,linear-gradient(rgba(0,0,0,0),var(--card) 70%) bottom/100% 26px no-repeat local,radial-gradient(farthest-side at 50% 0,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) top/100% 12px no-repeat scroll,radial-gradient(farthest-side at 50% 100%,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) bottom/100% 12px no-repeat scroll,var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance);max-height:calc(100dvh - 32px);overflow:hidden auto}
 .ui-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 0}
 .ui-modal-x{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--radius-pill);border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .ui-modal-x:hover{background:var(--hvr);color:var(--t0)}
@@ -6891,6 +7129,24 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .ui-modal-err{font-size:12px;font-weight:500;color:var(--err)}
 .ui-modal-actions--row{flex-direction:row;justify-content:flex-end}
 .ui-modal-actions--row .btn{width:auto}
+/* Short viewports, keyed on HEIGHT — which is the whole point. The audit found
+   this app repeatedly reaching for a width query to solve a height problem (a
+   landscape phone is 844-932px WIDE, so every max-width rule misses it). The
+   scroll cue above makes the overflow honest; this reduces how much there is to
+   scroll, by spending the vertical rhythm that a 390px-tall viewport cannot
+   afford. Measured on /login at 844x390: 133px hidden before, 69px after.
+   Nothing is removed — the Google button, the divider and both links all stay,
+   because dropping a sign-in method to win back pixels is an auth-flow change,
+   not a layout one. 460px covers both landscape phones in the matrix (390 and
+   430) and leaves every portrait viewport untouched. */
+@media(max-height:460px){
+  .ui-modal{max-height:calc(100dvh - 16px)}
+  .ui-modal-head{padding:12px 18px 0}
+  .ui-modal-body{padding:10px 18px 16px}
+  .auth-divider{margin:12px 0}
+  .auth-form{gap:12px}
+  .auth-links{margin-top:10px}
+}
 
 /* --- Pro-upgrade modal: see the "W3 - V2 SHARED UI" block at the end of
        this file. The V1 rules that sat here (a #8B5CF6 -> #EC4899 gradient
@@ -8034,8 +8290,6 @@ button.plb-varrow:hover{background:var(--bg-2)}
   .tsc-status{grid-template-columns:1fr}
   .tsc-status span+span{border-left:0;border-top:1px solid var(--border)}
   .tsc-panel{padding:16px}
-  .tsc-row{align-items:flex-start;flex-direction:column;gap:6px}
-  .tsc-row-meta{flex-direction:row;flex-basis:auto;gap:8px;flex-wrap:wrap}
   .tsc-width-btn{font-size:10px;padding:7px 6px}
   .tsc-more-links{align-items:flex-start;flex-direction:column;gap:12px}
 }
@@ -9084,3 +9338,36 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .pnav-acc-link[data-soon] .pnav-acc-label{color:var(--t3)}
 .pnav-acc-link[data-soon] .pnav-acc-desc{color:var(--t3)}
 .pnav-acc-link[data-soon] .pnav-acc-ico{opacity:.5;filter:grayscale(1)}
+
+/* Type-scale specimens on a phone: stack the row and let the specimen WRAP.
+   The reflow-320 fix above made the specimen truncate rather than overflow
+   unreachably, which was right about reachability and left the tool useless:
+   measured at 390x844, all 9 rows truncated and the largest showed 192px of a
+   1305px string - 15% of the specimen, so every row read "The quick b..." while
+   the page promises you can read the scale back in a real layout (S16,
+   mobile-audit-2026-08).
+
+   Two changes, and the first is what makes the second affordable. Stacking the
+   row (the treatment that already existed below 380px) gives the specimen the
+   full row width instead of the ~192px left over beside the meta column. Then
+   wrapping shows the whole string at its TRUE size, which is the one property a
+   type scale exists to demonstrate.
+
+   The cost is height, and it is real: the ladder goes 986px -> 1931px at 390px
+   wide, and the page 5635px -> 6580px (+17%). Measured alternatives, so the
+   trade is on the record rather than asserted:
+     - wrap without stacking      100% shown, ladder 2546px (+1560)
+     - clamp to 2 lines           22% shown, ladder 1105px (+119)
+     - stack + wrap (this)        100% shown, ladder 1931px (+945)
+     - do nothing                 15% shown, ladder 986px
+   The 2-line clamp is the tempting middle and it is not worth it: it buys 7
+   percentage points and still hides three quarters of the specimen.
+
+   Scoped to <=768px. Landscape phones and tablets (769px and up) still truncate
+   at 31-45% shown; they are wider, this band is where the tool is unusable, and
+   769+ is where PR #263 is reworking these grids. */
+@media(max-width:768px){
+  .tsc-row{align-items:flex-start;flex-direction:column;gap:6px}
+  .tsc-row-meta{flex-direction:row;flex-basis:auto;gap:8px;flex-wrap:wrap}
+  .tsc-row-text{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
+}
