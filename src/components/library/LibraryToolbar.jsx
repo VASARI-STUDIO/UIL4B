@@ -14,24 +14,34 @@ import LibrarySearch from './LibrarySearch'
 // type, the Palette Library needs one combined set, and the Font Gallery needs
 // category plus sort.
 
+// `extra` is a second row INSIDE the sticky container, for controls that change
+// how the results are rendered rather than which results there are — the Font
+// Gallery's preview text and specimen size. It belongs in the toolbar rather
+// than under it because pinning the search row while the rest scrolled out from
+// under it is a fault that tool already had once and fixed.
+
 export default function LibraryToolbar({
   search,
   action,
+  extra,
   children,
   className = '',
 }) {
   return (
     <div className={`lbry-toolbar${className ? ` ${className}` : ''}`}>
-      {search && (
-        <LibrarySearch
-          value={search.value}
-          onChange={search.onChange}
-          placeholder={search.placeholder}
-          label={search.label}
-        />
-      )}
-      {children && <div className="lbry-toolbar-filters">{children}</div>}
-      {action && <div className="lbry-toolbar-action">{action}</div>}
+      <div className="lbry-toolbar-row">
+        {search && (
+          <LibrarySearch
+            value={search.value}
+            onChange={search.onChange}
+            placeholder={search.placeholder}
+            label={search.label}
+          />
+        )}
+        {children && <div className="lbry-toolbar-filters">{children}</div>}
+        {action && <div className="lbry-toolbar-action">{action}</div>}
+      </div>
+      {extra && <div className="lbry-toolbar-row lbry-toolbar-row--extra">{extra}</div>}
     </div>
   )
 }

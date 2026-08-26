@@ -245,11 +245,21 @@ test.describe('Font Gallery', () => {
 
     await page.getByLabel('Preview text').fill('Make the words the interface')
     await expect(page.getByLabel('Preview text')).toHaveValue('Make the words the interface')
-    const rows = page.locator('.fg-card')
-    const firstRow = await rows.nth(0).boundingBox()
-    const secondRow = await rows.nth(1).boundingBox()
-    expect(Math.abs(firstRow.x - secondRow.x), 'each typeface should begin on the same full-width line').toBeLessThan(2)
-    expect(secondRow.y, 'the next typeface should render below the first').toBeGreaterThan(firstRow.y + firstRow.height - 2)
+    // THE GALLERY IS A SPECIMEN GRID, NOT A FULL-WIDTH LIST.
+    //
+    // This assertion used to pin the opposite — "each typeface should begin on
+    // the same full-width line". That layout showed five families of seventeen
+    // hundred per screen at 1440, spent about a quarter of each 154px row on
+    // the specimen, and left the family NAME roughly 800px from the face it
+    // named. The founder's direction was that the typography tools take their
+    // browsing model from the gradient and palette libraries, which are grids.
+    // Changed deliberately: this is a new decision, not a test relaxed to go green.
+    const cards = page.locator('.fg-card')
+    const first = await cards.nth(0).boundingBox()
+    const second = await cards.nth(1).boundingBox()
+    expect(second.x, 'the second typeface sits beside the first, not under it')
+      .toBeGreaterThan(first.x + first.width - 2)
+    expect(Math.abs(second.y - first.y), 'cards sharing a row share a top edge').toBeLessThan(2)
 
     await page.getByRole('button', { name: 'Serif', exact: true }).click()
     await expect(page.locator('.fg-count')).toContainText('in Serif')
@@ -530,6 +540,73 @@ test.describe('typography tools under a failing font catalogue', () => {
   })
 })
 
+// ── Choosing a family is BROWSABLE, not recall-and-type ──────────────────────
+// The founder's report was that picking a pair "expects you to remember and
+// type font names". The cause was structural rather than cosmetic: the picker
+// was a native <select>, and a <select> renders every option in the UI font, so
+// there was no arrangement of it that could show a face. These tests pin the
+// property that fixes it — you can SEE what you are choosing — plus the
+// keyboard contract the <select> used to give for free.
+test.describe('the font picker is browsable', () => {
+  test('a designer picks a heading face by looking at specimens', async ({ page }) => {
+    watch(page, 'designer choosing a heading face')
+    await go(page, '/fontpairs')
+
+    const trigger = page.locator('.typ-picker-trigger').first()
+    await expect(trigger).toBeVisible()
+    await trigger.click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toHaveAttribute('aria-modal', 'true')
+
+    // THE POINT OF THE WHOLE CHANGE: each tile renders in its OWN family, so
+    // the grid shows faces rather than a list of names in one font. A <select>
+    // could never satisfy this, which is why it had to go.
+    const families = await dialog.locator('.fbd-sample').evaluateAll(
+      (nodes) => nodes.slice(0, 6).map((n) => getComputedStyle(n).fontFamily),
+    )
+    expect(families.length).toBeGreaterThan(3)
+    expect(new Set(families).size, 'each specimen tile renders in its own family').toBeGreaterThan(1)
+
+    // Search narrows, and picking a tile closes the dialog and applies the face.
+    await dialog.getByLabel('Search font families').fill('Lora')
+    const tile = dialog.locator('.fbd-card', { hasText: 'Lora' }).first()
+    await expect(tile).toBeVisible()
+    await tile.locator('.fbd-tile').click()
+
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(trigger.locator('.typ-picker-name')).toHaveText('Lora')
+  })
+
+  test('the browser closes from the keyboard and hands focus back', async ({ page }) => {
+    watch(page, 'keyboard-only visitor choosing a face')
+    await go(page, '/typescale')
+
+    const trigger = page.locator('.typ-picker-trigger').first()
+    await trigger.click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    // Background scroll must be handed back, or the page is left unusable.
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('')
+  })
+
+  test('the trigger shows the current family in that family', async ({ page }) => {
+    watch(page, 'designer glancing at the current selection')
+    await go(page, '/fontpairs')
+
+    // The trigger is a preview, not a label: its specimen must resolve to the
+    // selected family and not to the UI font.
+    const face = page.locator('.typ-picker-face').first()
+    const named = await page.locator('.typ-picker-name').first().innerText()
+    const stack = await face.evaluate((n) => getComputedStyle(n).fontFamily)
+    expect(stack.toLowerCase()).toContain(named.toLowerCase())
+  })
+})
+
 test('coarse-pointer typography controls expose 44px hit targets', async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -548,7 +625,8 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   await go(page, '/fontgallery')
   await expect(page.locator('.fg-card').first()).toBeVisible()
   await expectTarget(page.locator('.fg-card-compare').first(), 'Font Gallery compare')
-  await expectTarget(page.locator('.fg-sort-btn').first(), 'Font Gallery sort')
+  // The bespoke .fg-sort-btn segment is now the shared Library filter control.
+  await expectTarget(page.locator('.lbry-filter').first(), 'Font Gallery filter')
   await page.locator('.fg-card-compare').first().click()
   await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery clear')
 
