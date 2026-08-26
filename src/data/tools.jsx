@@ -6,7 +6,7 @@ export const CATEGORIES = [
     labelKey: 'categories.color.label',
     descKey: 'categories.color.description',
     label: 'Colour Studio',
-    path: '/color',
+    path: '/create/color',
     description: 'Build palettes, scales, gradients and verify accessibility.',
     icon: (
       <>
@@ -22,7 +22,7 @@ export const CATEGORIES = [
     labelKey: 'categories.typography.label',
     descKey: 'categories.typography.description',
     label: 'Typography',
-    path: '/typography',
+    path: '/create/typography',
     description: 'Type scales and font pairings tuned for readability.',
     icon: (
       <>
@@ -37,7 +37,7 @@ export const CATEGORIES = [
     labelKey: 'categories.imagery.label',
     descKey: 'categories.imagery.description',
     label: 'Imagery',
-    path: '/imagery',
+    path: '/create/imagery',
     description: 'Convert and compress images, extract frames, and work out aspect ratios.',
     icon: (
       <>
@@ -52,7 +52,7 @@ export const CATEGORIES = [
     labelKey: 'categories.iconsEmoji.label',
     descKey: 'categories.iconsEmoji.description',
     label: 'Icons & Emoji',
-    path: '/icons-emoji',
+    path: '/create/icons-emoji',
     description: 'Search thousands of icons and browse emoji to copy instantly.',
     icon: (
       <>
@@ -68,7 +68,7 @@ export const CATEGORIES = [
     labelKey: 'categories.uiBuilder.label',
     descKey: 'categories.uiBuilder.description',
     label: 'UI Builder',
-    path: '/ui-builder-cat',
+    path: '/create/components',
     description: 'Design dashboard components with live previews and CSS export.',
     icon: (
       <>
@@ -83,7 +83,7 @@ export const CATEGORIES = [
     labelKey: 'categories.ai.label',
     descKey: 'categories.ai.description',
     label: 'AI Tools',
-    path: '/ai-tools',
+    path: '/create/ai-tools',
     description: 'AI-powered generators for images, alt text, and more.',
     icon: (
       <>
@@ -143,21 +143,21 @@ const TOOL_I18N_MAP = {
 }
 
 export const TOOLS = [
-  { id: 'color-studio', label: 'Colour Studio', path: '/color', category: 'color', description: 'Complete colour system builder with palette, tints, contrast, and gradients.', keywords: ['color', 'colour', 'studio', 'palette', 'tint', 'contrast', 'gradient', 'system'], icon: (<><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 010-20 9 9 0 019 9c0 4-3 4-5 4h-2a2 2 0 00-2 2 2 2 0 01-2 2"/></>) },
-  { id: 'fontgallery', label: 'Font Gallery', path: '/fontgallery', category: 'typography', description: 'Visual gallery to browse and preview typefaces.', keywords: ['font', 'gallery', 'browse', 'typeface', 'preview', 'google fonts'], icon: (<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>) },
-  { id: 'fontpairs', label: 'Font Pair Finder', path: '/fontpairs', category: 'typography', description: 'Curated font pairings for headlines and body.', keywords: ['font', 'pair', 'pairing', 'typography', 'google fonts'], icon: (<><path d="M4 7V4h7v3"/><path d="M7.5 4v16"/><path d="M5.5 20h4"/><path d="M14 12h6"/><path d="M14 16h6"/><path d="M14 20h4"/></>) },
-  { id: 'typescale', label: 'Type Scale', path: '/typescale', category: 'typography', description: 'Modular type scale calculator with CSS export.', keywords: ['type', 'scale', 'modular', 'font size'], icon: (<><path d="M3 7V5h10v2"/><path d="M8 5v14"/><path d="M6 19h4"/><path d="M14 13v-2h7v2"/><path d="M17.5 11v8"/><path d="M16 19h3"/></>) },
-  { id: 'icons', label: 'Icon Library', path: '/icons', category: 'icons-emoji', description: 'Search thousands of icons via Iconify API.', keywords: ['icon', 'svg', 'symbol', 'iconify'], icon: (<><polygon points="12 2 15 9 22 9.3 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.3 9 9"/></>) },
-  { id: 'emoji', label: 'Emoji Library', path: '/emoji', category: 'icons-emoji', description: 'Browse and copy emojis organised by category.', keywords: ['emoji', 'emoticon', 'smiley', 'unicode', 'copy', 'symbol'], icon: (<><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>) },
-  { id: 'ratio', label: 'Aspect & Resolution Calculator', path: '/ratio', category: 'imagery', description: 'Solve any aspect ratio, resolution, PPI, or diagonal from a single piece of information — devices, screens, social formats and standard sizes built in.', keywords: ['ratio', 'aspect', 'calculator', 'dimensions', 'resolution', 'resize', '16:9', '4:3', 'crop', 'ppi', 'diagonal', 'screen size', 'device', 'instagram', 'reel', 'banner'], icon: (<><path d="M4 8V5a1 1 0 011-1h3"/><path d="M16 4h3a1 1 0 011 1v3"/><path d="M20 16v3a1 1 0 01-1 1h-3"/><path d="M8 20H5a1 1 0 01-1-1v-3"/></>) },
-  { id: 'alt-text', label: 'Alt Text Generator', path: '/alt-text', category: 'ai', alpha: true, description: 'Generate accessible alt text for images in batch using AI.', keywords: ['alt', 'text', 'accessibility', 'a11y', 'ai', 'description', 'batch'], icon: (<><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l2-5 2 5"/><path d="M7.5 12.5h3"/><path d="M14 14V9h2.5a1.5 1.5 0 010 3H14"/></>) },
-  { id: 'ai-prompt', label: 'AI Image Prompt Generator', path: '/ai-prompt', category: 'ai', alpha: true, description: 'Generate detailed AI image prompts from a design brief using AI.', keywords: ['ai', 'prompt', 'openrouter', 'image', 'generator', 'midjourney', 'dalle', 'stable diffusion'], icon: (<><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><circle cx="12" cy="12" r="4"/></>) },
-  { id: 'landing-prompts', label: 'AI Landing Page Prompts', path: '/landing-prompts', category: 'ai', alpha: true, description: 'Build structured JSON prompts for generating AAA-tier websites with AI builders.', keywords: ['ai', 'landing', 'page', 'website', 'prompt', 'json', 'v0', 'lovable', 'bolt', 'generator'], icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>) },
-  { id: 'file-converter', label: 'File Converter', path: '/file-converter', category: 'imagery', alpha: true, description: 'Convert between image and video formats — WebP/MP4 to GIF, frames, and more.', keywords: ['convert', 'file', 'converter', 'image', 'compress', 'resize', 'webp', 'gif', 'mp4', 'video', 'frames', 'extract', 'png', 'jpeg', 'avif', 'ezgif'], icon: (<><path d="M4 14V6a2 2 0 0 1 2-2h8"/><path d="M20 10v8a2 2 0 0 1-2 2H6"/><polyline points="14 4 14 8 18 8"/><path d="M4 14l3-3 3 3"/><path d="M20 10l-3 3-3-3"/></>) },
+  { id: 'color-studio', label: 'Colour Studio', path: '/create/color', category: 'color', description: 'Complete colour system builder with palette, tints, contrast, and gradients.', keywords: ['color', 'colour', 'studio', 'palette', 'tint', 'contrast', 'gradient', 'system'], icon: (<><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 010-20 9 9 0 019 9c0 4-3 4-5 4h-2a2 2 0 00-2 2 2 2 0 01-2 2"/></>) },
+  { id: 'fontgallery', label: 'Font Gallery', path: '/create/font-gallery', category: 'typography', description: 'Visual gallery to browse and preview typefaces.', keywords: ['font', 'gallery', 'browse', 'typeface', 'preview', 'google fonts'], icon: (<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>) },
+  { id: 'fontpairs', label: 'Font Pair Finder', path: '/create/font-pair', category: 'typography', description: 'Curated font pairings for headlines and body.', keywords: ['font', 'pair', 'pairing', 'typography', 'google fonts'], icon: (<><path d="M4 7V4h7v3"/><path d="M7.5 4v16"/><path d="M5.5 20h4"/><path d="M14 12h6"/><path d="M14 16h6"/><path d="M14 20h4"/></>) },
+  { id: 'typescale', label: 'Type Scale', path: '/create/type-scale', category: 'typography', description: 'Modular type scale calculator with CSS export.', keywords: ['type', 'scale', 'modular', 'font size'], icon: (<><path d="M3 7V5h10v2"/><path d="M8 5v14"/><path d="M6 19h4"/><path d="M14 13v-2h7v2"/><path d="M17.5 11v8"/><path d="M16 19h3"/></>) },
+  { id: 'icons', label: 'Icon Library', path: '/create/icons', category: 'icons-emoji', description: 'Search thousands of icons via Iconify API.', keywords: ['icon', 'svg', 'symbol', 'iconify'], icon: (<><polygon points="12 2 15 9 22 9.3 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.3 9 9"/></>) },
+  { id: 'emoji', label: 'Emoji Library', path: '/create/emoji', category: 'icons-emoji', description: 'Browse and copy emojis organised by category.', keywords: ['emoji', 'emoticon', 'smiley', 'unicode', 'copy', 'symbol'], icon: (<><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>) },
+  { id: 'ratio', label: 'Aspect & Resolution Calculator', path: '/create/aspect-ratio', category: 'imagery', description: 'Solve any aspect ratio, resolution, PPI, or diagonal from a single piece of information — devices, screens, social formats and standard sizes built in.', keywords: ['ratio', 'aspect', 'calculator', 'dimensions', 'resolution', 'resize', '16:9', '4:3', 'crop', 'ppi', 'diagonal', 'screen size', 'device', 'instagram', 'reel', 'banner'], icon: (<><path d="M4 8V5a1 1 0 011-1h3"/><path d="M16 4h3a1 1 0 011 1v3"/><path d="M20 16v3a1 1 0 01-1 1h-3"/><path d="M8 20H5a1 1 0 01-1-1v-3"/></>) },
+  { id: 'alt-text', label: 'Alt Text Generator', path: '/create/alt-text', category: 'ai', alpha: true, description: 'Generate accessible alt text for images in batch using AI.', keywords: ['alt', 'text', 'accessibility', 'a11y', 'ai', 'description', 'batch'], icon: (<><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l2-5 2 5"/><path d="M7.5 12.5h3"/><path d="M14 14V9h2.5a1.5 1.5 0 010 3H14"/></>) },
+  { id: 'ai-prompt', label: 'AI Image Prompt Generator', path: '/create/ai-prompt', category: 'ai', alpha: true, description: 'Generate detailed AI image prompts from a design brief using AI.', keywords: ['ai', 'prompt', 'openrouter', 'image', 'generator', 'midjourney', 'dalle', 'stable diffusion'], icon: (<><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><circle cx="12" cy="12" r="4"/></>) },
+  { id: 'landing-prompts', label: 'AI Landing Page Prompts', path: '/create/landing-prompts', category: 'ai', alpha: true, description: 'Build structured JSON prompts for generating AAA-tier websites with AI builders.', keywords: ['ai', 'landing', 'page', 'website', 'prompt', 'json', 'v0', 'lovable', 'bolt', 'generator'], icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>) },
+  { id: 'file-converter', label: 'File Converter', path: '/create/file-converter', category: 'imagery', alpha: true, description: 'Convert between image and video formats — WebP/MP4 to GIF, frames, and more.', keywords: ['convert', 'file', 'converter', 'image', 'compress', 'resize', 'webp', 'gif', 'mp4', 'video', 'frames', 'extract', 'png', 'jpeg', 'avif', 'ezgif'], icon: (<><path d="M4 14V6a2 2 0 0 1 2-2h8"/><path d="M20 10v8a2 2 0 0 1-2 2H6"/><polyline points="14 4 14 8 18 8"/><path d="M4 14l3-3 3 3"/><path d="M20 10l-3 3-3-3"/></>) },
 
-  { id: 'ui-builder', label: 'Component Designer', path: '/ui-builder', category: 'ui-builder', alpha: true, description: 'Design buttons, cards, tables, inputs and more with live previews.', keywords: ['ui', 'builder', 'component', 'button', 'card', 'table', 'input', 'dashboard', 'design'], icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>) },
-  { id: 'box-shadow', label: 'Box Shadow', path: '/box-shadow', category: 'ui-builder', description: 'Design layered CSS box shadows with live preview.', keywords: ['box', 'shadow', 'css', 'elevation', 'layer', 'drop shadow', 'neumorphic'], icon: (<><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 21h14a2 2 0 002-2V7" opacity=".5"/></>) },
-  { id: 'auto-builder', label: 'UI Auto-Builder', path: '/auto-builder', category: 'ui-builder', alpha: true, description: 'Describe a business and auto-generate brand colours, fonts, and a UI preview.', keywords: ['auto', 'builder', 'generate', 'brand', 'ai', 'palette', 'font', 'logo', 'business'], icon: (<><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></>) },
+  { id: 'ui-builder', label: 'Component Designer', path: '/create/component-designer', category: 'ui-builder', alpha: true, description: 'Design buttons, cards, tables, inputs and more with live previews.', keywords: ['ui', 'builder', 'component', 'button', 'card', 'table', 'input', 'dashboard', 'design'], icon: (<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></>) },
+  { id: 'box-shadow', label: 'Box Shadow', path: '/create/box-shadow', category: 'ui-builder', description: 'Design layered CSS box shadows with live preview.', keywords: ['box', 'shadow', 'css', 'elevation', 'layer', 'drop shadow', 'neumorphic'], icon: (<><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 21h14a2 2 0 002-2V7" opacity=".5"/></>) },
+  { id: 'auto-builder', label: 'UI Auto-Builder', path: '/create/auto-builder', category: 'ui-builder', alpha: true, description: 'Describe a business and auto-generate brand colours, fonts, and a UI preview.', keywords: ['auto', 'builder', 'generate', 'brand', 'ai', 'palette', 'font', 'logo', 'business'], icon: (<><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></>) },
 
   { id: 'prompts', label: 'Prompt Library', path: '/prompts', category: 'documentation', description: 'AI image generation prompts with output previews.', keywords: ['prompt', 'ai', 'midjourney', 'dalle', 'stable diffusion', 'library'], icon: (<><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2v-4"/><path d="M14.5 3.5l4 4L12 14l-4 1 1-4z"/></>) },
   { id: 'docs-design', label: 'Design Principles', path: '/docs-design', category: 'documentation', subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'], icon: (<><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/><circle cx="12" cy="12" r="2.5"/></>) },

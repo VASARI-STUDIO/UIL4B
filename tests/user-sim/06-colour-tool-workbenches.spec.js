@@ -8,7 +8,7 @@ import { normalizeClipboardText } from '../../src/hooks/useClipboard.js'
 test.describe('Gradient Generator workbench resilience', () => {
   test('a developer can refine stops without invalid input corrupting the gradient', async ({ page }) => {
     watch(page, 'front-end developer')
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Gradient Generator' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Shape the gradient' })).toBeVisible()
@@ -40,7 +40,7 @@ test.describe('Gradient Generator workbench resilience', () => {
 
   test('locked stops survive repeated randomise actions and stop count is bounded', async ({ page }) => {
     watch(page, 'product designer')
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
 
     await page.getByRole('textbox', { name: 'Stop 1 hex' }).fill('#123456')
     const firstLock = page.getByRole('button', { name: /Lock stop 1 colour/ })
@@ -68,7 +68,7 @@ test.describe('Gradient Generator workbench resilience', () => {
       })
     })
     await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
 
     await page.getByRole('button', { name: 'Copy', exact: true }).click()
     await expect(page.getByText(/Failed to copy|Copy failed/)).toBeVisible()
@@ -85,7 +85,7 @@ test.describe('Gradient Generator workbench resilience', () => {
         value: undefined,
       })
     })
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
 
     const normalized = [
       normalizeClipboardText('  #ABCDEF  '),
@@ -103,7 +103,7 @@ test.describe('Gradient Generator workbench resilience', () => {
 test.describe('Semantic Colour system workflow', () => {
   test('a designer can choose a bundle and evaluate non-colour state cues', async ({ page }) => {
     watch(page, 'product designer')
-    await go(page, '/color/semantic')
+    await go(page, '/create/semantic-color')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Semantic Colours' })).toBeVisible()
     await expect(page.getByRole('radio', { name: /Balanced/ })).toHaveAttribute('aria-checked', 'true')
@@ -141,7 +141,7 @@ test.describe('Semantic Colour system workflow', () => {
   test('the semantic editor and handoff remain contained on a narrow screen', async ({ page }) => {
     watch(page, 'mobile product designer')
     await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/color/semantic')
+    await go(page, '/create/semantic-color')
 
     await expect(page.getByRole('radio', { name: /Balanced/ })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Canonical, predictable token names' })).toBeVisible()

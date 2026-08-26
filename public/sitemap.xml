@@ -4,26 +4,26 @@
   <url><loc>https://www.uil4b.com/</loc><priority>1.0</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
 
   <!-- Live colour tools -->
-  <url><loc>https://www.uil4b.com/color</loc><priority>0.9</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://www.uil4b.com/color/palette</loc><priority>0.9</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://www.uil4b.com/color/semantic</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://www.uil4b.com/color/tint</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://www.uil4b.com/color/gradient</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://www.uil4b.com/color/contrast</loc><priority>0.8</priority><changefreq>monthly</changefreq><lastmod>2026-07-28</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/color</loc><priority>0.9</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/palette</loc><priority>0.9</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/semantic-color</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/tint</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/gradient</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/contrast</loc><priority>0.8</priority><changefreq>monthly</changefreq><lastmod>2026-08-22</lastmod></url>
 
   <!-- Live typography tools -->
-  <url><loc>https://www.uil4b.com/fontgallery</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-30</lastmod></url>
-  <url><loc>https://www.uil4b.com/fontpairs</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-30</lastmod></url>
-  <url><loc>https://www.uil4b.com/typescale</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-30</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/font-gallery</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/font-pair</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/type-scale</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
 
   <!-- Live asset tools -->
-  <url><loc>https://www.uil4b.com/icons</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://www.uil4b.com/emoji</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://www.uil4b.com/file-converter</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://www.uil4b.com/ratio</loc><priority>0.8</priority><changefreq>monthly</changefreq><lastmod>2026-07-28</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/icons</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/emoji</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/file-converter</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-22</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/aspect-ratio</loc><priority>0.8</priority><changefreq>monthly</changefreq><lastmod>2026-08-22</lastmod></url>
 
   <!-- Live AI tools -->
-  <url><loc>https://www.uil4b.com/alt-text</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-08-11</lastmod></url>
+  <url><loc>https://www.uil4b.com/create/alt-text</loc><priority>0.7</priority><changefreq>monthly</changefreq><lastmod>2026-08-22</lastmod></url>
 
   <!-- Discover -->
   <url><loc>https://www.uil4b.com/discover</loc><priority>0.8</priority><changefreq>weekly</changefreq><lastmod>2026-08-13</lastmod></url>

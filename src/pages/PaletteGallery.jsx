@@ -91,7 +91,7 @@ export default function PaletteGallery({ toast }) {
           placeholder: 'Search by name or hex…',
           label: 'Search palettes',
         }}
-        action={<Link className="pgl-build-link" to="/color/palette">Create a palette <span aria-hidden="true">↗</span></Link>}
+        action={<Link className="pgl-build-link" to="/create/palette">Create a palette <span aria-hidden="true">↗</span></Link>}
       >
         <LibraryFilterGroup label="Filter palettes" value={filter} onChange={setFilter} options={FILTERS} />
       </LibraryToolbar>

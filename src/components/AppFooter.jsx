@@ -4,13 +4,13 @@ const FOOTER_GROUPS = [
   {
     label: 'Create',
     links: [
-      ['/color', 'Colour systems'],
-      // Straight to the Font Gallery rather than /typography: the category home
+      ['/create/color', 'Colour systems'],
+      // Straight to the Font Gallery rather than /create/typography: the category home
       // has no screen of its own and only redirects here, so linking it would
       // spend a navigation to arrive at the same place.
-      ['/fontgallery', 'Typography'],
-      ['/icons', 'Icons & emoji'],
-      ['/imagery', 'Imagery'],
+      ['/create/font-gallery', 'Typography'],
+      ['/create/icons', 'Icons & emoji'],
+      ['/create/imagery', 'Imagery'],
     ],
   },
   {
@@ -43,7 +43,7 @@ export default function AppFooter({ compact = false }) {
           <p className="app-footer-tagline">
             The operating workspace for building, validating and exporting interface foundations.
           </p>
-          <Link className="app-footer-start" to="/color">
+          <Link className="app-footer-start" to="/create/color">
             Start with colour <span aria-hidden="true">&rarr;</span>
           </Link>
         </div>

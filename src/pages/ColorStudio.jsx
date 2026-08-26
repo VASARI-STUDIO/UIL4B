@@ -14,6 +14,7 @@ import SnapSlider from '../components/SnapSlider'
 import ShuffleIcon from '../components/ShuffleIcon'
 import { extractColorPointsFromImage } from '../utils/extractColors'
 import { COLOR_LIBRARIES, findClosestNamedColor } from '../data/namedColors'
+import { resolveTool } from '../data/toolTree'
 
 const HARMS = ['analogous', 'complement', 'triadic', 'split', 'tetradic', 'monochromatic', 'custom']
 const HARM_LABELS = {
@@ -1757,19 +1758,20 @@ function PreviewUpsell({ onUpgrade }) {
   )
 }
 
-// The five visible colour tools, each its own routed page under /color/<tool>. The
+// The five visible colour tools, each its own routed page under /create/<pagetitle>. The
 // section tools re-enter the studio focused on their section (via the pathname
 // effect below); tint + contrast are standalone pages. The footer at the bottom
 // links across to all of them. Order mirrors the mega-menu.
 const COLOUR_TOOLS = [
-  { id: 'palette', label: 'Palette', route: '/color/palette', desc: 'Build the core ramp' },
-  { id: 'semantic', label: 'Semantic Colour', route: '/color/semantic', desc: 'Success, warning, error' },
-  { id: 'gradient', label: 'Gradient', route: '/color/gradient', desc: 'Blend across your palette' },
-  { id: 'tint', label: 'Tint', route: '/color/tint', desc: 'Scale any swatch' },
-  { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', desc: 'Verify AA / AAA' },
+  { id: 'palette', label: 'Palette', route: '/create/palette', desc: 'Build the core ramp' },
+  { id: 'semantic', label: 'Semantic Colour', route: '/create/semantic-color', desc: 'Success, warning, error' },
+  { id: 'gradient', label: 'Gradient', route: '/create/gradient', desc: 'Blend across your palette' },
+  { id: 'tint', label: 'Tint', route: '/create/tint', desc: 'Scale any swatch' },
+  { id: 'contrast', label: 'Contrast Checker', route: '/create/contrast', desc: 'Verify AA / AAA' },
 ]
 
-// /color/<tool> route → the single studio section that route renders (#39).
+// Colour tool id → the single studio section that route renders (#39). Keyed by
+// tool id, not URL segment, so it survives a route move.
 const PATH_TO_SECTION = { palette: 'palette', semantic: 'states', ui: 'systems', gradient: 'gradients' }
 const SOLO_TITLES = { palette: 'Palette Builder', states: 'Semantic Colours', systems: 'UI Colour Systems', gradients: 'Gradient Tool' }
 
@@ -1945,21 +1947,29 @@ export default function ColorStudio({ onCopy, toast }) {
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams, toast])
 
-  // ── Route focus: /color/<tool> ──
+  // ── Route focus: the solo colour tool routes ──
   // The section tools (palette / semantic / ui / gradient) are real routes that
   // mount THIS studio as a true standalone page: ONLY their section renders
   // (soloSection), the pill nav is hidden, and the page title becomes the
-  // tool's own. Plain /color keeps the full merged studio. Tracked by segment
-  // (not one-shot) — the dispatcher renders the same element type for every
-  // /color route, so switching tools in the nav re-runs this without
+  // tool's own. The colour category home keeps the full merged studio. Tracked
+  // by tool id (not one-shot) — the dispatcher renders the same element type
+  // for every colour route, so switching tools in the nav re-runs this without
   // remounting.
+  //
+  // Resolved through toolTree, NEVER by slicing a segment out of the pathname.
+  // This used to read the SECOND path segment and treat it as the tool id — an
+  // assumption that only held while every colour tool sat under one parent, and
+  // that the /create/<pagetitle> flattening breaks. CREATE_GROUPS is the table
+  // the router itself is built from, so asking it is the only reading that
+  // cannot go stale the next time a URL moves.
   const { pathname } = useLocation()
-  const pathSeg = /^\/color\/([a-z-]+)/i.exec(pathname)?.[1]?.toLowerCase() || null
+  const { tool: routeTool, isHome: onCategoryHome } = resolveTool(pathname)
+  const pathSeg = onCategoryHome ? null : routeTool?.id || null
   const soloSection = pathSeg ? (PATH_TO_SECTION[pathSeg] || 'palette') : null
   const pathToolRef = useRef(null)
   useEffect(() => {
     if (!pathSeg) {
-      // Back on /color proper: reopen everything so the merged studio is whole.
+      // Back on /create/color proper: reopen everything so the merged studio is whole.
       if (pathToolRef.current) { pathToolRef.current = null; setCollapsed({}) }
       return
     }
@@ -1973,7 +1983,7 @@ export default function ColorStudio({ onCopy, toast }) {
   }, [pathSeg])
 
   // ── Nav deep-link: ?tool=<id> (legacy) ──
-  // Old external links still arrive as /color?tool=<id>; keep honouring them.
+  // Old external links still arrive as /create/color?tool=<id>; keep honouring them.
   // Same focus behaviour, then strip the param. One-shot, with its own ref so it
   // never fights the preset/tab handler above. contrast + tint now live on their
   // own pages → their legacy ids fall back to the palette section.
@@ -3040,7 +3050,7 @@ ${stateVars}
         )}
       </div>
 
-      {/* Section pill-nav only exists on the merged /color studio — a
+      {/* Section pill-nav only exists on the merged /create/color studio — a
           standalone tool page has exactly one section, nothing to jump to. */}
       {!soloSection && (
         <nav className="cs-pillnav" aria-label="Colour Studio sections" ref={navRef}>
@@ -3535,9 +3545,9 @@ ${stateVars}
             <strong>Validate the states, then connect them to the rest of your interface foundation.</strong>
           </div>
           <div>
-            <NavLink to="/color/contrast">Check contrast <span aria-hidden="true">→</span></NavLink>
-            <NavLink to="/color/tint">Build tonal scales <span aria-hidden="true">→</span></NavLink>
-            <NavLink to="/color/palette">Return to palette <span aria-hidden="true">→</span></NavLink>
+            <NavLink to="/create/contrast">Check contrast <span aria-hidden="true">→</span></NavLink>
+            <NavLink to="/create/tint">Build tonal scales <span aria-hidden="true">→</span></NavLink>
+            <NavLink to="/create/palette">Return to palette <span aria-hidden="true">→</span></NavLink>
           </div>
         </nav>
         </>}
@@ -3891,7 +3901,7 @@ ${stateVars}
 
       {/* ── Flow CTA: Next step → Typography ── */}
       <div className="cs-next-step">
-        <NavLink to="/fontpairs" className="cs-next-link">
+        <NavLink to="/create/font-pair" className="cs-next-link">
           <span>Next step</span>
           <strong>Continue to Typography</strong>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

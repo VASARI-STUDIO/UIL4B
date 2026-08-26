@@ -42,22 +42,22 @@ test('every route in the crawler sitemap is treated as real', async () => {
 })
 
 test('a genuinely absent URL is unknown', () => {
-  for (const junk of ['/this-does-not-exist', '/wp-admin', '/color/nope', '/a/b/c/d']) {
+  for (const junk of ['/this-does-not-exist', '/wp-admin', '/create/not-a-tool', '/a/b/c/d']) {
     assert.equal(isUnknownRoute(junk), true, `${junk} should read as missing`)
   }
 })
 
 test('trailing slashes and query strings do not invent a missing page', () => {
-  assert.equal(isUnknownRoute('/typescale/'), false)
-  assert.equal(isUnknownRoute('/typescale?x=1'), false)
-  assert.equal(isUnknownRoute('/typescale#top'), false)
+  assert.equal(isUnknownRoute('/create/type-scale/'), false)
+  assert.equal(isUnknownRoute('/create/type-scale?x=1'), false)
+  assert.equal(isUnknownRoute('/create/type-scale#top'), false)
 })
 
 // ── What gets indexed ───────────────────────────────────────────────────────
 
 test('a missing page is noindex, and a real one is not', () => {
   assert.equal(robotsFor('/this-does-not-exist'), 'noindex,follow')
-  assert.equal(robotsFor('/typescale'), 'index,follow')
+  assert.equal(robotsFor('/create/type-scale'), 'index,follow')
   assert.equal(robotsFor('/'), 'index,follow')
 })
 
@@ -110,8 +110,8 @@ test('the 404 shell does not wear the homepage title', { skip: !built && 'run `n
 })
 
 test('a real route still gets its own canonical and stays indexable', { skip: !built && 'run `npm run build` first' }, () => {
-  const html = read('dist/typescale/index.html')
-  assert.match(html, /<link rel="canonical" href="https:\/\/www\.uil4b\.com\/typescale"/)
+  const html = read('dist/create/type-scale/index.html')
+  assert.match(html, /<link rel="canonical" href="https:\/\/www\.uil4b\.com\/create\/type-scale"/)
   assert.match(html, /<meta\s+name="robots"\s+content="index,follow"/)
 })
 
@@ -203,7 +203,7 @@ test('the client and the prerendered shell agree on the 404 copy', () => {
 })
 
 test('canonicalUrl is unchanged for real routes', () => {
-  assert.equal(canonicalUrl('/typescale'), 'https://www.uil4b.com/typescale')
+  assert.equal(canonicalUrl('/create/type-scale'), 'https://www.uil4b.com/create/type-scale')
   assert.equal(canonicalUrl('/'), 'https://www.uil4b.com/')
 })
 
@@ -227,7 +227,7 @@ test('/home is real, indexable content — the alias is about canonical, not noi
 
 test('the alias does not leak into other routes', () => {
   assert.equal(canonicalUrl('/homepage'), 'https://www.uil4b.com/homepage')
-  assert.equal(canonicalUrl('/typescale'), 'https://www.uil4b.com/typescale')
+  assert.equal(canonicalUrl('/create/type-scale'), 'https://www.uil4b.com/create/type-scale')
 })
 
 test('/home is not advertised in the sitemap', async () => {

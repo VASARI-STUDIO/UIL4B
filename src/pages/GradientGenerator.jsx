@@ -16,7 +16,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 
 // ── Gradient Generator ──
-// The standalone /color/gradient tool: build any linear / radial / conic
+// The standalone /create/gradient tool: build any linear / radial / conic
 // gradient with draggable stops, a live angle dial and copy-ready CSS — all on
 // one screen and styled with the app design tokens so it follows the active
 // theme. It reads + writes the shared design.gradient (ProjectContext) so a
@@ -1094,7 +1094,7 @@ export default function GradientGenerator({ onCopy, toast }) {
           </div>
         ) : (
           <p className="ggn-import-empty">
-            Nothing to import yet — build a palette in the <Link to="/color/palette">Palette Builder</Link> and its colours will appear here as gradient stops.
+            Nothing to import yet — build a palette in the <Link to="/create/palette">Palette Builder</Link> and its colours will appear here as gradient stops.
           </p>
         )}
       </section>
