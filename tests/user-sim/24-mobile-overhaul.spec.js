@@ -197,17 +197,40 @@ test('S15 · the .is-waiting reveal still animates its grid track open', async (
   expect(atRest.opacity).toBe(0)
   expect(atRest.tabIndex, 'a hidden CTA must stay out of the tab order').toBe(-1)
 
-  await page.evaluate(() => {
+  // The track must INTERPOLATE, not jump-cut. A snap would mean the transition
+  // stopped running (see css-conventions.md — a composite already carries its
+  // easing, so a stray `ease` kills it).
+  //
+  // This used to scroll, sleep 110ms, and read once. That is a CLOCK deciding
+  // whether the thing under test has started, and it is the same mistake S15's
+  // width tests made. MEASURED at 834x700: the scroll listener → setState →
+  // re-render → class removal chain does not put the transition on screen until
+  // +55–76ms after the scroll on an idle machine, so the 110ms sample was
+  // reading the first ~40ms of a 280ms transition. Under runner contention that
+  // start latency passes 110ms and the sample reads a flat 0 — CI, twice.
+  //
+  // So catch the FIRST non-zero frame instead of a frame at a fixed offset, and
+  // assert it is well short of the finished width. That is strictly stronger
+  // than the old pair: `mid > 0` alone would pass on a jump-cut sampled after
+  // the cut, whereas a first non-zero frame that already equals the final width
+  // IS the jump-cut, and fails here. Nothing about the assertion is loosened —
+  // only the moment of the reading is now decided by the page, not the clock.
+  const reveal = await page.evaluate(async () => {
+    const b = document.querySelector('.pnav-cta')
+    const track = () => parseFloat(getComputedStyle(b).gridTemplateColumns)
     const sec = document.getElementById('workbench') || document.getElementById('create')
     window.scrollTo({ top: sec.offsetTop, behavior: 'instant' })
+    const frame = () => new Promise((r) => requestAnimationFrame(r))
+    const deadline = performance.now() + 5000
+    let first = null
+    while (performance.now() < deadline) {
+      const v = track()
+      if (v > 0) { first = Math.round(v * 100) / 100; break }
+      await frame()
+    }
+    return { first }
   })
-
-  // Sampled mid-transition: the track must INTERPOLATE, not jump-cut. A snap
-  // here would mean the transition stopped running (see css-conventions.md —
-  // a composite already carries its easing, so a stray `ease` kills it).
-  await page.waitForTimeout(110)
-  const mid = await read()
-  expect(mid.track, `mid-reveal track was ${mid.track}px — the reveal jump-cut instead of easing`).toBeGreaterThan(0)
+  expect(reveal.first, 'the reveal never left a 0px track — it did not run at all').not.toBeNull()
 
   await page.waitForTimeout(800)
   const shown = await read()
@@ -216,7 +239,7 @@ test('S15 · the .is-waiting reveal still animates its grid track open', async (
   expect(shown.tabIndex, 'a revealed CTA must be reachable by keyboard').toBe(0)
   const g = await ctaGeometry(page)
   expect(g.outside, 'the revealed CTA must be fully painted').toBe(0)
-  expect(mid.track, 'mid-reveal should be part-way, not already finished').toBeLessThan(shown.track)
+  expect(reveal.first, `the first painted frame of the reveal was already ${reveal.first}px of ${shown.track}px — it jump-cut instead of easing`).toBeLessThan(shown.track)
 
   await ctx.close()
 })
@@ -396,7 +419,14 @@ test('S12 · the touch action row does not cover the palette it acts on', async 
   // defect, not a fix — so assert the swatch is intact, not merely that the
   // buttons are visible.
   for (const [w, h] of [[390, 844], [834, 1194], [1180, 820]]) {
-    const { ctx, page } = await openTouch(browser, w, h, '/discover/palettes', w >= 700)
+    // waitFor, not the settle pause: MEASURED, .pgal-card lands 326–351ms after
+    // `load` on an idle machine and 360–503ms under a 4× CPU throttle, against
+    // openTouch's fixed 400ms. It was always a coin flip on a contended runner
+    // and CI lost it twice, crashing on a null card rather than failing an
+    // assertion. Measured the same both sides of #254's Discover rewrite
+    // (pre-#254 median 493ms, post 401ms), so the gallery is not the regression
+    // — the fixed pause was never long enough to be the thing that decides.
+    const { ctx, page } = await openTouch(browser, w, h, '/discover/palettes', w >= 700, '.pgal-card')
     const covered = await page.evaluate(() => {
       const card = document.querySelector('.pgal-card')
       const acts = card.querySelector('.pgal-actions').getBoundingClientRect()
