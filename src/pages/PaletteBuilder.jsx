@@ -28,6 +28,7 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
 // colours and the slider values are persisted separately.
+import useModalDialog from '../hooks/useModalDialog'
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
 
 // Palette Builder — the standalone /create/palette workbench. A full-bleed
@@ -1176,6 +1177,16 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const anyPopover = saveOpen || harmOpen || visionOpen || imgOpen
     || galleryOpen || histOpen
     || tintsIdx != null || pickerIdx != null || swapIdx != null || ctxMenu != null || preview != null
+
+  // Both of this page's dialogs declared aria-modal="true" and trapped nothing:
+  // Tab walked out into the builder behind them, the canvas scrolled, and
+  // closing dropped focus to the top of the document. The setState setters are
+  // stable, so these close handlers are stable too and the effect does not
+  // re-run on every render of a very large component.
+  const closePreview = useCallback(() => setPreview(null), [])
+  const closeSubmit = useCallback(() => setSubmitOpen(false), [])
+  const previewDialogRef = useModalDialog(closePreview, { enabled: preview != null })
+  const submitDialogRef = useModalDialog(closeSubmit, { enabled: Boolean(submitOpen && uid) })
 
   // Spacebar = randomise only from the idle Palette canvas. Buttons, links,
   // popovers and the in-place UI System own Space for activation or copy.
@@ -2731,6 +2742,8 @@ export default function PaletteBuilder({ onCopy, toast }) {
           role="dialog"
           aria-modal="true"
           aria-label="Palette preview"
+          tabIndex={-1}
+          ref={previewDialogRef}
           onPointerDown={(e) => { if (e.target === e.currentTarget) setPreview(null) }}
         >
           <div className={preview.compare ? 'plb-modal-card' : 'plb-modal-card plb-modal-card--previews'}>
@@ -2828,6 +2841,8 @@ export default function PaletteBuilder({ onCopy, toast }) {
           role="dialog"
           aria-modal="true"
           aria-label="Submit palette to the community"
+          tabIndex={-1}
+          ref={submitDialogRef}
           onPointerDown={(e) => { if (e.target === e.currentTarget) setSubmitOpen(false) }}
         >
           <div className="plb-modal-card plb-submitcard">
