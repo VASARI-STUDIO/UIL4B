@@ -15,7 +15,7 @@
 // which this suite has no way to create. So the markup is injected and the
 // REAL stylesheet is measured against it. That tests exactly the half unit
 // tests can't reach, and nothing it already covers.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 // Mirrors BillingBanner.jsx's rendered structure. If that component's class

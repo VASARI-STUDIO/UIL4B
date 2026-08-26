@@ -1,7 +1,7 @@
 // Personas: DESIGNER and FRONT-END DEVELOPER.
 // Goal: build one shared tonal scale, evaluate it in a real interface context,
 // then inspect a deterministic CSS handoff without losing the source work.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 test.describe('Tint Scale designer and developer workflows', () => {

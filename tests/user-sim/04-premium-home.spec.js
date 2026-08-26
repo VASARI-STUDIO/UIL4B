@@ -1,6 +1,6 @@
 // Premium-home regression coverage: the public promise, interactive proof and
 // responsive information hierarchy must remain usable without animation.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { watch, go } from './helpers.js'
 
 const PERSONA = 'prospective UI-system builder'

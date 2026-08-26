@@ -9,7 +9,7 @@
 // here exercises the DEGRADED catalogue path for real. That is deliberate: the
 // bundled-fallback notice, the retry and the "everything still works" promise
 // are the states most likely to rot, and they are the ones under test.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 async function installFontEvidenceMock(page, { fontApi, mode }) {

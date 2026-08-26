@@ -21,7 +21,7 @@
 // Real device metrics (`isMobile` + `hasTouch`) are used for the phone
 // viewports, because a desktop Chromium narrowed to 390px still reports
 // `hover: hover` and hides this whole class of defect.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -100,12 +100,11 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
   })
   const page = await ctx.newPage()
   watch(page, `defect sweep ${width}x${height} ${path}`)
-  // Google One Tap is live signed out and would sit over the controls being
-  // hit-tested. Served empty rather than aborted: an abort raises a console
-  // error the feedback loop then reports on every viewport.
-  await page.route('**accounts.google.com/gsi/**', (r) => r.fulfill({
-    status: 200, contentType: 'application/javascript', body: '',
-  }).catch(() => {}))
+  // One Tap used to be routed here, per page. It is stubbed for the whole suite
+  // in base.js now — on the context, so it covers this hand-built one too — and
+  // this copy is gone rather than racing it: a page route takes precedence over
+  // a context route, so leaving it would have made the per-spec stub the silent
+  // winner. Same reasoning, one place; see base.js.
   await page.goto(path, { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('load').catch(() => {})
   if (waitFor) await page.locator(waitFor).first().waitFor({ state: 'attached', timeout: 15000 })
