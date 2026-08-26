@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import LibraryCard from '../library/LibraryCard'
+import LibraryGrid from '../library/LibraryGrid'
 import { GALLERY_PALETTES, paletteBuilderUrl } from '../../data/paletteGallery'
 import { setGradientDraft, resetGradientDraft } from '../../utils/colorHandoff'
 import { useProject } from '../../contexts/ProjectContext'
@@ -172,25 +174,44 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
   }, [canSaveProjects, navigate, setPalette, toast])
 
   return (
-    <div className="pgal-grid">
+    <LibraryGrid className="pgal-grid">
       {palettes.map(p => {
         const selected = selectedId != null && p.id === selectedId
         return (
-        <article key={p.id} className={`pgal-card${selected ? ' is-selected' : ''}`} data-kind={p.kind || 'curated'}>
-          {selected && (
-            <span className="pgal-tick" aria-hidden="true"><CheckGlyph /></span>
+        <LibraryCard
+          key={p.id}
+          className="pgal-card"
+          data-kind={p.kind || 'curated'}
+          selected={selected}
+          nameClassName="pgal-name"
+          badgeClassName="pgal-badge"
+          badge={p.kind === 'brand' ? `Brand${p.pro ? ' · Pro' : ''}` : null}
+          // The like button moved out of the foot and onto the swatch, where
+          // the Gradient Library already keeps it. The two libraries put the
+          // same control in two different places, which is exactly the
+          // divergence the shared card exists to end.
+          float={(
+            <>
+              {selected && (
+                <span className="pgal-tick" aria-hidden="true"><CheckGlyph /></span>
+              )}
+              <button
+                type="button"
+                className={`pgal-like${likes.has(p.id) ? ' is-liked' : ''}`}
+                onClick={() => toggleLike(p.id)}
+                aria-pressed={likes.has(p.id)}
+                aria-label={likes.has(p.id) ? `Unlike ${p.name}` : `Like ${p.name}`}
+                title={likes.has(p.id) ? 'Liked' : 'Like'}
+              >
+                <HeartGlyph filled={likes.has(p.id)} />
+              </button>
+            </>
           )}
-          {p.kind === 'brand' && (
-            <span className="pgal-badge">Brand{p.pro ? ' · Pro' : ''}</span>
-          )}
-          {/* The stripes. On Discover (no onPick) each stripe copies its hex.
-              Inside the builder popup (onPick) the whole swatch is the select
-              surface: clicking any stripe enables the palette (or, when it's
-              already selected, toggles it back off) — no per-hex copy. */}
-          {/* Positioning context for the action layer below, so it anchors to
-              the bottom of the SWATCH rather than the bottom of the card —
-              anchored to the card it would sit over the name and like row. */}
-          <div className="pgal-shot">
+          // The stripes. On Discover (no onPick) each stripe copies its hex.
+          // Inside the builder popup (onPick) the whole swatch is the select
+          // surface: clicking any stripe enables the palette (or, when it is
+          // already selected, toggles it back off) — no per-hex copy.
+          media={(
           <div className="pgal-stripes" role="group" aria-label={`${p.name} palette`}>
             {p.colors.map(hex => (
               <button
@@ -208,20 +229,21 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
               </button>
             ))}
           </div>
-
-          {/* Hover / focus actions. Discover only — inside the builder popup
-              (onPick) the whole card is already one select surface and a second
-              action layer would compete with it.
-
-              These are real buttons in the DOM at all times, not injected on
-              hover: the layer is revealed with CSS (opacity/visibility on
-              .pgal-card:hover and :focus-within), so keyboard users tab into
-              exactly the same actions a pointer reveals, and a screen reader
-              never meets a control that appears only under a mouse. Pro brand
-              systems are excluded — the builder owns that gate, and handing the
-              colours over here would route around it. */}
-          {!onPick && !p.pro && (
-            <div className="pgal-actions" role="group" aria-label={`${p.name} actions`}>
+          )}
+          actionsLabel={`${p.name} actions`}
+          // Hover / focus actions. Discover only — inside the builder popup
+          // (onPick) the whole card is already one select surface and a second
+          // action layer would compete with it.
+          //
+          // These are real buttons in the DOM at all times, not injected on
+          // hover: the shared card reveals the layer with CSS (opacity and
+          // visibility under :hover and :focus-within), so keyboard users tab
+          // into exactly the same actions a pointer reveals, and a screen
+          // reader never meets a control that appears only under a mouse. Pro
+          // brand systems are excluded — the builder owns that gate, and
+          // handing the colours over here would route around it.
+          actions={!onPick && !p.pro ? (
+            <>
               <Link
                 className="pgal-act"
                 to={paletteBuilderUrl(p.colors)}
@@ -266,22 +288,11 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
               >
                 <HexGlyph /><span>Hex</span>
               </button>
-            </div>
-          )}
-          </div>
-
-          <div className="pgal-foot">
-            <button
-              type="button"
-              className={`pgal-like${likes.has(p.id) ? ' is-liked' : ''}`}
-              onClick={() => toggleLike(p.id)}
-              aria-pressed={likes.has(p.id)}
-              aria-label={likes.has(p.id) ? `Unlike ${p.name}` : `Like ${p.name}`}
-              title={likes.has(p.id) ? 'Liked' : 'Like'}
-            >
-              <HeartGlyph filled={likes.has(p.id)} />
-            </button>
-            <span className="pgal-name">{p.name}</span>
+            </>
+          ) : null}
+          name={p.name}
+          tail={(
+            <>
             {onCompare && (
               <button
                 type="button"
@@ -328,10 +339,11 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
                 Open <span aria-hidden="true">→</span>
               </Link>
             )}
-          </div>
-        </article>
+            </>
+          )}
+        />
         )
       })}
-    </div>
+    </LibraryGrid>
   )
 }
