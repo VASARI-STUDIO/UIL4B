@@ -8,58 +8,44 @@
 **This table is the single source of truth for the gate numbers.** No other
 document, comment or commit message should restate them — link here instead.
 Every figure below was produced by running the command in this repository on
-the `fix/nav-login-slider-panel` branch on 2026-08-08; if you change a
-number here, you must have re-run it.
+`main` at `0211537` on 2026-08-26; if you change a number here, you must have
+re-run it.
 
 | Gate | Command | Current baseline |
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
-| Build | `npm run build` | passes (vite + prerender) |
-| Unit | `npm run test:unit` | **489 tests, 489 pass** |
+| Build | `npm run build` | passes — **27 route shells + a noindex 404 shell** |
+| Unit | `npm run test:unit` | **556 tests, 556 pass, 0 skipped** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **229 tests across 23 spec files**; **216 pass, 13 skipped** (`npx playwright test --list`) |
+| Browser acceptance | `npm run test:users` | **269 tests across 25 spec files**; **256 pass, 13 skipped** |
 
-Price-ladder drift guard (2026-08-20) moved unit 484 → **489** (+5: the client
-`approvedTotal` and the server `DEFAULT_PRICES` agreeing in USD, quarterly being
-fully described on the server, every subscription row pricing every supported
-currency, per-month rates falling as commitment lengthens, and the tripwire that
-quarterly is described but not sellable). Lint unchanged at 0 errors / 31
-warnings.
+### How these moved, and why the old numbers were not a regression
 
-**Browser acceptance was already 229 before that slice, not the 226 written
-here.** The +3 came from `4c077ca` *test(home): move the homepage contract onto
-the V2 surface* (2026-08-17), which this table was never updated for — so the
-figure had been stale for three days and the next slice to run the suite would
-have had to decide whether it had caused a regression. It had not. Corrected
-from a measured run rather than inferred: **216 pass, 13 skipped, 0 fail.**
+The previous figures here were **489 unit / 229 browser**, measured 2026-08-20.
+The 2026-08-20 founder-batch queue then merged seventeen PRs, which is the whole
+of the difference:
 
-> **Run `npm run build`, never bare `npx vite build`.** They are not
-> interchangeable: `build` is `vite build && node scripts/prerender.mjs`, and
-> `npx vite build` does not prerender. Four soft-404 shell tests then self-skip
-> with `# run \`npm run build\` first`, the suite reports **485 pass / 4
-> skipped**, and it looks green while the shell assertions never execute.
-> A gate that passes by skipping is exactly the "silence is not a pass" failure
-> this document exists to prevent.
-
-## Open-stack test deltas — 2026-08-20
-
-**`main` is 484 unit / 229 browser.** Seven PRs are open and most add tests, so
-the "current baseline" differs per branch. Check your own base before concluding
-you caused a regression — that confusion has already cost time twice.
-
-| PR | Adds | Unit on its branch | Browser on its branch |
+| | Was | Now | Where it came from |
 |---|---|---|---|
-| #257 workspace copy | +2 unit | 486 | 229 |
-| #261 price ladder | +5 unit | 489 | 229 |
-| #262 homepage motion | +1 unit | 485 | 229 |
-| #263 responsive | +7 browser | 484 | 236 (223 pass) |
-| #264 homepage copy | +11 unit, +4 browser | 497 | 233 (220 pass) |
-| #266 route migration | +17 unit | 501 | 229 |
+| Unit | 489 | **556** | +67, the largest single block being #266's 308-line `redirects.test.js` |
+| Browser | 229 | **269** | +40 across #263, #271, #274 and #259 — two new spec files, `24-mobile-overhaul` and `25-defect-sweep` |
+| Spec files | 23 | **25** | as above |
+| Lint | 0 / 31 | **0 / 31** | unchanged through all seventeen |
 
-**Projected once the whole stack merges: 520 unit, 240 browser** (13 skipped
-throughout — the admin-gated UI System suite). That projection is arithmetic on
-reported deltas, **not a measured number**; re-measure after the merges and
-replace this section with the real figure.
+This section previously projected "520 unit, 240 browser once the whole stack
+merges" and said plainly that it was arithmetic rather than measurement. **It
+was wrong in both columns** — 556 and 269 — because several of those PRs grew
+tests during review that no delta table could have anticipated. The projection
+is deleted rather than corrected: a projected gate number is not a gate number,
+and having one in this table invites someone to check against it.
+
+> **Check your own base before concluding you caused a regression.** These are
+> `main`'s numbers. A branch that adds tests will read higher, and a branch cut
+> before a merge will read lower. That confusion has cost time three times now.
+
+> **A zero skip count on the unit run is part of the bar.** If `npm run
+> test:unit` reports skips, a bare `npx vite build` ran somewhere instead of
+> `npm run build` — see the warning below.
 
 The 13 skipped are the whole of `12-ui-system-builder.spec.js`. UI System mode
 went admin-only in founder batch 4 and this suite runs signed out, so the
