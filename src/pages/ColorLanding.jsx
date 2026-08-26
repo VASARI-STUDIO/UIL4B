@@ -4,9 +4,9 @@ import SystemCTA from '../components/SystemCTA'
 import { useReveal } from '../hooks/useReveal'
 import { CREATE_GROUPS } from '../data/toolTree'
 
-// The /color sales page (Wave 6 item 24). The old merged Colour Studio at /color
+// The /create/color sales page (Wave 6 item 24). The old merged Colour Studio at /create/color
 // is being reworked into a guided walkthrough (the Design System Builder), so
-// /color now sells the colour system instead of mounting the full studio. It
+// /create/color now sells the colour system instead of mounting the full studio. It
 // mirrors the SurfaceLanding pattern — same hero / pillars / grid / CTA classes —
 // but its cards are LIVE tools, so each links straight into its tool (no "Soon"
 // badge). The card list is driven by the colour group in toolTree, so the page
@@ -50,7 +50,7 @@ export default function ColorLanding() {
           five colour tools together.
         </p>
         <div className="home-hero-cta">
-          <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/color/palette">
+          <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/create/palette">
             Start with a palette
             <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
           </Link>
@@ -115,7 +115,7 @@ export default function ColorLanding() {
         title="Build a colour system that stays connected."
         description="Start with one decision, validate every role, and leave with production-ready tokens."
         primaryLabel="Start with a palette"
-        primaryTo="/color/palette"
+        primaryTo="/create/palette"
         secondaryLabel="Back to home"
         secondaryTo="/home"
       />

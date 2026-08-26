@@ -37,7 +37,7 @@ const SURFACES = {
     primaryLabel: 'Browse palettes',
     primaryTo: '/discover/palettes',
     secondaryLabel: 'Explore fonts',
-    secondaryTo: '/fontgallery',
+    secondaryTo: '/create/font-gallery',
     hint: 'Three curated libraries are ready now — palettes, gradients and fonts.',
   },
   learn: {
@@ -58,7 +58,7 @@ const SURFACES = {
     hue: 'ai',
     groups: LEARN_GROUPS,
     primaryLabel: 'Start building',
-    primaryTo: '/color',
+    primaryTo: '/create/color',
     secondaryLabel: 'Back to home',
     secondaryTo: '/home',
     hint: 'Learn is coming soon — here’s what’s on the way.',
@@ -173,7 +173,7 @@ export default function SurfaceLanding({ surface }) {
         title="Turn what you find into a system you can ship."
         description="Move from reference to real interface foundations without rebuilding the context in another app."
         primaryLabel="Start building"
-        primaryTo="/color"
+        primaryTo="/create/color"
         secondaryLabel="Back to home"
         secondaryTo="/home"
       />

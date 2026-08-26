@@ -291,7 +291,7 @@ export default function PillNav() {
   const launchBrandKit = () => {
     closeAll()
     try { sessionStorage.setItem(UIKIT_GUIDE_KEY, '1') } catch { /* ignore */ }
-    navigate('/color')
+    navigate('/create/color')
   }
   // On marketing/sales routes there's nothing to export, so the bar leads with
   // the conversion pill instead of the Export shell.

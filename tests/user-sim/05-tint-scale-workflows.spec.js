@@ -7,7 +7,7 @@ import { go, watch } from './helpers.js'
 test.describe('Tint Scale designer and developer workflows', () => {
   test('a designer can tune a scale and evaluate semantic roles', async ({ page }) => {
     watch(page, 'designer')
-    await go(page, '/color/tint')
+    await go(page, '/create/tint')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Tint Scale Generator' })).toBeVisible()
     await expect(page.getByRole('tab', { name: /For designers/i })).toHaveAttribute('aria-selected', 'true')
@@ -36,7 +36,7 @@ test.describe('Tint Scale designer and developer workflows', () => {
 
   test('a developer can inspect a complete multi-scale CSS handoff', async ({ page }) => {
     watch(page, 'front-end developer')
-    await go(page, '/color/tint')
+    await go(page, '/create/tint')
 
     await page.getByRole('tab', { name: /For developers/i }).click()
     await expect(page.getByRole('tab', { name: /For developers/i })).toHaveAttribute('aria-selected', 'true')
@@ -69,7 +69,7 @@ test.describe('Tint Scale designer and developer workflows', () => {
   test('the workflow remains usable and contained on a phone', async ({ page }) => {
     watch(page, 'mobile designer')
     await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/color/tint')
+    await go(page, '/create/tint')
 
     await expect(page.getByRole('button', { name: 'Design preview' })).toBeVisible()
     await expect(page.locator('.tt-preview')).toBeVisible()
@@ -87,7 +87,7 @@ test.describe('Tint Scale designer and developer workflows', () => {
   test('invalid source edits and very dense scales fail safely', async ({ page }) => {
     watch(page, 'design-system engineer')
     await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/color/tint')
+    await go(page, '/create/tint')
 
     const hex = page.getByRole('textbox', { name: 'Base colour 1 hex' })
     await hex.fill('#NOTHEX')

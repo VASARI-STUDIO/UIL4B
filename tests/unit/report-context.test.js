@@ -23,13 +23,13 @@ const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
 test('a report records the route, tool, viewport, plan and sign-in state', () => {
   const c = buildReportContext({
-    pathname: '/color/palette',
+    pathname: '/create/palette',
     tool: 'Palette Generator',
     viewport: { width: 1440, height: 900 },
     plan: 'free',
     signedIn: true,
   })
-  assert.equal(c.route, '/color/palette')
+  assert.equal(c.route, '/create/palette')
   assert.equal(c.tool, 'Palette Generator')
   assert.equal(c.viewport, '1440x900')
   assert.equal(c.plan, 'free')
@@ -37,7 +37,7 @@ test('a report records the route, tool, viewport, plan and sign-in state', () =>
 })
 
 test('missing facts are omitted rather than guessed', () => {
-  const c = buildReportContext({ pathname: '/icons' })
+  const c = buildReportContext({ pathname: '/create/icons' })
   assert.deepEqual(Object.keys(c), ['route'])
   assert.equal(c.tool, undefined)
 })
@@ -50,11 +50,11 @@ test('a report with no route at all still says something', () => {
 // ── What it deliberately does NOT capture ───────────────────────────────────
 
 test('the query string is dropped, because the colour tools encode work into it', () => {
-  // /color/palette?c=0051FF,4C8DFF,... carries the user's actual palette.
+  // /create/palette?c=0051FF,4C8DFF,... carries the user's actual palette.
   // Keeping the query would smuggle their work into a support inbox through
   // the URL, which is exactly what the no-content rule exists to prevent.
-  const c = buildReportContext({ pathname: '/color/palette?c=0051FF,4C8DFF,A9C7FF' })
-  assert.equal(c.route, '/color/palette')
+  const c = buildReportContext({ pathname: '/create/palette?c=0051FF,4C8DFF,A9C7FF' })
+  assert.equal(c.route, '/create/palette')
   assert.ok(!JSON.stringify(c).includes('0051FF'))
 })
 
@@ -81,18 +81,18 @@ test('every captured value is length-capped', () => {
 // ── How it is attached ──────────────────────────────────────────────────────
 
 test('the context is clearly separated from the user\'s own words', () => {
-  const out = withReportContext('The sliders jump.', { route: '/color/palette' })
+  const out = withReportContext('The sliders jump.', { route: '/create/palette' })
   assert.match(out, /^The sliders jump\./)
   assert.match(out, /--- captured automatically ---/)
-  assert.match(out, /route: \/color\/palette/)
+  assert.match(out, /route: \/create\/palette/)
 })
 
 test('a long message is truncated so the context always survives', () => {
   // A report that loses its route because someone wrote a long description is
   // the exact failure this exists to prevent.
-  const out = withReportContext('x'.repeat(9000), { route: '/typescale' }, 5000)
+  const out = withReportContext('x'.repeat(9000), { route: '/create/type-scale' }, 5000)
   assert.ok(out.length <= 5000, `${out.length} exceeds the server's limit`)
-  assert.match(out, /route: \/typescale/, 'the context must survive truncation')
+  assert.match(out, /route: \/create\/type-scale/, 'the context must survive truncation')
 })
 
 test('an empty context adds nothing', () => {

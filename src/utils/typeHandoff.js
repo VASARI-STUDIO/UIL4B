@@ -108,7 +108,7 @@ function makeTypeSlot() {
 const pairSlot = makeTypeSlot()
 const scaleSlot = makeTypeSlot()
 
-/* ── → Font Pair (/fontpairs) ─────────────────────────────────────────────── */
+/* ── → Font Pair (/create/font-pair) ─────────────────────────────────────────────── */
 
 export const buildPairDraft = pairSlot.build
 export const validatePairDraft = pairSlot.validate
@@ -117,7 +117,7 @@ export const readPairDraft = pairSlot.read
 export const consumePairDraft = pairSlot.consume
 export const resetPairDraft = pairSlot.reset
 
-/* ── → Type Scale (/typescale) ────────────────────────────────────────────── */
+/* ── → Type Scale (/create/type-scale) ────────────────────────────────────────────── */
 
 export const buildScaleDraft = scaleSlot.build
 export const validateScaleDraft = scaleSlot.validate

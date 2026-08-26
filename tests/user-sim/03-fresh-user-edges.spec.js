@@ -28,7 +28,7 @@ test.describe('mobile (390×844)', () => {
 
   test('ratio tool: tabs fit, dropdown opens inside the viewport', async ({ page }) => {
     const fb = watch(page, PERSONA)
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
     for (const t of ['Devices', 'Screens', 'Social', 'Ratios']) {
       await expect(page.getByRole('button', { name: t, exact: true })).toBeVisible()
     }
@@ -54,7 +54,7 @@ test.describe('mobile (390×844)', () => {
 test.describe('keyboard behaviour', () => {
   test('Escape closes the preset dropdown', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
     await page.getByRole('button', { name: 'Devices', exact: true }).click()
     await page.getByRole('button', { name: /Pick a device/ }).click()
     await expect(page.getByRole('listbox', { name: /Pick a device/ })).toBeVisible()
@@ -64,7 +64,7 @@ test.describe('keyboard behaviour', () => {
 
   test('dropdown trigger is reachable and operable by keyboard', async ({ page }) => {
     const fb = watch(page, PERSONA)
-    await go(page, '/ratio')
+    await go(page, '/create/aspect-ratio')
     await page.getByRole('button', { name: 'Devices', exact: true }).click()
     const btn = page.getByRole('button', { name: /Pick a device/ })
     await btn.focus()
@@ -85,7 +85,7 @@ test.describe('garbage input never breaks the calculator', () => {
   for (const c of CASES) {
     test(`ratio inputs: ${c.name}`, async ({ page }) => {
       const fb = watch(page, PERSONA)
-      await go(page, '/ratio')
+      await go(page, '/create/aspect-ratio')
       await page.getByRole('spinbutton', { name: 'Ratio width' }).fill(c.w)
       await page.getByRole('spinbutton', { name: 'Ratio height' }).fill(c.h)
       // The tool may show a placeholder/empty result — it must never show
@@ -101,9 +101,9 @@ test.describe('garbage input never breaks the calculator', () => {
 
 test.describe('route sweep — every public page loads clean', () => {
   const ROUTES = [
-    '/', '/color', '/color/palette', '/color/semantic', '/color/tint',
-    '/color/gradient', '/color/contrast', '/icons', '/emoji', '/file-converter',
-    '/ratio', '/discover', '/discover/gradients', '/learn', '/plans', '/community',
+    '/', '/create/color', '/create/palette', '/create/semantic-color', '/create/tint',
+    '/create/gradient', '/create/contrast', '/create/icons', '/create/emoji', '/create/file-converter',
+    '/create/aspect-ratio', '/discover', '/discover/gradients', '/learn', '/plans', '/community',
     '/help', '/info', '/sitemap', '/privacy', '/terms', '/feedback', '/seo',
     '/login', '/settings',
   ]

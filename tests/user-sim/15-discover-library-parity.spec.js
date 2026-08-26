@@ -228,14 +228,14 @@ test.describe('the Palette Library carries the brand systems', () => {
     const freeBrand = BRAND_PALETTES.find((brand) => brand.free)
     const freeCard = page.locator('.pgal-card', { hasText: freeBrand.name }).first()
     await expect(freeCard.getByRole('link', { name: new RegExp(`Open ${freeBrand.name}`) }))
-      .toHaveAttribute('href', /^\/color\/palette\?c=/)
+      .toHaveAttribute('href', /^\/create\/palette\?c=/)
 
     // Pro-gated brands do NOT: the builder still owns that decision, so the
     // card routes there instead of injecting the colours via ?c=.
     const proBrand = BRAND_PALETTES.find((brand) => !brand.free)
     const proCard = page.locator('.pgal-card', { hasText: proBrand.name }).first()
     await expect(proCard.locator('.pgal-badge')).toHaveText('Brand · Pro')
-    await expect(proCard.locator('.pgal-use--pro')).toHaveAttribute('href', '/color/palette')
+    await expect(proCard.locator('.pgal-use--pro')).toHaveAttribute('href', '/create/palette')
     await expect(proCard.locator('a[href*="?c="]')).toHaveCount(0)
   })
 })

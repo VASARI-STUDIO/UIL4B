@@ -6,7 +6,7 @@
 // analytics, so nothing here persists and nothing here is serialised.
 //
 // The record is versioned and consumed atomically exactly once. A direct visit
-// or a reload of /file-converter finds an empty slot and shows its normal
+// or a reload of /create/file-converter finds an empty slot and shows its normal
 // choose/drop state.
 // Explicit extension so `node --test` can import this module directly for the
 // unit suite; Vite resolves it identically.
