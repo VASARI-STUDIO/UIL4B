@@ -43,6 +43,7 @@ export default function LibraryCard({
   // shared one — nesting would leave two boxes competing for the same ellipsis.
   nameClassName = '',
   metaClassName = '',
+  badgeClassName = '',
   selected = false,
   ...rest
 }) {
@@ -53,7 +54,7 @@ export default function LibraryCard({
     >
       <div className="lbry-card-shot">
         {media}
-        {badge && <span className="lbry-card-badge">{badge}</span>}
+        {badge && <span className={`lbry-card-badge${badgeClassName ? ` ${badgeClassName}` : ''}`}>{badge}</span>}
         {float && <div className="lbry-card-float">{float}</div>}
         {actions && (
           <div className="lbry-card-actions" role="group" aria-label={actionsLabel}>
