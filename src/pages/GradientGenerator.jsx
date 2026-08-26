@@ -13,6 +13,7 @@ import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import useModalDialog from '../hooks/useModalDialog'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 
 // ── Gradient Generator ──
@@ -205,11 +206,7 @@ function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const submitDialogRef = useModalDialog(onClose)
 
   const submit = () => {
     if (busy) return                                   // double-submit guard
@@ -225,7 +222,7 @@ function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
 
   return (
     <div className="ui-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a gradient for review">
+      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a gradient for review" tabIndex={-1} ref={submitDialogRef}>
         <div className="ui-modal-head">
           <h2 className="ui-modal-title">Submit for review</h2>
           <button className="ui-modal-x" onClick={onClose} aria-label="Close">

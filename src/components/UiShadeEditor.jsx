@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import SnapSlider from './SnapSlider'
 import { hctToHex, hexToHct } from '../utils/colors'
 import { normaliseHex } from '../utils/paletteAdjust'
+import useModalDialog from '../hooks/useModalDialog'
 
 function rounded(values) {
   return {
@@ -25,7 +26,6 @@ function fieldGradient(key, request) {
 }
 
 export default function UiShadeEditor({ group, item, onClose, onSave }) {
-  const dialogRef = useRef(null)
   const closeRef = useRef(onClose)
   const [request, setRequest] = useState(() => ({ ...item.achieved }))
   const [draft, setDraft] = useState(item.hex)
@@ -53,42 +53,18 @@ export default function UiShadeEditor({ group, item, onClose, onSave }) {
     closeRef.current = onClose
   }, [onClose])
 
-  useEffect(() => {
-    const previous = document.activeElement
-    const dialog = dialogRef.current
-    const focusable = () => [...dialog.querySelectorAll(
-      'button:not([disabled]),input:not([disabled]),[href],[tabindex]:not([tabindex="-1"])',
-    )].filter(element => !element.hidden)
-    requestAnimationFrame(() => (dialog.querySelector('#uis-edit-h') || focusable()[0] || dialog).focus())
-    const onKeyDown = event => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        closeRef.current()
-        return
-      }
-      if (event.key !== 'Tab') return
-      const items = focusable()
-      if (!items.length) {
-        event.preventDefault()
-        dialog.focus()
-        return
-      }
-      const first = items[0]
-      const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-    dialog.addEventListener('keydown', onKeyDown)
-    return () => {
-      dialog.removeEventListener('keydown', onKeyDown)
-      requestAnimationFrame(() => previous?.focus?.())
-    }
-  }, [])
+  // The ref indirection is what makes this identity stable. useModalDialog keys
+  // its effect on the close handler, so passing `onClose` straight through
+  // would tear down and re-apply the scroll lock on every parent render.
+  const stableClose = useCallback(() => closeRef.current(), [])
+
+  // This had a complete, correct focus trap of its own — it was the second of
+  // only two in the app. It moved to the shared hook anyway, because two
+  // correct implementations still drift, and this one was missing the
+  // background scroll lock the shared one carries. The one thing worth keeping
+  // is its deliberate initial focus: this dialog exists to edit a hue, so it
+  // opens onto that field rather than onto the dialog.
+  const dialogRef = useModalDialog(stableClose, { initialFocus: '#uis-edit-h' })
 
   const setField = (key, value) => {
     setError('')
