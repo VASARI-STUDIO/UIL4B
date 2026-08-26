@@ -4615,7 +4615,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    rail was meant to be guarded — and the reasoning above it is what the two
    rails that DO ship were missing. Those are now guarded (see
    `.plb-toolbar-group:last-child` and `.ggn-presets`, and
-   tests/user-sim/26-motion-guards.spec.js). Deleting is a founder call.
+   tests/user-sim/27-motion-guards.spec.js). Deleting is a founder call.
    Note the base rule is `x mandatory`, the only one in the file — the four
    live rails are all `x proximity`. */
 html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}

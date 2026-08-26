@@ -36,7 +36,7 @@
 // covers the `@media(prefers-reduced-motion:reduce)` half by clearing the
 // fabricated attribute, so the fallback selector is proven independently of the
 // boot script. All three keep passing once #273 lands.
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base.js'
 import { watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -70,9 +70,10 @@ async function open(browser, { width, height, path, reduced }) {
   })
   const page = await ctx.newPage()
   watch(page, `motion guards ${width}x${height} ${path}${reduced ? ' [reduced]' : ''}`)
-  await page.route('**accounts.google.com/gsi/**', (r) => r.fulfill({
-    status: 200, contentType: 'application/javascript', body: '',
-  }).catch(() => {}))
+  // One Tap is stubbed for the whole suite in base.js, on the context — which
+  // covers this hand-built one. Not routed again here: a page route takes
+  // precedence over a context route, so a second copy would silently win the
+  // race base.js exists to remove.
   if (reduced) {
     await page.addInitScript(() => {
       try { localStorage.setItem('vs-appearance', JSON.stringify({ reducedMotion: true })) } catch { /* private mode */ }
