@@ -10,7 +10,7 @@
 //     unchanged in substance — every one of those eleven routes must still be
 //     reachable from the homepage with a real href — so the same table is now
 //     asserted against `.htool-link`. The grid is a SUPERSET: it also exposes
-//     /emoji and the AI + component routes the old hero never linked, so no
+//     /create/emoji and the AI + component routes the old hero never linked, so no
 //     route was orphaned by the redesign.
 //   · The satellite → workbench convergence is gone, and nothing decorative
 //     replaced it. The sticky step sync took its place, and it moves REAL
@@ -34,17 +34,17 @@ const PERSONA = 'designer evaluating the workspace from the homepage'
 // The eleven routes the pre-V2 hero exposed. Every one must still be reachable
 // from the homepage — that is the half of the contract that did not change.
 const SATELLITES = [
-  ['Palette', '/color/palette'],
-  ['Semantic', '/color/semantic'],
-  ['Tint', '/color/tint'],
-  ['Gradient Generator', '/color/gradient'],
-  ['Contrast', '/color/contrast'],
-  ['Icon Library', '/icons'],
-  ['File Converter', '/file-converter'],
-  ['Aspect & Resolution', '/ratio'],
-  ['Font Gallery', '/fontgallery'],
-  ['Font Pair', '/fontpairs'],
-  ['Type Scale', '/typescale'],
+  ['Palette', '/create/palette'],
+  ['Semantic', '/create/semantic-color'],
+  ['Tint', '/create/tint'],
+  ['Gradient Generator', '/create/gradient'],
+  ['Contrast', '/create/contrast'],
+  ['Icon Library', '/create/icons'],
+  ['File Converter', '/create/file-converter'],
+  ['Aspect & Resolution', '/create/aspect-ratio'],
+  ['Font Gallery', '/create/font-gallery'],
+  ['Font Pair', '/create/font-pair'],
+  ['Type Scale', '/create/type-scale'],
 ]
 
 const TABS = ['Palette', 'Gradient', 'Image', 'Icon', 'Typography']
@@ -118,7 +118,7 @@ const converterView = (page) => page.evaluate(() => {
 async function handOffImages(page, files) {
   await page.locator('.hw-tab[data-tab="image"]').click()
   await page.locator('.hw-body input[type="file"]').setInputFiles(files)
-  await page.waitForURL('**/file-converter')
+  await page.waitForURL('**/create/file-converter')
 }
 
 test.describe('homepage: eleven tools, five ways of working', () => {
@@ -202,7 +202,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // …and the grid is a superset: the redesign orphaned nothing and added the
     // routes the constellation never had room for.
-    for (const href of ['/emoji', '/alt-text', '/ui-builder', '/box-shadow']) {
+    for (const href of ['/create/emoji', '/create/alt-text', '/create/component-designer', '/create/box-shadow']) {
       await expect(page.locator(`.htool-link[href="${href}"]`)).toHaveCount(1)
     }
 
@@ -592,8 +592,8 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     await page.locator('.hw-tab[data-tab="typography"]').click()
     await expect(page.locator('.hw-type-row')).toHaveCount(4)
-    await expect(page.locator('.hw-panel').getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
-    await expect(page.locator('.hw-panel').getByRole('link', { name: /Font Pair/ })).toHaveAttribute('href', '/fontpairs')
+    await expect(page.locator('.hw-panel').getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
+    await expect(page.locator('.hw-panel').getByRole('link', { name: /Font Pair/ })).toHaveAttribute('href', '/create/font-pair')
 
     // Real key entry must allow the native number input to become empty while
     // replacing its value; the committed draft is validated on blur.
@@ -621,7 +621,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.getByLabel('Base size')).toHaveValue('20')
 
     await page.getByRole('button', { name: /Continue in Type Scale/ }).click()
-    await page.waitForURL('**/typescale')
+    await page.waitForURL('**/create/type-scale')
     await expect(page.locator('.tsc-status')).toContainText('20px')
     await expect(page.locator('.tsc-status')).toContainText('1.333')
     // The homepage carries scale maths only: saved family choices survive.
@@ -764,7 +764,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await page.locator('.hw-body input[type="file"]').setInputFiles([png('one.png'), png('two.png')])
 
     // 11 · the converter receives both files and the draft, exactly once.
-    await page.waitForURL('**/file-converter')
+    await page.waitForURL('**/create/file-converter')
     await expect(page.locator('.fc-card')).toHaveCount(2)
     const note = page.locator('.fc-draft-note')
     await expect(note).toContainText('PNG')
@@ -796,7 +796,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     let choosers = 0
     page.on('filechooser', () => { choosers += 1 })
 
-    await go(page, '/file-converter')
+    await go(page, '/create/file-converter')
     await expect(page.locator('.fc-drop')).toBeVisible()
     await expect(page.locator('.fc-card')).toHaveCount(0)
     await page.reload({ waitUntil: 'domcontentloaded' })
@@ -830,7 +830,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // One accepted selection produces exactly one transfer.
     await page.locator('.hw-body input[type="file"]').setInputFiles([png('ok.png')])
-    await page.waitForURL('**/file-converter')
+    await page.waitForURL('**/create/file-converter')
     await expect(page.locator('.fc-card')).toHaveCount(1)
   })
 
@@ -853,7 +853,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // 15 · a valid draft opens the real editor with the supported values.
     await page.getByRole('button', { name: /Continue in Icon Editor/ }).click()
-    await page.waitForURL('**/icons')
+    await page.waitForURL('**/create/icons')
     const customiser = page.locator('.icust, .ig-custom, [class*="icust"]').first()
     await expect(customiser).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('zap', { exact: false }).first()).toBeVisible()
@@ -867,7 +867,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
   test('15 · a direct Icon Library visit never inherits a draft', async ({ page }) => {
     watch(page, 'visitor arriving at the editor directly')
-    await go(page, '/icons')
+    await go(page, '/create/icons')
     await expect(page.locator('.ic').first()).toBeVisible({ timeout: 15000 })
     await expect(page.locator('.icust')).toHaveCount(0)
   })
@@ -944,7 +944,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await spyOnScrollTo(page)
     watch(page, 'visitor arriving at the converter directly')
 
-    await go(page, '/file-converter')
+    await go(page, '/create/file-converter')
     await expect(page.locator('.fc-drop')).toBeVisible()
     expect((await converterView(page)).scrollY, 'a direct visit auto-scrolled').toBe(0)
 

@@ -19,87 +19,87 @@ export const CREATE_GROUPS = [
     id: 'colour',
     label: 'Colour System Generator',
     hue: 'colour',
-    home: '/color',
+    home: '/create/color',
     desc: 'Palettes, tints, gradients and contrast — one system.',
     soon: false,
-    // Every colour feature is its own tool on its own page. /color stays the
+    // Every colour feature is its own tool on its own page. /create/color stays the
     // merged full studio; palette/semantic/gradient render the studio
     // focused on their section, while tint + contrast are standalone pages.
     tools: [
-      { id: 'palette', label: 'Palette', route: '/color/palette', soon: false },
-      { id: 'semantic', label: 'Semantic Colour', route: '/color/semantic', soon: false },
-      { id: 'tint', label: 'Tint', route: '/color/tint', soon: false },
-      { id: 'gradient', label: 'Gradient', route: '/color/gradient', soon: false },
-      { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', soon: false },
+      { id: 'palette', label: 'Palette', route: '/create/palette', soon: false },
+      { id: 'semantic', label: 'Semantic Colour', route: '/create/semantic-color', soon: false },
+      { id: 'tint', label: 'Tint', route: '/create/tint', soon: false },
+      { id: 'gradient', label: 'Gradient', route: '/create/gradient', soon: false },
+      { id: 'contrast', label: 'Contrast Checker', route: '/create/contrast', soon: false },
     ],
   },
   {
     id: 'icons',
     label: 'Icons & Emoji',
     hue: 'icons',
-    home: '/icons-emoji',
+    home: '/create/icons-emoji',
     desc: '200k icons and every emoji, copy-ready.',
     soon: false,
     tools: [
-      { id: 'icons', label: 'Icon Library', route: '/icons', soon: false },
-      { id: 'emoji', label: 'Emoji Library', route: '/emoji', soon: false },
+      { id: 'icons', label: 'Icon Library', route: '/create/icons', soon: false },
+      { id: 'emoji', label: 'Emoji Library', route: '/create/emoji', soon: false },
     ],
   },
   {
     id: 'type',
     label: 'Typography System Builder',
     hue: 'type',
-    home: '/typography',
+    home: '/create/typography',
     desc: 'Pair fonts and build scales that hold up.',
     soon: false,
     // ⚠️ A tool is only `soon: false` when its route is in CreateTool's
     // LIVE_TOOLS map — otherwise the route renders the 🤫 workshop state and
     // the nav must dim it. Keep the two in sync.
     tools: [
-      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', soon: false },
-      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', soon: false },
-      { id: 'type-scale', label: 'Type Scale', route: '/typescale', soon: false },
+      { id: 'font-gallery', label: 'Font Gallery', route: '/create/font-gallery', soon: false },
+      { id: 'font-pair', label: 'Font Pair', route: '/create/font-pair', soon: false },
+      { id: 'type-scale', label: 'Type Scale', route: '/create/type-scale', soon: false },
     ],
   },
   {
     id: 'component',
     label: 'UI Component Builder',
     hue: 'component',
-    home: '/ui-builder-cat',
+    home: '/create/components',
     desc: 'Design components with live preview and CSS out.',
     soon: true,
     tools: [
-      { id: 'component-designer', label: 'Component Designer', route: '/ui-builder', soon: true },
-      { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', soon: true },
-      { id: 'auto-builder', label: 'Auto-Builder', route: '/auto-builder', soon: true },
+      { id: 'component-designer', label: 'Component Designer', route: '/create/component-designer', soon: true },
+      { id: 'box-shadow', label: 'Box Shadow', route: '/create/box-shadow', soon: true },
+      { id: 'auto-builder', label: 'Auto-Builder', route: '/create/auto-builder', soon: true },
     ],
   },
   {
     id: 'imagery',
     label: 'Imagery & Media',
     hue: 'imagery',
-    home: '/imagery',
+    home: '/create/imagery',
     desc: 'Convert, compress and frame every asset.',
     soon: false,
     tools: [
-      { id: 'file-converter', label: 'File Converter', route: '/file-converter', soon: false },
-      { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', soon: false },
+      { id: 'file-converter', label: 'File Converter', route: '/create/file-converter', soon: false },
+      { id: 'ratio', label: 'Aspect & Resolution', route: '/create/aspect-ratio', soon: false },
     ],
   },
   {
     id: 'ai',
     label: 'AI Studio',
     hue: 'ai',
-    home: '/ai-tools',
+    home: '/create/ai-tools',
     desc: 'Generators for prompts, pages and alt text.',
     // Live because Alt Text is live and mounted in CreateTool's LIVE_TOOLS. The
     // three unbuilt siblings now carry their own Soon badge, which is exactly
     // the per-tool behaviour the header comment describes.
     soon: false,
     tools: [
-      { id: 'alt-text', label: 'Alt Text', route: '/alt-text', soon: false },
-      { id: 'ai-prompt', label: 'Image Prompt', route: '/ai-prompt', soon: true },
-      { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', soon: true },
+      { id: 'alt-text', label: 'Alt Text', route: '/create/alt-text', soon: false },
+      { id: 'ai-prompt', label: 'Image Prompt', route: '/create/ai-prompt', soon: true },
+      { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/create/landing-prompts', soon: true },
       // Prompt Library is no longer here — it moved to Discover, where the
       // other browse-and-take surfaces live. Create is for tools you OPERATE.
     ],
@@ -132,17 +132,17 @@ export const HOME_WORKBENCH_TABS = [
 // `zone` documents the intended wide-screen placement so the CSS and this table
 // can be checked against each other.
 export const HOME_SATELLITES = [
-  { id: 'palette', label: 'Palette', route: '/color/palette', family: 'palette', hue: 'colour', icon: 'palette', zone: 'upper left' },
-  { id: 'semantic', label: 'Semantic', route: '/color/semantic', family: 'palette', hue: 'colour', icon: 'semantic', zone: 'left' },
-  { id: 'tint', label: 'Tint', route: '/color/tint', family: 'palette', hue: 'colour', icon: 'tint', zone: 'lower left' },
-  { id: 'gradient', label: 'Gradient Generator', route: '/color/gradient', family: 'gradient', hue: 'colour', icon: 'gradient', zone: 'upper right' },
-  { id: 'contrast', label: 'Contrast', route: '/color/contrast', family: 'palette', hue: 'colour', icon: 'contrast', zone: 'right' },
-  { id: 'icons', label: 'Icon Library', route: '/icons', family: 'icon', hue: 'icons', icon: 'icons', zone: 'outer right' },
-  { id: 'file-converter', label: 'File Converter', route: '/file-converter', family: 'image', hue: 'imagery', icon: 'imagery', zone: 'lower right' },
-  { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', family: 'image', hue: 'imagery', icon: 'ratio', zone: 'lower outer edge' },
-  { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', family: 'typography', hue: 'type', icon: 'type', zone: 'upper inner left' },
-  { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', family: 'typography', hue: 'type', icon: 'font-pair', zone: 'upper inner right' },
-  { id: 'type-scale', label: 'Type Scale', route: '/typescale', family: 'typography', hue: 'type', icon: 'typography', zone: 'upper centre' },
+  { id: 'palette', label: 'Palette', route: '/create/palette', family: 'palette', hue: 'colour', icon: 'palette', zone: 'upper left' },
+  { id: 'semantic', label: 'Semantic', route: '/create/semantic-color', family: 'palette', hue: 'colour', icon: 'semantic', zone: 'left' },
+  { id: 'tint', label: 'Tint', route: '/create/tint', family: 'palette', hue: 'colour', icon: 'tint', zone: 'lower left' },
+  { id: 'gradient', label: 'Gradient Generator', route: '/create/gradient', family: 'gradient', hue: 'colour', icon: 'gradient', zone: 'upper right' },
+  { id: 'contrast', label: 'Contrast', route: '/create/contrast', family: 'palette', hue: 'colour', icon: 'contrast', zone: 'right' },
+  { id: 'icons', label: 'Icon Library', route: '/create/icons', family: 'icon', hue: 'icons', icon: 'icons', zone: 'outer right' },
+  { id: 'file-converter', label: 'File Converter', route: '/create/file-converter', family: 'image', hue: 'imagery', icon: 'imagery', zone: 'lower right' },
+  { id: 'ratio', label: 'Aspect & Resolution', route: '/create/aspect-ratio', family: 'image', hue: 'imagery', icon: 'ratio', zone: 'lower outer edge' },
+  { id: 'font-gallery', label: 'Font Gallery', route: '/create/font-gallery', family: 'typography', hue: 'type', icon: 'type', zone: 'upper inner left' },
+  { id: 'font-pair', label: 'Font Pair', route: '/create/font-pair', family: 'typography', hue: 'type', icon: 'font-pair', zone: 'upper inner right' },
+  { id: 'type-scale', label: 'Type Scale', route: '/create/type-scale', family: 'typography', hue: 'type', icon: 'typography', zone: 'upper centre' },
 ]
 
 // Family id → the workbench tab it resolves into. Used for the satellite's
@@ -157,7 +157,7 @@ export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) 
 export const DISCOVER_GROUPS = [
   { id: 'palette-library', icon: 'palette', label: 'Palette Library', desc: 'Curated colour systems ready to copy, save or open in the Palette Builder.', route: '/discover/palettes', soon: false },
   { id: 'gradient-gallery', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
-  { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', route: '/fontgallery', soon: false },
+  { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', route: '/create/font-gallery', soon: false },
   { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/discover', soon: true },
   { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
   { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab.', route: '/discover', soon: true },
@@ -189,51 +189,51 @@ export const LEARN_GROUPS = [
 // groups — "Icons", "Media" (converter + aspect calculator) and "AI" — so each
 // gets its own eyebrow without forcing a fourth (cramped) grid column.
 //
-// NOTE: the five Colour rows are real pages under /color/<tool> (see
+// NOTE: the five Colour rows are real pages under /create/<pagetitle> (see
 // CREATE_GROUPS above) — createRoutes() picks them up automatically.
 const CREATE_MENU = [
   [{
     label: 'Colour',
     tools: [
-      { id: 'palette', label: 'Palette', route: '/color/palette', icon: 'palette', hue: 'colour', soon: false },
-      { id: 'gradient', label: 'Gradient', route: '/color/gradient', icon: 'gradient', hue: 'colour', soon: false },
-      { id: 'contrast', label: 'Contrast Checker', route: '/color/contrast', icon: 'contrast', hue: 'colour', soon: false },
-      { id: 'tint', label: 'Tint', route: '/color/tint', icon: 'tint', hue: 'colour', soon: false },
-      { id: 'semantic', label: 'Semantic Colour', route: '/color/semantic', icon: 'semantic', hue: 'colour', soon: false },
+      { id: 'palette', label: 'Palette', route: '/create/palette', icon: 'palette', hue: 'colour', soon: false },
+      { id: 'gradient', label: 'Gradient', route: '/create/gradient', icon: 'gradient', hue: 'colour', soon: false },
+      { id: 'contrast', label: 'Contrast Checker', route: '/create/contrast', icon: 'contrast', hue: 'colour', soon: false },
+      { id: 'tint', label: 'Tint', route: '/create/tint', icon: 'tint', hue: 'colour', soon: false },
+      { id: 'semantic', label: 'Semantic Colour', route: '/create/semantic-color', icon: 'semantic', hue: 'colour', soon: false },
     ],
   }],
   [{
     label: 'Type & UI',
     tools: [
-      { id: 'font-gallery', label: 'Font Gallery', route: '/fontgallery', icon: 'type', hue: 'type', soon: false },
-      { id: 'font-pair', label: 'Font Pair', route: '/fontpairs', icon: 'font-pair', hue: 'type', soon: false },
-      { id: 'type-scale', label: 'Type Scale', route: '/typescale', icon: 'typography', hue: 'type', soon: false },
-      { id: 'component-designer', label: 'Component Designer', route: '/ui-builder', icon: 'component', hue: 'component', soon: true },
-      { id: 'box-shadow', label: 'Box Shadow', route: '/box-shadow', icon: 'box-shadow', hue: 'component', soon: true },
-      { id: 'auto-builder', label: 'Auto-Builder', route: '/auto-builder', icon: 'auto', hue: 'component', soon: true },
+      { id: 'font-gallery', label: 'Font Gallery', route: '/create/font-gallery', icon: 'type', hue: 'type', soon: false },
+      { id: 'font-pair', label: 'Font Pair', route: '/create/font-pair', icon: 'font-pair', hue: 'type', soon: false },
+      { id: 'type-scale', label: 'Type Scale', route: '/create/type-scale', icon: 'typography', hue: 'type', soon: false },
+      { id: 'component-designer', label: 'Component Designer', route: '/create/component-designer', icon: 'component', hue: 'component', soon: true },
+      { id: 'box-shadow', label: 'Box Shadow', route: '/create/box-shadow', icon: 'box-shadow', hue: 'component', soon: true },
+      { id: 'auto-builder', label: 'Auto-Builder', route: '/create/auto-builder', icon: 'auto', hue: 'component', soon: true },
     ],
   }],
   [
     {
       label: 'Icons',
       tools: [
-        { id: 'icons', label: 'Icon Library', route: '/icons', icon: 'icons', hue: 'icons', soon: false },
-        { id: 'emoji', label: 'Emoji Library', route: '/emoji', icon: 'emoji', hue: 'icons', soon: false },
+        { id: 'icons', label: 'Icon Library', route: '/create/icons', icon: 'icons', hue: 'icons', soon: false },
+        { id: 'emoji', label: 'Emoji Library', route: '/create/emoji', icon: 'emoji', hue: 'icons', soon: false },
       ],
     },
     {
       label: 'Media',
       tools: [
-        { id: 'file-converter', label: 'File Converter', route: '/file-converter', icon: 'imagery', hue: 'imagery', soon: false },
-        { id: 'ratio', label: 'Aspect & Resolution', route: '/ratio', icon: 'ratio', hue: 'imagery', soon: false },
+        { id: 'file-converter', label: 'File Converter', route: '/create/file-converter', icon: 'imagery', hue: 'imagery', soon: false },
+        { id: 'ratio', label: 'Aspect & Resolution', route: '/create/aspect-ratio', icon: 'ratio', hue: 'imagery', soon: false },
       ],
     },
     {
       label: 'AI',
       tools: [
-        { id: 'alt-text', label: 'Alt Text', route: '/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
-        { id: 'ai-prompt', label: 'AI Image Prompt', route: '/ai-prompt', icon: 'ai', hue: 'ai', soon: true },
-        { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/landing-prompts', icon: 'marketing', hue: 'ai', soon: true },
+        { id: 'alt-text', label: 'Alt Text', route: '/create/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
+        { id: 'ai-prompt', label: 'AI Image Prompt', route: '/create/ai-prompt', icon: 'ai', hue: 'ai', soon: true },
+        { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/create/landing-prompts', icon: 'marketing', hue: 'ai', soon: true },
       ],
     },
   ],

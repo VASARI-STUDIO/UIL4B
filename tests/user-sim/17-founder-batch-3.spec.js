@@ -164,7 +164,7 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
     test(`it fits at ${viewport.width}x${viewport.height}, and the hand-off is reachable`, async ({ page }) => {
       await page.setViewportSize(viewport)
       watch(page, 'designer pairing fonts on a laptop')
-      await go(page, '/fontpairs')
+      await go(page, '/create/font-pair')
 
       await expect(page.locator('.fpr-config')).toBeVisible()
       await settleSticky(page)
@@ -186,7 +186,7 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
   test('it still fits when the panel content grows — a family with a third weight row', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     watch(page, 'designer pairing a family with a dozen weights')
-    await go(page, '/fontpairs')
+    await go(page, '/create/font-pair')
     await expect(page.locator('.fpr-config')).toBeVisible()
 
     // A 12-variant family wraps each weight picker onto a third row, ~68px a
@@ -208,7 +208,7 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
   test('below 981px it goes back to a plain stacked panel with no inner scroller', async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 900 })
     watch(page, 'designer pairing fonts on a tablet')
-    await go(page, '/fontpairs')
+    await go(page, '/create/font-pair')
     await expect(page.locator('.fpr-config')).toBeVisible()
 
     const panel = await measurePanel(page, '.fpr-config')
@@ -228,7 +228,7 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
 test.describe('Palette Builder · Temperature crosses zero continuously', () => {
   test('a slow drag across zero never leaps, and reaches values either side', async ({ page }) => {
     watch(page, 'designer warming a palette by hand')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const slider = page.locator('input[type=range][aria-label*="Temperature" i]').first()
     await expect(slider).toBeVisible()
@@ -268,7 +268,7 @@ test.describe('Palette Builder · Temperature crosses zero continuously', () => 
 
   test('keyboard stepping still bypasses the snap entirely', async ({ page }) => {
     watch(page, 'keyboard user tuning temperature')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const slider = page.locator('input[type=range][aria-label*="Temperature" i]').first()
     await slider.focus()

@@ -26,7 +26,7 @@ import { useClipboard } from '../hooks/useClipboard'
 // and flips between the two libraries via a large segmented pill title.
 const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 
-// Colour — /color is the colour SALES page (handled upstream in App.jsx, never
+// Colour — /create/color is the colour SALES page (handled upstream in App.jsx, never
 // reaches this shell). semantic/ui are the same ColorStudio focused on their
 // section (it reads the pathname); gradient is its own dark "Gradient Generator"
 // surface. Palette is its own full-bleed workbench, and tint + contrast are light
@@ -61,19 +61,19 @@ const AltTextGenerator = lazy(() => import('./AltTextGenerator'))
 // map still renders the 🤫 state even if its group is flagged live — a safe
 // fallback that can never mount a half-finished screen.
 const LIVE_TOOLS = {
-  '/color/palette': PaletteBuilder,
-  '/color/semantic': ColorStudio,
-  '/color/gradient': GradientGenerator,
-  '/color/tint': TintTool,
-  '/color/contrast': ContrastChecker,
-  '/icons': IconEmojiLibrary,
-  '/emoji': IconEmojiLibrary,
-  '/file-converter': FileConverter,
-  '/ratio': RatioCalculator,
-  '/fontgallery': FontGallery,
-  '/fontpairs': FontMatcher,
-  '/typescale': TypeScale,
-  '/alt-text': AltTextGenerator,
+  '/create/palette': PaletteBuilder,
+  '/create/semantic-color': ColorStudio,
+  '/create/gradient': GradientGenerator,
+  '/create/tint': TintTool,
+  '/create/contrast': ContrastChecker,
+  '/create/icons': IconEmojiLibrary,
+  '/create/emoji': IconEmojiLibrary,
+  '/create/file-converter': FileConverter,
+  '/create/aspect-ratio': RatioCalculator,
+  '/create/font-gallery': FontGallery,
+  '/create/font-pair': FontMatcher,
+  '/create/type-scale': TypeScale,
+  '/create/alt-text': AltTextGenerator,
 }
 
 // Match toolTree's own path handling (lowercase, strip query/hash, drop trailing
@@ -123,8 +123,8 @@ export default function CreateTool() {
   if (!group) return <Navigate to="/home" replace />
 
   // A live group's category home has no screen of its own — send it to the first
-  // real tool (e.g. /icons-emoji → /icons) so visitors never land on an empty home.
-  // Skip when the home IS a live screen (/color is the full merged studio, with
+  // real tool (e.g. /create/icons-emoji → /create/icons) so visitors never land on an empty home.
+  // Skip when the home IS a live screen (/create/color is the full merged studio, with
   // its tools as sub-routes) or when the first tool is the home itself —
   // redirecting either would lose a real page or loop.
   const firstTool = group.tools?.[0]

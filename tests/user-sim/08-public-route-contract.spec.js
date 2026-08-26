@@ -5,7 +5,7 @@ import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 
 const STATIC_INDEXABLE_ROUTES = [
   '/',
-  '/color',
+  '/create/color',
   '/discover',
   '/plans',
   '/community',
@@ -35,18 +35,18 @@ const EXPECTED_CRAWLER_ROUTES = [
 
 const RETIRED_OR_THIN_ROUTES = [
   '/color/ui',
-  '/box-shadow',
-  '/ui-builder',
-  '/auto-builder',
-  '/ai-prompt',
-  '/landing-prompts',
-  // '/alt-text' was here while the tool was staged. It is live again (founder
+  '/create/box-shadow',
+  '/create/component-designer',
+  '/create/auto-builder',
+  '/create/ai-prompt',
+  '/create/landing-prompts',
+  // '/create/alt-text' was here while the tool was staged. It is live again (founder
   // batch 4), mounted in CreateTool's LIVE_TOOLS and listed in the crawler
   // sitemap, so EXPECTED_CRAWLER_ROUTES now derives it from the tool tree above.
-  '/typography',
-  '/imagery',
-  '/icons-emoji',
-  '/ai-tools',
+  '/create/typography',
+  '/create/imagery',
+  '/create/icons-emoji',
+  '/create/ai-tools',
   '/prompts',
   // /discover moved OUT of this list: it is a real surface landing with links
   // to three live libraries (asserted in the first test below), so excluding it
@@ -73,7 +73,7 @@ test.describe('public route contract', () => {
 
     await expect(page.getByRole('link', { name: /Palette Library/ })).toHaveAttribute('href', '/discover/palettes')
     await expect(page.getByRole('link', { name: /Gradient Library/ })).toHaveAttribute('href', '/discover/gradients')
-    await expect(page.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
+    await expect(page.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
 
     await go(page, '/discover/palettes')
     await expect(page.getByRole('heading', { level: 1, name: 'Palette Library' })).toBeVisible()
@@ -115,9 +115,9 @@ test.describe('public route contract', () => {
     await expect(palettes).not.toHaveAttribute('data-soon')
     await expect(palettes.getByRole('link', { name: /Palette Library/ })).toHaveAttribute('href', '/discover/palettes')
 
-    const fonts = discover.locator('[data-route="/fontgallery"]')
+    const fonts = discover.locator('[data-route="/create/font-gallery"]')
     await expect(fonts).not.toHaveAttribute('data-soon')
-    await expect(fonts.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/fontgallery')
+    await expect(fonts.getByRole('link', { name: /Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
 
     const stagedDiscover = discover.locator('[data-soon="true"]')
     await expect(stagedDiscover).toHaveCount(DISCOVER_GROUPS.filter((group) => group.soon).length)
@@ -128,12 +128,12 @@ test.describe('public route contract', () => {
     await expect(learn.locator('a')).toHaveCount(0)
 
     // A Create tool still in the workshop stays non-actionable on the map…
-    const stagedBoxShadow = page.locator('.smap-link[data-route="/box-shadow"]')
+    const stagedBoxShadow = page.locator('.smap-link[data-route="/create/box-shadow"]')
     await expect(stagedBoxShadow).toHaveAttribute('data-soon', 'true')
     await expect(stagedBoxShadow.locator('a')).toHaveCount(0)
 
     // …while the three typography tools that just shipped are real links.
-    for (const route of ['/fontgallery', '/fontpairs', '/typescale']) {
+    for (const route of ['/create/font-gallery', '/create/font-pair', '/create/type-scale']) {
       const live = page.locator(`.smap-link[data-route="${route}"]`).first()
       await expect(live).not.toHaveAttribute('data-soon', 'true')
       await expect(live.locator('a')).toHaveAttribute('href', route)
@@ -143,7 +143,7 @@ test.describe('public route contract', () => {
   test('retired UI Colour redirects to the live colour landing without re-entering the tool dispatcher', async ({ page }) => {
     watch(page, 'visitor following an old colour-tool bookmark')
     await go(page, '/color/ui')
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/color')
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/color')
     await expect(page.getByRole('heading', { name: 'One colour system, start to finish.' })).toBeVisible()
   })
 

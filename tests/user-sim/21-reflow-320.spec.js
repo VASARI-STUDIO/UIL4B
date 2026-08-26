@@ -18,11 +18,11 @@
 // What it caught (docs/audit-2026-08-11.md, P2), all three from the same family
 // of mistake — a flex item that refuses to shrink:
 //
-//   /color/palette      .plb-col-tools at right:367 vs a 315px viewport. Lock,
+//   /create/palette      .plb-col-tools at right:367 vs a 315px viewport. Lock,
 //                       copy and delete on every colour were simply unreachable.
 //   /discover/prompts   .pl-add-btn — "Submit prompt", the primary CTA — at
 //                       right:535. Entirely off screen.
-//   /typescale          .tsc-row-text at 1328px inside a 247px row. The rule
+//   /create/type-scale          .tsc-row-text at 1328px inside a 247px row. The rule
 //                       already asked for an ellipsis; `min-width: auto` on the
 //                       parent flex item meant it never applied.
 import { test, expect } from '@playwright/test'
@@ -34,13 +34,13 @@ const NARROW = { width: 320, height: 800 }
 
 const ROUTES = [
   '/',
-  '/color/palette',
+  '/create/palette',
   '/discover/prompts',
-  '/typescale',
-  '/icons',
+  '/create/type-scale',
+  '/create/icons',
   '/plans',
-  '/fontpairs',
-  '/ratio',
+  '/create/font-pair',
+  '/create/aspect-ratio',
 ]
 
 /**
@@ -114,7 +114,7 @@ test.describe('reflow at 320px', () => {
     // the size is not.
     await page.setViewportSize(NARROW)
     watch(page, 'a designer checking a type scale on a phone')
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
     // The ladder is inside a lazily-loaded panel. Waiting for it with a locator
     // rather than snapshotting straight after navigation — an evaluate() that
     // runs first returns an empty list, which would pass a "nothing overflows"
@@ -138,7 +138,7 @@ test.describe('reflow at 320px', () => {
     // 1.4.10 failure for a 2.5.8 one.
     await page.setViewportSize(NARROW)
     watch(page, 'a designer editing a palette on a phone')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('.plb-tool').first()).toBeVisible()
 
     const tools = await page.evaluate(() =>

@@ -10,7 +10,7 @@ import { CATEGORY_MAP } from '../../data/discoverCategories'
 // is treated as unavailable so we never offer a "Use in tool" CTA that dead-ends
 // on a placeholder. Removing a route from this set (when the tool ships) re-lights
 // every CTA for it automatically — no per-component change needed.
-export const GATED_ROUTES = new Set(['/ui-builder', '/file-converter'])
+export const GATED_ROUTES = new Set(['/create/component-designer', '/create/file-converter'])
 
 // True when a related tool's destination is live for everyone (not admin-gated).
 export function isToolAvailable(tool) {

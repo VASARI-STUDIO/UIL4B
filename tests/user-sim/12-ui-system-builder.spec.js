@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { go, watch } from './helpers.js'
 
 async function enter(page) {
-  await go(page, '/color/palette')
+  await go(page, '/create/palette')
   await page.getByRole('button', { name: 'Build UI system' }).click()
   await expect(page.getByRole('heading', { name: 'UI System Builder' })).toBeVisible()
 }
@@ -30,7 +30,7 @@ test.describe.skip('UI System Builder', () => {
   test('Space belongs to UI controls and Back restores the ordinary Palette draft exactly', async ({ page, context }) => {
     watch(page, 'designer evaluating UI mode without committing it')
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     const seed = await page.getByRole('textbox', { name: 'Seed colour hex' }).inputValue()
     const palette = await page.locator('.plb-col .plb-hex').allTextContents()
 
@@ -159,7 +159,7 @@ test.describe.skip('UI System Builder', () => {
 
   test('free preview cannot apply nine editable Brand shades or bypass the palette cap', async ({ page }) => {
     watch(page, 'free designer reaching the Pro hand-back boundary')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('.plb-col .plb-hex').first()).toBeVisible()
     const original = await page.locator('.plb-col .plb-hex').allTextContents()
     await page.getByRole('button', { name: 'Build UI system' }).click()
@@ -195,7 +195,7 @@ test.describe.skip('UI System Builder', () => {
   test('generation remains available offline and honors reduced motion plus forced colours', async ({ page, context }) => {
     watch(page, 'designer working with constrained browser settings')
     await page.emulateMedia({ reducedMotion: 'reduce', forcedColors: 'active' })
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
     await expect(page.getByRole('button', { name: 'Build UI system' })).toBeVisible()
     await context.setOffline(true)
     await page.getByRole('button', { name: 'Build UI system' }).click()

@@ -17,7 +17,7 @@ const DARK_RING = /rgba\(11,\s*13,\s*16|#0b0d10/i
 test.describe('Palette Builder · global-adjust slider handles', () => {
   test('the handle centre shows the track colour underneath it, and follows the drag', async ({ page }) => {
     watch(page, 'designer tuning a palette')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const hue = page.getByRole('slider', { name: 'Hue adjustment' })
     await expect(hue).toBeVisible()
@@ -62,7 +62,7 @@ test.describe('Palette Builder · global-adjust slider handles', () => {
 
   test('BATCH 4: dragging one slider repaints the other three tracks', async ({ page }) => {
     watch(page, 'designer pulling hue and reading the other three bars')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const hue = page.getByRole('slider', { name: 'Hue adjustment' })
     await expect(hue).toBeVisible()
@@ -96,7 +96,7 @@ test.describe('Palette Builder · global-adjust slider handles', () => {
 
   test('the handle stays visible against the lightest and darkest track colours, in both themes', async ({ page }) => {
     watch(page, 'designer checking the handle against extreme track colours')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const tone = page.getByRole('slider', { name: 'Tone adjustment' })
     await expect(tone).toBeVisible()
@@ -161,7 +161,7 @@ test.describe('Palette Builder · global-adjust slider handles', () => {
   test('a SnapSlider with no track colour is untouched — other consumers keep the platform thumb', async ({ page }) => {
     watch(page, 'designer using the type scale sliders')
     // Type Scale drives plain SnapSliders — no gradient, so no custom thumb.
-    await go(page, '/typescale')
+    await go(page, '/create/type-scale')
     await expect(page.locator('.snapv').first()).toBeVisible()
     const plain = await page.evaluate(() => {
       const all = [...document.querySelectorAll('.snapv')]
@@ -193,7 +193,7 @@ test.describe('Palette Builder · global-adjust slider handles', () => {
 test.describe('Palette Builder · toolbar icon buttons', () => {
   test('hovering an icon button reveals its label at the label\'s real width', async ({ page }) => {
     watch(page, 'designer exploring the toolbar')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     const button = page.getByRole('button', { name: 'Preview' })
     await expect(button).toBeVisible()
@@ -232,7 +232,7 @@ test.describe('Palette Builder · toolbar icon buttons', () => {
 
   test('every icon button in the toolbar reveals real text, on hover and on focus', async ({ page }) => {
     watch(page, 'keyboard user in the toolbar')
-    await go(page, '/color/palette')
+    await go(page, '/create/palette')
 
     await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible()
     const buttons = page.locator('.plb-icobtn:visible')
@@ -275,7 +275,7 @@ test.describe('Palette Builder · toolbar icon buttons', () => {
 test.describe('Gradient Generator · adding and fine-tuning a stop', () => {
   test('pressing the rail creates a visible handle that drags in the same gesture', async ({ page }) => {
     watch(page, 'designer placing a gradient stop')
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
 
     const rail = page.locator('.ggn-bar')
     await expect(rail).toBeVisible()
@@ -320,7 +320,7 @@ test.describe('Gradient Generator · adding and fine-tuning a stop', () => {
 
   test('a newly added stop takes focus so the arrow keys nudge it straight away', async ({ page }) => {
     watch(page, 'keyboard-first designer')
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
 
     const rail = page.locator('.ggn-bar')
     await expect(rail).toBeVisible()
@@ -348,7 +348,7 @@ test.describe('Gradient Generator · adding and fine-tuning a stop', () => {
 
   test('a touch drag moves the stop instead of scrolling the page away', async ({ page }) => {
     watch(page, 'designer on a touch screen')
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
     await expect(page.locator('.ggn-handle').first()).toBeVisible()
     // touch-action:none on the rail and handles is what stops the page scroller
     // claiming the gesture. Without it a touch drag never reaches the tool.
@@ -366,7 +366,7 @@ test.describe('Gradient Generator · adding and fine-tuning a stop', () => {
 test.describe('Gradient Generator · submit for review', () => {
   test('a signed-out creator is asked to sign in before the review form exists', async ({ page }) => {
     watch(page, 'signed-out designer sharing a gradient')
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
 
     const submit = page.getByRole('button', { name: 'Submit for review' })
     await submit.click()
@@ -379,7 +379,7 @@ test.describe('Gradient Generator · submit for review', () => {
 
   test('dismissing the sign-in gate queues nothing and returns focus to submit', async ({ page }) => {
     watch(page, 'designer dismissing community sign-in')
-    await go(page, '/color/gradient')
+    await go(page, '/create/gradient')
     const submit = page.getByRole('button', { name: 'Submit for review' })
     await submit.click()
     await page.keyboard.press('Escape')
