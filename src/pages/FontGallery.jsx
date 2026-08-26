@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
+import LibraryToolbar from '../components/library/LibraryToolbar'
+import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
+import LibraryGrid from '../components/library/LibraryGrid'
+import LibraryCard from '../components/library/LibraryCard'
+import LibraryEmpty from '../components/library/LibraryEmpty'
+import useModalDialog from '../hooks/useModalDialog'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
@@ -108,48 +114,11 @@ function useFontReady(font, weight, { defer = true } = {}) {
   return [ready, ref]
 }
 
-// Shared dialog plumbing: focus trap, Escape, background scroll lock and focus
-// restoration. Every overlay in this tool goes through it, so none of them can
-// drift out of the keyboard contract.
-function useModal(onClose) {
-  const ref = useRef(null)
-
-  useEffect(() => {
-    const opener = document.activeElement
-    const node = ref.current
-    document.body.style.overflow = 'hidden'
-
-    const focusables = () => Array.from(
-      node?.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') || [],
-    ).filter(el => el.offsetParent !== null || el === document.activeElement)
-
-    // Focus the dialog itself rather than its first control: a screen reader
-    // then announces the dialog's label before its contents, and the close
-    // button is one Tab away instead of already selected.
-    node?.focus()
-
-    const onKey = (e) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onClose(); return }
-      if (e.key !== 'Tab') return
-      const list = focusables()
-      if (!list.length) { e.preventDefault(); node?.focus(); return }
-      const first = list[0]
-      const last = list[list.length - 1]
-      const active = document.activeElement
-      if (e.shiftKey && (active === first || active === node)) { e.preventDefault(); last.focus() }
-      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus() }
-    }
-
-    document.addEventListener('keydown', onKey, true)
-    return () => {
-      document.removeEventListener('keydown', onKey, true)
-      document.body.style.overflow = ''
-      if (opener && typeof opener.focus === 'function') opener.focus()
-    }
-  }, [onClose])
-
-  return ref
-}
+// This tool's dialog plumbing — focus trap, Escape, background scroll lock and
+// focus restoration — moved to hooks/useModalDialog.js when the font browser
+// needed the same contract. It was the only correct implementation of it in the
+// app, so it became the shared one rather than being copied a second time.
+const useModal = useModalDialog
 
 function CloseIcon() {
   return (
@@ -161,64 +130,69 @@ function CloseIcon() {
 
 /* ── Catalogue row ────────────────────────────────────────────────────────── */
 
-function GalleryCard({ font, index, onOpen, inCompare, onToggleCompare, previewText, previewSize }) {
+function GalleryCard({ font, onOpen, inCompare, onToggleCompare, previewText, previewSize }) {
   const heading = headingWeight(font)
   const body = bodyWeight(font)
   const [ready, ref] = useFontReady(font, heading)
 
   return (
-    <li className={inCompare ? 'fg-card fg-card--comparing' : 'fg-card'} ref={ref}>
-      <button
-        type="button"
-        className="fg-card-open"
-        onClick={() => onOpen(font)}
-        aria-label={`Open the ${font.family} specimen — ${font.category}, ${font.variants.length} weights`}
-      >
-        <span className="fg-card-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-        {/* The specimen is decorative to assistive tech: the button's own label
-            already names the family, its category and its weight count, so
-            exposing the sample and the pangram as well would repeat the same
-            family name three times and read the pangram out once per row. */}
-        <span
-          className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
-          ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body), '--fg-card-size': `${previewSize}px` })}
-          aria-hidden="true"
+    <LibraryCard
+      className={inCompare ? 'fg-card fg-card--comparing' : 'fg-card'}
+      nameClassName="fg-card-name"
+      metaClassName="fg-card-info"
+      media={(
+        <button
+          type="button"
+          className="fg-card-open"
+          ref={ref}
+          onClick={() => onOpen(font)}
+          aria-label={`Open the ${font.family} specimen — ${font.category}, ${font.variants.length} weights`}
         >
-          {ready ? (
-            <>
-              {/* Two lines with two jobs: the display line takes the user's own
-                  words, the second line stays the pangram so every row still
-                  offers the same texture reference to compare against. Echoing
-                  the typed string on both lines told the reader nothing. */}
-              <span className="fg-card-sample">{previewText.trim() || font.family}</span>
-              <span className="fg-card-pangram">{PANGRAM}</span>
-            </>
-          ) : (
-            <>
-              <span className="fg-card-skeleton fg-card-skeleton--sample" />
-              <span className="fg-card-skeleton fg-card-skeleton--body" />
-            </>
-          )}
-        </span>
-        <span className="fg-card-meta">
-          <span className="fg-card-name">{font.family}</span>
-          <span className="fg-card-info">{font.category} · {font.variants.length}w</span>
-        </span>
-      </button>
-      <button
-        type="button"
-        className={inCompare ? 'fg-card-compare fg-card-compare--on' : 'fg-card-compare'}
-        onClick={() => onToggleCompare(font)}
-        aria-pressed={inCompare}
-        aria-label={inCompare ? `Remove ${font.family} from the comparison` : `Add ${font.family} to the comparison`}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          {inCompare
-            ? <polyline points="20 6 9 17 4 12" />
-            : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
-        </svg>
-      </button>
-    </li>
+          {/* The specimen is decorative to assistive tech: the button's own label
+              already names the family, its category and its weight count, so
+              exposing the sample and the pangram as well would repeat the same
+              family name three times and read the pangram out once per card. */}
+          <span
+            className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
+            ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body), '--fg-card-size': `${previewSize}px` })}
+            aria-hidden="true"
+          >
+            {ready ? (
+              <>
+                {/* Two lines with two jobs: the display line takes the user's own
+                    words, the second line stays the pangram so every card still
+                    offers the same texture reference to compare against. Echoing
+                    the typed string on both lines told the reader nothing. */}
+                <span className="fg-card-sample">{previewText.trim() || font.family}</span>
+                <span className="fg-card-pangram">{PANGRAM}</span>
+              </>
+            ) : (
+              <>
+                <span className="fg-card-skeleton fg-card-skeleton--sample" />
+                <span className="fg-card-skeleton fg-card-skeleton--body" />
+              </>
+            )}
+          </span>
+        </button>
+      )}
+      float={(
+        <button
+          type="button"
+          className={inCompare ? 'fg-card-compare fg-card-compare--on' : 'fg-card-compare'}
+          onClick={() => onToggleCompare(font)}
+          aria-pressed={inCompare}
+          aria-label={inCompare ? `Remove ${font.family} from the comparison` : `Add ${font.family} to the comparison`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {inCompare
+              ? <polyline points="20 6 9 17 4 12" />
+              : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
+          </svg>
+        </button>
+      )}
+      name={font.family}
+      meta={`${font.category} · ${font.variants.length}w`}
+    />
   )
 }
 
@@ -257,19 +231,21 @@ function GalleryHero({ families, classifications, weights, pending }) {
   )
 }
 
-// The reserved row geometry, drawn empty. Shown while the catalogue is still in
-// flight so the list arrives into a shape the reader has already seen, instead
-// of a centred spinner collapsing into a full page.
-function SkeletonRows({ count = 6 }) {
+// The reserved card geometry, drawn empty. Shown while the catalogue is still
+// in flight so the grid arrives into a shape the reader has already seen,
+// instead of a centred spinner collapsing into a full page.
+//
+// Nine, not six: the grid shows three across, so six left a ragged two rows.
+function SkeletonRows({ count = 9 }) {
   return (
-    <ul className="fg-grid fg-grid--skeleton" aria-hidden="true">
+    <div className="lbry-grid fg-grid fg-grid--skeleton" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
-        <li key={i} className="fg-skel-row">
+        <div key={i} className="fg-skel-row">
           <span className="fg-card-skeleton fg-card-skeleton--sample" />
           <span className="fg-card-skeleton fg-card-skeleton--body" />
-        </li>
+        </div>
       ))}
-    </ul>
+    </div>
   )
 }
 
@@ -605,7 +581,10 @@ export default function FontGallery({ onCopy, toast }) {
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState('popularity')
   const [previewText, setPreviewText] = useState('')
-  const [previewSize, setPreviewSize] = useState(52)
+  // 40, not the list layout's 52: three grid columns give each specimen ~400px
+  // instead of a full page width, and 52px ellipsised the longer family names
+  // at rest — the one thing a font gallery must never do to a name.
+  const [previewSize, setPreviewSize] = useState(40)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
@@ -725,78 +704,59 @@ export default function FontGallery({ onCopy, toast }) {
         count={galleryCatalog.length}
       />
 
-      {/* Search, preview and filtering are one control block and travel
-          together, the way the Palette Library's toolbar does. Pinning the
-          search row while the category and sort controls scrolled out from
-          under it left half the toolbar stranded off screen. */}
-      <div className="fg-controls">
-        <section className="fg-command" aria-label="Font preview controls">
-          <label className="fg-command-search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="search"
-              placeholder="Search families…"
-              value={query}
-              spellCheck="false"
-              aria-label="Search font families"
-              onChange={e => setQuery(e.target.value)}
-            />
-          </label>
-          <label className="fg-command-text">
-            <span>Preview text</span>
-            <input
-              value={previewText}
-              maxLength={72}
-              spellCheck="false"
-              placeholder="Type something beautiful…"
-              onChange={e => setPreviewText(e.target.value)}
-            />
-          </label>
-          <label className="fg-command-size">
-            <span>Size</span>
-            {/* Ceiling is the reserved sample box, not a round number: above
-                64px a normal-metric face no longer fits inside the fixed 80px
-                line the grid reserves for it, and the row would clip its own
-                descenders rather than reflow. The slider must not offer a size
-                the geometry cannot honour. */}
-            <input type="range" min="34" max="64" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
-            <strong>{previewSize}px</strong>
-          </label>
-        </section>
-
-        <div className="fg-filters">
-          <div className="fg-filter-cats" role="group" aria-label="Filter by category">
-            {CATS.map(c => (
-              <button
-                key={c.id}
-                type="button"
-                className={category === c.id ? 'fg-cat-pill fg-cat-pill--on' : 'fg-cat-pill'}
-                aria-pressed={category === c.id}
-                onClick={() => setCategory(c.id)}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-          <div className="fg-filter-right">
-            <div className="fg-sort" role="group" aria-label="Sort families">
-              {SORTS.map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={sort === s.id ? 'fg-sort-btn fg-sort-btn--on' : 'fg-sort-btn'}
-                  aria-pressed={sort === s.id}
-                  onClick={() => setSort(s.id)}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Search, filtering and the preview controls are one block and travel
+          together — pinning the search row while the category and sort controls
+          scrolled out from under it left half the toolbar stranded off screen.
+          It is now the shared Library toolbar, so this page, the Palette Library
+          and the Gradient Library are one implementation rather than three
+          lookalikes. Preview text and size sit on the toolbar's second row:
+          they change how results are RENDERED, not which results there are. */}
+      <LibraryToolbar
+        className="fg-controls"
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: 'Search families…',
+          label: 'Search font families',
+        }}
+        extra={(
+          <>
+            <label className="fg-command-text">
+              <span>Preview text</span>
+              <input
+                value={previewText}
+                maxLength={72}
+                spellCheck="false"
+                placeholder="Type something beautiful…"
+                onChange={e => setPreviewText(e.target.value)}
+              />
+            </label>
+            <label className="fg-command-size">
+              <span>Size</span>
+              {/* Ceiling is the reserved sample box, not a round number: above
+                  48px a normal-metric face no longer fits inside the fixed 68px
+                  line the card reserves for it, and the card would clip its own
+                  descenders rather than reflow. The slider must not offer a size
+                  the geometry cannot honour. */}
+              <input type="range" min="22" max="48" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
+              <strong>{previewSize}px</strong>
+            </label>
+          </>
+        )}
+      >
+        <LibraryFilterGroup
+          label="Filter by category"
+          value={category}
+          onChange={setCategory}
+          options={CATS}
+        />
+        <LibraryFilterGroup
+          label="Sort families"
+          value={sort}
+          onChange={setSort}
+          options={SORTS}
+        />
+      </LibraryToolbar>
 
       <p className="fg-count" aria-live="polite">
         {filtered.length.toLocaleString()} famil{filtered.length === 1 ? 'y' : 'ies'}
@@ -805,30 +765,21 @@ export default function FontGallery({ onCopy, toast }) {
       </p>
 
       {filtered.length === 0 ? (
-        <div className="fg-empty" role="status">
-          <strong>Nothing matches that yet.</strong>
-          <span>
-            {query.trim()
-              ? `No family in the loaded catalogue contains “${query.trim()}”.`
-              : 'No family in the loaded catalogue is in this category.'}
-            {' '}Clear the filters to see everything again.
-          </span>
-          <button
-            type="button"
-            className="fg-more-btn fg-more-btn--primary"
-            onClick={() => { setQuery(''); setCategory('all') }}
-          >
-            Clear filters
-          </button>
-        </div>
+        <LibraryEmpty
+          className="fg-empty"
+          title="Nothing matches that yet."
+          detail={`${query.trim()
+            ? `No family in the loaded catalogue contains “${query.trim()}”.`
+            : 'No family in the loaded catalogue is in this category.'} Clear the filters to see everything again.`}
+          onClear={() => { setQuery(''); setCategory('all') }}
+        />
       ) : (
         <>
-          <ul className="fg-grid">
-            {paged.map((font, index) => (
+          <LibraryGrid className="fg-grid">
+            {paged.map((font) => (
               <GalleryCard
                 key={font.family}
                 font={font}
-                index={index}
                 onOpen={setSelected}
                 inCompare={compareIds.has(font.family)}
                 onToggleCompare={toggleCompare}
@@ -836,7 +787,7 @@ export default function FontGallery({ onCopy, toast }) {
                 previewSize={previewSize}
               />
             ))}
-          </ul>
+          </LibraryGrid>
 
           {hasMore && (
             <>

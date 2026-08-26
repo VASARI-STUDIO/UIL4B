@@ -625,8 +625,12 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.locator('.tsc-status')).toContainText('20px')
     await expect(page.locator('.tsc-status')).toContainText('1.333')
     // The homepage carries scale maths only: saved family choices survive.
-    await expect(page.getByLabel('Heading family', { exact: true })).toHaveValue('Merriweather')
-    await expect(page.getByLabel('Body family', { exact: true })).toHaveValue('Lora')
+    // Read off the picker's name line rather than a form value — the family
+    // picker is a specimen trigger now, not a <select>, because a <select>
+    // renders every option in the UI font and so could never show a face.
+    const picker = (label) => page.locator('.typ-picker').filter({ hasText: label }).first()
+    await expect(picker('Heading family').locator('.typ-picker-name')).toHaveText('Merriweather')
+    await expect(picker('Body family').locator('.typ-picker-name')).toHaveText('Lora')
   })
 
   test('8 · palette and gradient produce real values with honest states', async ({ page }) => {
