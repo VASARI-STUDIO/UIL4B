@@ -27,6 +27,15 @@ import { watch } from './helpers.js'
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
+// EVERY CREATE PATH BELOW IS A `/create/*` URL, and that is not cosmetic. PR
+// #266 moved the Create tools (/emoji → /create/emoji, /color/palette →
+// /create/palette, and 22 more — src/data/legacyRoutes.js has the table) and
+// gave every retired URL a 301. Playwright FOLLOWS a redirect, so this file went
+// on passing while exercising the redirect rather than the route, and nothing in
+// the run said so. A route that has to be redirected to before it can be
+// measured is not the route the test claims to cover, and the day one of those
+// 301s is dropped the test would start measuring a 404 shell instead.
+
 /**
  * Open `path` at an exact viewport under real touch device metrics.
  * `waitFor` is a selector that must be attached before the measurement runs —
@@ -51,6 +60,10 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
   await page.waitForLoadState('load').catch(() => {})
   if (waitFor) await page.locator(waitFor).first().waitFor({ state: 'attached', timeout: 15000 })
   await page.waitForTimeout(400)
+  // Landed on the route it asked for, not on a redirect's destination. This is
+  // the guard for the staleness above: without it a retired path in the table
+  // keeps passing, silently, on whatever the 301 sends it to.
+  expect(new URL(page.url()).pathname.replace(/\/$/, '') || '/', `${path} did not answer for itself — it redirected to ${new URL(page.url()).pathname}`).toBe(path)
   return { ctx, page }
 }
 
@@ -120,7 +133,7 @@ const TSC_WIDE = [[769, 900], [800, 600], [834, 1194], [844, 390], [900, 900], [
 test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser }) => {
   const damage = []
   for (const [w, h] of TSC_WIDE) {
-    const { ctx, page } = await open(browser, w, h, '/typescale', '.tsc-row-text', { touch: w < 1000 })
+    const { ctx, page } = await open(browser, w, h, '/create/type-scale', '.tsc-row-text', { touch: w < 1000 })
     const r = await page.evaluate(() => {
       const rows = [...document.querySelectorAll('.tsc-row-text')]
       const hidden = []
@@ -155,7 +168,7 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 //
 // The route list is wider than the audit's, on purpose: S4 only records the
 // Emoji Library, but the defect is a property of a SHARED filter row, and every
-// surface that mounts one has it. /icons (4 of 7 off at 320px) and
+// surface that mounts one has it. /create/icons (4 of 7 off at 320px) and
 // /discover/prompts (3 of 6) were never written down.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -192,21 +205,21 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 // [path, container selector, item selector, rows, items across all rows]
 const CHIP_ROWS = [
   // The original `.pl-chips` idiom: one wrapping row of outlined pills.
-  ['/emoji', '.pl-chips', '.pl-chip', 1, 12],
-  ['/icons', '.pl-chips', '.pl-chip', 1, 7],
+  ['/create/emoji', '.pl-chips', '.pl-chip', 1, 12],
+  ['/create/icons', '.pl-chips', '.pl-chip', 1, 7],
   ['/discover/prompts', '.pl-chips', '.pl-chip', 1, 6],
 ]
 
 // The shared Library segmented tray (PR #254), which replaced the chip row on
 // the browse surfaces. /discover/gradients mounts TWO trays — 8 mood options and
 // 4 type options — so it is the surface the single-row shape could not describe.
-// /discover/palettes and /fontgallery are here for the reason the list above is
+// /discover/palettes and /create/font-gallery are here for the reason the list above is
 // wider than the audit: the tray is shared CSS, and a fix measured on one
 // consumer has already been shown to leave another broken.
 const FILTER_TRAYS = [
   ['/discover/gradients', '.lbry-filters', '.lbry-filter', 2, 12],
   ['/discover/palettes', '.lbry-filters', '.lbry-filter', 1, 6],
-  ['/fontgallery', '.lbry-filters', '.lbry-filter', 2, 8],
+  ['/create/font-gallery', '.lbry-filters', '.lbry-filter', 2, 8],
 ]
 
 /**
@@ -268,7 +281,7 @@ test('S4 · every shared Library filter is inside its own tray, on every surface
 test('S3 · every Semantic Colours role preset is inside its own row', async ({ browser }) => {
   const damage = []
   for (const w of [320, 360, 390, 430, 480, 560, 768]) {
-    const { ctx, page } = await open(browser, w, 900, '/color/semantic', '.stc-role-presets', { touch: w < 800 })
+    const { ctx, page } = await open(browser, w, 900, '/create/semantic-color', '.stc-role-presets', { touch: w < 800 })
     const r = await page.evaluate(() => {
       const rows = [...document.querySelectorAll('.stc-role-presets')]
       let outside = 0, total = 0, scrollers = 0
@@ -430,7 +443,7 @@ async function targetSizeFailures(page) {
 test('N8 · no Palette Builder target is both under 24px and crowded', async ({ browser }) => {
   const damage = []
   for (const [w, h] of [[390, 844], [769, 900], [834, 1194], [1024, 768], [1280, 900]]) {
-    const { ctx, page } = await open(browser, w, h, '/color/palette', '.plb-col')
+    const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col')
     const r = await targetSizeFailures(page)
     await ctx.close()
     expect(r.total, `${w}x${h}: expected interactive controls to have rendered`).toBeGreaterThan(20)
@@ -440,7 +453,7 @@ test('N8 · no Palette Builder target is both under 24px and crowded', async ({ 
 })
 
 test('N8 · the tonal ramp is one target per swatch and still opens the tints', async ({ browser }) => {
-  const { ctx, page } = await open(browser, 1280, 900, '/color/palette', '.plb-ramp')
+  const { ctx, page } = await open(browser, 1280, 900, '/create/palette', '.plb-ramp')
   const before = await page.evaluate(() => ({
     ramps: document.querySelectorAll('.plb-ramp').length,
     // The bars must be decorative, not five copies of the same control.
@@ -541,7 +554,7 @@ test('N4 · no tool-map tooltip is clipped by the page container', async ({ brow
 test('N3 · no Palette Builder swatch name is crushed by the tool row', async ({ browser }) => {
   const damage = []
   for (const w of [430, 440, 450, 460, 480, 500, 560, 640, 768]) {
-    const { ctx, page } = await open(browser, w, 900, '/color/palette', '.plb-name')
+    const { ctx, page } = await open(browser, w, 900, '/create/palette', '.plb-name')
     const r = await truncationCensus(page, '.plb-name')
     await ctx.close()
     expect(r.total, `${w}px: expected the five swatch names`).toBe(5)
@@ -568,7 +581,7 @@ test('N3 · no Palette Builder swatch name is crushed by the tool row', async ({
 test('N2 · the gradient stop hex input shows its whole value', async ({ browser }) => {
   const damage = []
   for (const w of [320, 340, 350, 390, 769, 780, 800, 900]) {
-    const { ctx, page } = await open(browser, w, 900, '/color/gradient', '.ggn-stop-hex', { touch: w < 800 })
+    const { ctx, page } = await open(browser, w, 900, '/create/gradient', '.ggn-stop-hex', { touch: w < 800 })
     const r = await page.evaluate(() => {
       const inputs = [...document.querySelectorAll('.ggn-stop-hex')]
       return {
@@ -596,7 +609,7 @@ test('N2 · the gradient stop hex input shows its whole value', async ({ browser
 test('N1 · no font family name is truncated down to the 320px floor', async ({ browser }) => {
   const damage = []
   for (const w of [320, 360, 380, 430]) {
-    const { ctx, page } = await open(browser, w, 900, '/fontgallery', '.fg-card-name')
+    const { ctx, page } = await open(browser, w, 900, '/create/font-gallery', '.fg-card-name')
     const r = await truncationCensus(page, '.fg-card-name')
     await ctx.close()
     expect(r.total, `${w}px: expected the font cards to have rendered`).toBeGreaterThan(20)
@@ -723,7 +736,7 @@ test('Palette Builder swatch tools never reach the swatch content on a short des
     // Deliberately NOT a touch context: this is a desktop/laptop defect, and the
     // tools are opacity:0 until hover on a pointer device — which changes
     // nothing about their box, and is exactly why it goes unnoticed.
-    const { ctx, page } = await open(browser, w, h, '/color/palette', '.plb-col', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col', { touch: false })
     const r = await page.evaluate(() => {
       const cols = [...document.querySelectorAll('.plb-col')]
       const board = document.querySelector('.plb-board')
@@ -779,7 +792,7 @@ const PLB_VIEWPORTS = [[320, 568], [360, 560], [390, 640], [390, 760], [390, 844
 test('M1 · every Palette Builder swatch control is tappable on a short phone', async ({ browser }) => {
   const damage = []
   for (const [w, h] of PLB_VIEWPORTS) {
-    const { ctx, page } = await open(browser, w, h, '/color/palette', '.plb-col')
+    const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col')
     const r = await page.evaluate(() => {
       const label = (el) => {
         if (!el) return 'null'
