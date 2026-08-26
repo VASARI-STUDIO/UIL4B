@@ -6,6 +6,16 @@ heaps of clipping issues and other things."*
 **This is a diagnosis-only pass. Nothing was fixed.** Line references are evidence, not
 patches.
 
+> **The `docs/qa/screenshots/…` files cited below are NOT in the repository.**
+> They were local capture evidence from the run that produced this audit, and
+> they are `.gitignore`d — 11 MB of PNGs that go stale the moment the stylesheet
+> they document changes, against a suite that reproduces them on demand. The
+> paths are kept as a record of what was captured and at which width, not as
+> links you can follow. To regenerate: `npm run build`, `npm run preview`, then
+> drive the widths listed in the Method section. See `screenshots/README.md` for
+> why the portfolio directory of the same name is tracked and this one is not.
+
+
 ---
 
 ## Method
