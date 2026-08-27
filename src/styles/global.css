@@ -6627,16 +6627,32 @@ button.plb-varrow:hover{background:var(--bg-2)}
 
 /* Image picker (Wave 4) — drag-drop dropzone, nested preview with draggable
    picker points, a picked-palette strip and a +/- colour count. Free to use. */
-.plb-imgmenu{min-width:300px}
+/* The image picker's card. Wide enough that a picker point can be placed
+   deliberately rather than guessed at — the founder's report was that the old
+   300px dropdown was too small to see where the markers were landing. */
+.plb-imgcard{width:min(720px,100%);gap:10px}
 .plb-imgdrop{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px;text-align:center;color:var(--t2);background:var(--bg-1);border:1.5px dashed var(--border);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
 .plb-imgdrop:hover,.plb-imgdrop--over{border-color:var(--brand);background:var(--bg-2);color:var(--t1)}
 .plb-imgdrop>svg{color:var(--t2)}
 .plb-imgdrop-t{font-size:13px;font-weight:600;color:var(--t0)}
 .plb-imgdrop-s{font-size:11px;font-weight:500;color:var(--t2)}
 .plb-imgerr{margin-top:8px;padding:7px 10px;font-size:11.5px;font-weight:600;color:#B91C1C;background:color-mix(in srgb,#EF4444 12%,transparent);border-radius:var(--radius-s)}
-.plb-imgstage{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;border-radius:var(--radius-s);background:var(--bg-2);touch-action:none;user-select:none}
+/* THE STAGE BOX MUST HAVE THE IMAGE'S OWN RATIO. Every picker point is stored
+   as a normalised coordinate in the SOURCE image and rendered as a percentage
+   of this box, so the two only describe the same place while the two shapes
+   match. This was a hard 16/10 with `object-fit: cover`: any other shape of
+   image was cropped, the markers sat over pixels they had not sampled, and
+   dragging one read the colour under a different pixel from the one under the
+   cursor. `--plb-img-ar` is set inline from the upload's natural dimensions.
+
+   The max-width is not decoration either: with a definite width, `aspect-ratio`
+   derives the height, and a `max-height` alone would clamp the height and
+   silently break the ratio again. Capping the WIDTH at the height cap times the
+   ratio means whichever limit binds, both stay consistent. */
+.plb-imgstage{position:relative;width:100%;aspect-ratio:var(--plb-img-ar,1.6);max-width:calc(min(48vh,420px) * var(--plb-img-ar,1.6));margin-inline:auto;overflow:hidden;border-radius:var(--radius-s);background:var(--bg-2);touch-action:none;user-select:none}
 .plb-imgstage-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-.plb-imgpoint{position:absolute;width:20px;height:20px;transform:translate(-50%,-50%);border-radius:999px;border:2.5px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.4),0 1px 4px rgba(0,0,0,.35);cursor:grab;padding:0}
+.plb-imghint{margin:0;font-size:11px;font-weight:500;color:var(--t2);text-align:center}
+.plb-imgpoint{position:absolute;width:26px;height:26px;transform:translate(-50%,-50%);border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.4);cursor:grab;padding:0}
 .plb-imgpoint:active{cursor:grabbing}
 .plb-imgstrip{display:flex;gap:3px;margin-top:8px}
 .plb-imgswatch{flex:1;height:22px;border-radius:5px;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
