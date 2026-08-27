@@ -350,7 +350,10 @@ export default function PillNav() {
   // flips when it would otherwise be clipped by the viewport edge. Only one of
   // the two buttons that claim accountBtnRef is ever mounted at a time.
   const closeAccountMenu = useCallback(() => setMenu(null), [])
-  const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu)
+  // arrowNav: the panel stays a disclosure (see the trigger's comment below),
+  // but Up/Down/Home/End walk its controls, so reaching "Sign out" from the top
+  // of a fourteen-control panel is one keypress rather than thirteen tabs.
+  const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu, { arrowNav: true })
   // Latest open/menu mirrored into a ref so the once-bound key handler reads the
   // current layer without re-subscribing. Written in an effect (never during
   // render) to satisfy React's rules-of-refs.

@@ -22,6 +22,13 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 // `initialFocus` is a CSS selector for the control that should take focus
 // instead of the panel itself — reach for it only where the popover's whole
 // purpose is one control (the colour picker opens onto its saturation pad).
+//
+// `arrowNav` adds Up/Down/Home/End movement between the panel's own controls.
+// It does NOT make the panel a `role="menu"`: these panels hold segmented
+// controls, links and status lines, and claiming menu semantics for that told
+// assistive technology to expect a single-tab-stop widget it isn't. Arrow keys
+// here are a movement convenience layered on a disclosure — every control keeps
+// its own tab stop, so a user who ignores the arrows loses nothing.
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
 
@@ -66,7 +73,35 @@ export function placePopover(trigger, panel) {
   panel.style.setProperty('--pop-max-h', `${Math.max(140, Math.round((side === 'top' ? roomAbove : roomBelow) - EDGE_PAD * 2))}px`)
 }
 
-export default function usePopover(open, onClose, { initialFocus = null, autoFocus = true } = {}) {
+// Which control an arrow/Home/End press should move to. Pure, so the wrapping
+// behaviour is testable without a browser. `index` is the currently focused
+// control's position (-1 when focus is on the panel itself); the return is the
+// index to focus, or -1 to leave the key alone.
+export function popoverArrowTarget(key, index, count) {
+  if (!count) return -1
+  switch (key) {
+    // From the panel itself (index -1) Down enters at the top and Up at the
+    // bottom, which is what both the APG menu and listbox patterns do.
+    case 'ArrowDown': return index < 0 ? 0 : (index + 1) % count
+    case 'ArrowUp': return index < 0 ? count - 1 : (index - 1 + count) % count
+    case 'Home': return 0
+    case 'End': return count - 1
+    default: return -1
+  }
+}
+
+// Home/End belong to the caret inside a text-entry control, and arrow keys move
+// it. Never steal them from one.
+function ownsItsOwnKeys(el) {
+  if (!el) return false
+  const tag = el.tagName
+  if (tag === 'TEXTAREA' || tag === 'SELECT') return true
+  if (el.isContentEditable) return true
+  if (tag !== 'INPUT') return false
+  return !['checkbox', 'radio', 'button', 'submit', 'reset', 'file'].includes(el.type)
+}
+
+export default function usePopover(open, onClose, { initialFocus = null, autoFocus = true, arrowNav = false } = {}) {
   const triggerRef = useRef(null)
   const popRef = useRef(null)
   const closeRef = useRef(onClose)
@@ -116,7 +151,17 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
         closeToTrigger()
         return
       }
-      if (e.key !== 'Tab' || !panel) return
+      if (!panel) return
+      if (arrowNav && !ownsItsOwnKeys(e.target) && (panel === document.activeElement || panel.contains(document.activeElement))) {
+        const controls = focusablesIn(panel)
+        const next = popoverArrowTarget(e.key, controls.indexOf(document.activeElement), controls.length)
+        if (next >= 0) {
+          e.preventDefault()
+          controls[next].focus()
+          return
+        }
+      }
+      if (e.key !== 'Tab') return
       const list = focusablesIn(panel)
       if (!list.length) return
       const active = document.activeElement
@@ -136,7 +181,7 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       document.removeEventListener('pointerdown', onDown, true)
       document.removeEventListener('keydown', onKey, true)
     }
-  }, [open, initialFocus, autoFocus, closeToTrigger])
+  }, [open, initialFocus, autoFocus, arrowNav, closeToTrigger])
 
   return { triggerRef, popRef, closeToTrigger }
 }

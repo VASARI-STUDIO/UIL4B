@@ -13,6 +13,28 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The nav popover can be walked with the arrow keys
+
+`usePopover` gained an opt-in `arrowNav`, and the nav's account panel (avatar
+when signed in, meatball when signed out) turns it on. Up/Down step through the
+panel's controls and wrap at both ends, Home/End reach either end in one press.
+
+The panel stays a **disclosure**, not a `role="menu"`. That distinction was an
+earlier deliberate correction — the panel holds a segmented theme control, links
+and a status line, and menu semantics promise assistive technology a
+single-tab-stop widget it is not — so the arrows are movement layered on top:
+every control keeps its own tab stop, and a user who ignores the arrows loses
+nothing. Escape-to-trigger, outside-press dismissal, focus-on-open and
+Tab-past-the-end-closes were already in the hook and are asserted here so the
+new handling cannot quietly swallow them.
+
+Two guards worth naming, because both were reachable: the handler is bound on
+the document in the capture phase, so without a containment check it would have
+hijacked every arrow key on the site for as long as any popover was open; and
+Home/End/arrows are never taken from a text-entry control, where they belong to
+the caret.
+
+
 ### Design Language V2 — token foundation
 
 The token layer of [`docs/reference/design-language-v2.md`](docs/reference/design-language-v2.md),
