@@ -50,7 +50,10 @@ export default function GradientGallery({ toast }) {
   const { user } = useAuth()
   const [rawQuery, setRawQuery] = useState('')
   const [tag, setTag] = useState('all')
-  const [type, setType] = useState('all')
+  // An ARRAY, because the type tray is multi-select (founder request,
+  // 2026-08-08). `['all']` is the unfiltered state; picking every type collapses
+  // straight back to it, which LibraryFilterGroup handles.
+  const [types, setTypes] = useState(['all'])
   // Gradients this browser has queued for review. They are deliberately kept
   // OUT of the browse grid: they are not in the library, and showing them there
   // would imply they had been published. See utils/gradientSubmissions.js.
@@ -92,15 +95,15 @@ export default function GradientGallery({ toast }) {
 
   const visible = useMemo(() => GALLERY_GRADIENTS.filter(g => {
     if (tag !== 'all' && !g.tags.includes(tag)) return false
-    if (type !== 'all' && g.type !== type) return false
+    if (!types.includes('all') && !types.includes(g.type)) return false
     if (query) {
       const hay = `${g.name} ${g.type} ${g.tags.join(' ')} ${g.stops.map(s => s.color).join(' ')}`.toLowerCase()
       if (!hay.includes(query)) return false
     }
     return true
-  }), [query, tag, type])
+  }), [query, tag, types])
 
-  const clearAll = () => { setRawQuery(''); setTag('all'); setType('all') }
+  const clearAll = () => { setRawQuery(''); setTag('all'); setTypes(['all']) }
 
   return (
     <div className="sec grg-wrap">
@@ -175,9 +178,11 @@ export default function GradientGallery({ toast }) {
         />
         <LibraryFilterGroup
           label="Filter by gradient type"
-          value={type}
-          onChange={setType}
+          value={types}
+          onChange={setTypes}
           options={TYPE_OPTIONS}
+          multiSelect
+          hint="Shift-click to combine types"
         />
       </LibraryToolbar>
 
