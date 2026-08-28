@@ -239,7 +239,10 @@ function loadImageData(file, maxSize = 320) {
         canvas.width = w; canvas.height = h
         const ctx = canvas.getContext('2d', { willReadFrequently: true })
         ctx.drawImage(img, 0, 0, w, h)
-        resolve({ data: ctx.getImageData(0, 0, w, h), url })
+        // The natural dimensions, not the capped canvas's: the preview stage
+        // is sized from this ratio, and rounding 4000x2999 down to 320x240
+        // would tilt every picker point by a fraction of the image.
+        resolve({ data: ctx.getImageData(0, 0, w, h), url, aspect: img.naturalWidth / img.naturalHeight })
       } catch (err) { URL.revokeObjectURL(url); reject(err) }
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Couldn’t read that image')) }
@@ -925,6 +928,10 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [imgPoints, setImgPoints] = useState([]) // [{ x, y, hex }] normalised
   const [imgError, setImgError] = useState('')
   const [imgDragOver, setImgDragOver] = useState(false)
+  // The uploaded image's own width/height ratio. The stage is sized to it so a
+  // point's normalised (x, y) in the SOURCE lands on the same spot of the
+  // DISPLAYED image — see the CSS note on .plb-imgstage.
+  const [imgAspect, setImgAspect] = useState(16 / 10)
   const imgDataRef = useRef(null)               // ImageData kept for live sampling
   const imgDragIdx = useRef(null)               // point index being dragged
   const imgStageRef = useRef(null)              // the preview stage element
@@ -1174,7 +1181,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setLiveMsg('Palette randomised')
   }, [harmony, locked, toast, resolveSystem])
 
-  const anyPopover = saveOpen || harmOpen || visionOpen || imgOpen
+  // imgOpen is deliberately NOT here. The image picker is a centred modal now,
+  // and this layer closes anything whose pointerdown misses a .plb-menuwrap —
+  // which is every press inside the modal, including dragging a picker point.
+  // useModalDialog owns its Escape and the scrim owns its outside press.
+  const anyPopover = saveOpen || harmOpen || visionOpen
     || galleryOpen || histOpen
     || tintsIdx != null || pickerIdx != null || swapIdx != null || ctxMenu != null || preview != null
 
@@ -1185,6 +1196,8 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // re-run on every render of a very large component.
   const closePreview = useCallback(() => setPreview(null), [])
   const closeSubmit = useCallback(() => setSubmitOpen(false), [])
+  const closeImageDialog = useCallback(() => setImgOpen(false), [])
+  const imageDialogRef = useModalDialog(closeImageDialog, { enabled: imgOpen })
   const previewDialogRef = useModalDialog(closePreview, { enabled: preview != null })
   const submitDialogRef = useModalDialog(closeSubmit, { enabled: Boolean(submitOpen && uid) })
 
@@ -1407,8 +1420,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
       setImgError(`That image is over ${IMG_MAX_MB} MB — pick a smaller one.`); return
     }
     try {
-      const { data, url } = await loadImageData(file)
+      const { data, url, aspect } = await loadImageData(file)
       imgDataRef.current = data
+      setImgAspect(Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 10)
       setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return url })
       setImgPoints(dominantSwatches(data, Math.min(colors.length, PRO_MAX)))
     } catch (err) {
@@ -1436,7 +1450,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const clearImage = () => {
     setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return '' })
     imgDataRef.current = null
-    setImgPoints([]); setImgError('')
+    setImgPoints([]); setImgError(''); setImgAspect(16 / 10)
   }
 
   const addImagePoint = () => {
@@ -2017,6 +2031,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
               type="button"
               className="btn btn-s plb-icobtn"
               aria-label="Image"
+              aria-haspopup="dialog"
               aria-expanded={imgOpen}
               title="Pull colours from an image"
               onClick={() => { const n = !imgOpen; closeAllMenus(); setImgOpen(n) }}
@@ -2024,66 +2039,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
               <IcoImage /><span className="plb-lbl"><span className="plb-lbl-i">Image</span></span>
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="plb-file" onChange={onImageFile} aria-hidden="true" tabIndex={-1} />
-            {imgOpen && (
-              <div className="plb-menu plb-menu--left plb-imgmenu" role="menu" aria-label="Pull colours from an image">
-                <div className="plb-menu-title">From image</div>
-                {!imgSrc ? (
-                  <>
-                    <div
-                      className={imgDragOver ? 'plb-imgdrop plb-imgdrop--over' : 'plb-imgdrop'}
-                      onClick={() => fileRef.current?.click()}
-                      onDragOver={(e) => { e.preventDefault(); setImgDragOver(true) }}
-                      onDragLeave={() => setImgDragOver(false)}
-                      onDrop={onImageDrop}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileRef.current?.click() } }}
-                    >
-                      <IcoImage />
-                      <div className="plb-imgdrop-t">Drag an image here</div>
-                      <div className="plb-imgdrop-s">or click to browse · PNG, JPG, up to {IMG_MAX_MB} MB</div>
-                    </div>
-                    {imgError && <div className="plb-imgerr" role="alert">{imgError}</div>}
-                  </>
-                ) : (
-                  <>
-                    <div className="plb-imgstage" ref={imgStageRef}>
-                      <img src={imgSrc} alt="Uploaded reference" className="plb-imgstage-img" draggable={false} />
-                      {imgPoints.map((p, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          className="plb-imgpoint"
-                          style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, background: p.hex }}
-                          onPointerDown={(e) => { e.preventDefault(); imgDragIdx.current = i }}
-                          aria-label={`Picker point ${i + 1}: ${p.hex}`}
-                          title={p.hex}
-                        />
-                      ))}
-                    </div>
-                    <div className="plb-imgstrip">
-                      {imgPoints.map((p, i) => (
-                        <div key={i} className="plb-imgswatch" style={{ background: p.hex }} title={p.hex} />
-                      ))}
-                    </div>
-                    <div className="plb-imgcount">
-                      <span className="plb-imgcount-l">Colours</span>
-                      <div className="plb-imgcount-ctl">
-                        <button type="button" className="plb-imgcount-btn" onClick={removeImagePoint} disabled={imgPoints.length <= 2} aria-label="Fewer colours">−</button>
-                        <span className="plb-imgcount-n">{imgPoints.length}</span>
-                        <button type="button" className="plb-imgcount-btn" onClick={addImagePoint} disabled={imgPoints.length >= PRO_MAX} aria-label="More colours">+</button>
-                      </div>
-                    </div>
-                    <div className="plb-imgactions">
-                      <button type="button" className="btn btn-s btn-ghost" onClick={autoExtractImage}>Reset / auto</button>
-                      <button type="button" className="btn btn-s btn-ghost" onClick={() => fileRef.current?.click()}>Replace</button>
-                      <button type="button" className="btn btn-s" onClick={applyImagePalette}>Apply</button>
-                    </div>
-                    <button type="button" className="plb-imgclear" onClick={clearImage}>Remove image</button>
-                  </>
-                )}
-              </div>
-            )}
           </div>
 
           {/* One gallery button → a large community-gallery popup with three
@@ -2740,6 +2695,94 @@ export default function PaletteBuilder({ onCopy, toast }) {
           {colors.length > 2 && (
             <button type="button" role="menuitem" className="plb-ctx-item plb-ctx-item--danger" onClick={() => { removeCol(ctxMenu.i); setCtxMenu(null) }}><IcoX /> Remove</button>
           )}
+        </div>
+      )}
+
+      {/* ── Image picker modal ──
+          Was an anchored 300px toolbar dropdown. Two things were wrong with it,
+          and the founder only saw the second: the stage was too small to place a
+          picker point deliberately, and — the real fault — it was a FIXED 16/10
+          box showing the image `object-fit: cover`, while every picker point is
+          stored as a normalised coordinate in the SOURCE. Any image that was not
+          16/10 was cropped, so the markers sat over pixels they had not sampled
+          and dragging one read the colour under a different pixel than the one
+          under the cursor. Centred, enlarged, and the stage now takes the
+          image's own ratio so the two coordinate spaces are the same space. */}
+      {imgOpen && (
+        <div
+          className="plb-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pull colours from an image"
+          tabIndex={-1}
+          ref={imageDialogRef}
+          onPointerDown={(e) => { if (e.target === e.currentTarget) setImgOpen(false) }}
+        >
+          <div className="plb-modal-card plb-imgcard">
+            <div className="plb-modal-head">
+              <span className="plb-pop-title">From image</span>
+              <button type="button" className="plb-pop-x" onClick={() => setImgOpen(false)} aria-label="Close">
+                <IcoX />
+              </button>
+            </div>
+            {!imgSrc ? (
+              <>
+                <div
+                  className={imgDragOver ? 'plb-imgdrop plb-imgdrop--over' : 'plb-imgdrop'}
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setImgDragOver(true) }}
+                  onDragLeave={() => setImgDragOver(false)}
+                  onDrop={onImageDrop}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileRef.current?.click() } }}
+                >
+                  <IcoImage />
+                  <div className="plb-imgdrop-t">Drag an image here</div>
+                  <div className="plb-imgdrop-s">or click to browse · PNG, JPG, up to {IMG_MAX_MB} MB</div>
+                </div>
+                {imgError && <div className="plb-imgerr" role="alert">{imgError}</div>}
+              </>
+            ) : (
+              <>
+                <div className="plb-imgstage" ref={imgStageRef} style={{ '--plb-img-ar': imgAspect }} data-img-aspect={imgAspect}>
+                  <img src={imgSrc} alt="Uploaded reference" className="plb-imgstage-img" draggable={false} />
+                  {imgPoints.map((p, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="plb-imgpoint"
+                      style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, background: p.hex }}
+                      onPointerDown={(e) => { e.preventDefault(); imgDragIdx.current = i }}
+                      aria-label={`Picker point ${i + 1}: ${p.hex}`}
+                      title={p.hex}
+                      data-hex={p.hex}
+                    />
+                  ))}
+                </div>
+                <p className="plb-imghint">Drag a marker to sample a different pixel.</p>
+                <div className="plb-imgstrip">
+                  {imgPoints.map((p, i) => (
+                    <div key={i} className="plb-imgswatch" style={{ background: p.hex }} title={p.hex} />
+                  ))}
+                </div>
+                <div className="plb-imgcount">
+                  <span className="plb-imgcount-l">Colours</span>
+                  <div className="plb-imgcount-ctl">
+                    <button type="button" className="plb-imgcount-btn" onClick={removeImagePoint} disabled={imgPoints.length <= 2} aria-label="Fewer colours">−</button>
+                    <span className="plb-imgcount-n">{imgPoints.length}</span>
+                    <button type="button" className="plb-imgcount-btn" onClick={addImagePoint} disabled={imgPoints.length >= PRO_MAX} aria-label="More colours">+</button>
+                  </div>
+                </div>
+                <div className="plb-imgactions">
+                  <button type="button" className="btn btn-s btn-ghost" onClick={autoExtractImage}>Reset / auto</button>
+                  <button type="button" className="btn btn-s btn-ghost" onClick={() => fileRef.current?.click()}>Replace</button>
+                  <button type="button" className="btn btn-s" onClick={applyImagePalette}>Apply</button>
+                </div>
+                <button type="button" className="plb-imgclear" onClick={clearImage}>Remove image</button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
