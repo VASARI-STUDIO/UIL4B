@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useAppearance } from '../contexts/AppearanceContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import NavIcon from './NavIcon'
 
@@ -187,6 +188,70 @@ function MoonIcon() {
 }
 
 // The day/night segmented control, shared by the account popover (signed in) and
+// Terms the search placeholder cycles through on hover. Real tool names, not
+// invented ones — the point is to tell a first-time visitor what is in here,
+// and a term that finds nothing when typed would be a lie.
+const SEARCH_HINTS = ['palette builder', 'gradients', 'font pairing', 'contrast checker', 'type scale', 'emoji library']
+
+// Milliseconds per character typed / deleted, and the hold at a completed word.
+const TYPE_MS = 55
+const ERASE_MS = 28
+const HOLD_MS = 1100
+
+// The nav search placeholder. At rest it reads "Search tools…"; while the field
+// is hovered or focused it types the terms above one character at a time,
+// holds, erases, and moves on.
+//
+// THREE THINGS THIS DELIBERATELY DOES NOT DO.
+//
+// It does not run at load. The timer only exists while `active` is true, so a
+// signed-out homepage does no work for it until the pointer arrives — which is
+// what keeps it clear of the LCP/CLS budgets recorded on `homepage-field-metrics`.
+//
+// It does not animate under reduced motion. A character-by-character reveal is
+// animation whether it is done in CSS or in JS, and the global
+// `transition-duration: 0.01ms` rule cannot reach a setState loop. `active` is
+// false whenever motion is reduced, so the static text simply stays.
+//
+// It is not read by assistive technology. The button already has a fixed
+// accessible name ("Search UIL4B"); a live stream of half-typed words on top of
+// that is noise, so the animated span is aria-hidden and the static label is
+// what a screen reader gets.
+function SearchPlaceholder({ active }) {
+  const [typed, setTyped] = useState('')
+  const [term, setTerm] = useState(0)
+
+  // Every setState below happens inside a timer callback, never synchronously
+  // in the effect body — the first character is scheduled rather than written,
+  // and the reset on deactivation happens in the cleanup. That is what keeps
+  // this off the `react-hooks/set-state-in-effect` warning count, which the
+  // build gate holds at a fixed number.
+  useEffect(() => {
+    if (!active) return undefined
+    let cancelled = false
+    let timer
+    const word = SEARCH_HINTS[term % SEARCH_HINTS.length]
+    const step = (i, erasing) => {
+      if (cancelled) return
+      setTyped(word.slice(0, i))
+      if (!erasing && i < word.length) timer = setTimeout(() => step(i + 1, false), TYPE_MS)
+      else if (!erasing) timer = setTimeout(() => step(i, true), HOLD_MS)
+      else if (i > 0) timer = setTimeout(() => step(i - 1, true), ERASE_MS)
+      else setTerm(t => t + 1)
+    }
+    timer = setTimeout(() => step(0, false), TYPE_MS)
+    return () => { cancelled = true; clearTimeout(timer); setTyped('') }
+  }, [active, term])
+
+  if (!active) return <span className="pnav-search-ph">Search tools&hellip;</span>
+  return (
+    <span className="pnav-search-ph pnav-search-ph--typing" aria-hidden="true">
+      {typed}
+      <i className="pnav-search-caret" />
+    </span>
+  )
+}
+
 // the compact menu popover (signed out) so the theme toggle reads identically in
 // both places.
 function ThemeSeg({ theme, setTheme }) {
@@ -282,6 +347,11 @@ export default function PillNav() {
   const { openLogin } = useLoginPrompt()
   const { isPro } = useSubscription()
   const { theme, setTheme } = useTheme()
+  const { reducedMotion } = useAppearance()
+  // Hover/focus on the search field. Drives both the width expansion and the
+  // typing placeholder; the CSS could do the width on its own, but the timer
+  // needs to know too, and one source beats two that can disagree.
+  const [searchHot, setSearchHot] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -647,7 +717,7 @@ export default function PillNav() {
                 palette, which reuses the same search index. On sales routes the
                 field hides on desktop (the bar leads with the three menus +
                 Get Pro); the / shortcut still works. */}
-            <div className="pnav-search">
+            <div className={searchHot ? 'pnav-search is-hot' : 'pnav-search'}>
               <button
                 type="button"
                 className="pnav-search-field"
@@ -655,9 +725,13 @@ export default function PillNav() {
                 aria-expanded={searchOpen}
                 aria-label="Search UIL4B"
                 onClick={openSearch}
+                onPointerEnter={() => setSearchHot(true)}
+                onPointerLeave={() => setSearchHot(false)}
+                onFocus={() => setSearchHot(true)}
+                onBlur={() => setSearchHot(false)}
               >
                 <SearchIcon />
-                <span className="pnav-search-ph">Search tools&hellip;</span>
+                <SearchPlaceholder active={searchHot && !reducedMotion} />
                 <kbd className="pnav-search-kbd" aria-hidden="true">/</kbd>
               </button>
             </div>

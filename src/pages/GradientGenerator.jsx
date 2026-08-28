@@ -5,6 +5,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import ColorPickerPop from '../components/ColorPickerPop'
 import ShuffleIcon from '../components/ShuffleIcon'
+import { GRAD_TYPE_WEIGHTS, pickGradientType, pickStopCount } from '../utils/gradientRandom'
 import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
@@ -24,7 +25,7 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 // gradient authored here survives a jump to any other colour tool.
 // (Class prefix `ggn-` = gradient generator.)
 
-const GRAD_TYPES = ['Linear', 'Radial', 'Conic']
+const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 
 // Starter presets (the 4×4 grid). Explicit hex so the preview is vivid
 // regardless of the user's current palette. A spread of moods — vivid,
@@ -512,7 +513,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     // than its index — so if ANY stop is locked we keep the current length
     // rather than shrinking to a random 2–3 and dropping locked stops.
     const hasStopLock = stops.some(s => s.locked)
-    const n = (locks.count || hasStopLock) ? stops.length : 2 + Math.floor(Math.random() * 2) // 2–3 stops
+    const n = (locks.count || hasStopLock) ? stops.length : pickStopCount(Math.random())
     return Array.from({ length: n }, (_, i) => {
       const ex = stops[i]
       if (ex?.locked) return { color: ex.color, position: ex.position, locked: true }
@@ -526,7 +527,7 @@ export default function GradientGenerator({ onCopy, toast }) {
 
   const randomise = useCallback(() => {
     setStops(rollStops(() => randomHex()))
-    if (!locks.type) setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
+    if (!locks.type) setType(pickGradientType(Math.random()))
     if (!locks.angle) setAngle(Math.round(Math.random() * 360))
     setActiveStop(0)
     setFromLibrary(false)
@@ -555,7 +556,7 @@ export default function GradientGenerator({ onCopy, toast }) {
     // Draw unlocked slots from the shuffled palette, cycling if there are more
     // stops than colours so a locked count never runs the pool dry.
     setStops(rollStops(i => shuffled[i % shuffled.length].toUpperCase()))
-    if (!locks.type) setType(GRAD_TYPES[Math.floor(Math.random() * GRAD_TYPES.length)])
+    if (!locks.type) setType(pickGradientType(Math.random()))
     if (!locks.angle) setAngle(Math.round(Math.random() * 360))
     setActiveStop(0)
     setFromLibrary(false)
