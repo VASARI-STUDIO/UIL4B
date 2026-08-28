@@ -1,5 +1,7 @@
 import { adminDb, adminAuth, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
 import { planForUser, dailyLimitFor, monthlyLimitFor, modelFor } from './_lib/plans.js'
+import { requireAdmin } from './_lib/admin.js'
+import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 import { cleanKey } from './_lib/env.js'
 import { classifyGeminiFinish } from './_lib/geminiFinish.js'
 
@@ -530,14 +532,45 @@ const TASKS = {
   },
 }
 
+// Constant-time comparison for the break-glass code below. `===` on secrets
+// leaks their length and their matching prefix through timing; over a network
+// that signal is noisy, but a cheap correct comparison costs nothing.
+function timingSafeEqual(a, b) {
+  const av = Buffer.from(String(a))
+  const bv = Buffer.from(String(b))
+  if (av.length !== bv.length) return false
+  return nodeTimingSafeEqual(av, bv)
+}
+
 export default async function handler(req, res) {
-  // Config health check (admin-code gated). GET /api/ai?diag=<code> reports
-  // whether the AI keys and Firebase credential are present/valid — lengths
-  // only, never the values — so misconfiguration is diagnosable fast.
+  // ── Config health check ───────────────────────────────────────────────────
+  // GET /api/ai?diag=1 reports whether the AI keys and the Firebase credential
+  // are present and valid — presence and length only, never a value.
+  //
+  // THIS USED TO BE GATED ON A STRING COMMITTED TO THIS FILE. That is not a
+  // secret; it is a published password, and it opened an endpoint that
+  // enumerates which of the deployment's secrets exist. It is now gated on a
+  // VERIFIED ADMINISTRATOR, using the same allowlist + email_verified check as
+  // /api/verify-admin.
+  //
+  // The break-glass matters and is not laziness. The single most useful thing
+  // this endpoint reports is "the Firebase credential is broken" — and admin
+  // auth runs on that same credential, so gating solely on it would make the
+  // diagnostic unreachable in the one situation it exists for. DIAG_CODE is a
+  // server-only env var with NO default: unset (the shipped state) means the
+  // break-glass does not exist and admin auth is the only way in.
   if (req.method === 'GET') {
-    if ((req.query?.diag || '') !== 'uil4b-dev-2026') {
+    if (!('diag' in (req.query || {}))) {
       res.setHeader('Allow', 'POST')
       return res.status(405).json({ error: 'Method not allowed' })
+    }
+    const breakGlass = process.env.DIAG_CODE
+    const codeMatches = Boolean(breakGlass) && timingSafeEqual(req.query.diag, breakGlass)
+    if (!codeMatches) {
+      const admin = await requireAdmin(req)
+      // 404 rather than 403 — see requireAdmin. A caller who is not the
+      // administrator learns nothing about whether this surface exists.
+      if (!admin.ok) return res.status(admin.status === 401 ? 404 : admin.status).json({ error: 'Not found' })
     }
     let cred
     try { cred = credentialProblem() || 'ok' } catch (e) { cred = 'error: ' + String(e?.message || e).slice(0, 120) }
