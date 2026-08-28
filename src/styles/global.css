@@ -4941,12 +4941,33 @@ html.lenis,html.lenis body{height:auto}
 /* Centre search — sits between the nav triggers and the right-hand actions
    cluster; it takes the bar's spare width (flex:1) so the fixed-width field
    stays visually centred and the actions stay pinned right. */
-.pnav-search{display:flex;align-items:center;justify-content:flex-start;flex:0 1 300px;min-width:0}
+/* Hover/focus widens the field (founder request, 2026-08-08). It grows into the
+   lead column's own slack, never past it: .pnav-inner is `1fr auto 1fr`, so the
+   three centre menus stay dead-centre whatever this does, and `min-width:0`
+   keeps the content from forcing the column wider than its track. The reduced-
+   motion rule at the top of this file already flattens the transition to
+   0.01ms, so there is no per-component guard for it here — only the JS typing
+   animation needs one, and PillNav gates that on `reducedMotion`.
+
+   A DEFINITE `width`, NOT A FLEX BASIS. .pnav-lead is `justify-self:start` in a
+   1fr track, so it is shrink-to-fit — its width comes from its content, which
+   made `flex-basis` inert here and let the *typed text* drive the box instead.
+   Measured: the field went 177px → 88px on hover, because a half-typed word is
+   narrower than "Search tools…". A definite width contributes itself to the
+   column's intrinsic size, so the box stops following the text. `flex:0 1 auto`
+   keeps it shrinkable at widths where the lead column is genuinely squeezed. */
+.pnav-search{display:flex;align-items:center;justify-content:flex-start;flex:0 1 auto;width:300px;min-width:0;transition:width var(--dur-3) var(--ease-out)}
+.pnav-search.is-hot{width:390px}
 .pnav-search-field{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:100%;min-width:40px;height:40px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-search-field:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .pnav-search-field .pnav-search-ico{flex:0 0 auto;color:var(--t2)}
 .pnav-search-field:hover .pnav-search-ico{color:var(--t1)}
-.pnav-search-ph{white-space:nowrap;flex:1 1 auto;text-align:left}
+.pnav-search-ph{white-space:nowrap;flex:1 1 auto;text-align:left;overflow:hidden;text-overflow:ellipsis}
+/* The typed term reads as input rather than as a label, so it takes the ink
+   colour the resting placeholder does not. */
+.pnav-search-field:hover .pnav-search-ph--typing{color:var(--t0)}
+.pnav-search-caret{display:inline-block;width:1px;height:1em;margin-left:1px;vertical-align:-0.15em;background:currentColor;animation:pnav-caret 1s steps(1,end) infinite}
+@keyframes pnav-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
 .pnav-search-kbd{flex:0 0 auto;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:11px;font-weight:600;line-height:1}
 /* Sales/marketing routes drop the search field (the / shortcut still opens the
    palette); the grid's middle column keeps the three menus centred regardless. */
@@ -6161,8 +6182,12 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 /* ══ Foundry responsive ══ */
 @media(max-width:1180px){
   /* Tight middle ground: the centred menus stay put; the search gives up its
-     placeholder and shrinks to the icon so the side columns never clip. */
-  .pnav-search{flex:0 0 auto}
+     placeholder and shrinks to the icon so the side columns never clip.
+     The base rule's definite 300px comes off with it — and `.is-hot` has to be
+     named explicitly, because a media query adds no specificity and
+     `.pnav-search.is-hot` would otherwise keep winning down here, where there
+     is no hover and no placeholder to expand for. */
+  .pnav-search,.pnav-search.is-hot{flex:0 0 auto;width:auto}
   .pnav-search-field{width:40px;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
 }
@@ -6190,7 +6215,7 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
   /* Search collapses to an icon-only tap target hugging the actions cluster;
      sales routes get it back too — on mobile it's the only way into the
      palette. The bookmark / export icon buttons fold away into the sheet. */
-  .pnav-search{flex:0 0 auto;margin-left:auto}
+  .pnav-search,.pnav-search.is-hot{flex:0 0 auto;width:auto;margin-left:auto}
   .pnav--sales .pnav-search-field{display:flex}
   .pnav-search-field{width:40px;min-width:0;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
