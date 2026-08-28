@@ -65,6 +65,51 @@ function prefixWordCoverage(haystack, query) {
   return best
 }
 
+// Suffixes English adds to a word it is still the same word as.
+const INFLECTIONS = ['', 's', 'es', 'd', 'ed', 'ing', 'er', 'ers', 'al', 'y', 'ies', 'ly', 'e']
+
+// Is `query` plausibly the same WORD as some word of `haystack`, rather than
+// merely its opening letters?
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// WHY COVERAGE ALONE WAS NOT ENOUGH, AND THE BUG THAT PROVED IT
+// ─────────────────────────────────────────────────────────────────────────────
+// The prefix band scores on coverage, on the argument that a query covering
+// most of a word is an inflection of it: "lock"/"locked" is 67% and "music"/
+// "musical" is 71%, both above the 690 line a whole keyword scores, so 🔒 and 🎵
+// win their queries. The worked example in that comment used "car"/"carrot" —
+// 50%, safely below the line — and concluded 🚗 wins "car".
+//
+// It does not. The example only considered a LONG unrelated word. Short ones
+// score far higher on the same measure: "car"/"card" and "car"/"carp" are 75%,
+// which lands at 713 and beats 🚗's keyword hit at 690. Measured on the shipped
+// index, "car" returned:
+//
+//   🏎️ racing car · 🚓 police car · 🚨 police car light · 🎏 carp streamer ·
+//   💳 credit card · 📇 card index · 🗃️ card file box · 🗂️ card index dividers ·
+//   🎴 flower playing cards · 🚗 automobile   ← tenth
+//
+// Six unrelated words between the query and the car. Coverage cannot separate
+// these cases, because a SHORT query gets high coverage on any slightly longer
+// word, related or not — the shorter the query, the more coincidences clear the
+// bar.
+//
+// So the prefix band only outranks a whole keyword when what is left over is a
+// suffix English actually adds. "musical" − "music" = "al" and "locked" −
+// "lock" = "ed" are inflections; "carrot" − "car" = "rot" is not. A minimum
+// query length rides along with it: at three letters "card" − "car" = "d" would
+// pass the suffix test on a technicality, and three-letter prefixes of unrelated
+// words are common enough that the whole band is untrustworthy there.
+const MIN_INFLECTION_QUERY = 4
+function inflectsAWord(haystack, query) {
+  if (query.length < MIN_INFLECTION_QUERY) return false
+  return haystack.split(' ').some(word => (
+    word.length >= query.length
+    && word.startsWith(query)
+    && INFLECTIONS.includes(word.slice(query.length))
+  ))
+}
+
 // 0 = no match. Higher is a better match. A hit on the emoji's NAME always
 // outranks a hit on its keywords, so "cat" puts 🐱 above every emoji that
 // merely lists "cat" as a related term.
@@ -109,8 +154,16 @@ export function scoreEmoji(entry, query, tokens) {
   //
   // Above the line the query is an inflection of the word and the emoji is what
   // was meant; below it the letters merely coincide.
+  //
+  // The cap is what makes that sentence true. Coverage on its own let short
+  // coincidences over the line — "car"/"card" is 75%, higher than either
+  // inflection above — so a query that does not INFLECT any word of the name is
+  // held below 690 whatever its coverage. See inflectsAWord.
   const prefix = prefixWordCoverage(name, query)
-  if (prefix) bump(600 + Math.round(150 * prefix))
+  if (prefix) {
+    const raw = 600 + Math.round(150 * prefix)
+    bump(inflectsAWord(name, query) ? raw : Math.min(raw, 689))
+  }
 
   // +30 when the name corroborates a keyword hit. ✈️ "airplane" and 🧑‍✈️
   // "pilot" both list the keyword "plane"; only one of them is a plane.

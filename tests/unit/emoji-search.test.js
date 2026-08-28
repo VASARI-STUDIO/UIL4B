@@ -196,3 +196,65 @@ test('every index entry can find itself by its own name', () => {
     assert.ok(find(name).includes(char), `${char} cannot be found by its name "${name}"`)
   }
 })
+
+// ── The prefix band admitted coincidences ────────────────────────────────────
+//
+// scoreEmoji's prefix band scores on COVERAGE — how much of a word the query
+// accounts for — on the argument that a query covering most of a word is an
+// inflection of it. The worked example in that comment used "car"/"carrot" at
+// 50%, safely below the 690 a whole keyword scores, and concluded 🚗 wins "car".
+//
+// It did not. The example only considered a LONG unrelated word. Short ones
+// score much higher on the same measure: "car"/"card" and "car"/"carp" are 75%,
+// which beat 🚗's keyword hit outright. Measured on the shipped index before
+// this fix, "car" returned six unrelated words before the car:
+//
+//   🏎️ 🚓 🚨 🎏(carp streamer) 💳(credit card) 📇(card index)
+//   🗃️(card file box) 🗂️(card index dividers) 🎴(flower playing cards) 🚗 ← 10th
+//
+// The band now only outranks a keyword when the leftover letters are a suffix
+// English actually adds, which is what separates "locked" from "carrot" — and,
+// the part coverage could not, "card" from "locked".
+const CAR = '🚗'
+const CARP_STREAMER = '🎏'
+const CREDIT_CARD = '💳'
+const CARD_INDEX = '📇'
+
+test('"car" no longer puts card and carp above the car', () => {
+  for (const other of [CARP_STREAMER, CREDIT_CARD, CARD_INDEX]) {
+    assert.ok(
+      rank('car', CAR) < rank('car', other),
+      `${other} still outranks ${CAR} for "car" — an unrelated word beating a real keyword hit`,
+    )
+  }
+})
+
+test('"car" leads with vehicles', () => {
+  // Not an exact-order assertion: 🏎️ "racing car" and 🚓 "police car" carry the
+  // whole word in their NAME, so they legitimately outrank a keyword hit, and
+  // pinning the exact permutation would break on any CLDR data refresh. What
+  // must hold is that nothing unrelated is in the opening run.
+  const top = find('car').slice(0, 6)
+  assert.ok(top.includes(CAR), `the car is not in the first six: ${top.join(' ')}`)
+  for (const other of [CARP_STREAMER, CREDIT_CARD, CARD_INDEX]) {
+    assert.ok(!top.includes(other), `${other} is in the first six for "car": ${top.join(' ')}`)
+  }
+})
+
+// The other half of the same rule: real inflections must still clear the line,
+// or the fix has traded one misranking for another. These two are the exact
+// pairs scoreEmoji's own comment uses to justify the band's existence.
+test('real inflections still beat a whole keyword', () => {
+  // 🔒 "locked" — the query is the stem, "ed" is the suffix.
+  assert.ok(rank('lock', '🔒') < rank('lock', '🔑'), '🔑 outranks 🔒 for "lock"')
+  // 🎵 "musical note" — "music" + "al".
+  assert.ok(rank('music', '🎵') < rank('music', '🎤'), '🎤 outranks 🎵 for "music"')
+})
+
+test('a coincidence that is long enough to look like a suffix is still excluded', () => {
+  // "clap"/"clapper" leaves "per", which is not an inflection — 🎬 "clapper
+  // board" must stay behind 👏. This held before the fix too (57% coverage put
+  // it under the line on its own) and must keep holding now that the length
+  // rule could otherwise have let it through.
+  assert.equal(first('clap'), '👏')
+})
