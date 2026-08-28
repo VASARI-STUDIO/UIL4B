@@ -120,7 +120,7 @@ test('the client mirror checks the same flag, before the same grace window', () 
   // ways it could be wrong.
   const src = fs.readFileSync(
     path.join(process.cwd(), 'src/contexts/SubscriptionContext.jsx'), 'utf8',
-  ).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  ).replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
   const flagAt = src.indexOf('accessRevoked')
   const graceAt = src.indexOf('isWithinPastDueGrace(')
@@ -135,7 +135,7 @@ test('the webhook does not cancel the Stripe subscription behind the founder', (
   // chargeback under its own rules. Access stops either way. If this ever
   // becomes wanted it is a founder decision, not a drive-by.
   const hook = fs.readFileSync(path.join(process.cwd(), 'api/stripe-webhook.js'), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    .replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   assert.doesNotMatch(hook, /subscriptions\.(cancel|del)\(/, 'the webhook now cancels subscriptions in Stripe')
   assert.doesNotMatch(hook, /subscriptions\.update\([^)]*cancel_at_period_end/, 'the webhook now schedules cancellation in Stripe')
 })
@@ -147,7 +147,13 @@ test('the reversed path resolves its user from the SUBSCRIPTION, not the Payment
   // PaymentIntent per invoice and copies none of our metadata. A chargeback
   // almost always lands on a renewal, so reusing uidForPaymentIntent here would
   // fail exactly when it is needed.
-  const hook = fs.readFileSync(path.join(process.cwd(), 'api/stripe-webhook.js'), 'utf8')
+  // NORMALISE THE LINE ENDINGS FIRST. git checks this file out with CRLF on
+  // Windows, so slicing on a bare newline-brace-newline found nothing, ran to
+  // the end of the file, and swept in restoreAfterDisputeWon — which
+  // legitimately calls uidForPaymentIntent. It passed on a freshly written
+  // working tree and failed the moment the branch was rebased and
+  // re-checked-out, which is the worst way for a test to be wrong.
+  const hook = fs.readFileSync(path.join(process.cwd(), 'api/stripe-webhook.js'), 'utf8').replace(/\r\n/g, '\n')
   const fn = hook.slice(hook.indexOf('async function revokeSubscriptionAccess'))
   const body = fn.slice(0, fn.indexOf('\n}\n'))
   assert.match(body, /sub\.metadata\?\.firebaseUid/, 'the subscription metadata is not consulted')
