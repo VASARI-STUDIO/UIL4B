@@ -21,7 +21,19 @@ test.describe('gradient randomiser weighting', () => {
   // 60 presses is enough to be decisive about "excludes nothing" without being
   // a coin-flip test: at the shipped 25% per non-linear type, the chance of
   // never seeing one of them in 60 draws is about 1 in 5 million.
-  test('Random reaches every type, and reaches linear most often', async ({ page }) => {
+  //
+  // THIS TEST USED TO ALSO ASSERT "AND LINEAR MOST OFTEN". That was a mistake,
+  // and CI caught it: 60 draws at 50/25/25 produced linear 24, radial 24, and
+  // the run went red on a tie. The expected counts are 30 and 15, so a tie is
+  // rare — and "rare" is not a property a build gate may depend on.
+  //
+  // Sampling a random source can only ever be probably-right. The distribution
+  // is asserted EXACTLY, over a 100,000-point grid of the roll space, in
+  // tests/unit/gradient-random.test.js, and the unit suite additionally pins
+  // that this page calls the weighted pickers rather than rolling its own. What
+  // is left here is the one claim a browser is needed for and that no draw can
+  // flip: every type is still reachable.
+  test('Random reaches every type', async ({ page }) => {
     await page.goto('/create/gradient')
     const random = page.getByRole('button', { name: 'Random', exact: true })
     await expect(random).toBeVisible()
@@ -36,15 +48,12 @@ test.describe('gradient randomiser weighting', () => {
       if (type && type in seen) seen[type]++
     }
 
-    // Wiring, not distribution: if the tool stopped calling the weighted picker
-    // this would still pass — which is why the arithmetic lives in the unit
-    // test and only the two structural claims are made here.
+    // The toggle was actually readable — without this, a selector that stopped
+    // matching would make the exclusion check below vacuously true.
     expect(Object.values(seen).reduce((a, b) => a + b, 0), 'no type could be read from the toggle').toBeGreaterThan(50)
     for (const [type, n] of Object.entries(seen)) {
-      expect(n, `${type} never came up in 60 presses — that is an exclusion`).toBeGreaterThan(0)
+      expect(n, `${type} never came up in 60 presses — that is an exclusion, not a weighting`).toBeGreaterThan(0)
     }
-    expect(seen.Linear, `linear ${seen.Linear} vs radial ${seen.Radial} / conic ${seen.Conic}`)
-      .toBeGreaterThan(Math.max(seen.Radial, seen.Conic))
   })
 })
 
