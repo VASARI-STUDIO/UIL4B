@@ -63,19 +63,56 @@ function appendAudit(entry) {
   } catch { /* ignore */ }
 }
 
+// Errors that prove a request actually LEFT the browser: DNS, the connection,
+// a proxy or tunnel, TLS, or a timeout waiting for an answer. Everything else
+// Chromium reports on a failed request — `net::ERR_ABORTED` above all — means it
+// was cancelled inside the browser, which is exactly what happens to an
+// in-flight fetch when a page navigates or a context closes.
+const REACHED_NETWORK = /ERR_NAME_NOT_RESOLVED|ERR_CONNECTION|ERR_INTERNET_DISCONNECTED|ERR_TUNNEL|ERR_PROXY|ERR_CERT|ERR_SSL|ERR_TIMED_OUT|ERR_ADDRESS|ERR_SOCKS/i
+
+/**
+ * Was a failed request dispatched, or cancelled where it stood?
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WHY THIS IS NOT "DID THE ROUTE HANDLER RUN?"
+ * ─────────────────────────────────────────────────────────────────────────────
+ * It used to be. A request was called an escape if the `context.route` handler
+ * had never taken charge of it — the reasoning being that an un-intercepted
+ * request must have been dispatched.
+ *
+ * That reasoning has a race in it. Interception and the handler running are not
+ * the same instant: a request can be raised, and the context torn down, before
+ * the handler is invoked. The request never went anywhere — but it was never in
+ * the WeakSet either, so it was reported as having reached Google, and
+ * `assertOneTapNeverLeft()` failed the entire run.
+ *
+ * It happened on green branches, with a different spec each time, and cost two
+ * separate investigations before the pattern was visible. A guard that cries
+ * wolf is a guard people start ignoring, which is worse than not having it.
+ *
+ * The classification now comes from the failure ITSELF rather than from a
+ * bookkeeping side effect. This is also STRICTER in the case that matters: a
+ * network-class failure on a request the handler *had* taken charge of used to
+ * be counted as an abort and hidden. It is now reported.
+ *
+ * The primary proof of an escape is unchanged and is not this function: a
+ * RESPONSE from this host without the stub's header could only have come from
+ * Google.
+ */
+export function classifyOneTapFailure(errorText) {
+  return REACHED_NETWORK.test(errorText || '') ? 'reached-network' : 'cancelled-in-browser'
+}
+
 /**
  * Install the stub on one browser context and start auditing it.
  * Returns the same context, so it can wrap `newContext` transparently.
  */
 export async function stubOneTap(context) {
   const audit = { stubbed: 0, abortedAtTeardown: 0, escaped: [] }
-  // Requests this route actually took charge of. An intercepted request is held
-  // at the network layer and never dispatched, so whatever happens to it after
-  // that, it did not reach Google.
-  const intercepted = new WeakSet()
-
+  // No WeakSet of intercepted requests any more: whether the handler had run was
+  // the racy signal this file used to classify failures with, and keeping the
+  // bookkeeping around would invite someone to reach for it again.
   await context.route((url) => url.hostname === ONE_TAP_HOST, (route) => {
-    intercepted.add(route.request())
     return route.fulfill({
       status: 200,
       contentType: 'application/javascript',
@@ -93,14 +130,18 @@ export async function stubOneTap(context) {
     else audit.escaped.push(`${res.url()} [responded ${res.status()}]`)
   })
 
-  // A failure is only evidence of an escape if the route never had the request:
-  // that means it was dispatched, and DNS or the connection is what failed.
-  // A page closing while a fulfil is still in flight aborts a request we were
-  // already holding — counted, so it stays visible, but it is not an escape.
+  // A failure is only evidence of an escape if it came from the NETWORK. See
+  // classifyOneTapFailure — this used to key off whether the route handler had
+  // already run, which is a race against context teardown and made the
+  // suite-wide guard fail at random on green branches.
   context.on('requestfailed', (req) => {
     if (!isOneTapUrl(req.url())) return
-    if (intercepted.has(req)) audit.abortedAtTeardown += 1
-    else audit.escaped.push(`${req.url()} [${req.failure()?.errorText || 'request failed'}, never intercepted]`)
+    const why = req.failure()?.errorText || 'request failed'
+    if (classifyOneTapFailure(why) === 'reached-network') {
+      audit.escaped.push(`${req.url()} [${why}]`)
+    } else {
+      audit.abortedAtTeardown += 1
+    }
   })
 
   context.on('close', () => appendAudit(audit))
