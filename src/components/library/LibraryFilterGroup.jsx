@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+import { isOn, toggleSelection } from './filterSelection'
 
 // A segmented filter tray with a sliding indicator — the one filter idiom for
 // every Library browse surface.
@@ -21,6 +22,29 @@ import { useCallback, useEffect, useRef } from 'react'
 // `.lbry-filters` in global.css), so on a phone the active option is often not
 // on the first line — an X-only offset would leave the indicator on line one,
 // highlighting an option nobody chose.
+//
+// ── MULTI-SELECT (opt-in via `multiSelect`) ─────────────────────────────────
+// Founder request (2026-08-08): shift-click to pick more than one, and picking
+// every option collapses back to the reset option rather than reading as a
+// filter that excludes nothing while looking like it excludes something.
+//
+// `value` then holds an ARRAY of ids and `onChange` is handed one. The
+// single-select call sites keep passing and receiving a string; nothing about
+// them changes.
+//
+// THE KEYBOARD EQUIVALENT IS THE SAME GESTURE, NOT A SECOND ONE. A button
+// activated with Enter or Space carries the live modifier state on the click
+// event it dispatches, so Shift+Enter on a focused option is additive for the
+// same reason Shift+Click is — one code path, and no chance of the two drifting
+// apart. Ctrl/Cmd are accepted alongside Shift because that is the multi-select
+// chord people arrive with from file managers, and neither means anything else
+// here. There is a rendered test for Shift+Enter specifically; this is the sort
+// of claim that is easy to assume and easy to get wrong.
+//
+// The sliding indicator hides itself the moment more than one option is on:
+// one box cannot point at three things, and leaving it on the first of them
+// would report a selection narrower than the real one. `aria-pressed` carries
+// the state either way, which is why hiding it costs nothing.
 
 export default function LibraryFilterGroup({
   label,
@@ -28,16 +52,26 @@ export default function LibraryFilterGroup({
   onChange,
   options,
   className = '',
+  multiSelect = false,
+  // The option that means "no filter". Only consulted in multiSelect mode.
+  resetId = 'all',
+  hint,
 }) {
   const trayRef = useRef(null)
+  // 'none' | 'one' | 'multi'. Drives the CSS that has to stand in for the
+  // sliding indicator once the indicator can no longer point at the selection.
+  const activeOptions = options.filter(o => isOn(value, o.id)).length
+  const activeCount = activeOptions === 0 ? 'none' : activeOptions === 1 ? 'one' : 'multi'
 
   const place = useCallback(() => {
     const tray = trayRef.current
     if (!tray) return
-    const active = tray.querySelector('[data-active="true"]')
-    // No active option (or nothing laid out yet) hides the indicator instead of
-    // parking it at x=0, where it would sit under the first option and claim a
-    // selection that is not there.
+    const on = tray.querySelectorAll('[data-active="true"]')
+    const active = on.length === 1 ? on[0] : null
+    // No active option, nothing laid out yet, or more than one option on: hide
+    // the indicator rather than parking it at x=0 (where it would sit under the
+    // first option and claim a selection that is not there) or leaving it on
+    // one of several (where it would report a narrower filter than is applied).
     if (!active || !active.offsetWidth) {
       tray.style.setProperty('--lbry-ind-opacity', '0')
       return
@@ -77,7 +111,8 @@ export default function LibraryFilterGroup({
     <div
       className={`lbry-filters${className ? ` ${className}` : ''}`}
       role="group"
-      aria-label={label}
+      aria-label={multiSelect && hint ? `${label}. ${hint}` : label}
+      data-active-count={activeCount}
       ref={trayRef}
     >
       <span className="lbry-filter-ind" aria-hidden="true" />
@@ -86,14 +121,25 @@ export default function LibraryFilterGroup({
           key={option.id}
           type="button"
           className="lbry-filter"
-          data-active={value === option.id}
-          aria-pressed={value === option.id}
-          onClick={() => onChange(option.id)}
+          data-active={isOn(value, option.id)}
+          aria-pressed={isOn(value, option.id)}
+          title={multiSelect && hint ? hint : undefined}
+          onClick={(event) => {
+            if (!multiSelect) { onChange(option.id); return }
+            const additive = event.shiftKey || event.metaKey || event.ctrlKey
+            onChange(additive
+              ? toggleSelection(value, option.id, { options, resetId })
+              : [option.id])
+          }}
         >
           {option.dot && <span className="lbry-filter-dot" data-dot={option.dot} aria-hidden="true" />}
           {option.label}
         </button>
       ))}
+      {/* Visible, because a modifier gesture nobody is told about is a gesture
+          nobody uses. aria-hidden: the same words are already in the group's
+          accessible name, and a screen reader should hear them once. */}
+      {multiSelect && hint && <span className="lbry-filter-hint" aria-hidden="true">{hint}</span>}
     </div>
   )
 }
