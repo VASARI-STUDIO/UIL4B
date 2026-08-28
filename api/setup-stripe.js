@@ -1,11 +1,12 @@
 import { getStripeServer } from './_lib/stripe.js'
 import { adminAuth, credentialProblem } from './_lib/firebase-admin.js'
+// One list, shared with /api/verify-admin and /api/ai's diagnostic.
+import { ADMIN_EMAILS } from './_lib/admin.js'
 import {
   SUPPORTED_CURRENCIES, CURRENCY_CODES, BASE_CURRENCY, DEFAULT_PRICES,
   LOOKUP_KEYS, INTERVAL_MAP, BILLING_INTERVALS, LIFETIME_CURRENCY_CODES, toCents, fromCents,
 } from './_lib/pricing.js'
 
-const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
 const PRODUCT_NAME = 'UIL4B Pro'
 const PRODUCT_DESCRIPTION =
   '1,000 AI actions per day, unlimited project and custom-icon saves, advanced colour controls, and full design JSON export.'
