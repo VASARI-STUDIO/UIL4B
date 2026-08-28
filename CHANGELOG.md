@@ -13,6 +13,36 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The Library filter tray does multi-select
+
+Founder request (2026-08-08). Two of its three parts turned out to be **already
+shipped** — the sliding pill indicator and the Warm / Cool / Dark / Light colour
+dots both landed with the `src/components/library/` extraction. What was missing
+was multi-select.
+
+`LibraryFilterGroup` takes an opt-in `multiSelect`; `value` then holds an array.
+Shift, Ctrl or Cmd + click is additive, and two states collapse back to the
+reset option because they are the same view of the data: **every option
+selected** (the founder's "selecting all three types resets to All types" — three
+lit pills that exclude nothing claim a narrowing that is not happening) and
+**no option selected**.
+
+**The keyboard equivalent is the same gesture, not a second one.** A button
+activated with Enter or Space carries the live modifier state on the click event
+it dispatches, so Shift+Enter is additive for the same reason Shift+Click is —
+one code path, no chance of the two drifting apart. That is easy to assume and
+easy to be wrong about, so there is a rendered test for Shift+Enter specifically.
+
+The sliding indicator hides itself once more than one option is on: one box
+cannot point at three things, and leaving it on the first would report a
+narrower filter than is applied. The lit pills take over drawing their own fill,
+so the tray reads the same either way, and `aria-pressed` carried the state all
+along.
+
+Enabled on the gradient **type** tray, which is what the request named. Every
+other tray — including the mood tray beside it — keeps single-select until
+someone opts it in, and there is a test pinning that.
+
 ### The One Tap guard stops failing runs at random
 
 `assertOneTapNeverLeft()` fails the whole browser run if a single request
