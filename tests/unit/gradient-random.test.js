@@ -10,6 +10,8 @@
 // tests/user-sim/30-founder-requests-0808.spec.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import {
   GRAD_TYPE_WEIGHTS,
   TWO_STOP_SHARE,
@@ -87,4 +89,41 @@ test('weightedPick never returns undefined, whatever it is handed', () => {
   for (const roll of [1, 1.5, -0.2, Number.EPSILON]) {
     assert.ok(weightedPick(w, roll) !== undefined, `roll ${roll} produced no type`)
   }
+})
+
+// ── The tool is actually wired to the weighting ──────────────────────────────
+//
+// The browser spec used to assert "linear comes up most often" over 60 presses
+// of Random. CI caught that for what it was: at 50/25/25 the expected counts
+// are 30/15/15, it drew 24/24, and the run went red on a tie. Sampling a random
+// source is probably-right by construction, and a build gate may not depend on
+// "probably".
+//
+// So the wiring is pinned here instead, deterministically. Between this and the
+// distribution tests above, the pair says everything the sampled version was
+// trying to: the arithmetic is correct, and the page uses it.
+test('GradientGenerator rolls through the weighted pickers, not its own uniform pick', () => {
+  const src = fs.readFileSync(
+    path.join(process.cwd(), 'src/pages/GradientGenerator.jsx'), 'utf8',
+  ).replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+  assert.match(src, /pickGradientType\(Math\.random\(\)\)/, 'the type is no longer drawn from the weighted picker')
+  assert.match(src, /pickStopCount\(Math\.random\(\)\)/, 'the stop count is no longer drawn from the weighted picker')
+
+  // The two shapes it used to have. Either coming back is the weighting being
+  // silently reverted while every test above still passes.
+  assert.doesNotMatch(src, /GRAD_TYPES\[Math\.floor\(Math\.random\(\)/,
+    'the type is being drawn uniformly from GRAD_TYPES again')
+  assert.doesNotMatch(src, /2 \+ Math\.floor\(Math\.random\(\) \* 2\)/,
+    'the stop count is being drawn uniformly again')
+})
+
+// The type toggle in the UI is built from the weights table, so the two cannot
+// drift into offering a type the randomiser can never produce (or the reverse).
+test('the UI type list and the weights table are the same list', () => {
+  const src = fs.readFileSync(
+    path.join(process.cwd(), 'src/pages/GradientGenerator.jsx'), 'utf8',
+  ).replace(/\r\n/g, '\n')
+  assert.match(src, /const GRAD_TYPES = GRAD_TYPE_WEIGHTS\.map/,
+    'GRAD_TYPES is declared independently again — it can now list a type the randomiser never rolls')
 })

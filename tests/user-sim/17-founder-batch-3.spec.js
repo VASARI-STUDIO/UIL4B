@@ -31,7 +31,21 @@ test.describe('nav auth opens over the page you are on', () => {
       await page.mouse.wheel(0, 700)
       await page.waitForTimeout(250)
     }
-    const scrolledTo = await page.evaluate(() => window.scrollY)
+    // SETTLE BEFORE RECORDING THE BASELINE. The loop above exits the moment a
+    // sample reads over 400 — but Lenis is still animating toward the full 700
+    // of that gesture, so the number captured here was a mid-flight position.
+    // The comparison at the end then measured the REST of the animation and
+    // called it a lost scroll position: CI failed with "was 467, now 700" and
+    // "was 489, now 700" on two branches that touched nothing near this.
+    // Waiting for two identical samples is the difference between measuring the
+    // bug and measuring the easing curve.
+    let scrolledTo = await page.evaluate(() => window.scrollY)
+    for (let i = 0; i < 20; i++) {
+      await page.waitForTimeout(100)
+      const now = await page.evaluate(() => window.scrollY)
+      if (now === scrolledTo) break
+      scrolledTo = now
+    }
     expect(scrolledTo, 'the visitor is well down the library').toBeGreaterThan(400)
 
     await cta.click()
