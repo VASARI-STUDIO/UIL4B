@@ -8,38 +8,38 @@
 **This table is the single source of truth for the gate numbers.** No other
 document, comment or commit message should restate them — link here instead.
 Every figure below was produced by running the command in this repository on
-`main` at `a08c8a5` on 2026-08-26; if you change a number here, you must have
+`main` at `ce7adca` on 2026-08-27; if you change a number here, you must have
 re-run it.
 
 | Gate | Command | Current baseline |
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
 | Build | `npm run build` | passes — **27 route shells + a noindex 404 shell** |
-| Unit | `npm run test:unit` | **556 tests, 556 pass, 0 skipped** |
+| Unit | `npm run test:unit` | **571 tests, 571 pass, 0 skipped** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **285 tests across 26 spec files**; **272 pass, 13 skipped** |
+| Browser acceptance | `npm run test:users` | **291 tests across 28 spec files**; **278 pass, 13 skipped** |
 
 ### How these moved, and why the old numbers were not a regression
 
 The previous figures here were **489 unit / 229 browser**, measured 2026-08-20.
-The 2026-08-20 founder-batch queue then merged seventeen PRs, which is the whole
+The 2026-08-20 founder-batch queue then merged twenty PRs, which is the whole
 of the difference:
 
 | | Was | Now | Where it came from |
 |---|---|---|---|
-| Unit | 489 | **556** | +67, the largest single block being #266's 308-line `redirects.test.js` |
-| Browser | 229 | **285** | +56, in three new spec files — `23-responsive-mid-band` (#263), `24-mobile-overhaul` (#271), `25-defect-sweep` (#274) |
-| Spec files | 23 | **26** | as above |
-| Lint | 0 / 31 | **0 / 31** | unchanged through all seventeen |
+| Unit | 489 | **571** | +82, the largest single block being #266's 308-line `redirects.test.js` |
+| Browser | 229 | **291** | +62, in five new spec files — `23-responsive-mid-band` (#263), `24-mobile-overhaul` (#271), `25-defect-sweep` (#274), `26-one-tap-stub` (#276), `27-motion-guards` (#275) |
+| Spec files | 23 | **28** | as above |
+| Lint | 0 / 31 | **0 / 31** | unchanged through all twenty |
 
 This section previously projected "520 unit, 240 browser once the whole stack
 merges" and said plainly that it was arithmetic rather than measurement. **It
-was wrong in both columns** — the real figures are 556 and 285 — because several of those PRs grew
+was wrong in both columns** — the real figures are 571 and 291 — because several of those PRs grew
 tests during review that no delta table could have anticipated. The projection
 is deleted rather than corrected: a projected gate number is not a gate number,
 and having one in this table invites someone to check against it.
 
-### The browser figures here were wrong once already — measure the tree you are documenting
+### These figures went stale twice while being written — measure the tree you are documenting
 
 The first rewrite of this section recorded **269 tests / 25 spec files / 256
 pass**, and said it measured `main` at `0211537`. That part was true. The
@@ -48,13 +48,20 @@ the commit that wrote it down, so the table shipped describing a tree that no
 longer existed, while its own delta row claimed to have counted `#274` — whose
 sixteen tests were not in the tree measured.
 
-Corrected from a fresh run: **285 / 26 / 272**.
+Corrected from a fresh run, and corrected AGAIN when three more merges landed
+before this section settled: **291 / 28 / 278**, measured at `ce7adca`.
 
-Nobody caught this from the numbers. It was caught because an engineer's branch
-measured a different figure and said so instead of assuming its own base was
-wrong. **Re-measure at the commit you are about to write, not the one you
-started from**, and put that SHA in the line above — a baseline whose provenance
-is a stale SHA is worse than one with no SHA at all, because it looks checkable.
+Nobody caught the first one from the numbers. It was caught because an
+engineer's branch measured a different figure and **said so** instead of
+assuming its own base was at fault.
+
+**Re-measure at the commit you are about to write, not the one you started
+from**, and put that SHA in the line above — a baseline whose provenance is a
+stale SHA is worse than one with no SHA, because it looks checkable.
+
+And do not update this table while a queue is still draining. It went stale a
+second time in the same hour, for the same reason: three more PRs merged between
+the correction and the commit. **Update it once, when nothing is in flight.**
 
 > **Check your own base before concluding you caused a regression.** These are
 > `main`'s numbers. A branch that adds tests will read higher, and a branch cut

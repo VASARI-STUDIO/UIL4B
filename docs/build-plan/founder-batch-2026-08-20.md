@@ -5,12 +5,54 @@ regrouped and sequenced. This file is the **routing plan** for that batch only.
 It does not own status — `src/data/pipeline.js` does. When an item here is
 queued, it moves there and this row links to it.
 
-**Critical path: none of the engineering can start.** Seven green PRs are open
-and the merge action is blocked for the Director in this environment. Four of
-them (#254 → #255 → #258 → #259) are a stack that rewrites the library browsing
-language, the typography surfaces, the modal layer and the palette card — the
-exact surfaces this batch redesigns. Routing engineering before they merge
-guarantees conflicts in every file that matters.
+> **This paragraph was the state on 2026-08-20 and is kept for the record. It is
+> no longer true.** It read:
+>
+> > Critical path: none of the engineering can start. Seven green PRs are open
+> > and the merge action is blocked for the Director in this environment. Four
+> > of them (#254 → #255 → #258 → #259) are a stack that rewrites the library
+> > browsing language, the typography surfaces, the modal layer and the palette
+> > card — the exact surfaces this batch redesigns. Routing engineering before
+> > they merge guarantees conflicts in every file that matters.
+>
+> The merge block was transient, not structural. The stack merged in order, and
+> the reasoning about conflicts was right — every later PR in the queue had to be
+> rebased through those four surfaces.
+
+## Where this batch stands — 2026-08-27
+
+**Twenty PRs merged, one closed as superseded.** The full list and the ordering
+lessons are in `merge-order-2026-08-26.md`; this section maps the batch's own
+items onto what happened to them.
+
+| Item | State |
+|---|---|
+| **A1** merge the stack | **Done** — 20 merged, #212 closed as superseded by #265 |
+| **A2** settle the price ladder | **Decided** ($7/$18/$48). The *display* side shipped in #261 and is guarded by `price-ladder.test.js`; #277 added the guard that ties every price on screen to the same module. **The Stripe side is still owner-gated** — see `docs/OWNER-ACTIONS.md`, including that yearly is a price RISE, $39.99 → $48 |
+| **A3** footer attribution | **Not shipped.** `AppFooter.jsx` still reads "Built in Brisbane for people who ship interfaces." It is in none of the four parked PRs — it looks like homepage work and is not, because the footer is on every page. Branch `feat/footer-attribution` exists |
+| **B1** Mobbin research | **Done** — #267 |
+| **B2** responsive audit | **Done** — #268, plus `docs/qa/responsive-audit-2026-08.md` |
+| **C1–C13** homepage | **Parked by the founder** — #262, #264, #269, #270 stay open and untouched. Note #267's research *has* merged, so the direction is available to that work |
+| **D1–D5** other surfaces | **Not started, correctly.** Group D is gated on C settling the language, and C is parked. Building D4/D5 now would mean building pages against a design system that is being replaced |
+| **E1** implement C | Parked with C |
+| **E2** breakpoint defects | **Done** — #263 (the 961–1343px band, including the Palette Builder blocker), #271 (the mobile overhaul), #274 (the sweep, including the 4:3 report) |
+| **E3** dead locale price keys | **Done** — no price strings remain in any of the ten locale files |
+| **E4** the `screenshots/` directory | **Answered: keep.** They are deliberate 4K portfolio assets from `dac6584`, not dead weight. The justification now lives in `screenshots/README.md`, with a flag that they are stale — captured in June, before the routes moved and the surfaces were rebuilt |
+
+### What the batch produced that it did not ask for
+
+Four PRs exist because working the queue surfaced them, and they are worth
+naming so they do not read as scope creep:
+
+- **#272** — the Emoji Library search fault was real (`laptop` returned nothing, because search matched per-*category* keywords); the perf fault the founder reported had been fixed a month earlier in #149.
+- **#273** — `prefers-reduced-motion` was ignored for **every** default visitor, because the boot script stamped `data-reduced-motion="false"` rather than leaving it unset. Ten rule sites, including the global clamp.
+- **#276** — the acceptance suite was making **338 real requests to `accounts.google.com` per run**. Best explanation we have for the queue's dominant symptom: green locally, red on CI.
+- **#277** — nothing tied the homepage's hand-typed price ladder to the module that defines it. They agreed by luck.
+
+### Still open, and on whom
+
+- **The founder:** the homepage four; the Stripe prices; whether to recapture the portfolio screenshots; the icon-grid density decision behind audit item N5.
+- **Engineering:** A3, and one in-flight branch consolidating the suite's comment strippers (`test/one-comment-stripper`, committed as explicit WIP, not gated, no PR).
 
 ---
 
