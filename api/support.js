@@ -1,5 +1,7 @@
 import { initializeApp, cert, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
+import { allowedOrigins } from './_lib/origins.js'
+import { clientIp, consume } from './_lib/rateLimit.js'
 
 if (!getApps().length) {
   const projectId = process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'uil4b'
@@ -22,17 +24,52 @@ const db = getFirestore()
 const VALID_TYPES = ['bug', 'feature', 'general', 'help']
 const VALID_SOURCES = ['feedback-form', 'inline', 'email']
 
+// ── Abuse limits ─────────────────────────────────────────────────────────────
+// This endpoint takes no authentication — deliberately, because the people most
+// likely to need it are the ones who cannot sign in — and it fans one anonymous
+// POST out to a Firestore write, an optional Google Sheets webhook and an
+// outbound Resend email. That is three metered services per request, reachable
+// by anyone, in a loop.
+//
+// Two windows, because they catch different things. The burst window stops a
+// script hammering the form; the hourly window stops a slow drip that stays
+// under the burst limit all day. Both are per-IP.
+const BURST = { limit: 3, windowMs: 60 * 1000 }
+const HOURLY = { limit: 15, windowMs: 60 * 60 * 1000 }
+
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // `Access-Control-Allow-Origin: *` invited every page on the internet to POST
+  // here from a visitor's browser. The allowlist is the same one the Stripe
+  // flows use. Note what this does and does not buy: CORS is a browser
+  // protection, so it stops a hostile page using someone else's browser as the
+  // sender — it does nothing against curl. The rate limit below is what covers
+  // that, and the two are not interchangeable.
+  const origin = req.headers.origin
+  if (origin && allowedOrigins().includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  const ip = clientIp(req)
+  for (const window of [BURST, HOURLY]) {
+    const verdict = await consume(db, { bucket: 'support', key: `${ip}_${window.windowMs}`, ...window })
+    if (!verdict.allowed) {
+      res.setHeader('Retry-After', String(verdict.retryAfter))
+      return res.status(429).json({
+        error: 'Too many messages from this connection. Try again shortly — or email support directly.',
+        retryAfter: verdict.retryAfter,
+      })
+    }
+  }
 
   const { type, subject, message, email, source } = req.body || {}
 
@@ -64,8 +101,14 @@ export default async function handler(req, res) {
     updatedAt: new Date().toISOString(),
   }
 
+  // Whether the message actually landed anywhere. A failed Firestore write used
+  // to be logged and then answered with `{ ok: true }` — the user was told their
+  // bug report had been received when it had been dropped. The response at the
+  // end is now conditional on this.
+  let stored = false
   try {
     await db.collection('feedback').add(entry)
+    stored = true
   } catch (err) {
     console.error('Firestore write failed:', err.message)
   }
@@ -98,9 +141,10 @@ export default async function handler(req, res) {
   const resendKey = process.env.RESEND_API_KEY
   const notifyEmail = process.env.SUPPORT_NOTIFY_EMAIL
 
+  let emailed = false
   if (resendKey && notifyEmail) {
     try {
-      await fetch('https://api.resend.com/emails', {
+      const sent = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${resendKey}`,
@@ -126,10 +170,17 @@ export default async function handler(req, res) {
           `,
         }),
       })
+      emailed = sent.ok
     } catch (err) {
       console.error('Email send failed:', err.message)
     }
   }
 
+  // Every downstream is optional except the record itself, so "delivered" means
+  // at least one of them took it. Nothing else in this handler is allowed to
+  // turn a dropped message into a green tick.
+  if (!stored && !emailed) {
+    return res.status(502).json({ error: 'We could not record that message. Please try again shortly.' })
+  }
   return res.status(200).json({ ok: true })
 }

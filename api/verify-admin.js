@@ -1,6 +1,7 @@
 import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
-
-const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
+// One list, shared with /api/ai's diagnostic. Two copies of an allowlist is one
+// copy too many — the day they disagree, the disagreement is a hole.
+import { ADMIN_EMAILS } from './_lib/admin.js'
 
 // Cross-user data for the admin Users tab. Firestore rules make `users/{uid}`
 // owner-only, so the client can't read other users' docs — only the Admin SDK

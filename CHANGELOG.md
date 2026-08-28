@@ -13,6 +13,62 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The two /api surfaces that were reachable without credentials
+
+**`GET /api/ai?diag=…` was gated on a password committed to this repository.**
+Behind it, an endpoint that enumerates which of the deployment's secrets exist.
+It now requires a **verified administrator** — the same shared allowlist and
+`email_verified` check `/api/verify-admin` uses — and answers **404, not 403**,
+to everyone else, so a caller who is not the founder learns nothing about
+whether the surface exists.
+
+A server-only `DIAG_CODE` break-glass remains, with **no default**. That is not
+laziness: the single most valuable thing this endpoint reports is "the Firebase
+credential is broken", and admin auth runs on that same credential, so gating
+solely on it would make the diagnostic unreachable in the one situation it
+exists for. Unset — the shipped state — means the break-glass does not exist.
+It is compared in constant time. Credential *values* were never exposed and
+still are not; presence and length only.
+
+The admin allowlist now lives in one place (`api/_lib/admin.js`) instead of
+three. Two copies of an allowlist is one copy too many — the day they disagree,
+the disagreement is a hole rather than a bug.
+
+**`POST /api/support` took an unauthenticated request from any origin** and
+fanned it out to a Firestore write, an optional Google Sheets webhook and an
+outbound Resend email. Three metered services per request, reachable by anyone,
+in a loop.
+
+- **Two per-IP windows**, consumed before any work happens: 3/minute stops a
+  script hammering the form, 15/hour stops a slow drip that stays under the
+  burst limit all day. A throttled caller gets a 429 and a `Retry-After`.
+- **Firestore-backed, not in-memory.** Serverless functions are horizontally
+  scaled and recycled, so a module-level counter gives an attacker one
+  allowance per instance and resets on every cold start. That is not a limiter.
+- **No IP is stored.** Counter documents are keyed by a salted SHA-256. The
+  `rate-limits` collection has no `firestore.rules` entry, which means Firestore
+  denies every client read and write to it by default; only the Admin SDK, which
+  bypasses rules, can reach it.
+- **It fails open, deliberately.** A support form that stops accepting bug
+  reports the moment the database wobbles turns an availability blip into total
+  loss of the channel users report it on. The trade is stated in the code and
+  asserted in a test so it stays deliberate.
+- **`Access-Control-Allow-Origin: *` → the shared allowlist**, with `Vary`.
+  Worth being precise about what that buys: CORS is a browser protection, so it
+  stops a hostile page using a visitor's browser as the sender. It does nothing
+  against `curl`. The rate limit is what covers that; the two are not
+  interchangeable.
+- **A dropped message no longer reports success.** A failed Firestore write was
+  logged and then answered `{ ok: true }` — the user was told their bug report
+  had landed when it had not. If it reached neither Firestore nor email, the
+  answer is now 502.
+
+A defect found by writing the limiter's test rather than by reading it: a
+first-ever request stored `windowStart: 0` instead of `now`, because
+`now - 0 >= windowMs` is true for every real epoch timestamp. Harmless in
+production and wrong in principle; a synthetic clock in the unit test is what
+surfaced it.
+
 ### The Library filter tray does multi-select
 
 Founder request (2026-08-08). Two of its three parts turned out to be **already
