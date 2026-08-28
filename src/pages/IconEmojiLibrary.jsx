@@ -1,5 +1,6 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import useOnline from '../hooks/useOnline'
 import { useI18n } from '../contexts/I18nContext'
 
 const IconLibrary = lazy(() => import('./IconLibrary'))
@@ -30,20 +31,9 @@ export default function IconEmojiLibrary({ onCopy }) {
   // visited tab is folded in via React's derive-state-during-render pattern (no
   // effect, so no cascading-render lint warning and no extra commit).
   const [mounted, setMounted] = useState(() => new Set([tab]))
-  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
+  const online = useOnline()   // the shared signal; see src/hooks/useOnline.js
   const tabRefs = useRef({})
   if (!mounted.has(tab)) setMounted(new Set(mounted).add(tab))
-
-  useEffect(() => {
-    const onOnline = () => setOnline(true)
-    const onOffline = () => setOnline(false)
-    window.addEventListener('online', onOnline)
-    window.addEventListener('offline', onOffline)
-    return () => {
-      window.removeEventListener('online', onOnline)
-      window.removeEventListener('offline', onOffline)
-    }
-  }, [])
 
   const activateTab = (next) => navigate(next === 'icon' ? '/create/icons' : '/create/emoji')
   const onTabKeyDown = (event, current) => {

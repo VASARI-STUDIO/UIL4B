@@ -13,6 +13,47 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### One offline signal, instead of five surfaces each guessing
+
+Offline was handled only per-surface: the font catalogue fell back to its
+bundled list, the emoji index refused to load, the Discover cards showed their
+own notice, the icon tabs and the file converter each kept their own pair of
+listeners. Every one of those was correct on its own terms, and none of them
+said the thing that actually helps — that the **network** is the problem, that
+nothing the user did caused it, and which parts of the product still work.
+
+`src/hooks/useOnline.js` is now the one signal and `OfflineBanner` the one
+notice, mounted outside `AppInner` so it reaches the chromeless Create tools
+too.
+
+- **It names what still works.** Colour, typography and export all run in the
+  browser with no network at all. A bare "you are offline" would send someone
+  away from a product that is still almost entirely usable, so the banner says
+  which three things genuinely need a connection instead.
+- **Only `navigator.onLine === false` is ever trusted.** `true` means a network
+  interface is up, not that the internet is reachable — a captive portal, a dead
+  router and a DNS outage all report `true`. The hook never claims a connection
+  is working; the surfaces that need to know find out by trying, as they already
+  did.
+- **Top-centre under the nav**, not a fourth thing in the bottom corners. The
+  toast and the feedback FAB hold the bottom right and the billing banner the
+  bottom left; stacking a fourth there meant every pair of them had to know
+  about the others, and the first attempt needed a hard-coded banner height in a
+  `:has()` rule to manage it. Its z-index sits *below* the nav's, because the nav
+  is how someone leaves a page that is not working.
+- `useFontCatalog` and `IconEmojiLibrary` lost their own listener pairs. The
+  font catalogue's reconnect-refetch now keys on the **transition** rather than
+  on an event, so it also fires for a component that *mounted* while offline — a
+  listener attached after the event never hears it.
+
+The browser spec sets `navigator.onLine` directly rather than using
+`context.setOffline()`. That is not a stylistic choice: #189 spent two attempts
+on a flaky offline test before recording that **`setOffline` does not reliably
+flip `navigator.onLine`**, which is exactly how that test came to depend on lazy
+chunk timing instead of on behaviour.
+
+This closes `global-failure-states`; the 404 half shipped in #235.
+
 ### A reversed subscription payment now actually removes access
 
 The refund/dispute path in the Stripe webhook was keyed entirely to the one-off
