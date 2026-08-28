@@ -13,6 +13,40 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### Two founder requests from 2026-08-08
+
+**The gradient randomiser favours a two-stop linear.** "A weighting, not an
+exclusion" — so every type and both stop counts still appear. Type is now
+Linear 50% / Radial 25% / Conic 25% and the stop count 2 at 60%, which takes a
+two-stop linear from 16.7% (tied-least-likely with every other combination) to
+30% (the most likely), while the rarest combination stays at 10%. The pickers in
+`src/utils/gradientRandom.js` take the roll as an argument rather than calling
+`Math.random` themselves, so the distribution is asserted exactly instead of
+sampled.
+
+**The nav search expands on hover and types.** Hover or focus takes the field
+from 300px to 390px and types six real tool names a character at a time, holding
+and erasing between them.
+
+- **Nothing runs until the pointer arrives.** The timer only exists while the
+  field is hot, so the load-time budgets on `homepage-field-metrics` are
+  untouched — and there is a test that asserts it.
+- **Reduced motion gets the static label and no timer at all.** The global
+  `transition-duration: 0.01ms` rule handles the width, but it cannot reach a
+  `setState` loop, so the typing is gated on the resolved `reducedMotion`.
+- **Assistive technology never hears it.** The button keeps its fixed
+  "Search UIL4B" name and the animated span is `aria-hidden`.
+- **A visible side effect, deliberately kept.** `.pnav-lead` is `justify-self:
+  start` in a `1fr` track, so it is shrink-to-fit and the existing
+  `flex-basis: 300px` was inert — the resting field was sized by its text, at
+  ~177px. Measured on the first attempt at this: hovering made the field
+  *narrower* (177px → 88px), because a half-typed word is shorter than
+  "Search tools…". A definite `width` fixes that, and the resting field is now
+  the 300px the stylesheet always claimed. Below 1180px the definite width comes
+  back off, `.is-hot` named explicitly alongside it — a media query adds no
+  specificity, so `.pnav-search.is-hot` would otherwise keep winning at widths
+  that have no hover and no placeholder.
+
 ### The nav popover can be walked with the arrow keys
 
 `usePopover` gained an opt-in `arrowNav`, and the nav's account panel (avatar
