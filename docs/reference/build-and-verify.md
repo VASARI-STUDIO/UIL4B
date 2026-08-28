@@ -242,6 +242,32 @@ counted as an abort and hidden.
 one of these starts failing intermittently, fix the guard — do not raise its
 threshold and do not delete it.
 
+**FIXED — a test that sampled a random source.** `30-founder-requests-0808`
+asserted "Random reaches linear most often" over 60 presses of the gradient
+randomiser. At the shipped 50/25/25 weighting the expected counts are 30/15/15;
+CI drew **24 linear, 24 radial** and went red on a tie. Nothing was broken.
+
+**A build gate may not depend on "probably".** Sampling a random source is
+probably-right by construction, and no draw count makes that a property — it
+only moves the failure rate. The distribution is now asserted exactly, over a
+100,000-point grid of the roll space, in `tests/unit/gradient-random.test.js`,
+which also pins that the page calls the weighted pickers rather than rolling its
+own. The browser keeps the one claim no draw can flip: every type is still
+reachable.
+
+**FIXED — a baseline captured mid-animation.** `17-founder-batch-3` → *Start
+for Free keeps the Palette Library underneath* wheels down the page until
+`scrollY` reads over 400, records that number, opens and closes the auth popup,
+and asserts the position survived. The wheel loop exits on the first sample over
+400 — but Lenis is still easing toward the full 700 of that gesture, so the
+recorded baseline was a mid-flight position and the final comparison measured
+the REST OF THE EASING CURVE. CI failed with `was 467, now 700` and
+`was 489, now 700` on two branches that touched nothing near it.
+
+It now polls for two identical samples before recording. **Anywhere this suite
+reads a scroll position on a Lenis page, read it twice** — one sample during a
+smooth scroll is a number in transit, not a position.
+
 **Known browser-suite flake:** under runner contention a small number of
 specs can fail once and pass on rerun. Re-run before treating a single red
 browser job as a real regression, and say in the PR which failures were flake
