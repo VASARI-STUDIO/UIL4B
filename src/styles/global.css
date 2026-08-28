@@ -8691,6 +8691,13 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-filter{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:7px 13px;color:var(--t2);background:transparent;border:0;border-radius:var(--radius);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .lbry-filter:hover{color:var(--t0)}
 .lbry-filter[data-active="true"]{color:var(--t0)}
+/* MULTI-SELECT: once two options are on, the sliding indicator hides itself —
+   one box cannot point at three things — so the pills have to carry their own
+   "on" state. Same fill and shadow the indicator would have drawn, applied to
+   each of them, so the tray reads identically whether one or several are lit. */
+.lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{background:var(--card);box-shadow:var(--shadow-xs)}
+.lbry-filter-hint{align-self:center;padding:0 10px 0 4px;color:var(--t3);font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+@media(max-width:900px){.lbry-filter-hint{display:none}}
 .lbry-filter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .lbry-filter-dot{width:8px;height:8px;flex-shrink:0;border-radius:var(--radius-pill);box-shadow:inset 0 0 0 1px rgba(10,10,18,.16)}
 .lbry-filter-dot[data-dot="warm"]{background:linear-gradient(135deg,#FFA94D,#F0435F)}
