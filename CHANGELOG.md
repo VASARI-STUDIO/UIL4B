@@ -13,6 +13,30 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The One Tap guard stops failing runs at random
+
+`assertOneTapNeverLeft()` fails the whole browser run if a single request
+reaches `accounts.google.com`. It was failing runs that had not — on branches
+that touched nothing near it, with a different spec implicated each time.
+
+The stub was fine. The guard's bookkeeping was not: a failed request was called
+an escape when the `context.route` handler had never taken charge of it.
+Interception and the handler running are not the same instant, so a request
+raised and then cancelled by a closing context was never in the WeakSet, and was
+reported as having reached Google.
+
+Classification now comes from the failure's own error text — DNS, connection,
+proxy, TLS and timeout mean the request left the browser; everything else,
+`net::ERR_ABORTED` above all, means it was cancelled where it stood. This is
+also **stricter** in the case that matters: a network-class failure on a request
+the handler *had* taken charge of used to be counted as an abort and hidden from
+the report. The primary proof of an escape is unchanged and was never this — a
+response from that host without the stub's header could only have come from
+Google.
+
+A guard that cries wolf is one people start ignoring, which is worse than not
+having it.
+
 ### Two founder requests from 2026-08-08
 
 **The gradient randomiser favours a two-stop linear.** "A weighting, not an

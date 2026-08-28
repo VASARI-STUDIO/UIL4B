@@ -217,6 +217,31 @@ to `src/config/plans.js` — the counterpart `api/_lib/plans.js` had always name
 and which had never existed. That removed the pre-existing warning on
 `FREE_SAVE_LIMITS` at the same time, because it was the same fault.
 
+**FIXED — the One Tap guard was failing whole runs at random.** The suite-wide
+`assertOneTapNeverLeft()` check fails the run if any request reaches
+`accounts.google.com`. It classified a failed request as an escape when the
+`context.route` handler had never taken charge of it — the reasoning being that
+an un-intercepted request must have been dispatched.
+
+That reasoning has a race in it. Interception and the handler running are not
+the same instant, so a request raised and then cancelled by a closing context
+was never in the bookkeeping — and was reported as having reached Google. It
+went red on branches that had touched nothing near it, with a different spec
+implicated each time, and cost two separate investigations before the pattern
+was visible.
+
+The classification now comes from the failure's own error text: DNS, connection,
+proxy, TLS and timeout errors mean the request left; everything else —
+`ERR_ABORTED` above all — means it was cancelled in the browser.
+`classifyOneTapFailure` in `tests/user-sim/base.js`, with the case table in
+`tests/unit/one-tap-stub.test.js`. This is also **stricter** where it counts: a
+network-class failure on a request the handler *had* taken charge of used to be
+counted as an abort and hidden.
+
+**A guard that cries wolf gets ignored, which is worse than not having one.** If
+one of these starts failing intermittently, fix the guard — do not raise its
+threshold and do not delete it.
+
 **Known browser-suite flake:** under runner contention a small number of
 specs can fail once and pass on rerun. Re-run before treating a single red
 browser job as a real regression, and say in the PR which failures were flake

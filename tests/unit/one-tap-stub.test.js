@@ -123,3 +123,50 @@ test('at least one spec still builds its own context, so the hard case is really
     'no spec builds its own browser context any more — re-check what tests/user-sim/26-one-tap-stub.spec.js '
     + 'is still proving before trusting it')
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE FAILURE CLASSIFIER
+// ─────────────────────────────────────────────────────────────────────────────
+// The suite-wide guard failed whole runs at random, on branches that had not
+// touched anything near it, with a different spec implicated each time. The
+// cause was not the stub — it was the guard's bookkeeping: a failed request was
+// called an escape when the `context.route` handler had never taken charge of
+// it, and "the handler ran" is a race against context teardown. A request
+// raised and then cancelled by a closing context never reached Google and never
+// reached the handler either, so it was reported as having escaped.
+//
+// The classification now comes from the failure itself. These cases are the
+// contract, and the second block matters most: making a guard quieter is only
+// legitimate if it is still loud about the thing it guards.
+import { classifyOneTapFailure } from '../user-sim/base.js'
+
+test('a request cancelled inside the browser is not an escape', () => {
+  for (const why of [
+    'net::ERR_ABORTED',                       // the page navigated, or the context closed
+    'net::ERR_BLOCKED_BY_CLIENT',
+    'net::ERR_FAILED',
+    'Request is already handled!',
+    '',
+    undefined,
+  ]) {
+    assert.equal(classifyOneTapFailure(why), 'cancelled-in-browser', String(why))
+  }
+})
+
+test('a request that actually left the browser IS an escape', () => {
+  // Every one of these means Chromium got as far as the network stack. If the
+  // classifier ever stops reporting these, the guard is decorative.
+  for (const why of [
+    'net::ERR_NAME_NOT_RESOLVED',
+    'net::ERR_CONNECTION_REFUSED',
+    'net::ERR_CONNECTION_RESET',
+    'net::ERR_INTERNET_DISCONNECTED',
+    'net::ERR_TUNNEL_CONNECTION_FAILED',
+    'net::ERR_PROXY_CONNECTION_FAILED',
+    'net::ERR_CERT_AUTHORITY_INVALID',
+    'net::ERR_SSL_PROTOCOL_ERROR',
+    'net::ERR_TIMED_OUT',
+  ]) {
+    assert.equal(classifyOneTapFailure(why), 'reached-network', why)
+  }
+})
