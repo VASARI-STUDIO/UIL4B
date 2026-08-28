@@ -13,6 +13,33 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The image → palette picker is centred, larger, and no longer lies about where a colour came from
+
+The founder reported the popup as "too small and not centred, so you can't see
+where the sample markers are being placed". The size was real; it was also
+hiding a worse fault.
+
+Every picker point is stored as a **normalised coordinate in the source image**
+and was rendered as a **percentage of the stage box**. Those describe the same
+place only while the two shapes match — and the stage was a hard
+`aspect-ratio: 16/10` with `object-fit: cover`. Any image of another shape was
+cropped, so the markers sat over pixels they had never sampled, and dragging one
+sampled the source at the cursor's fraction of the *box*: on a 4:1 image,
+dropping a marker at 12.5% across read the pixel at 12.5% of the source while
+the pixel actually under the cursor was at 35%.
+
+- The stage now takes the **uploaded image's own ratio**, from its natural
+  dimensions rather than the capped sampling canvas. Its `max-width` is the
+  height cap times that ratio, so whichever limit binds the shape stays true — a
+  `max-height` alone would have silently reintroduced the same distortion.
+- The picker is a **centred 720px dialog** rather than a 300px dropdown anchored
+  to a toolbar button, and it goes through `useModalDialog`, so it now also has
+  a focus trap, Escape, a scroll lock and focus restoration it never had.
+- Markers are 26px rather than 20px.
+- `imgOpen` left the toolbar's dismiss layer. That layer closes any menu whose
+  `pointerdown` misses a `.plb-menuwrap` — which, once the picker is rendered at
+  the page root, is every press inside it, dragging included.
+
 ### The two /api surfaces that were reachable without credentials
 
 **`GET /api/ai?diag=…` was gated on a password committed to this repository.**
