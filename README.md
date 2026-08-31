@@ -40,8 +40,12 @@ public summary.
 
 ### UI Builder
 
-- **Component Designer** — buttons, cards, inputs, badges, toggles, tables and tabs with live previews, shared design tokens, guided step-by-step mode and CSS export
-- **Box Shadow Generator** — layered CSS box shadows with live preview
+The whole group carries `soon: true` in `src/data/toolTree.js`: it is badged
+"Soon" in the nav and its routes resolve to the honest workshop state.
+
+- **Component Designer** — Soon. Buttons, cards, inputs, badges, toggles, tables and tabs with live previews, shared design tokens, guided step-by-step mode and CSS export
+- **Box Shadow Generator** — Soon. Layered CSS box shadows with live preview
+- **UI Auto-Builder** — Soon
 
 ### Discover & Learn
 
