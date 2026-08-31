@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import usePopover from '../hooks/usePopover'
+import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
+import { addRecentColor, getRecentColors } from '../utils/recentColors'
 
 // ── ColorPickerPop ────────────────────────────────────────────────────────────
 // Token-styled replacement for the OS-native <input type="color"> popup: a
@@ -13,18 +15,45 @@ import usePopover from '../hooks/usePopover'
 // opening it left focus on the trigger (so a keyboard user had to tab through
 // the page to reach the pad), Escape dropped focus to <body>, and next to the
 // right-hand edge of a narrow viewport the panel was simply clipped.
-
-const HEX_RE = /^#?([0-9a-f]{6})$/i
-const SHORT_HEX_RE = /^#?([0-9a-f]{3})$/i
-
-function normalizeHex(raw) {
-  if (typeof raw !== 'string') return null
-  const long = raw.trim().match(HEX_RE)
-  if (long) return `#${long[1].toLowerCase()}`
-  const short = raw.trim().match(SHORT_HEX_RE)
-  if (short) return `#${short[1].toLowerCase().split('').map((c) => c + c).join('')}`
-  return null
-}
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// WHAT THE FOUNDER ASKED FOR, AND WHAT IS HERE
+// ─────────────────────────────────────────────────────────────────────────────
+// Request (2026-08-08): "Solid / Gradient / Image tabs, an SV field, hue and
+// alpha sliders, a format dropdown and saved swatches." The queue item added:
+// "Shared component — scope which surfaces adopt it before building."
+//
+// The SV field, hue slider and preset swatches already existed. Added here:
+//
+//   FORMAT DROPDOWN — hex / rgb / hsl. A LENS, not a second value: the
+//   component still emits `#rrggbb` whatever is on screen. Widening the emit
+//   contract is a much larger change than a display preference earns, and every
+//   consumer would have to be taught to read it.
+//
+//   SAVED SWATCHES — the last twelve colours committed from ANY picker in the
+//   app, shared across surfaces (utils/recentColors.js). A colour you just
+//   mixed is one you are likely to want in the next tool, and matching it again
+//   by eye is the tedious part of building a system.
+//
+// NOT HERE, and both omissions are the same decision rather than an oversight:
+// this component has exactly three call sites, and a control none of them can
+// consume is dead code that merely looks finished.
+//
+//   ALPHA SLIDER. Nothing downstream can store an alpha. A gradient STOP is
+//   `{ color, position }` and its alpha would have to reach gradientCss,
+//   gradientSvg, every export format, the saved-gradient shape and the library
+//   data before it meant anything. A PALETTE swatch is worse than unsupported —
+//   the contrast maths, the tint scales and the exports all assume an opaque
+//   colour, so a translucent one would not be a nicer colour, it would be a
+//   corrupt palette. `formatColor` in utils/colorFormats.js already carries
+//   alpha and is tested for it, so the day a stop model can hold one, the
+//   slider is a small change. Transparent gradient stops are their own feature.
+//
+//   SOLID / GRADIENT / IMAGE TABS. Nothing can consume a gradient or an image
+//   from here either — the three call sites are a palette swatch, a gradient
+//   stop (which cannot itself be a gradient) and an icon colour. Which surface
+//   should take a gradient or image fill is product direction, not a defect, so
+//   it is raised in docs/PROPOSALS.md rather than guessed at.
 
 function hexToHsv(hex) {
   const n = normalizeHex(hex) || '#000000'
@@ -65,8 +94,21 @@ const DEFAULT_SWATCHES = [
   '#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#78716c',
 ]
 
-export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom colour', swatches = DEFAULT_SWATCHES, disabled = false, onDisabledClick }) {
+export default function ColorPickerPop({
+  value,
+  onChange,
+  ariaLabel = 'Custom colour',
+  swatches = DEFAULT_SWATCHES,
+  disabled = false,
+  onDisabledClick,
+}) {
   const [open, setOpen] = useState(false)
+  const [format, setFormat] = useState('hex')
+  const [recents, setRecents] = useState(getRecentColors)
+  // useId, not a counter: two pickers can be open at once (a gradient has a
+  // stop picker per stop) and a duplicated id would point every label at the
+  // first list.
+  const recentsId = useId()
   const current = normalizeHex(value) || '#000000'
   // hsv is the working state while the popover is open — it preserves hue when
   // the colour passes through black/white (where hue is lost in hex round-trips).
@@ -85,16 +127,25 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
   useEffect(() => {
     if (!open && !draggingRef.current) {
       setHsv(hexToHsv(current))
-      setHexText(current)
+      setHexText(formatColor(current, format))
     }
-  }, [current, open])
+  }, [current, open, format])
 
+  // Dragging the pad fires this on every pointermove, so the recents list is
+  // NOT written here — it would fill with twelve shades of one drag. It is
+  // written on release, on a swatch press and on a typed value: the three
+  // moments a colour was actually chosen rather than passed through.
   const commit = (next) => {
     setHsv(next)
     const hex = hsvToHex(next)
-    setHexText(hex)
+    setHexText(formatColor(hex, format))
     onChange?.(hex)
   }
+
+  const remember = useCallback((hex) => {
+    const stored = normalizeHex(hex)
+    if (stored) setRecents(addRecentColor(stored))
+  }, [])
 
   const padPointer = (e) => {
     const pad = padRef.current
@@ -108,12 +159,21 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
   const hueHex = useMemo(() => hsvToHex({ h: hsv.h, s: 1, v: 1 }), [hsv.h])
   const liveHex = hsvToHex(hsv)
 
-  const applyHexText = () => {
-    const hex = normalizeHex(hexText)
-    if (!hex) { setHexText(liveHex); return }
-    setHsv(hexToHsv(hex))
-    setHexText(hex)
-    onChange?.(hex)
+  // Accepts hex, rgb() or hsl() whatever the dropdown says — someone pasting a
+  // colour out of devtools should not have to change a setting first. An
+  // unreadable value snaps back rather than clearing, so a typo never destroys
+  // the colour that was already chosen.
+  const applyTypedColor = () => {
+    const parsed = parseColor(hexText)
+    if (!parsed) { setHexText(formatColor(liveHex, format)); return }
+    setHsv(hexToHsv(parsed.hex))
+    // `parsed.alpha` is deliberately discarded. Pasting `#ff000080` or
+    // `rgb(255 0 0 / .5)` sets the COLOUR and drops the transparency, because
+    // nothing downstream can store one — see the note at the top. Silently
+    // keeping it would produce a value the next export could not represent.
+    setHexText(formatColor(parsed.hex, format))
+    onChange?.(parsed.hex)
+    remember(parsed.hex)
   }
 
   return (
@@ -155,6 +215,7 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
             onPointerUp={(e) => {
               draggingRef.current = false
               e.currentTarget.releasePointerCapture(e.pointerId)
+              remember(hsvToHex(hsv))
             }}
             onKeyDown={(e) => {
               const step = e.shiftKey ? 0.1 : 0.02
@@ -183,19 +244,66 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
           />
 
           <div className="cpk-row">
-            <span className="cpk-chip" style={{ background: liveHex }} aria-hidden="true" />
+            <span className="cpk-chip" style={{ '--cpk-chip-color': liveHex }} aria-hidden="true" />
             <input
               className="cpk-hex"
               type="text"
               value={hexText}
               spellCheck={false}
-              aria-label="Hex colour"
+              /* Not "Hex colour" any more: the field takes rgb() and hsl() too,
+                 and a label that names one notation tells a screen-reader user
+                 the other two will be rejected. */
+              aria-label="Colour value"
               onChange={(e) => setHexText(e.target.value)}
-              onBlur={applyHexText}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyHexText() } }}
+              onBlur={applyTypedColor}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyTypedColor() } }}
             />
+            <select
+              className="cpk-format"
+              value={format}
+              aria-label="Colour notation"
+              onChange={(e) => {
+                const next = e.target.value
+                setFormat(next)
+                // Rewrite what is on screen immediately. Waiting for the next
+                // commit would leave the field showing hex under a dropdown
+                // that says rgb.
+                setHexText(formatColor(liveHex, next))
+              }}
+            >
+              {COLOR_FORMATS.map((f) => (
+                <option key={f} value={f}>{f.toUpperCase()}</option>
+              ))}
+            </select>
           </div>
 
+          {recents.length > 0 && (
+            <div className="cpk-recents">
+              <p className="cpk-recents-label" id={`${recentsId}-label`}>Recent</p>
+              <div className="cpk-swatches" role="listbox" aria-labelledby={`${recentsId}-label`}>
+                {recents.map((sw) => (
+                  <button
+                    key={sw}
+                    type="button"
+                    role="option"
+                    aria-selected={sw === liveHex}
+                    className={`cpk-swatch${sw === liveHex ? ' is-active' : ''}`}
+                    style={{ background: sw }}
+                    aria-label={sw}
+                    title={sw}
+                    onClick={() => {
+                      setHsv(hexToHsv(sw))
+                      setHexText(formatColor(sw, format))
+                      onChange?.(sw)
+                      remember(sw)
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="cpk-recents-label">Presets</p>
           <div className="cpk-swatches" role="listbox" aria-label="Preset colours">
             {swatches.map((sw) => (
               <button
@@ -209,8 +317,9 @@ export default function ColorPickerPop({ value, onChange, ariaLabel = 'Custom co
                 title={sw}
                 onClick={() => {
                   setHsv(hexToHsv(sw))
-                  setHexText(sw)
+                  setHexText(formatColor(sw, format))
                   onChange?.(sw)
+                  remember(sw)
                 }}
               />
             ))}
