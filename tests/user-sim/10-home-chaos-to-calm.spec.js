@@ -163,34 +163,74 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // 1 · the design project's headline, and the mark that ties it to the bar.
+    // 1 · the hero's promise, its one mark, and the introduced command bar.
     //
-    // This replaces "No more tab hoarding. / Build your UI system in one place."
-    // The V2 design makes the headline and the command bar ONE idea: the
-    // highlighted phrase names the input directly beneath it. The old copy
-    // never mentioned searching, so the bar arrived unintroduced and the --hi
-    // mark pointed at nothing. Founder instruction, 2026-08-16.
+    // ─────────────────────────────────────────────────────────────────────────
+    // THIS BLOCK USED TO PIN THE SENTENCES. It asserted the h1 read "Every
+    // design tool, / one search box away.", that the mark sat on the words
+    // "search box", and that the sub-copy said "Type what you need".
+    //
+    // Those strings came from a founder instruction on 2026-08-16, and the
+    // instruction behind them was sound: before it, the command bar arrived
+    // unannounced and the --hi mark "pointed at nothing". The strings were one
+    // way to satisfy that. Pinning THEM rather than the property meant the
+    // contract failed on any copy edit — including the one that produced this
+    // change, where a user told the founder the page read instantly as "an
+    // AI-generated website" and the headline was part of why.
+    //
+    // So this now pins the PROPERTIES that instruction was really about, plus
+    // the one claim the new copy makes. Copy stays free to move; the hero
+    // cannot quietly go back to having an unexplained input in it.
+    // ─────────────────────────────────────────────────────────────────────────
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText('Every design tool,')
-    await expect(heading).toContainText('one search box away.')
 
-    // The mark is on "search box" specifically — that is the whole point of the
-    // pairing, and a mark on any other phrase is the bug this guards.
+    // Exactly one mark, and it highlights a phrase that is actually in the
+    // headline — a mark on an empty or duplicated span is the original bug.
     const mark = heading.locator('.home-mark')
     await expect(mark).toHaveCount(1)
-    await expect(mark).toHaveText('search box')
+    const marked = (await mark.innerText()).trim()
+    expect(marked.length, 'the mark highlights nothing').toBeGreaterThan(2)
+    expect((await heading.innerText()).includes(marked)).toBe(true)
 
-    // …and the thing it names is really there, directly below it.
+    // The headline names what the product makes. Not a pinned sentence — a
+    // check that it is about this product rather than about a category, which
+    // is the failure the rewrite was for.
+    await expect(heading).toContainText(/colour|color|type|token|system/i)
+
+    // The command bar is INTRODUCED before it appears, and sits below whatever
+    // introduces it. That is the 2026-08-16 instruction, carried forward.
+    const label = page.locator('.home-hero-searchlabel')
+    await expect(label).toBeVisible()
     const geometry = await page.evaluate(() => {
-      const m = document.querySelector('.home-hero-h1 .home-mark').getBoundingClientRect()
+      const l = document.querySelector('.home-hero-searchlabel').getBoundingClientRect()
       const bar = document.querySelector('.hcmd-bar').getBoundingClientRect()
-      return { markBottom: m.bottom, barTop: bar.top }
+      return { labelBottom: l.bottom, barTop: bar.top }
     })
-    expect(geometry.barTop, 'the command bar must sit below its own headline mark')
-      .toBeGreaterThan(geometry.markBottom)
+    expect(geometry.barTop, 'the command bar must sit below the label that introduces it')
+      .toBeGreaterThan(geometry.labelBottom)
 
-    // The sub-copy sets up typing a query rather than describing a workspace.
-    await expect(page.locator('.home-hero-sub')).toContainText('Type what you need')
+    // …and the input takes its accessible name from that same visible label, so
+    // a screen-reader user hears the introduction a sighted user reads.
+    const named = await page.evaluate(() => {
+      const input = document.querySelector('.hcmd-input')
+      const by = input.getAttribute('aria-labelledby')
+      return by ? document.getElementById(by)?.textContent?.trim() : input.getAttribute('aria-label')
+    })
+    // Case-insensitive on purpose: the label is uppercased in CSS, so
+    // innerText reports SEARCH EVERY TOOL while the accessible name is computed
+    // from textContent. They are the same string; only the transform differs.
+    const labelText = await label.evaluate(el => el.textContent.trim())
+    expect(named.toLowerCase()).toBe(labelText.toLowerCase())
+
+    // ── The furniture that made the page read as generic must not come back ──
+    // Each of these was on the page and was removed for a stated reason (see
+    // the notes in src/pages/Home.jsx). They are cheap to reintroduce by habit,
+    // which is exactly why they are pinned.
+    await expect(page.locator('.home-hero-stats'), 'the hero stat strip is back').toHaveCount(0)
+    const heroText = await page.locator('.home-hero').innerText()
+    expect(heroText, 'the hero opens on the reader\'s pain again').not.toMatch(/stop hunting|tired of|no more/i)
+    const bracketed = await page.locator('main').innerText()
+    expect(bracketed, 'the bracketed [ SECTION ] eyebrow motif is back').not.toMatch(/\[\s*(CREATE|THE TOOLSET|COMMUNITY|PRICING)\s*\]/i)
 
     // 2 · every route the old hero exposed is still reachable, with a real
     // href — that is what makes open-in-new-tab and copy-link behave. They now

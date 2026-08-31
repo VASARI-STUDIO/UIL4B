@@ -50,18 +50,32 @@ test.describe('premium homepage', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // The design project's headline — see 10-home-chaos-to-calm for why this
-    // replaced "No more tab hoarding. / Build your UI system in one place."
+    // The headline says what the product MAKES rather than naming a category.
+    //
+    // It used to be pinned verbatim ("Every design tool, / one search box
+    // away."). That sentence is gone: a user told the founder the page read
+    // instantly as "an AI-generated website", and a headline that could sit on
+    // any design product was part of why. The full reasoning and the property
+    // pins live in 10-home-chaos-to-calm, which owns this contract; here the
+    // check is only that the hero still names the work.
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText('Every design tool,')
-    await expect(heading).toContainText('one search box away.')
-    // V2 replaced the "operating workspace" kicker pill with the mono stat
-    // line. Same job — say what this is before the headline lands — so the
-    // assertion moved to the element that now does it, and checks the numbers
-    // are the derived ones rather than the mock's invented "40+ TOOLS".
-    await expect(page.locator('.home-hero-stats')).toContainText('LIVE TOOLS')
-    await expect(page.locator('.home-hero-stats')).toContainText('ONE ACCOUNT')
-    await expect(page.locator('.home-hero-stats')).not.toContainText('40+')
+    await expect(heading).toContainText(/colour|color|type|token|system/i)
+
+    // The kicker still does the job the "operating workspace" pill and then the
+    // mono stat line each did before it: say what this is before the headline
+    // lands. What changed is that it is now ONE quiet category line rather than
+    // a four-item statistics strip — the strip was the most recognisable piece
+    // of generic SaaS furniture on the page.
+    await expect(page.locator('.home-hero-kicker')).toBeVisible()
+    await expect(page.locator('.home-hero-stats'), 'the hero stat strip is back').toHaveCount(0)
+
+    // The figures did not disappear — they moved beside the toolset grid they
+    // describe. Still derived from the tool tree, still never the mock's
+    // invented "40+ TOOLS".
+    const facts = page.locator('.htools-facts')
+    await expect(facts).toContainText('tools live today')
+    await expect(facts).toContainText('icons, via Iconify')
+    await expect(facts).not.toContainText('40+')
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
     await expect(page.getByText(/Component tooling is coming next/)).toBeVisible()
 

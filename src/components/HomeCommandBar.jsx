@@ -35,7 +35,7 @@ function RowIcon({ item }) {
   )
 }
 
-export default function HomeCommandBar() {
+export default function HomeCommandBar({ labelledBy } = {}) {
   const { t } = useI18n()
   const navigate = useNavigate()
   const inputRef = useRef(null)
@@ -127,7 +127,7 @@ export default function HomeCommandBar() {
           value={query}
           spellCheck="false"
           autoComplete="off"
-          aria-label="Search every UIL4B tool"
+          {...(labelledBy ? { 'aria-labelledby': labelledBy } : { 'aria-label': 'Search every UIL4B tool' })}
           aria-describedby={`${listId}-count`}
           placeholder="Search tools — contrast, gradient, type scale…"
           onChange={(event) => setQuery(event.target.value)}

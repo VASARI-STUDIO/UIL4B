@@ -5690,7 +5690,7 @@ html.lenis,html.lenis body{height:auto}
 
 /* `both` fill supplies the pre-paint hidden state, so no JS arming class is
    needed to prevent a flash. */
-.home-hero-stats{animation:home-hero-rise .5s var(--ease-entrance) both}
+.home-hero-kicker{animation:home-hero-rise .5s var(--ease-entrance) both}
 .home-hero-line-in{animation:home-hero-clip-up .92s var(--ease-entrance) .08s both}
 .home-hero-line:nth-of-type(2) .home-hero-line-in{animation-delay:.18s}
 .home-hero-sub{animation:home-hero-rise .66s var(--ease-entrance) .42s both}
@@ -5706,9 +5706,9 @@ html.lenis,html.lenis body{height:auto}
    over the OS query in BOTH directions, so a visitor who turned motion back on
    inside the app still gets the entrance. */
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.home-hero-stats,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+  html:not([data-reduced-motion="false"]) :is(.home-hero-kicker,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
 }
-html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
 /* V2 body: 54ch measure, --mute, line-height 1.65. */
 .home-hero-sub{font-size:var(--fs-lede);font-weight:400;color:var(--t2);line-height:1.6;max-width:54ch;margin:var(--s-5) auto 0;text-wrap:pretty}
 .home-hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:var(--s-6)}
@@ -5740,9 +5740,17 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
 /* ── Hero ────────────────────────────────────────────────────────────────────
    Composition is the page's existing centred measure; every TYPE and SPACING
    value is the V2 display scale. */
-.home-hero-stats{display:flex;flex-wrap:wrap;justify-content:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
-.home-hero-stat{display:inline-flex;align-items:center;white-space:nowrap}
-.home-hero-stat-sep{padding:0 10px;opacity:.5}
+/* The centred stat strip that used to sit above the headline is gone — see the
+   note in Home.jsx. What replaces it is a single quiet category line, the way a
+   product page names its own category rather than opening with proof. */
+.home-hero-searchlabel{margin:var(--s-6) 0 var(--s-3);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.home-hero-kicker{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin:0}
+/* The catalogue figures, now beside the toolset grid they describe. A
+   definition list because that is what they are: a number and what it counts. */
+.htools-facts{display:flex;flex-wrap:wrap;gap:var(--s-6);margin:var(--s-5) 0 0;padding:0}
+.htools-facts>div{display:grid;gap:2px}
+.htools-facts dt{font-size:var(--fs-h4,22px);font-weight:700;line-height:1;letter-spacing:-.02em;color:var(--t0);font-variant-numeric:tabular-nums}
+.htools-facts dd{margin:0;font-size:var(--fs-body-s);color:var(--t2)}
 
 /* The single --hi element on this viewport. It is a marker pen, and the budget
    is one per screen — see design-language-v2.md. `box-decoration-break:clone`
@@ -5933,8 +5941,7 @@ html[data-reduced-motion="true"] :is(.home-hero-stats,.home-hero-line-in,.home-h
   .hprice-note{text-align:left}
 }
 @media(max-width:480px){
-  .home-hero-stat-sep{padding:0 7px}
-  .hcmd{margin-top:var(--s-5)}
+    .hcmd{margin-top:var(--s-5)}
   .hcmd-bar{grid-template-columns:auto minmax(0,1fr);padding-right:14px}
   /* The keycap names a shortcut a phone has no keyboard for. */
   .hcmd-kbd{display:none}
