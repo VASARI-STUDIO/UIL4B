@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import LibraryToolbar from '../components/library/LibraryToolbar'
+import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import { EMOJI_DATA } from '../data/emojiData'
 import { normaliseQuery, searchEmoji } from '../data/emojiSearch'
 import { getLoadedEmojiIndex, loadEmojiIndex } from '../data/emojiIndexLoader'
@@ -57,6 +59,24 @@ const CAT_ICONS = {
   Smileys: '😀', Hands: '👋', People: '🧑', Animals: '🐻', Food: '🍔', Activities: '⚽',
   Travel: '✈️', Objects: '💡', Symbols: '❤️', Flags: '🚩', Nature: '🌿',
 }
+// Built once at module scope: the options are a pure function of static data,
+// and rebuilding them per render would hand LibraryFilterGroup a new array
+// identity on every keystroke and re-measure its sliding indicator.
+//
+// `id: 'all'` rather than `null` — LibraryFilterGroup compares option ids, and
+// the component keeps `activeCat` as `null` for "no filter" because that is
+// what the rest of this file already means by it. The two are bridged at the
+// call site, not by changing either convention.
+const CATEGORY_OPTIONS = [
+  { id: 'all', label: 'All', count: TOTAL_COUNT.toLocaleString() },
+  ...PARSED_EMOJI_DATA.map((g) => ({
+    id: g.cat,
+    label: g.cat,
+    icon: CAT_ICONS[g.cat],
+    count: g.items.length,
+  })),
+]
+
 
 // ─── Virtualiser geometry ───
 // Emoji are native Unicode glyphs (font characters, not images), so "lazy
@@ -101,7 +121,6 @@ export default function EmojiLibrary({ onCopy, embedded }) {
   const virtRef = useRef(null)
   const toneRef = useRef(null)
 
-  const allCategories = EMOJI_DATA.map(d => d.cat)
   const query = normaliseQuery(search)
 
   // Fetch the index. Called on focus, so it is normally resolved before the
@@ -239,79 +258,74 @@ export default function EmojiLibrary({ onCopy, embedded }) {
         </div>
       )}
 
-      <div className="pl-toolbar lib-commandbar" role="search" aria-label="Find and filter emoji">
-        <div className="pl-search-wrap">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="search"
-            className="pl-search"
-            placeholder="Search emojis..."
-            value={search}
-            onFocus={requestIndex}
-            onChange={e => { setSearch(e.target.value); requestIndex() }}
-            aria-label="Search emoji"
-            aria-describedby="emoji-search-status"
-          />
-          {search && (
-            <button type="button" className="pl-search-clear" aria-label="Clear emoji search" onClick={() => setSearch('')}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </button>
-          )}
-        </div>
+      {/* THE SHARED BROWSE LANGUAGE. This was the fourth implementation of a
+          Library toolbar — `.pl-toolbar` with `.pl-search-wrap` (borrowed from
+          the Prompt Library) and outlined `.pl-chip` pills — while the Palette
+          and Gradient libraries had already converged on
+          src/components/library/. Founder request: make this and the Icon
+          Library match the galleries.
 
-        {/* Skin tone lives in a compact popover instead of six inline buttons —
-            one control in the toolbar, the choices on demand. */}
-        <div className="emoji-tone-wrap" ref={toneRef}>
-          <button
-            type="button"
-            className={`emoji-tone-btn${toneOpen ? ' open' : ''}`}
-            onClick={() => setToneOpen(o => !o)}
-            aria-haspopup="true"
-            aria-expanded={toneOpen}
-            title="Skin tone"
-            aria-label="Choose skin tone"
-          >
-            <span className="emoji-tone-current">{skinTone ? `👋${skinTone}` : '👋'}</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-          </button>
-          {toneOpen && (
-            <div className="emoji-tone-pop" role="menu" aria-label="Skin tone">
-              {TONES.map((tone, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={skinTone === tone}
-                  className={`emoji-skin-btn${skinTone === tone ? ' active' : ''}`}
-                  onClick={() => { setSkinTone(tone); setToneOpen(false) }}
-                  title={i === 0 ? 'Default' : `Skin tone ${i}`}
-                  aria-label={i === 0 ? 'Default skin tone' : `Skin tone ${i}`}
-                >
-                  {i === 0 ? '👋' : `👋${tone}`}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="pl-chips">
-          <button className={`pl-chip${!activeCat ? ' active' : ''}`} onClick={() => setActiveCat(null)}>
-            All <span className="emoji-chip-count">{TOTAL_COUNT}</span>
-          </button>
-          {allCategories.map(cat => (
+          Two things the shared components did not do, and now do, rather than
+          being dropped to force a match: the search field takes an `onFocus`
+          (this surface preloads its index chunk there, so it is ready before
+          the first keystroke) and a filter option takes an `icon` and a
+          `count`. Both are aria-hidden decoration over an unchanged
+          accessible name. */}
+      <LibraryToolbar
+        className="emoji-toolbar"
+        search={{
+          value: search,
+          onChange: (next) => { setSearch(next); requestIndex() },
+          onFocus: requestIndex,
+          placeholder: 'Search emoji by name or keyword…',
+          label: 'Search emoji',
+        }}
+        action={(
+          <>
+          {/* Skin tone lives in a compact popover instead of six inline buttons —
+              one control in the toolbar, the choices on demand. */}
+          <div className="emoji-tone-wrap" ref={toneRef}>
             <button
-              key={cat}
-              className={`pl-chip emoji-chip${activeCat === cat ? ' active' : ''}`}
-              onClick={() => setActiveCat(activeCat === cat ? null : cat)}
+              type="button"
+              className={`emoji-tone-btn${toneOpen ? ' open' : ''}`}
+              onClick={() => setToneOpen(o => !o)}
+              aria-haspopup="true"
+              aria-expanded={toneOpen}
+              title="Skin tone"
+              aria-label="Choose skin tone"
             >
-              <span className="emoji-chip-ic" aria-hidden="true">{CAT_ICONS[cat]}</span>
-              {cat}
+              <span className="emoji-tone-current">{skinTone ? `👋${skinTone}` : '👋'}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
             </button>
-          ))}
-        </div>
-      </div>
+            {toneOpen && (
+              <div className="emoji-tone-pop" role="menu" aria-label="Skin tone">
+                {TONES.map((tone, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={skinTone === tone}
+                    className={`emoji-skin-btn${skinTone === tone ? ' active' : ''}`}
+                    onClick={() => { setSkinTone(tone); setToneOpen(false) }}
+                    title={i === 0 ? 'Default' : `Skin tone ${i}`}
+                    aria-label={i === 0 ? 'Default skin tone' : `Skin tone ${i}`}
+                  >
+                    {i === 0 ? '👋' : `👋${tone}`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          </>
+        )}
+      >
+        <LibraryFilterGroup
+          label="Filter by category"
+          value={activeCat ?? 'all'}
+          onChange={(id) => setActiveCat(id === 'all' ? null : id)}
+          options={CATEGORY_OPTIONS}
+        />
+      </LibraryToolbar>
 
       {/* Windowed list: a relative container at full scroll height; only rows
           inside the viewport (± overscan) are mounted, absolutely positioned. */}
