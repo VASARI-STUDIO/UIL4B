@@ -206,6 +206,133 @@ async function revokeByPaymentIntent(stripe, {
   return revoked
 }
 
+// ── Reversed SUBSCRIPTION payments ──────────────────────────────────────────
+//
+// revokeByPaymentIntent above only ever touches `lifetimeEntitlement`, and only
+// when the entitlement's own paymentIntentId matches. A reversed SUBSCRIPTION
+// charge has a PaymentIntent belonging to an invoice, not to the one-off
+// purchase — so that transaction found nothing, returned false, and the yearly
+// entitlement stayed active while the money went back.
+//
+// THE USER LINK IS THE HARD PART, and it is why this cannot reuse
+// uidForPaymentIntent. That helper reads `metadata.firebaseUid` off the
+// PaymentIntent, which api/create-checkout.js stamps at checkout — so it is
+// there for the FIRST payment and absent from every renewal, because Stripe
+// creates a fresh PaymentIntent per invoice and copies none of our metadata. A
+// chargeback almost always lands on a renewal. The reliable link is the
+// SUBSCRIPTION's own metadata, which checkout does stamp and which Stripe
+// carries for the life of the subscription; the customer lookup stays as a
+// fallback for subscriptions created before that was true.
+async function subscriptionForPaymentIntent(stripe, paymentIntentId) {
+  if (!paymentIntentId) return null
+  try {
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId)
+    const invoiceId = typeof intent?.invoice === 'string' ? intent.invoice : intent?.invoice?.id
+    if (!invoiceId) return null   // a one-off payment, not a subscription charge
+    const invoice = await stripe.invoices.retrieve(invoiceId)
+    const subId = typeof invoice?.subscription === 'string'
+      ? invoice.subscription
+      : invoice?.subscription?.id
+    if (!subId) return null
+    return await stripe.subscriptions.retrieve(subId)
+  } catch (err) {
+    console.error('stripe-webhook: could not trace a reversed charge to its subscription', {
+      paymentIntentId, error: err?.message,
+    })
+    return null
+  }
+}
+
+// Revoke access bought by a subscription payment that has gone back.
+//
+// `accessRevoked` is a SEPARATE, STICKY field and not a status, because
+// writeSubscription() overwrites `status` from Stripe on every
+// customer.subscription.* delivery. A disputed subscription commonly still
+// reads `active` in Stripe for a while, so a revocation written into `status`
+// would be quietly undone by the next event — in the customer's favour, on
+// money we no longer hold. api/_lib/plans.js checks the flag ahead of both the
+// active check and the past-due grace.
+//
+// Stripe's own subscription is deliberately NOT cancelled here. Cancelling is
+// an irreversible outward action on a live billing account taken off the back
+// of one webhook, and Stripe already cancels on a chargeback under its own
+// rules. Access stops either way; what happens to the subscription record is
+// the founder's call, and the log line below is what tells them there is one to
+// make.
+async function revokeSubscriptionAccess(stripe, { paymentIntentId, customerId = null, chargeId = null, disputeId = null, reason }) {
+  const sub = await subscriptionForPaymentIntent(stripe, paymentIntentId)
+  if (!sub) return false
+
+  const uid = sub.metadata?.firebaseUid || await uidForCustomer(sub.customer || customerId)
+  if (!uid) {
+    console.error('stripe-webhook: a subscription payment was reversed and no user could be resolved — ACCESS MAY STILL BE ACTIVE', {
+      reason, paymentIntentId, chargeId, disputeId, subscriptionId: sub.id, customerId: sub.customer || customerId,
+    })
+    return false
+  }
+
+  const db = adminDb()
+  const ref = db.collection('users').doc(uid)
+  await db.runTransaction(async (tx) => {
+    const existing = (await tx.get(ref)).data()?.subscription
+    // Stamped ONCE, on the transition. A dispute produces two events (created,
+    // then funds_withdrawn) and Stripe retries deliveries, so re-stamping would
+    // move the banner's key and re-surface a notice the user had already read.
+    // The reason is still updated, so the record names the most recent thing
+    // that happened to the money.
+    const revokedAt = existing?.accessRevoked === true && Number.isFinite(existing?.accessRevokedAt)
+      ? existing.accessRevokedAt
+      : Date.now()
+    tx.set(ref, {
+      subscription: {
+        accessRevoked: true,
+        accessRevokedAt: revokedAt,
+        accessRevokedReason: reason,
+        accessRevokedPaymentIntentId: paymentIntentId,
+        accessRevokedSubscriptionId: sub.id,
+        updatedAt: Date.now(),
+      },
+    }, { merge: true })
+  })
+
+  console.warn('stripe-webhook: subscription access revoked — the Stripe subscription itself was left alone', {
+    uid, reason, paymentIntentId, subscriptionId: sub.id, stripeStatus: sub.status,
+  })
+  return true
+}
+
+// Clear a subscription revocation. Only ever called for a dispute closed in our
+// favour, and only when it is THIS dispute's revocation being lifted — a won
+// dispute on a subscription that was separately refunded stays revoked.
+async function restoreSubscriptionAfterDisputeWon(stripe, dispute, paymentIntentId) {
+  const sub = await subscriptionForPaymentIntent(stripe, paymentIntentId)
+  if (!sub) return false
+  const uid = sub.metadata?.firebaseUid || await uidForCustomer(sub.customer)
+  if (!uid) return false
+
+  const db = adminDb()
+  const ref = db.collection('users').doc(uid)
+  return db.runTransaction(async (tx) => {
+    const existing = (await tx.get(ref)).data()?.subscription
+    if (existing?.accessRevoked !== true) return false
+    if (existing.accessRevokedPaymentIntentId !== paymentIntentId) return false
+    // A refund is final; a won dispute does not undo one.
+    if (existing.accessRevokedReason === 'full_refund') return false
+    tx.set(ref, {
+      subscription: {
+        accessRevoked: false,
+        accessRevokedAt: null,
+        accessRevokedReason: null,
+        accessRevokedPaymentIntentId: null,
+        accessRevokedSubscriptionId: null,
+        updatedAt: Date.now(),
+      },
+    }, { merge: true })
+    console.warn('stripe-webhook: subscription access restored after a won dispute', { uid, paymentIntentId })
+    return true
+  })
+}
+
 // A dispute closed in our favour returns the money, so the access it bought
 // comes back — but only if it was revoked FOR that dispute and the charge is
 // otherwise clean (a won dispute on a separately refunded charge stays revoked).
@@ -372,12 +499,18 @@ export default async function handler(req, res) {
       const charge = event.data.object
       // Partial refunds keep access — only a full refund removes it.
       if (charge && charge.amount_refunded >= charge.amount) {
-        await revokeByPaymentIntent(stripe, {
+        const args = {
           paymentIntentId: paymentIntentIdOf(charge),
           customerId: charge.customer || null,
           chargeId: charge.id || null,
           reason: 'full_refund',
-        })
+        }
+        // Both, not either. A charge belongs to exactly one of the two — a
+        // one-off purchase or a subscription invoice — and each call is a no-op
+        // for the other, so running both removes the need to guess which kind of
+        // charge this was before knowing what to revoke.
+        await revokeByPaymentIntent(stripe, args)
+        await revokeSubscriptionAccess(stripe, args)
       }
       break
     }
@@ -386,17 +519,22 @@ export default async function handler(req, res) {
     case 'charge.dispute.created':
     case 'charge.dispute.funds_withdrawn': {
       const dispute = event.data.object
-      await revokeByPaymentIntent(stripe, {
+      const args = {
         paymentIntentId: paymentIntentIdOf(dispute),
         chargeId: typeof dispute?.charge === 'string' ? dispute.charge : dispute?.charge?.id || null,
         disputeId: dispute?.id || null,
         reason: event.type === 'charge.dispute.created' ? 'dispute_created' : 'dispute_funds_withdrawn',
-      })
+      }
+      await revokeByPaymentIntent(stripe, args)
+      await revokeSubscriptionAccess(stripe, args)
       break
     }
     case 'charge.dispute.closed': {
       const dispute = event.data.object
-      if (dispute?.status === 'won') await restoreAfterDisputeWon(stripe, dispute)
+      if (dispute?.status === 'won') {
+        await restoreAfterDisputeWon(stripe, dispute)
+        await restoreSubscriptionAfterDisputeWon(stripe, dispute, paymentIntentIdOf(dispute))
+      }
       break
     }
     case 'invoice.payment_failed': {

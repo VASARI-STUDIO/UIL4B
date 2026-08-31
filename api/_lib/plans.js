@@ -86,8 +86,26 @@ export const PLANS = {
 // the two numbers drift.
 export const PAST_DUE_GRACE_MS = 7 * 86_400_000
 
+// A subscription payment that was refunded or charged back.
+//
+// This is a SEPARATE, STICKY field rather than a status the webhook writes,
+// because `customer.subscription.updated` overwrites `status` from Stripe on
+// every delivery. A subscription whose charge was disputed usually still reads
+// `active` in Stripe for a while, so a revocation written into `status` would
+// be undone by the next event — silently, and in the customer's favour.
+//
+// It is cleared in exactly one place: a dispute closed in our favour, which is
+// the same rule the lifetime entitlement already follows.
+export function subscriptionAccessRevoked(subscription) {
+  return subscription?.accessRevoked === true
+}
+
 export function planForSubscription(subscription) {
   if (!subscription) return PLANS.free
+  // Checked before anything else, including the past-due grace: money that has
+  // gone back is not a reason to keep serving the product, and the grace window
+  // exists for a payment that is being RETRIED, not one that was reversed.
+  if (subscriptionAccessRevoked(subscription)) return PLANS.free
   const active = subscription.status === 'active' || subscription.status === 'trialing'
   if (active) {
     // Guard against an expired period that the webhook hasn't cleaned up yet.
