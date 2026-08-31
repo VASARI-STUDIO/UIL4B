@@ -6,6 +6,7 @@ import AppFooter from './components/AppFooter'
 import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/GoogleOneTap'
 import BillingBanner from './components/BillingBanner'
+import OfflineBanner from './components/OfflineBanner'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
@@ -399,6 +400,11 @@ export default function App() {
             tool takes the CHROMELESS_PATHS early return, and those are exactly
             the pages where a lapsed subscription is about to be felt. */}
         <BillingBanner />
+        {/* Same reasoning as the billing banner: mounted outside AppInner's
+            shell so it also reaches the chromeless Create tools. It renders
+            top-centre under the nav rather than in a corner — see the CSS note
+            on .offline-banner. */}
+        <OfflineBanner />
       </ProModalProvider>
     </LoginPromptProvider>
   )

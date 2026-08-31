@@ -9105,6 +9105,20 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    a payment warning hidden under a "Copied!" toast is a warning nobody reads.
    z-index sits above the FAB and below the toast, so a transient confirmation
    still wins the foreground for its two seconds. */
+/* The app-level offline notice.
+   TOP-CENTRE, under the nav — not bottom-left beside the billing banner. Three
+   things already compete for the bottom corners: the toast and the feedback FAB
+   on the right, the billing banner on the left. Stacking a fourth there means
+   every pair of them needs to know about the other, and the first attempt at
+   this needed a hard-coded banner height in a `:has()` rule to do it. Top-centre
+   collides with nothing and is where a connection notice is conventionally
+   looked for.
+   z-index sits BELOW the nav's 120 deliberately: the nav is how someone leaves a
+   page that is not working, and a notice that covers it makes things worse. */
+.offline-banner{position:fixed;top:calc(var(--nav-h) + 10px);left:50%;transform:translateX(-50%);z-index:119;display:flex;align-items:flex-start;gap:10px;width:min(520px,calc(100vw - 32px));padding:12px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--warn);border-radius:var(--radius-l);box-shadow:var(--ring),var(--warm-shadow-lg)}
+.offline-banner svg{color:var(--warn);flex-shrink:0;margin-top:1px}
+.offline-banner-text{margin:0;font-size:12.5px;line-height:1.55;color:var(--t1)}
+.offline-banner-text strong{color:var(--t0);font-weight:700}
 .bill-banner{position:fixed;left:20px;bottom:20px;z-index:120;display:flex;align-items:flex-start;gap:10px;width:min(360px,calc(100vw - 40px));padding:14px 12px 14px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--t3);border-radius:var(--radius-l);box-shadow:var(--ring),var(--warm-shadow-lg);animation:bill-rise var(--dur-3) var(--ease-entrance)}
 .bill-banner--urgent{border-left-color:var(--err)}
 .bill-banner-body{flex:1;min-width:0}

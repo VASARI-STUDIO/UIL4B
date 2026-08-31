@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import useOnline from './useOnline'
 import { fetchFontCatalog } from '../utils/googleFonts'
 
 // One catalog loader shared by all three typography tools, so they tell the
@@ -20,7 +21,11 @@ export function useFontCatalog() {
   const [status, setStatus] = useState('loading')
   const [source, setSource] = useState('live')
   const [retrying, setRetrying] = useState(false)
-  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false)
+  // The shared signal (src/hooks/useOnline.js). This hook used to keep its own
+  // pair of listeners; five surfaces did, and none of them agreed on what to
+  // say. The RECOVERY behaviour below is still this hook's own, because only
+  // it knows a fallback catalogue is worth re-fetching.
+  const online = useOnline()
   const alive = useRef(true)
   const request = useRef(null)
   // Mirrors `source` so the online listener can branch on it without taking it
@@ -53,21 +58,20 @@ export function useFontCatalog() {
 
   useEffect(() => { load(false) }, [load])
 
-  // Coming back online is the moment a fallback catalog is most likely to be
-  // replaceable — retry automatically rather than making the user notice.
+  // Coming back online is the moment a fallback catalogue is most likely to be
+  // replaceable — retry automatically rather than making the user notice. Keyed
+  // on the shared signal rather than on this hook's own listener pair, so it
+  // also fires for a component that MOUNTED while offline and only later
+  // reconnected; a listener attached after the event never hears it.
+  //
+  // Scheduled rather than called straight from the effect body: load() setStates
+  // and a setState synchronous with an effect triggers a cascading render. One
+  // tick, and cancellable if the connection flaps.
   useEffect(() => {
-    const goOnline = () => {
-      setOnline(true)
-      if (sourceRef.current === 'fallback') load(true)
-    }
-    const goOffline = () => setOnline(false)
-    window.addEventListener('online', goOnline)
-    window.addEventListener('offline', goOffline)
-    return () => {
-      window.removeEventListener('online', goOnline)
-      window.removeEventListener('offline', goOffline)
-    }
-  }, [load])
+    if (!online || sourceRef.current !== 'fallback') return undefined
+    const id = setTimeout(() => load(true), 0)
+    return () => clearTimeout(id)
+  }, [online, load])
 
   const retry = useCallback(() => {
     if (retrying) return
