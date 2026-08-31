@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useSubscription } from '../contexts/SubscriptionContext'
 
 // The front end for billing state the Stripe webhook has always collected and
@@ -53,6 +53,17 @@ function plural(n, one, many) {
 // "there was a problem" sends the user to support instead of to their card.
 function contentFor(alert) {
   const { kind, daysLeft } = alert
+  // A refund or chargeback. Deliberately does NOT say "update your card": the
+  // money came back, which is a different situation from a card that declined,
+  // and offering the wrong fix is how a billing notice sends someone to support.
+  // It also does not accuse — a refund the founder issued lands here too.
+  if (kind === 'payment-reversed') {
+    return {
+      title: 'Pro is off — that payment was reversed',
+      body: 'Your projects and saved work are all still here. Subscribing again switches Pro back on; if you think this is wrong, get in touch and we’ll sort it.',
+      cta: 'See plans',
+    }
+  }
   if (kind === 'payment-failed') {
     return {
       title: 'Your last payment didn’t go through',
@@ -92,6 +103,7 @@ function contentFor(alert) {
 
 export default function BillingBanner() {
   const { billingAlert: alert, openPortal } = useSubscription()
+  const navigate = useNavigate()
   const [dismissedKey, setDismissedKey] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -112,6 +124,14 @@ export default function BillingBanner() {
   // every other kind of alert, and for a failure whose invoice URL never
   // arrived.
   const openBilling = async () => {
+    // A reversed payment has nothing to fix in the portal — the money is back
+    // and the subscription may already be gone. The only real next step is to
+    // subscribe again, so the CTA goes to the plans page rather than opening a
+    // billing portal that would show the user nothing actionable.
+    if (alert.kind === 'payment-reversed') {
+      navigate('/plans')
+      return
+    }
     if (alert.hostedInvoiceUrl) {
       window.location.href = alert.hostedInvoiceUrl
       return

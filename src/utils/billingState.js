@@ -76,6 +76,26 @@ export function isWithinPastDueGrace(sub, now = Date.now()) {
 export function billingAlert(sub, { now = Date.now() } = {}) {
   if (!sub) return null
 
+  // ── Payment reversed ───────────────────────────────────────────────────────
+  // A refund or a chargeback on a subscription charge. FIRST, ahead of every
+  // other alert, because it is the only one where the user has already lost
+  // access — and because a "your card failed, update it" banner shown to
+  // someone who charged the payment back would be both wrong and insulting.
+  //
+  // Not dismissible in practice: the key is stamped once at revocation, so it
+  // stays keyed to that event rather than re-appearing on every write.
+  if (sub.accessRevoked === true) {
+    return {
+      kind: 'payment-reversed',
+      // 'dispute_created' | 'dispute_funds_withdrawn' | 'refund' — the banner
+      // does not print this, but support needs it and so does a bug report.
+      reason: sub.accessRevokedReason || null,
+      revokedAt: sub.accessRevokedAt || null,
+      severity: 'urgent',
+      key: `reversed:${sub.accessRevokedAt || sub.updatedAt || 0}`,
+    }
+  }
+
   // ── Payment trouble ────────────────────────────────────────────────────────
   // `canceled` is excluded: once Stripe has cancelled, a retry link is a dead
   // end and the honest message is "resubscribe", which the plans page already

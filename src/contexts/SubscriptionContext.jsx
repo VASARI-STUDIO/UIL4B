@@ -59,6 +59,13 @@ const PRO_PLAN = {
 function planForSubscription(sub, lifetimeEntitlement) {
   if (lifetimeEntitlement?.active === true && !lifetimeEntitlement.revokedAt) return PRO_PLAN
   if (!sub) return FREE_PLAN
+  // Refunded or charged back. A sticky flag rather than a status, because
+  // `status` is overwritten from Stripe on every subscription event — see the
+  // note on subscriptionAccessRevoked in api/_lib/plans.js. Checked before the
+  // past-due grace: that window is for a payment being RETRIED, not a reversed
+  // one. The server is what actually enforces this; the mirror is here so the
+  // UI does not spend a round trip showing Pro to someone who no longer has it.
+  if (sub.accessRevoked === true) return FREE_PLAN
   const active = sub.status === 'active' || sub.status === 'trialing'
   if (active) {
     if (sub.currentPeriodEnd && Date.now() > sub.currentPeriodEnd + 86_400_000) return FREE_PLAN
