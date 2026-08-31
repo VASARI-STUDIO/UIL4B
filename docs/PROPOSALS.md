@@ -127,6 +127,53 @@ much as a correctness one, which is why it is here rather than done.
 
 ---
 
+## P-005 · Where should a colour control take a gradient or an image?
+
+**Evidence: `observed`** — founder request, 2026-08-08: *"Solid / Gradient /
+Image tabs, an SV field, hue and alpha sliders, a format dropdown and saved
+swatches"* for the colour picker. Everything in that list except the tabs and
+the alpha slider has now shipped (`colour-picker-ui`). These two are here rather
+than done because building them needs an answer this document is for.
+
+**The problem with just building them.** `ColorPickerPop` has exactly three call
+sites, and none of them can consume what those two controls produce:
+
+| Call site | Why not |
+|---|---|
+| Palette Builder swatch | Must stay an opaque hex. The contrast maths, the tint scales and every export assume it. A gradient or a translucent swatch is not a nicer colour — it is a corrupt palette. |
+| Gradient Generator **stop** | A stop cannot itself be a gradient. Alpha *is* meaningful, but a stop is `{ color, position }` — alpha would have to reach `gradientCss`, `gradientSvg`, every export format, the saved-gradient shape and the library data before it meant anything. |
+| Icon Library colour | One SVG fill. Same story as a stop. |
+
+So the tabs would be three tabs where two do nothing, and the alpha slider would
+move a value nothing stores. Both would look finished and be dead.
+
+**What is actually being asked, underneath.** Almost certainly a **fill picker**
+— a control for "what goes in this box" rather than "what colour is this" —
+which is a different component with a different output type (`{ type: 'solid' |
+'gradient' | 'image', … }`). That is a real and useful thing to have. It needs a
+surface that takes a fill.
+
+**Three ways to go, cheapest first.**
+
+1. **Transparent gradient stops only.** Add alpha to the stop model and its four
+   output paths. Fade-to-transparent is the single most-asked-for gradient
+   shape, so this earns its keep on its own. Does not answer the tabs.
+2. **A fill picker for one named surface** — a UI Component Builder background,
+   a preview scene, an export canvas. Needs that surface to exist first.
+3. **Neither.** The picker is a *colour* picker, the Gradient Generator is where
+   gradients are made, and the two are not the same job.
+
+**Cost / risk.** (1) is a contained slice with a clear test surface. (2) is a
+new component plus a consumer, and is the only one that delivers the tabs as
+asked. (3) costs nothing and closes the request.
+
+**What would settle it.** Naming the surface that should accept a gradient or an
+image fill — or saying there isn't one.
+
+**Verdict:** _(PENDING)_
+
+---
+
 ## Resolved
 
 | Date | Proposal | Verdict |
