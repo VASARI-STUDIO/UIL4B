@@ -5335,7 +5335,13 @@ html.lenis,html.lenis body{height:auto}
 .cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-xs);cursor:grab}
 .cpk-hue::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-xs);cursor:grab}
 .cpk-row{display:flex;align-items:center;gap:8px}
-.cpk-chip{flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-xs);border:1px solid var(--border)}
+.cpk-chip{flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--cpk-chip-color,transparent)}
+/* The notation select. Sized to its widest option (HEX/RGB/HSL are all three
+   characters) so switching never reflows the row under the pointer. */
+.cpk-format{flex:0 0 auto;height:32px;padding:0 6px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
+.cpk-format:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cpk-recents-label{margin:2px 0 -2px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.cpk-recents{display:grid;gap:6px}
 .cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
 .cpk-hex:focus{outline:none;border-color:var(--accent)}
 .cpk-swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}

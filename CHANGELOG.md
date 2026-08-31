@@ -13,6 +13,46 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The colour picker reads and writes rgb and hsl, and remembers what you mixed
+
+Founder request (2026-08-08): *"Solid / Gradient / Image tabs, an SV field, hue
+and alpha sliders, a format dropdown and saved swatches."* The SV pad, hue
+slider and presets already existed. Two of the rest shipped; two were declined,
+and the declining is the substance of this change.
+
+**Shipped.**
+
+- **A hex / rgb / hsl dropdown.** A *lens*, not a second value — the component
+  still emits `#rrggbb` whatever is on screen, because every consumer stores hex
+  and widening that contract is a far larger change than a display preference
+  earns. The field **accepts all three notations whatever the dropdown says**,
+  so pasting a colour out of devtools works without changing a setting first.
+  An unreadable value snaps back rather than clearing, so a typo cannot destroy
+  the colour already chosen.
+- **Saved swatches** — the last twelve colours committed from *any* picker in
+  the app, shared across surfaces. A colour mixed in the Palette Builder is one
+  you are likely to want on a gradient stop, and matching it again by eye is the
+  tedious part of building a system. Written on release, on a swatch press and
+  on a typed value — not on every pointermove, or one drag would fill the list
+  with twelve shades of itself.
+
+**Declined, both for the same reason.** `ColorPickerPop` has exactly three call
+sites and none of them can consume what these two produce:
+
+- **The alpha slider.** A palette swatch must stay opaque — the contrast maths,
+  the tint scales and every export assume it, so a translucent one would not be
+  a nicer colour but a corrupt palette. A gradient *stop* is `{ color, position }`;
+  alpha would have to reach `gradientCss`, `gradientSvg`, every export format,
+  the saved-gradient shape and the library data before it meant anything.
+- **The Solid / Gradient / Image tabs.** Nothing can take a gradient or an image
+  from this control at all.
+
+A control no surface can consume is dead code that merely looks finished. Which
+surface *should* accept a gradient or image fill is product direction, so it is
+raised as **P-005** in `docs/PROPOSALS.md` with the three ways forward costed,
+rather than guessed at. There is a test asserting both are absent, so a stub
+cannot appear without someone deciding to add one.
+
 ### The Palette Library browses in categories
 
 Founder request (2026-08-08): *"trending/popular first, then brand palettes,
