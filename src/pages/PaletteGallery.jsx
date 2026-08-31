@@ -20,6 +20,38 @@ const FILTERS = [
   { id: 'vivid', label: 'Vivid' },
 ]
 
+// ── Categories, in browse order ─────────────────────────────────────────────
+//
+// Founder request (2026-08-08): "trending/popular first, then brand palettes,
+// then community". Two of those three do not exist yet, and neither is faked:
+//
+//   TRENDING is blocked on real usage data. There is no ranking signal in the
+//   product — see the `upgrade-activation-events` queue item — and sorting by
+//   anything else while calling it trending would be an invention dressed as a
+//   measurement. The curated collection therefore leads in its catalogue order
+//   and is not labelled trending.
+//
+//   COMMUNITY has no source. Community publishing is the `community-backend`
+//   item and is not built. An empty "Community" heading would be a promise the
+//   product cannot keep, so there isn't one.
+//
+// What ships is the ordering and the sectioning, over the two categories that
+// hold real palettes today. Adding trending later is one entry in this array.
+const SECTIONS = [
+  {
+    id: 'curated',
+    label: 'Curated collection',
+    blurb: 'Colour systems with a point of view, built here.',
+    match: (palette) => palette.kind === 'curated',
+  },
+  {
+    id: 'brand',
+    label: 'Brand systems',
+    blurb: 'Published identity colours from interfaces you already know.',
+    match: (palette) => palette.kind === 'brand',
+  },
+]
+
 function channel(hex, offset) {
   return Number.parseInt(hex.slice(offset, offset + 2), 16)
 }
@@ -69,6 +101,18 @@ export default function PaletteGallery({ toast }) {
 
   const brandCount = useMemo(() => visible.filter((p) => p.kind === 'brand').length, [visible])
 
+  // Sections are for BROWSING. The moment a search or a category filter is
+  // applied the user has already said which subset they want, and splitting
+  // that answer back into headed groups — often one of them empty — buries it.
+  // So a narrowed view is one flat grid, exactly as before.
+  const browsing = filter === 'all' && !query.trim()
+  const grouped = useMemo(() => (
+    browsing
+      ? SECTIONS.map((section) => ({ ...section, palettes: visible.filter(section.match) }))
+        .filter((section) => section.palettes.length > 0)
+      : []
+  ), [browsing, visible])
+
   const clear = () => {
     setQuery('')
     setFilter('all')
@@ -106,13 +150,35 @@ export default function PaletteGallery({ toast }) {
 
       {visible.length ? (
         <section aria-labelledby="pgl-grid-heading">
-          {brandCount > 0 && filter !== 'brand' && (
-            <p className="pgl-note">
-              {brandCount} of these {brandCount === 1 ? 'is a' : 'are'} published brand
-              {brandCount === 1 ? ' system' : ' systems'}, badged <strong>Brand</strong> on the card.
-            </p>
+          {browsing ? (
+            grouped.map((section) => (
+              <div className="pgl-section" key={section.id}>
+                {/* Sticky, so the category you are inside stays legible while
+                    you scroll a hundred cards — which is the whole point of
+                    sectioning a list this long rather than filtering it. */}
+                <div className="pgl-section-head">
+                  <h3 id={`pgl-section-${section.id}`}>{section.label}</h3>
+                  <span className="pgl-section-count">{section.palettes.length}</span>
+                  <p className="pgl-section-blurb">{section.blurb}</p>
+                </div>
+                <PaletteGalleryGrid
+                  toast={toast}
+                  palettes={section.palettes}
+                  labelledBy={`pgl-section-${section.id}`}
+                />
+              </div>
+            ))
+          ) : (
+            <>
+              {brandCount > 0 && filter !== 'brand' && (
+                <p className="pgl-note">
+                  {brandCount} of these {brandCount === 1 ? 'is a' : 'are'} published brand
+                  {brandCount === 1 ? ' system' : ' systems'}, badged <strong>Brand</strong> on the card.
+                </p>
+              )}
+              <PaletteGalleryGrid toast={toast} palettes={visible} />
+            </>
           )}
-          <PaletteGalleryGrid toast={toast} palettes={visible} />
         </section>
       ) : (
         <LibraryEmpty

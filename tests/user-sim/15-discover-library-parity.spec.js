@@ -174,9 +174,20 @@ test.describe('the Palette Library carries the brand systems', () => {
     await expect(page.locator('.pgal-card[data-kind="brand"] .pgal-badge')).toHaveCount(BRAND_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="curated"] .pgal-badge')).toHaveCount(0)
 
-    // The hero count and the note both tell the truth about the mix.
+    // The hero count and the section headings both tell the truth about the mix.
+    //
+    // This used to assert a `.pgl-note` sentence — "36 of these are published
+    // brand systems" — printed above one flat grid. The library now BROWSES IN
+    // SECTIONS, so the same fact is carried by the Brand systems heading and its
+    // own count, next to the cards it is about rather than in a preamble. The
+    // note still renders for a filtered or searched view, where there are no
+    // sections; see tests/user-sim/34-palette-library-sections.spec.js.
     await expect(page.locator('.dgh-mark strong')).toHaveText(String(LIBRARY_PALETTES.length))
-    await expect(page.locator('.pgl-note')).toContainText(`${BRAND_PALETTES.length} of these are published brand systems`)
+    const sections = page.locator('.pgl-section-head')
+    await expect(sections.filter({ hasText: 'Brand systems' }).locator('.pgl-section-count'))
+      .toHaveText(String(BRAND_PALETTES.length))
+    await expect(sections.filter({ hasText: 'Curated collection' }).locator('.pgl-section-count'))
+      .toHaveText(String(CURATED_LIBRARY_PALETTES.length))
   })
 
   test('the Brand filter isolates brand systems and Curated excludes them', async ({ page }) => {
