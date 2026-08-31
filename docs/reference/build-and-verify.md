@@ -306,7 +306,8 @@ server):
 1. `npm ci`
 2. `npx eslint .` — fails the job on errors; the pre-existing advisory
    warnings (see the baseline table above) do not fail it.
-3. `npx vite build`
+3. `npm run build` — vite build **plus** `scripts/prerender.mjs`; the
+   workflow step is named "Build (vite + prerender)".
 4. `npm run test:unit`
 5. `npm run test:rules` (Firestore emulator, via `actions/setup-java` pinned
    to Temurin 21 — see the JDK note below)
@@ -322,7 +323,7 @@ the root cause, don't route around it.
 ## Commands
 
 ```bash
-npx vite build          # MUST pass before any commit
+npm run build           # MUST pass before any commit (vite + prerender)
 npx vite --port 5173    # dev server
 npx eslint .            # MUST be clean (0 errors) before shipping
 npm run test:unit       # pure logic (auth switching, billing guards)
@@ -359,12 +360,12 @@ Before starting any implementation:
 2. **After finishing**, run that verification and report the result with
    evidence.
 3. **Never claim success without evidence.** Minimum bar = a passing
-   `npx vite build` + a visual/behavioural confirmation. "It compiles" is not
+   `npm run build` + a visual/behavioural confirmation. "It compiles" is not
    "it works."
 
 ## Build-gate rules
 
-- **Verify-first build gate.** A change is not "done" until `npx vite build`
+- **Verify-first build gate.** A change is not "done" until `npm run build`
   passes and `npx eslint .` reports 0 errors. Agents never claim success
   without that evidence.
 - **Red build = NO-GO.** A failing build is a hard stop at the release gate, no
@@ -377,7 +378,7 @@ Before starting any implementation:
 Founder rule (2026-06-30): **don't over-route.** The build/lint gate is cheap
 (local, zero model cost); the multi-agent review gate is not. So:
 
-- **After each change** → run the **simple check**: `npx vite build` +
+- **After each change** → run the **simple check**: `npm run build` +
   `npx eslint .`, against the baselines at the top of this file.
 - **After a cluster of related changes** → run **one combined code-review + qa**
   over the whole batch, then merge. Not a fresh review per micro-edit.

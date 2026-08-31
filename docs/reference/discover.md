@@ -106,8 +106,9 @@ Upvote/downvote · Comment/feedback · Report · Request similar.
 
 ## Gradient routing decision
 
-- **Gradient Generator → Create** (`/color/gradient`): create, edit,
-  copy CSS, export, browse presets, use community gradients, save.
+- **Gradient Generator → Create**: create, edit, copy CSS, export, browse
+  presets, use community gradients, save. Its route lives in
+  [`tool-tree.md`](../build-plan/tool-tree.md), not here.
 - **Gradient Library → Discover** (`/discover/gradients`): browse community +
   external gradient inspiration, save, remix, like, submit, **Use in Gradient
   Generator**.

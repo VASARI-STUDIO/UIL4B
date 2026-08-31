@@ -13,7 +13,7 @@ serverless functions under `/api`.
 |---|---|---|
 | **Frontend** | React 19 (`react` / `react-dom` ^19.2) | Function components + hooks only. |
 | **Routing** | `react-router-dom` ^7.9 | `BrowserRouter`, route-per-page in `src/pages/`. |
-| **Build** | Vite ^8 (`@vitejs/plugin-react` ^6) | `npx vite build` is the verify gate. |
+| **Build** | Vite ^8 (`@vitejs/plugin-react` ^6) | `vite build` + `scripts/prerender.mjs`, wired together as `npm run build`. Gate commands and baselines: [`build-and-verify.md`](build-and-verify.md). |
 | **Styling** | CSS custom properties, single `src/styles/global.css` | No CSS-in-JS, no component stylesheets. |
 | **Auth** | Firebase Auth ^11.9 | Google One Tap + email/password. |
 | **Database** | Firestore (region `australia-southeast1`) | Project `uil4b-357c5`. |
@@ -27,7 +27,7 @@ serverless functions under `/api`.
 
 ```bash
 npm run dev          # vite dev server
-npm run build        # vite build  (== npx vite build — the verify gate)
+npm run build        # vite build + scripts/prerender.mjs — the verify gate
 npm run lint         # eslint .
 npm run preview      # vite preview
 npm run setup:stripe # node scripts/setup-stripe.js  (founder-gated, see human-validation-zones.md)

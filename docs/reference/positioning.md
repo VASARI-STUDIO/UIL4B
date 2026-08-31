@@ -107,22 +107,20 @@ When naming or describing a tool, lead with what the user walks away with.
 ## Indicative surface mapping (target IA)
 
 Where today's pages belong under the three-surface model. Indicative — alpha and
-admin gating stay exactly as they are today.
+admin gating stay exactly as they are today. This section used to re-list every
+tool route. It does not any more: routes,
+their live-vs-Soon status and the legacy redirects have one home,
+[`tool-tree.md`](../build-plan/tool-tree.md), derived from
+`src/data/toolTree.js`. The copy here went stale the day #266 flattened every
+Create URL to `/create/*`, which is exactly the failure mode a second copy
+produces.
 
-| Surface | Sub-area | Today's pages / routes |
-|---|---|---|
-| **Workspace** | Foundations | ColorStudio `/color`, TypeScale `/typescale`, FontMatcher `/fontpairs`, FontGallery `/fontgallery`, RatioCalculator `/ratio`, BoxShadowGenerator `/box-shadow` |
-| **Workspace** | Assets | IconLibrary `/icons`, EmojiLibrary `/emoji`, FileConverter `/file-converter` (alpha), video frames (→ file-converter) |
-| **Workspace** | Accessibility | contrast (in ColorStudio), AltTextGenerator `/alt-text` (alpha), SeoInspector `/seo` (partial) |
-| **Workspace** | Tokens & Themes | UIBuilder `/ui-builder` (alpha), AutoBuilder `/auto-builder` (alpha), StyleGuide `/style-guide` (admin) |
-| **Workspace** | Export & Handoff | `src/utils/exportBuilder.js`, ColorStudio export, StyleGuide export |
-| **Discover** | — | Community `/community`, ExternalResources `/resources`, community prompts in PromptLibrary `/prompts`, gradient **library** (the gradient *generator* stays in Workspace) |
-| **Workspace** | — | Projects `/projects` — the user's *private* saved work, the output of building (not a Discover browse surface) |
-| **Learn** | — | DocsDesign/Social/Themes/Brand/SEO/Marketing/AI, HelpCentre `/help`, InfoCentre `/info` |
-
-AI generators (AiPromptGenerator `/ai-prompt`, LandingPromptGenerator
-`/landing-prompts`) are cross-cutting: the image-prompt generator sits with
-Assets; landing-page copy sits with Discover/Learn. Both remain alpha-gated.
+What this doc still owns is the *shape*: **Create** holds the sub-areas
+Foundations, Assets, Accessibility, Tokens & Themes, and Export & Handoff, plus
+Projects (the user's private saved work — the output of building, not a browse
+surface). **Discover** holds the community and curated-resource browse
+surfaces. **Learn** holds the guides plus the Help and Info centres. Which page
+sits in which sub-area is read from `tool-tree.md`.
 
 ## Audience & messaging
 
