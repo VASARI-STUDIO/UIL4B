@@ -13,6 +13,55 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### A reversed subscription payment now actually removes access
+
+The refund/dispute path in the Stripe webhook was keyed entirely to the one-off
+`lifetimeEntitlement.paymentIntentId`. A reversed **subscription** charge has a
+PaymentIntent belonging to an invoice, not to the lifetime purchase, so the
+revocation transaction matched nothing, returned `false`, and the yearly
+entitlement stayed active while the money went back.
+
+**The user link was the hard part.** `api/create-checkout.js` stamps
+`metadata.firebaseUid` on the *checkout* PaymentIntent — so it is there for the
+first payment and absent from every renewal, because Stripe creates a fresh
+PaymentIntent per invoice and copies none of our metadata. A chargeback almost
+always lands on a renewal, so the existing helper would have failed exactly when
+it was needed. The reliable link is the **subscription's** own metadata, traced
+PaymentIntent → invoice → subscription, with the customer lookup as a fallback
+for subscriptions created before that metadata existed.
+
+**`subscription.accessRevoked` is a new sticky field, not a status.**
+`writeSubscription()` overwrites `status` from Stripe on every
+`customer.subscription.*` delivery, and a disputed subscription commonly still
+reads `active` in Stripe for a while — so a revocation written into `status`
+would have been undone by the next event, silently, in the customer's favour, on
+money we no longer hold.
+
+- Both plan resolvers honour it — the server one that grants anything and the
+  client mirror that decides what the UI shows — and both check it **ahead of
+  the seven-day past-due grace**, because that window exists for a payment being
+  *retried*, not a reversed one.
+- It lives inside the `subscription` map, which `firestore.rules` already locks
+  against client writes, so the revoked user cannot clear their own revocation.
+  There is a test pinning that lock, since the design is unsafe without it.
+- A dispute closed in our favour lifts it. A full refund never does.
+- A live lifetime entitlement is untouched — a different purchase.
+
+**The Stripe subscription itself is deliberately not cancelled.** Cancelling is
+an irreversible outward action on a live billing account, taken off the back of
+one webhook, and Stripe already cancels on a chargeback under its own rules.
+Access stops either way; what happens to the subscription record is the
+founder's call, and the log line says there is one to make.
+
+Users get a dedicated **"Pro is off — that payment was reversed"** banner that
+does *not* tell them to update their card: the money came back, which is a
+different situation from a card that declined, and its CTA goes to the plans
+page rather than to a billing portal that would show them nothing actionable. It
+does not accuse anyone either — a refund the founder issued lands here too.
+
+**Not run:** no live Stripe event has been replayed against this. That check
+belongs to `stripe-checkout-live-qa`, which is owner-gated.
+
 ### Emoji search stops ranking coincidences above the answer
 
 The 2026-08-08 report described two symptoms — "search returns nothing usable"
