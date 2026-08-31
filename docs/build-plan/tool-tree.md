@@ -2,7 +2,8 @@
 
 _Stable scaffolding reference — read when building/placing a tool or touching
 nav. Structure founder-confirmed 2026-07-02; route and live/Soon status
-re-derived from source 2026-08-15. Hub → [`../../CLAUDE.md`](../../CLAUDE.md)._
+re-derived from source 2026-08-31 (post-#266 `/create/*` flattening). Hub →
+[`../../CLAUDE.md`](../../CLAUDE.md)._
 
 > **How to keep this true.** `src/data/toolTree.js` is the single source of
 > truth for tool routes and their Soon flags — `createRoutes()` derives the
@@ -38,10 +39,10 @@ claim. **Dashboard is removed.** The "Create" label + surface id is `create`
 **How routes are mounted (not obvious from `App.jsx`).** Create tools do not
 appear as `<Route>` entries. `createRoutes()` builds `CREATE_PATHS` from the tool
 tree, `CHROMELESS_PATHS` adds `/discover` and `/learn`, and an early return in
-`App.jsx` renders those paths chromeless — `<ColorLanding />` for `/color`,
-`<SurfaceLanding />` for the two surface landings, and `<CreateTool />` for every
-live tool. Grepping `App.jsx` for `path="/color/palette"` finds nothing and that
-is expected.
+`App.jsx` renders those paths chromeless — `<ColorLanding />` for
+`/create/color`, `<SurfaceLanding />` for the two surface landings, and
+`<CreateTool />` for every live tool. Grepping `App.jsx` for
+`path="/create/palette"` finds nothing and that is expected.
 
 **Two "not-ready" systems, kept distinct:**
 1. **Soon-badged tools** — public, in the nav, badged "Soon" (chosen over a `#`
@@ -50,10 +51,17 @@ is expected.
 2. **Unbuilt direct routes** — resolved by `CreateTool` to that same state;
    dormant implementations are not mounted until activated.
 
-**Legacy URLs redirect, they are not duplicates.** `/palette` → `/color/palette`,
-`/tints` → `/color/tint`, `/gradients` → `/color/gradient`, `/contrast` →
-`/color/contrast`, `/color-studio` and `/export` → `/color`, `/color/ui` →
-`/color`.
+**Legacy URLs redirect, they are not duplicates.** The full table is
+`src/data/legacyRoutes.js` — do not re-list it here. It has two halves:
+`CREATE_ROUTE_MIGRATION` (every pre-#266 tool URL → its `/create/*`
+replacement, e.g. `/color/palette` → `/create/palette`, `/fontgallery` →
+`/create/font-gallery`, `/ratio` → `/create/aspect-ratio`) and `RETIRED_ROUTES`
+(older names retargeted straight at the live `/create/*` URL so no redirect
+chains, e.g. `/palette` → `/create/palette`, `/color-studio` and `/export` →
+`/create/color`). `scripts/sync-vercel-rewrites.mjs` writes them into
+`vercel.json` as HTTP **301**s; `App.jsx` renders the same pairs as client
+`<Navigate>` routes; `tests/unit/redirects.test.js` fails the build if the two
+disagree, if a redirect is not a 301, or if one chains or loops.
 
 ---
 
@@ -71,35 +79,45 @@ workshop state.
 
 ### CREATE (build)
 
-- **Colour System Generator** — landing at `/color`
-  - Palette Generator `/color/palette` — **live**
-  - Semantic (UI-state) Colour Generator `/color/semantic` — **live**
-  - Tint Generator `/color/tint` — **live**
-  - Gradient Generator `/color/gradient` — **live**
-  - Contrast Checker `/color/contrast` — **live**
-  - **UI System Builder** — **admin-only.** Entered from a "Build UI system"
-    button inside the Palette Builder, gated by `canUseUiSystem`. Founder
-    decision, batch 4: *"make the internal design system for admins only."*
-    Its acceptance suite (`tests/user-sim/12-ui-system-builder.spec.js`, 13
-    tests) is skipped because that suite runs signed out and the surface is
-    therefore unreachable — skipped is the honest state, not a broken test.
-- **Typography System Builder**
-  - Font Gallery `/fontgallery` — **live**
-  - Font Pair Tool `/fontpairs` — **live**
-  - Type Scale `/typescale` — **live**
-- **UI Component Builder**
-  - Component Designer `/ui-builder` — Soon
-  - Box Shadow Generator `/box-shadow` — Soon
-  - UI Auto-Builder `/auto-builder` — Soon
-- **Imagery & Media**
-  - File Converter `/file-converter` (image + video + frames merged) — **live**
-  - Aspect-Ratio Calculator `/ratio` — **live**
-- **AI Studio**
-  - Alt-Text Generator `/alt-text` — **live** (the only live AI tool)
-  - AI Image-Prompt Generator `/ai-prompt` — Soon
-  - AI Landing-Page Prompt Generator `/landing-prompts` — Soon
-- **Icons & Emoji** — unified into one pill-toggle surface
-  - Icon Library `/icons` — **live** · Emoji Library `/emoji` — **live**
+Every Create URL is `/create/<pagetitle>` (founder decision 2026-08-20, shipped
+in #266). Category homes keep their own final segment; three slugs are not the
+bare tool id, because flattening removed the parent segment that carried half
+the meaning — `semantic-color`, `aspect-ratio`, and `component-designer` under
+`/create/components`. The reasoning is written out in `legacyRoutes.js`.
+
+- **Colour System Generator** — landing at `/create/color`
+  - Palette Generator `/create/palette` — **live**
+  - Semantic (UI-state) Colour Generator `/create/semantic-color` — **live**
+  - Tint Generator `/create/tint` — **live**
+  - Gradient Generator `/create/gradient` — **live**
+  - Contrast Checker `/create/contrast` — **live**
+  - **UI System Builder** — **admin-only**, and not a route in the tool tree.
+    Entered from a "Build UI system" button inside the Palette Builder, gated by
+    `canUseUiSystem`. Founder decision, batch 4: *"make the internal design
+    system for admins only."* Its acceptance suite
+    (`tests/user-sim/12-ui-system-builder.spec.js`, 13 tests) is skipped because
+    that suite runs signed out and the surface is therefore unreachable —
+    skipped is the honest state, not a broken test.
+- **Typography System Builder** — landing at `/create/typography`
+  - Font Gallery `/create/font-gallery` — **live**
+  - Font Pair Tool `/create/font-pair` — **live**
+  - Type Scale `/create/type-scale` — **live**
+- **UI Component Builder** — landing at `/create/components` — Soon (the whole
+  group carries `soon: true`)
+  - Component Designer `/create/component-designer` — Soon
+  - Box Shadow Generator `/create/box-shadow` — Soon
+  - UI Auto-Builder `/create/auto-builder` — Soon
+- **Imagery & Media** — landing at `/create/imagery`
+  - File Converter `/create/file-converter` (image + video + frames merged) —
+    **live**
+  - Aspect-Ratio Calculator `/create/aspect-ratio` — **live**
+- **AI Studio** — landing at `/create/ai-tools`
+  - Alt-Text Generator `/create/alt-text` — **live** (the only live AI tool)
+  - AI Image-Prompt Generator `/create/ai-prompt` — Soon
+  - AI Landing-Page Prompt Generator `/create/landing-prompts` — Soon
+- **Icons & Emoji** — landing at `/create/icons-emoji`, one pill-toggle surface
+  - Icon Library `/create/icons` — **live** · Emoji Library `/create/emoji` —
+    **live**
 
 ### DISCOVER (browse — community: inspiration + free-to-copy assets)
 
@@ -135,11 +153,14 @@ subjects below are therefore scope, not shipped surface:
 
 ## Reusable tool code (do NOT delete — reuse when each tool is actioned)
 
-Colour tools (`/color/*`; `/color` is their landing) ·
-Typography (`/fontgallery`, `/fontpairs`, `/typescale`) · UI (`/ui-builder`,
-`/box-shadow`, `/auto-builder`) · Imagery (`/file-converter`, `/ratio`) · AI
-(`/ai-prompt`, `/landing-prompts`, `/alt-text`) · Prompt Library
-(`/discover/prompts`) · Icons/Emoji (`/icons`, `/emoji`).
+Colour tools (`/create/palette`, `/create/semantic-color`, `/create/tint`,
+`/create/gradient`, `/create/contrast`; `/create/color` is their landing) ·
+Typography (`/create/font-gallery`, `/create/font-pair`, `/create/type-scale`) ·
+UI (`/create/component-designer`, `/create/box-shadow`,
+`/create/auto-builder`) · Imagery (`/create/file-converter`,
+`/create/aspect-ratio`) · AI (`/create/ai-prompt`, `/create/landing-prompts`,
+`/create/alt-text`) · Prompt Library (`/discover/prompts`) · Icons/Emoji
+(`/create/icons`, `/create/emoji`).
 
 **Kept infra/features:** Firebase Auth/Firestore, Stripe, OpenRouter/Gemini AI,
 feedback tool, admin dashboard, `sections.jsx` surface model (Workspace→Create),
