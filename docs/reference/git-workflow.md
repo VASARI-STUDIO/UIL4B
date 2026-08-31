@@ -38,7 +38,7 @@ git push -u origin <branch-name>
 Before a PR is prepared, the branch passes the quality gates:
 
 1. Clean tree, on the feature branch (not `main`).
-2. `npx vite build` passes.
+2. `npm run build` passes.
 3. `npx eslint .` is clean.
 4. One `reviewer` pass — secrets, correctness and security in a single
    verdict — **BLOCK on any critical**.
