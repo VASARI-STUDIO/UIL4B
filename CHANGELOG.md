@@ -13,6 +13,60 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The homepage stops sounding like it was generated
+
+A user told the founder the page read instantly as "an AI-generated website".
+That is a first-impression failure on the surface that has to carry the first
+impression, so this is a copy and framing change rather than a redesign — the
+page architecture (a live workbench, a command bar wired to the real tool
+registry) is its best asset and is untouched.
+
+Four pieces of furniture were doing the damage. Each is fluent on its own;
+together they are recognisable before a single word is read.
+
+- **A centred statistics strip above the headline** — `48 LIVE TOOLS · 200K
+  ICONS · 1,500+ FONTS · ONE ACCOUNT`. The numbers were honestly derived from
+  the tool tree; the *component* is the most recognisable piece of generic SaaS
+  furniture there is. The figures now sit beside the toolset grid, where each
+  one describes something on screen instead of arriving as proof before there is
+  anything to prove.
+- **A headline that named a category, not the work.** "Every design tool, one
+  search box away" could sit on dozens of unrelated products. It is now
+  "Colour, type and tokens that stay one system" — which names what gets made
+  and states the one claim a visitor can check.
+- **A sub-headline that opened on the reader's pain.** "Stop hunting through
+  twelve bookmarked tabs" — the canonical shape, with an invented specific in
+  it. Replaced by the mechanism: the same values move between tools, so the hex
+  you change in the palette builder is the hex your export ships.
+- **Four identical bracketed  eyebrows.** Applied uniformly across
+  every section, they had stopped being wayfinding and become decoration — and
+  where a heading already names its section, an eyebrow above it is a second
+  label for the same thing. Gone, along with three headings built on stock
+  rhetorical shapes: defensive negation ("Not a screenshot. The actual tools"),
+  the N-nouns/one-noun fragment pair ("Six categories. One account."), and a
+  quip that described nothing ("Systems worth stealing.").
+
+**A prior founder instruction was carried forward rather than discarded.** On
+2026-08-16 the founder required that the command bar be introduced — before
+that, it arrived unannounced and the highlight mark "pointed at nothing". That
+was met by making the headline a pun on "search box". The bar now carries its
+own visible label instead, so the requirement still holds and the headline is
+free to say what the product makes. The input takes its accessible name from
+that same visible label.
+
+**The homepage contract stopped pinning sentences.** `10-home-chaos-to-calm`
+asserted the exact headline, the exact marked words and an exact phrase from the
+sub-copy, so it failed on any copy edit — including this one. It now pins the
+PROPERTIES that instruction was about (one mark, on a phrase that is really in
+the headline; the bar introduced and below its label; the accessible name
+matching the visible one) plus guards against the specific furniture returning:
+the stat strip, a pain-opener, and the bracketed eyebrow motif.
+
+The step-by-step workbench copy is deliberately unchanged. It is the most
+specific writing on the page — real limits ("WebP cannot store lossless, and
+says so"), real behaviour ("a half-typed hex never destroys the preview") —
+and it was never the problem.
+
 ### The colour picker reads and writes rgb and hsl, and remembers what you mixed
 
 Founder request (2026-08-08): *"Solid / Gradient / Image tabs, an SV field, hue

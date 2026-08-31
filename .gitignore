@@ -39,3 +39,8 @@ pubsub-debug.log
 
 # QA evidence screenshots (regenerable Playwright captures, not referenced by any doc)
 docs/qa/screenshots/
+
+# Throwaway audit/probe scripts run from the repo root (module resolution
+# needs them here). Never committed.
+__*.mjs
+__*.py
