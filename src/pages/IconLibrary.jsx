@@ -11,6 +11,8 @@ import { getLenis } from '../hooks/useSmoothScroll'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
+import LibraryToolbar from '../components/library/LibraryToolbar'
+import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
@@ -51,6 +53,17 @@ const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
 const ALL_PACKS = [...new Set(GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs))]
+
+// Built once at module scope so LibraryFilterGroup is not handed a new array
+// identity on every keystroke — it measures its sliding indicator off the
+// active button, and a fresh options array re-runs that measurement.
+//
+// "My Icons" leads because it is the user's own collection rather than one of
+// the catalogue's groups; `custom` is not a member of GROUP_ORDER and never was.
+const GROUP_OPTIONS = [
+  { id: 'custom', label: 'My Icons' },
+  ...GROUP_ORDER.map((key) => ({ id: key, label: ICON_GROUPS[key].label })),
+]
 // Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
 const ALL_INITIAL_PER_PACK = 250
 // Packs whose default style is genuinely stroke-based (the stroke slider applies).
@@ -1606,10 +1619,20 @@ export default function IconLibrary({ onCopy, embedded }) {
     timer.current = setTimeout(() => doSearch(q, scope), 300)
   }, [doSearch])
 
-  const handleQueryChange = (e) => {
-    const q = e.target.value
-    setQuery(q)
-    debounceSearch(q, { pack, group })
+  // Takes the value, not the event: LibrarySearch hands its `onChange` a string,
+  // and adapting at the call site with a fake `{ target: { value } }` would be a
+  // shim nobody could read.
+  //
+  // An EMPTY value routes to handleClearSearch rather than through the debounce.
+  // The shared field's own clear button calls onChange('') like any other edit,
+  // and clearing has to do more than empty the box: cancel the in-flight
+  // debounced search, then restore whichever listing was being browsed. Letting
+  // '' fall through would leave a search running against nothing and strand the
+  // user on the last result set.
+  const handleQueryChange = (next) => {
+    if (!next) { handleClearSearch(); return }
+    setQuery(next)
+    debounceSearch(next, { pack, group })
   }
 
   const handleClearSearch = () => {
@@ -1795,27 +1818,34 @@ export default function IconLibrary({ onCopy, embedded }) {
       )}
 
       <div className="sub">
-        <div className="pl-toolbar lib-commandbar" role="search" aria-label="Find and filter icons">
-          <div className="pl-search-wrap">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="search"
-              className="pl-search"
-              placeholder="Search icons…"
-              value={query}
-              onChange={handleQueryChange}
-              aria-label="Search icons"
-            />
-            {query && (
-              <button type="button" className="pl-search-clear" aria-label="Clear search" onClick={handleClearSearch}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              </button>
-            )}
-          </div>
+        {/* THE SHARED BROWSE LANGUAGE. This was the fourth implementation of a
+            Library toolbar — `.pl-toolbar` with `.pl-search-wrap` (borrowed
+            from the Prompt Library) and outlined `.pl-chip` pills — while the
+            Palette and Gradient libraries had already converged on
+            src/components/library/. Founder request: make this and the Emoji
+            Library match the galleries.
 
-          <select className="pl-select" value={selectValue} onChange={handlePackChange} aria-label="Icon pack">
+            THE PACK SELECT STAYS A SELECT. Twenty-six packs in six optgroups is
+            not a pill tray, and forcing it into one to look consistent would
+            trade a working control for a matching one. It sits in the toolbar's
+            filter row beside the group tray and takes the shared field metrics,
+            which is what "consistent" has to mean for a control this size. */}
+        <LibraryToolbar
+          className="ig-toolbar"
+          search={{
+            value: query,
+            onChange: handleQueryChange,
+            placeholder: 'Search icons…',
+            label: 'Search icons',
+          }}
+          action={(
+            <button type="button" className="ig-addbtn" onClick={handleAddIcon}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              Add icon
+            </button>
+          )}
+        >
+          <select className="lbry-select" value={selectValue} onChange={handlePackChange} aria-label="Icon pack">
             <option value="all">All packs</option>
             <optgroup label="Yours">
               <option value="custom">My Icons</option>
@@ -1855,21 +1885,13 @@ export default function IconLibrary({ onCopy, embedded }) {
               <option value="openmoji">OpenMoji</option>
             </optgroup>
           </select>
-
-          <button type="button" className="ig-addbtn" onClick={handleAddIcon}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            Add icon
-          </button>
-
-          <div className="pl-chips">
-            <button type="button" className={`pl-chip${source === 'custom' ? ' active' : ''}`} onClick={() => browseCustom()}>My Icons</button>
-            {GROUP_ORDER.map(key => (
-              <button key={key} type="button" className={`pl-chip${group === key ? ' active' : ''}`} onClick={() => handleGroupToggle(key)}>
-                {ICON_GROUPS[key].label}
-              </button>
-            ))}
-          </div>
-        </div>
+          <LibraryFilterGroup
+            label="Filter by icon group"
+            value={source === 'custom' ? 'custom' : group}
+            onChange={(id) => (id === 'custom' ? browseCustom() : handleGroupToggle(id))}
+            options={GROUP_OPTIONS}
+          />
+        </LibraryToolbar>
 
         {isMyIcons ? (
           // ── My Icons: two distinct collections, each independently clearable ──

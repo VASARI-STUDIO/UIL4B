@@ -258,8 +258,12 @@ const CHIP_WIDTHS = [320, 390, 768, 1180]
 
 const CHIP_ROWS = [
   // The original `.pl-chips` idiom: one wrapping row of outlined pills.
-  ['/create/emoji', '.pl-chips', '.pl-chip', 1, 12],
-  ['/create/icons', '.pl-chips', '.pl-chip', 1, 7],
+  //
+  // /create/emoji and /create/icons LEFT this list rather than being deleted
+  // from the suite: both moved onto the shared Library tray, so they are
+  // measured in FILTER_TRAYS below — same measurement, new selector. The Prompt
+  // Library is the last consumer of the original idiom and is why the block
+  // stays at all.
   ['/discover/prompts', '.pl-chips', '.pl-chip', 1, 6],
 ]
 
@@ -273,6 +277,11 @@ const FILTER_TRAYS = [
   ['/discover/gradients', '.lbry-filters', '.lbry-filter', 2, 12],
   ['/discover/palettes', '.lbry-filters', '.lbry-filter', 1, 6],
   ['/create/font-gallery', '.lbry-filters', '.lbry-filter', 2, 8],
+  // The two Create libraries the founder asked to match the galleries. Emoji
+  // carries the widest tray in the app — 12 categories — which is what makes it
+  // the surface any tray regression shows up on first.
+  ['/create/emoji', '.lbry-filters', '.lbry-filter', 1, 12],
+  ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7],
 ]
 
 /**

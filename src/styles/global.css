@@ -356,7 +356,6 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .lib-loading{display:flex;min-height:280px;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--t2)}
 .lib-loading strong{font-size:var(--fs-body);color:var(--t0)}
 .lib-loading span{font-size:var(--fs-caption)}
-.lib-commandbar{top:var(--nav-clear);border-bottom:1px solid var(--border)}
 @media(max-width:768px){.lib-head{grid-template-columns:1fr;align-items:start}.lib-switch{width:100%;min-width:0}.lib-head-status{grid-column:auto}}
 @media(max-width:480px){.lib-head h1{font-size:var(--fs-h2)}.lib-switch{grid-template-columns:1fr}.lib-keyhint{display:none}}
 
@@ -903,9 +902,6 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
 .pl-add-btn{flex-shrink:0;margin-left:auto}
 /* Native select, styled to sit in a .pl-toolbar next to the search field */
-.pl-select{flex-shrink:0;max-width:200px;height:40px;padding:0 34px 0 14px;border:1px solid var(--border);border-radius:var(--radius);background-color:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2370707b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;transition:border-color var(--t),box-shadow var(--t)}
-.pl-select:hover{border-color:var(--bh)}
-.pl-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
 
 /* Add prompt panel */
 .pl-add-panel{max-height:0;overflow:hidden;transition:max-height var(--dur-3) var(--ease-out),opacity var(--dur-2) var(--ease-standard);opacity:0;margin-bottom:0}
@@ -8685,6 +8681,18 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    `.pgal-card`, `.fg-card`) for per-surface deltas. Anything that lands in a
    consumer block and is not genuinely specific to that surface belongs up here
    instead — that is how the three implementations drifted apart the first time. */
+/* STICKY ONLY WHERE STICKY IS AFFORDABLE.
+   Measured at 390x844: this toolbar renders 227px on the Palette Library, 235px
+   on the Gradient Library, 273px on the Icon Library, 309px on the Font Gallery
+   and 409px on the Emoji Library — 27% to 48% of the viewport. Pinning a third
+   to a half of a phone screen to keep filters in reach costs more than it buys;
+   the reason to make this sticky at all was a ~100-card desktop grid where the
+   filters scroll away exactly when you start wanting them, and that argument
+   does not survive the space it takes on a phone.
+   This decision already existed TWICE, as `position:static` overrides on
+   `.pgl-toolbar` and `.fg-controls` — and the other three surfaces never got
+   it, which is the divergence this component was extracted to end. It is one
+   rule now. */
 .lbry-toolbar{position:sticky;top:calc(var(--nav-clear) + 8px);z-index:45;display:flex;flex-direction:column;gap:10px;margin:0 0 clamp(28px,4vw,52px);padding:10px;background:color-mix(in srgb,var(--bg-0) 88%,transparent);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:0 14px 42px rgba(10,10,18,.09);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
 .lbry-toolbar-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .lbry-toolbar-row--extra{padding-top:10px;border-top:1px solid var(--border)}
@@ -8742,6 +8750,19 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-filter-hint{align-self:center;padding:0 10px 0 4px;color:var(--t3);font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
 @media(max-width:900px){.lbry-filter-hint{display:none}}
 .lbry-filter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* An option glyph (the Emoji Library's category emoji) and an option count
+   (its "All 1,636"). Both aria-hidden — the accessible name is the label. */
+.lbry-filter-icon{font-size:13px;line-height:1;flex-shrink:0}
+/* A select inside the shared toolbar. The Icon Library's pack picker is 26
+   options across six optgroups — not a pill tray, and forcing it into one to
+   look consistent would trade a working control for a matching one. It takes
+   the shared field metrics instead, which is what consistency has to mean for a
+   control this size. */
+.lbry-select{flex:0 0 auto;min-width:0;max-width:220px;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t1);font-family:var(--font);font-size:11px;font-weight:650;cursor:pointer}
+.lbry-select:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media(max-width:640px){.lbry-select{max-width:100%;width:100%}}
+.lbry-filter-count{margin-left:1px;padding:0 5px;border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t3);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
+.lbry-filter[data-active="true"] .lbry-filter-count{background:var(--bg-2);color:var(--t2)}
 .lbry-filter-dot{width:8px;height:8px;flex-shrink:0;border-radius:var(--radius-pill);box-shadow:inset 0 0 0 1px rgba(10,10,18,.16)}
 .lbry-filter-dot[data-dot="warm"]{background:linear-gradient(135deg,#FFA94D,#F0435F)}
 .lbry-filter-dot[data-dot="cool"]{background:linear-gradient(135deg,#4DA3FF,#7C5CFF)}
@@ -8850,7 +8871,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 @media(max-width:640px){
   /* The action stops being a tail and becomes a full-width row: at this width
      `margin-left:auto` was pushing it onto its own line anyway, ragged. */
-  .lbry-toolbar{gap:8px;padding:8px}
+  .lbry-toolbar{position:static;gap:8px;padding:8px}
   .lbry-toolbar-filters{width:100%}
   .lbry-filters{width:100%}
   .lbry-toolbar-action{width:100%;margin-left:0}
@@ -9060,7 +9081,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .tt-output,.tt-config{grid-column:auto;grid-row:auto}
 }
 @media(max-width:720px){
-  .pgl-toolbar{position:static;grid-template-columns:1fr;padding:8px}
+  .pgl-toolbar{grid-template-columns:1fr;padding:8px}
   .pgl-search{grid-column:auto}
   .pgl-filters{overflow-x:auto}
   .pgl-filters button{flex:0 0 auto}
@@ -9072,7 +9093,6 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .fg-hero-stats{grid-template-columns:1fr}
   .fg-hero-stats span{padding:9px 0}
   .fg-hero-stats span+span{padding-left:0;border-left:0;border-top:1px solid rgba(255,255,255,.15)}
-  .fg-controls{position:static}
   .fg-command{grid-template-columns:1fr;padding:8px}
   .fg-command-size{order:initial}
   .fg-card-open{grid-template-columns:34px minmax(0,1fr)}

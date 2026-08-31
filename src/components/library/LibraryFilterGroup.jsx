@@ -133,7 +133,15 @@ export default function LibraryFilterGroup({
           }}
         >
           {option.dot && <span className="lbry-filter-dot" data-dot={option.dot} aria-hidden="true" />}
+          {/* `icon` is a character, not a component: the Emoji Library's
+              categories are identified by an emoji and always were. Rendering
+              it aria-hidden keeps the option's accessible name the label alone
+              — a screen reader announcing "grinning face Smileys" reads the
+              decoration twice. Dropping the glyphs instead would have been a
+              silent regression dressed as consistency. */}
+          {option.icon && <span className="lbry-filter-icon" aria-hidden="true">{option.icon}</span>}
           {option.label}
+          {option.count != null && <span className="lbry-filter-count" aria-hidden="true">{option.count}</span>}
         </button>
       ))}
       {/* Visible, because a modifier gesture nobody is told about is a gesture
