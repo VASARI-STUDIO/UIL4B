@@ -13,6 +13,59 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The Icon and Emoji libraries join the shared browse language
+
+Founder request: *"make the tool bar for the icon and emoji gallery and header
+more like the other galleries such as palette and gradient library, this will
+help create more consistancy"*.
+
+Both were still running `.pl-toolbar` with `.pl-search-wrap` — borrowed
+wholesale from the Prompt Library — and outlined `.pl-chip` pills, while the
+Palette and Gradient libraries had long since converged on
+`src/components/library/`. That is the fourth implementation the shared
+components exist to prevent, and the queue item said so in as many words.
+
+**Two extensions to the shared components, rather than dropping behaviour to
+force a match:**
+
+- `LibrarySearch` takes an `onFocus`. The Emoji Library's search index is a
+  separate ~31 KB chunk, deliberately not bundled, requested on focus so it is
+  ready before the first keystroke. Without the hook that surface would have had
+  to keep its own field.
+- A filter option takes an `icon` and a `count`. The emoji categories were
+  always identified by a glyph. Both render `aria-hidden`, so the option's
+  accessible name is still the label alone.
+
+**The Icon Library's pack select stays a select.** Twenty-six packs across six
+optgroups is not a pill tray, and forcing it into one to look consistent would
+trade a working control for a matching one. It takes the shared field metrics
+instead, which is what consistency has to mean for a control that size.
+
+### A mobile defect found while doing it, fixed for all five surfaces
+
+The shared toolbar is sticky. Measured at 390×844 it occupies **27–48% of the
+viewport**: 227px on the Palette Library, 235px on Gradient, 273px on Icons,
+309px on the Font Gallery and **409px on Emoji**, which carries the widest tray
+in the app. Pinning a third to a half of a phone screen costs more than it buys
+— the reason to make it sticky at all was a hundred-card desktop grid where the
+filters scroll away exactly when you start wanting them, and that argument does
+not survive the space it takes on a phone.
+
+That decision already existed **twice**, as `position: static` overrides on
+`.pgl-toolbar` and `.fg-controls` — and the other three surfaces never got it.
+That is precisely the divergence this component was extracted to end. It is one
+rule on `.lbry-toolbar` now, and all five surfaces agree at 390, 834 and 1440.
+
+`.lib-commandbar` and `.pl-select` had zero remaining consumers and are deleted.
+`.pl-toolbar`, `.pl-search-wrap` and `.pl-chip` stay: the Prompt Library is
+still on them.
+
+One behaviour that nearly went missing, kept deliberately: the Icon Library's
+clear-search does more than empty the box — it cancels the in-flight debounced
+search and restores whichever listing was being browsed. The shared field's
+clear button calls `onChange('')` like any other edit, so an empty value now
+routes to that handler instead of falling through the debounce.
+
 ### The homepage stops sounding like it was generated
 
 A user told the founder the page read instantly as "an AI-generated website".

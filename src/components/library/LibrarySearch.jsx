@@ -10,9 +10,15 @@
 // "clear filters" link: a search with no way back out is the single most common
 // way a browse surface strands someone on an empty grid.
 
+// `onFocus` exists for ONE reason and it is a real one: the Emoji Library's
+// search index is a separate ~31 KB chunk, deliberately not bundled, and it is
+// requested on focus so it is normally resolved before the first keystroke.
+// Without this hook that surface would have had to keep its own search field —
+// which is exactly the fourth implementation this component exists to prevent.
 export default function LibrarySearch({
   value,
   onChange,
+  onFocus,
   placeholder = 'Search…',
   label,
   className = '',
@@ -29,6 +35,7 @@ export default function LibrarySearch({
         aria-label={label}
         spellCheck="false"
         onChange={(event) => onChange(event.target.value)}
+        onFocus={onFocus}
       />
       {value && (
         <button

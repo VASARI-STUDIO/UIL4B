@@ -34,6 +34,7 @@ export default function LibraryToolbar({
           <LibrarySearch
             value={search.value}
             onChange={search.onChange}
+            onFocus={search.onFocus}
             placeholder={search.placeholder}
             label={search.label}
           />
