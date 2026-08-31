@@ -112,7 +112,7 @@ function CheckGlyph() {
 // `selectedId` (optional) marks a card as the currently-imported palette: it gets
 // a tick badge and its action flips to "Selected", so clicking it again toggles
 // the import off (the builder reverts to the pre-import system).
-export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = GALLERY_PALETTES }) {
+export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = GALLERY_PALETTES, labelledBy }) {
   const [likes, setLikes] = useState(loadLikes)
   const navigate = useNavigate()
   const { setPalette, canSaveProjects } = useProject()
@@ -174,7 +174,7 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
   }, [canSaveProjects, navigate, setPalette, toast])
 
   return (
-    <LibraryGrid className="pgal-grid">
+    <LibraryGrid className="pgal-grid" labelledBy={labelledBy}>
       {palettes.map(p => {
         const selected = selectedId != null && p.id === selectedId
         return (

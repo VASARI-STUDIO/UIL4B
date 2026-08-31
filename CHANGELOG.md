@@ -13,6 +13,38 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The Palette Library browses in categories
+
+Founder request (2026-08-08): *"trending/popular first, then brand palettes,
+then community"*. **Two of those three do not exist, and neither is faked.**
+
+- **Trending** needs a real ranking signal and the product has none — that is
+  the `upgrade-activation-events` item. Sorting by anything else while calling
+  it trending would be an invention dressed as a measurement, so the curated
+  collection leads in its catalogue order and is not labelled trending.
+- **Community** has no source until `community-backend` is built. An empty
+  "Community" heading would be a promise the product cannot keep.
+
+What ships is the ordering and the sectioning over the two categories that hold
+real palettes: **Curated collection**, then **Brand systems**, each with its own
+count and its own labelled grid. The headings are **sticky** — that is the whole
+point of sectioning a hundred-card list rather than filtering it: the answer to
+"what am I looking at" has to survive the scroll. They pin below the nav rather
+than under it.
+
+A filter or a search collapses back to one flat grid. A filter is already an
+answer to "which subset", and re-splitting that answer into headed groups — one
+of them usually empty — buries it.
+
+Adding either missing category later is one entry in the `SECTIONS` array. There
+is a test asserting both are **absent**, so a stub cannot quietly appear in
+place of the real thing.
+
+The "36 of these are published brand systems" preamble is gone from the browse
+view: the Brand systems heading and its count say the same thing next to the
+cards it is about, instead of in a sentence above a mixed grid. It still renders
+for filtered and searched views, which have no sections.
+
 ### One offline signal, instead of five surfaces each guessing
 
 Offline was handled only per-surface: the font catalogue fell back to its
