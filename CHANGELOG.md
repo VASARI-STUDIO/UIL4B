@@ -13,6 +13,46 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### Emoji search stops ranking coincidences above the answer
+
+The 2026-08-08 report described two symptoms — "search returns nothing usable"
+and "the whole surface is laggy" — and the queue item asked which caused which.
+**Neither. They were independent.** The search failure was a data fault (the old
+filter matched a per-*category* keyword table, so a query selected categories
+rather than emoji), fixed by the real per-emoji CLDR index in #272; the render
+cost was already bounded by a windowed grid, and the index is fetched on demand
+rather than bundled, so fixing the first did not cost the second. #272 shipped
+with its ranking explicitly unfinished; this closes the remainder.
+
+**The ranking bug, found by checking the module's own documented example.**
+`scoreEmoji`'s prefix band scores on coverage — how much of a word the query
+accounts for — on the argument that a query covering most of a word is an
+inflection of it. Its comment used "car"/"carrot" (50%, safely below the line a
+whole keyword scores) and concluded 🚗 wins "car".
+
+It did not. That example only considered a *long* unrelated word. Short ones
+score far higher on the same measure: "car"/"card" and "car"/"carp" are 75%.
+Measured on the shipped index, "car" returned
+
+> 🏎️ 🚓 🚨 🎏 💳 📇 🗃️ 🗂️ 🎴 **🚗**
+
+— six unrelated words between the query and the car, which was tenth.
+
+Coverage cannot separate those cases, because the shorter the query the more
+unrelated words clear the bar. So the prefix band now only outranks a whole
+keyword when what is left over is **a suffix English actually adds**: "musical"
+− "music" = "al" and "locked" − "lock" = "ed" are inflections; "carrot" − "car"
+= "rot" is not. A four-character minimum rides along with it, because at three
+letters "card" − "car" = "d" would pass the suffix test on a technicality.
+
+"car" now opens 🏎️ 🚓 🚨 🚗 🚕 🚙 — vehicles all the way down. Both halves of
+the rule are pinned: the coincidences are excluded *and* the real inflections
+still beat a whole keyword, because a fix that traded one misranking for another
+would look identical from one side.
+
+Measured for the perf half: 430 emoji buttons in the DOM at 1440×900, against a
+catalogue of 1,636.
+
 ### The image → palette picker is centred, larger, and no longer lies about where a colour came from
 
 The founder reported the popup as "too small and not centred, so you can't see
