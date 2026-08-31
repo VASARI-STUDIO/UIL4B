@@ -27,7 +27,7 @@ import { COMMUNITY_DESIGNS } from '../data/communityDesigns'
 // The command bar searches the real tool registry through the same
 // `queryCommandIndex` the ⌘K palette uses. There is no second index.
 
-/* ── Hero stat line — every number derived, none invented ─────────────────── */
+/* ── Catalogue figures — every number derived, none invented ──────────────── */
 
 // Counted from the tool tree at module load, so the claim can never drift from
 // the product. The mock's "40+ TOOLS" was invented; this is what is live.
@@ -37,13 +37,22 @@ const LIVE_TOOL_COUNT = CREATE_GROUPS
 
 // 200k icons: the Iconify catalogue behind /create/icons, already claimed in
 // toolTree.js and in the workbench's Icon panel.
-// 1,500+ fonts: the Google Fonts catalogue behind /create/font-gallery, as described in
-// discoverResources.js. Both are the real libraries the tools read.
-const HERO_STATS = [
-  `${LIVE_TOOL_COUNT} LIVE TOOLS`,
-  '200K ICONS',
-  '1,500+ FONTS',
-  'ONE ACCOUNT',
+// 1,500+ fonts: the Google Fonts catalogue behind /create/font-gallery, as
+// described in discoverResources.js. Both are the real libraries the tools read.
+//
+// THESE USED TO SIT ABOVE THE HEADLINE, as a centred `48 LIVE TOOLS · 200K
+// ICONS · 1,500+ FONTS · ONE ACCOUNT` strip. The numbers were honest; the
+// COMPONENT was the problem. A stat bar over a hero headline is the single most
+// recognisable piece of generic SaaS furniture, and a visitor reads the shape
+// before they read the figures — which is exactly the "this is an AI-generated
+// website" reaction the founder relayed from a real user.
+//
+// They now sit beside the toolset grid, where each number describes something
+// the reader can see on screen rather than announcing itself as proof.
+const CATALOGUE_FACTS = [
+  { value: String(LIVE_TOOL_COUNT), label: 'tools live today' },
+  { value: '200k', label: 'icons, via Iconify' },
+  { value: '1,500+', label: 'families, via Google Fonts' },
 ]
 
 /* ── The sticky scroll narrative ──────────────────────────────────────────── */
@@ -203,34 +212,53 @@ export default function Home() {
             (headline), the qualifier (sub), the way in (command bar), the two
             actions, the honest terms. Nothing here waits on GSAP — the
             entrance is CSS keyframes and the command bar is plain React. */}
+        {/* ── Hero ──
+            REWRITTEN after a user told the founder the page read instantly as
+            "an AI-generated website". The diagnosis, kept here because the old
+            copy will look harmless to anyone who did not see it beside the
+            reference set:
+              · a centred stat strip above the headline — the most recognisable
+                piece of generic SaaS furniture there is;
+              · a headline that promised a category ("Every design tool, one
+                search box away") rather than naming the thing being made, so it
+                could have sat on dozens of unrelated products;
+              · a sub-headline opening on the reader's pain ("Stop hunting
+                through twelve bookmarked tabs") with an invented specific;
+              · a three-clause reassurance line under the buttons.
+            Each of those is fluent. Together they are furniture, and a visitor
+            reads the furniture before the words.
+
+            What replaces it says what UIL4B makes and what is true of it. The
+            command bar stays — it searches the real registry through the same
+            index as the ⌘K palette, and it is the most product-specific thing
+            on the page — but it now carries its own small label instead of
+            being the referent for a pun in the headline. */}
         <header className="home-hero">
           <div className="home-hero-core">
-            <p className="home-hero-stats">
-              {HERO_STATS.map((stat, i) => (
-                <span className="home-hero-stat" key={stat}>
-                  {i > 0 && <span className="home-hero-stat-sep" aria-hidden="true">·</span>}
-                  {stat}
-                </span>
-              ))}
-            </p>
+            <p className="home-hero-kicker">UI system toolkit</p>
 
-            {/* The headline and the command bar below it are ONE idea: the
-                highlighted phrase IS the input sitting directly beneath it, so
-                the hero explains itself and the --hi mark has a referent on
-                screen. Copy is the design project's, verbatim. */}
+            {/* The mark lands on "one system", which is the actual claim and the
+                one a visitor can check: the same values move between tools. */}
             <h1 className="home-hero-h1">
-              <span className="home-hero-line"><span className="home-hero-line-in">Every design tool,</span></span>
+              <span className="home-hero-line"><span className="home-hero-line-in">Colour, type and tokens</span></span>
               <span className="home-hero-line"><span className="home-hero-line-in">
-                one <mark className="home-mark">search box</mark> away.
+                that stay <mark className="home-mark">one system</mark>.
               </span></span>
             </h1>
 
             <p className="home-hero-sub">
-              Stop hunting through twelve bookmarked tabs. Type what you need — colour, type,
-              icons, tokens — and start working. Nothing to install.
+              Every tool here reads and writes the same values, so the hex you change in the
+              palette builder is the hex your export ships. Nothing to install.
             </p>
 
-            <HomeCommandBar />
+            {/* The bar is INTRODUCED, which is the property the founder asked
+                for on 2026-08-16 ("the --hi mark pointed at nothing" — the bar
+                used to arrive unannounced). That instruction was met by making
+                the headline a pun on "search box"; this label meets the same
+                requirement without spending the headline on it, so the headline
+                can say what the product makes. */}
+            <p className="home-hero-searchlabel" id="home-search-label">Search every tool</p>
+            <HomeCommandBar labelledBy="home-search-label" />
 
             <div className="home-hero-cta">
               {/* ?signup=1 so the popup opens on the sign-up form. A real
@@ -243,7 +271,7 @@ export default function Home() {
               <a className="ui-pill ui-pill-quiet ui-pill-lg" href="#workbench">See it working</a>
             </div>
 
-            <p className="home-hero-hint">No credit card · No setup · Your first system stays free</p>
+            <p className="home-hero-hint">Free to use. No card.</p>
           </div>
         </header>
 
@@ -254,15 +282,25 @@ export default function Home() {
             enhancement, and touching a tab pins it. */}
         <section className="hsteps" id="workbench" aria-labelledby="hsteps-title">
           <div className="home-container">
+            {/* The bracketed [ CREATE ] eyebrow is gone, here and on the
+                three sections below it. Four of them, identically formatted,
+                had stopped being wayfinding and become a motif — and a motif
+                applied uniformly is decoration. Where a heading already names
+                its own section, an eyebrow above it is a second label for the
+                same thing.
+
+                The heading was "Not a screenshot. The actual tools, running
+                here." Defensive negation: it argues with a doubt the reader has
+                not voiced yet, and the shape ("Not an X. The real Y.") is
+                itself a tell. The instruction is stronger than the boast. */}
             <div className="hsteps-head" data-reveal>
-              <span className="hbrow">[ CREATE ]</span>
               <h2 className="hh2" id="hsteps-title">
-                Not a screenshot. The actual tools, running here.
+                Everything below is the real tool. Use it.
               </h2>
               <p className="hlede">
-                Everything below is live: real generated values, real keyboard handling, real
-                clipboard. Nothing saves, nothing needs an account, and every panel names where
-                it hands off before you press it.
+                Real generated values, real keyboard handling, real clipboard. Nothing saves,
+                nothing needs an account, and every panel names where it hands off before you
+                press it.
               </p>
             </div>
 
@@ -314,9 +352,12 @@ export default function Home() {
             being hidden or claimed as live. */}
         <section className="htools" aria-labelledby="htools-title">
           <div className="home-container">
+            {/* "Six categories. One account." — the N-nouns/one-noun fragment
+                pair, which appeared three times on this page in three different
+                sizes. Naming the six is shorter to read and tells the visitor
+                something the count does not. */}
             <div className="htools-head" data-reveal>
-              <span className="hbrow">[ THE TOOLSET ]</span>
-              <h2 className="hh2" id="htools-title">Six categories. One account.</h2>
+              <h2 className="hh2" id="htools-title">Colour, type, icons, imagery, tokens, export.</h2>
               {/* Canonical founder direction (uil4b-brand-design →
                   surface-principles.md): component tooling must be NAMED as
                   coming next, and must never appear as a live preview mode. It
@@ -327,6 +368,18 @@ export default function Home() {
                 Every tool reads and writes the same system, so a colour decision in one place
                 is the same colour decision everywhere else. Component tooling is coming next.
               </p>
+              {/* The figures the hero used to announce. Down here each one
+                  describes something on screen — the grid the reader is
+                  looking at — instead of arriving as proof before there is
+                  anything to prove. */}
+              <dl className="htools-facts">
+                {CATALOGUE_FACTS.map((fact) => (
+                  <div key={fact.label}>
+                    <dt>{fact.value}</dt>
+                    <dd>{fact.label}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
 
             <ul className="htools-grid" data-reveal-group>
@@ -381,9 +434,10 @@ export default function Home() {
         <section className="hcomm" aria-labelledby="hcomm-title">
           <div className="home-container">
             <div className="hcomm-head" data-reveal>
+              {/* "Systems worth stealing." A designer-flavoured quip that says
+                  nothing about what is in the list. */}
               <div>
-                <span className="hbrow">[ COMMUNITY ]</span>
-                <h2 className="hh2" id="hcomm-title">Systems worth stealing.</h2>
+                <h2 className="hh2" id="hcomm-title">What other people have published.</h2>
               </div>
               <div className="hcomm-tabs" role="tablist" aria-label="Community ordering">
                 {COMMUNITY_TABS.map((tab) => (
@@ -463,7 +517,6 @@ export default function Home() {
           <div className="home-container">
             <div className="hprice-panel" data-reveal>
               <div className="hprice-lead">
-                <span className="hbrow hprice-eyebrow">[ PRICING ]</span>
                 <h2 className="hh2 hprice-title" id="hprice-title">
                   Pro from <span className="hprice-hi">$4/month</span>.
                 </h2>
