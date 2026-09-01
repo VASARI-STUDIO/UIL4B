@@ -920,6 +920,28 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
 .pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
 .pl-add-btn{flex-shrink:0;margin-left:auto}
+/* PATTERN B: THE TABLET BAND WAS NEVER HANDLED. This toolbar column-stacks at
+   ≤640px and is a desktop row above it, so 834px got the desktop row with none
+   of the desktop room. Measured at 834: `.pl-search-wrap` (flex:1, max 360px)
+   and `.pl-chips` (flex:1, min-width:0) competed for the same space, the chips
+   lost, and six categories were crushed into ~200px and wrapped to FOUR ragged
+   lines — with wide dead gaps either side, "Submit prompt" stranded out on the
+   right, and the placeholder truncated to "Search community prompt".
+   The category row is the primary browse control on this page, so it gets a
+   full row of its own and all six chips fit on one line — which is the two-row
+   shape Jira's Teams directory, Claude's connector Directory and Customer.io's
+   integrations browser all reflow into when the width stops being desktop-wide.
+   Below 641px the existing full column stack still wins.
+   The cost, taken deliberately: "Submit prompt" lands on a third row of its
+   own. It could be pulled up beside the search field with `order`, and that was
+   rejected — `order` moves the box and not the tab stop, so it would leave the
+   focus order running search → sort → chips → submit against a visual order of
+   search → sort → submit → chips. A slightly loose row is worth less than a
+   focus order that matches what you can see (WCAG 2.4.3). */
+@media(min-width:641px) and (max-width:980px){
+  .pl-search-wrap{max-width:none}
+  .pl-chips{flex:1 1 100%}
+}
 /* Native select, styled to sit in a .pl-toolbar next to the search field */
 
 /* Add prompt panel */
