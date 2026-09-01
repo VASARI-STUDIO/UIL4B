@@ -1,6 +1,6 @@
 // Where a new account lands, and where a new customer lands.
 //
-// docs/account-lifecycle-audit-2026-08-12.md, B4 and B6:
+// The 2026-08-12 account lifecycle audit, B4 and B6:
 //
 //   B4  Onboarding finished at `/home`, and Home.jsx has NO auth awareness at
 //       all — it does not import useAuth. So someone who had just created an

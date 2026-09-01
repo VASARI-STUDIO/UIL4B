@@ -1,6 +1,6 @@
 // A URL that resolves to nothing must SAY so — to the person and to the crawler.
 //
-// docs/audit-2026-08-11.md, P2: `curl -o /dev/null -w "%{http_code}"
+// The 2026-08-11 site audit, P2: `curl -o /dev/null -w "%{http_code}"
 // /this-does-not-exist` returned **200**, rendering the homepage with
 // `robots: index,follow`. The catch-all was
 // `<Route path="*" element={<Navigate to="/" replace />} />`.

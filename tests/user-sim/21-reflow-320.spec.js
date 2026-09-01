@@ -15,7 +15,7 @@
 // REACH it. This sweep only reports an element that overflows the viewport AND
 // has no scrollable ancestor.
 //
-// What it caught (docs/audit-2026-08-11.md, P2), all three from the same family
+// What it caught (2026-08-11 site audit, P2), all three from the same family
 // of mistake — a flex item that refuses to shrink:
 //
 //   /create/palette      .plb-col-tools at right:367 vs a 315px viewport. Lock,
