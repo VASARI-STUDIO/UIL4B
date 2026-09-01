@@ -796,7 +796,11 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .grad-p-info{padding:10px 12px;background:var(--card)}
 
 /* ─── Icons ─── */
-.ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(88px,calc(100%/3)),1fr));gap:4px}
+/* 112px, not 88. The old value gave the SAME ~85px cell at tablet and phone, so
+   tablet's extra 444px of width bought eight columns of illegible labels rather
+   than a readable grid. A wider cell is what makes a two-line 11px name fit;
+   below ~336px `calc(100%/3)` still takes over and holds three columns. */
+.ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(112px,calc(100%/3)),1fr));gap:4px}
 .ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 6px 12px;border-radius:var(--radius-s);cursor:pointer;border:1px solid transparent;min-height:80px;min-width:0;overflow:hidden;transition:all var(--t)}
 .ic:hover{background:var(--bg-2);border-color:var(--border)}
 .ic:active{transform:scale(.95)}
@@ -804,7 +808,22 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .ic svg{stroke:var(--t0);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 /* Long icon names must stay inside the cell — otherwise they paint past the
    hover background and look clipped against neighbouring cells. */
-.ic span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8.5px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.2}
+/* THE LABEL EXISTS TO TELL TWO NEIGHBOURING ICONS APART. It was 8.5px dropping
+   to 8px below 480, single-line with an ellipsis, in a cell that is ~85px at
+   BOTH tablet and phone (`minmax(min(88px,calc(100%/3)),1fr)` gives 8 columns
+   at 834 and 4 at 390 — the same cell either way). At 834px that produced six
+   consecutive cells all reading "align-horizonta…", which is a label that has
+   stopped doing the only job it has.
+   Two lines at 11px rather than one at 8: the fix is not more characters, it is
+   the DISCRIMINATING characters. "align-horizontal-" / "distribute-cen…" tells
+   you which of the six you are looking at; "align-horizonta…" does not. 11px is
+   also the floor the rest of this stylesheet holds to for mono caption text.
+   Icon browsers worth copying mostly do not label cells at all — Skiff, Pitch's
+   Icons8 picker and Adobe Express's icon chooser are all bare glyph grids that
+   lean on search and the glyph itself. UIL4B keeps the name because the name is
+   the thing you copy, but that is the reason it has to be legible rather than
+   decorative. */
+.ic span{max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;font-size:11px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.25}
 
 /* ─── Icon Detail popup ─── */
 .il-detail{position:relative;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);max-width:560px;width:100%;padding:40px;box-shadow:var(--warm-shadow-lg);animation:fg-rise var(--dur-3) var(--ease-entrance)}
@@ -1526,7 +1545,13 @@ img,svg,video{max-width:100%;height:auto}
   .dash-tools-grid{grid-template-columns:1fr}
   .pal-grid{grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr))}
   .pal-swatch{min-height:140px;padding:14px}
-  .ig{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
+  /* 104px, not 72. Fewer, wider cells is the whole point: 72px could not hold a
+     legible icon name at any font size, so the grid was dense with labels that
+     all read the same. The name also gets a third line down here, because a
+     phone cell is narrow enough that two lines still cut the `align-horizontal-
+     distribute-*` family in the same place. */
+  .ig{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  .ic>span:not(.ic-pack){-webkit-line-clamp:3;line-clamp:3}
   .grad-presets{grid-template-columns:repeat(auto-fill,minmax(min(180px,100%),1fr))}
   .img-grid{grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr))}
   .pl-gallery{grid-template-columns:1fr}
@@ -1608,9 +1633,11 @@ img,svg,video{max-width:100%;height:auto}
   .topbar-btn-export{display:none}
   .pal-grid{grid-template-columns:repeat(auto-fill,minmax(min(120px,calc((100% - 8px)/2)),1fr))!important}
   .pal-swatch{min-height:120px;padding:12px}
-  .ig{grid-template-columns:repeat(4,1fr)}
+  /* Three, not four. At 390px four columns give an 87px cell, which clipped 24
+     of the 120 visible names; three give ~118px and clip none. */
+  .ig{grid-template-columns:repeat(3,1fr)}
   .ic{padding:14px 4px 10px;min-height:72px}
-  .ic span{font-size:8px}
+  /* The 8px override is gone — see the `.ic span` note by the base rule. */
   .img-grid{grid-template-columns:1fr}
   .grad-presets{grid-template-columns:1fr}
   .btn-cat{grid-template-columns:1fr}
@@ -5675,7 +5702,21 @@ html.lenis,html.lenis body{height:auto}
 .ig-attrib code{font-family:var(--mono);font-size:.92em;color:var(--t2)}
 .ig-attrib a{color:var(--brand);text-decoration:none;font-weight:600}
 .ig-attrib a:hover{text-decoration:underline}
-.ic .ic-pack{font-size:7.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);line-height:1}
+.ic .ic-pack{font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);line-height:1}
+/* THE PACK LABEL IS DROPPED BELOW 980px, and it is the cheapest thing in this
+   grid to give up. It rendered "LUCIDE" under EVERY cell — a third line, at
+   7.5px, carrying a value that is identical for essentially the whole grid and
+   therefore discriminates nothing, while the line that does discriminate (the
+   icon's own name) was being truncated to make room for it. Which pack is
+   active is already stated by the pack filter in the toolbar above.
+   This is Magnific's answer in the icon-browser survey: pack identity belongs
+   to the GROUP — it labels a collection once, with its author, and never the
+   individual icon. Above 980px the cell is wide enough to afford the third line,
+   and a mixed-pack result set (logo.dev, custom uploads) is where it earns its
+   place, so it is kept there rather than deleted outright. */
+@media(max-width:980px){
+  .ic .ic-pack{display:none}
+}
 
 @media(max-width:560px){
   .icust-overlay{padding:24px 12px 32px}
