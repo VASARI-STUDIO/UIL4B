@@ -9,7 +9,7 @@
 //     `approvedTotal` below is the ladder recorded in
 //     docs/reference/design-language-v2.md ("Deviations from the mock",
 //     founder-approved 2026-08-16) and re-approved as decision 2 of
-//     docs/build-plan/founder-batch-2026-08-20.md: $7 monthly · $18 quarterly ·
+//     2026-08-20, recorded in CHANGELOG.md: $7 monthly · $18 quarterly ·
 //     $48 yearly.
 //
 //     SETTLED 2026-08-20: api/_lib/pricing.js used to disagree with this file —

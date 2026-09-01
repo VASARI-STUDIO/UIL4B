@@ -1,7 +1,7 @@
 // Document structure and search-result copy — two things that only fail
 // silently, and only for people who are not looking at the page.
 //
-// docs/audit-2026-08-11.md, P4:
+// The 2026-08-11 site audit, P4:
 //   • /privacy, /terms and /create/emoji went h1 -> h3. A screen-reader user
 //     navigating by heading hears a level-3 with no level-2 above it and cannot
 //     tell where the outline broke (WCAG 1.3.1).
