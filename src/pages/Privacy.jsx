@@ -39,7 +39,7 @@ export default function Privacy() {
         <p>{t('privacy.lastUpdated')}</p>
       </div>
 
-      <div className="card" style={{ maxWidth: 820, lineHeight: 1.8 }}>
+      <div className="card legal-card">
         <h2 className="legal-h">{t('privacy.s1Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 24 }}>{t('privacy.s1Text')}</p>
 
@@ -66,11 +66,19 @@ export default function Privacy() {
               </tr>
             </thead>
             <tbody>
+              {/* `data-label` is not decoration. Below 640px the table stacks
+                  into one card per row and the <thead> is display:none, so
+                  without these each card was three unlabelled lines: a key, a
+                  sentence, and a bare YES / NO / ACCOUNT-BOUND floating with
+                  nothing to say what it answered. On the page where we disclose
+                  what we store, "vs-accounts … YES" that does not say YES to
+                  WHAT is worse than no table at all. The CSS renders these as
+                  the row labels the <th> cells would have been. */}
               {STORAGE_DISCLOSURE.map(row => (
                 <tr key={row.key}>
-                  <td><span className="storage-key">{row.key}</span></td>
-                  <td className="storage-purpose">{row.purpose}</td>
-                  <td><span className={`storage-pii ${row.pii}`}>{row.pii === 'yes' ? 'Yes' : row.pii === 'local' ? 'Account-bound' : 'No'}</span></td>
+                  <td data-label="Key"><span className="storage-key">{row.key}</span></td>
+                  <td className="storage-purpose" data-label="Purpose">{row.purpose}</td>
+                  <td data-label="Personal data"><span className={`storage-pii ${row.pii}`}>{row.pii === 'yes' ? 'Yes' : row.pii === 'local' ? 'Account-bound' : 'No'}</span></td>
                 </tr>
               ))}
             </tbody>

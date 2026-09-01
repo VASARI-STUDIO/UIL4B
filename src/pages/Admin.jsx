@@ -1593,7 +1593,7 @@ export default function Admin({ toast }) {
           roving tabindex — one tab stop for the whole bar, arrows to move
           within it — matching the pattern Settings already uses. */}
       <div
-        className="adm-tabs"
+        className="adm-tabs rail-overflow"
         role="tablist"
         aria-label="Admin sections"
         onKeyDown={onTabKeyDown}

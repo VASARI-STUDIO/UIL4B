@@ -1021,7 +1021,7 @@ export default function HomeWorkbench({ variant = 'section', activeTab, onTabCha
             </span>
             <span className="hw-chrome-live"><i />Live preview</span>
           </div>
-          <div className="hw-tabs" role="tablist" aria-label="Workbench modes">
+          <div className="hw-tabs rail-overflow" role="tablist" aria-label="Workbench modes">
             {HOME_WORKBENCH_TABS.map((tab, index) => (
               <button
                 key={tab.id}
