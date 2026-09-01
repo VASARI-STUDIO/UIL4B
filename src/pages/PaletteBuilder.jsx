@@ -2061,7 +2061,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
           </div>
         </div>
 
-        <div className="plb-toolbar-group">
+        {/* `rail-overflow` carries the shared scroller affordances (peek fade,
+            visible scrollbar, snap). It is switched back OFF above 960px in
+            global.css, where this group must not be a scroll container at all —
+            its dropdowns are absolutely-positioned popups and a scroll
+            container would clip them. */}
+        <div className="plb-toolbar-group rail-overflow">
           <div className="plb-menuwrap">
             <button
               type="button"

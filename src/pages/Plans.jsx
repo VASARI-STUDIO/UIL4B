@@ -237,7 +237,7 @@ export default function Plans() {
         UIL4B runs in your browser and is unmetered on both plans.
       </p>
 
-      <div className="plans-compare-wrap">
+      <div className="plans-compare-wrap rail-overflow">
         <table className="plans-compare-table">
           <caption className="sr-only">Free and Pro verified limits and capabilities</caption>
           <thead><tr><th scope="col">Capability</th><th scope="col">Free</th><th scope="col" className="pct-pro">Pro</th></tr></thead>
