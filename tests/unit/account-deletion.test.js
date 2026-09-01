@@ -1,7 +1,7 @@
 // Account deletion is irreversible and it spends someone's money. Every test
 // here is a refusal rule.
 //
-// The audit (docs/account-lifecycle-audit-2026-08-12.md § A1-A3) found three
+// The audit (2026-08-12 account lifecycle audit § A1-A3) found three
 // failures in the old client-side path:
 //
 //   A1  It never called Stripe, so a Pro user who deleted their account kept

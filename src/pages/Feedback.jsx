@@ -8,7 +8,7 @@ import { saveFeedback } from '../utils/analytics'
 // that should quietly fail or be hard to use.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHAT WAS WRONG (docs/audit-2026-08-11.md, P2)
+// WHAT WAS WRONG (2026-08-11 site audit, P2 — see CHANGELOG.md)
 // ─────────────────────────────────────────────────────────────────────────────
 // Measured on the rendered page: ZERO <label> elements. The three `.seg-label`
 // divs look like labels and are not — so neither the subject nor the message

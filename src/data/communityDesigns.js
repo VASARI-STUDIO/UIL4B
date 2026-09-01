@@ -2,7 +2,7 @@
 // community" band on Discover, shown until real submissions exist.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THIS WAS REWRITTEN (docs/audit-2026-08-11.md, P3)
+// WHY THIS WAS REWRITTEN (2026-08-11 site audit, P3 — see CHANGELOG.md)
 // ─────────────────────────────────────────────────────────────────────────────
 // The seed used to be twelve INVENTED designs by INVENTED people — "Aurora
 // Analytics by Maya R., 342 saves" — each linking to a stock site's homepage,

@@ -6,7 +6,7 @@
 // actual signup demoted to a small text link underneath. Four of the highest
 // traffic paths into the product told a first-time visitor they already had an
 // account. The usability sweep called it the single highest-impact fix on the
-// site (docs/audit-2026-08-11.md, P1).
+// site (2026-08-11 site audit, P1).
 //
 // The popup is one component either way; only which form it OPENS on changed.
 // So these tests assert the opening state, and that "Log in" — which shares the

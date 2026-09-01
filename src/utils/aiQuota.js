@@ -1,7 +1,7 @@
 // What's left of an AI allowance, and which ceiling is about to bite.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THIS EXISTS (docs/account-lifecycle-audit-2026-08-12.md § B2)
+// WHY THIS EXISTS (2026-08-12 account lifecycle audit § B2)
 // ─────────────────────────────────────────────────────────────────────────────
 // `usageTracker.js` exported getRemainingUses and getResetTime — exactly the two
 // functions needed to warn someone before they hit a wall. Neither was imported

@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 // A real 404, replacing `<Route path="*" element={<Navigate to="/" replace />} />`.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THE REDIRECT WAS WRONG (docs/audit-2026-08-11.md, P2)
+// WHY THE REDIRECT WAS WRONG (2026-08-11 site audit, P2 — see CHANGELOG.md)
 // ─────────────────────────────────────────────────────────────────────────────
 // `curl -o /dev/null -w "%{http_code}" /this-does-not-exist` returned **200**,
 // rendering the homepage with `robots: index,follow`. That is a soft 404, and

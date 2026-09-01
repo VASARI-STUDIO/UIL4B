@@ -101,6 +101,9 @@ Read the relevant one before working in that area.
   components, `/api` (12-function limit), analytics.
 - **[Colour System Method](docs/reference/color-system-m3.md)** — M3-based colour
   method (seed → tonal palettes → roles → light/dark).
+- **[Design Language V2](docs/reference/design-language-v2.md)** — the shipped V2
+  visual language, and "Deviations from the mock" (founder-approved, including
+  the plan ladder). Read before changing type, spacing or surface treatment.
 - **[Build & Verify](docs/reference/build-and-verify.md)** — the verify gate +
   when to run simple vs. batched checks.
 - **⚠️ [Human Validation Zones](docs/reference/human-validation-zones.md)** —
