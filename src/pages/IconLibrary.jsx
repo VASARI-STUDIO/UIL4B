@@ -1790,7 +1790,7 @@ export default function IconLibrary({ onCopy, embedded }) {
               Clear
             </button>
           </div>
-          <div className="ig-rail-track">
+          <div className="ig-rail-track rail-overflow">
             {recents.map((r) => (
               <button
                 key={r.key}
