@@ -6776,7 +6776,23 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
 .cc-more-link{font-size:13px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
 .cc-more-link:hover{color:var(--brand)}
 @media(max-width:900px){.cc-grid{grid-template-columns:1fr}}
-@media(max-width:560px){.cc-fields{flex-direction:column;align-items:stretch}.cc-swap{width:100%}}
+/* The "make it pass" row stops being a single non-wrapping strip. Chip, copy and
+   two buttons in one row left the description ~85px at 390px, so
+   "AAA (7:1) — adjust the text" wrapped onto two lines while the buttons either
+   side of it stayed on one — the row read as broken rather than tight, and the
+   sentence that says WHAT to fix was the only thing squeezed. Two grid rows:
+   the chip and its sentence together, then the two actions side by side across
+   the full width, which also takes them from ~60px wide to a real touch target. */
+@media(max-width:560px){
+  .cc-fields{flex-direction:column;align-items:stretch}
+  .cc-swap{width:100%}
+  .cc-fix{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
+  .cc-fix-chip{grid-area:1/1}
+  .cc-fix-desc{grid-area:1/2;align-self:center}
+  .cc-fix-apply{grid-area:2/1}
+  .cc-fix-copy{grid-area:2/2}
+  .cc-fix-apply,.cc-fix-copy{min-height:40px}
+}
 
 /* ══════════ Palette Builder (/color/palette) ══════════ */
 /* Full-bleed workbench: the negative margins exactly cancel .rail-content's
