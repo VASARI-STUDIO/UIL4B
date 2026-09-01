@@ -13,6 +13,29 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### The hero headline stopped colliding with its own highlight on a phone
+
+Caught by screenshotting the rendered page at 390x844 rather than by reading the
+markup, and caused by the headline rewrite immediately before it: the new line
+is longer, so it wrapped to FOUR lines at the clamp floor of 46px and filled the
+entire first screen — and the descender of "stay" reached down into the band
+where the next line paints its highlight, so the yellow box sliced the "y" off.
+
+Two causes, both fixed, neither visible from the source:
+
+- **The highlight is painted over an INLINE BOX, not over the CSS line-height.**
+  An inline element's background covers the font's own natural box (~1.3em for
+  Manrope 800) whatever the heading's line-height says. On a headline that
+  wraps, one visual line's highlight therefore paints across the line above it.
+  That never showed while the headline was two short lines that did not wrap.
+- **46px was too large a floor for this sentence.** Three lines at 34-58px reads
+  better on a phone than four at 46px, and the extra leading clears the
+  descender.
+
+Desktop is unchanged: the tight display line-height the hero is built on still
+applies above 900px, where the headline cannot collide with itself.
+
+
 ### The Icon and Emoji libraries join the shared browse language
 
 Founder request: *"make the tool bar for the icon and emoji gallery and header
