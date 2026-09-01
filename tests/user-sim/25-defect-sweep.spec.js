@@ -22,7 +22,7 @@
 // viewports, because a desktop Chromium narrowed to 390px still reports
 // `hover: hover` and hides this whole class of defect.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { restingScrollY, watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -438,7 +438,9 @@ test('S5 / S10 · the FAB never permanently covers a control', async ({ browser 
     for (const [w, h] of shapes) {
       const { ctx, page } = await open(browser, w, h, path, waitFor)
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
-      await page.waitForTimeout(500)
+      // Every rectangle below is read from a live layout, so the page has to
+      // have stopped moving first. 500ms was a guess at how long that takes.
+      await restingScrollY(page, `${path} at ${w}x${h}, scrolled to the bottom`)
       const covered = await page.evaluate(() => {
         const fab = document.querySelector('.global-feedback-btn')
         const out = []

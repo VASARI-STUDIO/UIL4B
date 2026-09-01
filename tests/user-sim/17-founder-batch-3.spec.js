@@ -3,7 +3,7 @@
 // Same rule as batches 1 and 2 (14- and 16-): each of these reached the founder
 // because nothing measured the rendered result. These tests measure it.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, restingScrollY, watch, wheelToRest } from './helpers.js'
 
 /* ── D5 · Auth from the nav must not navigate ────────────────────────────────
  * Founder: on the Palette Library, "Start for Free" changed the URL to /login,
@@ -25,26 +25,14 @@ test.describe('nav auth opens over the page you are on', () => {
 
     // Somewhere down the page, so losing the page would be obvious. The gallery
     // grows as it renders and the page uses smooth scrolling, so wheel until it
-    // has actually moved rather than assuming one gesture is enough.
+    // has actually moved rather than assuming one gesture is enough — and let
+    // each gesture LAND before judging whether another is needed. Every number
+    // this test compares is a resting position; see restingScrollY() in
+    // helpers.js for why a sampled one is not worth comparing.
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight)).toBeGreaterThan(2000)
-    for (let i = 0; i < 8 && (await page.evaluate(() => window.scrollY)) < 400; i++) {
-      await page.mouse.wheel(0, 700)
-      await page.waitForTimeout(250)
-    }
-    // SETTLE BEFORE RECORDING THE BASELINE. The loop above exits the moment a
-    // sample reads over 400 — but Lenis is still animating toward the full 700
-    // of that gesture, so the number captured here was a mid-flight position.
-    // The comparison at the end then measured the REST of the animation and
-    // called it a lost scroll position: CI failed with "was 467, now 700" and
-    // "was 489, now 700" on two branches that touched nothing near this.
-    // Waiting for two identical samples is the difference between measuring the
-    // bug and measuring the easing curve.
-    let scrolledTo = await page.evaluate(() => window.scrollY)
-    for (let i = 0; i < 20; i++) {
-      await page.waitForTimeout(100)
-      const now = await page.evaluate(() => window.scrollY)
-      if (now === scrolledTo) break
-      scrolledTo = now
+    let scrolledTo = await restingScrollY(page, 'the library before scrolling')
+    for (let i = 0; i < 8 && scrolledTo < 400; i++) {
+      scrolledTo = await wheelToRest(page, 700, 'the library after a wheel gesture')
     }
     expect(scrolledTo, 'the visitor is well down the library').toBeGreaterThan(400)
 
@@ -61,13 +49,22 @@ test.describe('nav auth opens over the page you are on', () => {
     // …and dismissing it is not a navigation either. This is the founder's
     // report: the X used to land on /home.
     expect(new URL(page.url()).pathname).toBe('/discover/palettes')
-    // Nothing remounted, so the scroll position survived. (The popup locks and
-    // releases body scroll, which the smooth-scroll layer settles over a frame
-    // or two — hence the tolerance rather than an exact match. The bug this
-    // guards against was landing on a different page at scrollY 0.)
-    await page.waitForTimeout(600)
-    const landedAt = await page.evaluate(() => window.scrollY)
-    expect(Math.abs(landedAt - scrolledTo), `stayed put (was ${scrolledTo}, now ${landedAt})`).toBeLessThan(200)
+    // Nothing remounted, so the scroll position survived. The bug this guards
+    // against was landing on a different page at scrollY 0 — a difference of
+    // everything the visitor had scrolled, which the line above pins at over
+    // 400px.
+    //
+    // The tolerance used to be 200px and a `waitForTimeout(600)`, described as
+    // room for the body-scroll lock to settle. It was really a budget for an
+    // animation nobody had waited for, and a budget is where a flake lives:
+    // whichever end of the subtraction was read mid-flight, the difference grew
+    // until it broke through. Both ends are resting positions now, so the
+    // tolerance only has to cover what locking and releasing body scroll can
+    // legitimately cost — the page reflows by a scrollbar's width and back.
+    // Measured across 40 runs the difference is 0. A regression cannot hide
+    // under this without also failing the `> 400` above.
+    const landedAt = await restingScrollY(page, 'the library after the popup closed')
+    expect(Math.abs(landedAt - scrolledTo), `stayed put (was ${scrolledTo}, now ${landedAt})`).toBeLessThan(24)
   })
 
   test('Escape behaves the same as the X', async ({ page }) => {
