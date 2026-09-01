@@ -6183,7 +6183,15 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
 .htool-link{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-0);color:var(--t1);font-size:var(--fs-caption);font-weight:500;text-decoration:none;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .htool-link:hover{color:var(--t0);border-color:var(--t0);text-decoration:none}
 .htool-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.htool-soon{display:inline-flex;padding:2px 7px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:9px;font-style:normal;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+/* 10.5px, not 9. Found by the scroll-aware recapture of the homepage — the
+   reveal-gated sections below the hero had never been reviewed, because
+   `[data-reveal]{opacity:0}` never fires in a non-scrolling full-page capture
+   (measured: 10 of 11 revealed blocks still at opacity 0 without a scroll pass).
+   "Soon" is the badge that tells a visitor a tool is not built yet, so it is
+   load-bearing copy on a sales page, and at 9px mono uppercase in `--t3` it was
+   the smallest text on the site. Same floor already applied to `.ch-card-tag`
+   and the icon-grid labels in this pass. */
+.htool-soon{display:inline-flex;padding:2px 7px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:10.5px;font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
 .htool-open{margin-top:auto;padding-top:var(--s-4);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);transition:color var(--dur-2) var(--ease-standard)}
 .htool:hover .htool-open{color:var(--t0)}
 
