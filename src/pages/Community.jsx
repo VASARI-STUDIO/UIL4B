@@ -4,8 +4,10 @@ import CommunityCard from '../components/discover/CommunityCard'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
-import { readCommunitySubmissions, writeCommunitySubmissions } from '../utils/communitySubmissions'
+import { readCommunitySubmissions, sanitizeCommunitySubmission, writeCommunitySubmissions } from '../utils/communitySubmissions'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
+import { buildQueueRecord, mergeSubmissions } from '../utils/communityQueue'
+import { listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
 import useModalDialog from '../hooks/useModalDialog'
 
 // Community Hub — browse, save, and submit design inspiration. Saves drive the
@@ -15,8 +17,13 @@ import useModalDialog from '../hooks/useModalDialog'
 //
 // The seed data (COMMUNITY_DESIGNS), the category list (COMMUNITY_CATEGORIES) and
 // the card (CommunityCard) now live in shared modules so the Discover surface can
-// render the same designs without importing this page. Submission stays a
-// local-only placeholder here (no shared publishing pipeline yet).
+// render the same designs without importing this page.
+//
+// A SUBMISSION IS A PROPERTY OF THE ACCOUNT, NOT OF THIS BROWSER. It used to be
+// written to `vs-community-submissions` and nowhere else, so a design submitted
+// on a phone was invisible on a laptop and no reviewer ever saw it. Submitting
+// now also publishes to the shared review queue (utils/communityQueue.js) and
+// this list merges the account's copy back over the local one.
 
 const SAVES_KEY = 'vs-community-saves'
 
@@ -81,7 +88,11 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
               </select>
             </label>
             {error && <div className="ui-modal-err">{error}</div>}
-            <p className="ui-modal-note">Submissions are saved to this browser for now. Shared community publishing is coming soon.</p>
+            {/* This note used to say submissions were saved to this browser
+                "for now". They now go to the review queue on your account, so
+                it says what actually happens — including that nothing appears
+                in the public library until a reviewer approves it. */}
+            <p className="ui-modal-note">Submissions are saved to your account and queued for review, so they follow you across devices. Nothing appears publicly until it has been reviewed.</p>
           </div>
           <div className="ui-modal-actions ui-modal-actions--row">
             <button className="btn" onClick={onClose}>Cancel</button>
@@ -103,7 +114,14 @@ export default function Community({ toast }) {
   // of AuthContext (which rebuilds the `user` object each time).
   const uid = user?.uid || null
   const [saves, setSaves] = useState(loadSaves)
+  // The LOCAL store only. It is what gets written back to localStorage below,
+  // so the account's copy is deliberately kept out of it: round-tripping server
+  // documents through this browser's store would grow it without bound and
+  // blur which entries this device actually owns.
   const [submissions, setSubmissions] = useState(loadSubmissions)
+  // The account's copy, mapped into the card shape. Empty until it arrives (or
+  // for good, when signed out or offline) — the local list renders either way.
+  const [serverSubmissions, setServerSubmissions] = useState([])
   const [filter, setFilter] = useState('All')
   const [sort, setSort] = useState('popular')
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -114,6 +132,49 @@ export default function Community({ toast }) {
   useEffect(() => {
     writeCommunitySubmissions(submissions)
   }, [submissions])
+
+  // "My submissions" is a property of the ACCOUNT, not of this browser.
+  //
+  // This list used to come from localStorage alone, so a design submitted on a
+  // phone was invisible on a laptop and vice versa. They were never lost; they
+  // were simply only ever in one browser's storage, and no reviewer could see
+  // them either.
+  //
+  // The local list still renders first (instant, works offline); the account's
+  // copy merges in when it arrives. Local-only entries are KEPT and marked
+  // unsynced rather than dropped — they are real submissions that have not
+  // reached the queue yet, and hiding them would look exactly like the bug.
+  useEffect(() => {
+    let cancelled = false
+    if (!uid) return undefined
+    listMySubmissions(uid, 'design')
+      .then((server) => {
+        if (cancelled) return
+        // Through the SAME sanitiser the local store uses. A card rendered from
+        // the wire must not be handed a `javascript:` href just because the
+        // document came back from Firestore instead of localStorage —
+        // safeHttpUrl is the only thing that has ever guaranteed that.
+        setServerSubmissions(server.map(s => sanitizeCommunitySubmission({
+          id: s.localId || s.id,
+          name: s.name,
+          status: s.status,
+          createdAt: s.createdAt,
+          saves: 0,
+          mine: true,
+          c1: '#3B82F6', c2: '#8B5CF6',
+          ...(s.payload || {}),
+        })).filter(Boolean))
+      })
+      .catch(() => { /* the local list still stands; nothing is lost */ })
+    return () => { cancelled = true }
+  }, [uid])
+
+  // Server wins on conflict — it is the copy a reviewer acts on — and the local
+  // entry it replaces is matched on `localId`. See utils/communityQueue.js.
+  const mine = useMemo(
+    () => mergeSubmissions(serverSubmissions, submissions),
+    [serverSubmissions, submissions],
+  )
 
   const toggleSave = useCallback((id) => {
     setSaves(prev => {
@@ -128,7 +189,7 @@ export default function Community({ toast }) {
   // user's own save — exactly the "ranking by saves" behaviour, illustratively.
   const effectiveCount = useCallback((item) => item.saves + (saves.has(item.id) ? 1 : 0), [saves])
 
-  const all = useMemo(() => [...submissions, ...COMMUNITY_DESIGNS], [submissions])
+  const all = useMemo(() => [...mine, ...COMMUNITY_DESIGNS], [mine])
 
   const visible = useMemo(() => {
     let list = filter === 'All' ? all : all.filter(i => i.category === filter)
@@ -138,13 +199,39 @@ export default function Community({ toast }) {
     return list
   }, [all, filter, sort, effectiveCount, saves])
 
-  const handleSubmit = (item) => {
+  // Local first — submitting works offline and the list updates without
+  // waiting on a round trip — then the shared queue, which is what makes the
+  // submission follow the account and reach a reviewer at all.
+  const handleSubmit = async (item) => {
     // Defence in depth: the form is only mounted for a signed-in user, but a
     // sign-out mid-flow must not slip a submission through.
     if (!uid) { setSubmitOpen(false); return }
     setSubmissions(prev => [item, ...prev])
     setSubmitOpen(false)
-    if (toast) toast('Design submitted')
+
+    const queued = buildQueueRecord({
+      kind: 'design',
+      name: item.name,
+      user,
+      payload: {
+        author: item.author, category: item.category, url: item.url,
+        c1: item.c1, c2: item.c2,
+      },
+    })
+    if (!queued) {
+      // No signed-in user — the local copy stands, and the message says so
+      // rather than claiming it reached a reviewer.
+      toast?.('Saved to this browser. Sign in to submit it for review.')
+      return
+    }
+    try {
+      await publishToQueue({ ...queued, localId: item.id })
+      toast?.('Design submitted for review')
+    } catch {
+      // Never claim it reached the queue when it did not. The local copy is
+      // kept, so nothing the user made is lost.
+      toast?.('Saved locally — we could not reach the review queue. Try again later.')
+    }
   }
 
   // Ask a signed-out user to sign in BEFORE the submission form exists — the

@@ -166,3 +166,102 @@ test('an unauthenticated client cannot read or write any user document', async (
   await assertFails(getDoc(userDoc(anon)))
   await assertFails(setDoc(userDoc(anon), PROFILE))
 })
+
+// (d) The community review queue.
+//
+// Gradients already published here; palettes and designs were written to
+// localStorage and nowhere else, so a palette submitted on a phone was
+// invisible on a laptop AND no reviewer ever saw it. Routing them through this
+// collection only helps if the rules actually accept those kinds — and only if
+// they still refuse a client that tries to approve its own work. Both halves
+// are pinned below, because "the rules do not mention `kind`" is an argument,
+// not a test.
+
+const QUEUE = 'community-submissions'
+const submissionDoc = (db, id) => doc(db, QUEUE, id)
+
+function submission(overrides = {}) {
+  return {
+    kind: 'palette',
+    name: 'Harbour Dusk',
+    authorUid: ALICE,
+    authorName: 'Alice',
+    status: 'pending',
+    payload: { colors: ['#0F172A', '#38BDF8'] },
+    createdAt: '2026-09-01T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
+async function seedSubmission(id, data) {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), QUEUE, id), data)
+  })
+}
+
+for (const kind of ['gradient', 'design', 'palette']) {
+  test(`an author can queue a ${kind} submission for review`, async () => {
+    await assertSucceeds(
+      setDoc(submissionDoc(aliceDb(), `s-${kind}`), submission({ kind })),
+    )
+  })
+
+  test(`a ${kind} submission cannot be created already approved`, async () => {
+    // 'approved' is a reviewer's word. If a client could write it, anything
+    // could put itself straight into the public library.
+    await assertFails(
+      setDoc(submissionDoc(aliceDb(), `bad-${kind}`), submission({ kind, status: 'approved' })),
+    )
+  })
+}
+
+test('a submission cannot be created under someone else\'s name', async () => {
+  await assertFails(
+    setDoc(submissionDoc(bobDb(), 'forged'), submission({ authorUid: ALICE })),
+  )
+})
+
+test('a signed-out client cannot queue anything', async () => {
+  const anon = testEnv.unauthenticatedContext().firestore()
+  await assertFails(setDoc(submissionDoc(anon, 'anon'), submission()))
+})
+
+test('a signed-in user can read the queue, which is how their own list loads', async () => {
+  // listMySubmissions(uid, kind) is the read behind "my submissions" — without
+  // this the account copy never arrives and the merge has nothing to merge.
+  await seedSubmission('readable', submission())
+  await assertSucceeds(getDoc(submissionDoc(aliceDb(), 'readable')))
+})
+
+test('an author cannot promote their own pending submission', async () => {
+  await seedSubmission('mine', submission())
+  await assertFails(
+    setDoc(submissionDoc(aliceDb(), 'mine'), submission({ status: 'approved' })),
+  )
+})
+
+test('an author can withdraw and delete their own submission', async () => {
+  await seedSubmission('mine', submission())
+  await assertSucceeds(
+    setDoc(submissionDoc(aliceDb(), 'mine'), submission({ status: 'withdrawn' })),
+  )
+  await assertSucceeds(deleteDoc(submissionDoc(aliceDb(), 'mine')))
+})
+
+test('a stranger can neither moderate nor delete a submission', async () => {
+  await seedSubmission('mine', submission())
+  await assertFails(
+    setDoc(submissionDoc(bobDb(), 'mine'), submission({ status: 'approved' })),
+  )
+  await assertFails(deleteDoc(submissionDoc(bobDb(), 'mine')))
+})
+
+test('a reviewer with the admin claim can approve', async () => {
+  // The claim api/verify-admin.js grants. Nothing granted it before, so every
+  // moderation write used to be rejected.
+  const adminDb = testEnv.authenticatedContext('admin-uid', { admin: true }).firestore()
+  await seedSubmission('mine', submission())
+  await assertSucceeds(
+    setDoc(submissionDoc(adminDb, 'mine'), submission({ status: 'approved' })),
+  )
+})

@@ -24,6 +24,8 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, isAdminEmail, PUBLIC_OWNER_ID } from '../utils/constants'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
+import { buildQueueRecord } from '../utils/communityQueue'
+import { publishToQueue } from '../utils/communityQueueApi'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
@@ -1859,19 +1861,32 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   // Community submission — same localStorage store + shape Community.jsx
   // renders, with the palette link as the URL so the card opens this board.
-  const submitToCommunity = () => {
+  //
+  // LOCAL FIRST, THEN THE ACCOUNT. Until this reached the queue a palette was
+  // written to `vs-community-submissions` and NOWHERE ELSE — the same bug
+  // already fixed for gradients. A palette submitted on a phone was invisible
+  // on a laptop, and no reviewer ever saw it, so "submitted" named a review
+  // that could not happen. The local write stays first: submitting works
+  // offline and the list updates without waiting on a round trip. The queue
+  // write is what makes it follow the ACCOUNT and reach a reviewer.
+  const submitToCommunity = async () => {
     const name = submitName.trim()
     if (!name) { setSubmitErr('Give the palette a name first.'); return }
     const publicHandle = ownerHandle?.publicHandle || (handle ? '@' + handle : '')
     if (!publicHandle) { setSubmitErr('Set your community handle first.'); return }
+    // Defence in depth: the form is only mounted after the sign-in gate, but a
+    // sign-out mid-flow must not slip a submission through.
+    if (!uid) { setSubmitOpen(false); return }
+    const localId = 'u' + Date.now()
+    const url = shareLink()
     try {
       appendCommunitySubmission({
-        id: 'u' + Date.now(),
+        id: localId,
         name,
         author: publicHandle,
         ownerId: ownerHandle ? PUBLIC_OWNER_ID : undefined,
         category: 'Branding',
-        url: shareLink(),
+        url,
         c1: adjusted[0],
         c2: adjusted[1] || adjusted[0],
         colors: adjusted,
@@ -1880,9 +1895,30 @@ export default function PaletteBuilder({ onCopy, toast }) {
       })
       setSubmitName('')
       setSubmitOpen(false)
-      toast?.('Submitted to the community — thanks!')
     } catch {
       setSubmitErr('Couldn’t submit right now.')
+      return
+    }
+
+    const queued = buildQueueRecord({
+      kind: 'palette',
+      name,
+      user,
+      payload: { colors: adjusted, category: 'Branding', url, author: publicHandle },
+    })
+    if (!queued) {
+      // No signed-in user — the local copy stands, and the message says so
+      // rather than claiming it reached a reviewer.
+      toast?.('Saved to this browser. Sign in to submit it for review.')
+      return
+    }
+    try {
+      await publishToQueue({ ...queued, localId })
+      toast?.('Submitted to the community — thanks!')
+    } catch {
+      // Never claim it reached the queue when it did not. The local copy is
+      // kept, so nothing the user made is lost.
+      toast?.('Saved locally — we could not reach the review queue. Try again later.')
     }
   }
 
