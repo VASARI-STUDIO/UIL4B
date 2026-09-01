@@ -8463,10 +8463,28 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .grg-wrap{padding-bottom:88px}
 /* Toolbar, grid, card frame, foot and empty state now come from the shared
    Library language (.lbry-, below). What is left here is what is genuinely
-   specific to a gradient: the 3:4 swatch, and the three controls that hang off
-   it. The type badge that used to be `.grg-pill` — hover-only — is now the
-   shared `.lbry-card-badge` and is visible at rest. */
-.grg-swatch{display:block;aspect-ratio:3/4;border:1px solid var(--border);border-radius:inherit;box-shadow:var(--shadow-s)}
+   specific to a gradient: the swatch, and the three controls that hang off it.
+   The type badge that used to be `.grg-pill` — hover-only — is now the shared
+   `.lbry-card-badge` and is visible at rest.
+
+   THE SWATCH IS LANDSCAPE, and it is `height:196px` rather than a ratio for one
+   reason: that is exactly what `.pgal-stripes` on /discover/palettes is. These
+   two galleries were extracted into one shared browse language (.lbry-) because
+   they had solved the same problem twice and disagreed on every part of it —
+   and then they still disagreed about the only thing a browser actually looks
+   at, the shape of the tile. `aspect-ratio:3/4` was never overridden at any
+   breakpoint, so at 390px one portrait tile was 358x477 — 57% of the screen for
+   a single gradient — and the page ran to 57,839px against the palette
+   gallery's landscape rows. Two sibling galleries sharing one browse language
+   browsed completely differently.
+   A ratio cannot fix it, because a ratio is what caused it: the tile has to
+   stop growing when the column does. A fixed height is also what every colour
+   gallery worth copying does — Adobe Color, Relume's palette library and
+   Semrush's brand kits are all landscape and dense, and none of them uses a
+   portrait swatch. Measured, shipped rule against the old one injected back:
+   57,839px → 29,706px at 390px, and 31,330px → 15,330px at 834px. Half the
+   page, for the same number of gradients. */
+.grg-swatch{display:block;height:196px;border:1px solid var(--border);border-radius:inherit;box-shadow:var(--shadow-s)}
 .grg-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .grg-like{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.35);background:rgba(10,10,14,.42);color:#fff;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .grg-like:hover{background:rgba(10,10,14,.62)}
