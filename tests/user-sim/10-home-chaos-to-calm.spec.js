@@ -27,7 +27,7 @@
 // IS the contract now; its unmet performance budgets moved to the
 // homepage-field-metrics item in src/data/pipeline.js).
 import { test, expect } from './base.js'
-import { watch, go } from './helpers.js'
+import { watch, go, restingScrollY } from './helpers.js'
 
 const PERSONA = 'designer evaluating the workspace from the homepage'
 
@@ -926,18 +926,19 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await handOffImages(page, [png('one.png'), png('two.png')])
     await expect(page.locator('.fc-card')).toHaveCount(2)
 
-    // The viewport actually moved off the top, and settled.
+    // The viewport actually moved off the top, and settled. "Settled" used to
+    // mean two equal readings of scrollY in a row, which is not the same claim:
+    // window.scrollY is a whole-pixel view of a value Lenis is still damping, so
+    // two equal readings are routinely available part-way through an ease. Every
+    // geometry assertion below is then measured against a page that is still
+    // moving. restingScrollY() waits for the scroll layer itself to say it has
+    // finished — see helpers.js.
     await expect.poll(
       async () => (await converterView(page)).scrollY,
       { timeout: 10000 },
     ).toBeGreaterThan(0)
-    let view = await converterView(page)
-    await expect.poll(async () => {
-      const next = await converterView(page)
-      const settled = next.scrollY === view.scrollY
-      view = next
-      return settled
-    }, { timeout: 10000 }).toBe(true)
+    await restingScrollY(page, 'the converter after the hand-off scrolled to it')
+    const view = await converterView(page)
 
     // The heading of the region is clear of the fixed bar, not under it.
     expect(view.queue.top, 'queue hidden beneath the sticky nav').toBeGreaterThanOrEqual(view.navBottom - 1)

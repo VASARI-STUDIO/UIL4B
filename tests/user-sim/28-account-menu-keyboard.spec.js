@@ -19,7 +19,7 @@
 // The pure key→index decision is asserted separately, without a DOM, in
 // tests/unit/popover-keys.test.js.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { restingScrollY, watch } from './helpers.js'
 
 const PANEL = '#pnav-account-pop'
 const TRIGGER = '.pnav-more'
@@ -128,7 +128,10 @@ test.describe('nav popover keyboard movement', () => {
   // long as any popover was open.
   test('the panel claims arrow keys only while focus is inside it', async ({ page }) => {
     await openPanel(page)
-    const before = await page.evaluate(() => window.scrollY)
+    // At rest, so the baseline is a position and not a frame of something else's
+    // animation — a baseline caught mid-scroll would let the "it moved" poll
+    // below pass on the tail of THAT scroll rather than on the arrow key.
+    const before = await restingScrollY(page, 'the home page before the arrow key')
     await page.locator('h1').first().click()          // focus leaves → panel closes
     await expect(page.locator(PANEL)).toHaveCount(0)
     await page.keyboard.press('ArrowDown')
