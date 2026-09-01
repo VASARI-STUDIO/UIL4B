@@ -10,7 +10,7 @@
 // a "Trending" heading over an unranked list would be an invention dressed as a
 // measurement.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { restingScrollY, watch } from './helpers.js'
 
 const ROUTE = '/discover/palettes'
 const HEAD = '.pgl-section-head'
@@ -54,8 +54,14 @@ test.describe('palette library sections', () => {
     // reaches the pin. Measuring the delta over a short scroll therefore proves
     // nothing — the first version of this test asserted exactly that and failed
     // on a heading that was sticking correctly.
+    // Both halves of this matter. Polling until scrollY passes 1500 says the
+    // page has gone far enough; it does NOT say it has stopped going, and this
+    // page is driven by Lenis. Measuring a pinned heading against a 12px window
+    // while the scroller is still easing is the same mistake 17-founder-batch-3
+    // made — see restingScrollY() in helpers.js.
     await page.evaluate(() => window.scrollTo(0, 2200))
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1500)
+    expect(await restingScrollY(page, 'the library scrolled past the first section'))
+      .toBeGreaterThan(1500)
 
     const after = await first.boundingBox()
     expect(after, 'the first heading scrolled out of the viewport entirely').toBeTruthy()
@@ -66,7 +72,7 @@ test.describe('palette library sections', () => {
 
   test('a heading never hides under the fixed nav', async ({ page }) => {
     await page.evaluate(() => window.scrollBy(0, 900))
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(400)
+    expect(await restingScrollY(page, 'the library scrolled under the nav')).toBeGreaterThan(400)
     const [nav, head] = await Promise.all([
       page.locator('nav.pnav').boundingBox(),
       page.locator(HEAD).first().boundingBox(),

@@ -7,7 +7,7 @@
 // That is the class of bug this file exists to catch: a default that matches no
 // panel is a blank page, and a blank page is indistinguishable from a crash.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, restingScrollY, watch } from './helpers.js'
 
 test.describe('settings panels', () => {
   test('opens on a real panel, never blank', async ({ page }) => {
@@ -27,14 +27,17 @@ test.describe('settings panels', () => {
     watch(page, 'a visitor changing their language')
     await go(page, '/settings')
 
-    const before = await page.evaluate(() => window.scrollY)
+    const before = await restingScrollY(page, 'settings, before the section swap')
     await page.getByRole('tab', { name: /Language/ }).click()
 
     const visible = page.locator('.settings-section:not([hidden])')
     await expect(visible).toHaveCount(1)
     await expect(visible).toHaveAttribute('id', 'set-language')
-    // A panel swap must not move the page under the user.
-    expect(await page.evaluate(() => window.scrollY)).toBe(before)
+    // A panel swap must not move the page under the user. Read at rest rather
+    // than the instant after the click: this page is under Lenis, so a smooth
+    // scroll that had not started yet would read as no scroll at all, and the
+    // assertion would be one that cannot go red.
+    expect(await restingScrollY(page, 'settings, after the section swap')).toBe(before)
   })
 
   test('arrow keys move between tabs, and only the active one is tabbable', async ({ page }) => {
