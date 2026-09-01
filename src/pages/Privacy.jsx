@@ -39,7 +39,7 @@ export default function Privacy() {
         <p>{t('privacy.lastUpdated')}</p>
       </div>
 
-      <div className="card" style={{ maxWidth: 820, lineHeight: 1.8 }}>
+      <div className="card legal-card">
         <h2 className="legal-h">{t('privacy.s1Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 24 }}>{t('privacy.s1Text')}</p>
 

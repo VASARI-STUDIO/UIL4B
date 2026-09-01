@@ -5775,7 +5775,20 @@ html.lenis,html.lenis body{height:auto}
 /* ══ Tool-page shell (rail-) ══ */
 /* The in-tool left rail is retired — navigation lives entirely in the PillNav
    mega-menus, so the shell is a single full-width content column. */
-.rail-shell{display:grid;grid-template-columns:1fr;min-height:100vh;padding-top:var(--nav-clear)}
+/* The reserve is `100dvh - 240px`, not `100vh`, and the 240 is measured rather
+   than chosen. A full viewport was being held open for content that does not
+   need it: on /create/alt-text and /create/file-converter the painted content
+   ends at ~545px inside an 1112px tablet viewport, so 567px of bare background
+   sat between the tool and the footer (292px at 390px wide).
+   The reserve exists so a short tool page does not leave page background BELOW
+   the footer, and the footer itself is what makes that affordable — measured on
+   `.app-footer--compact`: 254px at 1440, 263px at 834, 609px at 390, 630px at
+   320. Subtracting less than the smallest of those (240px) keeps shell + footer
+   taller than the viewport at every width, while giving the dead band back:
+   567px → 327px at 834, and 292px → 52px at 390.
+   `dvh` rather than `vh` so a mobile browser's collapsing URL bar does not add
+   its own gap on top of this one. */
+.rail-shell{display:grid;grid-template-columns:1fr;min-height:calc(100dvh - 240px);padding-top:var(--nav-clear)}
 .rail-content{min-width:0;padding:24px var(--page-inline) var(--s-9)}
 /* Library toolbars live inside the content column and span it (see
    .pl-toolbar). All they need here is to clear the floating nav when they
@@ -9824,6 +9837,18 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    with no h2 between — a screen-reader user navigating by heading hears a
    level-3 with nothing above it and cannot tell where the outline broke
    (WCAG 1.3.1). The tag changed; the size deliberately did not. */
+/* ONE measure for both legal pages, in CSS rather than in two disagreeing
+   inline styles. /terms carried `maxWidth:720` and /privacy `maxWidth:820`, both
+   as `style={{}}` against the single-global.css convention, and neither had
+   `margin-inline:auto` — so at 834px the Terms card stopped at x≈740 while its
+   own H1 and the footer ran to x≈814, leaving a 74px void down the right side
+   only. Two pages that are read as one document had two different measures and
+   two different alignments.
+   72ch, not a pixel count: the constraint on a wall of legal text is the line
+   LENGTH, which is a function of the type size, and 72ch lands at ~780px here —
+   between the two numbers that were being argued over. `.plans-honesty` already
+   uses 72ch for the same reason. */
+.legal-card{max-width:72ch;margin-inline:auto;line-height:1.8}
 .legal-h{font-family:var(--serif);font-size:22px;font-weight:500;letter-spacing:-.015em;margin-bottom:12px}
 .legal-h--tight{margin-bottom:8px}
 .legal-h--sm{font-family:var(--font);font-size:16px;font-weight:700;letter-spacing:normal}
