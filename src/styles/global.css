@@ -3816,6 +3816,17 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .ic-stat-lbl{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);margin-top:8px}
 .ic-bp-current{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:650;color:var(--t0);margin-bottom:30px}
 .ic-bp-ruler{position:relative;height:3px;background:var(--bg-3);border-radius:2px;margin:0 8px 26px}
+/* The 380 and 480 ticks sit ~27px apart on a 390px phone while their labels are
+   absolutely-positioned, `white-space:nowrap` and need ~25px and ~38px — so
+   "TINY" and "PHONE" ran together and the ruler read "TINYPHONE", which is not a
+   breakpoint. The labels alternate height instead of being dropped: the whole
+   point of this ruler is to name the band you are currently in, so losing a name
+   costs more than a row of padding. The marker is `.ic-bp-ruler`'s first child,
+   so the ticks are children 2..n and even/odd alternates cleanly across them. */
+@media(max-width:640px){
+  .ic-bp-ruler{margin-top:18px}
+  .ic-bp-tick:nth-child(even) .ic-bp-tick-lbl{top:-38px}
+}
 .ic-bp-marker{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--card);box-shadow:0 0 0 1px var(--accent);transform:translate(-50%,-50%);transition:left var(--dur-2) var(--ease-standard);z-index:2}
 .ic-bp-tick{position:absolute;top:50%;width:2px;height:8px;background:var(--border);transform:translate(-50%,-50%)}
 .ic-bp-tick-lbl{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
@@ -3872,6 +3883,17 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .seo-tab{padding:9px 16px;border:none;background:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .seo-tab:hover{color:var(--t0)}
 .seo-tab.is-active{color:var(--accent);border-bottom-color:var(--accent)}
+/* Three tabs at 13px with 16px of side padding need ~396px and had 358, so every
+   label wrapped to two lines — "Meta & / SERP" — and a two-line tab makes the
+   underline read as a box rather than as a selection. Trimming the type one step
+   and the padding to 10px brings the row to ~336px, so all three sit on one line
+   at 390px. Not a scroller: three short tabs that FIT are always better than
+   three that have to be swiped for, which is the whole argument of
+   `.rail-overflow` read in the other direction. */
+@media(max-width:560px){
+  .seo-tabs{gap:2px}
+  .seo-tab{padding:9px 10px;font-size:12px}
+}
 .seo-faqs{display:flex;flex-direction:column;gap:14px}
 .seo-faq{display:flex;flex-direction:column;gap:7px}
 .seo-faq-head{display:flex;align-items:center;justify-content:space-between}
@@ -9560,7 +9582,13 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 }
 @media(max-width:480px){
   .pgl-page .pgal-stripes{height:210px}
-  .fg-hero-pair-link,.fpr-gallery-link{max-width:128px;text-align:right}
+  /* No 128px cap. The link is an `inline-flex` carrying its own `border-bottom`,
+     so capping it made the label wrap after "Font" and left the rule sitting
+     under "Gallery ↗" alone — an underline detached from most of the text it is
+     supposed to underline. `white-space:nowrap` keeps the label and its arrow on
+     one line, which is what makes the border match the text; the link is ~150px
+     and its row has the space once it is not being squeezed into 128. */
+  .fg-hero-pair-link,.fpr-gallery-link{text-align:right;white-space:nowrap}
   .fg-filter-right{width:100%}
   .fg-sort{width:100%;overflow-x:auto}
   .fg-sort-btn{flex:1}
