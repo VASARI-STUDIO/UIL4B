@@ -9875,6 +9875,23 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    purpose so the grid cannot reflow as webfaces load (asserted by
    11-typography-tools.spec.js). Hiding the line keeps the box identical. */
 .fg-card:last-child{border-bottom-color:transparent}
+/* PATTERN B AGAIN — the tablet band falls into the phone layout by one column.
+   `--lbry-col-min:400px` gives three 435px columns at 1440 and, at 834, a grid
+   794px wide that JUST misses two (it needs 820). So the specimen row stretched
+   to 792px while its content — a family name, a pangram and an add button — is
+   composed for a ~435px column: measured, the type occupied the left ~300px of
+   a 790px row, 77 times over, and the page ran to 12,231px.
+   360px across the 700–980 band puts two ~387px columns back at 834, within
+   50px of the desktop column the card was designed for, and halves the page:
+   12,231px → 6,951px. The grid still has to be wide enough to hold them, so the
+   second column actually appears from ~768px up and 700–767 stays one full-width
+   row — which is the right answer there anyway, since two columns at 700px would
+   be ~320px and narrower than the specimen needs. Measured at the seams:
+   981px → 2 columns of 460, 980px → 2 of 459, so the two bands meet with no
+   jump. */
+@media(min-width:700px) and (max-width:980px){
+  .fg-grid,.fg-grid--skeleton{--lbry-col-min:360px}
+}
 /* The chosen ratio's "where it fits" line. An interval name is a fact about
    music; this is the bit that answers whether to pick it. */
 .tsc-ratio-hint{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--t2)}
