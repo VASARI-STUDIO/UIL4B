@@ -3623,6 +3623,18 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .rc-dim small{font-size:11px;color:var(--t3);font-weight:500}
 .rc-times{color:var(--t3);font-size:18px}
 .rc-vis-panel{display:flex;flex-direction:column}
+/* The visualiser STICKS while the controls scroll past it. Measured at 834px:
+   the control column is 1225px tall and this panel 343px, so 882px of the right
+   rail was empty — and the thing left behind at the top was the preview of the
+   ratio the controls below it are editing. Sticky turns the dead rail into the
+   reason the two columns exist: you can see the shape change while you change
+   it. `.tt-config` and `.fpr-config` are the same decision on the same shape of
+   page, so this is the house pattern rather than a new one.
+   Only above 760px, where the grid is genuinely two columns — stacked, a sticky
+   panel would cover the controls it is meant to be previewing. */
+@media(min-width:761px){
+  .rc-vis-panel{position:sticky;top:calc(var(--nav-clear) + var(--s-4))}
+}
 .rc-vis-head{display:flex;align-items:center;justify-content:space-between}
 .rc-vis-tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);padding:2px 8px;border-radius:var(--radius-pill)}
 .rc-vis-stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:280px;padding:20px}
