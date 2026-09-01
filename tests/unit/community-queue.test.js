@@ -22,7 +22,10 @@ import {
   buildQueueRecord, mergeSubmissions, QUEUE_KINDS, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS,
 } from '../../src/utils/communityQueue.js'
 
-const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
+// Line endings are normalised: git checks this repo out with CRLF on Windows,
+// and a pattern that happens to span a newline must not pass on one machine
+// and fail on another.
+const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8').replace(/\r\n/g, '\n')
 const user = { uid: 'u1', displayName: 'Dylan', email: 'd@example.com' }
 
 // ── Nothing can publish itself ──────────────────────────────────────────────
@@ -138,4 +141,76 @@ test('the gallery reads the account, not just this browser', () => {
   const src = read('src/pages/GradientGallery.jsx')
   assert.match(src, /listMySubmissions\(user\.uid, 'gradient'\)/)
   assert.match(src, /mergeSubmissions\(/)
+})
+
+// ── The other two kinds ─────────────────────────────────────────────────────
+//
+// Gradients were fixed; palettes and designs were left writing to localStorage
+// and nowhere else, which is the SAME reported bug — a palette submitted on a
+// phone was invisible on a laptop, and no reviewer ever saw it. QUEUE_KINDS has
+// listed 'palette' and 'design' the whole time; only the call sites were
+// missing. These pin the call sites, because a kind the queue accepts and
+// nothing ever sends is indistinguishable from one it refuses.
+
+test('a palette submission reaches the account, not just this browser', () => {
+  const src = read('src/pages/PaletteBuilder.jsx')
+  assert.match(src, /buildQueueRecord\(\{\n\s*kind: 'palette',/,
+    'the palette must be shaped for the shared queue')
+  assert.match(src, /await publishToQueue\(\{ \.\.\.queued, localId \}\)/,
+    'and actually published, carrying the local id so the merge can pair them')
+})
+
+test('a design submission reaches the account, not just this browser', () => {
+  const src = read('src/pages/Community.jsx')
+  assert.match(src, /buildQueueRecord\(\{\n\s*kind: 'design',/)
+  assert.match(src, /await publishToQueue\(\{ \.\.\.queued, localId: item\.id \}\)/)
+})
+
+test('the local copy is still written FIRST, in both flows', () => {
+  // Local-first is the whole reason submitting works offline and the list
+  // updates without waiting on a round trip. Publishing before the local write
+  // would make a dropped connection lose the submission outright.
+  for (const [file, local] of [
+    ['src/pages/PaletteBuilder.jsx', 'appendCommunitySubmission('],
+    ['src/pages/Community.jsx', 'setSubmissions(prev => [item, ...prev])'],
+  ]) {
+    const src = read(file)
+    const localAt = src.indexOf(local)
+    const publishAt = src.indexOf('await publishToQueue(')
+    assert.ok(localAt > -1, `${file} must still keep a local copy`)
+    assert.ok(publishAt > -1, `${file} must publish to the queue`)
+    assert.ok(localAt < publishAt, `${file} must write locally before publishing`)
+  }
+})
+
+test('neither palette nor design flow claims a review it did not queue', () => {
+  for (const file of ['src/pages/PaletteBuilder.jsx', 'src/pages/Community.jsx']) {
+    const src = read(file)
+    assert.match(src, /Sign in to submit it for review/, `${file}: a signed-out save says what it is`)
+    assert.match(src, /could not reach the review queue/, `${file}: a failed publish says so`)
+  }
+})
+
+test('the community hub reads the account, not just this browser', () => {
+  const src = read('src/pages/Community.jsx')
+  assert.match(src, /listMySubmissions\(uid, 'design'\)/)
+  assert.match(src, /mergeSubmissions\(serverSubmissions, submissions\)/)
+})
+
+test('the hub no longer tells submitters their work stays in this browser', () => {
+  // The note read "Submissions are saved to this browser for now. Shared
+  // community publishing is coming soon." That was true while nothing was
+  // published. It became a lie the moment the queue existed.
+  const src = read('src/pages/Community.jsx')
+  assert.ok(!/Submissions are saved to this browser/.test(src),
+    'the note must not still promise browser-only storage')
+  assert.match(src, /saved to your account and queued for review/)
+})
+
+test('a submission from the wire is sanitised like one from this browser', () => {
+  // The cards render `item.url`. A document coming back from Firestore gets the
+  // same safeHttpUrl treatment the local store has always applied, so the wire
+  // is not a way around it.
+  const src = read('src/pages/Community.jsx')
+  assert.match(src, /sanitizeCommunitySubmission\(\{/)
 })
