@@ -1,4 +1,4 @@
-// Two accessibility failures from docs/audit-2026-08-11.md, both verified in a
+// Two accessibility failures from the 2026-08-11 site audit, both verified in a
 // real browser before and after.
 //
 // P2 — /feedback. Four surfaces across the app point here as THE way to report

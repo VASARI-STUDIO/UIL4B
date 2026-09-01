@@ -1,6 +1,6 @@
 // "Export my data" must mean all of it.
 //
-// The audit (docs/account-lifecycle-audit-2026-08-12.md § A4) found the export
+// The audit (2026-08-12 account lifecycle audit § A4) found the export
 // iterating a HAND-MAINTAINED list of 15 keys while the app writes about forty.
 // Measured on a real browser: 16 keys present, 9 absent from the list and so
 // silently missing from a file the user was told was their data. `vs-accounts`

@@ -2,7 +2,7 @@
 // list.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THIS EXISTS (docs/account-lifecycle-audit-2026-08-12.md § A4)
+// WHY THIS EXISTS (2026-08-12 account lifecycle audit § A4)
 // ─────────────────────────────────────────────────────────────────────────────
 // The export iterated a HAND-MAINTAINED list of 15 keys. The app writes roughly
 // forty. Measured on a real browser: 16 keys present, 9 of them absent from the

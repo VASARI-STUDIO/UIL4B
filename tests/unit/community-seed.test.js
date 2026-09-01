@@ -1,6 +1,6 @@
 // The Community surface must not invent people or their behaviour.
 //
-// docs/audit-2026-08-11.md, P3: twelve seeded "designs" carried invented names
+// The 2026-08-11 site audit, P3: twelve seeded "designs" carried invented names
 // ("Aurora Analytics"), invented designers ("Maya R."), and invented save
 // counts (342, 318, 287…), each linking to a stock site's homepage — rendered
 // by the same card as real member submissions, with nothing marking them apart.

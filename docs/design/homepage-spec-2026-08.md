@@ -4,7 +4,7 @@
 > Group C: C1–C13). **Design authority only — no code in this file.**
 >
 > **Inputs.** `docs/research/homepage-patterns-2026-08.md` (Mobbin, 95 cited
-> captures) · `docs/build-plan/founder-batch-2026-08-20.md` (F-1…F-4) ·
+> captures) · the Director findings F-1…F-4 of the 2026-08-20 founder batch ·
 > `docs/reference/design-language-v2.md` · `docs/reference/growth-persuasion.md`
 > · `docs/reference/positioning.md` · a fresh Mobbin pass run for this spec ·
 > and a **rendered measurement pass** run against `src/pages/Home.jsx` on a local

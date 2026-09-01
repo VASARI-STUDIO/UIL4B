@@ -1,7 +1,7 @@
 // Account deletion, done properly and server-side.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHAT WAS WRONG (docs/account-lifecycle-audit-2026-08-12.md § A1-A3)
+// WHAT WAS WRONG (2026-08-12 account lifecycle audit § A1-A3)
 // ─────────────────────────────────────────────────────────────────────────────
 // The old path lived entirely in AuthContext.deleteAccount:
 //

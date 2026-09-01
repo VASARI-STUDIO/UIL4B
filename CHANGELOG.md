@@ -13,6 +13,86 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### Founder decisions — 2026-08-20
+
+Answers given by Dylan in conversation with the Director on 2026-08-20, in
+response to a six-item decision table. **Quoted verbatim; nothing inferred.**
+They were recorded in a build-plan routing document until now; that document has
+been retired and this is their canonical home. Cite this section — not a plan
+file — when a document needs to point at where one of these calls was made.
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Merge order for the open stack, with #257 rebased first | *"yes do that"* |
+| 2 | Price ladder **$7 monthly · $18 quarterly · $48 yearly**, with the server moved onto it | *"yes do that"* |
+| 3 | Portfolio URL for the footer attribution: `dylan-coleman.com` | *"yes"* |
+| 4 | Step numbering, Option B (route + connector) | *"yes but all the urls for the create tools should be /create/pagetitle not /color/ or other"* |
+| 5 | Sticky-scroll trigger at the 52/44 default | *"okay do that"* |
+| 6 | Update `positioning.md` to match the shipped export behaviour | *"yes do that"* |
+
+**Decision 2 is the one with money attached.** The `$7 / $18 / $48` ladder was
+first approved on 2026-08-16 in `docs/reference/design-language-v2.md`
+("Deviations from the mock") and re-approved here. It **supersedes** the old
+server defaults in `api/_lib/pricing.js` — `$4.99` monthly, `$39.99` yearly, no
+quarterly interval at all. Note what that means on the top of the ladder: yearly
+is a **price RISE, `$39.99` → `$48`**, and it was flagged as such before
+approval rather than after.
+
+The display side has shipped (#261 moved the server fallback onto the ladder;
+#277 tied every price on screen to the same module, and
+`tests/unit/price-ladder.test.js` fails the build if they drift apart again).
+**The Stripe side has not**, and cannot be done from this repository: the amounts
+actually charged live in Stripe price objects that are configured in the
+dashboard. That remains an owner action — see `docs/OWNER-ACTIONS.md`, which also
+carries what quarterly needs before it can be sold at all.
+
+**Decision 4 grew the scope it was answering.** The step-numbering call arrived
+with a route migration attached, which shipped in #266: every Create tool moved
+to `/create/<pagetitle>` behind real HTTP 301s in `vercel.json`, with the 24
+pre-existing client-side redirects converted in the same pass.
+`src/data/legacyRoutes.js` is now the one table both the edge config and the
+client router read.
+
+**Decision 6 resolves a contradiction in favour of what ships.** Free exports
+carry a footer credit rather than being blocked, so `positioning.md`'s
+*"Pro = all file exports"* is the line that changes — not the code.
+
+Decisions 1 and 5 are discharged: the stack merged in order, and the sticky
+trigger ships at 52/44.
+
+### One home per fact: four spent planning documents retired
+
+Four documents that had done their work were deleted, and everything in them
+that was still true moved to the canonical home for that kind of fact — the map
+in `CLAUDE.md` decides which. Nothing was dropped to make the deletion tidy;
+what remained open moved to a queue, and what needed the founder moved to
+`docs/PROPOSALS.md`.
+
+- **`docs/audit-2026-08-11.md`** (site audit — usability + SEO/accessibility).
+  Every P1, P2 and P3 was already fixed and is already recorded here. Of the P4
+  list, one item was still genuinely open and became a queue entry; the rest had
+  shipped, been settled as deliberate, or were the two verified false positives.
+  The audit's *"not checked — do not read as passing"* list survives as its own
+  queue entry, because an unrun check is a fact about our evidence and deleting
+  it would have quietly upgraded it to a pass.
+- **`docs/account-lifecycle-audit-2026-08-12.md`** (onboarding, account,
+  billing, notifications). Sections A and B1/B2/B4 shipped and are recorded
+  here. B3, B5, the remainder of B6 and the whole of section C were open and are
+  now queue entries — including the one that matters most: there is still **no
+  user-facing transactional email at all**, so no re-engagement moment is
+  reachable.
+- **`docs/build-plan/founder-batch-2026-08-20.md`** — the six decisions above,
+  plus the batch's still-open work (the footer attribution, the five
+  other-surface redesigns) and its still-open founder questions.
+- **`docs/build-plan/merge-order-2026-08-26.md`** — the queue drained, so what
+  was left was what it taught. Those lessons now live in
+  `docs/reference/git-workflow.md`, where the next person to work a queue will
+  actually meet them.
+
+`docs/reference/design-language-v2.md` was also added to the reference list in
+`CLAUDE.md`; it existed and was cited by other documents while being absent from
+the map that is supposed to name every reference doc.
+
 ### The hero headline stopped colliding with its own highlight on a phone
 
 Caught by screenshotting the rendered page at 390x844 rather than by reading the
@@ -756,7 +836,11 @@ renewal invoice, so when that invoice fails the period end is already a month
 out — grace measured from it would have run ~37 days instead of 7.
 
 Unit 229 → 251, browser acceptance 205 → 208, lint unchanged at 32.
-Full detail: [`docs/account-lifecycle-audit-2026-08-12.md`](docs/account-lifecycle-audit-2026-08-12.md) § B1.
+**A third trap, recorded here because the audit that held it has been
+retired:** `trialEndingSoon` is never set back to `false` anywhere. On its own
+it would announce a trial that ended months ago, on every page load. The banner
+therefore guards on a live `status === 'trialing'` plus a future `trialEndsAt`,
+and treats the stored flag only as a widening hint.
 
 ---
 

@@ -1,6 +1,6 @@
 // What's left of an AI allowance, and which ceiling bites first.
 //
-// The audit (docs/account-lifecycle-audit-2026-08-12.md § B2) found the warning
+// The audit (2026-08-12 account lifecycle audit § B2) found the warning
 // machinery already written and wired to nothing: `getRemainingUses` and
 // `getResetTime` were exported from usageTracker.js and imported nowhere, the
 // server returned `usage: { used, limit, remaining }` on every response and no
