@@ -6675,6 +6675,14 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
   :root{--page-gutter:16px}
   .tt-audience{grid-template-columns:1fr}
   .tt-audience-tab+.tt-audience-tab{border-left:0;border-top:1px solid var(--border)}
+  /* The selection indicator has to rotate with the layout. Stacked, the tabs
+     divide top-to-bottom, so a `bottom:0` underline on the FIRST tab lands
+     directly on top of the SECOND tab's new 1px top border: a 2px brand line
+     welded to a 1px grey line, reading as a rendering artefact rather than as
+     selection, and pointing at the tab that is NOT selected. Side-on it becomes
+     a left-edge bar, which is the conventional stacked-tab treatment and cannot
+     collide with a horizontal divider. */
+  .tt-audience-tab::after{top:0;right:auto;bottom:0;left:0;width:2px;height:auto}
   .tt-status{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tt-status span:nth-child(3){border-left:0;border-top:1px solid var(--border)}
   .tt-status span:nth-child(4){border-top:1px solid var(--border)}
@@ -8585,7 +8593,17 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
   .fbd-grid{--lbry-col-min:150px}
-  .typ-picker-face{width:78px;font-size:22px}
+  /* NO `width` here. This is the third time this control has been given a fixed
+     face box and the second time it has had to be taken away again — the design
+     note above `.typ-picker-trigger` records the first, where a 104px box cut
+     "Handgloves" mid-word and read as a broken control rather than a preview.
+     `width:78px` did it again and worse: at 390px the specimen showed "Handglo"
+     with the o sliced down the middle and ~200px of empty trigger to the right
+     of the cut. The base rule already has everything needed to stay inside the
+     row — `min-width:0`, `overflow:hidden`, and a `minmax(0,1fr)` grid track —
+     so the width was never load-bearing, only harmful. The font-size drop is
+     kept; that is what actually buys room on a phone. */
+  .typ-picker-face{font-size:22px}
   .typ-picker-cue{display:none}
 }
 
@@ -8842,6 +8860,8 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 @media(max-width:768px){
   .tsc-audience{grid-template-columns:1fr}
   .tsc-audience-tab+.tsc-audience-tab{border-left:0;border-top:1px solid var(--border)}
+  /* Rotates with the layout — see the identical note on `.tt-audience-tab`. */
+  .tsc-audience-tab::after{top:0;right:auto;bottom:0;left:0;width:2px;height:auto}
   .tsc-delivery-head{flex-direction:column}
   .tsc-more{align-items:flex-start;flex-direction:column}
   .tsc-more-links{justify-content:flex-start}
