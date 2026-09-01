@@ -5656,7 +5656,27 @@ html.lenis,html.lenis body{height:auto}
    four — the sub-copy and command bar keep their own narrower measures below. */
 .home-hero-core{position:relative;z-index:2;max-width:1080px;margin:0 auto}
 /* V2 display scale — design-language-v2.md, "Display scale". */
+/* LINE-HEIGHT AND THE HIGHLIGHT ARE COUPLED, which is not obvious and cost a
+   visible break on a phone. `.home-mark` paints a background on an INLINE
+   element, so its box is the line box — and at line-height below 1 the line box
+   is shorter than the glyphs it contains, so a marked run on one visual line
+   paints over the descenders of the line above it.
+
+   That never showed while the headline was two short lines that did not wrap
+   inside a span. The current headline wraps to four visual lines at 390px, both
+   marked and unmarked, and the highlight sat on top of the words above it.
+
+   .98 stays where the line cannot collide with itself; anywhere the headline is
+   guaranteed to wrap, the line box gets enough height to hold its own
+   background. Measured at 390, 768 and 1440. */
 .home-hero-h1{font-size:clamp(46px,6.6vw,96px);font-weight:800;letter-spacing:-.045em;line-height:.98;color:var(--t0);text-wrap:balance}
+/* Measured at 390x844. Two things were wrong and they compound:
+   the clamp floors at 46px, which puts this headline on FOUR lines and fills
+   the whole first screen with it; and at line-height 1.08 the descender of
+   "stay" reaches into the band where the next line paints its highlight, so
+   the mark covered the "y". A smaller floor gives three lines, and the extra
+   leading clears the descender. Both verified by screenshot, not by eye. */
+@media(max-width:900px){.home-hero-h1{font-size:clamp(34px,9vw,58px);line-height:1.14}}
 /* Each headline line is its own block so the two phrases break cleanly instead of
    colliding ("design systembefore"); the inner span is inline-block so GSAP's
    yPercent slide-up reveal (useHomeMotion) has a transformable box to animate. */
@@ -5751,7 +5771,15 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
 /* The single --hi element on this viewport. It is a marker pen, and the budget
    is one per screen — see design-language-v2.md. `box-decoration-break:clone`
    keeps both halves of a wrapped mark rounded and padded. */
-.home-mark{background:var(--hi);color:var(--hi-fg);border-radius:var(--radius-xs);padding:0 .1em;margin:0 -.02em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+/* `line-height` HERE, not just on the h1. The background of an inline element
+   is painted over its INLINE BOX, and by default that box is the font's own
+   natural height (~1.3em for Manrope 800) regardless of the tighter line-height
+   on the heading. On a headline that wraps, that meant the highlight on one
+   visual line painted straight over the descenders of the line above — visible
+   as the "y" of "that stay" being sliced off at 390px.
+   Setting it on the mark shrinks the painted box without loosening the display
+   setting on the heading itself, which is the look this hero is built on. */
+.home-mark{background:var(--hi);color:var(--hi-fg);border-radius:var(--radius-xs);line-height:1;padding:0 .1em;margin:0 -.02em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 
 /* ── Command bar (structural pattern 2) ── */
 .hcmd{max-width:660px;margin:var(--s-5) auto 0;text-align:left}
