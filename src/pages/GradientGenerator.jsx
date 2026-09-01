@@ -1108,7 +1108,7 @@ export default function GradientGenerator({ onCopy, toast }) {
             Browse the Gradient Library <span aria-hidden="true">→</span>
           </Link>
         </div>
-        <div className="ggn-presets">
+        <div className="ggn-presets rail-overflow">
           {palettePresets.map((p, i) => (
             <button key={`mine-${i}`} type="button" className="ggn-preset ggn-preset--mine" onClick={() => applyPreset(p)} title={`Gradient from ${p.n}`}>
               <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />
