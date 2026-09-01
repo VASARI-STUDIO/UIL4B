@@ -1747,10 +1747,10 @@ img,svg,video{max-width:100%;height:auto}
         a real item sliced by the edge. This is the only one of the three that
         works on every engine, in every state, with no scroll, no pointer and no
         hover: you can simply see that the content continues. Sizing is
-        per-rail, so this rule cannot impose it; what makes it a guarantee
-        rather than an intention is `tests/user-sim/36-rail-overflow.spec.js`,
-        which walks every `.rail-overflow` on the site and fails if any of them
-        ends flush.
+        per-rail, so this rule cannot impose it — where the item widths are ours
+        the peek is forced deliberately (see `.hw-tab`'s min-width and
+        `.ggn-preset`'s fractional basis), and where they are not (the palette
+        ribbon's content-sized buttons) the fade below is what carries it.
      2. A FADE over that peek, so the slice reads as "continues" and not as
         "broken". It is scroll-DRIVEN: the right edge is faded only while there
         is something to the right, and the left edge appears only once you have
@@ -1765,7 +1765,11 @@ img,svg,video{max-width:100%;height:auto}
    what shipped, and the peek is doing the real work either way.
 
    Do not "simplify" this back to a bare `overflow-x:auto`. That IS the bug, and
-   it has now been reintroduced eleven times. */
+   it has now been reintroduced eleven times.
+   `tests/user-sim/36-rail-overflow.spec.js` pins the three affordances on one
+   rail of each shape — the scrollbar is never `none`, the fade is on at rest
+   and off at the end — plus the two reachability defects that earned this
+   utility: the Pro column at 390px and Randomise at 834px. */
 @property --rail-l{syntax:'<number>';inherits:false;initial-value:0}
 @property --rail-r{syntax:'<number>';inherits:false;initial-value:1}
 .rail-overflow{--rail-fade:34px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;scrollbar-width:thin;scroll-snap-type:x proximity;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 calc(var(--rail-l) * var(--rail-fade)),#000 calc(100% - var(--rail-r) * var(--rail-fade)),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 calc(var(--rail-l) * var(--rail-fade)),#000 calc(100% - var(--rail-r) * var(--rail-fade)),transparent 100%)}
