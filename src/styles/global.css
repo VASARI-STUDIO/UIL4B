@@ -5821,8 +5821,20 @@ html.lenis,html.lenis body{height:auto}
    taller than the viewport at every width, while giving the dead band back:
    567px → 327px at 834, and 292px → 52px at 390.
    `dvh` rather than `vh` so a mobile browser's collapsing URL bar does not add
-   its own gap on top of this one. */
-.rail-shell{display:grid;grid-template-columns:1fr;min-height:calc(100dvh - 240px);padding-top:var(--nav-clear)}
+   its own gap on top of this one.
+
+   SCOPED TO ≤980px, and that is not tidiness either. The full-viewport reserve
+   is also the scroll HEADROOM that "scroll this region to the top" depends on:
+   the home page's image hand-off routes into the File Converter and scrolls the
+   upload queue up under the nav, and with 240px taken off the page there was no
+   longer enough scroll range to finish the move — the first uploaded card
+   landed 5.4px below the fold, caught by 10-home-chaos-to-calm 11a. The dead
+   band was only ever reported at tablet and phone, so desktop keeps its full
+   reserve and the hand-off keeps its runway. */
+.rail-shell{display:grid;grid-template-columns:1fr;min-height:100dvh;padding-top:var(--nav-clear)}
+@media(max-width:980px){
+  .rail-shell{min-height:calc(100dvh - 240px)}
+}
 .rail-content{min-width:0;padding:24px var(--page-inline) var(--s-9)}
 /* Library toolbars live inside the content column and span it (see
    .pl-toolbar). All they need here is to clear the floating nav when they
