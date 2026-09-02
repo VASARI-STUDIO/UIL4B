@@ -9531,8 +9531,15 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fg-card-sample{display:flex;align-items:center;height:var(--fg-line);font-size:clamp(22px,var(--fg-card-size),72px);line-height:1.06;letter-spacing:-.035em}
 /* 15px, up from the card's 12px. At 386px the pangram was a texture swatch you
    squinted at; across 1,180px it is a line of running text set in the family,
-   which is what a body-weight sample is for. */
-.fg-card-pangram{height:24px;font-size:15px;line-height:24px;white-space:nowrap;text-overflow:ellipsis}
+   which is what a body-weight sample is for.
+   SLICED, NOT ELLIPSISED. The line is ~105 characters and fits whole at 1440;
+   from about 1200px down it runs past the edge. An ellipsis would be the wrong
+   signal — it says "words were omitted", which matters when the words are the
+   reader's and does not when they are a fixed specimen string. A clean slice is
+   the type-specimen convention (Readymag cuts its pangram at the pane edge;
+   Aave lets the letterforms bleed out of the frame) and it reads as "the face
+   continues" rather than as truncation damage. */
+.fg-card-pangram{height:24px;font-size:15px;line-height:24px;white-space:nowrap;text-overflow:clip}
 /* THE LADDER. Each numeral is drawn in the family at the weight it names, so
    the row shows the range instead of counting it. `margin-top:auto` pins it to
    the bottom of the reserved box, which keeps every row's ladder on one
@@ -9706,10 +9713,29 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
      ceiling drops to 52px because 64px of reserved line only clears a 52px face
      (52 × 1.17 ≈ 61), and the slider still runs to 72 on the same page: the
      clamp is what stops a phone honouring a size its box cannot. */
-  .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),52px) * 1.28);padding:18px 44px 14px 0}
-  .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),52px)}
-  .fg-card-pangram,.fg-card-skeleton--body{height:22px}
-  .fg-card-pangram{font-size:13px;line-height:22px}
+  /* CEILING 44, NOT 52. The slider still runs to 72 on the same page; the
+     clamp is what stops a phone honouring a size its row cannot hold. At 52px
+     a 271px specimen box slices "Montserrat" mid-stem — and slicing the family
+     NAME is the one thing this gallery must not do, which is the same reason
+     the three-column layout capped itself at 40. 44px fits the great majority
+     of families whole; the longest ("Playfair Display" wants ~330px) still run
+     past the edge, and the foot below carries the complete name for exactly
+     that case. */
+  .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),44px) * 1.28);padding:18px 44px 14px 0}
+  .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),44px)}
+  /* The tail goes, and the name gets its width back. At 390 the script list ran
+     ~200px of a 351px foot and left the family name ~150px, so the row's own
+     label truncated to protect a fact the specimen dialog states in full two
+     taps away. The name is the content of a font gallery — the ≤380px rule
+     below already fought this once for the same reason. */
+  .fg-card-scripts{display:none}
+  /* WRAPPED, NOT SLICED, ON A PHONE. A 350px row slices the body line after
+     about thirty characters, which is a shorter running-text sample than the
+     three-column card managed. Two clamped lines give ~70 instead, and the box
+     is reserved for exactly two so a family whose line wraps at a different
+     word still agrees in height with every other row. */
+  .fg-card-pangram,.fg-card-skeleton--body{height:40px}
+  .fg-card-pangram{-webkit-line-clamp:2;white-space:normal;font-size:13px;line-height:20px}
   /* Two lines of ladder reserved, not one. Nine numerals at 16px with 18px gaps
      need ~430px and a 390px phone has ~312px, so the widest families wrap once.
      The box is reserved for the wrap rather than clipping it — a ladder that
