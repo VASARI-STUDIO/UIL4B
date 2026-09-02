@@ -8,7 +8,15 @@ repository never depends on Dylan's private local wiki.
 
 | Skill | Purpose |
 |---|---|
-| `uil4b-brand-design` | Governs UIL4B identity, product-versus-sales continuity, anti-slop critique, and the brand learning loop. |
+| `uil4b-brand-design` | Governs UIL4B identity, product-versus-sales continuity, anti-slop **vocabulary**, and the brand learning loop. Use when making a design decision. |
+| `uil4b-surface-review` | The runnable **procedure** for reviewing a rendered surface — routes, viewports, capture artefacts, severity, finding format, and the responsive bands this app breaks at. Use when auditing a design decision. |
+
+The split between those two is deliberate and worth keeping. `uil4b-brand-design`
+answers *what is wrong with this*; `uil4b-surface-review` answers *how do I go
+and find out*. Anti-slop guidance previously existed in three places with no
+statement of which was authoritative for what — the quality bar, the `design`
+agent's tell list, and a dated design document. See
+`docs/reference/doc-authority-map.md`.
 
 Brand-specific decisions belong here and in the live project sources it names,
 not in `.claude/agents/design.md`.
