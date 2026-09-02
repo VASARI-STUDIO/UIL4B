@@ -45,6 +45,10 @@ export function LoginPromptProvider({ children }) {
   // event-driven callbacks below.
   const resolverRef = useRef(null)
   const pendingPromiseRef = useRef(null)
+  // The opener's ANCESTOR CHAIN, captured synchronously inside the click that
+  // asked for the prompt. See the note on finish() for why it cannot be left to
+  // useModalDialog on this surface.
+  const openerChainRef = useRef([])
   const promptIdRef = useRef(0)
   const userRef = useRef(user)
   useEffect(() => { userRef.current = user }, [user])
@@ -55,15 +59,41 @@ export function LoginPromptProvider({ children }) {
     pendingPromiseRef.current = null
     setPrompt(null)
     if (resolve) resolve(result)
-    // Focus restoration is NOT done here any more. It used to be a
-    // requestAnimationFrame calling .focus() on the exact node captured at open
-    // time, which does nothing at all once that node has unmounted — and the
-    // nav's "Log in" sits inside a popover that closeAll() tears down on the way
-    // in, so the commonest opener was always detached by the time we got here.
-    // LoginPopup now takes the app's shared useModalDialog contract, which walks
-    // the opener's ancestor chain for the nearest surviving node. Two competing
-    // restores would be worse than one: this rAF ran AFTER the hook's unmount
-    // cleanup, so the weaker mechanism would have won every time.
+
+    // Focus restoration. This used to call .focus() on the exact node captured
+    // at open time — which does nothing at all, and reports nothing, once that
+    // node has unmounted. PillNav's startLogin() is `closeAll(); openLogin()`,
+    // so the popover holding the button that was clicked is torn down on the
+    // way in and the commonest opener into this dialog was always detached by
+    // the time we got here. The user landed on <body>.
+    //
+    // LoginPopup now takes useModalDialog, which walks the opener's ancestor
+    // chain for exactly this reason — but it cannot help HERE. The hook
+    // captures document.activeElement in its mount effect, and React has
+    // already removed the menu and dropped focus to <body> by then: there is no
+    // chain left to walk. The capture has to happen synchronously inside the
+    // click, which is what requireLogin() does, so the restore has to happen
+    // here too.
+    //
+    // The rAF is load-bearing. setPrompt(null) above is async, so a synchronous
+    // focus() here would run BEFORE the dialog unmounts and the hook's own
+    // cleanup would immediately take focus back. One frame later the commit is
+    // done and this is the last word.
+    requestAnimationFrame(() => {
+      const chain = openerChainRef.current
+      openerChainRef.current = []
+      const restore = chain.find(el => el.isConnected && typeof el.focus === 'function')
+      if (!restore) return
+      // A surviving ANCESTOR is usually a container, which is not focusable on
+      // its own. The attribute is deliberately left in place: removing it right
+      // after focus() blurs the element straight back to <body>, which is a
+      // silent no-op that looks like a working restore. tabindex="-1" means
+      // "reachable by script, never by Tab", so leaving it costs nothing.
+      if (restore.tabIndex < 0 && !restore.hasAttribute('tabindex')) {
+        restore.setAttribute('tabindex', '-1')
+      }
+      restore.focus()
+    })
   }, [])
 
   const requireLogin = useCallback((reason, opts = {}) => {
@@ -73,6 +103,12 @@ export function LoginPromptProvider({ children }) {
     // Account switching never creates an account, so it never reaches
     // onboarding — leave whatever is stashed alone.
     if (opts.mode !== 'switch') stashResumeTarget(opts.from)
+    // Synchronous, and before any setState: this is the last moment at which
+    // the control that asked for the prompt is guaranteed to still be in the
+    // document.
+    const chain = []
+    for (let n = document.activeElement; n && n !== document.body; n = n.parentElement) chain.push(n)
+    openerChainRef.current = chain
     const promise = new Promise((resolve) => {
       resolverRef.current = resolve
       setPrompt({
