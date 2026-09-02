@@ -124,8 +124,12 @@ export function renderScale(size, viewBox = DEFAULT_VIEWBOX) {
  * attribute rather than writing "NaN" into someone's file.
  */
 export function strokeAttrForPx({ px, size, viewBox, absolute = false }) {
+  // Zero and below are rejected along with NaN: a zero-width stroke is an
+  // invisible icon, and leaving the pack's own attribute in place is the less
+  // destructive answer to input we cannot honour. (`Number(null)` and
+  // `Number('')` are both 0, which is how empty state arrives here.)
   const wanted = Number(px)
-  if (!Number.isFinite(wanted) || wanted < 0) return null
+  if (!Number.isFinite(wanted) || wanted <= 0) return null
   // `vector-effect: non-scaling-stroke` already resolves stroke-width in the
   // FINAL rendered space, so the pixel value passes through untouched — which
   // is also why a legacy record with Absolute on needed no migration below.
