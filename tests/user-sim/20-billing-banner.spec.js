@@ -140,4 +140,38 @@ test.describe('billing banner layout', () => {
     expect(m.ringWidth, 'the focus ring must be at least 2px').toBeGreaterThanOrEqual(2)
     expect(m.ringVsCard, 'the focus ring must reach 3:1 against the card').toBeGreaterThanOrEqual(3)
   })
+
+  /* The project-quota note (audit B6) must never reach a signed-out visitor.
+   *
+   * Same limitation as the banner above: the note itself needs a signed-in user
+   * with saved projects, which this suite has no way to create, so the WARNED
+   * states are pinned exhaustively in tests/unit/project-quota.test.js instead.
+   * What only a browser can check is the half that is not quota maths at all —
+   * that nothing on the way in leaks a free-plan allowance at a stranger.
+   *
+   * Worth recording, because it surprised this change: /projects is wrapped in
+   * RequireAuth (App.jsx), which redirects to /login before Projects.jsx renders
+   * anything. The `!canSaveProjects` sign-in panel INSIDE Projects.jsx is
+   * therefore unreachable for a signed-out visitor — so this test asserts the
+   * redirect that actually happens rather than a screen that does not. Unwrap
+   * that route, or hoist the quota block somewhere public, and a person who has
+   * never signed in gets told what their plan allows. */
+  test('a signed-out visitor is redirected and never told about a project allowance', async ({ page }) => {
+    watch(page, 'a stranger opening Projects before signing in')
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/projects')
+
+      // Vacuity guard: prove we actually landed somewhere, so a blank render
+      // cannot make the absence below pass by accident.
+      await page.locator('main, .sec, #root > *').first().waitFor()
+      await expect(page, `${width}px: /projects is behind RequireAuth`).toHaveURL(/\/login/)
+
+      await expect(
+        page.getByTestId('project-quota-note'),
+        `at ${width}px a signed-out visitor has no allowance to be told about`,
+      ).toHaveCount(0)
+      await expect(page.locator('body')).not.toContainText('on the free plan')
+    }
+  })
 })
