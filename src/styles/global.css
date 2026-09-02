@@ -2312,25 +2312,57 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .fg-compare-copy:hover{border-color:var(--brand);color:var(--brand)}
 
 /* Detail dialog */
-.fg-detail{max-width:800px;padding:40px}
-.fg-detail-close{position:absolute;top:16px;right:16px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
+/* A FRAME, NOT A COLUMN.
+   This dialog ran to 1,763px inside a 900px viewport and scrolled the OVERLAY,
+   which put every action it offers below the fold on arrival — you opened the
+   thing that helps you decide and could see none of the decisions. It is three
+   bands now: identity and controls pinned at the top, actions pinned at the
+   bottom, and only the specimen between them scrolling. `min()` against both
+   the viewport and a content height, so a two-weight family still gets a
+   dialog the size of its contents rather than a fixed slab with a hole in it. */
+.fg-detail{display:flex;flex-direction:column;max-width:860px;max-height:min(88vh,900px);padding:0;overflow:hidden}
+.fg-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0;padding:26px 28px 18px;border-bottom:1px solid var(--border)}
+.fg-detail-id{min-width:0}
+.fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fg-detail-close:hover{background:var(--bg-3);color:var(--t0)}
-.fg-detail-hero{margin:0 48px 20px 0;color:var(--t0);font-family:var(--fg-ff);font-size:clamp(40px,6vw,72px);font-weight:var(--fg-fw);line-height:1.15;letter-spacing:-.03em;word-break:break-word}
-.fg-detail-tags{display:flex;gap:6px;margin-bottom:32px;flex-wrap:wrap}
+/* 30–52px, down from 40–72. The hero was the tallest thing in a dialog that
+   could not afford height, and the family name is now repeated at every weight
+   in the list below — it does not also have to be a poster. */
+.fg-detail-hero{margin:0 0 12px;color:var(--t0);font-family:var(--fg-ff);font-size:clamp(30px,5vw,52px);font-weight:var(--fg-fw);line-height:1.1;letter-spacing:-.03em;word-break:break-word}
+.fg-detail-facts{display:flex;gap:6px;margin:0;flex-wrap:wrap}
+/* The script list runs long on a Noto face, and it is the one tag whose value
+   is the whole string rather than the first word of it, so it wraps instead of
+   sharing the pill row's `white-space` assumption. */
+.fg-tag--scripts{max-width:100%;text-transform:none;letter-spacing:.03em}
+.fg-detail-controls{flex-shrink:0;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--bg-1)}
+.fg-detail-field{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.fg-detail-field:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.fg-detail-field>span{flex-shrink:0;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.fg-detail-field input{width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+.fg-detail-field input::placeholder{color:var(--t3)}
+/* The only scrolling region, and it keeps a real scrollbar: this is a tall
+   list inside a fixed frame, which is precisely the case where hiding the
+   affordance leaves the content past the fold reading as absent. */
+.fg-detail-body{flex:1;min-height:0;overflow-y:auto;padding:24px 28px 4px}
 .fg-tag{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-pill)}
 .fg-detail-section{margin-bottom:32px}
 .fg-detail-label{display:block;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}
-.fg-scale-row{display:flex;align-items:baseline;gap:16px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.fg-scale-label{flex:0 0 52px;font-family:var(--mono);font-size:10px;color:var(--t2);text-align:right;line-height:1.3}
-.fg-scale-label span{font-size:9px;color:var(--t3)}
-.fg-scale-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t0);font-family:var(--fg-ff);font-size:var(--fg-size);font-weight:var(--fg-fw);line-height:1.25}
-.fg-weights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
-.fg-weight-slider-row{display:flex;align-items:center;gap:12px}
-.fg-weight-slider-row input[type="range"]{flex:1;accent-color:var(--brand)}
-.fg-weight-slider-val{flex:0 0 36px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t1);text-align:right}
-.fg-weight-card{padding:14px;text-align:center;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s)}
-.fg-weight-sample{height:44px;margin-bottom:6px;overflow:hidden;color:var(--t0);font-family:var(--fg-ff);font-size:34px;font-weight:var(--fg-fw);line-height:44px}
-.fg-weight-num{font-family:var(--mono);font-size:10px;color:var(--t2)}
+/* THE WEIGHT LIST — one line per cut, drawn in that cut.
+   Replaces `.fg-weights-grid`, which was six 96px tiles reading "Ag": two
+   letters cannot show what a weight does to a WORD, which is the only question
+   a weight list is asked. It also replaces `.fg-scale-row`, which printed one
+   sentence at six sizes and ellipsised five of them.
+   The rules are the separator, not boxes: six bordered cards down a dialog is
+   six frames competing with the type they contain, and the type is the content.
+   The line clips rather than wraps so every cut occupies exactly one row and
+   the list stays a column you can run your eye down — a wrapping line would
+   make the heavier cuts taller and destroy the comparison. */
+.fg-weight-rows{margin:0;padding:0;list-style:none}
+.fg-weight-row{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid var(--border)}
+.fg-weight-row:last-child{border-bottom:0}
+.fg-weight-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t0);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:25px;line-height:1.3;letter-spacing:-.015em}
+.fg-weight-tag{flex-shrink:0;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);font-variant-numeric:tabular-nums}
+.fg-weight-tag strong{color:var(--t2);font-weight:700}
 .fg-charset{color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:21px;line-height:1.8;letter-spacing:.02em;word-break:break-all}
 .fg-pair-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .fg-pair-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color var(--t)}
@@ -2343,8 +2375,10 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .fg-pair-name{min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fg-pair-apply{flex-shrink:0;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11.5px;font-weight:600;border-radius:var(--radius-pill);border:1px solid var(--border);background:transparent;color:var(--t1);cursor:pointer;transition:color var(--t),background var(--t),border-color var(--t)}
 .fg-pair-apply:hover{border-color:var(--brand);background:var(--brand);color:var(--accent-fg)}
-.fg-detail-apply,.fg-detail-actions{display:flex;gap:10px;flex-wrap:wrap}
-.fg-detail-actions{padding-top:14px;border-top:1px solid var(--border)}
+/* Pinned to the bottom of the frame, so the answer to "I like this one, now
+   what" is on screen from the moment the dialog opens instead of 1,700px down
+   it. `.fg-detail-apply` is gone with the second action bar it belonged to. */
+.fg-detail-actions{display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;padding:16px 28px;border-top:1px solid var(--border);background:var(--bg-1)}
 .fg-detail-btn{display:inline-flex;align-items:center;min-height:38px;padding:9px 15px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
 .fg-detail-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .fg-detail-btn--primary{color:var(--accent-fg);background:var(--brand);border-color:var(--brand)}
@@ -2366,7 +2400,12 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 
 @media(max-width:980px){
   .fg-hero-copy{grid-template-columns:1fr;gap:var(--s-4)}
-  .fg-detail{padding:28px}
+  /* The dialog's own padding moved into its three bands, so the tablet step is
+     on the bands rather than on the frame, which now carries none. */
+  .fg-detail-head{padding:22px 22px 16px}
+  .fg-detail-controls{padding:13px 22px}
+  .fg-detail-body{padding:20px 22px 4px}
+  .fg-detail-actions{padding:14px 22px}
 }
 @media(max-width:768px){
   .fg-more-nav{align-items:flex-start;flex-direction:column}
@@ -2376,13 +2415,22 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
   .fg-hero h1{font-size:36px}
   .fg-hero-copy>p{font-size:13px}
   .fg-overlay{padding:16px 10px}
-  .fg-detail{padding:20px}
-  .fg-detail-hero{margin-right:44px;font-size:34px}
+  /* The frame stays a frame on a phone — that is where a 1,763px dialog hurt
+     most — but takes more of the screen, because there is none to spare. */
+  .fg-detail{max-height:min(92vh,900px)}
+  .fg-detail-head{padding:18px 18px 14px}
+  .fg-detail-controls{padding:12px 18px}
+  .fg-detail-body{padding:18px 18px 4px}
+  .fg-detail-actions{padding:12px 18px}
+  .fg-detail-hero{font-size:30px}
   .fg-compare{padding:18px}
   .fg-charset{font-size:16px}
-  .fg-scale-row{align-items:flex-start;flex-direction:column;gap:2px}
-  .fg-scale-label{flex-basis:auto;text-align:left}
-  .fg-detail-btn{flex:1;justify-content:center}
+  /* Stacked: at 390px a 25px line and its numeral cannot share a row without
+     the line losing most of its words to the ellipsis, and the words are the
+     point of the row. The numeral goes above, as the caption Pitch gives it. */
+  .fg-weight-row{align-items:flex-start;flex-direction:column-reverse;gap:2px;padding:10px 0}
+  .fg-weight-line{max-width:100%;font-size:21px}
+  .fg-detail-btn{flex:1 1 46%;justify-content:center}
 }
 @media(max-width:380px){
   .fg-compare-tray{flex-direction:column;align-items:stretch}
@@ -9421,42 +9469,117 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    control did not, and a focused range input carries no outline of its own —
    keyboard focus arrived here invisibly. Every range on the page now rings. */
 .fg-command-size:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
-.fg-command-size input:focus-visible,.fg-weight-slider-row input:focus-visible,.fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.fg-command-size input:focus-visible,.fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .fg-command-size input{min-width:70px;width:100%;accent-color:var(--brand)}
 .fg-command-size strong{font-family:var(--mono);font-size:10px;color:var(--t1)}
 .fg-count{margin:18px 0 20px;text-transform:uppercase;letter-spacing:.11em}
-/* A SPECIMEN GRID, NOT A FULL-WIDTH LIST.
-   The gallery showed one family per 154px row: five of seventeen hundred per
-   screen at 1440, each row spending about a quarter of its width on the
-   specimen and leaving the rest empty, with the family NAME stranded ~800px
-   from the face it named. Three columns show fifteen per screen and put the
-   name directly beneath its own specimen.
-   The columns are wide on purpose — a 400px floor against the colour
-   libraries' 280px — because a typeface needs more room to be judged than a
-   swatch does. This is the shared Library grid with a different minimum, not a
-   different grid. */
-.fg-grid{--lbry-col-min:400px;margin:0 0 var(--s-5);padding:0;list-style:none}
-.fg-card-open{display:block;width:100%;padding:0;text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard)}
-.fg-card:hover .fg-card-open{border-color:var(--bh)}
-.fg-card-open:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-/* 22 + 68 + 10 + 22 + 20 = 142. The sample box is 68px: a 48px face needs
-   ~1.17em of ascent plus descent (56px) and the remainder is optical padding,
-   not leading. It was 88px to clear a 56px ceiling, but `line-height` equal to
-   the box then centred a 44px specimen inside it and left ~22px of dead air
-   between the face and the pangram describing it — the two belong together.
-   Fixed height, so the reserved-metrics contract holds whatever face lands. */
-.fg-card-preview{height:142px;padding:22px 24px 20px;background:transparent}
-.fg-card-skeleton--sample{height:68px}
-.fg-card-skeleton--body{height:22px}
-.fg-card-sample{display:flex;align-items:center;height:68px;font-size:clamp(22px,var(--fg-card-size),48px);line-height:1.06;letter-spacing:-.035em}
-.fg-card-pangram{height:22px;font-size:12px;line-height:22px;white-space:nowrap;text-overflow:ellipsis}
-.fg-card-name{font-size:15px;line-height:1.3;letter-spacing:-.015em}
+/* ONE SPECIMEN PER ROW, AT EVERY WIDTH (founder, 2026-09-02).
+   This reverses the three-column grid that shipped here, and the tablet column
+   PR #298 restored — read that one for the arithmetic it fixed, which was
+   correct for a grid and is moot for a list.
+
+   The audit that produced #298 was not complaining about one column. It was
+   complaining that a 790px row spent ~150px on the specimen and left the other
+   640px empty, and one column BY INTENT looks exactly like one column by
+   accident unless the row is rebuilt to want the width. So the row is now three
+   full-bleed lines, and each of them is something the 434px card could not show:
+
+     .fg-card-sample   the display line, at up to 72px instead of 48, in the
+                       reader's own words when they type some
+     .fg-card-pangram  the same family as running text at body weight, 15px
+                       rather than the card's 12px squeeze
+     .fg-card-ladder   the family's weight range, DRAWN — each numeral set in
+                       the family at the weight it names. Nine of them across a
+                       full-width row is the thing that needs a row; the grid's
+                       entire answer to "what weights has this got" was "9w".
+
+   Measured at 1440: the specimen block runs 1,180px against the grid's 386px.
+   `--lbry-col-min:100%` rather than a hand-written `grid-template-columns:1fr`,
+   so this stays the shared Library grid with a different minimum — the same
+   knob the three-column version turned, turned further. */
+/* A CONTINUOUS TABLE, NOT A STACK OF FLOATING CARDS.
+   The panel rules at the end of this file already made that argument for the
+   full-width list that used to live here, and they survived the three-column
+   grid unnoticed — `.fg-grid` has been a bordered, card-coloured panel this
+   whole time, drawn behind a grid that did not want one. Going back to one row
+   per line is the moment to honour it rather than fight it.
+   It is also the right answer for the width. A card's own border, radius and
+   ground are chrome, and chrome is what a full-width row can least afford: at
+   1,341px the rounded box drew a frame around type that is itself the content.
+   Rules between rows separate them for a tenth of the ink, which is what every
+   type foundry's catalogue does (Locomotive's list is hairlines and nothing
+   else), and it settles the question a stack of cards could not — a caption
+   between two specimens belongs to the one inside its own rules. */
+.fg-grid{--lbry-col-min:100%;margin:0 0 var(--s-5);padding:0;list-style:none;gap:0}
+.fg-card{gap:13px;padding:18px 0 16px;border-bottom:1px solid var(--border)}
+/* The rank gutter is a real column, not padding: it gives a 1,341px row a left
+   edge for the eye to return to, which is the thing a list of full-width bands
+   otherwise lacks. 56px holds "00"–"99" in the mono face with its tracking. */
+.fg-card-open{display:grid;grid-template-columns:56px minmax(0,1fr);width:100%;padding:0;text-align:left;background:transparent;border:0;border-radius:0;cursor:pointer}
+/* The row lifts on hover instead of the shot: there is no card to lift any
+   more, and the whole band is the target. `--hvr` only, so the rules stay the
+   structure and hover stays an enhancement — nothing here is discoverable by
+   hover alone, which is the standing direction for touch. */
+.fg-card:hover{background:var(--hvr)}
+.fg-card-open:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+/* `.lbry-card-shot` lifts and shadows on hover across the browse language. That
+   is right for a swatch tile and wrong for a table row — a row that rises 3px
+   under the pointer drags the rule under it out of line with its neighbours. */
+.fg-card .lbry-card-shot{border-radius:0}
+.fg-card:hover .lbry-card-shot{transform:none;box-shadow:none}
+.fg-card-index{padding:4px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums}
+/* THE RESERVED BOX TRACKS THE SLIDER.
+   The grid reserved a fixed 68px line because its 48px ceiling was fixed. A
+   full-width row can afford 72px, and reserving 72px worth of line on every row
+   for a size most readers never drag to costs 24px × 24 rows — about 580px of
+   page — permanently. So the box is derived from the chosen size instead:
+   1.28em is ~1.17em of ascent-plus-descent plus optical padding, the same
+   arithmetic the 68px box ran, expressed as a ratio rather than a constant.
+   The reserved-metrics contract is that rows agree WITH EACH OTHER, and they
+   still do — every row solves this from the same two variables — so nothing
+   moves as faces stream in. What changes is that the whole list breathes with
+   the slider, which is the honest behaviour for a control labelled Size. */
+.fg-card-preview{--fg-line:calc(clamp(22px,var(--fg-card-size,52px),72px) * 1.28);height:auto;padding:0 26px 0 0;background:transparent}
+.fg-card-skeleton--sample{height:var(--fg-line)}
+.fg-card-skeleton--body{height:24px}
+.fg-card-skeleton--ladder{width:44%;height:26px}
+.fg-card-sample{display:flex;align-items:center;height:var(--fg-line);font-size:clamp(22px,var(--fg-card-size),72px);line-height:1.06;letter-spacing:-.035em}
+/* 15px, up from the card's 12px. At 386px the pangram was a texture swatch you
+   squinted at; across 1,180px it is a line of running text set in the family,
+   which is what a body-weight sample is for.
+   SLICED, NOT ELLIPSISED. The line is ~105 characters and fits whole at 1440;
+   from about 1200px down it runs past the edge. An ellipsis would be the wrong
+   signal — it says "words were omitted", which matters when the words are the
+   reader's and does not when they are a fixed specimen string. A clean slice is
+   the type-specimen convention (Readymag cuts its pangram at the pane edge;
+   Aave lets the letterforms bleed out of the frame) and it reads as "the face
+   continues" rather than as truncation damage. */
+.fg-card-pangram{height:24px;font-size:15px;line-height:24px;white-space:nowrap;text-overflow:clip}
+/* THE LADDER. Each numeral is drawn in the family at the weight it names, so
+   the row shows the range instead of counting it. `margin-top:auto` pins it to
+   the bottom of the reserved box, which keeps every row's ladder on one
+   baseline down the page — a ladder that floated with its family's metrics
+   would be unreadable as the column-of-comparison it is meant to be.
+   Fixed height + hidden overflow: a family can carry two weights or nine and
+   the row must not change height between them. */
+.fg-card-ladder{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 26px;height:26px;overflow:hidden;font-family:var(--fg-ff);font-size:19px;line-height:26px;color:var(--t1);font-variant-numeric:tabular-nums}
+.fg-card-step{font-weight:var(--fg-fw)}
+.fg-card-name{font-size:16px;line-height:1.3;letter-spacing:-.015em}
 .fg-card-info{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:capitalize}
 /* Always visible, unlike the colour libraries' like button: comparison is the
    gallery's primary shortlisting gesture, and a control you must hover to
    discover is not a shortlisting tool. */
 .fg-card-compare{position:static;opacity:1;transform:none}
-.fg-card--comparing .fg-card-open{border-color:var(--brand);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--brand)}
+/* Shortlisted rows are marked by their ground and a brand rule down the gutter
+   — not by a border, which the row no longer has. Visible without hover, which
+   is the point of a shortlisting control on a touch screen. */
+.fg-card--comparing{background:var(--brand-bg);box-shadow:inset 3px 0 0 var(--brand)}
+/* The foot clears the rank gutter, so the name lines up with the specimen that
+   names it rather than with the number, and it spans the row — name at the left
+   edge, script coverage at the right — instead of huddling in the first 200px
+   of 1,341 and leaving the rest of the band blank. */
+.fg-card .lbry-card-foot{align-items:baseline;padding-left:56px}
+.fg-card-scripts{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t3)}
 
 /* The hero is a near-black slab, which reads as a deliberate object on the
    light page and as NOTHING on the dark one: #0a0a0b against a --bg-0 of
@@ -9471,10 +9594,12 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    flight, so the list lands in a shape the reader has already seen. Deliberately
    NOT .fg-card: the reserved-metrics contract is asserted across .fg-card, and
    these are not typefaces. */
-.fg-grid--skeleton{--lbry-col-min:400px}
-.fg-skel-row{display:flex;flex-direction:column;gap:10px;height:162px;padding:22px 24px 20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l)}
-.fg-skel-row .fg-card-skeleton--sample{width:min(72%,300px)}
-.fg-skel-row .fg-card-skeleton--body{width:92%}
+.fg-grid--skeleton{--lbry-col-min:100%}
+.fg-skel-row{--fg-line:67px;display:flex;flex-direction:column;gap:10px;padding:18px 26px 16px 56px;border-bottom:1px solid var(--border)}
+.fg-skel-row:last-child{border-bottom-color:transparent}
+.fg-skel-row .fg-card-skeleton--sample{width:min(48%,520px)}
+.fg-skel-row .fg-card-skeleton--body{width:min(64%,700px)}
+.fg-skel-row .fg-card-skeleton--ladder{width:min(34%,380px);margin-top:auto}
 
 /* Font Pair */
 .fpr-page{padding-bottom:72px}
@@ -9600,18 +9725,50 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .fg-command{grid-template-columns:1fr;padding:8px}
   .fg-command-size{order:initial}
   .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
-  .fg-card-index{padding-top:31px}
-  .fg-card-compare{top:27px}
-  /* 18 + 66 + 10 + 22 + 12 = 128 in a 130px box — the same reserved arithmetic
-     as the wide layout, re-run for the narrower specimen. */
-  .fg-card-preview{height:130px;padding:18px 52px 12px 0}
-  .fg-card-sample,.fg-card-skeleton--sample{height:66px;line-height:66px}
-  .fg-card-sample{font-size:clamp(30px,var(--fg-card-size),52px)}
+  .fg-card-index{padding-top:2px;font-size:10px}
+  .fg-card .lbry-card-foot{padding-left:34px}
+  /* 18 + 64 + 8 + 22 + 6 + 24 + 14 = 156 in a 156px box — the same reserved
+     arithmetic as the wide layout, re-run for the narrower specimen. The
+     ceiling drops to 52px because 64px of reserved line only clears a 52px face
+     (52 × 1.17 ≈ 61), and the slider still runs to 72 on the same page: the
+     clamp is what stops a phone honouring a size its box cannot. */
+  /* CEILING 44, NOT 52. The slider still runs to 72 on the same page; the
+     clamp is what stops a phone honouring a size its row cannot hold. At 52px
+     a 271px specimen box slices "Montserrat" mid-stem — and slicing the family
+     NAME is the one thing this gallery must not do, which is the same reason
+     the three-column layout capped itself at 40. 44px fits the great majority
+     of families whole; the longest ("Playfair Display" wants ~330px) still run
+     past the edge, and the foot below carries the complete name for exactly
+     that case. */
+  .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),44px) * 1.28);padding:0 60px 0 0}
+  .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),44px)}
+  /* The tail goes, and the name gets its width back. At 390 the script list ran
+     ~200px of a 351px foot and left the family name ~150px, so the row's own
+     label truncated to protect a fact the specimen dialog states in full two
+     taps away. The name is the content of a font gallery — the ≤380px rule
+     below already fought this once for the same reason. */
+  .fg-card-scripts{display:none}
+  /* WRAPPED, NOT SLICED, ON A PHONE. A 350px row slices the body line after
+     about thirty characters, which is a shorter running-text sample than the
+     three-column card managed. Two clamped lines give ~70 instead, and the box
+     is reserved for exactly two so a family whose line wraps at a different
+     word still agrees in height with every other row. */
+  .fg-card-pangram,.fg-card-skeleton--body{height:40px}
+  .fg-card-pangram{-webkit-line-clamp:2;white-space:normal;font-size:13px;line-height:20px}
+  /* Two lines of ladder reserved, not one. Nine numerals at 16px with 18px gaps
+     need ~430px and a 390px phone has ~312px, so the widest families wrap once.
+     The box is reserved for the wrap rather than clipping it — a ladder that
+     silently dropped 800 and 900 would misreport the family. */
+  .fg-card-ladder,.fg-card-skeleton--ladder{height:24px}
+  .fg-card-ladder{gap:2px 18px;font-size:16px;line-height:24px}
   /* Stacked, the meta goes back to a single line under the specimen: the name
      has the full column width there, so it does not need its own row.
      True down to about 380px, and NOT below it — see the ≤380px block. */
-  .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0 52px 18px 0;border-left:0}
-  .fg-skel-row{height:130px;padding:18px 24px 12px 34px}
+  .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0;border-left:0}
+  .fg-skel-row{--fg-line:67px;padding:16px 24px 14px 34px}
+  .fg-skel-row .fg-card-skeleton--sample{width:72%}
+  .fg-skel-row .fg-card-skeleton--body{width:90%}
+  .fg-skel-row .fg-card-skeleton--ladder{width:56%}
   .fpr-hero-pair{grid-template-columns:1fr auto 1fr}
   .fpr-status{grid-template-columns:1fr 1fr}
   .fpr-status span:nth-child(3){border-left:1px solid var(--border)}
@@ -9960,23 +10117,16 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    purpose so the grid cannot reflow as webfaces load (asserted by
    11-typography-tools.spec.js). Hiding the line keeps the box identical. */
 .fg-card:last-child{border-bottom-color:transparent}
-/* PATTERN B AGAIN — the tablet band falls into the phone layout by one column.
-   `--lbry-col-min:400px` gives three 435px columns at 1440 and, at 834, a grid
-   794px wide that JUST misses two (it needs 820). So the specimen row stretched
-   to 792px while its content — a family name, a pangram and an add button — is
-   composed for a ~435px column: measured, the type occupied the left ~300px of
-   a 790px row, 77 times over, and the page ran to 12,231px.
-   360px across the 700–980 band puts two ~387px columns back at 834, within
-   50px of the desktop column the card was designed for, and halves the page:
-   12,231px → 6,951px. The grid still has to be wide enough to hold them, so the
-   second column actually appears from ~768px up and 700–767 stays one full-width
-   row — which is the right answer there anyway, since two columns at 700px would
-   be ~320px and narrower than the specimen needs. Measured at the seams:
-   981px → 2 columns of 460, 980px → 2 of 459, so the two bands meet with no
-   jump. */
-@media(min-width:700px) and (max-width:980px){
-  .fg-grid,.fg-grid--skeleton{--lbry-col-min:360px}
-}
+/* PR #298 gave this band a second column here — `--lbry-col-min:360px` across
+   700–980 — because at 834 a 794px grid JUST missed two columns and left a
+   790px row with type in its left ~300px, 77 times over, for a 12,231px page.
+   That fix was right for a grid and is moot for a list: the founder's direction
+   of 2026-09-02 is one specimen per row at every width, so the band has no
+   column count of its own to set and the rule is gone rather than overridden.
+   The emptiness #298 measured is answered above instead, by a row whose three
+   lines each want the full width. Removing the override is deliberate; see the
+   `.fg-grid` block for what replaced it. */
+
 /* The chosen ratio's "where it fits" line. An interval name is a fact about
    music; this is the bit that answers whether to pick it. */
 .tsc-ratio-hint{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--t2)}
