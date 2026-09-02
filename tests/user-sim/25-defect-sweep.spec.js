@@ -545,11 +545,13 @@ test('N8 · the tonal ramp is one target per swatch and still opens the tints', 
   expect(before.tintsOpen).toBe(0)
 
   // The function has to survive the restructure, not just the geometry.
+  // toHaveCount retries, where the `waitForTimeout(400)` this replaces was a
+  // deadline: a popup that opened at 450ms was reported as a popup that never
+  // opened. Still exactly one — a second copy is as much a defect as none.
   await page.locator('.plb-ramp').first().click()
-  await page.waitForTimeout(400)
-  const after = await page.evaluate(() => document.querySelectorAll('.plb-tintpop').length)
+  await expect(page.locator('.plb-tintpop'), 'clicking the ramp must still open the tints popup')
+    .toHaveCount(1)
   await ctx.close()
-  expect(after, 'clicking the ramp must still open the tints popup').toBe(1)
 })
 
 /**
