@@ -9497,22 +9497,37 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    `--lbry-col-min:100%` rather than a hand-written `grid-template-columns:1fr`,
    so this stays the shared Library grid with a different minimum — the same
    knob the three-column version turned, turned further. */
-.fg-grid{--lbry-col-min:100%;margin:0 0 var(--s-5);padding:0;list-style:none;gap:34px 0}
-/* PROXIMITY HAS TO DECIDE WHICH SPECIMEN A CAPTION BELONGS TO.
-   In three columns a card's foot was unambiguous — it was the only thing under
-   that column. Stacked, every caption has a specimen above it AND below it, so
-   the two gaps have to disagree loudly: 8px from a row to its own caption
-   against 34px to the next row. At the shared 12/24 they were close enough that
-   the caption read as a divider between two rows rather than as the label of
-   one of them. */
-.fg-card{gap:8px}
-/* The rank gutter is a real column, not padding: it gives a 1,390px row a left
+/* A CONTINUOUS TABLE, NOT A STACK OF FLOATING CARDS.
+   The panel rules at the end of this file already made that argument for the
+   full-width list that used to live here, and they survived the three-column
+   grid unnoticed — `.fg-grid` has been a bordered, card-coloured panel this
+   whole time, drawn behind a grid that did not want one. Going back to one row
+   per line is the moment to honour it rather than fight it.
+   It is also the right answer for the width. A card's own border, radius and
+   ground are chrome, and chrome is what a full-width row can least afford: at
+   1,341px the rounded box drew a frame around type that is itself the content.
+   Rules between rows separate them for a tenth of the ink, which is what every
+   type foundry's catalogue does (Locomotive's list is hairlines and nothing
+   else), and it settles the question a stack of cards could not — a caption
+   between two specimens belongs to the one inside its own rules. */
+.fg-grid{--lbry-col-min:100%;margin:0 0 var(--s-5);padding:0;list-style:none;gap:0}
+.fg-card{gap:13px;padding:18px 0 16px;border-bottom:1px solid var(--border)}
+/* The rank gutter is a real column, not padding: it gives a 1,341px row a left
    edge for the eye to return to, which is the thing a list of full-width bands
    otherwise lacks. 56px holds "00"–"99" in the mono face with its tracking. */
-.fg-card-open{display:grid;grid-template-columns:56px minmax(0,1fr);width:100%;padding:0;text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard)}
-.fg-card:hover .fg-card-open{border-color:var(--bh)}
-.fg-card-open:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-.fg-card-index{padding:22px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums}
+.fg-card-open{display:grid;grid-template-columns:56px minmax(0,1fr);width:100%;padding:0;text-align:left;background:transparent;border:0;border-radius:0;cursor:pointer}
+/* The row lifts on hover instead of the shot: there is no card to lift any
+   more, and the whole band is the target. `--hvr` only, so the rules stay the
+   structure and hover stays an enhancement — nothing here is discoverable by
+   hover alone, which is the standing direction for touch. */
+.fg-card:hover{background:var(--hvr)}
+.fg-card-open:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+/* `.lbry-card-shot` lifts and shadows on hover across the browse language. That
+   is right for a swatch tile and wrong for a table row — a row that rises 3px
+   under the pointer drags the rule under it out of line with its neighbours. */
+.fg-card .lbry-card-shot{border-radius:0}
+.fg-card:hover .lbry-card-shot{transform:none;box-shadow:none}
+.fg-card-index{padding:4px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums}
 /* THE RESERVED BOX TRACKS THE SLIDER.
    The grid reserved a fixed 68px line because its 48px ceiling was fixed. A
    full-width row can afford 72px, and reserving 72px worth of line on every row
@@ -9524,7 +9539,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    still do — every row solves this from the same two variables — so nothing
    moves as faces stream in. What changes is that the whole list breathes with
    the slider, which is the honest behaviour for a control labelled Size. */
-.fg-card-preview{--fg-line:calc(clamp(22px,var(--fg-card-size,52px),72px) * 1.28);height:auto;padding:20px 26px 18px 0;background:transparent}
+.fg-card-preview{--fg-line:calc(clamp(22px,var(--fg-card-size,52px),72px) * 1.28);height:auto;padding:0 26px 0 0;background:transparent}
 .fg-card-skeleton--sample{height:var(--fg-line)}
 .fg-card-skeleton--body{height:24px}
 .fg-card-skeleton--ladder{width:44%;height:26px}
@@ -9555,7 +9570,10 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    gallery's primary shortlisting gesture, and a control you must hover to
    discover is not a shortlisting tool. */
 .fg-card-compare{position:static;opacity:1;transform:none}
-.fg-card--comparing .fg-card-open{border-color:var(--brand);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--brand)}
+/* Shortlisted rows are marked by their ground and a brand rule down the gutter
+   — not by a border, which the row no longer has. Visible without hover, which
+   is the point of a shortlisting control on a touch screen. */
+.fg-card--comparing{background:var(--brand-bg);box-shadow:inset 3px 0 0 var(--brand)}
 /* The foot clears the rank gutter, so the name lines up with the specimen that
    names it rather than with the number, and it spans the row — name at the left
    edge, script coverage at the right — instead of huddling in the first 200px
@@ -9577,7 +9595,8 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    NOT .fg-card: the reserved-metrics contract is asserted across .fg-card, and
    these are not typefaces. */
 .fg-grid--skeleton{--lbry-col-min:100%}
-.fg-skel-row{--fg-line:67px;display:flex;flex-direction:column;gap:10px;padding:24px 26px 22px 56px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l)}
+.fg-skel-row{--fg-line:67px;display:flex;flex-direction:column;gap:10px;padding:18px 26px 16px 56px;border-bottom:1px solid var(--border)}
+.fg-skel-row:last-child{border-bottom-color:transparent}
 .fg-skel-row .fg-card-skeleton--sample{width:min(48%,520px)}
 .fg-skel-row .fg-card-skeleton--body{width:min(64%,700px)}
 .fg-skel-row .fg-card-skeleton--ladder{width:min(34%,380px);margin-top:auto}
@@ -9706,7 +9725,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .fg-command{grid-template-columns:1fr;padding:8px}
   .fg-command-size{order:initial}
   .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
-  .fg-card-index{padding-top:22px;font-size:10px}
+  .fg-card-index{padding-top:2px;font-size:10px}
   .fg-card .lbry-card-foot{padding-left:34px}
   /* 18 + 64 + 8 + 22 + 6 + 24 + 14 = 156 in a 156px box — the same reserved
      arithmetic as the wide layout, re-run for the narrower specimen. The
@@ -9721,7 +9740,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
      of families whole; the longest ("Playfair Display" wants ~330px) still run
      past the edge, and the foot below carries the complete name for exactly
      that case. */
-  .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),44px) * 1.28);padding:18px 44px 14px 0}
+  .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),44px) * 1.28);padding:0 60px 0 0}
   .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),44px)}
   /* The tail goes, and the name gets its width back. At 390 the script list ran
      ~200px of a 351px foot and left the family name ~150px, so the row's own
@@ -9745,8 +9764,8 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   /* Stacked, the meta goes back to a single line under the specimen: the name
      has the full column width there, so it does not need its own row.
      True down to about 380px, and NOT below it — see the ≤380px block. */
-  .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0 44px 18px 0;border-left:0}
-  .fg-skel-row{--fg-line:67px;padding:18px 24px 14px 34px}
+  .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0;border-left:0}
+  .fg-skel-row{--fg-line:67px;padding:16px 24px 14px 34px}
   .fg-skel-row .fg-card-skeleton--sample{width:72%}
   .fg-skel-row .fg-card-skeleton--body{width:90%}
   .fg-skel-row .fg-card-skeleton--ladder{width:56%}

@@ -241,25 +241,29 @@ test.describe('Font Gallery', () => {
     await go(page, '/create/font-gallery')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Font Gallery' })).toBeVisible()
-    await expect(page.locator('.fg-card')).toHaveCount(48)
+    await expect(page.locator('.fg-card')).toHaveCount(24)
 
     await page.getByLabel('Preview text').fill('Make the words the interface')
     await expect(page.getByLabel('Preview text')).toHaveValue('Make the words the interface')
-    // THE GALLERY IS A SPECIMEN GRID, NOT A FULL-WIDTH LIST.
+    // ONE SPECIMEN PER ROW, AT EVERY WIDTH.
     //
-    // This assertion used to pin the opposite — "each typeface should begin on
-    // the same full-width line". That layout showed five families of seventeen
-    // hundred per screen at 1440, spent about a quarter of each 154px row on
-    // the specimen, and left the family NAME roughly 800px from the face it
-    // named. The founder's direction was that the typography tools take their
-    // browsing model from the gradient and palette libraries, which are grids.
-    // Changed deliberately: this is a new decision, not a test relaxed to go green.
+    // This assertion has now been turned twice, and both turns were founder
+    // decisions rather than tests relaxed to go green. It first pinned a
+    // full-width list; then a grid, on the direction that the typography tools
+    // browse like the gradient and palette libraries; and now a list again, on
+    // the direction of 2026-09-02 — "1 font per row and 1 column".
+    //
+    // What is NOT the same as the first version is what a row now contains, and
+    // that is the part worth pinning. The audit that produced the grid was
+    // complaining about a 790px row holding content composed for 435px, so the
+    // test below asserts the row is full width AND that the specimen actually
+    // spans it, which is the only version of this layout worth having.
     const cards = page.locator('.fg-card')
     const first = await cards.nth(0).boundingBox()
     const second = await cards.nth(1).boundingBox()
-    expect(second.x, 'the second typeface sits beside the first, not under it')
-      .toBeGreaterThan(first.x + first.width - 2)
-    expect(Math.abs(second.y - first.y), 'cards sharing a row share a top edge').toBeLessThan(2)
+    expect(second.y, 'the second typeface sits under the first, not beside it')
+      .toBeGreaterThan(first.y + first.height - 2)
+    expect(Math.abs(second.x - first.x), 'every row starts at the same left edge').toBeLessThan(2)
 
     await page.getByRole('button', { name: 'Serif', exact: true }).click()
     await expect(page.locator('.fg-count')).toContainText('in Serif')
@@ -308,6 +312,83 @@ test.describe('Font Gallery', () => {
     await expect(page.locator('.fg-card').first()).toBeVisible()
   })
 
+  test('the specimen dialog fits the viewport and keeps its actions reachable', async ({ page }) => {
+    // The defect this replaces: 1,763px of dialog in a 900px viewport, scrolling
+    // the OVERLAY, so every action it offers — Find a pairing, Copy import URL,
+    // Add to comparison — was below the fold the moment it opened.
+    watch(page, 'designer deciding whether to use this family')
+    await page.route('**/api/fonts', route => route.fulfill({ json: { fonts: [{
+      family: 'Lora', category: 'serif', variants: [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      subsets: ['latin', 'latin-ext', 'cyrillic'], popularity: 0,
+    }] } }))
+
+    await go(page, '/create/font-gallery')
+    await page.locator('.fg-card-open').first().click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    const viewport = page.viewportSize().height
+    const box = await dialog.boundingBox()
+    expect(box.height, 'the dialog fits the screen it opened on').toBeLessThanOrEqual(viewport)
+
+    // Every action is on screen WITHOUT scrolling anything.
+    for (const name of [/Find a pairing/, /Build a type scale/, /Add to comparison/, /Copy import URL/]) {
+      const action = dialog.getByRole('button', { name })
+      await expect(action).toBeVisible()
+      const ab = await action.boundingBox()
+      expect(ab.bottom ?? ab.y + ab.height, `${name} is inside the viewport`).toBeLessThanOrEqual(viewport + 1)
+      expect(ab.y, `${name} is inside the viewport`).toBeGreaterThanOrEqual(0)
+    }
+
+    // The body is what scrolls, not the overlay behind it.
+    const overflows = await dialog.locator('.fg-detail-body').evaluate(
+      (el) => el.scrollHeight > el.clientHeight,
+    )
+    expect(overflows, 'a nine-weight family overflows the BODY, which is the scrolling part').toBe(true)
+  })
+
+  test('the specimen dialog shows every real weight as words, and the scripts it covers', async ({ page }) => {
+    // Replaces two sections that told the reader nothing: six "Ag" tiles, and a
+    // "Type scale" block that printed one sentence six times, five of them
+    // ellipsised. Also replaces the "1 subset" tag with the script names.
+    watch(page, 'designer checking a family has the cuts and the scripts they need')
+    await page.route('**/api/fonts', route => route.fulfill({ json: { fonts: [{
+      family: 'Lora', category: 'serif', variants: [400, 600, 700],
+      subsets: ['latin', 'latin-ext', 'cyrillic'], popularity: 0,
+    }] } }))
+
+    await go(page, '/create/font-gallery')
+    await page.getByLabel('Preview text').fill('Handgloves')
+    await page.locator('.fg-card-open').first().click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    // One line per cut the family actually ships — no more, no fewer.
+    const rows = dialog.locator('.fg-weight-row')
+    await expect(rows).toHaveCount(3)
+    await expect(dialog.locator('.fg-weight-tag')).toHaveText([
+      '400 Regular', '600 SemiBold', '700 Bold',
+    ])
+
+    // Each line is drawn in its own cut, and set in the reader's own words —
+    // which the dialog inherited rather than discarding when it opened.
+    const lines = await dialog.locator('.fg-weight-line').evaluateAll(
+      (nodes) => nodes.map((n) => `${n.textContent}:${getComputedStyle(n).fontWeight}`),
+    )
+    expect(lines).toEqual(['Handgloves:400', 'Handgloves:600', 'Handgloves:700'])
+
+    // Scripts stated, not counted.
+    await expect(dialog.locator('.fg-tag--scripts')).toHaveText('Latin, Latin Extended, Cyrillic')
+    await expect(dialog.getByText('1 subset')).toHaveCount(0)
+
+    // Editing the words in the dialog re-sets every cut at once.
+    await dialog.getByLabel('Preview text').fill('Ampersand')
+    await expect(dialog.locator('.fg-weight-line').first()).toHaveText('Ampersand')
+    await expect(dialog.locator('.fg-weight-line').last()).toHaveText('Ampersand')
+  })
+
   test('the detail dialog is closable from the keyboard and restores focus', async ({ page }) => {
     watch(page, 'keyboard-only visitor')
     await go(page, '/create/font-gallery')
@@ -323,7 +404,7 @@ test.describe('Font Gallery', () => {
     await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('')
   })
 
-  test('cards reserve their metrics so the grid never reflows as faces load', async ({ page }) => {
+  test('rows reserve their metrics so the list never reflows as faces load', async ({ page }) => {
     watch(page, 'designer on a slow connection')
     await go(page, '/create/font-gallery')
 
@@ -331,12 +412,70 @@ test.describe('Font Gallery', () => {
     const heights = await page.locator('.fg-card').evaluateAll(
       (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
     )
-    expect(new Set(heights).size, 'every gallery card must be the same reserved height').toBe(1)
+    expect(new Set(heights).size, 'every gallery row must be the same reserved height').toBe(1)
 
     const boxes = await page.locator('.fg-card-preview > :first-child').evaluateAll(
       (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
     )
     expect(new Set(boxes).size, 'the sample line must keep a fixed box whatever face lands in it').toBe(1)
+
+    // The ladder is the row's last line and it varies in CONTENT — a family
+    // ships two weights or nine — so it is the one most likely to break the
+    // reserved-metrics contract by growing a row. `:last-child` rather than
+    // `.fg-card-ladder` because the contract is precisely that the pending
+    // skeleton and the loaded ladder reserve the SAME box: with a blocked font
+    // host every row is still a skeleton, and that is the state the reserved
+    // geometry exists for.
+    const ladders = await page.locator('.fg-card-preview > :last-child').evaluateAll(
+      (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
+    )
+    expect(ladders.length, 'every row reserves a ladder line').toBe(heights.length)
+    expect(new Set(ladders).size, 'the weight ladder must keep a fixed box however many cuts it lists').toBe(1)
+  })
+
+  test('a full-width row spends its width on the typeface, not on empty space', async ({ page }) => {
+    // The point of one-per-row. The 2026-09-01 audit found a 790px row whose
+    // content was composed for a 435px card, and one column by intent looks
+    // exactly like one column by accident unless the row is rebuilt to want the
+    // width — so this pins the three lines that do.
+    watch(page, 'designer judging a typeface across a full-width row')
+    await page.route('**/api/fonts', route => route.fulfill({ json: { fonts: [{
+      family: 'Lora', category: 'serif', variants: [100, 300, 400, 500, 700, 900],
+      subsets: ['latin', 'latin-ext', 'cyrillic', 'vietnamese'], popularity: 0,
+    }] } }))
+
+    await go(page, '/create/font-gallery')
+    const row = page.locator('.fg-card').first()
+    await expect(row).toBeVisible()
+
+    const rowBox = await row.boundingBox()
+    const shot = await page.locator('.fg-card-open').first().boundingBox()
+    expect(shot.width, 'the specimen block fills the row it is given')
+      .toBeGreaterThan(rowBox.width - 2)
+
+    // THE WEIGHT LADDER. The gallery's whole answer to "what weights has this
+    // family got" used to be the string "6w" in the card foot. It now draws
+    // them, and each numeral is set in the cut it names.
+    const ladder = page.locator('.fg-card-ladder').first()
+    await expect(ladder).toBeVisible()
+    const steps = page.locator('.fg-card-step')
+    await expect(steps).toHaveCount(5)
+    await expect(steps.first()).toHaveText('100')
+    await expect(steps.last()).toHaveText('900')
+
+    const stepWeights = await steps.evaluateAll(
+      (nodes) => nodes.map((n) => `${n.textContent}:${getComputedStyle(n).fontWeight}`),
+    )
+    expect(stepWeights, 'each numeral is rendered at the weight it names')
+      .toEqual(['100:100', '300:300', '500:500', '700:700', '900:900'])
+
+    // The body line is running text at body weight, not a 43-character squeeze.
+    const bodyLine = await page.locator('.fg-card-pangram').first().textContent()
+    expect(bodyLine.length, 'the body sample uses the width it now has').toBeGreaterThan(90)
+
+    // Script coverage at the row's far edge — the fact the grid never showed.
+    await expect(page.locator('.fg-card-scripts').first())
+      .toHaveText('Latin, Latin Extended, Cyrillic +1')
   })
 
   test('a held stylesheet keeps skeletons visible until the face registers, then reveals without FOUT', async ({ page }) => {
