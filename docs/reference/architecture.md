@@ -26,7 +26,7 @@ api/
 └── _lib/              # shared server helpers (env, firebase-admin, stripe, pricing, plans)
 ```
 
-## Product surfaces (Workspace / Discover / Learn)
+## Product surfaces (Create / Discover / Learn)
 
 The code is still organised route-per-page, but the **product story** groups
 every page under one of three surfaces (see `positioning.md`):
@@ -78,9 +78,17 @@ the unrouted pages — `Dashboard`, `CategoryDashboard`, `ExternalResources`,
 - **Colour**: ColorLanding, ColorStudio, PaletteBuilder, TintTool,
   GradientGenerator, ContrastChecker.
 - **Other tools**: FontGallery, FontMatcher, TypeScale, RatioCalculator,
-  BoxShadowGenerator, IconLibrary, EmojiLibrary, IconEmojiLibrary,
-  FileConverter, SeoInspector, AltTextGenerator, AiPromptGenerator,
-  LandingPromptGenerator, PromptLibrary, UIBuilder, AutoBuilder, StyleGuide.
+  BoxShadowGenerator, IconEmojiLibrary, FileConverter, SeoInspector,
+  AltTextGenerator, AiPromptGenerator, LandingPromptGenerator, PromptLibrary,
+  UIBuilder, AutoBuilder, StyleGuide.
+
+> **`IconLibrary.jsx` and `EmojiLibrary.jsx` are unrouted.** Both files still
+> exist and neither is imported anywhere. `CreateTool.jsx` maps **both**
+> `/create/icons` and `/create/emoji` to `IconEmojiLibrary`, so every line in
+> the other two files is dead on every shipped route. #306 lost a pass to
+> exactly this: it was sent to a hero in `IconLibrary.jsx`, changed it, and the
+> change rendered nowhere. **Grep for the import before editing a page file** —
+> a page component existing is not evidence that a route reaches it.
 - **Shells / hub**: Home, Landing, CreateTool (the honest workshop state for
   unbuilt routes), SurfaceLanding (Discover + Learn), SiteMap, Community,
   GradientGallery, InfoCentre, HelpCentre, Feedback, Settings, Projects,
@@ -93,8 +101,17 @@ the unrouted pages — `Dashboard`, `CategoryDashboard`, `ExternalResources`,
 - **Admin**: Admin (gated by `ADMIN_EMAILS` + session admin code).
 - **Legal**: Privacy, Terms.
 
-There is **no branded 404**: the wildcard route redirects to `/`. That is a known
-gap, tracked as `global-failure-states` in `src/data/pipeline.js`.
+There **is** a branded 404: `src/pages/NotFound.jsx` sits behind
+`<Route path="*">` in `App.jsx`, and `scripts/prerender.mjs` emits a matching
+`noindex` 404 shell. `tests/unit/not-found.test.js` holds it.
+
+> **Corrected 2026-09-03.** This paragraph read *"There is no branded 404: the
+> wildcard route redirects to `/`"* and pointed at `global-failure-states` as an
+> open gap. That shipped in **#235** — the redirect it describes is what
+> `NotFound.jsx` replaced, and the queue entry has read `done` since. An agent
+> trusting the old text would have set out to build a 404 that already exists,
+> found the wildcard route occupied, and had to work out which of the two
+> sources was lying. That round trip is the whole cost of a stale instruction.
 
 ## Components (`src/components/`)
 
@@ -125,8 +142,10 @@ stripe-webhook.js   support.js           verify-admin.js      delete-account.js
 previews (+ palette-card PNG) for `/p/:code` short links (vercel.json rewrite).
 
 Shared server helpers (NOT counted as functions) live in `api/_lib/`:
-`billing.js`, `env.js`, `firebase-admin.js`, `http.js`, `origins.js`, `plans.js`,
-`pricing.js`, `stripe.js`.
+`accountDeletion.js`, `admin.js`, `billing.js`, `env.js`, `firebase-admin.js`,
+`geminiFinish.js`, `http.js`, `origins.js`, `plans.js`, `pricing.js`,
+`rateLimit.js`, `stripe.js`. Read the directory rather than this list — helpers
+are uncapped, so they get added without anything forcing a doc update.
 
 **Before adding an API route:** you are likely at or near the cap. Prefer
 extending an existing route (e.g. action-switch on `req.body`) or moving logic

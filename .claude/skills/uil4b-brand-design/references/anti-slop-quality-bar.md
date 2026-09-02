@@ -1,5 +1,15 @@
 # Anti-slop quality bar
 
+> **This file is the vocabulary, not the procedure.** It names what slop is and
+> what each failure is called. It cannot be *run* — it has no routes, no
+> viewports, no capture method, no finding format and no rule for discounting a
+> capture artefact.
+>
+> To actually review a rendered surface and come back with evidenced findings,
+> follow **`.claude/skills/uil4b-surface-review/`**, which supplies the
+> procedure and uses the lenses below for naming. Use this file directly when
+> you are making a design decision rather than auditing one.
+
 ## Definition
 
 "AI slop" is the felt result of an interface that appears fluent and polished
@@ -25,7 +35,7 @@ card, gradient, animation, or layout is inherently slop.
 **Correction**
 
 Expose UIL4B-specific work: system inputs, validation, iteration, saved projects,
-export artefacts, meaningful constraints, and the relationship between Workspace,
+export artefacts, meaningful constraints, and the relationship between Create,
 Discover, and Learn.
 
 ### Composition

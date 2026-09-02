@@ -98,7 +98,8 @@ Knowledge lives here, not in a persona.
 
 | Need | Skill |
 |---|---|
-| Brand identity, anti-slop critique | `uil4b-brand-design` |
+| Brand identity, anti-slop vocabulary | `uil4b-brand-design` |
+| Running a visual / responsive review on a rendered surface | `uil4b-surface-review` |
 | Building UI | `frontend-ui-engineering` |
 | Landing a change in slices | `incremental-implementation` |
 | Root-causing a failure | `debugging-and-error-recovery` |
