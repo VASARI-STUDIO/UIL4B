@@ -27,7 +27,7 @@
 // IS the contract now; its unmet performance budgets moved to the
 // homepage-field-metrics item in src/data/pipeline.js).
 import { test, expect } from './base.js'
-import { watch, go, restingScrollY } from './helpers.js'
+import { watch, go, restAfterMove } from './helpers.js'
 
 const PERSONA = 'designer evaluating the workspace from the homepage'
 
@@ -933,11 +933,15 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // geometry assertion below is then measured against a page that is still
     // moving. restingScrollY() waits for the scroll layer itself to say it has
     // finished — see helpers.js.
-    await expect.poll(
-      async () => (await converterView(page)).scrollY,
-      { timeout: 10000 },
-    ).toBeGreaterThan(0)
-    await restingScrollY(page, 'the converter after the hand-off scrolled to it')
+    //
+    // The wait for the movement to BEGIN used to be a 10s poll on scrollY, which
+    // is the same clock-versus-take-up guess that failed 28-account-menu-
+    // keyboard.spec.js from the other direction: a hand-off slower to take up
+    // than the deadline would be reported as a hand-off that never scrolled.
+    // restAfterMove waits for take-up in animation frames and then for rest, so
+    // the number below is the landing position and nothing else.
+    const landed = await restAfterMove(page, 0, 'the converter after the hand-off scrolled to it')
+    expect(landed, 'the hand-off never moved the viewport off the top').toBeGreaterThan(0)
     const view = await converterView(page)
 
     // The heading of the region is clear of the fixed bar, not under it.
@@ -966,7 +970,11 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await handOffImages(page, [png('one.png')])
     await expect(page.locator('.fc-card')).toHaveCount(1)
 
-    await expect.poll(async () => (await converterView(page)).scrollY, { timeout: 5000 }).toBeGreaterThan(0)
+    // Take-up, then rest — not a 5s poll for "has it moved yet". Reduced motion
+    // never instantiates Lenis so this jump is instant, but the deadline was
+    // still the only thing separating "slow" from "never happened".
+    const landed = await restAfterMove(page, 0, 'the converter after the reduced-motion jump')
+    expect(landed, 'the hand-off never moved the viewport off the top').toBeGreaterThan(0)
     const calls = await scrollCalls(page)
     // Reduced motion never instantiates Lenis, so the reveal goes through
     // window.scrollTo — and must ask for an instant jump.
