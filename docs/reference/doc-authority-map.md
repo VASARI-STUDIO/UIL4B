@@ -28,7 +28,7 @@ Four instances inside one week, all found by accident rather than by any check:
 | # | The instruction | The truth | Cost |
 |---|---|---|---|
 | #291 | The gate doc said `npx vite build`, **five times** | CI runs `npm run build`; the same doc twice warned that bare vite skips the prerender | A green run with a silently smaller test count |
-| #303 | The gate doc hardcoded 571 unit / 291 browser | 659 / 355. Its own line records it had **already** drifted and been corrected once before | A clean run reads as a wild regression |
+| #303 | The gate doc hardcoded 571 unit / 291 browser | 659 / 355. Its own line records it had **already** drifted and been corrected once before. #312 later established it had drifted **four** times, one of them undetected the whole time | A clean run reads as a wild regression |
 | #306 | The backlog named a hero in `IconLibrary.jsx` | The hero is in `IconEmojiLibrary.jsx`; the named block is dead on every shipped route | A whole pass edited a file nothing renders |
 | #305 | The backlog named `FontBrowseDialog` as the Font Gallery's popup | That belongs to `FontPicker`; the gallery opens `DetailDialog` | Sent to the wrong component |
 
@@ -47,6 +47,7 @@ written down anywhere before.
 | What UIL4B is, who it is for, the surfaces | `docs/reference/positioning.md` | `architecture.md`'s surface section — it is an IA lens, not the story |
 | What the routes are, live vs Soon | `src/data/toolTree.js`, then `docs/build-plan/tool-tree.md` | Any prose route list. `positioning.md` deleted its copy for this reason |
 | Which routes get prerendered | `public/sitemap.xml` | Any counted list — `prerender.mjs` derives from the sitemap |
+| **How the app is built** — and that there are **two** paths | `package.json` scripts, then `build-and-verify.md` | Either path in isolation. See "Two build paths" below |
 | Where a page, context or API route lives | `docs/reference/architecture.md` | Its page list for *whether a route reaches it* — grep the import |
 | What the gate is and how to run it | `docs/reference/build-and-verify.md` | — it is the only home; no other file may restate a gate number |
 | The breakpoint scale, tokens, class naming | `docs/reference/css-conventions.md` | `murphys-law.md` and any older "768 / 480 / 380" triple |
@@ -66,12 +67,20 @@ written down anywhere before.
 
 **1. A hand-maintained number.** Test counts, route totals, file tallies. These
 *always* drift, and the drift is invisible because a stale number still looks
-like a number. Every one found in this pass had drifted.
+like a number. **Every single one found in this pass had drifted** — the gate
+doc's unit total, the rules-test total, the "four unit tests read the shells" in
+both `README.md` and `engineer.md`.
 
 > **Rule.** A number belongs in a document only if something fails when it goes
 > wrong. The `/api` 12-function cap qualifies — `tests/unit/account-deletion.test.js`
 > fails the build if it is exceeded. A test count does not, and never can.
 > Name the file or the command instead of the count.
+
+#312 took this furthest and is the pattern to copy: it deleted the gate doc's
+counts rather than correcting them a fifth time, restated each row as a property,
+and added `tests/unit/gate-doc.test.js` so the shape is now enforced instead of
+merely intended. **A convention loses across dozens of PRs and many agents; a
+test does not.**
 
 **2. A reference to a file that is not reached.** A page component existing is
 not evidence that a route reaches it. `IconLibrary.jsx` and `EmojiLibrary.jsx`
@@ -110,7 +119,7 @@ Verdicts from this pass. **KEEP** = accurate and needed · **UPDATE** = fixed he
 | File | Verdict | Why |
 |---|---|---|
 | `architecture.md` | UPDATE | Three claims the code contradicts — see the top of this file. Fixed. |
-| `build-and-verify.md` | UPDATE | Sole home of the gate. Restructuring its hand-carried counts is `gate-doc-hardcoded-counts` (#304) and is deliberately left to that item. Only the duplicated breakpoint triple was touched here. |
+| `build-and-verify.md` | UPDATE | Sole home of the gate. Its hand-carried counts were removed by **#312**, which landed while this pass was running and restated every row as a *property* — 0 errors, 0 failures, 0 skipped. `tests/unit/gate-doc.test.js` now fails CI if a count comes back. This branch deliberately did not touch the counts, so the two passes did not collide; only the duplicated breakpoint row was changed here. |
 | `css-conventions.md` | UPDATE | Now owns the widths-to-test question, and names 640px and the 641–900 band. |
 | `positioning.md` | KEEP | Canonical story. Its Workspace/Create naming note is explicit and correct. |
 | `murphys-law.md` | UPDATE | Carried a third breakpoint answer; now links to the one home. |
@@ -157,6 +166,35 @@ Verdicts from this pass. **KEEP** = accurate and needed · **UPDATE** = fixed he
 | `uil4b-surface-review/**` | NEW | The runnable review procedure. |
 | Six vendored skills | KEEP | Unmodified upstream MIT text. Their generic advice (Tailwind, 320/768/1024/1440 breakpoints, per-component stylesheets) conflicts with UIL4B; that is resolved by the precedence order in `skills/README.md`, **not** by editing them. |
 | 13 imported taste skills | KEEP, SCOPED, **gitignored** | Founder-installed and to be used. Three factual conflicts with this codebase are carved out below; the rest applies. Not edited, not committed. |
+
+## Two build paths, which must not diverge
+
+Findable here because a future agent editing one will not think to check the
+other. Both are in `package.json`:
+
+```
+build      vite build              && node scripts/prerender.mjs
+test:users vite build --mode test  && node scripts/prerender.mjs && playwright test
+```
+
+They differ only in `--mode test`, and **both must run the prerender**. This has
+already gone wrong once: `test:users` ran `vite build --mode test` *alone*, which
+overwrote `dist/` **without** the prerender step. Two things followed, both
+silent:
+
+- Running `test:users` before the unit suite skipped every unit test that asserts
+  against the built shells — a green run with a quietly smaller count.
+- The acceptance suite walked a different artefact from the one production
+  serves, so it was not testing what ships.
+
+> **Rule.** If you change how one of these builds, change the other in the same
+> commit, or say in the PR why they may now differ. `npm run prerender` exists as
+> a third entry point and calls the same script — three callers, one script.
+
+The related trap, which is the same fault seen from the agent's side: **a bare
+`npx vite build` writes `dist/` and prints nothing.** The line
+`prerender: wrote N route shells + a noindex 404 shell` is the only evidence the
+prerender ran at all. Look for the line.
 
 ## Imported taste skills — how to use them well here
 

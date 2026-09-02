@@ -129,9 +129,11 @@ Use `npm run build`, not bare `npx vite build`: several unit tests in
 smaller test count. (This line used to say "four". It is six, and counting them
 here just means the number goes stale again — the files are the answer.)
 
-Current expected counts for each gate are in
+What each gate must satisfy is in
 [`docs/reference/build-and-verify.md`](docs/reference/build-and-verify.md) —
-that file is the only place they are recorded.
+that file is the only place it is recorded. It states the gate as a **property**
+(0 errors, 0 failures, 0 skipped) rather than an expected test count; #312
+removed the counts after they drifted four times.
 
 ### Environment Variables
 
