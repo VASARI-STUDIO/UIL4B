@@ -5166,7 +5166,22 @@ html[data-reduced-motion="true"] .home-anim{animation:none!important;opacity:1!i
    mounted and removes them on teardown, so every rule here is inert elsewhere. */
 html.lenis,html.lenis body{height:auto}
 .lenis.lenis-smooth{scroll-behavior:auto!important}
-.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+/* Scroll containment for overlays. One change from the rule this replaces: it
+   was scoped to `.lenis.lenis-smooth`, so it did nothing for a visitor with
+   reduced motion on — Lenis is never instantiated for them, the class is never
+   added, and their popups chained into the page natively instead. The bug this
+   rule exists to stop was never Lenis-only.
+
+   It stays on the marked element ALONE. Extending it to `[data-lenis-prevent] *`
+   looks harmless — overscroll-behavior is documented as applying to scroll
+   containers, and most of a dialog's descendants are not one — but it is not:
+   measured 2026-09-03, `contain` on the plain <span> under the pointer stopped
+   the gesture from reaching the scrolling body four levels up, and the font
+   specimen dialog scrolled 0px instead of 413. Chrome honours the property
+   along the chain, not just at its ends. Which element is a scroll container is
+   a question only the layout engine can answer, so the hooks ask it in JS and
+   mark the answers (see markScrollContainers in hooks/useSmoothScroll.js). */
+[data-lenis-prevent]{overscroll-behavior:contain}
 .lenis.lenis-stopped{overflow:hidden}
 .lenis.lenis-smooth iframe{pointer-events:none}
 /* While GSAP drives the home reveals, silence the CSS transition so only one
