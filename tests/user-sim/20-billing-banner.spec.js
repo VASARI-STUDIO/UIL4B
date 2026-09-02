@@ -149,23 +149,30 @@ test.describe('billing banner layout', () => {
    * What only a browser can check is the half that is not quota maths at all —
    * that nothing on the way in leaks a free-plan allowance at a stranger.
    *
-   * Worth recording, because it surprised this change: /projects is wrapped in
-   * RequireAuth (App.jsx), which redirects to /login before Projects.jsx renders
-   * anything. The `!canSaveProjects` sign-in panel INSIDE Projects.jsx is
-   * therefore unreachable for a signed-out visitor — so this test asserts the
-   * redirect that actually happens rather than a screen that does not. Unwrap
-   * that route, or hoist the quota block somewhere public, and a person who has
-   * never signed in gets told what their plan allows. */
+   * Worth recording, because it surprised this change twice: /projects is
+   * wrapped in RequireAuth (App.jsx), so the `!canSaveProjects` sign-in panel
+   * INSIDE Projects.jsx is unreachable for a signed-out visitor — the route
+   * redirects to /login instead. And that redirect is NOT immediate: RequireAuth
+   * holds a loader until Firebase's onAuthStateChanged fires (measured at ~1s
+   * here), so a check that samples the URL on first paint reads /projects and
+   * concludes the wrong thing. Both assertions below are therefore auto-retrying
+   * and wait for the SETTLED signed-out state, never a fixed timeout.
+   *
+   * Unwrap that route, or hoist the quota block somewhere public, and a person
+   * who has never signed in gets told what their plan allows. */
   test('a signed-out visitor is redirected and never told about a project allowance', async ({ page }) => {
     watch(page, 'a stranger opening Projects before signing in')
     for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/projects')
 
-      // Vacuity guard: prove we actually landed somewhere, so a blank render
-      // cannot make the absence below pass by accident.
-      await page.locator('main, .sec, #root > *').first().waitFor()
+      // Wait for the redirect to SETTLE. Both of these retry, so neither reads
+      // the loader RequireAuth shows while auth is still resolving.
       await expect(page, `${width}px: /projects is behind RequireAuth`).toHaveURL(/\/login/)
+      await expect(
+        page.getByRole('button', { name: /sign in/i }).first(),
+        `${width}px: the signed-out destination must actually render`,
+      ).toBeVisible()
 
       await expect(
         page.getByTestId('project-quota-note'),
