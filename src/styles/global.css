@@ -6223,7 +6223,6 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
 /* The centred stat strip that used to sit above the headline is gone — see the
    note in Home.jsx. What replaces it is a single quiet category line, the way a
    product page names its own category rather than opening with proof. */
-.home-hero-searchlabel{margin:var(--s-6) 0 var(--s-3);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
 .home-hero-kicker{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin:0}
 /* The catalogue figures, now beside the toolset grid they describe. A
    definition list because that is what they are: a number and what it counts. */
@@ -6255,15 +6254,22 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
   .home-hero{padding-top:calc(var(--nav-top) + var(--nav-h) + var(--s-6))}
   .home-hero-sub{margin-top:var(--s-4)}
   .hcmd{margin-top:var(--s-4)}
-  .hcmd-chips{margin-top:var(--s-3)}
   .home-hero-cta{margin-top:var(--s-5)}
 }
 .hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .hcmd-bar:focus-within{border-color:var(--accent)}
 .hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-strong)}
-.hcmd-input{min-width:0;height:56px;border:0;background:none;color:var(--t0);font-family:var(--font);font-size:var(--fs-body);font-weight:500}
+/* `input.` prefix, the same idiom as input.cs-hue-slider above and for the same
+   reason: this MUST outrank the global input[type="text"] reset at the top of
+   the file, whose 0,1,1 beats a bare 0,1,0 class no matter which comes later.
+   Until it did, the hero's own search box was painting a second white, rounded,
+   1px-bordered rectangle inside .hcmd-bar — and on focus a second ring inside
+   the bar's — plus taking the reset's 13px over the --fs-body this rule asks
+   for. Visible on every viewport since the bar shipped, and unmissable now the
+   founder has removed the label and chips that used to flank it. */
+input.hcmd-input{min-width:0;height:56px;padding:0;border:0;border-radius:0;background:none;color:var(--t0);font-family:var(--font);font-size:var(--fs-body);font-weight:500}
 .hcmd-input::placeholder{color:var(--t3)}
-.hcmd-input:focus{outline:none}
+input.hcmd-input:focus{outline:none;box-shadow:none}
 .hcmd-kbd{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .hcmd-kbd:hover{background:var(--hvr);border-color:var(--bh)}
 .hcmd-kbd:active{transform:scale(.96)}
@@ -6285,12 +6291,6 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
 .hcmd-empty{padding:18px 16px;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
 .hcmd-empty strong{color:var(--t0)}
 
-.hcmd-chips{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:var(--s-4)}
-.hcmd-chips-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
-.hcmd-chip{min-height:34px;padding:0 14px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.04em;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.hcmd-chip:hover{color:var(--t0);border-color:var(--t0);transform:translateY(-2px)}
-.hcmd-chip:active{transform:scale(.97)}
-.hcmd-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ── V2 pill treatments ──
    Three, and no others: primary (accent), inverse (ink) and quiet. `ui-pill-hi`
@@ -6445,10 +6445,9 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
   .hcmd-row-cat{display:none}
   .hcomm-tabs{width:100%}
   .hcomm-tab{flex:1 1 0;padding:0 8px}
-  .hstep-cta,.hcmd-chip{min-height:40px}
+  .hstep-cta{min-height:40px}
 }
 @media(max-width:380px){
-  .hcmd-chips-label{display:none}
   .htool{padding:20px}
   .hprice-panel{padding:22px}
 }

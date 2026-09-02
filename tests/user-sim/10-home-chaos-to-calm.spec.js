@@ -57,6 +57,47 @@ async function reducedMotion(page) {
   })
 }
 
+// The inverse, for the three hero-placeholder tests below.
+//
+// This describe runs the whole file under `reducedMotion: 'reduce'`, which is
+// right for every other test in it and fatal for those three. An EXPLICIT
+// in-app choice beats the OS query in both directions — that is
+// AppearanceContext's documented contract, guarded by
+// tests/unit/reduced-motion-resolution.test.js — so storing `false` is how a
+// motion-on visitor is simulated without changing the file's configuration for
+// anything else in it.
+async function motionOn(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('vs-appearance', JSON.stringify({
+      rounding: 'default', density: 'cozy', reducedMotion: false,
+    }))
+  })
+}
+
+// The caret the hero placeholder types behind, U+258F. Duplicated from
+// HomeCommandBar.jsx deliberately: a test that imported the constant would
+// still pass if the constant were changed to a space.
+const CARET = '▏'
+
+// Every distinct value the hero placeholder takes over `ms`. Polls inside the
+// page rather than round-tripping per sample, so a 55ms-per-character animation
+// is actually caught. NOT a waitForTimeout stand-in for "wait until this
+// exists" — the callers above wait on `expect.poll` for that, and this measures
+// how a value CHANGES over a window, which is the thing under test.
+async function samplePlaceholder(page, ms) {
+  return page.evaluate(async (duration) => {
+    const input = document.querySelector('.hcmd-input')
+    const seen = []
+    const end = performance.now() + duration
+    while (performance.now() < end) {
+      const value = input.placeholder
+      if (seen[seen.length - 1] !== value) seen.push(value)
+      await new Promise((resolve) => { setTimeout(resolve, 25) })
+    }
+    return seen
+  }, ms)
+}
+
 const png = (name) => ({
   name,
   mimeType: 'image/png',
@@ -197,30 +238,46 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // is the failure the rewrite was for.
     await expect(heading).toContainText(/colour|color|type|token|system/i)
 
-    // The command bar is INTRODUCED before it appears, and sits below whatever
-    // introduces it. That is the 2026-08-16 instruction, carried forward.
-    const label = page.locator('.home-hero-searchlabel')
-    await expect(label).toBeVisible()
-    const geometry = await page.evaluate(() => {
-      const l = document.querySelector('.home-hero-searchlabel').getBoundingClientRect()
-      const bar = document.querySelector('.hcmd-bar').getBoundingClientRect()
-      return { labelBottom: l.bottom, barTop: bar.top }
-    })
-    expect(geometry.barTop, 'the command bar must sit below the label that introduces it')
-      .toBeGreaterThan(geometry.labelBottom)
+    // ── The bar's two framing lines are gone; its accessible name is not ─────
+    //
+    // THIS BLOCK USED TO ASSERT THE OPPOSITE. It required a visible
+    // `.home-hero-searchlabel` above the bar, required the bar to sit below it,
+    // and required the input's accessible name to equal that visible line. All
+    // three came from the 2026-08-16 instruction that the bar must be
+    // introduced rather than arriving unannounced.
+    //
+    // On 2026-09-03 the founder removed both framing lines — "remove the try
+    // line below it remove the seacrh every tool line above it" — and the
+    // introduction moved INTO the bar itself: the `>` prompt says it is a
+    // command line, and the placeholder types real tool names to say what is in
+    // it. So these assertions are rewritten to the new contract rather than
+    // deleted, and the half of the old contract that is an ACCESSIBILITY
+    // GUARANTEE rather than a layout preference is pinned harder than before.
+    await expect(page.locator('.home-hero-searchlabel'),
+      'the "Search every tool" line above the bar is back').toHaveCount(0)
+    await expect(page.locator('.hcmd-chips'),
+      'the "Try …" chip row below the bar is back').toHaveCount(0)
 
-    // …and the input takes its accessible name from that same visible label, so
-    // a screen-reader user hears the introduction a sighted user reads.
+    // Removing the visible line is a design choice. Removing the accessible
+    // name with it is a WCAG 4.1.2 failure — an unlabelled edit field in the
+    // middle of a heading — and no screenshot would ever show it, which is
+    // exactly why it is asserted here. Resolved the way a browser resolves it.
     const named = await page.evaluate(() => {
       const input = document.querySelector('.hcmd-input')
       const by = input.getAttribute('aria-labelledby')
-      return by ? document.getElementById(by)?.textContent?.trim() : input.getAttribute('aria-label')
+      const from = by ? document.getElementById(by) : null
+      return {
+        name: ((by ? from?.textContent : input.getAttribute('aria-label')) || '').trim(),
+        resolves: by ? !!from : true,
+        painted: from ? from.getBoundingClientRect().width > 1 : false,
+      }
     })
-    // Case-insensitive on purpose: the label is uppercased in CSS, so
-    // innerText reports SEARCH EVERY TOOL while the accessible name is computed
-    // from textContent. They are the same string; only the transform differs.
-    const labelText = await label.evaluate(el => el.textContent.trim())
-    expect(named.toLowerCase()).toBe(labelText.toLowerCase())
+    expect(named.resolves, 'aria-labelledby points at an id that is not on the page').toBe(true)
+    expect(named.name.length, 'the hero search box has no accessible name at all').toBeGreaterThan(3)
+    // …and whatever carries that name is not painted, which is the founder's
+    // half of the same change. Both halves, or the next edit satisfies one by
+    // breaking the other — which is how this regression would arrive.
+    expect(named.painted, 'the search label is being painted again').toBe(false)
 
     // ── The furniture that made the page read as generic must not come back ──
     // Each of these was on the page and was removed for a stated reason (see
@@ -577,6 +634,105 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // Escape clears rather than trapping.
     await page.locator('.hcmd-input').press('Escape')
     await expect(page.locator('.hcmd-input')).toHaveValue('')
+  })
+
+  // ── The hero bar's typed placeholder ──────────────────────────────────────
+  //
+  // FOUNDER, 2026-09-03: "the search box text animation i want that to play on
+  // the homepage hero search bar, and make it not need to be on hover, remove
+  // the try line below it remove the seacrh every tool line above it".
+  //
+  // The two removals are asserted in test 1–4 above. These three cover what had
+  // to replace them, because deleting the chips deleted the only thing on the
+  // page that told a visitor what is searchable. The animation inherits that
+  // job, and a decorative animation cannot do a job — hence "the terms are
+  // real" being pinned as hard as "the terms move".
+
+  test('the hero placeholder types by itself, with nothing hovered or focused', async ({ page }) => {
+    await motionOn(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const input = page.locator('.hcmd-input')
+    await input.waitFor()
+
+    // Not one pointer or keyboard event is sent in this test. That IS the
+    // assertion: the nav's version of this animation is gated behind
+    // `.pnav-search-field:hover` in global.css and would produce nothing at all
+    // under these conditions — which is also every condition on a touch device.
+    await expect
+      .poll(async () => (await input.getAttribute('placeholder')).includes(CARET), {
+        timeout: 9000,
+        message: 'the hero placeholder never started typing on its own',
+      })
+      .toBe(true)
+
+    const seen = await samplePlaceholder(page, 2500)
+    expect(seen.length, `the placeholder is not moving: ${JSON.stringify(seen)}`).toBeGreaterThan(5)
+  })
+
+  test('every term the placeholder types is a tool the bar can actually find', async ({ page }) => {
+    await motionOn(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const input = page.locator('.hcmd-input')
+    await input.waitFor()
+    await expect
+      .poll(async () => (await input.getAttribute('placeholder')).includes(CARET), { timeout: 9000 })
+      .toBe(true)
+
+    // Long enough to see at least one word typed, held and erased.
+    const seen = await samplePlaceholder(page, 9000)
+
+    // Only samples carrying the caret, so the resting placeholder — which is a
+    // sentence, not a query — can never be mistaken for a term.
+    const words = [...new Set(
+      seen.filter(v => v.includes(CARET)).map(v => v.replace(CARET, '')),
+    )].filter(Boolean)
+
+    // A FINISHED word is one that no other observed sample extends. Derived
+    // from what was actually on screen rather than from the component's list,
+    // so this cannot pass by agreeing with the implementation's own bug.
+    const finished = words.filter(w => !words.some(other => other !== w && other.startsWith(w)))
+    expect(finished.length, `no completed term was seen in ${JSON.stringify(words)}`).toBeGreaterThan(0)
+
+    for (const term of finished) {
+      await input.fill(term)
+      await expect(page.locator('.hcmd-row').first(),
+        `the placeholder advertises "${term}", and the bar finds nothing for it`).toBeVisible()
+    }
+  })
+
+  test('reduced motion gets a still placeholder that still names real tools', async ({ page }) => {
+    // No motionOn() here: the describe's own `reducedMotion: 'reduce'` plus the
+    // stored preference IS the condition under test.
+    await reducedMotion(page)
+    watch(page, 'visitor who has asked the OS for less motion')
+    await go(page, '/')
+
+    const input = page.locator('.hcmd-input')
+    await input.waitFor()
+
+    // Three seconds. A character lands every 55ms once typing starts at 1200ms,
+    // so an animation that ran at all would show dozens of distinct values.
+    const seen = await samplePlaceholder(page, 3000)
+    expect(seen, `the placeholder animated under reduced motion: ${JSON.stringify(seen)}`).toHaveLength(1)
+    expect(seen[0], 'a reduced-motion visitor was shown a typing caret').not.toContain(CARET)
+
+    // Still, and still doing the removed chips' job. A reduced-motion visitor
+    // loses the animation; they must not also lose the information, or the
+    // preference has quietly cost them the affordance rather than the effect.
+    const terms = (seen[0].split('—')[1] || '')
+      .split(',').map(s => s.replace(/…/g, '').trim()).filter(Boolean)
+    expect(terms.length, `the resting placeholder names nothing searchable: "${seen[0]}"`).toBeGreaterThan(1)
+
+    for (const term of terms) {
+      await input.fill(term)
+      await expect(page.locator('.hcmd-row').first(),
+        `the resting placeholder names "${term}", and the bar finds nothing for it`).toBeVisible()
+      await input.fill('')
+    }
   })
 
   test('the pricing panel leads with the approved ladder and does not invent proof', async ({ page }) => {
