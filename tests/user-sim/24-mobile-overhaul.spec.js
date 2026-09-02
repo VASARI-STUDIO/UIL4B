@@ -375,6 +375,17 @@ test('S13 · the palette card actions are reachable by keyboard at any tab speed
   watch(page, 'keyboard user in the palette library')
   await page.goto('/discover/palettes', { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('load').catch(() => {})
+  // Wait for the card to EXIST before the settle pause, not instead of it. The
+  // gallery windows its list, so on a contended runner nothing is mounted at
+  // 600ms and the in-page `document.querySelector('.pgal-card')` below crashed
+  // CI with `Cannot read properties of null (reading 'scrollIntoView')` — the
+  // same fault openTouch() above was fixed for, and raising the 600 would only
+  // move the coin flip. The stripe is waited for as well because it is the
+  // element the tab loop itself dereferences. The pause stays: layout after
+  // mount is still worth settling, it just no longer decides whether the test
+  // has anything to measure.
+  await expect(page.locator('.pgal-card').first()).toBeVisible({ timeout: 15000 })
+  await expect(page.locator('.pgal-stripe').first()).toBeVisible({ timeout: 15000 })
   await page.waitForTimeout(600)
 
   await page.evaluate(() => {
