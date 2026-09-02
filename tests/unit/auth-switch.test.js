@@ -87,7 +87,12 @@ test('forced password switching and prompt re-entrancy are guarded', async () =>
   assert.ok(popup.includes('!resetMode && !passwordOnly'))
   assert.ok(popup.includes('!passwordOnly && <div className="auth-links">'))
   assert.ok(popup.includes('readOnly={lockEmail}'))
-  assert.ok(popup.includes('ref={passwordRef}'))
+  // Switching account must land focus on the password field — the email is
+  // already filled and read-only, so anywhere else costs a keyboard user a tab
+  // every time. This used to be pinned as a bare ref={passwordRef}; LoginPopup
+  // now takes the shared useModalDialog contract and asks for the same landing
+  // spot through its initialFocus selector. Same guarantee, named mechanism.
+  assert.ok(popup.includes("initialFocus: passwordOnly ? '#ui-login-password' : '.auth-google-btn'"))
   assert.ok(prompt.includes('if (pendingPromiseRef.current) return pendingPromiseRef.current'))
   assert.ok(prompt.includes('key={prompt.id}'))
   assert.ok(prompt.includes("passwordOnly: opts.mode === 'switch'"))

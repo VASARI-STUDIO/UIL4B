@@ -138,6 +138,18 @@ test.describe('on a phone', () => {
       'nothing in this dialog may sit below the fold at 390px',
     ).toBe(0)
     await expect(dialog.getByRole('button', { name: /continue with google/i })).toBeVisible()
+
+    // And the TALL variant, which is the one that was actually over: the
+    // sign-up form carries a name field on top of everything else, and 53px of
+    // it — including 'Already have an account? Sign in' — sat below the fold
+    // at 390x844 before the pane was reworked.
+    await go(page, '/login?signup=1')
+    const signup = page.getByRole('dialog', { name: /create your free account/i })
+    await expect(signup).toBeVisible()
+    await expect.poll(
+      () => signup.evaluate(el => el.scrollHeight - el.clientHeight),
+      'the tallest variant of this dialog must fit at 390px too',
+    ).toBe(0)
   })
 
   test('the close control has a visible boundary without a hover', async ({ page }) => {
