@@ -419,18 +419,13 @@ test.describe('Font Gallery', () => {
     )
     expect(new Set(boxes).size, 'the sample line must keep a fixed box whatever face lands in it').toBe(1)
 
-    // The ladder is the row's last line and it varies in CONTENT — a family
-    // ships two weights or nine — so it is the one most likely to break the
-    // reserved-metrics contract by growing a row. `:last-child` rather than
-    // `.fg-card-ladder` because the contract is precisely that the pending
-    // skeleton and the loaded ladder reserve the SAME box: with a blocked font
-    // host every row is still a skeleton, and that is the state the reserved
-    // geometry exists for.
-    const ladders = await page.locator('.fg-card-preview > :last-child').evaluateAll(
-      (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
-    )
-    expect(ladders.length, 'every row reserves a ladder line').toBe(heights.length)
-    expect(new Set(ladders).size, 'the weight ladder must keep a fixed box however many cuts it lists').toBe(1)
+    // The row's third line — the weight ladder — has its own reserved box, and
+    // it is the line most likely to break this contract because its content
+    // varies most. It is asserted in "a full-width row spends its width on the
+    // typeface" rather than here: this test runs before any face has verified,
+    // so every row is still a skeleton and a ladder-height check would be
+    // uniform whatever the rule said. There it compares a nine-cut family
+    // against a two-cut one with both faces actually painting.
   })
 
   test('a full-width row spends its width on the typeface, not on empty space', async ({ page }) => {
@@ -439,10 +434,19 @@ test.describe('Font Gallery', () => {
     // exactly like one column by accident unless the row is rebuilt to want the
     // width — so this pins the three lines that do.
     watch(page, 'designer judging a typeface across a full-width row')
-    await page.route('**/api/fonts', route => route.fulfill({ json: { fonts: [{
-      family: 'Lora', category: 'serif', variants: [100, 300, 400, 500, 700, 900],
-      subsets: ['latin', 'latin-ext', 'cyrillic', 'vietnamese'], popularity: 0,
-    }] } }))
+    // Two families with very different weight counts — nine against two — so the
+    // row that varies most in ladder content is compared against the row that
+    // varies least.
+    await page.route('**/api/fonts', route => route.fulfill({ json: { fonts: [
+      {
+        family: 'Lora', category: 'serif', variants: [100, 300, 400, 500, 700, 900],
+        subsets: ['latin', 'latin-ext', 'cyrillic', 'vietnamese'], popularity: 0,
+      },
+      {
+        family: 'PT Sans', category: 'sans-serif', variants: [400, 700],
+        subsets: ['latin', 'cyrillic'], popularity: 1,
+      },
+    ] } }))
 
     await go(page, '/create/font-gallery')
     const row = page.locator('.fg-card').first()
@@ -458,7 +462,7 @@ test.describe('Font Gallery', () => {
     // them, and each numeral is set in the cut it names.
     const ladder = page.locator('.fg-card-ladder').first()
     await expect(ladder).toBeVisible()
-    const steps = page.locator('.fg-card-step')
+    const steps = ladder.locator('.fg-card-step')
     await expect(steps).toHaveCount(5)
     await expect(steps.first()).toHaveText('100')
     await expect(steps.last()).toHaveText('900')
@@ -468,6 +472,17 @@ test.describe('Font Gallery', () => {
     )
     expect(stepWeights, 'each numeral is rendered at the weight it names')
       .toEqual(['100:100', '300:300', '500:500', '700:700', '900:900'])
+
+    // A two-weight family draws two numerals, and its ladder still occupies the
+    // SAME reserved box — the row must not shrink or grow with the weight count,
+    // or a list of mixed families would step up and down as faces arrive.
+    const shortLadder = page.locator('.fg-card-ladder').nth(1)
+    await expect(shortLadder.locator('.fg-card-step')).toHaveCount(2)
+    const ladderBoxes = await page.locator('.fg-card-ladder').evaluateAll(
+      (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
+    )
+    expect(ladderBoxes.length).toBe(2)
+    expect(new Set(ladderBoxes).size, 'nine cuts and two cuts reserve the same ladder box').toBe(1)
 
     // The body line is running text at body weight, not a 43-character squeeze.
     const bodyLine = await page.locator('.fg-card-pangram').first().textContent()
