@@ -25,6 +25,14 @@ function GoogleIcon() {
   )
 }
 
+function Tick() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
 // Single-click sign-in. Opened over the current page (never navigates to
 // /login) so the user resumes exactly where they were on success. Composes the
 // existing HVZ auth functions — it does not touch AuthContext itself.
@@ -160,7 +168,15 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
     ? unlocks.filter(u => typeof u === 'string' && u.trim())
     : DEFAULT_UNLOCKS
   const showIntent = !!reason && !resetMode && !passwordOnly
-  const showUnlocks = showIntent && free && unlockList.length > 0 && !showWhy
+
+  // The pane also opens for a reason-less SIGN-UP. "Start for Free" in the nav,
+  // the header pill, the overflow menu, the bottom CTA and SystemCTA all open
+  // this popup with signup:true and no reason, and every one of them landed a
+  // first-time visitor on a bare three-field form with nothing anywhere saying
+  // what the account is for. `reason` gates the interruption copy; creating an
+  // account is its own reason to answer the question.
+  const showAside = showIntent || (isSignup && !resetMode && !passwordOnly)
+  const showUnlocks = showAside && free && unlockList.length > 0 && !showWhy
 
   // "Log in to continue" — matching the NAV TRIGGER, which says "Log in".
   //
@@ -184,50 +200,87 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
     <div className="ui-modal-overlay" onMouseDown={() => { if (!loading) onDismiss() }}>
       <div
         ref={dialogRef}
-        className="ui-modal ui-login"
+        className={'ui-modal ui-login' + (showAside ? ' ui-login--split' : '')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ui-login-title"
-        aria-describedby={showIntent ? 'ui-login-intent' : undefined}
+        aria-describedby={showAside ? 'ui-login-promise' : undefined}
         tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
       >
+        {/* Lifted out of .ui-modal-head and positioned over the dialog, the way
+            the Pro modal's close button already is, because the head is no
+            longer the top-left corner of this dialog at width — the reason pane
+            is. It stays the FIRST focusable in DOM order, which is what makes
+            Shift+Tab off it wrap round to the last control. */}
+        <button type="button" className="ui-modal-x ui-login-x" onClick={onDismiss} aria-label="Close" disabled={loading}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+
+        {/* The reason pane.
+
+            This was a tinted card stacked on top of the form, which pushed the
+            single most important control on the surface — Continue with Google —
+            below three boxed panels on a phone. It is now a column of its own
+            beside the form at width, and a short band above it below 781px, on
+            the same grid the Pro modal already uses for its proof rail. Nothing
+            here is behind a hover: on touch the pane is simply there.
+
+            The copy answers the two questions an interruption raises, in the
+            order a person asks them: what was I doing, and do I lose it. Naming
+            the action first is deliberate — "you must log in to X" reads as a
+            scold and buries the thing the user cared about. The return promise
+            is literally true: LoginPromptContext resolves a promise over the
+            current page and never navigates. */}
+        {showAside && (
+          <aside className="ui-login-aside">
+            <p className="ui-login-eyebrow">{showIntent ? 'Where you left off' : 'What a free account gets you'}</p>
+            <p className="ui-login-promise" id="ui-login-promise">
+              {showIntent
+                ? <>You were about to <strong>{reason}</strong>.</>
+                : <>Your palettes, type scales and gradients, <strong>kept</strong>.</>}
+            </p>
+            <p className="ui-login-aside-sub">
+              {showIntent
+                ? 'This opened over your work instead of navigating away, so signing in hands you straight back to it.'
+                : 'An account is where your saved work lives. Without one, everything you build here goes when the tab does.'}
+            </p>
+            {showWhy && (
+              <div className="ui-login-why">
+                <p className="ui-login-why-h">Why we ask first</p>
+                <ul className="ui-login-why-list">
+                  {whyList.map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
+            )}
+            {showUnlocks && (
+              <ul className="ui-login-gets">
+                {unlockList.map(item => (
+                  <li className="ui-login-get" key={item}>
+                    <span className="ui-login-get-tick"><Tick /></span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {/* The way out, stated as plainly as the way in — the same rule
+                that puts a real "Maybe later" button on the Pro modal
+                (growth-persuasion.md guardrail 3). It is also the honest
+                description of what dismissing does: onDismiss resolves the
+                caller's promise with null and nothing navigates or is
+                discarded. Anchored to the bottom of the pane at width, which
+                is what stops the column reading as half-finished. */}
+            <p className="ui-login-aside-foot">
+              Not now? Closing this changes nothing — your work stays exactly as it is.
+            </p>
+          </aside>
+        )}
+
         <div className="ui-modal-head">
           <h2 className="ui-modal-title" id="ui-login-title">{title}</h2>
-          <button type="button" className="ui-modal-x" onClick={onDismiss} aria-label="Close" disabled={loading}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-          </button>
         </div>
 
         <div className="ui-modal-body">
-          {showIntent && (
-            // Name the interrupted action first. "You must log in to X" reads as
-            // a scold and buries the thing the user was doing; leading with the
-            // action tells them the app didn't lose their place — and the return
-            // promise is literally true: LoginPromptContext resolves a promise
-            // over the current page and never navigates, so the caller resumes
-            // exactly where it was.
-            <div className="ui-login-intent" id="ui-login-intent">
-              <p className="ui-login-intent-h">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
-                <span>You were about to <strong>{reason}</strong>.</span>
-              </p>
-              {showUnlocks && (
-                <ul className="ui-login-unlocks">
-                  {unlockList.map(item => <li key={item}>{item}</li>)}
-                </ul>
-              )}
-              <p className="ui-login-intent-back">We’ll bring you straight back to it.</p>
-            </div>
-          )}
-          {showWhy && (
-            <div className="ui-login-why" id="ui-login-why">
-              <p className="ui-login-why-h">Why we ask first</p>
-              <ul className="ui-login-why-list">
-                {whyList.map(item => <li key={item}>{item}</li>)}
-              </ul>
-            </div>
-          )}
           {passwordOnly && (
             <p className="ui-login-note">
               <span>Sign in as <strong>{initialEmail}</strong>. Your current account stays active unless this sign-in succeeds.</span>
@@ -248,8 +301,16 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
             <>
               {!resetMode && !passwordOnly && (
                 <>
-                  <button className="auth-google-btn" type="button" onClick={handleGoogle} disabled={loading}>
-                    <GoogleIcon />
+                  {/* The accent moved here from the submit button below.
+                      Focus already landed on this control on open, so the app
+                      was calling Google the primary path with its keyboard
+                      behaviour while drawing it as the quiet outline and giving
+                      the accent to the slower two-field one. The two now agree.
+                      The mark keeps its white ground rather than being recoloured
+                      onto the fill, which is both Google's brand requirement and
+                      the only way the multicolour G stays legible on blue. */}
+                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={loading}>
+                    <span className="auth-google-mark"><GoogleIcon /></span>
                     {t('auth.continueWithGoogle') || 'Continue with Google'}
                   </button>
                   <div className="auth-divider"><span>{t('auth.orEmail') || 'or with email'}</span></div>
@@ -273,7 +334,10 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
                     <input id="ui-login-password" type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder') || '••••••••'} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
                   </div>
                 )}
-                <button className="btn btn-accent auth-submit" type="submit" disabled={loading}>
+                {/* Deliberately NOT .btn-accent any more — see the Google
+                    button above. Two accent fills on one surface is two
+                    primaries, which is none. */}
+                <button className="btn auth-submit" type="submit" disabled={loading}>
                   {loading ? (t('auth.pleaseWait') || 'Please wait…') : resetMode ? (t('auth.sendResetLink') || 'Send reset link') : isSignup ? (t('auth.createAccount') || 'Create account') : passwordOnly ? 'Switch account' : (t('common.signIn') || 'Sign in')}
                 </button>
               </form>
