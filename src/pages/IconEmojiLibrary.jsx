@@ -2,6 +2,7 @@ import { lazy, Suspense, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import useOnline from '../hooks/useOnline'
 import { useI18n } from '../contexts/I18nContext'
+import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 
 const IconLibrary = lazy(() => import('./IconLibrary'))
 const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
@@ -57,57 +58,73 @@ export default function IconEmojiLibrary({ onCopy }) {
   return (
     <>
     <div className="sec">
-      <header className="lib-head">
-        <div className="lib-head-copy">
-          <span className="lib-eyebrow">Asset library</span>
-          {/* /create/icons and /create/emoji are two separate indexable URLs sharing this
-              component, and they shared this headline verbatim — so both pages
-              announced "Find the right symbol. Keep building." to a crawler and
-              to anyone navigating by heading. The subtitle below already
-              differed per tab; the h1 is the one that matters most and did not. */}
-          <h1>{tab === 'icon' ? 'Icons for every interface.' : 'Every emoji, one tap away.'}</h1>
-          <p>{tab === 'icon' ? t('iconLibrary.subtitle') : t('emojiLibrary.subtitle')}</p>
-        </div>
-        <div className="lib-switch" role="tablist" aria-label="Choose asset library">
-          <button
-            id="lib-tab-icon"
-            type="button"
-            role="tab"
-            aria-selected={tab === 'icon'}
-            aria-controls="lib-panel-icon"
-            tabIndex={tab === 'icon' ? 0 : -1}
-            className={`lib-switch-btn${tab === 'icon' ? ' is-active' : ''}`}
-            ref={(node) => { if (node) tabRefs.current.icon = node }}
-            onClick={() => activateTab('icon')}
-            onKeyDown={(event) => onTabKeyDown(event, 'icon')}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5" /><circle cx="17" cy="7" r="3" /><path d="m7 14-3 6h6zM14 14h6v6h-6z" /></svg>
-            <span><strong>Icons</strong><small>SVG and JSX</small></span>
-          </button>
-          <button
-            id="lib-tab-emoji"
-            type="button"
-            role="tab"
-            aria-selected={tab === 'emoji'}
-            aria-controls="lib-panel-emoji"
-            tabIndex={tab === 'emoji' ? 0 : -1}
-            className={`lib-switch-btn${tab === 'emoji' ? ' is-active' : ''}`}
-            ref={(node) => { if (node) tabRefs.current.emoji = node }}
-            onClick={() => activateTab('emoji')}
-            onKeyDown={(event) => onTabKeyDown(event, 'emoji')}
-          >
-            <span className="lib-switch-emoji" aria-hidden="true">🙂</span>
-            <span><strong>Emoji</strong><small>Unicode, copy-ready</small></span>
-          </button>
-        </div>
-        <div className="lib-head-status">
-          <span className={online ? 'lib-net is-online' : 'lib-net is-offline'}>
-            <i aria-hidden="true" />
-            {online ? 'Live library connected' : 'Offline · built-in assets remain available'}
-          </span>
-          <span className="lib-keyhint">Use ← → to switch</span>
-        </div>
-      </header>
+      {/* THE SHARED LIBRARY MASTHEAD. #292 moved this surface's browse language
+          onto the Palette/Gradient components; the hero was not part of that,
+          so it stayed on a bespoke `.lib-head` — light, flush, 56px/720-weight
+          — next to two galleries wearing a 110px serif on a dark band. Founder
+          request: match the feeling of the other gallery pages. Same direction
+          of travel as #292: this page joins the existing pattern.
+
+          THE HEADLINE IS NOW THE LIBRARY'S NAME. The galleries' agreed
+          vocabulary is title case with no trailing full stop ("Palette
+          Library"), which tests/user-sim/15-discover-library-parity.spec.js
+          already pins for them. "Icons for every interface." was a sentence, so
+          it sat outside that vocabulary AND disagreed with the <title> the same
+          route ships ("UI L4B | Icon Library"). The two tabs still differ from
+          each other, which is the constraint that matters: /create/icons and
+          /create/emoji are two indexable URLs and must not share an h1. */}
+      <DiscoverGalleryHero
+        eyebrow="Create / Assets"
+        title={tab === 'icon' ? 'Icon Library' : 'Emoji Library'}
+        description={tab === 'icon' ? t('iconLibrary.subtitle') : t('emojiLibrary.subtitle')}
+        aside={(
+          <>
+            {/* The galleries put a decorative count in this column. This surface
+                puts the control that says WHICH library you are in — so it goes
+                through `aside`, not `mark`: never aria-hidden, and never
+                dropped on a narrow screen the way the count is. */}
+            <div className="lib-switch" role="tablist" aria-label="Choose asset library">
+              <button
+                id="lib-tab-icon"
+                type="button"
+                role="tab"
+                aria-selected={tab === 'icon'}
+                aria-controls="lib-panel-icon"
+                tabIndex={tab === 'icon' ? 0 : -1}
+                className={`lib-switch-btn${tab === 'icon' ? ' is-active' : ''}`}
+                ref={(node) => { if (node) tabRefs.current.icon = node }}
+                onClick={() => activateTab('icon')}
+                onKeyDown={(event) => onTabKeyDown(event, 'icon')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5" /><circle cx="17" cy="7" r="3" /><path d="m7 14-3 6h6zM14 14h6v6h-6z" /></svg>
+                <span><strong>Icons</strong><small>SVG and JSX</small></span>
+              </button>
+              <button
+                id="lib-tab-emoji"
+                type="button"
+                role="tab"
+                aria-selected={tab === 'emoji'}
+                aria-controls="lib-panel-emoji"
+                tabIndex={tab === 'emoji' ? 0 : -1}
+                className={`lib-switch-btn${tab === 'emoji' ? ' is-active' : ''}`}
+                ref={(node) => { if (node) tabRefs.current.emoji = node }}
+                onClick={() => activateTab('emoji')}
+                onKeyDown={(event) => onTabKeyDown(event, 'emoji')}
+              >
+                <span className="lib-switch-emoji" aria-hidden="true">🙂</span>
+                <span><strong>Emoji</strong><small>Unicode, copy-ready</small></span>
+              </button>
+            </div>
+            <div className="lib-head-status">
+              <span className={online ? 'lib-net is-online' : 'lib-net is-offline'}>
+                <i aria-hidden="true" />
+                {online ? 'Live library connected' : 'Offline · built-in assets remain available'}
+              </span>
+              <span className="lib-keyhint">Use ← → to switch</span>
+            </div>
+          </>
+        )}
+      />
 
       {/* Both panels stay mounted once visited; only the active one is shown. */}
       <div
