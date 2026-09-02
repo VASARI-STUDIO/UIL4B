@@ -1,5 +1,15 @@
 import { Link, NavLink } from 'react-router-dom'
 
+// Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
+// decisions — 2026-08-20", decision 3 — and the Help Centre and Settings already
+// link it exactly this way. Like those two it stays a literal rather than going
+// through safeHttpUrl(): that guard is for URLs arriving at RUNTIME (community
+// submissions, prompt profile links), and a constant in this file has no
+// untrusted path to guard. No rel="nofollow" either — that is for the curated
+// and member-submitted third-party links in Discover and Community. This one is
+// ours, and we want it followed.
+const FOUNDER_PORTFOLIO = 'https://dylan-coleman.com/'
+
 const FOOTER_GROUPS = [
   {
     label: 'Create',
@@ -63,7 +73,18 @@ export default function AppFooter({ compact = false }) {
         </nav>
         <div className="app-footer-legal">
           <span className="app-footer-copy">© {year} UIL4B</span>
-          <span>Built in Brisbane for people who ship interfaces.</span>
+          <span>
+            Built in Brisbane by{' '}
+            <a
+              className="app-footer-attrib"
+              href={FOUNDER_PORTFOLIO}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Dylan Coleman<span aria-hidden="true"> ↗</span>
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          </span>
         </div>
       </div>
     </footer>
