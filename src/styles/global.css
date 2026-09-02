@@ -2788,6 +2788,40 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .fb-sending-as{font-size:11px;color:var(--t3)}
 .fb-error{font-size:12px;color:var(--err);background:color-mix(in srgb,var(--err) 10%,transparent);border:1px solid color-mix(in srgb,var(--err) 30%,transparent);border-radius:var(--radius-s);padding:10px 12px}
 .fb-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
+
+/* ─── What is attached, shown before it is sent ──────────────────────────────
+   A quiet inset block, not a card and not a warning. It is the plain truth
+   about the payload, so it should read as part of the form rather than as an
+   alarm — a yellow box here would teach people to dismiss it unread.
+
+   Deliberately NOT a collapsed <details>: "show the user exactly what is
+   attached" and "hide it behind a chevron most people never open" are not the
+   same promise. It costs vertical space; .fb-body already scrolls. */
+.fb-cap{gap:8px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
+.fb-cap-intro{font-size:12px;line-height:1.6;color:var(--t2);margin:0}
+.fb-cap-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.fb-cap-label{display:flex;align-items:center;gap:9px;min-height:32px;padding:3px 6px;border-radius:var(--radius-s);cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+.fb-cap-label:hover{background:var(--hvr)}
+.fb-cap-check{flex-shrink:0;width:15px;height:15px;accent-color:var(--accent);cursor:pointer;margin:0}
+.fb-cap-name{flex-shrink:0;font-size:12px;font-weight:560;color:var(--t1)}
+/* The value is the evidence. It gets the mono face because it is a literal —
+   the exact string that will appear in the report, not a paraphrase of it. */
+.fb-cap-value{flex:1;min-width:0;font-family:var(--mono);font-size:11px;color:var(--t2);text-align:right;overflow-wrap:anywhere}
+/* Struck through rather than hidden, so an unticked row still shows WHAT was
+   declined. Removing the row on untick would make the list shrink under the
+   pointer and lose the record of the choice. */
+.fb-cap-value.off{color:var(--t3);text-decoration:line-through}
+.fb-cap-tip{font-size:11px;line-height:1.6;color:var(--t3);margin:2px 0 0;padding-top:8px;border-top:1px solid var(--border)}
+
+/* Stacked at phone width: label and value side by side stops fitting once the
+   value is a route or a selector, and squeezing them produces a two-line
+   value column next to a two-line label. */
+@media(max-width:520px){
+  .fb-cap-label{align-items:flex-start;flex-wrap:wrap;padding:6px}
+  .fb-cap-check{margin-top:2px}
+  .fb-cap-value{flex-basis:100%;margin-left:24px;text-align:left}
+}
+
 .fb-success{display:flex;flex-direction:column;align-items:center;text-align:center;padding:36px 24px 30px}
 .fb-success-icon{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:color-mix(in srgb,var(--ok) 12%,transparent);margin-bottom:16px}
 .fb-success-title{font-size:18px;font-weight:700;color:var(--t0);margin-bottom:8px}
@@ -10219,6 +10253,27 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .pop-sep{height:1px;margin:var(--s-1) 6px;background:var(--border)}
 .pop-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;background:none;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
+
+/* ─── The app-wide right-click menu (FeedbackContextMenu) ────────────────────
+   The anchor is a zero-height, MENU-WIDE box whose left edge sits on the
+   pointer. That width is not decorative: usePopover's placePopover end-aligns
+   a panel on its trigger's right edge, so an anchor exactly one menu wide
+   lands the panel's LEFT edge on the pointer — a menu that opens down-and-right
+   like every native one, with the hook's own edge-flipping and max-height
+   still doing the work. A zero-WIDTH anchor would open leftward.
+
+   pointer-events:none so the invisible anchor box cannot eat clicks on the
+   page it is floating over; the panel turns them back on for itself. */
+.fbx-anchor{position:fixed;width:260px;height:0;z-index:400;pointer-events:none}
+.fbx-menu{width:100%;pointer-events:auto}
+/* The head is the element signature, and it is the one place a monospace
+   literal belongs in this menu: it is a selector, not a label. .pop-head is
+   already mono/uppercase, so only the casing needs correcting — a selector
+   uppercased is a different selector. */
+.fbx-menu .pop-head{text-transform:none;letter-spacing:.02em;overflow-wrap:anywhere;color:var(--t2)}
+.fbx-note{font-size:11px;line-height:1.5;color:var(--t3);margin:0;padding:2px 10px 4px}
+.fbx-dismiss{display:block;width:100%;padding:6px 10px 4px;border:none;background:none;font-family:var(--font);font-size:11px;line-height:1.5;color:var(--t3);text-align:left;cursor:pointer;border-radius:var(--radius-s)}
+.fbx-dismiss:hover{background:var(--hvr);color:var(--t2)}
 
 /* ── The nav popovers, brought onto the shared language ─────────────────── */
 /* Small accent TEXT must use --accent-strong: --accent measures 3.82:1 on the
