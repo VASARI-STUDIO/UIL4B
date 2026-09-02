@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { buildReportContext, withReportContext } from '../utils/reportContext'
+import { buildReportContext, withReportContext, contextRows, omitContext } from '../utils/reportContext'
 import { resolveTool } from '../data/toolTree'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
 import useModalDialog from '../hooks/useModalDialog'
 
@@ -61,13 +63,16 @@ const TYPES = [
   },
 ]
 
-export default function FeedbackModal({ open, onClose }) {
+export default function FeedbackModal({ open, onClose, seed = null }) {
   const { user, userProfile } = useAuth()
   // P-002: the report carries where the user was, so acting on it does not
   // start with a round trip asking which page they meant.
   const location = useLocation()
   const { isPro } = useSubscription()
+  const { theme } = useTheme()
+  const { reducedMotion } = useAppearance()
   const titleId = useId()
+  const capId = useId()
 
   const [typeId, setTypeId] = useState('feedback')
   const [selections, setSelections] = useState({}) // { category, severity }
@@ -76,11 +81,29 @@ export default function FeedbackModal({ open, onClose }) {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState(false)
+  // What we propose to attach, frozen at the moment the dialog opened, and the
+  // keys the user has switched off. Frozen rather than recomputed at submit
+  // time so the list they approved is byte-for-byte the list that is sent —
+  // a disclosure that can drift between being read and being acted on is not
+  // a disclosure.
+  const [capture, setCapture] = useState({})
+  const [removed, setRemoved] = useState([])
 
   const overlayRef = useRef(null)
   const firstControlRef = useRef(null)
 
+  // Has this opening already been initialised? The open effect below depends on
+  // every value it captures — which is correct, and what the linter wants — but
+  // it must still run only ONCE per opening: re-running it because the user
+  // flipped the theme mid-sentence would reset every field and wipe what they
+  // had written. The flag turns a value-change re-run into a no-op.
+  const initialisedRef = useRef(false)
+
   const activeType = TYPES.find(t => t.id === typeId) || TYPES[0]
+  // Label/value rows in the canonical order, straight from the same module
+  // that decides what may be captured at all — so the panel cannot show one
+  // set of facts while a different set is sent.
+  const rows = contextRows(capture)
 
   // The <select> shows the first option when untouched, so the payload must
   // resolve to that same value rather than an empty string.
@@ -109,15 +132,37 @@ export default function FeedbackModal({ open, onClose }) {
   // Fully reset (including the chosen type) whenever the modal is freshly opened,
   // and focus the first control.
   useEffect(() => {
-    if (!open) return undefined
-    setTypeId('feedback')
+    if (!open) { initialisedRef.current = false; return undefined }
+    if (initialisedRef.current) return undefined
+    initialisedRef.current = true
+    // A right-click on something broken already told us this is a bug report;
+    // making the user say so again is a step for nothing.
+    setTypeId(seed?.typeId || 'feedback')
     resetFields()
+    setRemoved([])
+    setCapture(buildReportContext({
+      pathname: location.pathname,
+      tool: resolveTool(location.pathname)?.tool?.label || null,
+      // Only the context menu supplies this — a report opened from the button
+      // was not pointed at anything in particular, and inventing an element
+      // for it would be a fact we made up.
+      element: seed?.element || null,
+      viewport: typeof window !== 'undefined'
+        ? { width: window.innerWidth, height: window.innerHeight }
+        : null,
+      pixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : null,
+      theme,
+      reducedMotion,
+      plan: isPro ? 'pro' : 'free',
+      signedIn: !!user,
+      appVersion: import.meta.env.VITE_APP_VERSION || null,
+    }))
     // Focus after paint so the element is actually in the DOM. This runs after
     // the hook has focused the dialog itself, which is the intended order: the
     // dialog is announced, then the first control takes focus.
     const raf = requestAnimationFrame(() => firstControlRef.current?.focus())
     return () => cancelAnimationFrame(raf)
-  }, [open, resetFields])
+  }, [open, seed, resetFields, location.pathname, theme, reducedMotion, isPro, user])
 
   if (!open) return null
 
@@ -145,15 +190,12 @@ export default function FeedbackModal({ open, onClose }) {
       // one means asking "which page were you on?" — and most people never
       // reply to that. It is also the proposal's own mitigation for low-quality
       // volume: capture the context so the user need not describe it.
-      message: withReportContext(message.trim(), buildReportContext({
-        pathname: location.pathname,
-        tool: resolveTool(location.pathname)?.tool?.label || null,
-        viewport: typeof window !== 'undefined'
-          ? { width: window.innerWidth, height: window.innerHeight }
-          : null,
-        plan: isPro ? 'pro' : 'free',
-        signedIn: !!user,
-      })),
+      //
+      // `omitContext` is applied HERE, at the only point where anything leaves
+      // the browser, so an unticked row is absent from the request body, from
+      // the localStorage copy below and from the store — not merely hidden in
+      // the panel above.
+      message: withReportContext(message.trim(), omitContext(capture, removed)),
       email,
       // 'inline' is a value api/support.js actually accepts. 'feedback-modal'
       // was not in VALID_SOURCES, so the server silently replaced it with
@@ -291,6 +333,53 @@ export default function FeedbackModal({ open, onClose }) {
                 required
               />
             </div>
+
+            {/* What we are about to attach, in the open, itemised, before they
+                send — not a "some system information may be included" sentence
+                that tells the reader nothing they can act on. Every row is one
+                tick, and unticking it genuinely drops the value. */}
+            {rows.length > 0 && (
+              <div className="fb-field fb-cap">
+                <div className="fb-label" id={capId}>
+                  Attached to this report
+                  <span className="fb-optional"> ({rows.length - removed.length} of {rows.length})</span>
+                </div>
+                <p className="fb-cap-intro">
+                  These help us reproduce what you saw. Untick anything you would rather not send.
+                  We never attach what you have typed, the contents of any field, or the text on the page.
+                </p>
+                <ul className="fb-cap-list" aria-labelledby={capId}>
+                  {rows.map(row => {
+                    const on = !removed.includes(row.key)
+                    return (
+                      <li key={row.key} className="fb-cap-row">
+                        <label className="fb-cap-label">
+                          <input
+                            type="checkbox"
+                            className="fb-cap-check"
+                            checked={on}
+                            onChange={() => setRemoved(prev => (
+                              prev.includes(row.key) ? prev.filter(k => k !== row.key) : [...prev, row.key]
+                            ))}
+                          />
+                          <span className="fb-cap-name">{row.label}</span>
+                          <span className={`fb-cap-value${on ? '' : ' off'}`}>{row.value}</span>
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {!seed?.element && (
+                  // Discoverability without a hover affordance: the tip appears
+                  // in the one place where its value is obvious, and only when
+                  // they did not already arrive by the gesture it describes.
+                  <p className="fb-cap-tip">
+                    Tip: right-click anywhere in the app (or press the Menu key) to report a
+                    specific element with its name filled in.
+                  </p>
+                )}
+              </div>
+            )}
 
             {user && <div className="fb-sending-as">Sending as {user.email}</div>}
 
