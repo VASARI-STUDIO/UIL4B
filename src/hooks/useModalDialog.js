@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { getLenis } from './useSmoothScroll.js'
+import { markScrollContainers } from '../utils/scrollContainment.js'
 
 // The keyboard contract every modal surface in the app owes its user: a focus
 // trap, Escape to close, the background scroll locked while it is open, and
@@ -42,7 +44,37 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     const openerChain = []
     for (let n = opener; n && n !== document.body; n = n.parentElement) openerChain.push(n)
     const node = ref.current
+
+    // THE SCROLL LOCK, and why one line of it was decoration.
+    //
+    // `document.body.style.overflow = 'hidden'` is the whole lock this hook used
+    // to apply, and it does not hold. Measured 2026-09-03 in the production
+    // build: with the lock applied, one real wheel gesture over the page moved
+    // it from 0 to 600, and `window.scrollTo(0, 600)` moved it too. Lenis does
+    // not use the browser's scrolling mechanism — it cancels the wheel event and
+    // scrolls the document programmatically — and `overflow: hidden` only
+    // withdraws the mechanism, it does not make a box unscrollable. So the lock
+    // was aimed at the one layer that was never doing the scrolling.
+    //
+    // Stopping Lenis is what actually holds: a stopped instance swallows the
+    // wheel instead of acting on it, so the page behind the dialog cannot move
+    // at all. ExportPanel and IconLibrary had both worked this out and written
+    // it by hand; it belongs here, where every dialog gets it.
+    //
+    // The body lock STAYS, and is not redundant: with reduced motion on, Lenis
+    // is never instantiated, `getLenis()` returns null and the browser is doing
+    // the scrolling again — which is exactly the case the body lock does hold.
+    // The two cover each other's gap.
+    //
+    // Marking the dialog and its scroll containers `data-lenis-prevent` is what
+    // keeps the dialog's OWN content scrollable while Lenis is stopped: Lenis
+    // checks for that attribute before it checks whether it is stopped, so the
+    // gesture reaches the browser and the dialog scrolls natively. Without it a
+    // stopped Lenis would freeze the dialog's body along with the page — the bug
+    // wearing its opposite coat.
     document.body.style.overflow = 'hidden'
+    getLenis()?.stop()
+    const unmark = markScrollContainers(node)
 
     const focusables = () => Array.from(
       node?.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') || [],
@@ -69,6 +101,8 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     return () => {
       document.removeEventListener('keydown', onKey, true)
       document.body.style.overflow = ''
+      getLenis()?.start()
+      unmark()
       const restore = openerChain.find(el => el.isConnected && typeof el.focus === 'function')
       if (!restore) return
       // A surviving ANCESTOR is usually a container, which is not focusable on
