@@ -31,7 +31,10 @@ Every interactive feature must visibly handle all four:
 - **Double-submit guard.** Disable buttons during async work.
 - **localStorage may throw.** Wrap reads/writes in `try/catch` (the codebase
   already does this for `vs-onboarded`, analytics keys, etc.).
-- **Responsive down to 320px and up to 4K.** Breakpoints: 768 (tablet),
-  480 (phone), 380 (tiny). See `css-conventions.md`.
+- **Responsive down to 320px and up to 4K.** `css-conventions.md` owns the
+  breakpoint scale and the widths to test at — read it there rather than from
+  this line. It used to name "768 (tablet), 480 (phone), 380 (tiny)", a triple
+  that omitted **640px**, the most-used breakpoint in the stylesheet, and never
+  mentioned the 641–900px band where this app actually breaks.
 - **Mid-action navigation.** Don't leave the app in a broken state if the user
   leaves a flow halfway.

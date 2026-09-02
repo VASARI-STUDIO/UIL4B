@@ -43,6 +43,21 @@ In particular:
 - Read live code for implemented values instead of copying values into a skill
   or agent unless they are durable brand decisions.
 
+### Known conflicts with the vendored skills
+
+The vendored skills are unmodified upstream text, so they carry generic advice
+that UIL4B has already decided against. Do not edit them to fix this — they are
+MIT-licensed third-party files and diverging them makes the next update painful.
+Apply the precedence order instead. The two that come up:
+
+- **`frontend-ui-engineering` names breakpoints 320 / 768 / 1024 / 1440 and
+  shows Tailwind classes.** UIL4B has no Tailwind, and those are not our
+  breakpoints. `docs/reference/css-conventions.md` owns the scale and the widths
+  to test at; `uil4b-surface-review/references/responsive-bands.md` owns which
+  bands actually break.
+- **Several assume per-component stylesheets or CSS-in-JS.** UIL4B is one
+  `src/styles/global.css`, class-based, no exceptions.
+
 ## Updating knowledge
 
 Update the narrowest authoritative layer:

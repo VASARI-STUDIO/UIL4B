@@ -320,8 +320,28 @@ iPad-portrait in the stacked layout. Leave it.
 > these onto the scale is a **reviewed** pass (D1), not a blind snap — each one
 > is tied to real content geometry, so moving it can reintroduce overflow.
 
-Designs must hold from **320px → 4K**. Test the affected screen at 768 / 480 /
-380 before claiming done (see `murphys-law.md`).
+### Which widths to actually test
+
+Designs must hold from **320px → 4K**. Test the affected screen at
+**390 / 640 / 834 / 1280** before claiming done, and add any width the component
+itself reflows at.
+
+**This replaces the old "768 / 480 / 380" triple**, which three documents
+repeated — this file, `murphys-law.md` and `build-and-verify.md` — and which was
+wrong in the same way in all three:
+
+- It omitted **640px**, which carries **30** `@media` blocks in `global.css`,
+  more than any other width and more than 768px's 19. Every shared browse
+  toolbar stacks there and nowhere else (`.lbry-toolbar`, `.lbry-filters`,
+  `.lbry-toolbar-action`).
+- It left the **641–900px band** untested. At 834px — iPad portrait in landscape
+  orientation, and a real device — the 640px overrides are all off, so a tablet
+  is served the desktop branch. That band is where
+  `.plb-toolbar-group:last-child` hides 7 of 11 controls including Randomise,
+  recorded in this stylesheet's own "THE RECURRING DEFECT" note.
+
+Full band-by-band detail, and what breaks in each, is in
+[`.claude/skills/uil4b-surface-review/references/responsive-bands.md`](../../.claude/skills/uil4b-surface-review/references/responsive-bands.md).
 
 ## Accessibility
 
