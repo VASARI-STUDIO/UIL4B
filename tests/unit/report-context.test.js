@@ -15,7 +15,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { buildReportContext, formatReportContext, withReportContext } from '../../src/utils/reportContext.js'
+import {
+  buildReportContext, formatReportContext, withReportContext,
+  contextRows, omitContext, CONTEXT_FIELDS,
+} from '../../src/utils/reportContext.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -125,4 +128,129 @@ test('context rides in an existing field, so no API change was needed', () => {
   const api = read('api/support.js')
   assert.match(api, /const \{ type, subject, message, email, source \} = req\.body/,
     'the server contract must be unchanged')
+})
+
+// ── The right-click capture (backlog `right-click-feedback`) ────────────────
+//
+// Founder request 2026-09-02: open feedback with the details PREFILLED, so a
+// report is easy to find and replicate. The note is explicit that "PRIVACY IS
+// PART OF THE TASK, not an afterthought: show the user exactly what is
+// attached before they send, and let them remove any of it". These tests hold
+// both halves — what may be captured, and that removal is real rather than
+// cosmetic.
+
+test('a right-click report adds the element, theme, motion and build', () => {
+  const c = buildReportContext({
+    pathname: '/create/icons',
+    element: 'button.plb-add',
+    theme: 'dark',
+    reducedMotion: true,
+    appVersion: '2.8.1',
+    viewport: { width: 390, height: 844 },
+    pixelRatio: 3,
+  })
+  assert.equal(c.element, 'button.plb-add')
+  assert.equal(c.theme, 'dark')
+  assert.equal(c.motion, 'reduced')
+  assert.equal(c.build, '2.8.1')
+  assert.equal(c.viewport, '390x844 @3x')
+})
+
+test('reduced motion being OFF is still recorded', () => {
+  // "motion: full" is what rules the setting out as a cause. A field that only
+  // appears sometimes is one a triager learns to distrust.
+  assert.equal(buildReportContext({ pathname: '/', reducedMotion: false }).motion, 'full')
+})
+
+test('a 1x display adds no scale noise', () => {
+  assert.equal(
+    buildReportContext({ pathname: '/', viewport: { width: 1440, height: 900 }, pixelRatio: 1 }).viewport,
+    '1440x900',
+  )
+})
+
+test('every field the builder can emit is one the user is shown', () => {
+  // The anti-drift test, and the one that actually enforces the privacy
+  // promise. CONTEXT_FIELDS is what the disclosure panel renders; if a future
+  // change starts capturing something that is not in that list, it would be
+  // sent without ever appearing in front of the user. That must fail here.
+  const everything = buildReportContext({
+    pathname: '/create/palette', tool: 'Palette', element: 'button.x',
+    viewport: { width: 1, height: 1 }, pixelRatio: 2, theme: 'light',
+    reducedMotion: false, plan: 'pro', signedIn: true, appVersion: '9.9.9',
+  })
+  const declared = new Set(CONTEXT_FIELDS.map(f => f.key))
+  for (const key of Object.keys(everything)) {
+    assert.ok(declared.has(key), `'${key}' is captured but never shown to the user`)
+  }
+})
+
+test('every shown field has plain-language wording, not a variable name', () => {
+  // Someone deciding whether to send this should not have to be a developer to
+  // know what they are agreeing to.
+  for (const f of CONTEXT_FIELDS) {
+    assert.ok(f.label && f.label.length > 3, `${f.key} needs a human label`)
+    assert.notEqual(f.label, f.key)
+  }
+})
+
+test('the rows shown are the canonical order, skipping what was not captured', () => {
+  const rows = contextRows(buildReportContext({ pathname: '/help', theme: 'dark' }))
+  assert.deepEqual(rows.map(r => r.key), ['route', 'theme'])
+  assert.equal(rows[0].label, 'Page you were on')
+  assert.equal(rows[0].value, '/help')
+})
+
+test('unticking a row genuinely drops it from what is sent', () => {
+  // Not "hidden from the panel". A control that only appears to remove
+  // something is worse than no control at all.
+  const full = buildReportContext({ pathname: '/create/palette', element: 'button.plb-add', theme: 'dark' })
+  const kept = omitContext(full, ['element', 'theme'])
+  assert.deepEqual(Object.keys(kept), ['route'])
+  const out = withReportContext('It jumps.', kept)
+  assert.ok(!out.includes('plb-add'), 'a removed value must not reach the message')
+  assert.ok(!out.includes('dark'))
+  assert.match(out, /route: \/create\/palette/)
+})
+
+test('removing everything leaves the user\'s own words untouched', () => {
+  const out = withReportContext('Just this.', omitContext({ route: '/x' }, ['route']))
+  assert.equal(out, 'Just this.')
+})
+
+test('the attached block reads in the same order however it was built', () => {
+  // Two reports of the same bug should be eyeballable side by side.
+  const block = formatReportContext({ build: '1.0.0', route: '/a', element: 'button.x' })
+  assert.ok(block.indexOf('route:') < block.indexOf('element:'), 'route leads')
+  assert.ok(block.indexOf('element:') < block.indexOf('build:'), 'build trails')
+})
+
+// ── The wiring ──────────────────────────────────────────────────────────────
+
+test('the modal filters the capture through omitContext before sending', () => {
+  // The whole privacy contract rests on this one call site: it is the only
+  // point where anything leaves the browser.
+  const modal = read('src/components/FeedbackModal.jsx')
+  assert.match(modal, /withReportContext\(message\.trim\(\), omitContext\(capture, removed\)\)/,
+    'the send path must apply the removals')
+})
+
+test('the modal renders a row for every captured fact', () => {
+  // Shown, not merely available. `contextRows` is the same source the sender
+  // uses, so the panel cannot list one set of facts while another is sent.
+  const modal = read('src/components/FeedbackModal.jsx')
+  assert.match(modal, /contextRows\(capture\)/)
+  assert.match(modal, /rows\.map\(/)
+})
+
+test('there is still exactly one feedback pipeline', () => {
+  // The backlog note: "two ways to report that store differently is how a
+  // feedback queue stops being trusted". The right-click menu must not build
+  // its own payload — it hands a seed to the one modal and stops there.
+  const menu = read('src/components/FeedbackContextMenu.jsx')
+  assert.ok(!/fetch\(/.test(menu), 'the menu must not talk to the API itself')
+  assert.ok(!/saveFeedback/.test(menu), 'the menu must not write to the store itself')
+  const button = read('src/components/FeedbackButton.jsx')
+  assert.equal((button.match(/<FeedbackModal/g) || []).length, 1,
+    'both entry points must share one modal instance')
 })

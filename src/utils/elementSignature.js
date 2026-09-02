@@ -125,24 +125,45 @@ export function elementSignature(chain) {
 
   const tag = tagOf(nodes[0])
   const own = tokenFor(nodes[0])
-  if (own) return capped(`${tag}${own}`)
+  if (own) return safeSignature(`${tag}${own}`)
 
   // Nothing on the element itself. The nearest named ancestor plus our tag is
   // still a real lead — "the anchor inside .pnav-menu" is findable in seconds.
   for (let i = 1; i < nodes.length; i += 1) {
     const up = tokenFor(nodes[i])
-    if (up) return capped(tag ? `${up} ${tag}` : up)
+    if (up) return safeSignature(tag ? `${up} ${tag}` : up)
   }
-  return capped(tag)
+  return safeSignature(tag)
 }
 
-// Final guard. Nothing reaches the feedback store without passing this, so a
-// future change to the walk above cannot widen what escapes: the shape is
-// pinned here, in one place, rather than trusted to every caller.
-function capped(sig) {
+/**
+ * Final guard. Nothing reaches the feedback store without passing this, so a
+ * future change to the walk above cannot widen what escapes: the shape is
+ * pinned here, in one place, rather than trusted to every caller.
+ *
+ * Exported because it is a redaction rule, not an implementation detail.
+ * Nothing reachable through `elementSignature` today can violate it — the
+ * token and tag filters already stop everything — which is exactly why it
+ * needs testing directly: an untested last line of defence is one that
+ * silently stops working the day the line before it changes.
+ */
+// The guard checks the SHAPE, not merely the characters. An earlier version
+// allowed any two charset-valid halves separated by a space, which let
+// `div.my palette.saved` through — a sentence wearing a selector's punctuation.
+// Only the three forms the walk above can actually produce are accepted:
+//
+//   section                     a bare tag
+//   button.plb-add              a tag naming itself (or the token alone)
+//   .pnav-menu a                a named ancestor and our tag
+//
+const TAG = '[a-z][a-z0-9-]*'
+const TOKEN = '(?:[.#][A-Za-z0-9_-]{1,32}|\\[data-testid="[A-Za-z0-9_-]{1,32}"\\])'
+const SHAPE = new RegExp(`^(?:${TAG}|${TAG}?${TOKEN}|${TOKEN} ${TAG})$`)
+
+export function safeSignature(sig) {
   const s = String(sig || '').trim()
   if (!s || s.length > MAX_SIGNATURE) return ''
-  return /^[A-Za-z0-9_.#[\]"=-]+(?: [A-Za-z0-9_.#[\]"=-]+)?$/.test(s) ? s : ''
+  return SHAPE.test(s) ? s : ''
 }
 
 // Right-clicking these is how people copy, paste, save and open in a new tab.
