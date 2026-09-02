@@ -54,12 +54,22 @@ test('the section headings carry no inline styles', () => {
 // ── One headline per URL ────────────────────────────────────────────────────
 
 test('/create/icons and /create/emoji do not share an h1', () => {
+  // The headline moved into the shared masthead (DiscoverGalleryHero) when this
+  // surface joined the gallery pattern, so the page now passes it as `title`
+  // rather than writing the tag. The requirement did not move: two indexable
+  // URLs, two headlines. Both halves of the chain are checked, because either
+  // one breaking would re-share the h1 without the other noticing.
   const src = stripComments(read('src/pages/IconEmojiLibrary.jsx'))
-  const h1 = /<h1>([\s\S]*?)<\/h1>/.exec(src)?.[1] || ''
-  assert.ok(/tab === 'icon'/.test(h1),
-    'the h1 must differ per tab — the two tabs are two separate indexable URLs')
+  const title = /\btitle=\{([\s\S]*?)\}\s*\n/.exec(src)?.[1] || ''
+  assert.ok(/tab === 'icon'/.test(title),
+    'the masthead title must differ per tab — the two tabs are two separate indexable URLs')
   assert.ok(!/Find the right symbol\. Keep building\./.test(src),
     'the shared headline is back on both pages')
+
+  // …and the slot that title lands in is still the h1.
+  const hero = stripComments(read('src/components/discover/DiscoverGalleryHero.jsx'))
+  assert.match(hero, /<h1>\{title\}<\/h1>/,
+    'DiscoverGalleryHero must render `title` as the h1, or the check above proves nothing')
 })
 
 test('every route still has a distinct title', () => {
