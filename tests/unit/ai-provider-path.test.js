@@ -82,12 +82,24 @@ test('the prompt tool survives an OpenRouter outage, and the vision tools still 
   // This is also why an unauthenticated probe of /api/ai cannot isolate the
   // OpenRouter key: generate-prompt is configured when EITHER key is present,
   // so its 401 says nothing about which one.
+  // Asserted per task rather than by counting matches: a count would have to be
+  // bumped by hand every time a task is added, which is the drift this repo just
+  // finished removing from its gate doc.
   const src = ai()
-  assert.match(src, /configured:\s*\(\)\s*=>\s*Boolean\(OPENROUTER_KEY\s*\|\|\s*GEMINI_KEY\)/,
+  const configuredFor = (name) => {
+    const at = src.indexOf(`'${name}': {`)
+    assert.ok(at > -1, `api/ai.js no longer registers the '${name}' task`)
+    const block = src.slice(at, src.indexOf('\n  },', at))
+    const hit = block.match(/configured:\s*\(\)\s*=>\s*(.+),/)
+    assert.ok(hit, `'${name}' declares no configured() guard`)
+    return hit[1].trim()
+  }
+  assert.equal(configuredFor('generate-prompt'), 'Boolean(OPENROUTER_KEY || GEMINI_KEY)',
     'generate-prompt no longer accepts either provider — an OpenRouter outage would take the tool down')
-  const geminiOnly = [...src.matchAll(/configured:\s*\(\)\s*=>\s*Boolean\(GEMINI_KEY\)/g)]
-  assert.equal(geminiOnly.length, 2,
-    'alt-text and scan-photo are Gemini vision tasks and must require GEMINI_KEY')
+  for (const vision of ['alt-text', 'scan-photo']) {
+    assert.equal(configuredFor(vision), 'Boolean(GEMINI_KEY)',
+      `'${vision}' is a Gemini vision task and must require GEMINI_KEY`)
+  }
 })
 
 test('the diagnostic reports that a key EXISTS, never what it is', () => {
