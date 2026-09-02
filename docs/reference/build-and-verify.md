@@ -8,16 +8,33 @@
 **This table is the single source of truth for the gate numbers.** No other
 document, comment or commit message should restate them — link here instead.
 Every figure below was produced by running the command in this repository on
-`main` at `ce7adca` on 2026-08-27; if you change a number here, you must have
-re-run it.
+`main` at `dbb61fa` on 2026-09-03 (the unit row from the icon-stroke branch
+rebased onto it); if you change a number here, you must have re-run it.
 
 | Gate | Command | Current baseline |
 |---|---|---|
 | Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
 | Build | `npm run build` | passes — **27 route shells + a noindex 404 shell** |
-| Unit | `npm run test:unit` | **571 tests, 571 pass, 0 skipped** |
+| Unit | `npm run test:unit` | **682 tests, 682 pass, 0 skipped** |
 | Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **291 tests across 28 spec files**; **278 pass, 13 skipped** |
+| Browser acceptance | `npm run test:users` | **355 tests across 37 spec files**; **342 pass, 13 skipped** |
+
+The icon stroke-unit fix (2026-09-03) moved unit 659 → **682** (+23:
+`icon-stroke-px.test.js` — the pixel→viewBox-unit conversion across a matrix of
+size x stroke x viewBox, both storage migrations, and the two call sites that
+must use it). Browser acceptance and lint unchanged, which is the point: the
+change is arithmetic behind one function, not new surface.
+
+**This table had drifted before that, and the correction is the reason it moved
+so far in one step.** It read 571 unit / 291 browser, measured at `ce7adca` on
+2026-08-27. Re-measured on `dbb61fa`: **659 unit** and **355 browser across 37
+spec files** (342 pass, 13 skipped). Eighty-eight unit tests and sixty-four
+browser tests had merged without anyone moving the numbers here, so an agent
+checking its run against this table would have read a clean run as a wild
+regression. The figures above are the re-measured ones. If you find a number
+here you cannot reproduce, re-measure and correct it rather than treating the
+drift as a failure — a stale baseline in the file that calls itself the single
+source of truth is worse than no baseline.
 
 ### How these moved, and why the old numbers were not a regression
 
