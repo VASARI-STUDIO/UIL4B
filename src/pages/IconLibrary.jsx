@@ -1942,6 +1942,7 @@ export default function IconLibrary({ onCopy, embedded }) {
           </select>
           <LibraryFilterGroup
             label="Filter by icon group"
+            triggerLabel="Group"
             value={source === 'custom' ? 'custom' : group}
             onChange={(id) => (id === 'custom' ? browseCustom() : handleGroupToggle(id))}
             options={GROUP_OPTIONS}

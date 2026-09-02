@@ -892,7 +892,29 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
    1400) — so the bleed could never reach the viewport edge and simply
    overhung the content column by whatever the gutter was. The bar now spans its
    own container and lines up with the grid it filters. */
-.pl-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;position:sticky;top:0;z-index:30;padding:12px 0;background:color-mix(in srgb,var(--bg-0) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+/* `top:var(--nav-clear)`, not `top:0`. This bar is `position:sticky` at
+   z-index 30 and `.pnav` is `position:fixed;top:0` at z-index 120, so with a
+   zero offset the bar pins itself UNDERNEATH the floating nav the moment the
+   page is scrolled. Measured on /discover/prompts, scrolled, hit-testing each
+   control at its own centre:
+
+     1440px   10 of 10 covered — search, both sort buttons, all six category
+              chips and "Submit prompt". The bar is 80px tall and the nav is
+              60px, so almost none of it is left.
+      834px    3 of 10
+      390px    1 of 10
+
+   WORST AT DESKTOP, which is why two mobile audits walked past it: the taller
+   the bar wraps, the more of it escapes below the nav, so the narrow widths
+   that get audited are the widths that hide it.
+
+   The offset itself is not new — `--nav-clear` is what `.lbry-toolbar` and
+   `.plb-toolbar` already use, and there was a `.rail-content .pl-toolbar`
+   override carrying exactly this value. That override matched NOTHING:
+   `.rail-content` is rendered only by CreateTool.jsx and the sole consumer of
+   `.pl-toolbar` is PromptLibrary, which is not inside it. A correct rule
+   scoped to a selector that never matches is the shape this defect had. */
+.pl-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;position:sticky;top:var(--nav-clear);z-index:30;padding:12px 0;background:color-mix(in srgb,var(--bg-0) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .pl-search-wrap{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;flex:1;min-width:200px;max-width:360px;transition:all var(--t)}
 .pl-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-search-wrap svg{color:var(--t3);flex-shrink:0}
@@ -5959,10 +5981,12 @@ html.lenis,html.lenis body{height:auto}
   .rail-shell{min-height:calc(100dvh - 240px)}
 }
 .rail-content{min-width:0;padding:24px var(--page-inline) var(--s-9)}
-/* Library toolbars live inside the content column and span it (see
-   .pl-toolbar). All they need here is to clear the floating nav when they
-   stick. */
-.rail-content .pl-toolbar{top:var(--nav-clear)}
+/* The `.rail-content .pl-toolbar{top:var(--nav-clear)}` override that used to
+   sit here is GONE, and its value is now the base rule instead. It never
+   matched anything: `.rail-content` is rendered only by CreateTool.jsx, and the
+   one live consumer of `.pl-toolbar` is PromptLibrary, which is not inside it.
+   Meanwhile the base rule said `top:0`, so the only bar that used the class
+   pinned itself under the floating nav. See `.pl-toolbar` for the measurements. */
 
 /* ══ Coming-soon tool state (soon-) ══ */
 .soon{max-width:560px;margin:0 auto;padding:var(--s-9) 0}
@@ -9361,6 +9385,53 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{background:var(--card);box-shadow:var(--shadow-xs)}
 .lbry-filter-hint{align-self:center;padding:0 10px 0 4px;color:var(--t3);font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
 @media(max-width:900px){.lbry-filter-hint{display:none}}
+
+/* ── The tray's collapsed form (641–980px) ──────────────────────────────────
+   One trigger that names the group and its current selection, and a menu that
+   holds the same option buttons. See LibraryFilterGroup.jsx for why the swap
+   is made in markup rather than here — a tray and a menu are different
+   controls, not one control with two looks.
+
+   The trigger is 46px to match `.lbry-search`'s min-height, so the collapsed
+   row reads as one bar of controls rather than a search field with smaller
+   things floating beside it. It clears the WCAG 2.5.8 44px floor on its own,
+   which the 38px tray option only does inside the `pointer:coarse` block. */
+.lbry-filterpop{position:relative;display:flex;flex-shrink:0}
+.lbry-filtertrig{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 14px;color:var(--t1);background:var(--bg-2);border:1px solid transparent;border-radius:var(--radius-xl);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.lbry-filtertrig:hover{color:var(--t0)}
+.lbry-filtertrig:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lbry-filtertrig[aria-expanded="true"]{color:var(--t0);border-color:var(--border);background:var(--card)}
+/* A collapsed group that is actually filtering has to say so from the outside;
+   this is the state the pattern loses if the trigger is left plain. */
+.lbry-filtertrig[data-active="true"]{color:var(--t0);border-color:var(--border);background:var(--card);box-shadow:var(--shadow-xs)}
+.lbry-filtertrig-k{color:var(--t3);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.lbry-filtertrig-v{color:inherit}
+.lbry-filtertrig>svg{flex-shrink:0;color:var(--t3);transition:transform var(--dur-2) var(--ease-standard)}
+.lbry-filtertrig[aria-expanded="true"]>svg{transform:rotate(180deg)}
+/* A COLUMN, not the tray's wrapping row: the whole point of collapsing was that
+   a row of these does not fit the width. `--pop-max-h` is set by usePopover
+   from the space actually below the trigger, so a long list (12 emoji
+   categories) scrolls inside the panel instead of running off the viewport. */
+.lbry-filtermenu{position:absolute;top:calc(100% + 6px);left:0;z-index:60;display:flex;flex-direction:column;gap:2px;min-width:200px;max-width:min(320px,calc(100vw - 32px));max-height:var(--pop-max-h,420px);overflow-y:auto;overscroll-behavior:contain;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-panel,var(--shadow-l))}
+.lbry-filtermenu[data-pop-align="end"]{left:auto;right:0}
+.lbry-filtermenu[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
+.lbry-filtermenu:focus-visible{outline:none}
+/* Full-width rows with the label flush left. The tray's centred pill shape is
+   for a horizontal strip; in a column it would leave every label floating in
+   the middle of its own row with no common left edge to read down. */
+.lbry-filtermenu .lbry-filter{width:100%;justify-content:flex-start;border-radius:var(--radius)}
+.lbry-filtermenu .lbry-filter:hover{background:var(--bg-2)}
+.lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-2);color:var(--t0)}
+/* The count is the option's own metadata (1,655 emoji), so it belongs at the
+   far end of the row rather than tucked against the label. */
+.lbry-filtermenu .lbry-filter-count{margin-left:auto}
+/* The hint wraps here instead of being a one-line tail, because a column has
+   the width for it. It is NOT re-shown below 900px: the existing rule hides it
+   there because shift-click is a gesture a touch device does not have, which is
+   a fact about the input and not about the space available. The collapsed
+   trigger still reports a multi-selection ("3 selected"), so nothing about the
+   state is hidden — only the instruction for a gesture that is not offered. */
+.lbry-filtermenu .lbry-filter-hint{padding:6px 10px 4px;white-space:normal}
 .lbry-filter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 /* An option glyph (the Emoji Library's category emoji) and an option count
    (its "All 1,636"). Both aria-hidden — the accessible name is the label. */
@@ -9488,6 +9559,42 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .lbry-filters{width:100%}
   .lbry-toolbar-action{width:100%;margin-left:0}
   .lbry-toolbar-action>*{width:100%;justify-content:center}
+}
+
+/* PATTERN B, THIRD INSTANCE — and this one is the shared component, so it is
+   the instance that closes the most surfaces at once.
+
+   `.lbry-toolbar` had exactly two states: a desktop row, and a full column
+   stack at ≤640px. Everything from 641 to 980 fell through into the desktop
+   branch with none of the desktop room, and the two base rules that make the
+   desktop row work are the two that break it there:
+
+     · `.lbry-search{flex:1 1 240px}` has no ceiling, so with nothing to
+       compete with on a short row it takes the WHOLE row and pushes every
+       filter group onto a line of its own. Measured at 834px: a 774px search
+       field, above a filter tray with a third of the row empty beside it.
+     · `.lbry-toolbar-action{margin-left:auto}` then strands the action on a
+       ragged last row, hard right, alone. That is the same shape #298 recorded
+       as a deliberate cost on `.pl-toolbar` ("Submit prompt lands on a third
+       row of its own") — reproduced here on five more surfaces by one shared
+       rule, which is the argument for fixing it in the shared component.
+
+   The cap is 360px because that is `.pl-search-wrap`'s existing desktop
+   ceiling: the width this codebase already decided a search field is worth,
+   not a new number. It is a `max-width` over the `flex:1 1 240px` basis, so
+   the field still grows into a short row and still gives space back to a
+   filter tray that wants it.
+
+   The auto margin is DROPPED rather than kept, so an action that still wraps
+   sits flush under the filters and reads as the next control in the row rather
+   than an orphan pinned to the far edge. Nothing is reordered: `order` and
+   grid areas both move the box without moving the tab stop, and #298 already
+   rejected that trade on this exact layout on WCAG 2.4.3 grounds. Search →
+   filters → action is the DOM order, the visual order and the focus order, at
+   every width. */
+@media(min-width:641px) and (max-width:980px){
+  .lbry-search{max-width:360px}
+  .lbry-toolbar-action{margin-left:0}
 }
 
 /* Font Gallery */
