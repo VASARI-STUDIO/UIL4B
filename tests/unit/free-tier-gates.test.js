@@ -62,10 +62,17 @@ test('a new board defaults to a FREE system everywhere', () => {
   // to 'analogous' — a PAID system, which then silently collapsed to Auto
   // anyway. So the first board a free user saw was the exact confusion P-003
   // is about, produced by the default itself.
+  //
+  // That fallback is now the named DEFAULT_SYSTEM rather than a repeated
+  // literal, because the founder's 2026-09-03 request made the same value the
+  // arrival draw's system and Reset's system too — three places that must not
+  // be able to disagree. DEFAULT_SYSTEM is itself asserted to be a FREE system
+  // in tests/unit/palette-defaults.test.js, so accepting the constant here
+  // loses nothing: the literal spelling is checked one layer down.
   const src = stripComments(BUILDER)
   assert.ok(!/design\.palette\.harmony : 'analogous'/.test(src),
     'PaletteBuilder still falls back to a paid system')
-  assert.match(src, /design\.palette\.harmony : 'auto'/)
+  assert.match(src, /design\.palette\.harmony : (?:'auto'|DEFAULT_SYSTEM)/)
 
   const project = stripComments(read('src/contexts/ProjectContext.jsx'))
   assert.match(project, /harmony: 'auto'/)

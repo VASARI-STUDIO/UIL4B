@@ -158,6 +158,15 @@ export const DISCOVER_GROUPS = [
   { id: 'palette-library', icon: 'palette', label: 'Palette Library', desc: 'Curated colour systems ready to copy, save or open in the Palette Builder.', route: '/discover/palettes', soon: false },
   { id: 'gradient-gallery', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
   { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', route: '/create/font-gallery', soon: false },
+  // Reachable from BOTH surfaces on purpose. The page is already a Discover
+  // gallery in everything but its URL — #292 put it on the shared Library
+  // browse components and #306 put it under DiscoverGalleryHero — so listing it
+  // here is the founder's “access icon library from the discover tab” without a
+  // canonical move. Same shape as Font Gallery above: one entry, one live route,
+  // no redirect table entry and no change to the prerendered route count. The
+  // Emoji Library is deliberately not a second entry — it is the other tab of
+  // this same page, one click away inside the hero #306 shipped.
+  { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search 200,000+ icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', route: '/create/icons', soon: false },
   { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/discover', soon: true },
   { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
   { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab.', route: '/discover', soon: true },
@@ -271,7 +280,7 @@ function groupsToMenu(groups, spec) {
 }
 
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
-  { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery'] },
+  { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery', 'icon-library'] },
   { label: 'Community', ids: ['inspiration', 'community-prompts'] },
   { label: 'Your library', ids: ['curated', 'collections'] },
 ])
