@@ -19,7 +19,7 @@
 // The pure key→index decision is asserted separately, without a DOM, in
 // tests/unit/popover-keys.test.js.
 import { test, expect } from './base.js'
-import { restingScrollY, watch } from './helpers.js'
+import { keyToRest, restingScrollY, watch } from './helpers.js'
 
 const PANEL = '#pnav-account-pop'
 const TRIGGER = '.pnav-more'
@@ -123,18 +123,49 @@ test.describe('nav popover keyboard movement', () => {
   })
 
   // Arrow keys pressed with focus OUTSIDE the panel must be left to the page —
-  // the handler is bound on the document in the capture phase, so a missing
-  // containment guard would have hijacked every arrow key on the site for as
-  // long as any popover was open.
+  // the handler is bound on the document in the CAPTURE phase, so a missing
+  // containment guard hijacks every arrow key on the site for as long as any
+  // popover is open.
+  //
+  // THIS TEST USED TO PRESS THE KEY WITH THE PANEL ALREADY CLOSED, which is the
+  // one state in which the guard cannot matter: usePopover installs its
+  // document listener only while the popover is open and removes it on close,
+  // so after a close there is no handler left to hijack anything, guard or no
+  // guard. That was not a theory — deleting the containment guard outright and
+  // rebuilding left all six tests in this file GREEN. The press therefore
+  // happens while the panel is open and focus has been moved out of it, which
+  // is the state the paragraph above describes and the only one where the guard
+  // does any work.
+  //
+  // Focus is moved programmatically on purpose. Every pointer route out of the
+  // panel closes it — that is the disclosure contract, asserted above — so a
+  // click cannot reach this state. `#main` is the skip-link target: the page's
+  // own destination for "focus is on the document, not on a widget".
   test('the panel claims arrow keys only while focus is inside it', async ({ page }) => {
     await openPanel(page)
     // At rest, so the baseline is a position and not a frame of something else's
-    // animation — a baseline caught mid-scroll would let the "it moved" poll
-    // below pass on the tail of THAT scroll rather than on the arrow key.
+    // animation — a baseline caught mid-scroll would measure the arrow key
+    // against the tail of THAT scroll rather than against a still page.
     const before = await restingScrollY(page, 'the home page before the arrow key')
+
+    await page.evaluate(() => document.getElementById('main')?.focus())
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('main')
+    await expect(page.locator(PANEL), 'the panel must still be open, or the handler is not installed').toBeVisible()
+    expect((await focusPosition(page)).inPanel, 'focus never left the panel').toBe(false)
+
+    // keyToRest, not a poll for "it has moved yet": a poll waits for the
+    // movement to BEGIN and gives up on a deadline, so a keyboard scroll whose
+    // take-up outlasts the deadline is recorded as no scroll at all. That is
+    // what failed 2 of 4 CI runs here. See helpers.js.
+    const openY = await keyToRest(page, 'ArrowDown', 'the home page after an arrow key aimed past the open panel')
+    expect(openY, 'the open panel swallowed an arrow key that was not aimed at it').toBeGreaterThan(before)
+
+    // …and it lets go completely once the panel closes, rather than leaking a
+    // document listener that outlives the panel it belongs to.
     await page.locator('h1').first().click()          // focus leaves → panel closes
     await expect(page.locator(PANEL)).toHaveCount(0)
-    await page.keyboard.press('ArrowDown')
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before)
+    const afterClose = await restingScrollY(page, 'the home page once the panel closed')
+    const closedY = await keyToRest(page, 'ArrowDown', 'the home page after the panel closed')
+    expect(closedY, 'a closed panel was still holding on to the arrow keys').toBeGreaterThan(afterClose)
   })
 })
