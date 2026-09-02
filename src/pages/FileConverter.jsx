@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import SnapSlider from '../components/SnapSlider'
+import ColorPickerPop from '../components/ColorPickerPop'
 import { getLenis } from '../hooks/useSmoothScroll'
 import {
   DRAFT_FORMATS,
@@ -543,13 +544,15 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               {format === 'image/jpeg' && (
                 <div>
                   <div className="seg-label">Background</div>
-                  <input
-                    type="color"
+                  {/* The shared picker. Note that this control exists PRECISELY
+                      because JPEG has no alpha — which is also the panel's own
+                      reason for not offering an alpha slider. */}
+                  <ColorPickerPop
                     value={jpegBg}
-                    onChange={e => setJpegBg(e.target.value)}
+                    onChange={setJpegBg}
                     disabled={busy}
-                    className="fc-bg-pick"
-                    aria-label="JPEG background colour"
+                    ariaLabel="JPEG background colour"
+                    triggerClassName="fc-bg-pick"
                   />
                   <div className="fc-note">fills transparency — JPEG has no alpha</div>
                 </div>

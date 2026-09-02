@@ -6697,7 +6697,9 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 /* 2 · Gradient */
 .hw-grad-preview{height:132px;border-radius:var(--radius);box-shadow:var(--shadow-s)}
 .hw-stop{display:flex;align-items:center;gap:8px}
-.hw-stop-well{flex:0 0 auto}
+/* Holds the 48px width the base `input[type="color"]` rule used to give this
+   well, so swapping it for the shared picker's trigger did not move the row. */
+.hw-stop-well{flex:0 0 auto;width:48px}
 .hw-input-hex{width:104px;font-family:var(--mono);text-transform:uppercase}
 .hw-out{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-0)}
 .hw-code{flex:1 1 240px;min-width:0;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--t0);word-break:break-all;user-select:all}

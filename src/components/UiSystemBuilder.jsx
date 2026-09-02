@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import UiShadeEditor from './UiShadeEditor'
+import ColorPickerPop from './ColorPickerPop'
 import UiSystemLab from './UiSystemLab'
 import UiSystemMatrix from './UiSystemMatrix'
 import { useProModal } from '../contexts/ProModalContext'
@@ -183,19 +184,19 @@ export default function UiSystemBuilder({
       <section className="uis-command" aria-label="UI system controls">
         <div className="uis-seed-control">
           <label htmlFor="uis-seed">Brand 500</label>
-          <input
-            className="uis-seed-picker"
-            type="color"
+          {/* The shared picker. `disabled` keeps the trigger a real button, so
+              a locked click still reaches the Pro gate instead of being
+              swallowed — which is why ColorPickerPop uses aria-disabled rather
+              than the native attribute. `.uis-seed-picker` rides along on the
+              trigger because it carries this surface's 44px touch target, which
+              12-ui-system-builder.spec.js measures. */}
+          <ColorPickerPop
             value={systemSeed}
-            aria-label="Choose UI system brand colour"
-            aria-disabled={!canEdit}
-            onClick={event => {
-              if (!canEdit) {
-                event.preventDefault()
-                gate('seed')
-              }
-            }}
-            onChange={event => commitSeed(event.target.value)}
+            onChange={commitSeed}
+            ariaLabel="Choose UI system brand colour"
+            disabled={!canEdit}
+            onDisabledClick={() => gate('seed')}
+            triggerClassName="uis-seed-picker"
           />
           <input
             ref={seedInputRef}
