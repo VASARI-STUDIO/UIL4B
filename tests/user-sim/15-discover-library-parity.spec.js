@@ -64,6 +64,101 @@ test.describe('Discover libraries share one header', () => {
     expect(shapes[0]).toEqual(shapes[1])
   })
 
+  // ── Every library browse surface, not just the Discover two ──────────────
+  // The Icon/Emoji surface was the case this file could not see. #292 moved its
+  // TOOLBAR onto the shared Library components but left the hero on a bespoke
+  // `.lib-head` — flush, light, 56px — so for months the two galleries agreed
+  // with each other and the third page disagreed with both, and nothing failed.
+  // This is the assertion that would have caught it.
+  //
+  // It compares the masthead's RENDERED SURFACE across pages — ground, radius,
+  // padding, the type ramp of the headline and description — rather than
+  // asserting a class name, which any hand-rolled copy could satisfy.
+  const BROWSE_SURFACES = [
+    { route: '/discover/palettes', title: 'Palette Library' },
+    { route: '/discover/gradients', title: 'Gradient Library' },
+    { route: '/create/icons', title: 'Icon Library' },
+    { route: '/create/emoji', title: 'Emoji Library' },
+  ]
+
+  test('every library browse surface wears the one masthead', async ({ page }) => {
+    watch(page, 'reviewer checking the libraries still read as one product')
+    const shapes = []
+    for (const surface of BROWSE_SURFACES) {
+      await go(page, surface.route)
+      const hero = page.locator('.dgh-hero')
+      await expect(hero).toBeVisible()
+
+      // The page's own identity, through the shared slots.
+      await expect(hero.getByRole('heading', { level: 1, name: surface.title })).toBeVisible()
+      await expect(hero.locator('.dgh-eyebrow')).not.toBeEmpty()
+      await expect(hero.locator('p')).not.toBeEmpty()
+
+      // Title case, no trailing full stop — the agreed library vocabulary. This
+      // is what "Icons for every interface." used to fail.
+      expect(surface.title.endsWith('.')).toBe(false)
+      const h1 = await hero.getByRole('heading', { level: 1 }).innerText()
+      expect(h1.endsWith('.')).toBe(false)
+
+      shapes.push(await page.evaluate(() => {
+        const el = document.querySelector('.dgh-hero')
+        const s = getComputedStyle(el)
+        const h = getComputedStyle(el.querySelector('h1'))
+        const p = getComputedStyle(el.querySelector('p'))
+        return {
+          background: s.backgroundColor,
+          radius: s.borderTopLeftRadius,
+          padding: s.paddingTop,
+          colour: s.color,
+          h1Family: h.fontFamily,
+          h1Size: h.fontSize,
+          h1Weight: h.fontWeight,
+          h1LineHeight: h.lineHeight,
+          pSize: p.fontSize,
+          pColour: p.color,
+        }
+      }))
+    }
+    // One masthead means one set of numbers, on all four.
+    for (let i = 1; i < shapes.length; i += 1) {
+      expect(shapes[i], `${BROWSE_SURFACES[i].route} has drifted from ${BROWSE_SURFACES[0].route}`)
+        .toEqual(shapes[0])
+    }
+  })
+
+  // The right-hand column carries a decorative count on the galleries and the
+  // library tablist on the Icon/Emoji surface. The count may vanish on a narrow
+  // screen; the tablist may not — it is the only route to the other library, and
+  // a control that only exists above 720px is a control half the users lack.
+  test('the masthead drops its count on a phone but never its controls', async ({ page }) => {
+    watch(page, 'designer opening the libraries on a phone')
+    await page.setViewportSize({ width: 390, height: 844 })
+
+    await go(page, '/discover/palettes')
+    await expect(page.locator('.dgh-hero')).toBeVisible()
+    await expect(page.locator('.dgh-mark')).toBeHidden()
+
+    await go(page, '/create/icons')
+    const aside = page.locator('.dgh-aside')
+    await expect(aside).toBeVisible()
+    // Both libraries reachable, and the active one legible without hovering.
+    await expect(aside.getByRole('tab', { name: /Icons/ })).toBeVisible()
+    const emojiTab = aside.getByRole('tab', { name: /Emoji/ })
+    await expect(emojiTab).toBeVisible()
+    await expect(aside.getByRole('tab', { name: /Icons/ })).toHaveAttribute('aria-selected', 'true')
+    await expect(emojiTab).toHaveAttribute('aria-selected', 'false')
+
+    // The persistent marker is a real painted difference, not a hover rule.
+    const contrast = await page.evaluate(() => {
+      const tabs = [...document.querySelectorAll('.lib-switch-btn')]
+      return tabs.map((t) => getComputedStyle(t).backgroundColor)
+    })
+    expect(contrast[0]).not.toBe(contrast[1])
+
+    await emojiTab.click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Emoji Library' })).toBeVisible()
+  })
+
   // The masthead test above proves the two pages LOOK alike. These prove they
   // are the same implementation — which is the only version of that claim a
   // future edit cannot quietly break. Before the shared Library language the
