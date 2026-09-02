@@ -38,7 +38,7 @@ const SURFACES = {
     primaryTo: '/discover/palettes',
     secondaryLabel: 'Explore fonts',
     secondaryTo: '/create/font-gallery',
-    hint: 'Three curated libraries are ready now — palettes, gradients and fonts.',
+    hint: 'Four curated libraries are ready now — palettes, gradients, fonts and icons.',
   },
   learn: {
     eyebrow: 'Learn',
