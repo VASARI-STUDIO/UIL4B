@@ -17,6 +17,10 @@ import SnapSlider from '../components/SnapSlider'
 import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
+import {
+  STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
+  stickyStrokePx, strokeAttrForPx, viewBoxOf,
+} from '../utils/iconStroke'
 
 const API_LIMIT = 999
 
@@ -144,12 +148,19 @@ function bumpCopyCount() {
 // Sticky stroke width — the last width the user set persists so the next icon
 // they open starts at the same weight, making it easy to build a consistent set.
 // A re-opened custom icon still wins with its own saved stroke.
-const STROKE_KEY = 'vs-icon-stroke'
+//
+// The value is now PIXELS, so it lives under a NEW key: `vs-icon-stroke` held a
+// viewBox user-unit number and reusing that key would have silently redefined
+// what every returning user's stored digit meant. The old key is read exactly
+// once, converted at the size the editor has always opened at (see
+// `stickyStrokePx`), and then left alone — the first slider move writes the
+// pixel key, which wins from then on.
+const STROKE_KEY = 'vs-icon-stroke-px'
+const LEGACY_STROKE_KEY = 'vs-icon-stroke'
 function readStickyStroke() {
   try {
-    const v = Number(localStorage.getItem(STROKE_KEY))
-    return v >= 1 && v <= 3 ? v : 2
-  } catch { return 2 }
+    return stickyStrokePx(localStorage.getItem(STROKE_KEY), localStorage.getItem(LEGACY_STROKE_KEY))
+  } catch { return STROKE_PX.default }
 }
 function writeStickyStroke(v) {
   try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
@@ -450,13 +461,20 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
       svg.setAttribute('fill', color)
     }
   }
+  // `stroke` arrives in PIXELS. stroke-width is written in viewBox user units,
+  // so it has to be divided by the scale this file will be rendered at —
+  // otherwise a 2 lands on screen as 4px at the default size. `strokeAttrForPx`
+  // owns that conversion and the Stage calls the same function, so preview and
+  // exported file cannot disagree. See src/utils/iconStroke.js.
+  const box = viewBoxOf(rawSvg)
   // The Stage forces stroke width/cap/join on the svg AND every descendant
   // (CSS `svg, svg *`). Mirror that here so icons whose child shapes carry their
   // own stroke attributes export with the edits applied, not the originals.
   if (isStroke) {
+    const strokeAttr = strokeAttrForPx({ px: stroke, size, viewBox: box, absolute: absStroke })
     const shapes = [svg, ...svg.querySelectorAll('*')]
     for (const el of shapes) {
-      if (stroke != null) el.setAttribute('stroke-width', String(stroke))
+      if (strokeAttr != null) el.setAttribute('stroke-width', String(strokeAttr))
       if (absStroke) el.setAttribute('vector-effect', 'non-scaling-stroke')
       if (cap) el.setAttribute('stroke-linecap', cap)
       if (join) el.setAttribute('stroke-linejoin', join)
@@ -552,7 +570,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [size, setSize] = useState(() => (icon?.custom && icon.size) || icon?.draftSize || 48)
   const [color, setColor] = useState(() => (icon?.custom && icon.color) || '')
   // A saved custom keeps its own stroke; anything else opens at the sticky width.
-  const [stroke, setStroke] = useState(() => (icon?.custom && icon.stroke) || icon?.draftStroke || readStickyStroke())
+  // Both arrive in whatever unit their era used, so both go through the pixel
+  // conversion: a pre-fix record stored viewBox units next to its own size, and
+  // the homepage draft is a user-unit number for a 24-grid glyph. Converting at
+  // the boundary means a saved icon re-opens at the weight it was saved at.
+  const [stroke, setStroke] = useState(() => (
+    (icon?.custom ? customIconStrokePx(icon) : null)
+    ?? draftStrokePx(icon?.draftStroke, icon?.draftSize)
+    ?? readStickyStroke()
+  ))
   const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke))
   const [cap, setCap] = useState(() => (icon?.custom && icon.cap) || 'round')
   const [join, setJoin] = useState(() => (icon?.custom && icon.join) || 'round')
@@ -701,11 +727,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }, [rendersInline, baseSvgText])
 
   // Live preview via the ONLY permitted inline-style channel: setProperty.
+  //
+  // `--ig-stroke` feeds a CSS `stroke-width`, which the Stage resolves in the
+  // SAME viewBox user units the exported file uses — so it goes through the
+  // same px→units conversion the serializer runs. Preview and download read
+  // one function; they cannot drift.
   useEffect(() => {
     const stage = stageRef.current
     if (!stage) return
+    const strokeAttr = strokeAttrForPx({
+      px: stroke, size, viewBox: viewBoxOf(baseSvgText), absolute: absStroke,
+    })
     stage.style.setProperty('--ig-size', `${size}px`)
-    stage.style.setProperty('--ig-stroke', String(stroke))
+    stage.style.setProperty('--ig-stroke', String(strokeAttr ?? STROKE_PX.default))
     stage.style.setProperty('--ig-color', color || themeInk)
     stage.style.setProperty('--ig-cap', cap)
     stage.style.setProperty('--ig-join', join)
@@ -714,7 +748,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (flipH) tf.push('scaleX(-1)')
     if (flipV) tf.push('scaleY(-1)')
     stage.style.setProperty('--ig-transform', tf.length ? tf.join(' ') : 'none')
-  }, [size, stroke, color, cap, join, rotate, flipH, flipV, themeInk])
+  }, [size, stroke, color, cap, join, rotate, flipH, flipV, themeInk, absStroke, baseSvgText])
 
   // Lock body scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
@@ -860,6 +894,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       base, iteration, name, projectId,
       pack: activeIcon.pack || null, cdn: !!activeIcon.cdn,
       svg, color: color || '', size, stroke, absStroke, cap, join, isStroke, colored,
+      // Stamp the unit. Records without it predate the pixel fix and stored
+      // `stroke` in viewBox units; `customIconStrokePx` converts those on read,
+      // and this marker is what stops a converted value being converted twice.
+      strokeUnit: STROKE_UNIT_PX,
     }
     setSavePickerOpen(false)
     setNewProjOpen(false)
@@ -1041,19 +1079,36 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               {isStroke && (
                 <div className="icust-row">
                   <label htmlFor="icust-stroke">Stroke</label>
+                  {/* The `px` unit is half the fix: the slider now reports the
+                      width the exported file actually measures, at any size. */}
                   <SnapSlider
                     id="icust-stroke"
-                    min={1}
-                    max={3}
-                    step={0.25}
+                    min={STROKE_PX.min}
+                    max={STROKE_PX.max}
+                    step={STROKE_PX.step}
                     value={stroke}
-                    defaultValue={2}
-                    snaps={[1, 1.5, 2, 2.5, 3]}
+                    defaultValue={STROKE_PX.default}
+                    snaps={STROKE_PX.snaps}
+                    unit="px"
+                    inputMin={STROKE_PX.inputMin}
+                    inputMax={STROKE_PX.inputMax}
                     decimals={2}
-                    ariaLabel="Stroke width"
+                    ariaLabel="Stroke width in pixels"
                     onChange={(v) => { setStroke(v); writeStickyStroke(v); markDirty() }}
                   />
-                  <button type="button" className={`icust-abs${absStroke ? ' active' : ''}`} aria-pressed={absStroke} onClick={() => { setAbsStroke(a => !a); markDirty() }}>Absolute</button>
+                  {/* Both modes now measure the same pixels AT THIS SIZE; they
+                      differ only once someone rescales the exported file. Off:
+                      the stroke scales with the artwork, the way an icon should.
+                      On (non-scaling-stroke): it holds this pixel width at every
+                      size it is ever drawn at. "Absolute" never said that. */}
+                  <button
+                    type="button"
+                    className={`icust-abs${absStroke ? ' active' : ''}`}
+                    aria-pressed={absStroke}
+                    aria-label={`Fixed stroke width — hold ${stroke}px even when the SVG is resized`}
+                    title={`Hold this stroke at ${stroke}px even if the SVG is resized later. Off: the stroke scales with the icon.`}
+                    onClick={() => { setAbsStroke(a => !a); markDirty() }}
+                  >Fixed</button>
                 </div>
               )}
 
