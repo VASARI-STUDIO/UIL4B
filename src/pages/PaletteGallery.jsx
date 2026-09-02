@@ -137,7 +137,7 @@ export default function PaletteGallery({ toast }) {
         }}
         action={<Link className="pgl-build-link" to="/create/palette">Create a palette <span aria-hidden="true">↗</span></Link>}
       >
-        <LibraryFilterGroup label="Filter palettes" value={filter} onChange={setFilter} options={FILTERS} />
+        <LibraryFilterGroup label="Filter palettes" triggerLabel="Show" value={filter} onChange={setFilter} options={FILTERS} />
       </LibraryToolbar>
 
       <DiscoverResultHead

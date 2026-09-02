@@ -321,6 +321,7 @@ export default function EmojiLibrary({ onCopy, embedded }) {
       >
         <LibraryFilterGroup
           label="Filter by category"
+          triggerLabel="Category"
           value={activeCat ?? 'all'}
           onChange={(id) => setActiveCat(id === 'all' ? null : id)}
           options={CATEGORY_OPTIONS}
