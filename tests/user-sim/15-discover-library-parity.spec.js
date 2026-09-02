@@ -345,3 +345,50 @@ test.describe('the Palette Library carries the brand systems', () => {
     await expect(proCard.locator('a[href*="?c="]')).toHaveCount(0)
   })
 })
+
+// Founder request, 2026-09-03: "i sohuld also be able to access icon library
+// from the discober tab". The library itself did not move — it is still
+// /create/icons, and #292/#306 had already dressed it in the shared Discover
+// browse language — so what is pinned here is the REACH: a visitor who is on
+// Discover, on a phone or a desktop, can get to it without going via Create.
+test.describe('the Icon Library is reachable from Discover', () => {
+  test('the Discover landing offers the Icon Library as a live card', async ({ page }) => {
+    watch(page, 'designer on Discover looking for icons')
+    await go(page, '/discover')
+
+    const card = page.locator('.surface-card', { hasText: 'Icon Library' }).first()
+    await expect(card).toBeVisible()
+    // Live, not staged: a "Soon" badge here would be the same dead end the
+    // founder was reporting.
+    await expect(card.locator('.soon-badge')).toHaveCount(0)
+    await expect(card).toHaveAttribute('href', '/create/icons')
+
+    await card.click()
+    await expect(page).toHaveURL(/\/create\/icons$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Icon Library' })).toBeVisible()
+  })
+
+  test('the Discover menu lists it on a desktop and on a phone', async ({ page }) => {
+    watch(page, 'designer opening the Discover tab from the nav')
+    await go(page, '/home')
+
+    // Desktop: the Discover pill opens the mega-menu. Clicking, not hovering —
+    // the founder's 2026-09-02 direction is no hover-dependent affordances.
+    await page.getByRole('button', { name: 'Discover', exact: true }).first().click()
+    const desktopRow = page.locator('a[href="/create/icons"]', { hasText: 'Icon Library' }).first()
+    await expect(desktopRow).toBeVisible()
+
+    // Phone: the same entry, inside the full-screen sheet.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await go(page, '/home')
+    await page.getByRole('button', { name: 'Menu' }).first().click()
+    const sheet = page.locator('.pnav-sheet')
+    await expect(sheet).toBeVisible()
+    await sheet.getByRole('button', { name: /Discover/ }).first().click()
+    const sheetRow = sheet.locator('a[href="/create/icons"]').first()
+    await expect(sheetRow).toBeVisible()
+    // A tap target, not a hover target.
+    const box = await sheetRow.boundingBox()
+    expect(box.height).toBeGreaterThanOrEqual(44)
+  })
+})

@@ -32,6 +32,10 @@ import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, 
 // colours and the slider values are persisted separately.
 import useModalDialog from '../hooks/useModalDialog'
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
+// What a fresh board and a Reset open on, plus the ?c= > hand-off > saved >
+// random precedence — kept pure so the free-settings default and “a shared link
+// beats the random draw” can be tested exhaustively without a DOM.
+import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
 
 // Palette Builder — the standalone /create/palette workbench. A full-bleed
 // board so the columns are the page, not a panel floating in chrome: a
@@ -42,7 +46,6 @@ import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '.
 // so palettes built here match the studio's output.
 
 const DEFAULT_SEED = '#4338E0'
-const SESSION_SEED_KEY = 'vs-palette-session-seed'
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 const PRO_MAX = 8   // free ceiling on TOTAL columns — free palettes can hold up to 8
 const HARD_MAX = 10 // absolute ceiling so the board never becomes slivers
@@ -103,27 +106,15 @@ const TINT_TONES = [95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
 const HANDLE_KEY = 'vs-community-handle'            // the user's chosen social name
 
-function randomPaletteSeed() {
-  let hue = Math.floor(Math.random() * 360)
-  try {
-    const values = new Uint16Array(1)
-    globalThis.crypto?.getRandomValues?.(values)
-    hue = values[0] % 360
-  } catch { /* Math.random fallback above */ }
-  return normaliseHex(hctToHex(hue, 64, 54)) || DEFAULT_SEED
-}
-
-function sessionSeed() {
-  try {
-    const remembered = normaliseHex(sessionStorage.getItem(SESSION_SEED_KEY))
-    if (remembered) return remembered
-    const fresh = randomPaletteSeed()
-    sessionStorage.setItem(SESSION_SEED_KEY, fresh)
-    return fresh
-  } catch {
-    return randomPaletteSeed()
-  }
-}
+// `vs-palette-session-seed` used to pin the first random seed to sessionStorage
+// so a reload came back to the same board. MEASURED before removing it: it is
+// read exactly once, on the first visit a device ever makes. The mount effect
+// below writes the drawn board straight into ProjectContext, so from the second
+// visit onward `readSavedPalette` wins the precedence and the seed is never
+// consulted again — in a fresh tab, with sessionStorage empty, the key was not
+// even written. Everything it was there to protect is protected better by the
+// saved project, which survives a real restart and carries the whole board
+// rather than one hex. So the guarantee it made is kept; the key is retired.
 
 // Palette history (toolbar History menu): a rolling local log of the boards the
 // user has worked through, so an accidental randomise is never destructive.
@@ -139,7 +130,7 @@ function paletteSignature(snapshot) {
   return JSON.stringify({
     colors: snapshot.colors || [],
     seed: snapshot.seed || snapshot.colors?.[0] || DEFAULT_SEED,
-    harmony: snapshot.harmony || 'analogous',
+    harmony: snapshot.harmony || DEFAULT_SYSTEM,
     locked: snapshot.locked || [],
     adjust: snapshot.adjust || ZERO_ADJUST,
     vision: snapshot.vision || 'normal',
@@ -211,12 +202,12 @@ function midColor(a, b) {
 }
 
 // Shared palettes arrive as /create/palette?c=4338E0,7C6CF0,… — parse or null.
+// The parsing itself lives in utils/paletteDefaults so the rule that a shared
+// link outranks the random draw is enumerable in a unit test; this wrapper only
+// owns where the search string comes from.
 function colorsFromQuery() {
   try {
-    const c = new URLSearchParams(window.location.search).get('c')
-    if (!c) return null
-    const list = c.split(',').map(normaliseHex).filter(Boolean)
-    return list.length >= 2 ? list.slice(0, HARD_MAX) : null
+    return colorsFromSearch(window.location.search, HARD_MAX)
   } catch {
     return null
   }
@@ -859,13 +850,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [queryColors] = useState(colorsFromQuery)
   const [handoff] = useState(readBoardDraft)
   const [saved] = useState(() => readSavedPalette(design?.palette, HARD_MAX))
-  const [initial] = useState(() => {
-    if (queryColors) return { colors: queryColors, seed: queryColors[0], adjust: ZERO_ADJUST }
-    if (handoff) return { colors: handoff.colors, seed: handoff.colors[0], adjust: ZERO_ADJUST }
-    if (saved) return { colors: saved.colors, seed: saved.colors[0], adjust: saved.adjust }
-    const firstSeed = sessionSeed()
-    return { colors: generateHarmony(firstSeed, 'analogous'), seed: firstSeed, adjust: ZERO_ADJUST }
-  })
+  // The precedence itself is in utils/paletteDefaults: ?c= beats a hand-off,
+  // which beats the saved project, which beats a random draw. Nothing here may
+  // draw over the first three — a link someone sent a colleague, a Continue
+  // pressed seconds ago, and a board on this device are all real work.
+  // `source` is what the persist effect below reads to tell an untouched draw
+  // apart from a palette a person actually chose.
+  const [initial] = useState(() => initialPaletteBoard({ queryColors, handoff, saved }))
   useEffect(() => { consumeBoardDraft() }, [])
 
   // Colours are the source of truth (positional: index 0–4 = the five ROLES,
@@ -890,7 +881,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     // 'auto', not 'analogous' — P-004. Missed in the first pass: the default
     // moved in ProjectContext and ColorStudio but this fallback still handed a
     // new board a PAID system that then silently collapsed to Auto anyway.
-    return HARMONIES.some(h => h.id === design?.palette?.harmony) ? design.palette.harmony : 'auto'
+    return HARMONIES.some(h => h.id === design?.palette?.harmony) ? design.palette.harmony : DEFAULT_SYSTEM
   })
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
 
@@ -1094,7 +1085,20 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // Debounced: each ProjectContext write auto-persists the whole design to
   // localStorage, so writing on every tick would make slider scrubs janky —
   // rapid changes collapse into one write ~200ms after the user settles.
+  //
+  // An UNTOUCHED RANDOM DRAW IS NOT SAVED WORK. Skipping the mount write for it
+  // is what makes the founder's "auto load a random palette" true on every
+  // visit rather than only the first: this effect used to persist the drawn
+  // board immediately, which turned a throwaway default into a saved palette
+  // the user never made, and from then on the saved branch of the precedence
+  // won and the page showed that one palette forever. Measured before the fix:
+  // visit, reload and a fresh tab all returned the same five hexes. Only the
+  // FIRST run is skipped, and only for `source === 'random'` — the moment the
+  // user changes anything the effect re-runs and persists as it always did, and
+  // a ?c= link, a hand-off or a saved project still persist on mount.
+  const pristineRef = useRef(initial.source === 'random')
   useEffect(() => {
+    if (pristineRef.current) { pristineRef.current = false; return }
     const t = setTimeout(() => {
       setPalette({
         ...persistedPalette(colors, adjust),
@@ -1119,7 +1123,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
     try {
       gen = sys === 'auto' ? autoTonalFromSeed(fromSeed) : generateHarmony(fromSeed, sys)
     } catch {
-      gen = generateHarmony(fromSeed, 'analogous')
+      // A free system, not Analogous. The solver throwing is not a reason to
+      // hand a free user output from the paid harmony engine.
+      gen = generateHarmony(fromSeed, 'monochromatic')
     }
     setColors(prev => prev.map((c, i) => (i < gen.length && !locked.has(i) ? normaliseHex(gen[i]) || c : c)))
   }
@@ -1523,19 +1529,30 @@ export default function PaletteBuilder({ onCopy, toast }) {
       importedSig: importedSigRef.current,
       at: Date.now(),
     }
-    const defaults = generateHarmony(DEFAULT_SEED, 'analogous')
+    // Founder request, 2026-09-03: "reset should reset the settings to default
+    // but randomise the colour." So the settings go back to DEFAULT_SYSTEM with
+    // the lens at zero, and the COLOURS are a fresh draw from the same engine
+    // the Randomise button uses — not a return to the fixed #4338E0 board, and
+    // not the paid analogous system this used to rebuild under a free label.
+    // The pre-reset board is pushed into vs-palette-history just below and
+    // `undoPalette` still restores it, so re-randomising costs nothing.
+    const fresh = defaultPaletteBoard()
+    const defaults = fresh.colors
     const baseline = {
       colors: defaults,
-      seed: DEFAULT_SEED,
-      seedInput: DEFAULT_SEED,
-      harmony: 'analogous',
+      seed: fresh.seed,
+      seedInput: fresh.seed,
+      harmony: DEFAULT_SYSTEM,
       locked: [],
       adjust: ZERO_ADJUST,
       vision: 'normal',
       showContrast: false,
       importedGalleryId: null,
     }
-    const defaultPalette = paletteSignature(current) === paletteSignature(baseline)
+    // Settings, not colours. Two resets never produce the same board now, so
+    // comparing whole boards could never be true again and the double-click
+    // guard below would have been silently dead. See isDefaultSettings.
+    const defaultPalette = isDefaultSettings(current)
     // Preserve the first meaningful pre-reset snapshot when Reset is pressed
     // repeatedly. Without this guard, a defensive double-click replaces the
     // recoverable state with an already-reset board.
@@ -1553,9 +1570,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
       return next
     })
     setColors(defaults)
-    setSeed(DEFAULT_SEED)
-    setSeedInput(DEFAULT_SEED)
-    setHarmony('analogous')
+    setSeed(fresh.seed)
+    setSeedInput(fresh.seed)
+    setHarmony(DEFAULT_SYSTEM)
     setLocked(new Set())
     setAdjust(ZERO_ADJUST)
     setVision('normal')
@@ -1571,7 +1588,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setVarBase(null)
     setActiveVar(null)
     closeAllMenus()
-    setLiveMsg('Palette reset to the default system')
+    setLiveMsg('Settings reset to the default system, with a new random palette')
     toast?.('Palette reset · Undo is available')
   }
 
@@ -1587,7 +1604,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
       setColors(target.colors)
       setSeed(target.seed || target.colors[0])
       setSeedInput(target.seedInput || target.seed || target.colors[0])
-      setHarmony(target.harmony || 'analogous')
+      setHarmony(target.harmony || DEFAULT_SYSTEM)
       setLocked(new Set(target.locked || []))
       setAdjust({ ...(target.adjust || ZERO_ADJUST) })
       setVision(target.vision || 'normal')
@@ -1617,7 +1634,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     setColors(restored)
     setSeed(entry.seed || restored[0])
     setSeedInput(entry.seedInput || entry.seed || restored[0])
-    setHarmony(entry.harmony || 'analogous')
+    setHarmony(entry.harmony || DEFAULT_SYSTEM)
     setAdjust({ ...(entry.adjust || ZERO_ADJUST) })
     setLocked(new Set(entry.locked || []))
     setVision(entry.vision || 'normal')
@@ -2278,7 +2295,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                             setColors(h.colors.slice(0, HARD_MAX))
                             setSeed(h.seed || h.colors[0])
                             setSeedInput(h.seedInput || h.seed || h.colors[0])
-                            setHarmony(h.harmony || 'analogous')
+                            setHarmony(h.harmony || DEFAULT_SYSTEM)
                             setLocked(new Set(h.locked || []))
                             setAdjust({ ...(h.adjust || ZERO_ADJUST) })
                             setVision(h.vision || 'normal')

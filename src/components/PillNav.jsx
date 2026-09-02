@@ -50,6 +50,10 @@ const MENU_TOOL_COPY = {
   'box-shadow': 'Build deliberate depth systems.',
   'auto-builder': 'Generate a connected UI foundation.',
   icons: 'Search, customise and copy SVG icons.',
+  // The Discover surface lists the same page under its own group id, and a menu
+  // row is one line — without this it would fall back to the group's full
+  // sentence and run three lines deep beside its one-line neighbours.
+  'icon-library': 'Search, customise and copy SVG icons.',
   emoji: 'Find and copy emoji by category.',
   'file-converter': 'Convert and compress files locally.',
   ratio: 'Calculate dimensions and aspect ratios.',
