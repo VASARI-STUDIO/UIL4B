@@ -195,24 +195,74 @@ export async function restingScrollY(page, what = 'the page') {
   return resting
 }
 
-/**
- * One wheel gesture, and then the position it comes to rest at.
+/* ── Waiting for a gesture to be TAKEN UP ────────────────────────────────────
  *
- * The wait for the gesture to be TAKEN UP is not decoration. Dispatching a
- * wheel event and finding the scroll layer idle a few frames later has two
- * readings — "the gesture is finished" and "the gesture has not started" — and
- * this helper would otherwise return the pre-gesture position for the second.
- * A gesture that is never taken up is not an error here (the page may already
- * be at the bottom); callers send another one, and their own assertion on the
- * final position is what judges the result.
+ * The wait for a gesture to be taken up is not decoration, and it is the half
+ * of this file that #297 wrote into wheelToRest's own body. Dispatching an
+ * input and finding the scroll layer idle a few frames later has two readings —
+ * "the gesture is finished" and "the gesture has not started" — and a helper
+ * that cannot tell them apart returns the pre-gesture position for the second.
+ * That is the same unsoundness as sampling mid-flight, pointing the other way:
+ * it charges a real scroll to the position before it and reports no scroll.
+ *
+ * It is shared now because keyboard input needs exactly the same half, and the
+ * budget is counted in FRAMES for the same reason stillness is: a contended
+ * runner paints fewer of them per second, so a frame budget buys proportionally
+ * more wall-clock time in precisely the conditions that need more. That
+ * replaces the 2000ms `waitForFunction` this used to carry — the last wall
+ * clock left deciding one of this file's measurements. The ms figure below is a
+ * backstop against a page that has stopped painting altogether, and decides
+ * nothing on a page that is still painting.
+ *
+ * A gesture that is never taken up is NOT an error here. The page may already
+ * be at the bottom, and 28-account-menu-keyboard.spec.js deliberately sends a
+ * key that a correct build ignores. The caller's own assertion on the resting
+ * position is what judges the result — which is why this returns a boolean
+ * nobody is obliged to look at rather than throwing.
  */
+const TAKE_UP_FRAMES = 60
+const TAKE_UP_BACKSTOP_MS = 8000
+
+const waitForTakeUp = (page, from) => page.evaluate(({ start, frames, backstop }) => new Promise((resolve) => {
+  const root = document.documentElement
+  let left = frames
+  let done = false
+  const finish = (value) => { done = true; clearTimeout(timer); resolve(value) }
+  const timer = setTimeout(() => finish(false), backstop)
+  const tick = () => {
+    if (done) return
+    // Either half is enough. A changed position is take-up that has already
+    // landed; `lenis-scrolling` is take-up the scroll layer has accepted but
+    // has not yet painted a pixel of, which is the case a bare
+    // `scrollY !== start` misses on the one frame where it matters.
+    if (window.scrollY !== start || root.classList.contains('lenis-scrolling')) { finish(true); return }
+    if (--left <= 0) { finish(false); return }
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}), { start: from, frames: TAKE_UP_FRAMES, backstop: TAKE_UP_BACKSTOP_MS })
+
+/** One wheel gesture, and then the position it comes to rest at. */
 export async function wheelToRest(page, dy, what = 'the page') {
   const before = await page.evaluate(() => window.scrollY)
   await page.mouse.wheel(0, dy)
-  await page.waitForFunction(
-    (from) => window.scrollY !== from || document.documentElement.classList.contains('lenis-scrolling'),
-    before,
-    { timeout: 2000 },
-  ).catch(() => { /* not taken up; see above */ })
+  await waitForTakeUp(page, before)
+  return restingScrollY(page, what)
+}
+
+/**
+ * One key press, and then the position the page comes to rest at.
+ *
+ * Keyboard scrolling needed its own because the assertion that goes with it is
+ * shaped the other way round from the wheel ones. A test that presses a key and
+ * polls for `scrollY > before` is waiting for the movement to BEGIN, and its
+ * deadline is a guess about someone else's take-up: on a loaded runner the
+ * guess expires first and a real scroll is recorded as none. Waiting for
+ * take-up and then for rest takes the guess out of both ends of the reading.
+ */
+export async function keyToRest(page, key, what = 'the page') {
+  const before = await page.evaluate(() => window.scrollY)
+  await page.keyboard.press(key)
+  await waitForTakeUp(page, before)
   return restingScrollY(page, what)
 }
