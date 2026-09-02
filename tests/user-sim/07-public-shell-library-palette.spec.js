@@ -75,6 +75,85 @@ test.describe('public UI quality release', () => {
     }
   })
 
+  /* The footer credits the founder, and does it on EVERY route.
+   *
+   * This is the shape of the bug it closes: the attribution was asked for in the
+   * founder batch of 2026-08-20 (item A3) and was the only item of that batch
+   * that never shipped, because it LOOKS like homepage work. It is not — the
+   * footer renders on every page, so it belonged to none of the four parked
+   * homepage PRs and fell between them. So the route loop is the point of this
+   * test, not decoration: it fails the same way the omission did.
+   *
+   * The resting underline is a real requirement, not styling trivia. Every other
+   * link in this footer is an internal NavLink; this is the only one that leaves
+   * the app, and on touch there is no hover to reveal that. */
+  test('the footer credits Dylan Coleman on every route and marks the link as leaving the app', async ({ page }) => {
+    watch(page, 'visitor wondering who made this')
+    for (const route of ['/', '/discover', '/create/palette']) {
+      await go(page, route)
+      const footer = page.locator('.app-footer')
+      const attrib = footer.locator('.app-footer-attrib')
+      await attrib.waitFor()
+
+      await expect(footer, `${route} should credit the founder`).toContainText('Built in Brisbane by Dylan Coleman')
+      await expect(footer, `${route} should have dropped the old tagline`)
+        .not.toContainText('for people who ship interfaces')
+
+      // The settled URL — CHANGELOG.md, founder decisions 2026-08-20, decision 3.
+      await expect(attrib).toHaveAttribute('href', 'https://dylan-coleman.com/')
+      await expect(attrib).toHaveAttribute('target', '_blank')
+      const rel = await attrib.getAttribute('rel')
+      expect(rel, `${route} external credit needs the app's new-tab guard`).toContain('noopener')
+      expect(rel).toContain('noreferrer')
+
+      // Discoverable WITHOUT hover — founder direction 2026-09-02. Asserted in
+      // BOTH themes and by CONTRAST, not just by presence: the first version of
+      // this rule pinned the underline to --bh, which is a real underline that
+      // happens to sit at 1.7:1 on the dark footer. "Has an underline" would
+      // have passed that. "Can be seen" does not.
+      for (const theme of ['light', 'dark']) {
+        const seen = await attrib.evaluate((el, mode) => {
+          const root = document.documentElement
+          const previous = root.getAttribute('data-theme')
+          root.setAttribute('data-theme', mode)
+          // TWO channel scales are in play and mixing them silently produces a
+          // plausible wrong number: backgroundColor comes back as rgb() on
+          // 0-255, but a color-mix() resolves to color(srgb r g b / a) on 0-1.
+          // Reading the second as the first is what made a 3.3:1 underline
+          // measure 1.09:1 while this test was being written.
+          const toRgba = (c) => {
+            const n = (c.match(/-?[\d.]+(?:e[-+]?\d+)?/gi) || []).map(Number)
+            const scale = /^color\(/i.test(c) ? 255 : 1
+            return [n[0] * scale, n[1] * scale, n[2] * scale, n.length > 3 ? n[3] : 1]
+          }
+          const lum = (rgb) => {
+            const [r, g, b] = rgb.slice(0, 3).map((v) => {
+              const s = v / 255
+              return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+            })
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b
+          }
+          const style = getComputedStyle(el)
+          const line = style.textDecorationLine
+          // The underline is semi-transparent, so composite it over the footer
+          // ground before measuring — the painted colour is what a user sees.
+          const deco = toRgba(style.textDecorationColor)
+          const bg = toRgba(getComputedStyle(el.closest('.app-footer')).backgroundColor)
+          const over = [0, 1, 2].map((i) => deco[i] * deco[3] + bg[i] * (1 - deco[3]))
+          const [a, b2] = [lum(over) + 0.05, lum(bg) + 0.05]
+          if (previous === null) root.removeAttribute('data-theme')
+          else root.setAttribute('data-theme', previous)
+          return { line, ratio: Math.max(a, b2) / Math.min(a, b2) }
+        }, theme)
+        expect(seen.line, `${route} credit must be underlined at rest, not only on hover`).toContain('underline')
+        // WCAG 1.4.11: this underline is the non-text signal that the link
+        // leaves the app, so it is held to the 3:1 non-text contrast bar.
+        expect(seen.ratio, `${route} underline must reach 3:1 in ${theme} (got ${seen.ratio.toFixed(2)}:1)`)
+          .toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
   test('Discover and Learn map blips keep a 24px target around the compact visual dot', async ({ page }) => {
     watch(page, 'touch user exploring public community proof')
     await page.setViewportSize({ width: 390, height: 844 })

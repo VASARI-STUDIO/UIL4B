@@ -2731,6 +2731,17 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer-soon-link em{padding:2px 5px;border:1px solid var(--border);border-radius:999px;font-family:var(--mono);font-size:8px;font-style:normal;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
 .app-footer-legal{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding-top:var(--s-5);border-top:1px solid var(--border);font-size:var(--fs-caption);color:var(--t3)}
 .app-footer-copy{font-family:var(--mono)}
+/* Founder attribution. Lifts off the --t3 sentence around it and keeps a
+   RESTING underline: every sibling in this footer is an internal NavLink, so
+   the one link that leaves the app has to say so without being hovered
+   (founder direction 2026-09-02 — no hover-only affordances on touch).
+   The underline derives from currentColor rather than a fixed token because a
+   fixed one cannot serve both themes: --bh reads 1.7:1 on the dark footer,
+   which is an affordance only in the sense that it technically exists. 70% is
+   the mix that clears 1.4.11's 3:1 against the footer ground in BOTH themes —
+   50% measured 2.4:1 in light, where the ground is white. */
+.app-footer-attrib{color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
+.app-footer-attrib:hover{color:var(--accent);text-decoration-color:currentColor}
 .app-footer--compact{padding-block:var(--s-6) var(--s-4)}
 .app-footer--compact .app-footer-inner{grid-template-columns:minmax(220px,.8fr) minmax(420px,1.2fr);gap:var(--s-5) var(--s-7)}
 .app-footer--compact .app-footer-tagline{max-width:36ch}
