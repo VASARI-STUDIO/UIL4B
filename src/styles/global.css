@@ -327,37 +327,46 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .sec-h-eyebrow::before{content:'';width:24px;height:1px;background:var(--t3)}
 .sub{margin-bottom:48px}
 
-/* ─── Merged Icon + Emoji library — the page title IS a segmented pill ─── */
-/* One surface, two libraries: the large serif segmented control flips between
-   Icons and Emoji (each embedded child library drops its own <h1>, so this
-   header owns the title). Semantic tokens keep it correct in light + dark; the
-   active segment reads as a raised thumb, matching .pnav-seg-btn's pattern. */
-.sec-h.lib-head{margin-bottom:40px}
-.lib-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:var(--s-6);margin-bottom:var(--s-6);padding-bottom:var(--s-5);border-bottom:1px solid var(--border)}
-.lib-head-copy{max-width:680px}
-.lib-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
-.lib-head h1{margin-top:10px;font-size:var(--fs-h1);font-weight:720;line-height:1.02;letter-spacing:-.035em;color:var(--t0);text-wrap:balance}
-.lib-head-copy p{max-width:58ch;margin-top:12px;font-size:var(--fs-body);line-height:1.5;color:var(--t2)}
-.lib-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;min-width:360px;padding:4px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l)}
-.lib-switch-btn{appearance:none;display:flex;align-items:center;gap:10px;min-height:62px;padding:9px 13px;border:1px solid transparent;border-radius:var(--radius);background:none;color:var(--t2);font-family:var(--font);text-align:left;cursor:pointer;transition:color var(--t),background var(--t),border-color var(--t),box-shadow var(--t)}
-.lib-switch-btn:hover{color:var(--t1);background:var(--hvr)}
-.lib-switch-btn.is-active{color:var(--t0);background:var(--bg-1);border-color:var(--border);box-shadow:var(--shadow-xs)}
-.lib-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* ─── Merged Icon + Emoji library — the library switch and its status ─── */
+/* The masthead itself is now the shared .dgh-hero (see DiscoverGalleryHero);
+   this surface's own header rules — .lib-head, .lib-head-copy, .lib-eyebrow —
+   went with it. What is left is genuinely local: the tablist that flips between
+   the two libraries, and the connection status.
+
+   THESE COLOURS ARE WRITTEN FOR THE MASTHEAD'S GROUND, NOT THE THEME'S.
+   The switch renders inside .dgh-aside, and .dgh-hero is a fixed dark surface
+   in BOTH themes — so --bg-2 / --border / --t0..t3 would drop out of contrast
+   on it in light mode, exactly as the comment on .dgh-action .btn describes.
+   The dot colours are the --ok / --warn values from the dark palette, stated
+   literally for the same reason. */
+.lib-switch{display:grid;grid-template-columns:1fr;gap:4px;width:100%;padding:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-l)}
+.lib-switch-btn{appearance:none;display:flex;align-items:center;gap:10px;min-height:56px;padding:9px 13px;border:1px solid transparent;border-radius:var(--radius);background:none;color:rgba(255,255,255,.62);font-family:var(--font);text-align:left;cursor:pointer;transition:color var(--t),background var(--t),border-color var(--t)}
+.lib-switch-btn:hover{color:#fff;background:rgba(255,255,255,.07)}
+/* The active library is marked by a persistent raised thumb, not by hover —
+   on a touch screen there is no hover state to reveal which one you are in. */
+.lib-switch-btn.is-active{color:#fff;background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22)}
+.lib-switch-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .lib-switch-btn>svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .lib-switch-emoji{font-size:22px;line-height:1}
-.lib-switch-btn>span:last-child{display:flex;flex-direction:column;gap:2px}
+.lib-switch-btn>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
 .lib-switch-btn strong{font-size:var(--fs-body-s);font-weight:700;color:inherit}
-.lib-switch-btn small{font-size:var(--fs-micro);color:var(--t2)}
-.lib-head-status{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2)}
+.lib-switch-btn small{font-size:var(--fs-micro);color:rgba(255,255,255,.5)}
+.lib-switch-btn.is-active small{color:rgba(255,255,255,.66)}
+.lib-head-status{display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-family:var(--mono);font-size:var(--fs-micro);color:rgba(255,255,255,.55)}
 .lib-net{display:inline-flex;align-items:center;gap:7px}
-.lib-net i{width:7px;height:7px;border-radius:50%;background:var(--warn)}
-.lib-net.is-online i{background:var(--ok)}
-.lib-keyhint{color:var(--t3)}
+.lib-net i{width:7px;height:7px;border-radius:50%;background:#facc15;flex:none}
+.lib-net.is-online i{background:#4ade80}
+/* .48 not lower: at 11px this needs 4.5:1 against the masthead ground, and it
+   measures 4.99. It was .38 (3.51) for one commit — the dark hero is a much
+   darker ground than the page this text used to sit on. */
+.lib-keyhint{color:rgba(255,255,255,.48)}
 .lib-loading{display:flex;min-height:280px;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--t2)}
 .lib-loading strong{font-size:var(--fs-body);color:var(--t0)}
 .lib-loading span{font-size:var(--fs-caption)}
-@media(max-width:768px){.lib-head{grid-template-columns:1fr;align-items:start}.lib-switch{width:100%;min-width:0}.lib-head-status{grid-column:auto}}
-@media(max-width:480px){.lib-head h1{font-size:var(--fs-h2)}.lib-switch{grid-template-columns:1fr}.lib-keyhint{display:none}}
+/* Below the masthead's own 720px stack point the aside spans the full width,
+   so the two libraries sit side by side again; on a phone they stack back. */
+@media(max-width:720px){.lib-switch{grid-template-columns:1fr 1fr}.lib-head-status{flex-direction:row;align-items:center;justify-content:space-between;width:100%}}
+@media(max-width:480px){.lib-switch{grid-template-columns:1fr}.lib-keyhint{display:none}}
 
 /* ─── Color Studio Nav & Sections ─── */
 /* Pill-nav (CS#1/2/2.1): glass panel + absolutely-positioned sliding thumb whose
@@ -9102,6 +9111,12 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .dgh-action .btn{display:inline-flex;align-items:center;gap:8px;color:#0a0a0b;background:#fff;border-color:#fff}
 .dgh-action .btn:hover{color:#fff;background:var(--brand);border-color:var(--brand)}
 .dgh-action .btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
+/* The right-hand column, when it holds CONTROLS rather than the decorative
+   count (the Icon/Emoji surface's library tablist). Wider than the mark's
+   230px because these are labelled buttons, and left-aligned because they are
+   read as a list rather than as a display number. */
+.dgh-hero--controls{grid-template-columns:minmax(0,1fr) 264px;gap:clamp(28px,4vw,56px)}
+.dgh-aside{position:relative;z-index:1;display:flex;flex-direction:column;gap:14px;min-width:0}
 .dgh-mark{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
 .dgh-mark span{margin-bottom:36px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:#a89bff}
 .dgh-mark strong{font-family:var(--serif);font-size:92px;font-weight:500;line-height:.8;letter-spacing:-.07em}
@@ -9113,6 +9128,10 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 @media(max-width:720px){
   .dgh-hero{grid-template-columns:1fr;min-height:430px;border-radius:20px}
   .dgh-mark{display:none}
+  /* The mark is dropped here; the aside is NOT. It carries the only route to
+     the other library, so it stacks under the copy instead of disappearing.
+     The min-height also goes, because the stacked aside already fills it. */
+  .dgh-hero--controls{min-height:0}
 }
 @media(max-width:480px){
   .dgh-hero h1{font-size:clamp(38px,12vw,56px)}
