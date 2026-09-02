@@ -32,3 +32,28 @@ export function toggleSelection(current, id, { options, resetId }) {
   // reorder under the pointer.
   return selectable.filter(o => next.includes(o))
 }
+
+/**
+ * What the collapsed trigger says it is filtering by.
+ *
+ * The whole risk of collapsing a tray into one control is that the selection
+ * stops being visible, so this string is the feature rather than a label: a
+ * trigger reading only "Mood" has hidden state, where "Mood · Warm" has saved
+ * space. Deel's filter chips carry a count for the same reason.
+ *
+ * Pure and here rather than inline in the component so the three cases can be
+ * asserted without a browser — and the third one is the case that is easy to
+ * get wrong. Naming several selections individually is what a reader expects
+ * and it does not fit: four option labels overflow a 46px control, and a list
+ * truncated mid-word reports the selection LESS clearly than a count does.
+ *
+ * `emptyLabel` is the no-selection wording. It is a parameter because "Any" is
+ * right for a filter and wrong for a sort, and a surface that needs the other
+ * one should not have to reimplement the function to get it.
+ */
+export function selectionSummary(value, options, emptyLabel = 'Any') {
+  const on = options.filter(o => isOn(value, o.id))
+  if (on.length === 1) return on[0].label
+  if (on.length > 1) return `${on.length} selected`
+  return emptyLabel
+}

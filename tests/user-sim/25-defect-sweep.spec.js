@@ -256,6 +256,20 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 // [path, container selector, item selector, rows, items across all rows]
 const CHIP_WIDTHS = [320, 390, 768, 1180]
 
+// The shared Library tray no longer renders inline across the whole of that
+// list. Between 641 and 980px it collapses to a trigger plus a menu — the band
+// that previously had no layout of its own and wrapped the toolbar to three and
+// four rows (see `.lbry-search` in global.css and LibraryFilterGroup.jsx).
+//
+// 768 is inside that band, so the tray widths drop it and the collapsed form is
+// measured at 768 and 834 by the test below instead. The MEASUREMENT is the
+// same one either way — every option inside its own container's box, and that
+// container not quietly a horizontal scroller — asked of whichever form is
+// actually on screen. Dropping 768 from one list without asking the question
+// somewhere else would have been a coverage hole disguised as a green run.
+const TRAY_WIDTHS = [320, 390, 1180]
+const COLLAPSED_WIDTHS = [768, 834]
+
 const CHIP_ROWS = [
   // The original `.pl-chips` idiom: one wrapping row of outlined pills.
   //
@@ -291,10 +305,10 @@ const FILTER_TRAYS = [
  * whole defect. It measures which of them sit inside their own container's box,
  * and whether that container has quietly become a scroller again.
  */
-async function chipRowDamage(browser, surfaces) {
+async function chipRowDamage(browser, surfaces, widths = CHIP_WIDTHS) {
   const damage = []
   for (const [path, box, item, rows, items] of surfaces) {
-    for (const w of CHIP_WIDTHS) {
+    for (const w of widths) {
       const { ctx, page } = await open(browser, w, 900, path, box, { touch: w < 800 })
       const r = await page.evaluate(([boxSel, itemSel]) => {
         const found = [...document.querySelectorAll(boxSel)]
@@ -337,8 +351,88 @@ test('S4 · every filter chip is inside its own row, on every surface that share
 })
 
 test('S4 · every shared Library filter is inside its own tray, on every surface that shares it', async ({ browser }) => {
-  budget(FILTER_TRAYS.length * CHIP_WIDTHS.length)
-  const damage = await chipRowDamage(browser, FILTER_TRAYS)
+  budget(FILTER_TRAYS.length * TRAY_WIDTHS.length)
+  const damage = await chipRowDamage(browser, FILTER_TRAYS, TRAY_WIDTHS)
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// The same question, asked of the collapsed form, at the two widths inside the
+// band. Three things have to hold for the collapse to be an improvement rather
+// than a place to hide the options:
+//
+//   1. Every group is still represented — one trigger each, no group silently
+//      dropped. This is the `rows` guard from the tray test: a selector that
+//      matches nothing measures nothing and passes.
+//   2. The trigger SAYS what the group is filtering by. A collapsed group with
+//      no visible selection has hidden state rather than saved space, which is
+//      the known failure mode of this pattern.
+//   3. Opening it puts every option inside the menu's own box, and the menu is
+//      not a horizontal scroller. That is the S4 measurement verbatim — the
+//      collapse is only worth doing if it does not reintroduce the defect one
+//      level down.
+test('S4 · in the 641–980 band each Library filter collapses to a trigger that names its selection, and every option is inside the menu', async ({ browser }) => {
+  budget(FILTER_TRAYS.length * COLLAPSED_WIDTHS.length)
+  const damage = []
+  for (const [path, , , groups] of FILTER_TRAYS) {
+    for (const w of COLLAPSED_WIDTHS) {
+      // Wait on the TOOLBAR, not on the trigger. Waiting on the thing under
+      // test turns "the collapse did not happen" into a 15s timeout with no
+      // message; waiting on its container lets the count assertion below say
+      // what was expected and what was found.
+      const { ctx, page } = await open(browser, w, 900, path, '.lbry-toolbar', { touch: true })
+
+      const triggers = page.locator('.lbry-filtertrig')
+      const found = await triggers.count()
+      if (found !== groups) {
+        damage.push(`${path} @${w}px: expected ${groups} collapsed filter trigger(s), found ${found}`)
+        await ctx.close()
+        continue
+      }
+
+      for (let i = 0; i < found; i++) {
+        const trigger = triggers.nth(i)
+        // Read the two parts SEPARATELY. `textContent` runs the group name and
+        // the selection together with no separator ("MoodAll"), so any check on
+        // the concatenated string is really a check on the CSS that spaces
+        // them. What has to be true is that both parts exist and say different
+        // things — a trigger showing only its group name is the hidden-state
+        // failure this pattern is judged on.
+        const parts = await trigger.evaluate((el) => ({
+          key: el.querySelector('.lbry-filtertrig-k')?.textContent?.trim() || '',
+          value: el.querySelector('.lbry-filtertrig-v')?.textContent?.trim() || '',
+        }))
+        if (!parts.key) damage.push(`${path} @${w}px: trigger ${i} does not name its group`)
+        if (!parts.value) damage.push(`${path} @${w}px: trigger ${i} names the group ("${parts.key}") but not its selection`)
+        if (parts.key && parts.key === parts.value) {
+          damage.push(`${path} @${w}px: trigger ${i} repeats "${parts.key}" instead of reporting a selection`)
+        }
+        await trigger.click()
+        const menu = page.locator('.lbry-filtermenu')
+        await menu.waitFor({ state: 'visible' })
+        const r = await page.evaluate(() => {
+          const m = document.querySelector('.lbry-filtermenu')
+          const mb = m.getBoundingClientRect()
+          const opts = [...m.querySelectorAll('.lbry-filter')]
+          return {
+            options: opts.length,
+            outside: opts.filter((o) => {
+              const b = o.getBoundingClientRect()
+              return b.right > mb.right + 0.5 || b.left < mb.left - 0.5
+            }).length,
+            hScroll: m.scrollWidth > m.clientWidth + 1,
+            inViewport: mb.left >= -0.5 && mb.right <= window.innerWidth + 0.5,
+          }
+        })
+        if (!r.options) damage.push(`${path} @${w}px: trigger ${i} opened a menu with no options in it`)
+        if (r.outside) damage.push(`${path} @${w}px: ${r.outside} of ${r.options} options outside the menu box`)
+        if (r.hScroll) damage.push(`${path} @${w}px: the collapsed menu is a horizontal scroller`)
+        if (!r.inViewport) damage.push(`${path} @${w}px: the collapsed menu hangs off the viewport edge`)
+        await page.keyboard.press('Escape')
+        await menu.waitFor({ state: 'detached' })
+      }
+      await ctx.close()
+    }
+  }
   expect(damage, damage.join('\n')).toEqual([])
 })
 

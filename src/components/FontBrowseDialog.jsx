@@ -177,6 +177,7 @@ export default function FontBrowseDialog({ title, fonts, value, onPick, onClose 
         >
           <LibraryFilterGroup
             label="Filter by category"
+            triggerLabel="Category"
             value={category}
             onChange={changeCategory}
             options={CATS}

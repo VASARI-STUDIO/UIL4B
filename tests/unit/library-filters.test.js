@@ -11,7 +11,7 @@
 // grid actually widens) is in tests/user-sim/31-library-filter-multi.spec.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { isOn, toggleSelection } from '../../src/components/library/filterSelection.js'
+import { isOn, selectionSummary, toggleSelection } from '../../src/components/library/filterSelection.js'
 
 const OPTIONS = [
   { id: 'all', label: 'All types' },
@@ -83,4 +83,43 @@ test('isOn reads both shapes', () => {
 test('a tray with one selectable option collapses immediately, and stays reachable', () => {
   const one = { options: [{ id: 'all' }, { id: 'Linear' }], resetId: 'all' }
   assert.deepEqual(toggleSelection(['all'], 'Linear', one), ['all'])
+})
+
+// ── The collapsed trigger's summary (641–980px) ──────────────────────────────
+// Between 641 and 980px the tray renders as one trigger plus a menu, and this
+// string is the only thing on screen saying what the group is filtering by. If
+// it is wrong the collapse has hidden state rather than saved space, which is
+// the failure this whole pattern is judged on — so it is asserted here rather
+// than left to be noticed in a screenshot.
+const MOODS = [
+  { id: 'all', label: 'All' },
+  { id: 'warm', label: 'Warm' },
+  { id: 'cool', label: 'Cool' },
+  { id: 'dark', label: 'Dark' },
+]
+
+test('the collapsed trigger names a single selection in the option’s own words', () => {
+  assert.equal(selectionSummary('warm', MOODS), 'Warm')
+  assert.equal(selectionSummary(['cool'], MOODS), 'Cool')
+  // The reset option is a selection like any other and says its own name —
+  // "All" is more informative than "Any", and it is what the tray shows lit.
+  assert.equal(selectionSummary('all', MOODS), 'All')
+})
+
+test('several selections are counted rather than listed', () => {
+  assert.equal(selectionSummary(['warm', 'cool'], MOODS), '2 selected')
+  assert.equal(selectionSummary(['warm', 'cool', 'dark'], MOODS), '3 selected')
+})
+
+test('no selection falls back to the empty wording, which the call site may choose', () => {
+  assert.equal(selectionSummary([], MOODS), 'Any')
+  assert.equal(selectionSummary('', MOODS), 'Any')
+  assert.equal(selectionSummary([], MOODS, 'Default'), 'Default')
+})
+
+// A value that is no longer one of the options must not be reported as a
+// selection — the trigger would be naming a filter that is not applied.
+test('a stale value reports as no selection rather than inventing a label', () => {
+  assert.equal(selectionSummary('bezier', MOODS), 'Any')
+  assert.equal(selectionSummary(['warm', 'bezier'], MOODS), 'Warm')
 })

@@ -746,12 +746,14 @@ export default function FontGallery({ onCopy, toast }) {
       >
         <LibraryFilterGroup
           label="Filter by category"
+          triggerLabel="Category"
           value={category}
           onChange={setCategory}
           options={CATS}
         />
         <LibraryFilterGroup
           label="Sort families"
+          triggerLabel="Sort"
           value={sort}
           onChange={setSort}
           options={SORTS}
