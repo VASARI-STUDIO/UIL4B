@@ -5496,7 +5496,13 @@ html.lenis,html.lenis body{height:auto}
    its a11y/motion; the Stage is a DELIBERATELY fixed dark canvas (literal hexes,
    not tokens) that swaps to a light canvas so dark icons stay visible. Live values
    arrive on .icust-stage as --ig-size/--ig-stroke/--ig-color/--ig-transform and are
-   consumed by the inline SVG below via currentColor. ══ */
+   consumed by the inline SVG below via currentColor.
+   --ig-stroke is a viewBox USER-UNIT number, not a pixel one: CSS stroke-width
+   resolves in the SVG's own coordinate space, exactly like the stroke-width
+   attribute in the exported file. The Customizer's control is in pixels and JS
+   converts it once (src/utils/iconStroke.js, strokeAttrForPx) for both the Stage
+   and the export, so the preview cannot disagree with the download. The literal
+   2 below is the pre-paint fallback and equals the 4px default at size 48. ══ */
 .icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px) 16px 32px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;animation:cp-fade var(--dur-1) var(--ease-entrance)}
 /* Panel clips to its rounded corners; the header is fixed and a single inner
    .icust-body owns the scroll — so the scrollbar lives INSIDE the panel, never
