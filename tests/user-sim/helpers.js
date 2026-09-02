@@ -242,12 +242,24 @@ const waitForTakeUp = (page, from) => page.evaluate(({ start, frames, backstop }
   requestAnimationFrame(tick)
 }), { start: from, frames: TAKE_UP_FRAMES, backstop: TAKE_UP_BACKSTOP_MS })
 
+/**
+ * The resting position after something the test has already done should have
+ * moved the page, given where it was before that thing happened.
+ *
+ * For the cases where the cause is not an input the test can send — a route
+ * hand-off scrolling its own destination into view, say — and there is
+ * therefore nothing to press here.
+ */
+export async function restAfterMove(page, from, what = 'the page') {
+  await waitForTakeUp(page, from)
+  return restingScrollY(page, what)
+}
+
 /** One wheel gesture, and then the position it comes to rest at. */
 export async function wheelToRest(page, dy, what = 'the page') {
   const before = await page.evaluate(() => window.scrollY)
   await page.mouse.wheel(0, dy)
-  await waitForTakeUp(page, before)
-  return restingScrollY(page, what)
+  return restAfterMove(page, before, what)
 }
 
 /**
@@ -263,6 +275,5 @@ export async function wheelToRest(page, dy, what = 'the page') {
 export async function keyToRest(page, key, what = 'the page') {
   const before = await page.evaluate(() => window.scrollY)
   await page.keyboard.press(key)
-  await waitForTakeUp(page, before)
-  return restingScrollY(page, what)
+  return restAfterMove(page, before, what)
 }
