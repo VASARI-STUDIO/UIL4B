@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import useModalDialog from '../hooks/useModalDialog'
 
 // What a free account actually gets you. Shown when a gated action raised this
 // popup, so "log in to continue" answers the obvious next question — what do I
@@ -20,6 +21,14 @@ function GoogleIcon() {
       <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  )
+}
+
+function Tick() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   )
 }
@@ -52,47 +61,47 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const dialogRef = useRef(null)
-  const googleRef = useRef(null)
-  const passwordRef = useRef(null)
   const loadingRef = useRef(false)
+  const dismissRef = useRef(onDismiss)
 
   useEffect(() => { loadingRef.current = loading }, [loading])
+  useEffect(() => { dismissRef.current = onDismiss }, [onDismiss])
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const focusFrame = requestAnimationFrame(() => {
-      ;(passwordOnly ? passwordRef.current : googleRef.current)?.focus()
-    })
-    const onKey = (e) => {
-      if (e.key === 'Escape' && !loadingRef.current) {
-        e.preventDefault()
-        onDismiss()
-        return
-      }
-      if (e.key !== 'Tab') return
-      const focusable = [...(dialogRef.current?.querySelectorAll(
-        'button:not([disabled]),input:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])',
-      ) || [])]
-      if (!focusable.length) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      cancelAnimationFrame(focusFrame)
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [onDismiss, passwordOnly])
+  // Closing is refused while an auth call is in flight. A popup dismissed
+  // mid-`signInWithPopup` resolves the caller's promise with null while Firebase
+  // is still working, so the gated action reports "cancelled" and then the user
+  // silently becomes signed in. The guard predates this redesign; it is kept
+  // verbatim and simply moved behind the shared hook.
+  //
+  // Read through refs and pinned with an empty dep list so the identity never
+  // changes: useModalDialog re-runs its whole effect when onClose changes, which
+  // would re-lock scroll, re-capture the opener and restore focus mid-life.
+  const requestDismiss = useCallback(() => {
+    if (!loadingRef.current) dismissRef.current()
+  }, [])
+
+  // The app's shared modal contract — focus trap, Escape, scroll lock, and
+  // focus returned to whatever opened us. This dialog used to hand-roll all
+  // four, and the copy was subtly weaker than the original in two ways that
+  // both cost a keyboard user their place:
+  //
+  //  1. It never restored focus at all. LoginPromptContext did that instead, by
+  //     calling .focus() on the exact node it captured — which is a silent no-op
+  //     once that node has unmounted. PillNav's "Log in" lives inside a popover
+  //     that closeAll() tears down as the dialog opens, so the single most
+  //     common way into this dialog dropped the user on <body> on close.
+  //     useModalDialog remembers the opener's ANCESTOR CHAIN and hands focus to
+  //     the nearest node still connected.
+  //  2. Its keydown listener was bubble-phase on window with no stopPropagation,
+  //     so Escape inside this dialog could also close a surface underneath it.
+  //
+  // `initialFocus` keeps the landing spot this dialog already had rather than
+  // the hook's default of the dialog element: the fast path is one click on
+  // Continue with Google, and it is constant for the life of an instance, so
+  // the hook's effect never re-runs on it.
+  const dialogRef = useModalDialog(requestDismiss, {
+    initialFocus: passwordOnly ? '#ui-login-password' : '.auth-google-btn',
+  })
 
   const mapError = (err) => {
     const code = err?.code
@@ -159,7 +168,15 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
     ? unlocks.filter(u => typeof u === 'string' && u.trim())
     : DEFAULT_UNLOCKS
   const showIntent = !!reason && !resetMode && !passwordOnly
-  const showUnlocks = showIntent && free && unlockList.length > 0 && !showWhy
+
+  // The pane also opens for a reason-less SIGN-UP. "Start for Free" in the nav,
+  // the header pill, the overflow menu, the bottom CTA and SystemCTA all open
+  // this popup with signup:true and no reason, and every one of them landed a
+  // first-time visitor on a bare three-field form with nothing anywhere saying
+  // what the account is for. `reason` gates the interruption copy; creating an
+  // account is its own reason to answer the question.
+  const showAside = showIntent || (isSignup && !resetMode && !passwordOnly)
+  const showUnlocks = showAside && free && unlockList.length > 0 && !showWhy
 
   // "Log in to continue" — matching the NAV TRIGGER, which says "Log in".
   //
@@ -183,50 +200,87 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
     <div className="ui-modal-overlay" onMouseDown={() => { if (!loading) onDismiss() }}>
       <div
         ref={dialogRef}
-        className="ui-modal ui-login"
+        className={'ui-modal ui-login' + (showAside ? ' ui-login--split' : '')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ui-login-title"
-        aria-describedby={showIntent ? 'ui-login-intent' : undefined}
+        aria-describedby={showAside ? 'ui-login-promise' : undefined}
         tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
       >
+        {/* Lifted out of .ui-modal-head and positioned over the dialog, the way
+            the Pro modal's close button already is, because the head is no
+            longer the top-left corner of this dialog at width — the reason pane
+            is. It stays the FIRST focusable in DOM order, which is what makes
+            Shift+Tab off it wrap round to the last control. */}
+        <button type="button" className="ui-modal-x ui-login-x" onClick={onDismiss} aria-label="Close" disabled={loading}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+
+        {/* The reason pane.
+
+            This was a tinted card stacked on top of the form, which pushed the
+            single most important control on the surface — Continue with Google —
+            below three boxed panels on a phone. It is now a column of its own
+            beside the form at width, and a short band above it below 781px, on
+            the same grid the Pro modal already uses for its proof rail. Nothing
+            here is behind a hover: on touch the pane is simply there.
+
+            The copy answers the two questions an interruption raises, in the
+            order a person asks them: what was I doing, and do I lose it. Naming
+            the action first is deliberate — "you must log in to X" reads as a
+            scold and buries the thing the user cared about. The return promise
+            is literally true: LoginPromptContext resolves a promise over the
+            current page and never navigates. */}
+        {showAside && (
+          <aside className="ui-login-aside">
+            <p className="ui-login-eyebrow">{showIntent ? 'Where you left off' : 'What a free account gets you'}</p>
+            <p className="ui-login-promise" id="ui-login-promise">
+              {showIntent
+                ? <>You were about to <strong>{reason}</strong>.</>
+                : <>Your palettes, type scales and gradients, <strong>kept</strong>.</>}
+            </p>
+            <p className="ui-login-aside-sub">
+              {showIntent
+                ? 'This opened over your work instead of navigating away, so signing in hands you straight back to it.'
+                : 'An account is where your saved work lives. Without one, everything you build here goes when the tab does.'}
+            </p>
+            {showWhy && (
+              <div className="ui-login-why">
+                <p className="ui-login-why-h">Why we ask first</p>
+                <ul className="ui-login-why-list">
+                  {whyList.map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
+            )}
+            {showUnlocks && (
+              <ul className="ui-login-gets">
+                {unlockList.map(item => (
+                  <li className="ui-login-get" key={item}>
+                    <span className="ui-login-get-tick"><Tick /></span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {/* The way out, stated as plainly as the way in — the same rule
+                that puts a real "Maybe later" button on the Pro modal
+                (growth-persuasion.md guardrail 3). It is also the honest
+                description of what dismissing does: onDismiss resolves the
+                caller's promise with null and nothing navigates or is
+                discarded. Anchored to the bottom of the pane at width, which
+                is what stops the column reading as half-finished. */}
+            <p className="ui-login-aside-foot">
+              Not now? Closing this changes nothing — your work stays exactly as it is.
+            </p>
+          </aside>
+        )}
+
         <div className="ui-modal-head">
           <h2 className="ui-modal-title" id="ui-login-title">{title}</h2>
-          <button type="button" className="ui-modal-x" onClick={onDismiss} aria-label="Close" disabled={loading}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-          </button>
         </div>
 
         <div className="ui-modal-body">
-          {showIntent && (
-            // Name the interrupted action first. "You must log in to X" reads as
-            // a scold and buries the thing the user was doing; leading with the
-            // action tells them the app didn't lose their place — and the return
-            // promise is literally true: LoginPromptContext resolves a promise
-            // over the current page and never navigates, so the caller resumes
-            // exactly where it was.
-            <div className="ui-login-intent" id="ui-login-intent">
-              <p className="ui-login-intent-h">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
-                <span>You were about to <strong>{reason}</strong>.</span>
-              </p>
-              {showUnlocks && (
-                <ul className="ui-login-unlocks">
-                  {unlockList.map(item => <li key={item}>{item}</li>)}
-                </ul>
-              )}
-              <p className="ui-login-intent-back">We’ll bring you straight back to it.</p>
-            </div>
-          )}
-          {showWhy && (
-            <div className="ui-login-why" id="ui-login-why">
-              <p className="ui-login-why-h">Why we ask first</p>
-              <ul className="ui-login-why-list">
-                {whyList.map(item => <li key={item}>{item}</li>)}
-              </ul>
-            </div>
-          )}
           {passwordOnly && (
             <p className="ui-login-note">
               <span>Sign in as <strong>{initialEmail}</strong>. Your current account stays active unless this sign-in succeeds.</span>
@@ -247,8 +301,16 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
             <>
               {!resetMode && !passwordOnly && (
                 <>
-                  <button ref={googleRef} className="auth-google-btn" type="button" onClick={handleGoogle} disabled={loading}>
-                    <GoogleIcon />
+                  {/* The accent moved here from the submit button below.
+                      Focus already landed on this control on open, so the app
+                      was calling Google the primary path with its keyboard
+                      behaviour while drawing it as the quiet outline and giving
+                      the accent to the slower two-field one. The two now agree.
+                      The mark keeps its white ground rather than being recoloured
+                      onto the fill, which is both Google's brand requirement and
+                      the only way the multicolour G stays legible on blue. */}
+                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={loading}>
+                    <span className="auth-google-mark"><GoogleIcon /></span>
                     {t('auth.continueWithGoogle') || 'Continue with Google'}
                   </button>
                   <div className="auth-divider"><span>{t('auth.orEmail') || 'or with email'}</span></div>
@@ -269,10 +331,13 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
                 {!resetMode && (
                   <div className="auth-field">
                     <label htmlFor="ui-login-password">{t('auth.password') || 'Password'}</label>
-                    <input ref={passwordRef} id="ui-login-password" type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder') || '••••••••'} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
+                    <input id="ui-login-password" type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder') || '••••••••'} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
                   </div>
                 )}
-                <button className="btn btn-accent auth-submit" type="submit" disabled={loading}>
+                {/* Deliberately NOT .btn-accent any more — see the Google
+                    button above. Two accent fills on one surface is two
+                    primaries, which is none. */}
+                <button className="btn auth-submit" type="submit" disabled={loading}>
                   {loading ? (t('auth.pleaseWait') || 'Please wait…') : resetMode ? (t('auth.sendResetLink') || 'Send reset link') : isSignup ? (t('auth.createAccount') || 'Create account') : passwordOnly ? 'Switch account' : (t('common.signIn') || 'Sign in')}
                 </button>
               </form>
