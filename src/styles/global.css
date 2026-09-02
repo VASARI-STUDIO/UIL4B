@@ -5776,10 +5776,27 @@ html.lenis,html.lenis body{height:auto}
 /* Big enough to find on a 148px pad, and legible over both ends of the value
    axis: a white ring for dark colours, a dark hairline outside it for light ones. */
 .cpk-pad-thumb{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.3);pointer-events:none}
-.cpk-hue{-webkit-appearance:none;appearance:none;display:block;width:100%;height:22px;margin:0;border:0;border-top:1px solid var(--border);border-radius:0;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);cursor:pointer}
-.cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
-.cpk-hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
-.cpk-hue:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* ── The hue slider, and why every rule here is descendant-qualified ────────
+   `input[type="range"]` at the top of this file (~line 585) is the app's
+   standard slider: `background:transparent`, `height:32px`, a 4px `--bg-4`
+   runnable track and a 20px white-on-accent thumb. Its specificity is (0,1,1);
+   a bare `.cpk-hue` is (0,1,0), so the STANDARD SLIDER WON — and had been
+   winning since this component was written. The hue strip has never actually
+   painted its rainbow: what shipped was a thin grey track with the same blue
+   thumb as a stroke-width or a quality slider, on the one control in the app
+   whose entire job is to show you the hue you are choosing.
+
+   Nothing about the old declarations was wrong; they simply never applied.
+   Qualifying by `.cpk-instrument` takes these to (0,2,0)/(0,2,1), which beats
+   the element rule on class count — the same fix `.snapv--grad` already uses
+   two hundred lines below. The gradient goes on the ELEMENT and the runnable
+   track is made transparent and full-height, so the strip is the control. */
+.cpk-instrument .cpk-hue{-webkit-appearance:none;appearance:none;display:block;width:100%;height:22px;margin:0;padding:0;border:0;border-top:1px solid var(--border);border-radius:0;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);outline:none;cursor:pointer}
+.cpk-instrument .cpk-hue::-webkit-slider-runnable-track{height:22px;border-radius:0;background:transparent}
+.cpk-instrument .cpk-hue::-moz-range-track{height:22px;border-radius:0;background:transparent}
+.cpk-instrument .cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:3px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab;position:relative;z-index:2}
+.cpk-instrument .cpk-hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
+.cpk-instrument .cpk-hue:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .cpk-row{display:flex;align-items:center;gap:var(--s-1)}
 /* Eyedropper. Present only where the browser has the API — see the component. */
 .cpk-dropper{flex:0 0 auto;display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),border-color var(--dur-1) var(--ease-out)}
