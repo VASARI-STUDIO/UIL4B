@@ -95,7 +95,7 @@ the meaning — `semantic-color`, `aspect-ratio`, and `component-designer` under
     Entered from a "Build UI system" button inside the Palette Builder, gated by
     `canUseUiSystem`. Founder decision, batch 4: *"make the internal design
     system for admins only."* Its acceptance suite
-    (`tests/user-sim/12-ui-system-builder.spec.js`, 13 tests) is skipped because
+    (`tests/user-sim/12-ui-system-builder.spec.js`) is skipped in full because
     that suite runs signed out and the surface is therefore unreachable —
     skipped is the honest state, not a broken test.
 - **Typography System Builder** — landing at `/create/typography`
