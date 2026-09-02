@@ -71,6 +71,27 @@ export function ladderWeights(variants, limit = 5) {
   return [...picks].sort((a, b) => a - b).map(i => list[i])
 }
 
+// The OpenType usWeightClass names, which are what a foundry, a type designer
+// and every desktop font menu call these numbers. A specimen listing its cuts
+// as "400" and "600" is asking the reader to translate; listing them as
+// "400 Regular" and "600 SemiBold" is naming the thing they will go looking for
+// in the application they end up setting the type in.
+const WEIGHT_NAMES = {
+  100: 'Thin',
+  200: 'ExtraLight',
+  300: 'Light',
+  400: 'Regular',
+  500: 'Medium',
+  600: 'SemiBold',
+  700: 'Bold',
+  800: 'ExtraBold',
+  900: 'Black',
+}
+
+export function weightName(weight) {
+  return WEIGHT_NAMES[weight] || ''
+}
+
 // Google's subset ids as script names a person can read. `latin-ext` is not a
 // language and "3 subsets" is not a fact about a typeface — the specimen dialog
 // reduced this whole field to its own length, which threw away the only answer

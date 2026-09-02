@@ -2312,25 +2312,57 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .fg-compare-copy:hover{border-color:var(--brand);color:var(--brand)}
 
 /* Detail dialog */
-.fg-detail{max-width:800px;padding:40px}
-.fg-detail-close{position:absolute;top:16px;right:16px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
+/* A FRAME, NOT A COLUMN.
+   This dialog ran to 1,763px inside a 900px viewport and scrolled the OVERLAY,
+   which put every action it offers below the fold on arrival — you opened the
+   thing that helps you decide and could see none of the decisions. It is three
+   bands now: identity and controls pinned at the top, actions pinned at the
+   bottom, and only the specimen between them scrolling. `min()` against both
+   the viewport and a content height, so a two-weight family still gets a
+   dialog the size of its contents rather than a fixed slab with a hole in it. */
+.fg-detail{display:flex;flex-direction:column;max-width:860px;max-height:min(88vh,900px);padding:0;overflow:hidden}
+.fg-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0;padding:26px 28px 18px;border-bottom:1px solid var(--border)}
+.fg-detail-id{min-width:0}
+.fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fg-detail-close:hover{background:var(--bg-3);color:var(--t0)}
-.fg-detail-hero{margin:0 48px 20px 0;color:var(--t0);font-family:var(--fg-ff);font-size:clamp(40px,6vw,72px);font-weight:var(--fg-fw);line-height:1.15;letter-spacing:-.03em;word-break:break-word}
-.fg-detail-tags{display:flex;gap:6px;margin-bottom:32px;flex-wrap:wrap}
+/* 30–52px, down from 40–72. The hero was the tallest thing in a dialog that
+   could not afford height, and the family name is now repeated at every weight
+   in the list below — it does not also have to be a poster. */
+.fg-detail-hero{margin:0 0 12px;color:var(--t0);font-family:var(--fg-ff);font-size:clamp(30px,5vw,52px);font-weight:var(--fg-fw);line-height:1.1;letter-spacing:-.03em;word-break:break-word}
+.fg-detail-facts{display:flex;gap:6px;margin:0;flex-wrap:wrap}
+/* The script list runs long on a Noto face, and it is the one tag whose value
+   is the whole string rather than the first word of it, so it wraps instead of
+   sharing the pill row's `white-space` assumption. */
+.fg-tag--scripts{max-width:100%;text-transform:none;letter-spacing:.03em}
+.fg-detail-controls{flex-shrink:0;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--bg-1)}
+.fg-detail-field{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.fg-detail-field:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.fg-detail-field>span{flex-shrink:0;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.fg-detail-field input{width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+.fg-detail-field input::placeholder{color:var(--t3)}
+/* The only scrolling region, and it keeps a real scrollbar: this is a tall
+   list inside a fixed frame, which is precisely the case where hiding the
+   affordance leaves the content past the fold reading as absent. */
+.fg-detail-body{flex:1;min-height:0;overflow-y:auto;padding:24px 28px 4px}
 .fg-tag{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-pill)}
 .fg-detail-section{margin-bottom:32px}
 .fg-detail-label{display:block;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}
-.fg-scale-row{display:flex;align-items:baseline;gap:16px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.fg-scale-label{flex:0 0 52px;font-family:var(--mono);font-size:10px;color:var(--t2);text-align:right;line-height:1.3}
-.fg-scale-label span{font-size:9px;color:var(--t3)}
-.fg-scale-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t0);font-family:var(--fg-ff);font-size:var(--fg-size);font-weight:var(--fg-fw);line-height:1.25}
-.fg-weights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
-.fg-weight-slider-row{display:flex;align-items:center;gap:12px}
-.fg-weight-slider-row input[type="range"]{flex:1;accent-color:var(--brand)}
-.fg-weight-slider-val{flex:0 0 36px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t1);text-align:right}
-.fg-weight-card{padding:14px;text-align:center;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s)}
-.fg-weight-sample{height:44px;margin-bottom:6px;overflow:hidden;color:var(--t0);font-family:var(--fg-ff);font-size:34px;font-weight:var(--fg-fw);line-height:44px}
-.fg-weight-num{font-family:var(--mono);font-size:10px;color:var(--t2)}
+/* THE WEIGHT LIST — one line per cut, drawn in that cut.
+   Replaces `.fg-weights-grid`, which was six 96px tiles reading "Ag": two
+   letters cannot show what a weight does to a WORD, which is the only question
+   a weight list is asked. It also replaces `.fg-scale-row`, which printed one
+   sentence at six sizes and ellipsised five of them.
+   The rules are the separator, not boxes: six bordered cards down a dialog is
+   six frames competing with the type they contain, and the type is the content.
+   The line clips rather than wraps so every cut occupies exactly one row and
+   the list stays a column you can run your eye down — a wrapping line would
+   make the heavier cuts taller and destroy the comparison. */
+.fg-weight-rows{margin:0;padding:0;list-style:none}
+.fg-weight-row{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid var(--border)}
+.fg-weight-row:last-child{border-bottom:0}
+.fg-weight-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t0);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:25px;line-height:1.3;letter-spacing:-.015em}
+.fg-weight-tag{flex-shrink:0;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);font-variant-numeric:tabular-nums}
+.fg-weight-tag strong{color:var(--t2);font-weight:700}
 .fg-charset{color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:21px;line-height:1.8;letter-spacing:.02em;word-break:break-all}
 .fg-pair-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .fg-pair-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color var(--t)}
@@ -2343,8 +2375,10 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .fg-pair-name{min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fg-pair-apply{flex-shrink:0;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11.5px;font-weight:600;border-radius:var(--radius-pill);border:1px solid var(--border);background:transparent;color:var(--t1);cursor:pointer;transition:color var(--t),background var(--t),border-color var(--t)}
 .fg-pair-apply:hover{border-color:var(--brand);background:var(--brand);color:var(--accent-fg)}
-.fg-detail-apply,.fg-detail-actions{display:flex;gap:10px;flex-wrap:wrap}
-.fg-detail-actions{padding-top:14px;border-top:1px solid var(--border)}
+/* Pinned to the bottom of the frame, so the answer to "I like this one, now
+   what" is on screen from the moment the dialog opens instead of 1,700px down
+   it. `.fg-detail-apply` is gone with the second action bar it belonged to. */
+.fg-detail-actions{display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;padding:16px 28px;border-top:1px solid var(--border);background:var(--bg-1)}
 .fg-detail-btn{display:inline-flex;align-items:center;min-height:38px;padding:9px 15px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
 .fg-detail-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .fg-detail-btn--primary{color:var(--accent-fg);background:var(--brand);border-color:var(--brand)}
@@ -2366,7 +2400,12 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 
 @media(max-width:980px){
   .fg-hero-copy{grid-template-columns:1fr;gap:var(--s-4)}
-  .fg-detail{padding:28px}
+  /* The dialog's own padding moved into its three bands, so the tablet step is
+     on the bands rather than on the frame, which now carries none. */
+  .fg-detail-head{padding:22px 22px 16px}
+  .fg-detail-controls{padding:13px 22px}
+  .fg-detail-body{padding:20px 22px 4px}
+  .fg-detail-actions{padding:14px 22px}
 }
 @media(max-width:768px){
   .fg-more-nav{align-items:flex-start;flex-direction:column}
@@ -2376,13 +2415,22 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
   .fg-hero h1{font-size:36px}
   .fg-hero-copy>p{font-size:13px}
   .fg-overlay{padding:16px 10px}
-  .fg-detail{padding:20px}
-  .fg-detail-hero{margin-right:44px;font-size:34px}
+  /* The frame stays a frame on a phone — that is where a 1,763px dialog hurt
+     most — but takes more of the screen, because there is none to spare. */
+  .fg-detail{max-height:min(92vh,900px)}
+  .fg-detail-head{padding:18px 18px 14px}
+  .fg-detail-controls{padding:12px 18px}
+  .fg-detail-body{padding:18px 18px 4px}
+  .fg-detail-actions{padding:12px 18px}
+  .fg-detail-hero{font-size:30px}
   .fg-compare{padding:18px}
   .fg-charset{font-size:16px}
-  .fg-scale-row{align-items:flex-start;flex-direction:column;gap:2px}
-  .fg-scale-label{flex-basis:auto;text-align:left}
-  .fg-detail-btn{flex:1;justify-content:center}
+  /* Stacked: at 390px a 25px line and its numeral cannot share a row without
+     the line losing most of its words to the ellipsis, and the words are the
+     point of the row. The numeral goes above, as the caption Pitch gives it. */
+  .fg-weight-row{align-items:flex-start;flex-direction:column-reverse;gap:2px;padding:10px 0}
+  .fg-weight-line{max-width:100%;font-size:21px}
+  .fg-detail-btn{flex:1 1 46%;justify-content:center}
 }
 @media(max-width:380px){
   .fg-compare-tray{flex-direction:column;align-items:stretch}
@@ -9421,7 +9469,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    control did not, and a focused range input carries no outline of its own —
    keyboard focus arrived here invisibly. Every range on the page now rings. */
 .fg-command-size:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
-.fg-command-size input:focus-visible,.fg-weight-slider-row input:focus-visible,.fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.fg-command-size input:focus-visible,.fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .fg-command-size input{min-width:70px;width:100%;accent-color:var(--brand)}
 .fg-command-size strong{font-family:var(--mono);font-size:10px;color:var(--t1)}
 .fg-count{margin:18px 0 20px;text-transform:uppercase;letter-spacing:.11em}

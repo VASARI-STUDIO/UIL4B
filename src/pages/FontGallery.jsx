@@ -14,7 +14,7 @@ import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont,
   suggestPairings, verifyFontLoaded,
 } from '../utils/googleFonts'
-import { filterGalleryTypefaces, formatSubsets, ladderWeights } from '../utils/fontGallery'
+import { filterGalleryTypefaces, formatSubsets, ladderWeights, weightName } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 
 // Font Gallery — the standalone /create/font-gallery page. Browse the Google Fonts
@@ -416,13 +416,50 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
   )
 }
 
-/* ── Detail dialog ─────────────────────────────────────────────────────────── */
+/* ── Specimen dialog ───────────────────────────────────────────────────────── */
 
-function DetailDialog({ font, onClose, onCopy, onCompare, inCompare, onSendToPair, onSendToScale }) {
+// THE POPUP. `FontBrowseDialog.jsx` was the backlog note's guess and it is not
+// this one — that belongs to `FontPicker`, which Font Pair and Type Scale use.
+// What the Font Gallery opens when you click a family is this component, and
+// what was wrong with it, measured at 1440×900:
+//
+//   IT WAS 1,763px TALL IN A 900px VIEWPORT, and it scrolls the overlay rather
+//   than itself, so every action it offers — Find a pairing, Copy import URL,
+//   Add to comparison — sat below the fold on arrival. A dialog whose purpose
+//   is to help you decide opened with none of the decisions visible.
+//
+//   "TYPE SCALE" PRINTED THE SAME SENTENCE SIX TIMES, five of them ellipsised
+//   mid-word at six different points. It was ~40% of that height, it told you
+//   nothing the first line had not, and the tool it imitates is one button away
+//   in the same dialog.
+//
+//   "ALL WEIGHTS" WAS SIX "Ag" TILES. Two letters cannot show what a weight
+//   does to a word, which is the entire question. It was the section that
+//   should have been the heart of the dialog and the least informative in it.
+//
+//   THE TAGS COUNTED FACTS INSTEAD OF STATING THEM — "1 subset" where the data
+//   holds the script names, "6 weights" beside a control that could have shown
+//   them.
+//
+//   THE WEIGHT SLIDER had no job the page could name: it re-set a hero that was
+//   already at heading weight and a type scale that is now gone.
+//
+// So the dialog is a fixed-height frame — pinned identity, scrolling body,
+// pinned actions — and its body is the weight list, one full-width line per
+// real cut, set in your own words. Head and foot are the Readymag specimen
+// modal; the weight list is Pitch's, which renders every style as a real
+// sentence for exactly the reason the Ag tiles failed to.
+function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare, onSendToPair, onSendToScale }) {
   const ref = useModal(onClose)
   const [loadState, setLoadState] = useState('checking')
-  const [weight, setWeight] = useState(() => headingWeight(font))
+  // Seeded from the gallery's own preview field. Opening a specimen used to
+  // throw away the words you had just typed into the toolbar and hand you a
+  // stock pangram instead — the one moment in the flow where your words matter
+  // most was the one that dropped them.
+  const [text, setText] = useState(previewText)
   const [pairings, setPairings] = useState([])
+  const scripts = useMemo(() => formatSubsets(font.subsets), [font.subsets])
+  const weights = font.variants.length
 
   useEffect(() => {
     let cancelled = false
@@ -463,9 +500,50 @@ function DetailDialog({ font, onClose, onCopy, onCompare, inCompare, onSendToPai
         tabIndex={-1}
         ref={ref}
       >
-        <button type="button" className="fg-detail-close" onClick={onClose} aria-label={`Close the ${font.family} specimen`}>
-          <CloseIcon />
-        </button>
+        {/* PINNED IDENTITY. The family name, in its own face, and the three
+            facts the catalogue actually holds — stated, not counted. Scripts
+            are the Readymag "Language Support" line: the only answer this
+            dialog has to "can I set my copy in this", and it was being spent
+            on the word "subset". */}
+        <header className="fg-detail-head">
+          <div className="fg-detail-id">
+            <h2
+              className="fg-detail-hero"
+              id="fg-detail-title"
+              ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(headingWeight(font)) })}
+            >
+              {font.family}
+            </h2>
+            <p className="fg-detail-facts">
+              <span className="fg-tag">{font.category}</span>
+              <span className="fg-tag">{weights} weight{weights === 1 ? '' : 's'}</span>
+              {scripts.length > 0 && <span className="fg-tag fg-tag--scripts">{scripts.join(', ')}</span>}
+            </p>
+          </div>
+          <button type="button" className="fg-detail-close" onClick={onClose} aria-label={`Close the ${font.family} specimen`}>
+            <CloseIcon />
+          </button>
+        </header>
+
+        {/* One control, and it drives everything below it. The old dialog had a
+            weight slider that re-set a hero already at heading weight; this sets
+            the words that every cut in the list is drawn with, which is the only
+            variable a person actually wants to change while judging a face. */}
+        <div className="fg-detail-controls">
+          <label className="fg-detail-field">
+            <span>Preview text</span>
+            <input
+              type="text"
+              value={text}
+              maxLength={72}
+              spellCheck="false"
+              placeholder={PANGRAM}
+              onChange={e => setText(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="fg-detail-body">
 
         {loadState === 'unknown' && (
           <div className="fg-loading-note" role="status">
@@ -491,66 +569,34 @@ function DetailDialog({ font, onClose, onCopy, onCompare, inCompare, onSendToPai
           </div>
         )}
 
-        <h2
-          className="fg-detail-hero"
-          id="fg-detail-title"
-          ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(weight) })}
-        >
-          {font.family}
-        </h2>
-
-        <div className="fg-detail-tags">
-          <span className="fg-tag">{font.category}</span>
-          <span className="fg-tag">{font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</span>
-          {font.subsets?.length > 0 && <span className="fg-tag">{font.subsets.length} subset{font.subsets.length === 1 ? '' : 's'}</span>}
-        </div>
-
+        {/* THE BODY IS THE WEIGHT LIST. Every cut the family actually ships,
+            one full-width line each, drawn in that cut, set in the reader's own
+            words. This is the section the six "Ag" tiles were standing in for,
+            and it is the reason the type-scale block could go: a family read at
+            six weights tells you what six copies of one sentence at six sizes
+            never did, and sizes are the neighbouring tool's job. */}
         <div className="fg-detail-section">
-          <label className="fg-detail-label" htmlFor="fg-detail-weight">Weight</label>
-          <div className="fg-weight-slider-row">
-            <input
-              id="fg-detail-weight"
-              type="range"
-              min={Math.min(...font.variants)}
-              max={Math.max(...font.variants)}
-              step={100}
-              value={weight}
-              onChange={e => setWeight(+e.target.value)}
-            />
-            <span className="fg-weight-slider-val">{weight}</span>
-          </div>
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Type scale</div>
-          {SIZES.map(s => (
-            <div key={s.label} className="fg-scale-row">
-              <span className="fg-scale-label">{s.label}<br /><span>{s.px}px</span></span>
-              <span
-                className="fg-scale-text"
-                ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(weight), '--fg-size': `${s.px}px` })}
-              >
-                {PANGRAM}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">All weights</div>
-          <div className="fg-weights-grid">
+          <div className="fg-detail-label">Every weight, in your words</div>
+          <ol className="fg-weight-rows">
             {font.variants.map(w => (
-              <div key={w} className="fg-weight-card">
-                <div className="fg-weight-sample" ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(w) })}>Ag</div>
-                <div className="fg-weight-num">{w}</div>
-              </div>
+              <li key={w} className="fg-weight-row">
+                <span
+                  className="fg-weight-line"
+                  ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(w) })}
+                >
+                  {text.trim() || PANGRAM}
+                </span>
+                <span className="fg-weight-tag">
+                  <strong>{w}</strong>{weightName(w) ? ` ${weightName(w)}` : ''}
+                </span>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
 
         <div className="fg-detail-section">
           <div className="fg-detail-label">Character set</div>
-          <div className="fg-charset" ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(weight) })}>
+          <div className="fg-charset" ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(bodyWeight(font)) })}>
             <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
             <div>abcdefghijklmnopqrstuvwxyz</div>
             <div>0123456789 !@#$%^&amp;*()+-=</div>
@@ -589,19 +635,22 @@ function DetailDialog({ font, onClose, onCopy, onCompare, inCompare, onSendToPai
           </div>
         )}
 
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Take it further</div>
-          <div className="fg-detail-apply">
-            <button type="button" className="fg-detail-btn fg-detail-btn--primary" onClick={() => onSendToPair(font, null)}>
-              Find a pairing &rarr;
-            </button>
-            <button type="button" className="fg-detail-btn" onClick={() => onSendToScale(font)}>
-              Build a type scale &rarr;
-            </button>
-          </div>
         </div>
 
-        <div className="fg-detail-actions">
+        {/* PINNED ACTIONS. Every one of these used to sit past 1,700px of dialog
+            on a 900px screen, so the answer to "I like this one, now what" was
+            below the fold at the exact moment it was asked. "Take it further"
+            and the action row were also two bars doing one job — sending the
+            family somewhere — drawn differently. One bar now, with the two
+            hand-offs first because they are the reason this tool sits between
+            Font Pair and Type Scale. */}
+        <footer className="fg-detail-actions">
+          <button type="button" className="fg-detail-btn fg-detail-btn--primary" onClick={() => onSendToPair(font, null)}>
+            Find a pairing &rarr;
+          </button>
+          <button type="button" className="fg-detail-btn" onClick={() => onSendToScale(font)}>
+            Build a type scale &rarr;
+          </button>
           <button type="button" className="fg-detail-btn" onClick={() => onCompare(font)} aria-pressed={inCompare}>
             {inCompare ? 'In comparison' : 'Add to comparison'}
           </button>
@@ -623,7 +672,7 @@ function DetailDialog({ font, onClose, onCopy, onCompare, inCompare, onSendToPai
           >
             View on Google Fonts
           </a>
-        </div>
+        </footer>
       </div>
     </div>
   )
@@ -920,6 +969,7 @@ export default function FontGallery({ onCopy, toast }) {
       {selected && (
         <DetailDialog
           font={selected}
+          previewText={previewText}
           onClose={() => setSelected(null)}
           onCopy={onCopy}
           onCompare={compareFromDetail}
