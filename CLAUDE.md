@@ -129,7 +129,7 @@ Read the relevant one before working in that area.
 |---|---|
 | Product direction and the goal | **This file** (see Direction, above) |
 | Ideas awaiting founder approve/deny, and their verdicts | [`PROPOSALS.md`](docs/PROPOSALS.md) |
-| **Every gate baseline number** (lint warnings, test counts) | [`build-and-verify.md`](docs/reference/build-and-verify.md) |
+| **What the gate requires** (and the lint-warning ceiling) | [`build-and-verify.md`](docs/reference/build-and-verify.md) |
 | Founder-only console / credential / live-service work | [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) |
 | Execution order, blockers, known-unfixed bugs | `src/data/pipeline.js` |
 | Per-module product status | `src/data/moduleBoard.js` |

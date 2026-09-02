@@ -3,107 +3,114 @@
 > Reference doc for UIL4B. Linked from `CLAUDE.md`. This is the quality gate —
 > nothing ships without it.
 
-## Canonical gate baselines
+## The canonical gate
 
-**This table is the single source of truth for the gate numbers.** No other
-document, comment or commit message should restate them — link here instead.
-Every figure below was produced by running the command in this repository on
-`main` at `dbb61fa` on 2026-09-03 (the unit row from the icon-stroke branch
-rebased onto it); if you change a number here, you must have re-run it.
+**This file is the single source of truth for what the gate requires.** No other
+document, comment or commit message should restate it — link here instead.
 
-| Gate | Command | Current baseline |
+Every row below is a **property**, not a measurement. Run the command; the run
+either has the property or it does not. There is deliberately no expected test
+count in this table — see *Why there are no test counts here*, below.
+
+| Gate | Command | Pass condition |
 |---|---|---|
-| Lint | `npx eslint .` | **0 errors, 31 advisory warnings** |
-| Build | `npm run build` | passes — **27 route shells + a noindex 404 shell** |
-| Unit | `npm run test:unit` | **682 tests, 682 pass, 0 skipped** |
-| Firestore rules | `npm run test:rules` | **24 tests** (9 standalone + 5 × 3 parameterised entitlement fields) — count read from `tests/rules/firestore-rules.test.js`; the suite itself needs a JDK 21 (see below) |
-| Browser acceptance | `npm run test:users` | **355 tests across 37 spec files**; **342 pass, 13 skipped** |
+| Lint | `npx eslint .` | **0 errors.** The advisory warnings are pre-existing and capped at **31** — work may not raise that ceiling. This is the only number in the table, and it is a bound rather than a tally. |
+| Build | `npm run build` | passes **and prints its prerender line**: `prerender: wrote N route shells + a noindex 404 shell` |
+| Unit | `npm run test:unit` | **0 failures, 0 skipped** |
+| Firestore rules | `npm run test:rules` | **0 failures.** Needs a JDK 21 on `PATH` — see below |
+| Browser acceptance | `npm run test:users` | **0 failures.** The only skips are the whole of `12-ui-system-builder.spec.js` — see below |
 
-The icon stroke-unit fix (2026-09-03) moved unit 659 → **682** (+23:
-`icon-stroke-px.test.js` — the pixel→viewBox-unit conversion across a matrix of
-size x stroke x viewBox, both storage migrations, and the two call sites that
-must use it). Browser acceptance and lint unchanged, which is the point: the
-change is arithmetic behind one function, not new surface.
+**The prerender line is load-bearing; `N` is not.** That line is the only signal
+that `scripts/prerender.mjs` ran at all — a bare `npx vite build` writes `dist/`
+and prints nothing, so a build that skipped the prerender, or a prerender that
+silently stopped emitting shells, would ship green. **Look for the line.** Do
+not check `N` against a number written here: which routes get a shell is decided
+by the sitemap, and `tests/unit/prerender-routes.test.js` goes red the moment
+the sitemap, `routeMetaMap.js` and `vercel.json`'s rewrites stop agreeing. That
+test is the feedback loop. A number in this table never was one.
 
-**This table had drifted before that, and the correction is the reason it moved
-so far in one step.** It read 571 unit / 291 browser, measured at `ce7adca` on
-2026-08-27. Re-measured on `dbb61fa`: **659 unit** and **355 browser across 37
-spec files** (342 pass, 13 skipped). Eighty-eight unit tests and sixty-four
-browser tests had merged without anyone moving the numbers here, so an agent
-checking its run against this table would have read a clean run as a wild
-regression. The figures above are the re-measured ones. If you find a number
-here you cannot reproduce, re-measure and correct it rather than treating the
-drift as a failure — a stale baseline in the file that calls itself the single
-source of truth is worse than no baseline.
+### Why there are no test counts here
 
-### How these moved, and why the old numbers were not a regression
+This table used to carry exact totals — unit tests, browser tests, spec files,
+Firestore rules tests. **They drifted four times, and every drift was found by
+accident rather than by anything failing.**
 
-The previous figures here were **489 unit / 229 browser**, measured 2026-08-20.
-The 2026-08-20 founder-batch queue then merged twenty PRs, which is the whole
-of the difference:
+| The table said | It actually was | How that surfaced |
+|---|---|---|
+| 269 unit / 25 spec files | already stale the day it was written — `#274` merged between the measurement and the commit that recorded it | an engineer's branch measured differently and **said so** instead of assuming its own base was at fault |
+| "520 unit, 240 browser once the whole stack merges" | 571 / 291 — a projection, and wrong in both columns | when the 2026-08-20 queue finished draining |
+| 571 unit / 291 browser | 659 / 355 | during `#303`, eighty-eight unit and sixty-four browser tests later |
+| 24 rules tests (9 standalone + 5 × 3 parameterised) | 37 — sixteen standalone, plus 5 × 3 entitlement fields and 2 × 3 submission kinds | while writing this section; nobody had noticed |
 
-| | Was | Now | Where it came from |
-|---|---|---|---|
-| Unit | 489 | **571** | +82, the largest single block being #266's 308-line `redirects.test.js` |
-| Browser | 229 | **291** | +62, in five new spec files — `23-responsive-mid-band` (#263), `24-mobile-overhaul` (#271), `25-defect-sweep` (#274), `26-one-tap-stub` (#276), `27-motion-guards` (#275) |
-| Spec files | 23 | **28** | as above |
-| Lint | 0 / 31 | **0 / 31** | unchanged through all twenty |
+Each time the response was to re-measure and hand-correct, and each correction
+went stale again. **A number that must be updated by hand on every PR that adds
+a test will always go stale, because nothing fails when it does.** There is no
+feedback loop here, only a convention, and a convention loses across dozens of
+PRs and many agents.
 
-This section previously projected "520 unit, 240 browser once the whole stack
-merges" and said plainly that it was arithmetic rather than measurement. **It
-was wrong in both columns** — the real figures are 571 and 291 — because several of those PRs grew
-tests during review that no delta table could have anticipated. The projection
-is deleted rather than corrected: a projected gate number is not a gate number,
-and having one in this table invites someone to check against it.
+So the counts are deleted rather than corrected a fourth time. The exact total
+carried no information a reader ever acted on — nobody decides anything
+differently on 659 than on 682 — while its one observed effect was to make a
+clean suite read as a catastrophic regression to whoever checked against it.
+**A gate doc that can manufacture a false NO-GO is worse than one that says
+less.**
 
-### These figures went stale twice while being written — measure the tree you are documenting
+Generating the counts from a script, or asserting them in a unit test so that a
+stale number fails CI rather than misleading a reader, would also have stopped
+the drift. That was considered and not chosen: it buys ongoing maintenance for a
+figure nobody uses. The property is what the gate actually is; the count was
+only ever a proxy for it.
 
-The first rewrite of this section recorded **269 tests / 25 spec files / 256
-pass**, and said it measured `main` at `0211537`. That part was true. The
-mistake was everything around it: `#274` merged **between** that measurement and
-the commit that wrote it down, so the table shipped describing a tree that no
-longer existed, while its own delta row claimed to have counted `#274` — whose
-sixteen tests were not in the tree measured.
+**The rule this leaves behind: a number belongs in this table only if it is a
+bound that work is not supposed to move.** A test count grows with every PR that
+adds a test, so it can never qualify. The lint-warning ceiling does qualify —
+new code may not raise it, and a run that comes in *under* it is good news worth
+recording rather than a false alarm. The `/api` function budget qualifies too:
+a hard platform cap, with `tests/unit/account-deletion.test.js` failing the
+build if it is exceeded. Note what both have that a test count does not — an
+asymmetry, so that being out of date cannot cry wolf.
 
-Corrected from a fresh run, and corrected AGAIN when three more merges landed
-before this section settled: **291 / 28 / 278**, measured at `ce7adca`.
+`tests/unit/gate-doc.test.js` holds this shape in place: it fails if the gate
+table starts declaring expected test totals again, and if the prerender line
+stops being named here or stops being printed by `scripts/prerender.mjs`.
 
-Nobody caught the first one from the numbers. It was caught because an
-engineer's branch measured a different figure and **said so** instead of
-assuming its own base was at fault.
-
-**Re-measure at the commit you are about to write, not the one you started
-from**, and put that SHA in the line above — a baseline whose provenance is a
-stale SHA is worse than one with no SHA, because it looks checkable.
-
-And do not update this table while a queue is still draining. It went stale a
-second time in the same hour, for the same reason: three more PRs merged between
-the correction and the commit. **Update it once, when nothing is in flight.**
-
-> **Check your own base before concluding you caused a regression.** These are
-> `main`'s numbers. A branch that adds tests will read higher, and a branch cut
-> before a merge will read lower. That confusion has cost time three times now.
+> **Check your own base before concluding you caused a regression.** A branch
+> that adds tests runs more tests than `main`; a branch cut before a merge runs
+> fewer. That confusion cost time three times while this table had numbers in
+> it. Compare your run against the properties above — never your total against
+> someone else's total.
 
 > **A zero skip count on the unit run is part of the bar.** If `npm run
 > test:unit` reports skips, a bare `npx vite build` ran somewhere instead of
 > `npm run build` — see the warning below.
 
-The 13 skipped are the whole of `12-ui-system-builder.spec.js`. UI System mode
-went admin-only in founder batch 4 and this suite runs signed out, so the
-surface is unreachable rather than broken — the file carries the reason and the
-one-word change that re-enables it. Skipped is the honest state; do not "fix"
-the count by deleting the file.
+The skips are the whole of `12-ui-system-builder.spec.js`, and nothing
+else. UI System mode went admin-only in founder batch 4 and this suite runs
+signed out, so the surface is unreachable rather than broken — the file
+carries the reason and the one-word change that re-enables it. Skipped is the
+honest state; do not "fix" the count by deleting the file.
 
 The 31 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
-The previous figures in this table (33 / 185 / 191) were measured at 2026-08-09.
+**Match the ceiling, don't add new ones, and don't "fix" the existing ones as
+a side effect of unrelated work.** CI fails on lint **errors** only. If you
+retire one legitimately, say so in the PR and lower the number here — that
+direction is a real improvement and the only reason this figure should ever
+move.
+
+## History
+
+Everything below this line is a **dated record of a past change or a past
+fault**, not a baseline. The deltas in it ("moved unit 457 → 484") describe the
+tree at that commit and cannot go stale, which is exactly why they are safe to
+keep and why nothing above restates them. Do not check a run against anything
+in this section.
+
 Founder batch 4 (2026-08-11) added no lint warnings; it moved unit
 (+7 tests: the per-point snap radius, the centre detent, the cross-axis slider
 tracks and the ±180→±50 hue migration) and browser acceptance (+1 test: the
 rendered proof that moving one adjust slider repaints the other three tracks).
-Match the count, don't add new ones, and don't "fix" the existing ones as a
-side effect of unrelated work. CI fails on lint **errors** only.
 
 Alt-text truncation + SEO brief (2026-08-15) moved unit 457 → **484** (+27: the
 Gemini `finishReason` decision table, the auto-growing result field and its CSS
@@ -322,7 +329,7 @@ server):
 
 1. `npm ci`
 2. `npx eslint .` — fails the job on errors; the pre-existing advisory
-   warnings (see the baseline table above) do not fail it.
+   warnings (see the gate table above) do not fail it.
 3. `npm run build` — vite build **plus** `scripts/prerender.mjs`; the
    workflow step is named "Build (vite + prerender)".
 4. `npm run test:unit`
@@ -331,8 +338,8 @@ server):
 
 A second job, `browser-acceptance`, builds the app, installs Playwright's
 Chromium via `npx playwright install --with-deps chromium`, and runs
-`npm run test:users` (the user-simulation acceptance suite — see the baseline
-table for its current size) the same way — no secrets, no external services.
+`npm run test:users` (the user-simulation acceptance suite — see
+`tests/user-sim/README.md`) the same way — no secrets, no external services.
 
 If a gate goes red in CI, treat it exactly like a red local build: NO-GO, fix
 the root cause, don't route around it.
@@ -396,7 +403,7 @@ Founder rule (2026-06-30): **don't over-route.** The build/lint gate is cheap
 (local, zero model cost); the multi-agent review gate is not. So:
 
 - **After each change** → run the **simple check**: `npm run build` +
-  `npx eslint .`, against the baselines at the top of this file.
+  `npx eslint .`, against the pass conditions at the top of this file.
 - **After a cluster of related changes** → run **one combined code-review + qa**
   over the whole batch, then merge. Not a fresh review per micro-edit.
 - **Security-sensitive code is never batched away.** Anything touching `/api`,
