@@ -32,6 +32,24 @@ not in `.claude/agents/design.md`.
 | `performance-optimization` | Measures, diagnoses, and corrects performance bottlenecks. |
 | `debugging-and-error-recovery` | Finds root causes and verifies regressions systematically. |
 
+## Imported skills (`npx skills add`)
+
+Thirteen third-party design skills were installed on 2026-09-03 from
+`Leonxlnx/taste-skill` and are **gitignored** — they are a package manager's
+install directory, not repository content. They are founder-supplied and are to
+be **used**, not sidelined.
+
+They were written for greenfield landing pages, so a few of their statements are
+factually untrue of this codebase and will break working product if obeyed
+literally — most notably a ban on Lucide (a live product surface here) and an
+assumption that fonts like Geist are installed (they are not; this app
+self-hosts Manrope and JetBrains Mono).
+
+**Read `docs/reference/doc-authority-map.md` → "Imported taste skills" before
+loading one.** It records which parts apply directly, which need translating to
+the fonts and components that exist, which of the thirteen are worth reaching
+for, and which are redundant with each other.
+
 ## Precedence
 
 Use this order when guidance conflicts:
@@ -40,8 +58,13 @@ Use this order when guidance conflicts:
 2. `CLAUDE.md` and canonical project reference documents.
 3. Approved task acceptance criteria.
 4. First-party UIL4B skills.
-5. Vendored general-purpose skills.
+5. Vendored and imported third-party skills.
 6. General examples or external conventions.
+
+**Cutting across all of it:** where any skill asserts a *fact* about this
+codebase — what exists, what is installed, what is on screen — the codebase
+wins, and you check by reading it. That is not a demotion of the skill's taste;
+it applies only to statements of fact.
 
 In particular:
 

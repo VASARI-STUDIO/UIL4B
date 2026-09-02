@@ -89,6 +89,9 @@ was created.
 
 Read the relevant one before working in that area.
 
+- **🧭 [Doc Authority Map](docs/reference/doc-authority-map.md)** — which file is
+  authoritative for what, which look authoritative and are not, and how to use
+  the imported taste skills here. **Read it before trusting another document.**
 - **[Positioning & Surfaces](docs/reference/positioning.md)** — source of truth:
   what UIL4B is + the three surfaces.
 - **[Discover](docs/reference/discover.md)** — community + curated-resource hub
@@ -141,6 +144,22 @@ If a fact appears in two places, the table above wins and the other copy is a
 bug — delete it and link instead. Git history is the archive; do not create
 parallel historical planning docs. Subagent roster:
 [`.claude/agents/README.md`](.claude/agents/README.md).
+
+**Before you trust a document, check it.** An agent that follows a wrong
+instruction confidently does not fail — it does the wrong work and reports
+success, which is what going in circles actually looks like from the outside.
+Four instructions were confidently wrong in one week (#291, #303, #305, #306).
+Three habits catch nearly all of it:
+
+- **A hand-maintained number is probably stale.** Test counts, route totals,
+  file tallies. Re-run rather than read.
+- **A page file existing is not proof a route reaches it.** Grep the import —
+  this is what #306 lost a pass to.
+- **When a doc describes a gap, check the queue item it names.** Several
+  described work that had already shipped.
+
+Full detail, per-file verdicts and the imported-skill carve-outs:
+[`doc-authority-map.md`](docs/reference/doc-authority-map.md).
 
 ## Standing rules
 
