@@ -140,4 +140,45 @@ test.describe('billing banner layout', () => {
     expect(m.ringWidth, 'the focus ring must be at least 2px').toBeGreaterThanOrEqual(2)
     expect(m.ringVsCard, 'the focus ring must reach 3:1 against the card').toBeGreaterThanOrEqual(3)
   })
+
+  /* The project-quota note (audit B6) must never reach a signed-out visitor.
+   *
+   * Same limitation as the banner above: the note itself needs a signed-in user
+   * with saved projects, which this suite has no way to create, so the WARNED
+   * states are pinned exhaustively in tests/unit/project-quota.test.js instead.
+   * What only a browser can check is the half that is not quota maths at all —
+   * that nothing on the way in leaks a free-plan allowance at a stranger.
+   *
+   * Worth recording, because it surprised this change twice: /projects is
+   * wrapped in RequireAuth (App.jsx), so the `!canSaveProjects` sign-in panel
+   * INSIDE Projects.jsx is unreachable for a signed-out visitor — the route
+   * redirects to /login instead. And that redirect is NOT immediate: RequireAuth
+   * holds a loader until Firebase's onAuthStateChanged fires (measured at ~1s
+   * here), so a check that samples the URL on first paint reads /projects and
+   * concludes the wrong thing. Both assertions below are therefore auto-retrying
+   * and wait for the SETTLED signed-out state, never a fixed timeout.
+   *
+   * Unwrap that route, or hoist the quota block somewhere public, and a person
+   * who has never signed in gets told what their plan allows. */
+  test('a signed-out visitor is redirected and never told about a project allowance', async ({ page }) => {
+    watch(page, 'a stranger opening Projects before signing in')
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/projects')
+
+      // Wait for the redirect to SETTLE. Both of these retry, so neither reads
+      // the loader RequireAuth shows while auth is still resolving.
+      await expect(page, `${width}px: /projects is behind RequireAuth`).toHaveURL(/\/login/)
+      await expect(
+        page.getByRole('button', { name: /sign in/i }).first(),
+        `${width}px: the signed-out destination must actually render`,
+      ).toBeVisible()
+
+      await expect(
+        page.getByTestId('project-quota-note'),
+        `at ${width}px a signed-out visitor has no allowance to be told about`,
+      ).toHaveCount(0)
+      await expect(page.locator('body')).not.toContainText('on the free plan')
+    }
+  })
 })

@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { isSvg } from '../utils/imageProcessing'
+import { projectQuota } from '../utils/projectQuota'
 
 // Read-only sample design systems shown under the "Community" tab.
 const COMMUNITY_PROJECTS = [
@@ -448,7 +449,7 @@ export default function Projects({ toast }) {
   const navigate = useNavigate()
   const { isPro } = useSubscription()
   const {
-    projects, canSaveProjects,
+    projects, canSaveProjects, projectLimit,
     saveProject, loadProject, deleteProject, renameProject, overwriteProject,
     archiveProject, resetDesign, setPalette,
   } = useProject()
@@ -595,6 +596,18 @@ export default function Projects({ toast }) {
   const totalProjects = projects.length
   const totalColours = projects.reduce((sum, p) => sum + (p.design?.palette?.colors?.length || 0), 0)
 
+  // B6 (2026-08-12 account lifecycle audit): the cap was enforced and never
+  // announced. `projects` is the SAME array saveProject() counts — archived
+  // records included — so this counter cannot drift from the rule that actually
+  // refuses the save. projectLimit is already Infinity on Pro, which resolves to
+  // the 'unlimited' state and shows nothing.
+  const quota = projectQuota(totalProjects, projectLimit)
+  // Archiving toggles a flag; it does NOT remove the record, so it does not free
+  // a slot. Saying "archive one" would be false, and a user who has archived
+  // something is the most likely person to believe it. Only mention it to
+  // someone who has actually archived — otherwise it is noise.
+  const hasArchived = projects.some(p => p.archived)
+
   return (
     <div className="sec">
       <div className="sec-h" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -603,9 +616,42 @@ export default function Projects({ toast }) {
           <p style={{ color: 'var(--t2)', fontSize: 13 }}>Your saved design systems — palette, fonts, type scale, and tokens.</p>
           {totalProjects > 0 && (
             <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-              <span style={{ fontSize: 11, color: 'var(--t2)' }}><strong style={{ color: 'var(--t0)', fontWeight: 700 }}>{totalProjects}</strong> project{totalProjects === 1 ? '' : 's'}</span>
+              {/* The allowance appears in the count ONLY once it is worth
+                  knowing (projectQuota decides when). A permanent "1 of 3" from
+                  the first project turns the free tier into a countdown, which
+                  is the read P-003 is trying to avoid. */}
+              <span style={{ fontSize: 11, color: 'var(--t2)', fontVariantNumeric: 'tabular-nums' }}>
+                <strong style={{ color: 'var(--t0)', fontWeight: 700 }}>{totalProjects}</strong>
+                {quota.shouldTell ? ` of ${quota.limit} projects` : ` project${totalProjects === 1 ? '' : 's'}`}
+              </span>
               <span style={{ fontSize: 11, color: 'var(--t2)' }}><strong style={{ color: 'var(--t0)', fontWeight: 700 }}>{totalColours}</strong> colour{totalColours === 1 ? '' : 's'} saved</span>
             </div>
+          )}
+          {/* The sentence the audit found missing. At the cap it has to do two
+              jobs the old silent refusal did neither of: say that nothing was
+              taken away (true — ProjectContext only blocks NEW saves), and name
+              a way forward that does not require paying. */}
+          {quota.shouldTell && (
+            <p
+              data-testid="project-quota-note"
+              style={{ marginTop: 8, maxWidth: '58ch', fontSize: 12, lineHeight: 1.65, color: 'var(--t2)' }}
+            >
+              {quota.atLimit ? (
+                <>
+                  You’ve used all {quota.limit} projects on the free plan. Nothing has been
+                  removed — everything here is still yours to open and edit. To start
+                  another, delete one you’re finished with
+                  {hasArchived ? ', including any you archived (archived projects still take a slot)' : ''}
+                  , or{' '}
+                  <NavLink to="/plans" style={{ color: 'var(--accent)', fontWeight: 600 }}>go Pro for unlimited projects</NavLink>.
+                </>
+              ) : (
+                <>
+                  {quota.remaining} more project{quota.remaining === 1 ? '' : 's'} on the free plan.{' '}
+                  <NavLink to="/plans" style={{ color: 'var(--accent)', fontWeight: 600 }}>Pro lifts the cap</NavLink>.
+                </>
+              )}
+            </p>
           )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
