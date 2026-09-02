@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import useModalDialog from '../hooks/useModalDialog'
 
 // What a free account actually gets you. Shown when a gated action raised this
 // popup, so "log in to continue" answers the obvious next question — what do I
@@ -52,47 +53,47 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const dialogRef = useRef(null)
-  const googleRef = useRef(null)
-  const passwordRef = useRef(null)
   const loadingRef = useRef(false)
+  const dismissRef = useRef(onDismiss)
 
   useEffect(() => { loadingRef.current = loading }, [loading])
+  useEffect(() => { dismissRef.current = onDismiss }, [onDismiss])
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const focusFrame = requestAnimationFrame(() => {
-      ;(passwordOnly ? passwordRef.current : googleRef.current)?.focus()
-    })
-    const onKey = (e) => {
-      if (e.key === 'Escape' && !loadingRef.current) {
-        e.preventDefault()
-        onDismiss()
-        return
-      }
-      if (e.key !== 'Tab') return
-      const focusable = [...(dialogRef.current?.querySelectorAll(
-        'button:not([disabled]),input:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])',
-      ) || [])]
-      if (!focusable.length) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      cancelAnimationFrame(focusFrame)
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [onDismiss, passwordOnly])
+  // Closing is refused while an auth call is in flight. A popup dismissed
+  // mid-`signInWithPopup` resolves the caller's promise with null while Firebase
+  // is still working, so the gated action reports "cancelled" and then the user
+  // silently becomes signed in. The guard predates this redesign; it is kept
+  // verbatim and simply moved behind the shared hook.
+  //
+  // Read through refs and pinned with an empty dep list so the identity never
+  // changes: useModalDialog re-runs its whole effect when onClose changes, which
+  // would re-lock scroll, re-capture the opener and restore focus mid-life.
+  const requestDismiss = useCallback(() => {
+    if (!loadingRef.current) dismissRef.current()
+  }, [])
+
+  // The app's shared modal contract — focus trap, Escape, scroll lock, and
+  // focus returned to whatever opened us. This dialog used to hand-roll all
+  // four, and the copy was subtly weaker than the original in two ways that
+  // both cost a keyboard user their place:
+  //
+  //  1. It never restored focus at all. LoginPromptContext did that instead, by
+  //     calling .focus() on the exact node it captured — which is a silent no-op
+  //     once that node has unmounted. PillNav's "Log in" lives inside a popover
+  //     that closeAll() tears down as the dialog opens, so the single most
+  //     common way into this dialog dropped the user on <body> on close.
+  //     useModalDialog remembers the opener's ANCESTOR CHAIN and hands focus to
+  //     the nearest node still connected.
+  //  2. Its keydown listener was bubble-phase on window with no stopPropagation,
+  //     so Escape inside this dialog could also close a surface underneath it.
+  //
+  // `initialFocus` keeps the landing spot this dialog already had rather than
+  // the hook's default of the dialog element: the fast path is one click on
+  // Continue with Google, and it is constant for the life of an instance, so
+  // the hook's effect never re-runs on it.
+  const dialogRef = useModalDialog(requestDismiss, {
+    initialFocus: passwordOnly ? '#ui-login-password' : '.auth-google-btn',
+  })
 
   const mapError = (err) => {
     const code = err?.code
@@ -247,7 +248,7 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
             <>
               {!resetMode && !passwordOnly && (
                 <>
-                  <button ref={googleRef} className="auth-google-btn" type="button" onClick={handleGoogle} disabled={loading}>
+                  <button className="auth-google-btn" type="button" onClick={handleGoogle} disabled={loading}>
                     <GoogleIcon />
                     {t('auth.continueWithGoogle') || 'Continue with Google'}
                   </button>
@@ -269,7 +270,7 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
                 {!resetMode && (
                   <div className="auth-field">
                     <label htmlFor="ui-login-password">{t('auth.password') || 'Password'}</label>
-                    <input ref={passwordRef} id="ui-login-password" type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder') || '••••••••'} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
+                    <input id="ui-login-password" type="password" name="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder') || '••••••••'} required minLength={6} autoComplete={isSignup ? 'new-password' : 'current-password'} />
                   </div>
                 )}
                 <button className="btn btn-accent auth-submit" type="submit" disabled={loading}>

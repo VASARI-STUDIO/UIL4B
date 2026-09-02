@@ -45,7 +45,6 @@ export function LoginPromptProvider({ children }) {
   // event-driven callbacks below.
   const resolverRef = useRef(null)
   const pendingPromiseRef = useRef(null)
-  const openerRef = useRef(null)
   const promptIdRef = useRef(0)
   const userRef = useRef(user)
   useEffect(() => { userRef.current = user }, [user])
@@ -56,7 +55,15 @@ export function LoginPromptProvider({ children }) {
     pendingPromiseRef.current = null
     setPrompt(null)
     if (resolve) resolve(result)
-    requestAnimationFrame(() => openerRef.current?.focus?.())
+    // Focus restoration is NOT done here any more. It used to be a
+    // requestAnimationFrame calling .focus() on the exact node captured at open
+    // time, which does nothing at all once that node has unmounted — and the
+    // nav's "Log in" sits inside a popover that closeAll() tears down on the way
+    // in, so the commonest opener was always detached by the time we got here.
+    // LoginPopup now takes the app's shared useModalDialog contract, which walks
+    // the opener's ancestor chain for the nearest surviving node. Two competing
+    // restores would be worse than one: this rAF ran AFTER the hook's unmount
+    // cleanup, so the weaker mechanism would have won every time.
   }, [])
 
   const requireLogin = useCallback((reason, opts = {}) => {
@@ -66,7 +73,6 @@ export function LoginPromptProvider({ children }) {
     // Account switching never creates an account, so it never reaches
     // onboarding — leave whatever is stashed alone.
     if (opts.mode !== 'switch') stashResumeTarget(opts.from)
-    openerRef.current = document.activeElement
     const promise = new Promise((resolve) => {
       resolverRef.current = resolve
       setPrompt({
