@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { markScrollContainers } from '../utils/scrollContainment.js'
 
 // The keyboard + dismissal contract every NON-MODAL popover in the app owes its
 // user. Modals get useModalDialog (focus trapped, background inert); popovers
@@ -132,6 +133,21 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
     if (!open) return undefined
     const panel = popRef.current
 
+    // A popover is not modal, so the page behind it stays live BY DESIGN and
+    // nothing here stops Lenis or locks the body — that would be the modal
+    // contract, claimed by a surface that deliberately does not hold it.
+    //
+    // What a popover does owe is that a wheel gesture with the pointer inside it
+    // scrolls IT. `allowNestedScroll` (useSmoothScroll) already gives every
+    // scrollable element that much. Marking the panel's scroll containers adds
+    // the boundary half: reaching the end of a scrolling popover stops there
+    // rather than passing the rest of the gesture to the page underneath —
+    // which, with the popover still open over the top, reads as the page moving
+    // on its own. That matters more here than in a modal, because a popover
+    // leaves the page scrollable on purpose, so there is a live scroller waiting
+    // to take anything the panel lets through.
+    const unmark = markScrollContainers(panel)
+
     if (autoFocus) {
       const target = initialFocus ? panel?.querySelector(initialFocus) : focusablesIn(panel)[0]
       // rAF so the panel has been laid out (and placed) before focus lands —
@@ -180,6 +196,7 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
     return () => {
       document.removeEventListener('pointerdown', onDown, true)
       document.removeEventListener('keydown', onKey, true)
+      unmark()
     }
   }, [open, initialFocus, autoFocus, arrowNav, closeToTrigger])
 
