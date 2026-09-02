@@ -10145,18 +10145,139 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .ui-pro-plan-amount{font-size:24px}
 }
 
-/* -- Login-to-continue ----------------------------------------------------
-   The interrupted-action panel: what you were doing, what an account gives you,
-   and the promise that you come back to it. Replaces "You must log in to X",
-   which led with an obligation and buried the thing the user was doing. */
-.ui-login-intent{margin:0 0 16px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--accent) 26%,transparent);border-radius:var(--radius-l);background:var(--accent-bg)}
-.ui-login-intent-h{display:flex;gap:9px;align-items:flex-start;margin:0;font-size:13px;line-height:1.45;color:var(--t1)}
-.ui-login-intent-h strong{color:var(--t0);font-weight:700}
-.ui-login-intent-h svg{flex:none;margin-top:1px;color:var(--accent-strong)}
-.ui-login-unlocks{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
-.ui-login-unlocks li{position:relative;padding-left:18px;font-size:12.5px;line-height:1.45;color:var(--t1)}
-.ui-login-unlocks li::before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:var(--radius-pill);background:var(--accent-strong)}
-.ui-login-intent-back{margin:10px 0 0;font-size:11.5px;font-weight:650;color:var(--t2)}
+/* -- Login-to-continue: the reason pane ------------------------------------
+   This dialog is interruptive by definition — it only ever appears because
+   someone tried to do something and was stopped. Its first job is making the
+   interruption feel worth taking, and the V1 answer to that was three stacked,
+   equally-weighted tinted cards (.ui-login-intent, its bullet list and
+   .ui-login-why) sitting ON TOP of the form. Those rules are deleted rather
+   than overridden: leaving them here keeps them one class name away from
+   coming back, which is the same reason the V1 Pro art panel above is gone.
+
+   What was wrong, measured:
+     - At 390px the three panels pushed "Continue with Google" — the fastest
+       way out of the interruption, and the control that already took focus on
+       open — to roughly 300px down a dialog capped at 100dvh-32px.
+     - At 834px the dialog is a 440px column with ~330px of dead scrim either
+       side, so the tablet paid the phone's height cost and got nothing for it.
+     - Every panel was a rounded box with a tinted fill and a 1px border, so
+       none of them was emphasis. (anti-slop, Composition: "every idea enclosed
+       in an equally weighted rounded card".)
+
+   The pane is now a column of its own beside the form at >=781px and a single
+   band above it below that, on exactly the grid .ui-pro already uses for its
+   proof rail — same breakpoint, same border-right -> border-top flip, same
+   --cbg ground. Two gate surfaces, one structure.
+
+   Mobbin references (input to the decision, not a copy):
+     Qatalog     https://mobbin.com/screens/dc77f807-fbec-4d79-9ccb-3d7f2696bd86
+                 - the "why" gets its own PANE, not a card above the controls;
+                   that split is what frees the form to start at the top.
+     Fiverr      https://mobbin.com/screens/1e7f10d2-5894-419a-859b-61cbebfe5cb0
+                 - benefit lines as one ticked list, not three bordered boxes.
+     Perplexity  https://mobbin.com/screens/94116bee-b475-4b0f-818c-e2739984d6ef
+                 - the provider button is the solid primary and the email path
+                   is the quiet one. We had that exactly backwards.
+     Lovable     https://mobbin.com/screens/8d49cc46-adf4-44eb-9d47-79400ecb0ce2
+                 - intent stated in the head ("Start Building."), mechanism
+                   underneath it, no explanatory box in between.
+     DoorDash    https://mobbin.com/screens/fccbb1ba-89e3-4295-8765-776a97487bc7
+                 - the Google mark keeps a light ground when the button is
+                   filled, which is what .auth-google-mark is for.
+
+   Deliberately NOT taken: ChatGPT's and Vimeo's two-step email form (collect
+   the address, then reveal the password). It is the bigger height win and it is
+   the better pattern, but changing when this surface collects credentials is an
+   auth-flow decision, not a layout one, and auth is a human-validation zone.
+   Recorded on the backlog instead. */
+
+/* Default = the phone/tablet band. The grid below upgrades it to a column. */
+.ui-login-aside{display:flex;flex-direction:column;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--cbg)}
+.ui-login-eyebrow{margin:0;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+/* The one piece of type on this surface that is allowed to be big. It carries
+   the name of the action the user was actually taking, which is the whole
+   difference between a gate and a hand-off. */
+.ui-login-promise{margin:8px 0 0;font-size:16.5px;line-height:1.25;font-weight:600;letter-spacing:-.018em;color:var(--t1);text-wrap:balance}
+.ui-login-promise strong{color:var(--t0);font-weight:750}
+.ui-login-aside-sub{margin:8px 0 0;font-size:12.5px;line-height:1.5;color:var(--t2);text-wrap:pretty}
+
+/* "What you get" — the honest Free capability list. A tick rather than a dot:
+   a dot is a bullet, a tick is a claim about what you receive. Matches
+   .ui-pro-list, which makes the same kind of statement on the same kind of
+   surface. */
+.ui-login-gets{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ui-login-get{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.4;color:var(--t1)}
+.ui-login-get-tick{flex:none;display:grid;place-items:center;width:16px;height:16px;margin-top:1px;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent-strong)}
+
+/* Inside the pane the "why we ask first" list loses its own border and fill.
+   It is already inside a distinct surface; a card within a card was the
+   redundancy this redesign exists to remove. */
+.ui-login-aside .ui-login-why{margin:14px 0 0;padding:0;border:none;background:none}
+.ui-login-aside .ui-login-why-h{color:var(--t2)}
+/* margin-top:auto pushes this to the foot of the column at width. In the
+   band layout the pane is not stretched, so it simply follows the list. */
+/* Hidden in the band layout on purpose. This line exists to resolve the FOOT
+   of a stretched column; a phone has no stretched column, and the ~48px it
+   costs there pushed a real control ("Already have an account? Sign in") below
+   the fold on the signup variant. The way OUT is unaffected either way — the
+   close button, Escape and the scrim all still dismiss. */
+.ui-login-aside-foot{display:none;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--t2);text-wrap:pretty}
+
+/* The close button leaves .ui-modal-head, because at width the head is no
+   longer this dialog's top-right corner — the form column is. Same treatment
+   .ui-pro-x already gets. */
+.ui-login-x{position:absolute;top:13px;right:13px;z-index:2}
+.ui-login .ui-modal-head{padding-top:18px;padding-right:54px}
+
+/* Continue with Google is the primary path: one click, no typing, and it is
+   already where focus lands on open. It was drawn as a neutral outline while
+   the two-field email submit carried the accent fill — the slower path wearing
+   the primary's clothes. Swapped, using the same --accent-strong/--accent-fg
+   pair .btn-accent uses, so it stays AA in both themes (bare --accent is a
+   4.43:1 fill colour and is not allowed to carry 14px text here). */
+.ui-login .auth-google-btn--primary{background:var(--accent-strong);color:var(--accent-fg);border-color:transparent;font-weight:600}
+.ui-login .auth-google-btn--primary:hover{background:var(--accent-strong);border-color:transparent;box-shadow:0 1px 2px rgba(0,0,0,.12),0 4px 10px -3px color-mix(in srgb,var(--accent-strong) 40%,transparent)}
+.auth-google-mark{display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:var(--radius-xs);background:#fff}
+.ui-login .auth-submit{font-weight:600}
+
+@media(min-width:781px){
+  .ui-login--split{max-width:772px;display:grid;grid-template-columns:minmax(0,.86fr) minmax(0,1fr);grid-template-areas:"aside head" "aside body";align-items:start}
+  .ui-login--split .ui-login-aside{grid-area:aside;align-self:stretch;padding:26px 24px;border-bottom:none;border-right:1px solid var(--border)}
+  .ui-login--split .ui-modal-head{grid-area:head}
+  .ui-login--split .ui-modal-body{grid-area:body}
+  .ui-login--split .ui-modal-head,.ui-login--split .ui-modal-body{padding-left:26px;padding-right:26px}
+  .ui-login--split .ui-modal-head{padding-right:54px}
+  .ui-login--split .ui-login-promise{font-size:18px}
+  .ui-login--split .ui-login-aside-foot{display:block;margin-top:auto}
+}
+
+/* Landscape phones. The existing max-height:460px block already spends the
+   vertical rhythm the form can afford to lose; the pane has to do the same or
+   it just moves the overflow rather than removing it. */
+@media(max-height:460px){
+  .ui-login-aside{padding:12px 18px}
+  .ui-login-gets{margin-top:10px;gap:6px}
+  .ui-login-promise{font-size:15px}
+
+}
+
+/* Touch: nothing on this surface may be discoverable only on hover
+   (founder direction, 2026-09-02). Two controls here were.
+
+   .ui-modal-x is a bare glyph on a transparent ground with a transparent
+   border — its entire affordance was :hover{background:var(--hvr)}, so on a
+   phone or tablet the close control of every .ui-modal in the app had no
+   visible boundary at all. .auth-links button had the same problem one step
+   down: "No account? Sign up free" and "Forgot password?" are the only route
+   to account creation and password recovery from this dialog, and their only
+   signal that they were controls was an underline on hover.
+
+   Both get a persistent form instead. Scoped to hover:none so the pointer
+   experience is unchanged. */
+@media(hover:none){
+  .ui-modal-x{background:var(--bg-2);border-color:var(--border);color:var(--t1)}
+  .auth-links button{text-decoration:underline;text-underline-offset:3px}
+}
 
 /* -- PillNav V2 -----------------------------------------------------------
    Structure and information architecture are UNCHANGED: same three sections,
