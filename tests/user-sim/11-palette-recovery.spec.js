@@ -1,5 +1,16 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { hexToHct } from '../../src/utils/colors.js'
+
+/** The Palette Builder writes the board into the saved project on a ~200ms
+ *  debounce. Anything that reloads or re-navigates to prove the board SURVIVED
+ *  has to wait for that write to land — waiting on the stored value rather than
+ *  on a duration, so the test fails only for the reason it is about. */
+const waitForSavedSeed = (page, hex) => expect
+  .poll(() => page.evaluate(() => (
+    JSON.parse(localStorage.getItem('vs-current-design') || 'null')?.palette?.colors?.[0] || ''
+  ).toUpperCase()), { timeout: 5000 })
+  .toBe(hex.toUpperCase())
 
 test.describe('Palette Builder recovery and tool continuity', () => {
   test.beforeEach(async ({ page }) => {
@@ -30,9 +41,27 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     )
     expect(pickerColour).toBe(firstColour)
 
+    // This used to assert the seed SURVIVED a reload, which was true because
+    // `vs-palette-session-seed` pinned the first draw to the tab. The founder's
+    // 2026-09-03 request is that the page auto-loads a random palette, so an
+    // untouched board is now redrawn on arrival — and it must be, because the
+    // board was also being persisted on mount, which meant "random on load"
+    // held exactly once per device and never again.
+    //
+    // What replaces it is the guarantee that actually protects a person's work:
+    // once they have TOUCHED the board it survives a reload. An untouched draw
+    // is not work; a randomised one is.
+    await page.getByRole('button', { name: /Randomise/ }).click()
+    await expect(seed).not.toHaveValue(initial)
+    const chosen = await seed.inputValue()
+    // The project write is debounced ~200ms. Wait for the value to actually be
+    // in storage rather than for a duration — reloading a moment early would
+    // fail this for a reason that has nothing to do with what it tests.
+    await waitForSavedSeed(page, chosen)
+
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(seed).toHaveValue(initial)
-    await expect(firstHex).toHaveText(initial)
+    await expect(seed).toHaveValue(chosen)
+    await expect(firstHex).toHaveText(chosen)
   })
 
   test('the shell aligns, controls stay level, and a hover label grows its own button', async ({ page }) => {
@@ -298,5 +327,129 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(back).toBeVisible()
     await back.click()
     await expect(page).toHaveURL(/\/create\/palette$/)
+  })
+})
+
+// Founder request, 2026-09-03: "the pallete page should auto load a random
+// pallete on the default free settings. reset should reset the settings to
+// default but randomise the colour."
+//
+// The two rules with teeth — that the default settings are the FREE ones, and
+// that a shared link outranks the draw — are enumerated in
+// tests/unit/palette-defaults.test.js, where they can be run over every input
+// rather than the handful a browser can afford. What is here is the part only a
+// browser can answer: that the page a person actually opens behaves that way.
+//
+// Nothing below pins a colour. Assertions are on the PROPERTY — a palette is
+// present, two arrivals differ, the shared colours survived — because a test
+// that pinned a random draw would be flaky by construction.
+test.describe('the Palette Builder opens on a random palette', () => {
+  // addInitScript runs on EVERY navigation, so the clear is guarded: without the
+  // flag it would wipe the saved project before each `go()`, and the test below
+  // that proves a touched board survives could never pass.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem('palette-random-test-cleaned')) return
+      localStorage.removeItem('vs-current-design')
+      localStorage.removeItem('vs-palette-history')
+      sessionStorage.setItem('palette-random-test-cleaned', 'true')
+    })
+  })
+
+  const boardColors = (page) => page.locator('.plb-col .plb-hex').allTextContents()
+
+  test('two arrivals with nothing saved draw two different palettes', async ({ page }) => {
+    watch(page, 'designer opening the Palette Builder cold')
+    await go(page, '/create/palette')
+    await page.locator('.plb-col').first().waitFor()
+    const first = await boardColors(page)
+    expect(first.length).toBeGreaterThanOrEqual(5)
+
+    // Up to three further arrivals: a genuine randomiser will differ on the
+    // first, and three chances make a false red vanishingly unlikely while a
+    // regression to a fixed seed still fails every time.
+    let differed = false
+    for (let i = 0; i < 3 && !differed; i += 1) {
+      await go(page, '/create/palette')
+      await page.locator('.plb-col').first().waitFor()
+      differed = (await boardColors(page)).join() !== first.join()
+    }
+    expect(differed, 'every arrival produced the same board — the page is not randomising').toBe(true)
+  })
+
+  test('the board it draws came out of the FREE engine, not just a free label', async ({ page }) => {
+    watch(page, 'free user opening the Palette Builder')
+    await go(page, '/create/palette')
+    await page.locator('.plb-col').first().waitFor()
+
+    // The chip is the easy half, and on its own it proves nothing: it is fed by
+    // ProjectContext, so it read "Auto" for months while the board was actually
+    // being built by `generateHarmony(seed, 'analogous')` — a PAID system. A
+    // free user was looking at output they could not themselves produce.
+    await expect(page.locator('.plb-harm')).toContainText('Auto')
+    await expect(page.locator('.plb-collapsed')).toHaveCount(0)
+
+    // So this checks the ENGINE, through a signature only the tonal engine
+    // leaves. autoTonalPalette pins SUBTLE at tone 90 / chroma 8; measured over
+    // 300 draws of each, Auto lands at tone 89.8–90.1 and chroma 7.4–8.5 while
+    // Analogous never gets lighter than tone 83.2 or below chroma 24.5. The
+    // bounds below sit in that gap, so this is a property, not a pinned colour.
+    const hexes = await boardColors(page)
+    const [, chroma, tone] = hexToHct(hexes[3])
+    expect(tone, `SUBTLE tone ${tone} — not the tonal engine`).toBeGreaterThan(85)
+    expect(chroma, `SUBTLE chroma ${chroma} — not the tonal engine`).toBeLessThan(15)
+  })
+
+  test('a shared link still beats the random draw', async ({ page }) => {
+    watch(page, 'designer opening a palette a colleague sent')
+    const shared = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF']
+
+    // Three times: if the draw ever raced the link, a single pass could hide it.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await go(page, `/create/palette?c=${shared.map(c => c.slice(1)).join(',')}`)
+      await page.locator('.plb-col').first().waitFor()
+      expect(await boardColors(page)).toEqual(shared)
+    }
+  })
+
+  test('a board the user touched survives, and is never drawn over', async ({ page }) => {
+    watch(page, 'designer returning to work they left open')
+    await go(page, '/create/palette')
+    await page.locator('.plb-col').first().waitFor()
+    await page.getByRole('button', { name: /Randomise/ }).click()
+    const mine = await boardColors(page)
+    await waitForSavedSeed(page, mine[0])
+
+    await go(page, '/create/palette')
+    await page.locator('.plb-col').first().waitFor()
+    expect(await boardColors(page)).toEqual(mine)
+  })
+
+  test('Reset restores the default settings and draws a new colour', async ({ page }) => {
+    watch(page, 'designer clearing the board to start again')
+    await go(page, '/create/palette')
+    await page.locator('.plb-col').first().waitFor()
+
+    // Move a setting away from its default first, so "reset the settings" is a
+    // claim with something to prove. A lock is the sharpest one available: its
+    // own tooltip says "keep this colour through randomise", so if Reset left
+    // it standing, the redraw would come back carrying the old colour.
+    await page.getByRole('button', { name: 'Lock PRIMARY' }).click()
+    await expect(page.getByRole('button', { name: 'Unlock PRIMARY' })).toHaveCount(1)
+    const before = await boardColors(page)
+
+    const reset = page.getByRole('button', { name: 'Reset' })
+    await reset.click()
+    const afterFirst = await boardColors(page)
+    expect(afterFirst).not.toEqual(before)
+    await expect(page.locator('.plb-harm')).toContainText('Auto')
+    await expect(page.locator('[aria-label^="Unlock "]')).toHaveCount(0)
+
+    // Pressing it again draws again: Reset randomises the colour, it does not
+    // return to one fixed board.
+    await reset.click()
+    await expect
+      .poll(async () => (await boardColors(page)).join(), { timeout: 5000 })
+      .not.toBe(afterFirst.join())
   })
 })

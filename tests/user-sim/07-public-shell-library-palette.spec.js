@@ -285,7 +285,12 @@ test.describe('public UI quality release', () => {
     await expect(page.getByRole('button', { name: 'Unlock Primary' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Reset' }).click()
-    await expect(seed).toHaveValue('#4338E0')
+    // Founder request 2026-09-03: Reset restores the default SETTINGS but draws
+    // a NEW random colour, so the post-reset seed is captured rather than pinned
+    // to the old fixed #4338E0. What this test is actually about — the two-step
+    // Undo chain — is unchanged, and the lock still has to be cleared.
+    await expect(seed).not.toHaveValue('#FF0000')
+    const afterReset = await seed.inputValue()
     await expect(page.getByRole('button', { name: 'Lock Primary' })).toBeVisible()
 
     const undo = page.getByRole('button', { name: 'Undo' })
@@ -293,7 +298,7 @@ test.describe('public UI quality release', () => {
     await seed.fill('#00FF00')
     await expect(seed).toHaveValue('#00FF00')
     await undo.click()
-    await expect(seed).toHaveValue('#4338E0')
+    await expect(seed).toHaveValue(afterReset)
     await expect(page.getByRole('button', { name: 'Lock Primary' })).toBeVisible()
 
     await undo.click()
