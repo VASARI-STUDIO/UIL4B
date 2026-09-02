@@ -172,12 +172,14 @@ export default function GradientGallery({ toast }) {
       >
         <LibraryFilterGroup
           label="Filter by mood"
+          triggerLabel="Mood"
           value={tag}
           onChange={setTag}
           options={MOOD_OPTIONS}
         />
         <LibraryFilterGroup
           label="Filter by gradient type"
+          triggerLabel="Type"
           value={types}
           onChange={setTypes}
           options={TYPE_OPTIONS}
