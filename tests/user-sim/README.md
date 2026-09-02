@@ -6,34 +6,37 @@ Instagram post?"), and the pass condition is *the user got their answer*.
 
 ## Specs
 
-The first three files are the original personas. Everything after them is a
-surface or regression suite added alongside the feature that needed it — the
-persona framing still applies (assert the user's goal, not the implementation),
-but the file name says which surface it covers.
+`ls tests/user-sim/*.spec.js` is the list. There is deliberately no table of
+files here.
 
-| File | What it probes |
-| --- | --- |
-| `01-first-time-visitor.spec.js` | Never seen the product: landing comprehension, nav discovery, pricing findability, blank/broken pages, mistyped URLs |
-| `02-goal-driven-user.spec.js` | Knows exactly what they need: real answer-seeking flows on `/ratio` and the other live tools |
-| `03-fresh-user-edges.spec.js` | On a phone, impatient, error-prone: mobile usability, keyboard access, garbage input (Murphy's-law), full public-route sweep |
-| `04-premium-home.spec.js` | The premium public home shell |
-| `05-tint-scale-workflows.spec.js` | Tint scale workflows |
-| `06-colour-tool-workbenches.spec.js` | The colour tool workbenches |
-| `07-public-shell-library-palette.spec.js` | Public shell, library and palette surfaces |
-| `08-public-route-contract.spec.js` | The public route contract |
-| `09-auth-modal-accessibility.spec.js` | Auth modal accessibility |
-| `10-home-chaos-to-calm.spec.js` | The homepage chaos-to-calm workbench contract |
-| `11-palette-recovery.spec.js` | Palette recovery paths |
-| `11-typography-tools.spec.js` | The three typography tools |
-| `12-ui-system-builder.spec.js` | UI System builder |
-| `13-ui-system-pro.spec.js` | UI System Pro gating |
-| `14-founder-batch-regressions.spec.js` | The #202 founder-batch regressions |
+The naming carries the meaning, so the directory listing is the index:
+
+- **`01-` … `03-`** are the three original personas — never seen the product,
+  knows exactly what they need, and on a phone being impatient and error-prone.
+  Read these first; they are what the suite is *for*.
+- **Everything after them** is a surface or a regression suite, added alongside
+  the feature that needed it, and named for the surface it covers
+  (`21-reflow-320`, `26-one-tap-stub`, `33-offline-state`). The persona framing
+  still applies — assert the user's goal, not the implementation — but the file
+  name says which surface, so a table restating it adds nothing.
+
+**This used to be a table, and it went stale badly.** It described fourteen
+files and stopped being touched; by the time anyone noticed there were
+thirty-seven, so the "complete" list was missing twenty-three suites and its
+sign-off line — *use the next free number, `15-`* — pointed at a number that had
+been taken for months. A hand-maintained inventory of a directory has no
+feedback loop: nothing fails when a file is added and the list is not, so
+eventually nothing matches. Same fault, and the same fix, as the test counts
+that used to be in `docs/reference/build-and-verify.md`.
 
 Two files share the `11-` prefix. That is untidy but harmless — Playwright keys
-on the path, not the number. Use the next free number (`15-`) for a new file.
+on the path, not the number. **For a new file, take the next number after the
+highest one already present** (`ls tests/user-sim/*.spec.js | tail -1`), which
+is a rule that stays true rather than a number that goes stale.
 
-The current test count is recorded in
-`docs/reference/build-and-verify.md`, not here — one place, so it can't drift.
+There is no test count recorded anywhere, here or in the gate doc. The gate is
+**0 failures**, and the only skips are `12-ui-system-builder.spec.js` — see
+`docs/reference/build-and-verify.md`.
 
 ## Run it
 
