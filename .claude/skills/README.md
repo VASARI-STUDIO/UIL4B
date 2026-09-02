@@ -8,7 +8,15 @@ repository never depends on Dylan's private local wiki.
 
 | Skill | Purpose |
 |---|---|
-| `uil4b-brand-design` | Governs UIL4B identity, product-versus-sales continuity, anti-slop critique, and the brand learning loop. |
+| `uil4b-brand-design` | Governs UIL4B identity, product-versus-sales continuity, anti-slop **vocabulary**, and the brand learning loop. Use when making a design decision. |
+| `uil4b-surface-review` | The runnable **procedure** for reviewing a rendered surface — routes, viewports, capture artefacts, severity, finding format, and the responsive bands this app breaks at. Use when auditing a design decision. |
+
+The split between those two is deliberate and worth keeping. `uil4b-brand-design`
+answers *what is wrong with this*; `uil4b-surface-review` answers *how do I go
+and find out*. Anti-slop guidance previously existed in three places with no
+statement of which was authoritative for what — the quality bar, the `design`
+agent's tell list, and a dated design document. See
+`docs/reference/doc-authority-map.md`.
 
 Brand-specific decisions belong here and in the live project sources it names,
 not in `.claude/agents/design.md`.
@@ -24,6 +32,24 @@ not in `.claude/agents/design.md`.
 | `performance-optimization` | Measures, diagnoses, and corrects performance bottlenecks. |
 | `debugging-and-error-recovery` | Finds root causes and verifies regressions systematically. |
 
+## Imported skills (`npx skills add`)
+
+Thirteen third-party design skills were installed on 2026-09-03 from
+`Leonxlnx/taste-skill` and are **gitignored** — they are a package manager's
+install directory, not repository content. They are founder-supplied and are to
+be **used**, not sidelined.
+
+They were written for greenfield landing pages, so a few of their statements are
+factually untrue of this codebase and will break working product if obeyed
+literally — most notably a ban on Lucide (a live product surface here) and an
+assumption that fonts like Geist are installed (they are not; this app
+self-hosts Manrope and JetBrains Mono).
+
+**Read `docs/reference/doc-authority-map.md` → "Imported taste skills" before
+loading one.** It records which parts apply directly, which need translating to
+the fonts and components that exist, which of the thirteen are worth reaching
+for, and which are redundant with each other.
+
 ## Precedence
 
 Use this order when guidance conflicts:
@@ -32,8 +58,13 @@ Use this order when guidance conflicts:
 2. `CLAUDE.md` and canonical project reference documents.
 3. Approved task acceptance criteria.
 4. First-party UIL4B skills.
-5. Vendored general-purpose skills.
+5. Vendored and imported third-party skills.
 6. General examples or external conventions.
+
+**Cutting across all of it:** where any skill asserts a *fact* about this
+codebase — what exists, what is installed, what is on screen — the codebase
+wins, and you check by reading it. That is not a demotion of the skill's taste;
+it applies only to statements of fact.
 
 In particular:
 
@@ -42,6 +73,21 @@ In particular:
 - Follow `docs/reference/human-validation-zones.md` for founder-gated scope.
 - Read live code for implemented values instead of copying values into a skill
   or agent unless they are durable brand decisions.
+
+### Known conflicts with the vendored skills
+
+The vendored skills are unmodified upstream text, so they carry generic advice
+that UIL4B has already decided against. Do not edit them to fix this — they are
+MIT-licensed third-party files and diverging them makes the next update painful.
+Apply the precedence order instead. The two that come up:
+
+- **`frontend-ui-engineering` names breakpoints 320 / 768 / 1024 / 1440 and
+  shows Tailwind classes.** UIL4B has no Tailwind, and those are not our
+  breakpoints. `docs/reference/css-conventions.md` owns the scale and the widths
+  to test at; `uil4b-surface-review/references/responsive-bands.md` owns which
+  bands actually break.
+- **Several assume per-component stylesheets or CSS-in-JS.** UIL4B is one
+  `src/styles/global.css`, class-based, no exceptions.
 
 ## Updating knowledge
 

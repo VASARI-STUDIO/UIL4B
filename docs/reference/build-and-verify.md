@@ -421,7 +421,7 @@ after several changes have landed.*
 | UI / component change | Build passes + visual check (the affected screen/state). |
 | Logic / util change | Build passes + the specific behaviour exercised. |
 | API route change | Build passes + the route's happy path + one failure path. |
-| CSS-only change | Build passes + visual check at relevant breakpoints (768 / 480 / 380). |
+| CSS-only change | Build passes + visual check at the widths `css-conventions.md` names — do not carry a copy of them here. |
 | Copy / content | Build passes + the rendered text checked in context. |
 
 ## Murphy's-law states

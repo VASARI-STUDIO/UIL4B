@@ -51,6 +51,12 @@ it". That look is not a mystery; it is a short list of tells:
 When you critique, name the specific tell and the specific line or element. A
 critique that says "feels generic" is not actionable.
 
+**These tells are this role's duty statement, not the review method.** When you
+are asked to audit a rendered surface rather than to direct one, load
+`uil4b-surface-review` and follow its procedure — routes, viewports, discounted
+capture artefacts, severity, verified selectors. The list above tells you what to
+look for; that skill tells you where to stand and what to hand back.
+
 ## Specifications
 
 For each item specify:

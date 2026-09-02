@@ -35,9 +35,11 @@ npm run test:unit
 npm run test:users
 ```
 
-`npm run build` is `vite build && node scripts/prerender.mjs`. Four unit tests
-read the prerendered shells and **skip silently** without them, so bare
-`npx vite build` produces a green-looking run with a quietly smaller count.
+`npm run build` is `vite build && node scripts/prerender.mjs`. Unit tests in
+`not-found.test.js` and `redirects.test.js` read the prerendered shells and
+**skip silently** without them, so bare `npx vite build` produces a green-looking
+run with a quietly smaller count. (This said "four". It is six — which is why it
+now names the files.)
 
 Baselines live in `build-and-verify.md` and nowhere else. **Check them against
 your actual base branch** — a stacked branch has different counts from `main`,

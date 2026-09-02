@@ -51,3 +51,33 @@ docs/qa/screenshots/
 # needs them here). Never committed.
 __*.mjs
 __*.py
+
+# Third-party skills installed by `npx skills add` (2026-09-03:
+# Leonxlnx/taste-skill, 13 skills). This is a package manager's install
+# directory — treat it like node_modules and reinstall rather than commit.
+#
+# Two concrete reasons, not a preference:
+#   1. `npx skills add` symlinks .claude/skills/<name> -> .agents/skills/<name>
+#      with an ABSOLUTE target (/d/00_Main_Workspace/...). Committed, those
+#      links resolve to nothing on any other machine and in CI.
+#   2. Git on Windows handles symlinks poorly — without core.symlinks=true they
+#      land as plain text files containing a path, which is worse than absent
+#      because it looks like content.
+#
+# How they are used, and where the codebase overrides them, is documented in
+# docs/reference/doc-authority-map.md. Reinstall with:
+#   npx skills add Leonxlnx/taste-skill
+.agents/
+.claude/skills/brandkit
+.claude/skills/design-taste-frontend
+.claude/skills/design-taste-frontend-v1
+.claude/skills/full-output-enforcement
+.claude/skills/gpt-taste
+.claude/skills/high-end-visual-design
+.claude/skills/image-to-code
+.claude/skills/imagegen-frontend-mobile
+.claude/skills/imagegen-frontend-web
+.claude/skills/industrial-brutalist-ui
+.claude/skills/minimalist-ui
+.claude/skills/redesign-existing-projects
+.claude/skills/stitch-design-taste
