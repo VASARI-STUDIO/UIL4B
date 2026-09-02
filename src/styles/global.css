@@ -9425,38 +9425,88 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fg-command-size input{min-width:70px;width:100%;accent-color:var(--brand)}
 .fg-command-size strong{font-family:var(--mono);font-size:10px;color:var(--t1)}
 .fg-count{margin:18px 0 20px;text-transform:uppercase;letter-spacing:.11em}
-/* A SPECIMEN GRID, NOT A FULL-WIDTH LIST.
-   The gallery showed one family per 154px row: five of seventeen hundred per
-   screen at 1440, each row spending about a quarter of its width on the
-   specimen and leaving the rest empty, with the family NAME stranded ~800px
-   from the face it named. Three columns show fifteen per screen and put the
-   name directly beneath its own specimen.
-   The columns are wide on purpose — a 400px floor against the colour
-   libraries' 280px — because a typeface needs more room to be judged than a
-   swatch does. This is the shared Library grid with a different minimum, not a
-   different grid. */
-.fg-grid{--lbry-col-min:400px;margin:0 0 var(--s-5);padding:0;list-style:none}
-.fg-card-open{display:block;width:100%;padding:0;text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard)}
+/* ONE SPECIMEN PER ROW, AT EVERY WIDTH (founder, 2026-09-02).
+   This reverses the three-column grid that shipped here, and the tablet column
+   PR #298 restored — read that one for the arithmetic it fixed, which was
+   correct for a grid and is moot for a list.
+
+   The audit that produced #298 was not complaining about one column. It was
+   complaining that a 790px row spent ~150px on the specimen and left the other
+   640px empty, and one column BY INTENT looks exactly like one column by
+   accident unless the row is rebuilt to want the width. So the row is now three
+   full-bleed lines, and each of them is something the 434px card could not show:
+
+     .fg-card-sample   the display line, at up to 72px instead of 48, in the
+                       reader's own words when they type some
+     .fg-card-pangram  the same family as running text at body weight, 15px
+                       rather than the card's 12px squeeze
+     .fg-card-ladder   the family's weight range, DRAWN — each numeral set in
+                       the family at the weight it names. Nine of them across a
+                       full-width row is the thing that needs a row; the grid's
+                       entire answer to "what weights has this got" was "9w".
+
+   Measured at 1440: the specimen block runs 1,180px against the grid's 386px.
+   `--lbry-col-min:100%` rather than a hand-written `grid-template-columns:1fr`,
+   so this stays the shared Library grid with a different minimum — the same
+   knob the three-column version turned, turned further. */
+.fg-grid{--lbry-col-min:100%;margin:0 0 var(--s-5);padding:0;list-style:none;gap:34px 0}
+/* PROXIMITY HAS TO DECIDE WHICH SPECIMEN A CAPTION BELONGS TO.
+   In three columns a card's foot was unambiguous — it was the only thing under
+   that column. Stacked, every caption has a specimen above it AND below it, so
+   the two gaps have to disagree loudly: 8px from a row to its own caption
+   against 34px to the next row. At the shared 12/24 they were close enough that
+   the caption read as a divider between two rows rather than as the label of
+   one of them. */
+.fg-card{gap:8px}
+/* The rank gutter is a real column, not padding: it gives a 1,390px row a left
+   edge for the eye to return to, which is the thing a list of full-width bands
+   otherwise lacks. 56px holds "00"–"99" in the mono face with its tracking. */
+.fg-card-open{display:grid;grid-template-columns:56px minmax(0,1fr);width:100%;padding:0;text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard)}
 .fg-card:hover .fg-card-open{border-color:var(--bh)}
 .fg-card-open:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-/* 22 + 68 + 10 + 22 + 20 = 142. The sample box is 68px: a 48px face needs
-   ~1.17em of ascent plus descent (56px) and the remainder is optical padding,
-   not leading. It was 88px to clear a 56px ceiling, but `line-height` equal to
-   the box then centred a 44px specimen inside it and left ~22px of dead air
-   between the face and the pangram describing it — the two belong together.
-   Fixed height, so the reserved-metrics contract holds whatever face lands. */
-.fg-card-preview{height:142px;padding:22px 24px 20px;background:transparent}
-.fg-card-skeleton--sample{height:68px}
-.fg-card-skeleton--body{height:22px}
-.fg-card-sample{display:flex;align-items:center;height:68px;font-size:clamp(22px,var(--fg-card-size),48px);line-height:1.06;letter-spacing:-.035em}
-.fg-card-pangram{height:22px;font-size:12px;line-height:22px;white-space:nowrap;text-overflow:ellipsis}
-.fg-card-name{font-size:15px;line-height:1.3;letter-spacing:-.015em}
+.fg-card-index{padding:22px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums}
+/* THE RESERVED BOX TRACKS THE SLIDER.
+   The grid reserved a fixed 68px line because its 48px ceiling was fixed. A
+   full-width row can afford 72px, and reserving 72px worth of line on every row
+   for a size most readers never drag to costs 24px × 24 rows — about 580px of
+   page — permanently. So the box is derived from the chosen size instead:
+   1.28em is ~1.17em of ascent-plus-descent plus optical padding, the same
+   arithmetic the 68px box ran, expressed as a ratio rather than a constant.
+   The reserved-metrics contract is that rows agree WITH EACH OTHER, and they
+   still do — every row solves this from the same two variables — so nothing
+   moves as faces stream in. What changes is that the whole list breathes with
+   the slider, which is the honest behaviour for a control labelled Size. */
+.fg-card-preview{--fg-line:calc(clamp(22px,var(--fg-card-size,52px),72px) * 1.28);height:auto;padding:20px 26px 18px 0;background:transparent}
+.fg-card-skeleton--sample{height:var(--fg-line)}
+.fg-card-skeleton--body{height:24px}
+.fg-card-skeleton--ladder{width:44%;height:26px}
+.fg-card-sample{display:flex;align-items:center;height:var(--fg-line);font-size:clamp(22px,var(--fg-card-size),72px);line-height:1.06;letter-spacing:-.035em}
+/* 15px, up from the card's 12px. At 386px the pangram was a texture swatch you
+   squinted at; across 1,180px it is a line of running text set in the family,
+   which is what a body-weight sample is for. */
+.fg-card-pangram{height:24px;font-size:15px;line-height:24px;white-space:nowrap;text-overflow:ellipsis}
+/* THE LADDER. Each numeral is drawn in the family at the weight it names, so
+   the row shows the range instead of counting it. `margin-top:auto` pins it to
+   the bottom of the reserved box, which keeps every row's ladder on one
+   baseline down the page — a ladder that floated with its family's metrics
+   would be unreadable as the column-of-comparison it is meant to be.
+   Fixed height + hidden overflow: a family can carry two weights or nine and
+   the row must not change height between them. */
+.fg-card-ladder{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 26px;height:26px;overflow:hidden;font-family:var(--fg-ff);font-size:19px;line-height:26px;color:var(--t1);font-variant-numeric:tabular-nums}
+.fg-card-step{font-weight:var(--fg-fw)}
+.fg-card-name{font-size:16px;line-height:1.3;letter-spacing:-.015em}
 .fg-card-info{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:capitalize}
 /* Always visible, unlike the colour libraries' like button: comparison is the
    gallery's primary shortlisting gesture, and a control you must hover to
    discover is not a shortlisting tool. */
 .fg-card-compare{position:static;opacity:1;transform:none}
 .fg-card--comparing .fg-card-open{border-color:var(--brand);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--brand)}
+/* The foot clears the rank gutter, so the name lines up with the specimen that
+   names it rather than with the number, and it spans the row — name at the left
+   edge, script coverage at the right — instead of huddling in the first 200px
+   of 1,341 and leaving the rest of the band blank. */
+.fg-card .lbry-card-foot{align-items:baseline;padding-left:56px}
+.fg-card-scripts{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t3)}
 
 /* The hero is a near-black slab, which reads as a deliberate object on the
    light page and as NOTHING on the dark one: #0a0a0b against a --bg-0 of
@@ -9471,10 +9521,11 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    flight, so the list lands in a shape the reader has already seen. Deliberately
    NOT .fg-card: the reserved-metrics contract is asserted across .fg-card, and
    these are not typefaces. */
-.fg-grid--skeleton{--lbry-col-min:400px}
-.fg-skel-row{display:flex;flex-direction:column;gap:10px;height:162px;padding:22px 24px 20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l)}
-.fg-skel-row .fg-card-skeleton--sample{width:min(72%,300px)}
-.fg-skel-row .fg-card-skeleton--body{width:92%}
+.fg-grid--skeleton{--lbry-col-min:100%}
+.fg-skel-row{--fg-line:67px;display:flex;flex-direction:column;gap:10px;padding:24px 26px 22px 56px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l)}
+.fg-skel-row .fg-card-skeleton--sample{width:min(48%,520px)}
+.fg-skel-row .fg-card-skeleton--body{width:min(64%,700px)}
+.fg-skel-row .fg-card-skeleton--ladder{width:min(34%,380px);margin-top:auto}
 
 /* Font Pair */
 .fpr-page{padding-bottom:72px}
@@ -9600,18 +9651,31 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .fg-command{grid-template-columns:1fr;padding:8px}
   .fg-command-size{order:initial}
   .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
-  .fg-card-index{padding-top:31px}
-  .fg-card-compare{top:27px}
-  /* 18 + 66 + 10 + 22 + 12 = 128 in a 130px box — the same reserved arithmetic
-     as the wide layout, re-run for the narrower specimen. */
-  .fg-card-preview{height:130px;padding:18px 52px 12px 0}
-  .fg-card-sample,.fg-card-skeleton--sample{height:66px;line-height:66px}
-  .fg-card-sample{font-size:clamp(30px,var(--fg-card-size),52px)}
+  .fg-card-index{padding-top:22px;font-size:10px}
+  .fg-card .lbry-card-foot{padding-left:34px}
+  /* 18 + 64 + 8 + 22 + 6 + 24 + 14 = 156 in a 156px box — the same reserved
+     arithmetic as the wide layout, re-run for the narrower specimen. The
+     ceiling drops to 52px because 64px of reserved line only clears a 52px face
+     (52 × 1.17 ≈ 61), and the slider still runs to 72 on the same page: the
+     clamp is what stops a phone honouring a size its box cannot. */
+  .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),52px) * 1.28);padding:18px 44px 14px 0}
+  .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),52px)}
+  .fg-card-pangram,.fg-card-skeleton--body{height:22px}
+  .fg-card-pangram{font-size:13px;line-height:22px}
+  /* Two lines of ladder reserved, not one. Nine numerals at 16px with 18px gaps
+     need ~430px and a 390px phone has ~312px, so the widest families wrap once.
+     The box is reserved for the wrap rather than clipping it — a ladder that
+     silently dropped 800 and 900 would misreport the family. */
+  .fg-card-ladder,.fg-card-skeleton--ladder{height:24px}
+  .fg-card-ladder{gap:2px 18px;font-size:16px;line-height:24px}
   /* Stacked, the meta goes back to a single line under the specimen: the name
      has the full column width there, so it does not need its own row.
      True down to about 380px, and NOT below it — see the ≤380px block. */
-  .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0 52px 18px 0;border-left:0}
-  .fg-skel-row{height:130px;padding:18px 24px 12px 34px}
+  .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0 44px 18px 0;border-left:0}
+  .fg-skel-row{--fg-line:67px;padding:18px 24px 14px 34px}
+  .fg-skel-row .fg-card-skeleton--sample{width:72%}
+  .fg-skel-row .fg-card-skeleton--body{width:90%}
+  .fg-skel-row .fg-card-skeleton--ladder{width:56%}
   .fpr-hero-pair{grid-template-columns:1fr auto 1fr}
   .fpr-status{grid-template-columns:1fr 1fr}
   .fpr-status span:nth-child(3){border-left:1px solid var(--border)}
@@ -9960,23 +10024,16 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    purpose so the grid cannot reflow as webfaces load (asserted by
    11-typography-tools.spec.js). Hiding the line keeps the box identical. */
 .fg-card:last-child{border-bottom-color:transparent}
-/* PATTERN B AGAIN — the tablet band falls into the phone layout by one column.
-   `--lbry-col-min:400px` gives three 435px columns at 1440 and, at 834, a grid
-   794px wide that JUST misses two (it needs 820). So the specimen row stretched
-   to 792px while its content — a family name, a pangram and an add button — is
-   composed for a ~435px column: measured, the type occupied the left ~300px of
-   a 790px row, 77 times over, and the page ran to 12,231px.
-   360px across the 700–980 band puts two ~387px columns back at 834, within
-   50px of the desktop column the card was designed for, and halves the page:
-   12,231px → 6,951px. The grid still has to be wide enough to hold them, so the
-   second column actually appears from ~768px up and 700–767 stays one full-width
-   row — which is the right answer there anyway, since two columns at 700px would
-   be ~320px and narrower than the specimen needs. Measured at the seams:
-   981px → 2 columns of 460, 980px → 2 of 459, so the two bands meet with no
-   jump. */
-@media(min-width:700px) and (max-width:980px){
-  .fg-grid,.fg-grid--skeleton{--lbry-col-min:360px}
-}
+/* PR #298 gave this band a second column here — `--lbry-col-min:360px` across
+   700–980 — because at 834 a 794px grid JUST missed two columns and left a
+   790px row with type in its left ~300px, 77 times over, for a 12,231px page.
+   That fix was right for a grid and is moot for a list: the founder's direction
+   of 2026-09-02 is one specimen per row at every width, so the band has no
+   column count of its own to set and the rule is gone rather than overridden.
+   The emptiness #298 measured is answered above instead, by a row whose three
+   lines each want the full width. Removing the override is deliberate; see the
+   `.fg-grid` block for what replaced it. */
+
 /* The chosen ratio's "where it fits" line. An interval name is a fact about
    music; this is the bit that answers whether to pick it. */
 .tsc-ratio-hint{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--t2)}

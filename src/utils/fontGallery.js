@@ -35,3 +35,64 @@ export function isPickableTypeface(font) {
 export function filterPickableTypefaces(fonts) {
   return Array.isArray(fonts) ? fonts.filter(isPickableTypeface) : []
 }
+
+// ── What a full-width specimen row shows about a family ─────────────────────
+
+// The weights a row's ladder draws — numerals that are themselves set in the
+// family at the weight they name, so "900" is painted with the black cut and
+// "100" with the thin one. That only works if the family is actually LOADED at
+// every weight the ladder names: a numeral labelled 200 and painted with the
+// 400 file is the same lie as fallback text pretending to be the family, and
+// refusing that lie is the oldest contract on this page.
+//
+// So the ladder is capped, and the cap is a network budget rather than a visual
+// one. Every weight in it is a woff2 the browser has to fetch to paint it, and
+// a row asked for two per family before this (heading + body). Five is where a
+// nine-weight family still reads as a range — both ends and three steps between
+// them — without quintupling the font payload of a scroll.
+//
+// The ends are never dropped: min and max are what "how much range has this
+// family got" is actually asking. The middle is sampled evenly across the rest.
+export function ladderWeights(variants, limit = 5) {
+  const list = Array.isArray(variants)
+    ? [...new Set(variants.filter(w => Number.isFinite(w)))].sort((a, b) => a - b)
+    : []
+  if (list.length <= limit) return list
+  if (limit <= 1) return list.slice(0, 1)
+  if (limit === 2) return [list[0], list[list.length - 1]]
+
+  // Evenly spaced positions across the sorted list, both ends included.
+  // Rounding can land two positions on the same index, so the Set collapses
+  // them rather than drawing one weight twice and claiming it is two.
+  const picks = new Set()
+  for (let i = 0; i < limit; i += 1) {
+    picks.add(Math.round((i * (list.length - 1)) / (limit - 1)))
+  }
+  return [...picks].sort((a, b) => a - b).map(i => list[i])
+}
+
+// Google's subset ids as script names a person can read. `latin-ext` is not a
+// language and "3 subsets" is not a fact about a typeface — the specimen dialog
+// reduced this whole field to its own length, which threw away the only answer
+// it had to "can I set my copy in this", the question a Cyrillic, Greek or
+// Vietnamese reader opens a type catalogue with.
+const SUBSET_NAMES = {
+  'latin-ext': 'Latin Extended',
+  'cyrillic-ext': 'Cyrillic Extended',
+  'greek-ext': 'Greek Extended',
+  'chinese-simplified': 'Chinese (Simplified)',
+  'chinese-traditional': 'Chinese (Traditional)',
+  'chinese-hongkong': 'Chinese (Hong Kong)',
+  menclosedalphanum: 'Enclosed Alphanumerics',
+}
+
+export function formatSubsets(subsets) {
+  if (!Array.isArray(subsets)) return []
+  const seen = subsets
+    .filter(s => typeof s === 'string' && s.trim())
+    .map(s => s.trim().toLowerCase())
+  return [...new Set(seen)].map(id => (
+    SUBSET_NAMES[id]
+    || id.replace(/(^|[-_])([a-z])/g, (_, sep, ch) => (sep ? ' ' : '') + ch.toUpperCase())
+  ))
+}

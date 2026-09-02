@@ -14,7 +14,7 @@ import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont,
   suggestPairings, verifyFontLoaded,
 } from '../utils/googleFonts'
-import { filterGalleryTypefaces } from '../utils/fontGallery'
+import { filterGalleryTypefaces, formatSubsets, ladderWeights } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 
 // Font Gallery — the standalone /create/font-gallery page. Browse the Google Fonts
@@ -58,15 +58,20 @@ const SORTS = [
 ]
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-const SIZES = [
-  { label: 'Display', px: 64 },
-  { label: 'H1', px: 48 },
-  { label: 'H2', px: 36 },
-  { label: 'H3', px: 28 },
-  { label: 'Body', px: 16 },
-  { label: 'Small', px: 13 },
-]
-const PAGE_SIZE = 48
+// The row's body line. A 434px card could hold one pangram at 12px and that was
+// the whole running-text sample the gallery offered. A full-width row holds
+// about 110 characters at 15px, so the line is written to spend them: two
+// pangrams cover the alphabet twice in different letter pairs, and the tail
+// carries the figures, currency and punctuation you cannot judge from letters —
+// the parts of a face that most often turn out to be the disappointing ones.
+const SPECIMEN_LINE = 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. 0123456789 £$€ &@?!'
+// 24, not 48. A page of results is a scroll distance, not a card count: one
+// specimen per row makes each result about twice as tall, so keeping 48 would
+// have doubled the run to the "Show more" control and to the tools below it.
+// Twenty-four full-width rows are about the height forty-eight cards were in
+// three columns. The infinite-scroll sentinel still fills in on approach, so
+// this changes how much arrives at once, not how much is reachable.
+const PAGE_SIZE = 24
 const MAX_COMPARE = 3
 
 // Set CSS custom properties on a node — the no-inline-styles route for values
@@ -81,9 +86,19 @@ function varsRef(vars) {
 // Wait until a family is genuinely painting before revealing text in it.
 // Returns true only on a confirmed 'ok'; 'unknown' and 'failed' both keep the
 // placeholder up, because both mean "don't show this yet".
-function useFontReady(font, weight, { defer = true } = {}) {
+//
+// `extraWeights` are the cuts a caller is going to PAINT rather than merely
+// name — the row ladder's numerals. They have to be in the same css2 request as
+// the heading and body weights, because a weight the stylesheet never asked for
+// is drawn with the nearest one that did arrive, and a numeral reading 200
+// painted in the 400 cut is exactly the fallback-masquerading-as-the-family
+// problem this hook exists to prevent.
+function useFontReady(font, weight, { defer = true, extraWeights } = {}) {
   const [ready, setReady] = useState(false)
   const ref = useRef(null)
+  // A new array identity on every render would restart the effect on every
+  // render, so the weights travel as a stable string and are parsed back inside.
+  const extraKey = extraWeights ? extraWeights.join(',') : ''
 
   useEffect(() => {
     if (!font) return undefined
@@ -91,7 +106,8 @@ function useFontReady(font, weight, { defer = true } = {}) {
     setReady(false)
 
     const start = () => {
-      loadFont(font.family, [weight, bodyWeight(font)])
+      const extra = extraKey ? extraKey.split(',').map(Number) : []
+      loadFont(font.family, [weight, bodyWeight(font), ...extra])
       verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
         if (!cancelled && status === 'ok') setReady(true)
       })
@@ -109,7 +125,7 @@ function useFontReady(font, weight, { defer = true } = {}) {
     }, { rootMargin: '200px' })
     obs.observe(el)
     return () => { cancelled = true; obs.disconnect() }
-  }, [font, weight, defer])
+  }, [font, weight, defer, extraKey])
 
   return [ready, ref]
 }
@@ -130,10 +146,13 @@ function CloseIcon() {
 
 /* ── Catalogue row ────────────────────────────────────────────────────────── */
 
-function GalleryCard({ font, onOpen, inCompare, onToggleCompare, previewText, previewSize }) {
+function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, previewSize }) {
   const heading = headingWeight(font)
   const body = bodyWeight(font)
-  const [ready, ref] = useFontReady(font, heading)
+  const ladder = useMemo(() => ladderWeights(font.variants), [font.variants])
+  const scripts = useMemo(() => formatSubsets(font.subsets), [font.subsets])
+  const [ready, ref] = useFontReady(font, heading, { extraWeights: ladder })
+  const weights = font.variants.length
 
   return (
     <LibraryCard
@@ -146,12 +165,17 @@ function GalleryCard({ font, onOpen, inCompare, onToggleCompare, previewText, pr
           className="fg-card-open"
           ref={ref}
           onClick={() => onOpen(font)}
-          aria-label={`Open the ${font.family} specimen — ${font.category}, ${font.variants.length} weights`}
+          aria-label={`Open the ${font.family} specimen — ${font.category}, ${weights} weight${weights === 1 ? '' : 's'}`}
         >
+          {/* The catalogue position, which the "Popular" sort makes a real fact
+              and every other ordering makes a place in the list you are reading.
+              It is also the row's left edge: a full-width row with nothing at its
+              start has no line for the eye to come back to down 24 of them. */}
+          <span className="fg-card-index" aria-hidden="true">{String(rank).padStart(2, '0')}</span>
           {/* The specimen is decorative to assistive tech: the button's own label
               already names the family, its category and its weight count, so
-              exposing the sample and the pangram as well would repeat the same
-              family name three times and read the pangram out once per card. */}
+              exposing the sample, the pangram and the ladder as well would repeat
+              the same family name three times and read a pangram out per row. */}
           <span
             className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
             ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body), '--fg-card-size': `${previewSize}px` })}
@@ -159,17 +183,37 @@ function GalleryCard({ font, onOpen, inCompare, onToggleCompare, previewText, pr
           >
             {ready ? (
               <>
-                {/* Two lines with two jobs: the display line takes the user's own
-                    words, the second line stays the pangram so every card still
-                    offers the same texture reference to compare against. Echoing
-                    the typed string on both lines told the reader nothing. */}
+                {/* Three lines, three questions, and the row is full width because
+                    all three want the width:
+
+                      the display line  what do the letterforms look like at size,
+                                        in the reader's OWN words when they type
+                                        some — a 434px column showed about fifteen
+                                        characters of a 40px face and truncated the
+                                        rest, which is why the size slider had to
+                                        stop at 48px;
+                      the pangram       the same family as running text at body
+                                        weight, whole rather than ellipsised;
+                      the ladder        how much RANGE the family has, drawn
+                                        instead of counted. This is the one that
+                                        could not exist in the grid: nine weights
+                                        laid across a row need a row's width, and
+                                        "9w" in the card foot was the entire answer
+                                        the gallery gave to the question a designer
+                                        most often has to check. */}
                 <span className="fg-card-sample">{previewText.trim() || font.family}</span>
-                <span className="fg-card-pangram">{PANGRAM}</span>
+                <span className="fg-card-pangram">{SPECIMEN_LINE}</span>
+                <span className="fg-card-ladder">
+                  {ladder.map(w => (
+                    <span key={w} className="fg-card-step" ref={varsRef({ '--fg-fw': String(w) })}>{w}</span>
+                  ))}
+                </span>
               </>
             ) : (
               <>
                 <span className="fg-card-skeleton fg-card-skeleton--sample" />
                 <span className="fg-card-skeleton fg-card-skeleton--body" />
+                <span className="fg-card-skeleton fg-card-skeleton--ladder" />
               </>
             )}
           </span>
@@ -191,7 +235,23 @@ function GalleryCard({ font, onOpen, inCompare, onToggleCompare, previewText, pr
         </button>
       )}
       name={font.family}
-      meta={`${font.category} · ${font.variants.length}w`}
+      meta={`${font.category} · ${weights} weight${weights === 1 ? '' : 's'}`}
+      /* The far edge of a full-width row is the one place a fact can sit without
+         competing with the specimen, so it carries the one the gallery never
+         showed at all: which scripts the family actually covers. Three names and
+         a remainder, because the answer to "can I set my copy in this" is
+         usually settled by the first script in the list and never needs seven.
+         On the bundled fallback catalogue every entry is latin-only, so this
+         reads "Latin" down the whole page there. That is the fallback list being
+         thin, not the row being repetitive, and the banner above already says
+         which catalogue is on screen — reporting it honestly beats hiding a
+         field because the degraded data makes it dull. */
+      tail={scripts.length > 0 ? (
+        <span className="fg-card-scripts">
+          {scripts.slice(0, 3).join(', ')}
+          {scripts.length > 3 ? ` +${scripts.length - 3}` : ''}
+        </span>
+      ) : null}
     />
   )
 }
@@ -231,18 +291,21 @@ function GalleryHero({ families, classifications, weights, pending }) {
   )
 }
 
-// The reserved card geometry, drawn empty. Shown while the catalogue is still
-// in flight so the grid arrives into a shape the reader has already seen,
+// The reserved row geometry, drawn empty. Shown while the catalogue is still
+// in flight so the list arrives into a shape the reader has already seen,
 // instead of a centred spinner collapsing into a full page.
 //
-// Nine, not six: the grid shows three across, so six left a ragged two rows.
-function SkeletonRows({ count = 9 }) {
+// Four, not the grid's nine: one column means a skeleton row is a full-width
+// band, and nine of those is a screen and a half of shimmer promising more than
+// the first paint can deliver.
+function SkeletonRows({ count = 4 }) {
   return (
     <div className="lbry-grid fg-grid fg-grid--skeleton" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="fg-skel-row">
           <span className="fg-card-skeleton fg-card-skeleton--sample" />
           <span className="fg-card-skeleton fg-card-skeleton--body" />
+          <span className="fg-card-skeleton fg-card-skeleton--ladder" />
         </div>
       ))}
     </div>
@@ -581,10 +644,13 @@ export default function FontGallery({ onCopy, toast }) {
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState('popularity')
   const [previewText, setPreviewText] = useState('')
-  // 40, not the list layout's 52: three grid columns give each specimen ~400px
-  // instead of a full page width, and 52px ellipsised the longer family names
-  // at rest — the one thing a font gallery must never do to a name.
-  const [previewSize, setPreviewSize] = useState(40)
+  // 52, back up from the grid's 40. That 40 was chosen because three columns
+  // gave each specimen ~400px and 52px ellipsised the longer family names — the
+  // one thing a font gallery must never do to a name. A full-width row is not
+  // under that constraint: "Playfair Display" at 52px wants ~430px and has
+  // ~1,180px at 1440, so the reason for the smaller default has gone with the
+  // columns that caused it.
+  const [previewSize, setPreviewSize] = useState(52)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
@@ -733,12 +799,13 @@ export default function FontGallery({ onCopy, toast }) {
             </label>
             <label className="fg-command-size">
               <span>Size</span>
-              {/* Ceiling is the reserved sample box, not a round number: above
-                  48px a normal-metric face no longer fits inside the fixed 68px
-                  line the card reserves for it, and the card would clip its own
-                  descenders rather than reflow. The slider must not offer a size
-                  the geometry cannot honour. */}
-              <input type="range" min="22" max="48" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
+              {/* Ceiling is the reserved sample box, not a round number: the
+                  slider must never offer a size the geometry cannot honour, or
+                  the row clips its own descenders rather than reflow. The box
+                  grew with the row (68px → 92px), so the ceiling grows with it:
+                  a 72px face needs ~1.17em of ascent plus descent, which is 84px
+                  inside a 92px line. */}
+              <input type="range" min="22" max="72" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
               <strong>{previewSize}px</strong>
             </label>
           </>
@@ -776,10 +843,11 @@ export default function FontGallery({ onCopy, toast }) {
       ) : (
         <>
           <LibraryGrid className="fg-grid">
-            {paged.map((font) => (
+            {paged.map((font, i) => (
               <GalleryCard
                 key={font.family}
                 font={font}
+                rank={i + 1}
                 onOpen={setSelected}
                 inCompare={compareIds.has(font.family)}
                 onToggleCompare={toggleCompare}
