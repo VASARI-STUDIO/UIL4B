@@ -112,6 +112,44 @@ function labelGround(bg) {
   return contrastRatio(ink, bg) >= 4.5 ? bg : fixBackground(ink, bg, 4.5)
 }
 
+/**
+ * The muted role, guaranteed against EVERY ground the card actually paints it
+ * on rather than only the one it was derived against.
+ *
+ * derivePreviewRoles already clamps `muted` to 4.5:1 — but against `bg` alone
+ * (utils/colors.js, "muted + border: derived from text↔bg, contrast-clamped").
+ * This card then paints it on `surface` too: .hw-ui-bar and .hw-ui-delta both
+ * set background:role.surface. `surface` is only a 6% shift from `bg`, which
+ * looks close enough to be safe and is not — for a saturated generated palette
+ * that shift is worth more than the margin the clamp leaves. Measured over 80
+ * generator rerolls before this: 216 of 480 samples under 4.5:1 (45%), worst
+ * 2.53:1, e.g. #9999cc on #35399a at 3.53:1.
+ *
+ * Three steps, because the obvious one is not enough on its own:
+ *
+ * 1. Keep `muted` untouched when it already clears both grounds — the common
+ *    case, and the one that preserves the palette's character.
+ * 2. Otherwise let fixForeground walk it, which keeps the muted hue.
+ * 3. If that still misses, take the better achromatic pole. fixForeground
+ *    PRESERVES HUE AND SATURATION and picks its direction from the ground's
+ *    luminance (`bgLum < 0.5` ⇒ walk lighter), so against a mid-luminance
+ *    chromatic ground it can walk away from the reachable side and top out
+ *    short: measured #14461a on #36983f at 2.98:1 and #493b12 on #967517 at
+ *    2.53:1, where plain black clears both at 5.8 and 5.2. That is the same
+ *    "no ink of this hue clears it" case labelGround was written for; here the
+ *    ground is fixed by the layout, so legibility takes the hue's place.
+ */
+function mutedInk(muted, grounds) {
+  const worstOf = (ink) => Math.min(...grounds.map((g) => contrastRatio(ink, g)))
+  if (worstOf(muted) >= 4.5) return muted
+  let walked = muted
+  for (const g of grounds) {
+    if (contrastRatio(walked, g) < 4.5) walked = fixForeground(walked, g, 4.5)
+  }
+  if (worstOf(walked) >= 4.5) return walked
+  return worstOf('#141414') >= worstOf('#FFFFFF') ? '#141414' : '#FFFFFF'
+}
+
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
 
 function expandHex(value) {
@@ -255,22 +293,24 @@ function PaletteStage({ swatches }) {
   // that colour for its ground. The dots compare steps against each other on
   // the card; a step that IS the card is not one of them.
   const dots = hexes.filter((h) => h.toLowerCase() !== String(role.bg).toLowerCase())
+  // Guaranteed against both grounds this card paints muted text on.
+  const muted = mutedInk(role.muted, [role.bg, role.surface])
   const dotSeries = dots.length ? dots : hexes
   return (
     <div className="hw-ui" aria-hidden="true" style={{ background: role.bg, borderColor: role.border }}>
       <div className="hw-ui-bar" style={{ background: role.surface, borderBottomColor: role.border }}>
         <span className="hw-ui-mark" style={{ background: role.primary, color: role.onPrimary }}>A</span>
         <span className="hw-ui-app" style={{ color: role.text }}>Acme</span>
-        <span className="hw-ui-crumb" style={{ color: role.muted }}>Overview</span>
+        <span className="hw-ui-crumb" style={{ color: muted }}>Overview</span>
         <span className="hw-ui-avatar" style={{ background: labelGround(role.accent), color: readableInk(role.accent) }}>M</span>
       </div>
 
       <div className="hw-ui-main">
         <div className="hw-ui-metric">
-          <span className="hw-ui-metric-label" style={{ color: role.muted }}>Sessions this week</span>
+          <span className="hw-ui-metric-label" style={{ color: muted }}>Sessions this week</span>
           <span className="hw-ui-metric-row">
             <strong className="hw-ui-metric-num" style={{ color: role.text }}>12,480</strong>
-            <span className="hw-ui-delta" style={{ background: role.surface, color: role.muted, border: `1px solid ${role.border}` }}>+12.4%</span>
+            <span className="hw-ui-delta" style={{ background: role.surface, color: muted, border: `1px solid ${role.border}` }}>+12.4%</span>
           </span>
         </div>
 
@@ -294,7 +334,7 @@ function PaletteStage({ swatches }) {
             <li className="hw-ui-row" key={row.name} style={{ borderTopColor: role.border }}>
               <span className="hw-ui-dot" style={{ background: dotSeries[i % dotSeries.length] || role.primary }} />
               <span className="hw-ui-row-name" style={{ color: role.text }}>{row.name}</span>
-              <span className="hw-ui-row-state" style={{ color: role.muted }}>{row.state}</span>
+              <span className="hw-ui-row-state" style={{ color: muted }}>{row.state}</span>
             </li>
           ))}
         </ul>
