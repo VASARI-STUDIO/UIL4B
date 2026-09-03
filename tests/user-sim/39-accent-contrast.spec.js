@@ -155,8 +155,12 @@ test.describe('accent-family text clears its AA floor', () => {
     test(`${theme} theme: no accent text under its floor on any sampled route`, async ({ browser }) => {
       const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: theme })
       const page = await ctx.newPage()
+      // vs-t alone is the theme now. This used to also set vs-t-lightreset=1 to
+      // get past the one-time force-reset to light that ran on every fresh
+      // profile; that migration is retired, and setting a dead key here would
+      // imply it still means something.
       await page.addInitScript((t) => {
-        try { localStorage.setItem('vs-t', t); localStorage.setItem('vs-t-lightreset', '1') } catch { /* private mode */ }
+        try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
       }, theme)
       const failures = []
       for (const route of ROUTES) {

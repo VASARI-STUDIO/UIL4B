@@ -8,11 +8,11 @@ import { UIKIT_GUIDE_KEY } from './UIKitGuide'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import NavIcon from './NavIcon'
+import ThemeChoice from './ThemeChoice'
 
 // Overlays are code-split: the command palette and the export shell only load
 // the first time a visitor actually opens them, so they never weigh on the nav's
@@ -190,22 +190,6 @@ function SparkIcon() {
   )
 }
 
-function SunIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function MoonIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
-      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 // Terms the search placeholder cycles through on hover.
 //
@@ -291,33 +275,17 @@ function SearchPlaceholder({ active }) {
   )
 }
 
-// The day/night segmented control, shared by the account popover (signed in) and
-// the compact menu popover (signed out) so the theme toggle reads identically in
-// both places.
-function ThemeSeg({ theme, setTheme }) {
+// The Light / Dark / System control, shared by the account popover (signed in),
+// the compact menu popover (signed out) and the mobile sheet, so the theme reads
+// identically wherever it is reached. The buttons themselves live in
+// ThemeChoice.jsx, which /settings renders too — one implementation, because the
+// last arrangement had the control in exactly one popover that is display:none
+// below 768px and nowhere else at all.
+function ThemeSeg() {
   return (
     <div className="pnav-pop-row">
       <span className="pnav-pop-row-label">Theme</span>
-      <div className="pnav-seg" role="group" aria-label="Theme">
-        <button
-          type="button"
-          className="pnav-seg-btn"
-          aria-pressed={theme === 'light'}
-          onClick={() => setTheme('light')}
-        >
-          <SunIcon />
-          Day
-        </button>
-        <button
-          type="button"
-          className="pnav-seg-btn"
-          aria-pressed={theme === 'dark'}
-          onClick={() => setTheme('dark')}
-        >
-          <MoonIcon />
-          Night
-        </button>
-      </div>
+      <ThemeChoice />
     </div>
   )
 }
@@ -386,7 +354,6 @@ export default function PillNav() {
   const { user, userProfile, logout, knownAccounts, switchAccount } = useAuth()
   const { openLogin } = useLoginPrompt()
   const { isPro } = useSubscription()
-  const { theme, setTheme } = useTheme()
   const { reducedMotion } = useAppearance()
   // Hover/focus on the search field. Drives both the width expansion and the
   // typing placeholder; the CSS could do the width on its own, but the timer
@@ -920,7 +887,7 @@ export default function PillNav() {
                       </div>
                       <div className="pnav-pop-sep" />
                       <p className="pnav-pop-head">Appearance</p>
-                      <ThemeSeg theme={theme} setTheme={setTheme} />
+                      <ThemeSeg />
                       <div className="pnav-pop-sep" />
                       <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
                         <GearIcon />
@@ -1012,7 +979,7 @@ export default function PillNav() {
                     tabIndex={-1}
                   >
                     <p className="pnav-pop-head">Appearance</p>
-                    <ThemeSeg theme={theme} setTheme={setTheme} />
+                    <ThemeSeg />
                     <div className="pnav-pop-sep" />
                     <button type="button" className="pnav-pop-item" onClick={openSearch}>
                       <SearchIcon />
@@ -1220,6 +1187,14 @@ export default function PillNav() {
               </div>
             </div>
           )}
+          {/* Theme. The `.pnav-more-wrap{display:none}` rule below 768px has
+              always claimed "theme + auth live in the sheet / Settings" — auth
+              did, theme did not, and that is half of why a finished dark theme
+              was unreachable on a phone. Same control as the popover. */}
+          <div className="pnav-sheet-theme">
+            <p className="pnav-pop-head">Appearance</p>
+            <ThemeChoice />
+          </div>
           <div className="pnav-sheet-cta">
             {user ? (
               <Link className="ui-pill ui-pill-accent ui-pill-lg ui-pill-block" to="/settings" onClick={closeAll}>

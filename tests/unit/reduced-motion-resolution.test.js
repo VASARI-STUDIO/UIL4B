@@ -81,7 +81,16 @@ function makeDom({ os = false, stored = null } = {}) {
       removeItem: (k) => store.delete(k),
     },
     window: {
+      // The boot script now asks TWO media queries — prefers-color-scheme for
+      // the three-state theme, prefers-reduced-motion for this one. This stub
+      // answers the colour-scheme question with a dead "no" so the theme
+      // resolves to light (which the assertions below still expect) and keeps
+      // asserting that nothing else is being asked. AppearanceContext.jsx only
+      // ever asks the motion question, so it still reaches the same `mq`.
       matchMedia: (q) => {
+        if (/prefers-color-scheme/.test(q)) {
+          return { matches: false, addEventListener() {}, removeEventListener() {} }
+        }
         assert.match(q, /prefers-reduced-motion:\s*reduce/,
           'the OS query must be the reduced-motion one')
         return mq

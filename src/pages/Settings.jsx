@@ -9,6 +9,7 @@ import { useProPrice } from '../hooks/usePrices'
 import { LOCATIONS } from '../data/locations'
 import { FLAIRS, getFlair } from '../utils/constants'
 import UserName from '../components/UserName'
+import ThemeChoice from '../components/ThemeChoice'
 import { clearCommunitySubmissions, COMMUNITY_SUBMISSIONS_KEY } from '../utils/communitySubmissions'
 import { collectStorage, buildExport, keysToClear } from '../utils/dataExport'
 import { doc, getDoc } from 'firebase/firestore'
@@ -763,10 +764,23 @@ export default function Settings({ toast }) {
           <section id="set-accessibility" className="settings-section" role="tabpanel" aria-labelledby="settab-accessibility" hidden={active !== 'accessibility'}>
             <div className="settings-section-h">
               <h2>Accessibility</h2>
-              <p>Reduce motion for a calmer, distraction-free interface. Your light or dark theme lives in the top-nav settings menu.</p>
+              <p>Choose a theme and reduce motion for a calmer, distraction-free interface. Both are also in the menu at the top of every page.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
+                {/* Theme sits beside reduced motion because it resolves the same
+                    way: an explicit Light or Dark beats the device, and System
+                    hands the decision back to it — the same contract, so the two
+                    rows are honestly neighbours rather than merely adjacent.
+                    This blurb used to send people to "the top-nav settings menu"
+                    for a control that was display:none on a phone. */}
+                <div className="toggle-row">
+                  <div className="toggle-row-info">
+                    <div className="toggle-row-label">Theme</div>
+                    <div className="toggle-row-meta">Light, dark, or follow your device</div>
+                  </div>
+                  <ThemeChoice />
+                </div>
                 <div className="toggle-row">
                   <div className="toggle-row-info">
                     <div className="toggle-row-label">Reduced motion</div>
