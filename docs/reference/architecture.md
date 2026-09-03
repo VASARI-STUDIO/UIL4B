@@ -15,7 +15,7 @@ src/
 ├── main.jsx           # React root
 ├── pages/             # one component per route
 ├── contexts/          # cross-cutting state (providers)
-├── components/        # shared UI (Sidebar, TopBar, modals, gates…)
+├── components/        # shared UI (PillNav, modals, gates…)
 ├── utils/             # firebase, analytics, colors, fonts, stripe client…
 ├── hooks/             # custom hooks
 ├── data/              # static data
@@ -115,12 +115,14 @@ There **is** a branded 404: `src/pages/NotFound.jsx` sits behind
 
 ## Components (`src/components/`)
 
-Shared UI: `PillNav`, `Sidebar`, `TopBar`, `AppFooter`, `CommandPalette`,
+Shared UI: `PillNav`, `AppFooter`, `CommandPalette`,
 `Toast`, `AuthGate` ⚠️, `GoogleOneTap` ⚠️, `LoginPopup`, `ProUpgradeModal`,
-`FeedbackButton` / `FeedbackModal`, `UIPreviewModal`, `UIKitGuide`, `DocsTOC`,
+`FeedbackButton` / `FeedbackModal`, `UIKitGuide`, `DocsTOC`,
 `HomeWorkbench`, `SnapSlider`, `ColorPickerPop`, `ExportPanel`, `FontPicker`,
 `SystemCTA`, `ShuffleIcon`, the `UiSystem*` builder set, plus `discover/`,
-`prompt/` and `seo/` subfolders. (`CategoryMiniTool` was deleted in #196.)
+`prompt/` and `seo/` subfolders. (`CategoryMiniTool` was deleted in #196; `Sidebar`, `TopBar` and
+`UIPreviewModal` were deleted in 2026-09 — all three were unreachable once
+App.jsx moved to PillNav, and no built bundle contained a line of them.)
 
 ## API routes (`/api`) — 12-function limit
 

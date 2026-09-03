@@ -1,13 +1,11 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect } from 'react'
-import { NavLink, useLocation, useSearchParams } from 'react-router-dom'
-import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, mixHex, describeColor, autoTonalPalette, applyAdjust, simCvd, roleHueArcs, semanticRamp } from '../utils/colors'
+import { NavLink, useLocation } from 'react-router-dom'
+import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, mixHex, describeColor, autoTonalPalette, applyAdjust, roleHueArcs, semanticRamp } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
-import { useI18n } from '../contexts/I18nContext'
 import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
-import { resolveTool } from '../data/toolTree'
 
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 
@@ -378,7 +376,6 @@ const CB_MODES = [
   { value: 'tritanopia', label: 'Tritan', short: 'Trit', desc: 'Blue-blind (tritanopia)' },
   { value: 'achromatopsia', label: 'Achroma', short: 'Achr', desc: 'Total colour-blindness (achromatopsia)' },
 ]
-const CB_LABELS = Object.fromEntries(CB_MODES.map(m => [m.value, m.desc]))
 
 
 
@@ -396,23 +393,8 @@ const COLOUR_TOOLS = [
   { id: 'contrast', label: 'Contrast Checker', route: '/create/contrast', desc: 'Verify AA / AAA' },
 ]
 
-// Colour tool id → the single studio section that route renders (#39). Keyed by
-// tool id, not URL segment, so it survives a route move.
-const PATH_TO_SECTION = { palette: 'palette', semantic: 'states', ui: 'systems', gradient: 'gradients' }
-const SOLO_TITLES = { palette: 'Palette Builder', states: 'Semantic Colours', systems: 'UI Colour Systems', gradients: 'Gradient Tool' }
-
-// Tool-specific hero copy for the standalone pages (#50). The merged studio
-// keeps the generic i18n description; each solo page says what IT does — the
-// same standard the Tint and Contrast pages set.
-const SOLO_DESC = {
-  palette: 'Build your core palette from one seed colour. Pick a harmony, fine-tune every swatch, and get tonal ramps with accessibility checks built in.',
-  states: 'Dial in success, warning, error, info and pending colours. Start from a preset bundle or tune each state’s hue — every state gets a full 50–900 ramp.',
-  systems: 'Start your UI colours from a proven foundation — load a design-system palette, borrow a brand’s colours, or pull named swatches from the classic libraries.',
-  gradients: 'Blend gradients across your palette. Add and reposition stops, switch between linear, radial and conic, then copy the CSS in one click.',
-}
 
 export default function ColorStudio({ onCopy, toast }) {
-  const { t } = useI18n()
   const { theme } = useTheme()
   const { rounding } = useAppearance()
   const { design, setPalette, setStates, setTints, setGradient, saveProject, projects, loadProject, overwriteProject, canSaveProjects } = useProject()
@@ -479,172 +461,14 @@ export default function ColorStudio({ onCopy, toast }) {
   const satDecay = design?.tints?.satDecay ?? 12
   const oled = design?.tints?.oled ?? true
 
-  const [gradStops, setGradStops] = useState(() => design?.gradient?.stops || [{ color: null, position: 0 }, { color: null, position: 100 }])
-  const [gradAngle, setGradAngle] = useState(() => design?.gradient?.angle ?? 135)
-  const [gradType, setGradType] = useState(() => design?.gradient?.type || 'Linear')
+  const [gradStops] = useState(() => design?.gradient?.stops || [{ color: null, position: 0 }, { color: null, position: 100 }])
+  const [gradAngle] = useState(() => design?.gradient?.angle ?? 135)
+  const [gradType] = useState(() => design?.gradient?.type || 'Linear')
 
-  const SECTIONS = useMemo(() => [
-    { id: 'palette', label: 'Palette' },
-    { id: 'states', label: 'States' },
-    { id: 'systems', label: 'Systems' },
-    { id: 'gradients', label: 'Gradients' },
-    { id: 'visualizer', label: 'Visualizer' },
-  ], [])
-  const [collapsed, setCollapsed] = useState({})
-  const [activeSection, setActiveSection] = useState('palette')
-  const toggleCollapse = useCallback((id) => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })), [])
-
-  // ── Focused single-tool view ──
-  // Each colour tool reads as its own page: expand ONLY the target section,
-  // collapse every sibling, then smooth-scroll to it. The shared palette still
-  // lives one expand away, so the "stays in sync" core value is never lost.
-  // Used by both the ?tool= deep-link handler and the "More colour tools" footer.
-  const focusSection = useCallback((sectionId) => {
-    setCollapsed(SECTIONS.reduce((acc, s) => { acc[s.id] = s.id !== sectionId; return acc }, {}))
-    requestAnimationFrame(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
-  }, [SECTIONS])
-
-  // ── Discover hand-off: ?preset=<slug>&tab=gradient ──
-  // When the user picks "Use in Gradient Generator" from Discover, we arrive
-  // with a preset slug. Match it against GRAD_PRESETS by slugified name, apply
-  // it, expand + scroll to the gradients section, toast, then strip the params
-  // (replace) so a refresh/back doesn't silently re-apply it. One-shot.
-  const [searchParams, setSearchParams] = useSearchParams()
-  const presetAppliedRef = useRef(false)
-  useEffect(() => {
-    if (presetAppliedRef.current) return
-    const presetSlug = searchParams.get('preset')
-    if (!presetSlug && searchParams.get('tab') !== 'gradient') return
-    presetAppliedRef.current = true
-    const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    const preset = presetSlug ? GRAD_PRESETS.find(p => slugify(p.n) === presetSlug) : null
-    if (preset) {
-      setGradStops(preset.stops.map(s => ({ color: s.color, position: s.pos })))
-      setGradAngle(preset.angle)
-      setGradType(preset.type)
-    }
-    setCollapsed(prev => ({ ...prev, gradients: false }))
-    requestAnimationFrame(() => {
-      document.getElementById('gradients')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
-    if (toast) toast(preset ? 'Loaded from Discover' : 'Opened in Gradient Generator')
-    // Strip the hand-off params without adding a history entry.
-    const next = new URLSearchParams(searchParams)
-    next.delete('preset'); next.delete('tab'); next.delete('from')
-    setSearchParams(next, { replace: true })
-  }, [searchParams, setSearchParams, toast])
-
-  // ── Route focus: the solo colour tool routes ──
-  // The section tools (palette / semantic / ui / gradient) are real routes that
-  // mount THIS studio as a true standalone page: ONLY their section renders
-  // (soloSection), the pill nav is hidden, and the page title becomes the
-  // tool's own. The colour category home keeps the full merged studio. Tracked
-  // by tool id (not one-shot) — the dispatcher renders the same element type
-  // for every colour route, so switching tools in the nav re-runs this without
-  // remounting.
-  //
-  // Resolved through toolTree, NEVER by slicing a segment out of the pathname.
-  // This used to read the SECOND path segment and treat it as the tool id — an
-  // assumption that only held while every colour tool sat under one parent, and
-  // that the /create/<pagetitle> flattening breaks. CREATE_GROUPS is the table
-  // the router itself is built from, so asking it is the only reading that
-  // cannot go stale the next time a URL moves.
+  // The only route that mounts this page is /create/semantic-color. pathname is
+  // read for one thing: the More-colour-tools footer filters out the tool you
+  // are already on.
   const { pathname } = useLocation()
-  const { tool: routeTool, isHome: onCategoryHome } = resolveTool(pathname)
-  const pathSeg = onCategoryHome ? null : routeTool?.id || null
-  const soloSection = pathSeg ? (PATH_TO_SECTION[pathSeg] || 'palette') : null
-  const pathToolRef = useRef(null)
-  useEffect(() => {
-    if (!pathSeg) {
-      // Back on /create/color proper: reopen everything so the merged studio is whole.
-      if (pathToolRef.current) { pathToolRef.current = null; setCollapsed({}) }
-      return
-    }
-    if (pathSeg === pathToolRef.current) return
-    pathToolRef.current = pathSeg
-    // Solo routes render ONLY their section — no siblings to collapse, and the
-    // hero IS the top of the page, so the merged-studio collapse-and-scroll
-    // (focusSection) would only scroll the fresh hero out of view. Clear any
-    // collapse state and let the router's scroll-to-top handle position.
-    setCollapsed({})
-  }, [pathSeg])
-
-  // ── Nav deep-link: ?tool=<id> (legacy) ──
-  // Old external links still arrive as /create/color?tool=<id>; keep honouring them.
-  // Same focus behaviour, then strip the param. One-shot, with its own ref so it
-  // never fights the preset/tab handler above. contrast + tint now live on their
-  // own pages → their legacy ids fall back to the palette section.
-  const toolAppliedRef = useRef(false)
-  useEffect(() => {
-    if (toolAppliedRef.current) return
-    const tool = searchParams.get('tool')
-    if (!tool) return
-    toolAppliedRef.current = true
-    const TOOL_TO_SECTION = {
-      palette: 'palette',
-      gradient: 'gradients',
-      semantic: 'states',
-      'ui-colour': 'systems',
-      contrast: 'palette',
-      tint: 'palette',
-    }
-    const sectionId = TOOL_TO_SECTION[tool] || 'palette'
-    focusSection(sectionId)
-    const next = new URLSearchParams(searchParams)
-    next.delete('tool')
-    setSearchParams(next, { replace: true })
-  }, [searchParams, setSearchParams, focusSection])
-
-  useEffect(() => {
-    const els = SECTIONS.map(s => document.getElementById(s.id)).filter(Boolean)
-    if (!els.length) return
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) { setActiveSection(entry.target.id); break }
-      }
-    }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 })
-    els.forEach(el => observer.observe(el))
-    return () => observer.disconnect()
-  }, [SECTIONS])
-
-  // ── Pill-nav sliding thumb (CS#2/2.1) ──
-  // The thumb is positioned/sized from a live measure of the active button
-  // (offsetLeft/offsetWidth) so it fits any label width at any zoom/font state.
-  // We set CSS custom props imperatively on the thumb ref (NOT a JSX inline
-  // style attribute) to satisfy the no-inline-styles rule.
-  const navRef = useRef(null)
-  const thumbRef = useRef(null)
-  const itemRefs = useRef({})
-  const measureThumb = useCallback(() => {
-    const el = itemRefs.current[activeSection]
-    const thumb = thumbRef.current
-    if (!el || !thumb) return
-    thumb.style.setProperty('--cs-thumb-x', el.offsetLeft + 'px')
-    thumb.style.setProperty('--cs-thumb-w', el.offsetWidth + 'px')
-  }, [activeSection])
-  useEffect(() => {
-    measureThumb()
-    // On ≤768 the rail scrolls; centre the active item then re-measure once it settles.
-    const el = itemRefs.current[activeSection]
-    if (el && navRef.current && navRef.current.scrollWidth > navRef.current.clientWidth) {
-      el.scrollIntoView({ inline: 'center', block: 'nearest' })
-      requestAnimationFrame(() => requestAnimationFrame(measureThumb))
-    }
-  }, [activeSection, measureThumb])
-  useEffect(() => {
-    measureThumb()
-    // Outfit loads after first paint and shifts label widths — re-measure then.
-    document.fonts?.ready.then(measureThumb).catch(() => {})
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measureThumb) : null
-    if (ro && navRef.current) ro.observe(navRef.current)
-    window.addEventListener('resize', measureThumb)
-    return () => {
-      if (ro) ro.disconnect()
-      window.removeEventListener('resize', measureThumb)
-    }
-  }, [measureThumb])
 
   // Memoised on its scalar inputs so the array identity is stable across unrelated
   // renders — otherwise the whole downstream pipeline (baseColors→allColors→cbColors
@@ -662,30 +486,6 @@ export default function ColorStudio({ onCopy, toast }) {
   // consumer/export is untouched until a slider moves.
   const allColors = useMemo(() => applyAdjust(baseColors, globalAdjust), [baseColors, globalAdjust])
 
-  // ── Colour-vision lens (CS#3.9, §4.C) ──
-  // A pure presentation lens over allColors — NEVER mutates the source. When a
-  // CVD mode is active the rail backgrounds render cbColors[i]; the hex LABELS
-  // always render the true allColors[i]. simCvd never throws (returns input hex
-  // on bad data), so a swatch can never go blank.
-  const cbColors = useMemo(
-    () => (cbMode === 'normal' ? allColors : allColors.map(c => simCvd(c, cbMode))),
-    [allColors, cbMode]
-  )
-  // Confusion-pair heuristic (FREE premium touch): any two simulated swatches
-  // within ≈28/255 Euclidean RGB distance are flagged as hard to tell apart for
-  // this vision type. Returns a Set of swatch indices in any clashing pair.
-  const cbClash = useMemo(() => {
-    const out = new Set()
-    if (cbMode === 'normal') return out
-    const rgbs = cbColors.map(hexToRgb)
-    for (let i = 0; i < rgbs.length; i++) {
-      for (let j = i + 1; j < rgbs.length; j++) {
-        const dr = rgbs[i][0] - rgbs[j][0], dg = rgbs[i][1] - rgbs[j][1], db = rgbs[i][2] - rgbs[j][2]
-        if (Math.sqrt(dr * dr + dg * dg + db * db) <= 28) { out.add(i); out.add(j) }
-      }
-    }
-    return out
-  }, [cbColors, cbMode])
 
   // CB segmented-toggle sliding thumb — same measure technique as the page nav
   // (DRY: third use of the pattern). Sets --cs-cb-x / --cs-cb-w on the thumb ref.
@@ -734,6 +534,12 @@ export default function ColorStudio({ onCopy, toast }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stateColors])
 
+  // The gradient editor is gone from this page, but this state is NOT dead: the
+  // effect below still runs on every mount and writes the gradient through to
+  // ProjectContext. It is seeded from the project and never changes afterwards,
+  // so the write is the same round-trip it always was. Removing it would change
+  // what a project stores, which is a product decision rather than a dead-code
+  // one - see the pipeline note on colorstudio-dead-sections.
   useEffect(() => {
     setGradient({ stops: gradStops, angle: gradAngle, type: gradType })
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -782,20 +588,6 @@ export default function ColorStudio({ onCopy, toast }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    // Spacebar randomise belongs to the Palette Builder — don't fire it on a
-    // standalone tool page where that section isn't even rendered (#39).
-    if (soloSection && soloSection !== 'palette') return
-    const onKey = (e) => {
-      if (e.code !== 'Space') return
-      const tag = e.target.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return
-      e.preventDefault()
-      randomize()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [randomize, soloSection])
 
   const activeColor = allColors[activeColorIdx] || allColors[0]
 
@@ -1165,17 +957,19 @@ ${stateVars}
           This is convergence on the shape two of the four already shipped, not a
           fifth pattern. `.sec-h` itself is untouched — it is site-wide, and
           restyling it here would reach every page that uses it. */}
-      <div className={soloSection ? 'stc-hero' : 'sec-h'}>
-        <div className={soloSection ? 'stc-hero-id' : undefined}>
-          <div className={soloSection ? 'stc-hero-eyebrow' : 'sec-h-eyebrow'}>{soloSection ? 'Create / Colour' : 'Colour'}</div>
-          <h1>{soloSection ? SOLO_TITLES[soloSection] : t('color.title')}</h1>
-          <p>{soloSection ? SOLO_DESC[soloSection] : t('tools.colorStudio.description')}</p>
+      <div className="stc-hero">
+        <div className="stc-hero-id">
+          <div className="stc-hero-eyebrow">Create / Colour</div>
+          <h1>Semantic Colours</h1>
+          <p>
+            Dial in success, warning, error, info and pending colours. Start from a
+            preset bundle or tune each state&rsquo;s hue &mdash; every state gets a full
+            50&ndash;900 ramp.
+          </p>
         </div>
-        {soloSection === 'states' && (
-          <div className="stc-hero-actions">
-            <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
-          </div>
-        )}
+        <div className="stc-hero-actions">
+          <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
+        </div>
         {canSaveProjects && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'sticky', bottom: 16, zIndex: 20, background: 'var(--card)', padding: '10px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--warm-shadow-lg)' }}>
             <button className="btn btn-accent btn-s" onClick={() => setSaveMenuOpen(!saveMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1227,38 +1021,19 @@ ${stateVars}
           rather than only naming the page. The bundle name was previously the
           only one of these on the page and it was buried in the section header
           below, next to the copy button. */}
-      {soloSection === 'states' && (
+
         <div className="stc-status" aria-live="polite">
           <span><strong>{activeStateBundle?.name || 'Custom mix'}</strong> bundle</span>
           <span><strong>{stateRoleIds.length}</strong> state roles</span>
           <span><strong>{STATE_LABELS.length}</strong> stops per ramp</span>
           <span><strong>{stateTokenCount}</strong> canonical tokens</span>
         </div>
-      )}
+
 
       {/* ═══ SECTION 2: UI STATE COLORS ═══ */}
-      {(!soloSection || soloSection === 'states') && (
+
       <section id="states" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        {/* The solo page's copy of this header is gone: the bundle name is in the
-            status strip and "Copy all tokens" is in the hero, so rendering it
-            again here was the same two facts twice, 300px apart. The merged
-            studio still needs it as a collapse control. */}
-        {!soloSection && (
-          <div className="cs-section-header stc-head" onClick={() => toggleCollapse('states')} style={{ marginBottom: collapsed.states ? 0 : 14 }}>
-            <div className="stc-head-title">
-              <svg className={`cs-chevron${collapsed.states ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              <h2 style={{ fontSize: 18, fontWeight: 700 }}>Semantic Colours</h2>
-            </div>
-            <div className="stc-toolbar" onClick={e => e.stopPropagation()}>
-              <div className="stc-toolbar-copy">
-                <span className="stc-kicker">Semantic bundle</span>
-                <span>{activeStateBundle?.name || 'Custom mix'} · {stateTokenCount} canonical tokens</span>
-              </div>
-              <button className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
-            </div>
-          </div>
-        )}
-        {(soloSection === 'states' || !collapsed.states) && <>
+
         <div className="stc-bundles" role="radiogroup" aria-label="Semantic colour bundle">
           {STATE_BUNDLES.map((bundle, bundleIndex) => {
             const selected = JSON.stringify(stateColors) === JSON.stringify(bundle.config)
@@ -1406,9 +1181,9 @@ ${stateVars}
             contained in the other, is a choice the reader has to make twice.
             Its editorial line survives as the footer's lead, so the sequencing
             advice is kept and only the duplicate destinations are dropped. */}
-        </>}
+
       </section>
-      )}
+
 
       {/* ── More colour tools — links to every sibling tool's own page ──
           Section tools re-enter this studio focused on their section (the
@@ -1416,9 +1191,9 @@ ${stateVars}
           their standalone pages. */}
       <nav className="cs-tools-footer" aria-label="More colour tools">
         <h2 className="cs-tools-footer-title">More colour tools</h2>
-        {soloSection === 'states' && (
+
           <p className="cs-tools-footer-lead">Validate the states, then connect them to the rest of your interface foundation.</p>
-        )}
+
         <div className="cs-tools-footer-grid">
           {/* Never link a page to itself — filter the tool you're already on. */}
           {COLOUR_TOOLS.filter(tool => tool.route !== pathname).map(tool => (

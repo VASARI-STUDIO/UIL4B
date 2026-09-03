@@ -108,10 +108,6 @@
     }
   },
   "tools": {
-    "colorStudio": {
-      "label": "色彩工作室",
-      "description": "集调色板、色调、对比度和渐变于一体的完整色彩系统构建器。"
-    },
     "typeScale": {
       "label": "字体比例",
       "description": "支持 CSS 导出的模块化字体比例计算器。"

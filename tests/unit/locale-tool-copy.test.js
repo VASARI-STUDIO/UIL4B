@@ -87,14 +87,19 @@ function locales() {
     .map((f) => [f.replace(/\.json$/, ''), JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))])
 }
 
+/** The matcher, split out so it can be proved against a fixture. */
+const DIRECT_READ = /\bt\(\s*['"`](tools|categories)\.([A-Za-z0-9_]+)\./g
+
+function collectDirectReads(src, into) {
+  for (const m of src.matchAll(DIRECT_READ)) into[m[1]].add(m[2])
+  return into
+}
+
 /** `tools.` / `categories.` keys read straight through t(), from source. */
 function directlyReadKeys() {
   const found = { tools: new Set(), categories: new Set() }
   for (const file of sourceFiles()) {
-    const src = stripComments(read(file))
-    for (const m of src.matchAll(/\bt\(\s*['"`](tools|categories)\.([A-Za-z0-9_]+)\./g)) {
-      found[m[1]].add(m[2])
-    }
+    collectDirectReads(stripComments(read(file)), found)
   }
   return found
 }
@@ -136,13 +141,40 @@ test('the comment stripper works, so the source scan can be trusted', () => {
     'a comment survived stripping — the scan below would read retired keys as live')
 })
 
-test('the source scan is not vacuous — it finds the direct reader that exists', () => {
+test('the source scan is not vacuous — the direct-read matcher still matches', () => {
   // If the regex stopped matching, `consumedKeys()` would silently shrink and
   // the staleness test would start demanding the deletion of live keys.
-  const direct = directlyReadKeys()
-  assert.ok(direct.tools.has('colorStudio'),
-    'the scan no longer finds ColorStudio.jsx reading tools.colorStudio.description — '
-    + 'either the regex broke or that page stopped reading it, and the key can go')
+  //
+  // This used to pin the one direct reader that existed: ColorStudio.jsx read
+  // tools.colorStudio.description straight through t(). That page has since had
+  // its three unreachable sections deleted, the merged-studio hero went with
+  // them, and it was the LAST direct reader in src — so the pin failed, exactly
+  // as a pin to one file eventually does. Re-pinning it to whichever page reads
+  // a key today would only buy the next deletion the same failure.
+  //
+  // So prove the matcher against a FIXTURE. That is the actual invariant — the
+  // regex still recognises a direct read — and it holds whether src contains
+  // zero such reads or fifty.
+  const fixture = [
+    "const a = t('tools.typeScale.label')",
+    'const b = t("categories.colour.desc")',
+    'const c = t(`tools.altText.description`)',
+    "const d = t( 'tools.iconLibrary.label' )",
+  ].join('\n')
+  const found = collectDirectReads(fixture, { tools: new Set(), categories: new Set() })
+  assert.deepEqual([...found.tools].sort(), ['altText', 'iconLibrary', 'typeScale'],
+    'the direct-read matcher stopped recognising t() reads of tools.* — consumedKeys() '
+    + 'would silently shrink and the staleness test would demand live keys be deleted')
+  assert.deepEqual([...found.categories], ['colour'],
+    'the direct-read matcher stopped recognising t() reads of categories.*')
+
+  // And it must not match things that are not direct reads.
+  const noise = "t('nav.home')\nlabel = 'tools.typeScale.label'\ntranslate('tools.foo.bar')"
+  const none = collectDirectReads(noise, { tools: new Set(), categories: new Set() })
+  assert.deepEqual([...none.tools, ...none.categories], [],
+    'the matcher is matching strings that are not t() reads, so consumedKeys() would '
+    + 'grow and the staleness test would stop demanding real deletions')
+
   const scanned = sourceFiles()
   assert.ok(scanned.length >= 50, `only ${scanned.length} source files scanned`)
 })

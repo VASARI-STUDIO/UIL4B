@@ -108,10 +108,6 @@
     }
   },
   "tools": {
-    "colorStudio": {
-      "label": "컬러 스튜디오",
-      "description": "팔레트, 틴트, 대비, 그라데이션을 갖춘 종합 컬러 시스템 빌더."
-    },
     "typeScale": {
       "label": "타입 스케일",
       "description": "CSS 내보내기 기능이 있는 모듈식 타입 스케일 계산기."
