@@ -46,8 +46,10 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, isLocked }
           </div>
         )}
         {!isCommunity && <div className="pl-card-date-inline">{p.date}</div>}
+        {/* --accent-strong, not --accent: #0F6FFF measures 4.43:1 on the white
+            card, under AA at 10px. Same blue, 5.84:1. */}
         {isLocked && (
-          <div style={{ fontSize: 10, color: 'var(--accent)', marginTop: 4, fontWeight: 600 }}>
+          <div style={{ fontSize: 10, color: 'var(--accent-strong)', marginTop: 4, fontWeight: 600 }}>
             Pro only
           </div>
         )}

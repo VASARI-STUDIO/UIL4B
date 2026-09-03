@@ -8,6 +8,9 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 import { TAG_CATEGORIES, FREE_PROMPT_LIMIT } from '../data/promptCategories'
 import { getPrompts, setPromptsStore, getSavedIds, setSavedIdsStore, parseTags } from '../utils/promptStore'
+import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
+import LibraryToolbar from '../components/library/LibraryToolbar'
+import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import PromptCard from '../components/prompt/PromptCard'
 import PromptModal from '../components/prompt/PromptModal'
 import AddPromptPanel from '../components/prompt/AddPromptPanel'
@@ -15,6 +18,23 @@ import SubmitPromptPanel from '../components/prompt/SubmitPromptPanel'
 
 // Community submission surface name for the sign-in gate (utils/submitIntent).
 const SUBMIT_SURFACE = 'prompt'
+
+// Filter options for the shared LibraryFilterGroup trays. Module scope: they
+// derive from static data, and rebuilding them per render would hand the group
+// a new array identity every keystroke and re-measure the sliding indicator —
+// the same reason the Gradient Library hoists its own (GradientGallery.jsx).
+const SORT_OPTIONS = [
+  { id: 'popular', label: 'Popular' },
+  { id: 'new', label: 'Newest' },
+]
+
+// `activeCategory` is null for "no filter" but a filter tray needs a real id
+// for its reset option, so 'all' is the wire value and null is the state. The
+// two are mapped at the boundary rather than changing the filter predicate.
+const CATEGORY_OPTIONS = [
+  { id: 'all', label: 'All' },
+  ...TAG_CATEGORIES.map(cat => ({ id: cat.label, label: cat.label })),
+]
 
 export default function PromptLibrary({ onCopy, toast }) {
   const { t } = useI18n()
@@ -146,11 +166,47 @@ export default function PromptLibrary({ onCopy, toast }) {
 
   return (
     <div className="sec">
-      <div className="sec-h">
-        <div className="sec-h-eyebrow">{t('promptLibrary.title')}</div>
-        <h1>{t('promptLibrary.title')}</h1>
-        <p>{t('promptLibrary.subtitle')}</p>
-      </div>
+      {/* The shared Discover masthead, same as the Palette, Gradient, Icon and
+          Emoji libraries. This surface was the last one still on the site-wide
+          `.sec-h`, where the eyebrow was rendered from the SAME i18n key as the
+          h1 — so every locale printed the page title twice, which reads as
+          unfinished rather than as a choice. The eyebrow is a taxonomy path
+          here, matching its siblings.
+
+          `mark` is the library's SIZE, not the filtered count: the galleries
+          pass their total for the same reason — it is a decorative, aria-hidden
+          statistic about the collection, and a number that moved on every
+          keystroke would be neither. */}
+      <DiscoverGalleryHero
+        eyebrow="Discover / Prompts"
+        title={t('promptLibrary.title')}
+        description={t('promptLibrary.subtitle')}
+        mark={isCommunity
+          ? { label: 'community', value: COMMUNITY_PROMPTS.length, caption: 'shared prompts' }
+          : { label: 'yours', value: prompts.length, caption: 'saved prompts' }}
+        action={isCommunity ? (
+          <button
+            className="btn pl-add-btn"
+            onClick={openSubmit}
+            disabled={authLoading}
+            aria-busy={authLoading || undefined}
+            aria-expanded={submitOpen}
+            title={authLoading ? 'Checking your account…' : 'Submit a prompt to the community'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
+            </svg>
+            Submit prompt
+          </button>
+        ) : (
+          <button className="btn btn-accent pl-add-btn" onClick={() => setAddOpen(!addOpen)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            {t('promptLibrary.addPrompt')}
+          </button>
+        )}
+      />
 
       {/* Tab switcher */}
       <div className="pl-tabs">
@@ -170,85 +226,55 @@ export default function PromptLibrary({ onCopy, toast }) {
         </button>
       </div>
 
-      {/* Toolbar: search + category chips */}
-      <div className="pl-toolbar">
-        <div className="pl-search-wrap">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          {/* A placeholder is not an accessible name — it is unreadable to a
-              screen reader as a label and it disappears the moment you type. */}
-          <input
-            type="text"
-            className="pl-search"
-            aria-label={isCommunity ? 'Search community prompts' : 'Search your prompts'}
-            placeholder={isCommunity ? 'Search community prompts...' : t('promptLibrary.searchPlaceholder')}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className="pl-search-clear" onClick={() => setSearch('')} aria-label="Clear search">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </button>
-          )}
-        </div>
+      {/* Toolbar — the shared Library control block, as used by the Palette,
+          Gradient, Icon, Emoji and Font surfaces. This page ran the one-off
+          `.pl-toolbar` with outlined `.pl-chip` pills, which meant the tablet
+          band fix in #318 (the tray collapses to a menu between 641 and 980px)
+          reached every browse surface EXCEPT this one — measured 172px of
+          sticky chrome at both 641 and 834px against 80px at 1280, with the
+          sort pills stranded hard-right on the first line and the categories
+          on a second.
 
+          Sort is a filter group rather than its own control for the same
+          reason the Font Gallery's is: it asks "which subset, in which order?"
+          in the one idiom, instead of adding a second visual language to a row
+          that already has one.
+
+          The primary action lives in the HERO, not here. The shared masthead is
+          430px tall, and with the action in the toolbar underneath it the
+          "Submit prompt" CTA left the viewport entirely at 320x800 — caught by
+          21-reflow-320, which has guarded that exact button since it was found
+          off screen horizontally in the 2026-08-11 audit. The sibling galleries
+          already put their primary action in the hero, so this is the shared
+          shape rather than a workaround. */}
+      <LibraryToolbar
+        className="pl-lbry-toolbar"
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: isCommunity ? 'Search community prompts…' : t('promptLibrary.searchPlaceholder'),
+          label: isCommunity ? 'Search community prompts' : 'Search your prompts',
+        }}
+      >
         {isCommunity && (
           <>
-            {/* Was an inline style={{}} with no class, so it had no responsive
-                control at all and defaulted to min-width:auto — at 320px it
-                established a 519px flex line that pushed "Submit prompt" fully
-                off screen. Styling belongs in global.css
-                (docs/reference/css-conventions.md). */}
-            <div className="pl-sort">
-              <button className={`pl-chip${communitySort === 'popular' ? ' active' : ''}`} onClick={() => setCommunitySort('popular')}>
-                Popular
-              </button>
-              <button className={`pl-chip${communitySort === 'new' ? ' active' : ''}`} onClick={() => setCommunitySort('new')}>
-                Newest
-              </button>
-            </div>
-            <div className="pl-chips">
-              <button
-                className={`pl-chip${!activeCategory ? ' active' : ''}`}
-                onClick={() => setActiveCategory(null)}
-              >All</button>
-              {TAG_CATEGORIES.map(cat => (
-                <button
-                  key={cat.label}
-                  className={`pl-chip${activeCategory === cat.label ? ' active' : ''}`}
-                  onClick={() => setActiveCategory(activeCategory === cat.label ? null : cat.label)}
-                >{cat.label}</button>
-              ))}
-            </div>
+            <LibraryFilterGroup
+              label="Sort community prompts"
+              triggerLabel="Sort"
+              value={communitySort}
+              onChange={setCommunitySort}
+              options={SORT_OPTIONS}
+            />
+            <LibraryFilterGroup
+              label="Filter prompts by category"
+              triggerLabel="Category"
+              value={activeCategory || 'all'}
+              onChange={(id) => setActiveCategory(id === 'all' ? null : id)}
+              options={CATEGORY_OPTIONS}
+            />
           </>
         )}
-
-        {isCommunity && (
-          <button
-            className="btn pl-add-btn"
-            onClick={openSubmit}
-            disabled={authLoading}
-            aria-busy={authLoading || undefined}
-            aria-expanded={submitOpen}
-            title={authLoading ? 'Checking your account…' : 'Submit a prompt to the community'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
-            </svg>
-            Submit prompt
-          </button>
-        )}
-
-        {!isCommunity && (
-          <button className="btn btn-accent pl-add-btn" onClick={() => setAddOpen(!addOpen)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            {t('promptLibrary.addPrompt')}
-          </button>
-        )}
-      </div>
+      </LibraryToolbar>
 
       {/* Add prompt panel (slide-down) — only for My Prompts */}
       {!isCommunity && (

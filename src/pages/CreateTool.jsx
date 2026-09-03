@@ -26,11 +26,22 @@ import { useClipboard } from '../hooks/useClipboard'
 // and flips between the two libraries via a large segmented pill title.
 const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 
-// Colour — /create/color is the colour SALES page (handled upstream in App.jsx, never
-// reaches this shell). semantic/ui are the same ColorStudio focused on their
-// section (it reads the pathname); gradient is its own dark "Gradient Generator"
-// surface. Palette is its own full-bleed workbench, and tint + contrast are light
-// standalone pages — all on the same colour maths.
+// Colour — /create/color is the colour SALES page (handled upstream in App.jsx,
+// never reaches this shell). Every other colour route is its OWN component:
+// gradient is the dark "Gradient Generator" surface, palette is a full-bleed
+// workbench, and tint + contrast are light standalone pages — all on the same
+// colour maths.
+//
+// ColorStudio therefore mounts on exactly ONE shipped route, /create/semantic-color,
+// which always resolves to its `states` section. This comment used to say
+// "semantic/ui are the same ColorStudio focused on their section", which is
+// stale and has since misled a brief into treating the semantic hero as shared
+// with a second surface: THERE IS NO /create/ui ROUTE — it is absent from
+// toolTree.js and from LIVE_TOOLS below. Verify with
+//   grep -n "create/ui" src/data/toolTree.js src/pages/CreateTool.jsx
+// The consequence, recorded rather than acted on here: ColorStudio's `palette`,
+// `systems` and `gradients` sections, and the SOLO_TITLES / SOLO_DESC entries
+// for them, are unreachable. Tracked as [colorstudio-dead-sections].
 const ColorStudio = lazy(() => import('./ColorStudio'))
 const GradientGenerator = lazy(() => import('./GradientGenerator'))
 const PaletteBuilder = lazy(() => import('./PaletteBuilder'))
