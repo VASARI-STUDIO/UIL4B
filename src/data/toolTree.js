@@ -106,6 +106,53 @@ export const CREATE_GROUPS = [
   },
 ]
 
+// The ONE Create category home that is a real page rather than a redirect.
+//
+// CreateTool.jsx sends a live group's category home to its first tool ("A live
+// group's category home has no screen of its own"), so /create/typography,
+// /create/imagery, /create/ai-tools and /create/icons-emoji are redirects, not
+// destinations; /create/components is `soon` and renders the workshop state.
+// /create/color is the exception because App.jsx intercepts it ABOVE CreateTool
+// and renders ColorLanding, the colour sales page.
+//
+// This lives here, next to the groups it describes, because THREE things need
+// it and none of them may keep its own copy:
+//   1. scripts/route-matrix.mjs, so a URL that only bounces gets no crawlable
+//      shell (it re-exports this name, so its own importers are unchanged);
+//   2. src/data/toolIndex.js, so search never offers a category row that
+//      redirects the moment you click it;
+//   3. tests/unit/prerender-routes.test.js, which asserts this against the
+//      actual text of App.jsx.
+//
+// It is the one fact about the Create tree that is asserted rather than
+// derived, because LIVE_TOOLS and the App.jsx intercept live in .jsx modules
+// Node cannot import. An unchecked assumption is just a parallel list with
+// better manners, so both are read as source text by the tests above.
+export const CREATE_HOMES_THAT_RENDER = Object.freeze(['/create/color'])
+
+// Every Create tool the app can actually mount, flattened out of the groups.
+// `soon` is inherited from the group as well as the tool, because a tool inside
+// a Soon group renders the workshop state whatever its own flag says.
+export function createTools() {
+  return CREATE_GROUPS.flatMap((g) =>
+    g.tools.map((t) => ({
+      id: t.id,
+      label: t.label,
+      route: t.route,
+      group: g.id,
+      soon: !!(g.soon || t.soon),
+    })),
+  )
+}
+
+// The routes that mount a real screen — the set CreateTool.jsx's LIVE_TOOLS map
+// must equal exactly. tests/unit/search-index.test.js reads that map out of the
+// .jsx source and fails if the two ever disagree, which is what turns the
+// "keep the two in sync" comment above into something a build can check.
+export function liveToolRoutes() {
+  return createTools().filter((t) => !t.soon).map((t) => normalise(t.route))
+}
+
 // ── Homepage: two deliberately separate models ──────────────────────────────
 // The hero shows ELEVEN live tools; the mini-workbench below it has FIVE task
 // modes. They are not one-to-one — Semantic, Tint and Contrast stay direct tool

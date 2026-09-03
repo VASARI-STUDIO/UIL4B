@@ -50,7 +50,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PAGE_TITLES } from '../src/data/routeMetaMap.js'
-import { CREATE_GROUPS, createRoutes } from '../src/data/toolTree.js'
+import { CREATE_GROUPS, CREATE_HOMES_THAT_RENDER, createRoutes } from '../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../src/data/legacyRoutes.js'
 import { isPrivateRoute, isSoonRoute, robotsFor } from '../src/utils/routeMeta.js'
 
@@ -63,20 +63,12 @@ const UNTITLED_APP_ROUTES = Object.freeze([
   '/onboarding', '/checkout/return', '/style-guide',
 ])
 
-// The ONE Create category home that is a real page rather than a redirect.
-//
-// src/pages/CreateTool.jsx sends a live group's category home to its first tool
-// ("A live group's category home has no screen of its own"), so /create/typography,
-// /create/imagery, /create/ai-tools and /create/icons-emoji are redirects, not
-// destinations — prerendering them would mint an indexable shell for a URL that
-// bounces. /create/color is the exception because App.jsx intercepts it ABOVE
-// CreateTool and renders the colour landing.
-//
-// This is the one fact here that is not derived, because LIVE_TOOLS lives
-// inside a .jsx module Node cannot import. tests/unit/prerender-routes.test.js
-// reads both source files and fails if either stops being true, so it is a
-// checked assumption rather than a parallel list.
-export const CREATE_HOMES_THAT_RENDER = Object.freeze(['/create/color'])
+// The ONE Create category home that is a real page rather than a redirect now
+// lives beside the groups it describes, in src/data/toolTree.js, because the
+// search index needs the same fact and a second copy here is the exact defect
+// that made the tool search unusable. Re-exported so this module's importers
+// (and tests/unit/prerender-routes.test.js) are unchanged.
+export { CREATE_HOMES_THAT_RENDER }
 
 // Surfaces outside the Create tree that describe themselves as unfinished.
 //
