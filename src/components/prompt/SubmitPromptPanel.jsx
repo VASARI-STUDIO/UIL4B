@@ -154,7 +154,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
           </button>
         </div>
         <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>
-          Submissions are reviewed before appearing in the community library. Approved prompts earn you <strong style={{ color: 'var(--accent)' }}>+25 bonus AI generations</strong>.
+          Submissions are reviewed before appearing in the community library. Approved prompts earn you <strong style={{ color: 'var(--accent-strong)' }}>+25 bonus AI generations</strong>.
         </div>
       </div>
     </div>

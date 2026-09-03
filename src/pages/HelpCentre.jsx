@@ -69,7 +69,7 @@ function AboutTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div className="card" style={{ maxWidth: 820 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, color: 'var(--brand)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, color: 'var(--accent-strong)' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
           <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)' }}>What is UIL4B?</span>
         </div>
@@ -82,12 +82,12 @@ function AboutTab() {
       </div>
 
       <div className="card" style={{ maxWidth: 820 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, color: 'var(--brand)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, color: 'var(--accent-strong)' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
           <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--t0)' }}>The Story Behind It</span>
         </div>
         <p style={{ fontSize: 13.5, color: 'var(--t1)', lineHeight: 1.75, marginBottom: 14 }}>
-          UIL4B was created by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand)', textDecoration: 'none', fontWeight: 500 }}>Dylan Coleman</a>, a graphic designer who found himself constantly switching between the same set of design tools and resources. Rather than continuing to juggle bookmarks, Dylan decided to combine them all into one toolkit.
+          UIL4B was created by <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-strong)', textDecoration: 'none', fontWeight: 500 }}>Dylan Coleman</a>, a graphic designer who found himself constantly switching between the same set of design tools and resources. Rather than continuing to juggle bookmarks, Dylan decided to combine them all into one toolkit.
         </p>
         <p style={{ fontSize: 13.5, color: 'var(--t1)', lineHeight: 1.75 }}>
           What started as a personal solution quickly became something bigger. That is why UIL4B is completely free for everyone.
@@ -129,7 +129,7 @@ function FAQTab() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {filtered.length === 0 && (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--t2)', fontSize: 13 }}>
-            No matching questions found. Try a different search term or <NavLink to="/help#contact" style={{ color: 'var(--brand)' }}>contact us</NavLink>.
+            No matching questions found. Try a different search term or <NavLink to="/help#contact" style={{ color: 'var(--accent-strong)' }}>contact us</NavLink>.
           </div>
         )}
         {filtered.map((faq) => {

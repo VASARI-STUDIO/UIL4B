@@ -246,7 +246,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
           </div>
           <div className="adm-submission-title">{item.subject || `[${item.type}] Submission`}</div>
           <p className={`adm-submission-preview${expanded ? ' expanded' : ''}`}>{item.message}</p>
-          {!expanded && item.adminNotes && <div style={{ fontSize: 10, color: 'var(--accent)', marginTop: 4 }}>Has admin notes</div>}
+          {!expanded && item.adminNotes && <div style={{ fontSize: 10, color: 'var(--accent-strong)', marginTop: 4 }}>Has admin notes</div>}
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'transform .2s', transform: expanded ? 'rotate(180deg)' : 'none', marginTop: 4 }}>
           <polyline points="6 9 12 15 18 9" />
@@ -423,7 +423,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
             )}
             {profileLink && (
               <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 8 }}>
-                Profile: <a href={profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>{profileLink}</a>
+                Profile: <a href={profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-strong)' }}>{profileLink}</a>
               </div>
             )}
             {prompt.mediaUrl && (
@@ -442,7 +442,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
           <label
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--accent)', cursor: 'pointer', padding: '4px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--accent-strong)', cursor: 'pointer', padding: '4px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)' }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
@@ -535,7 +535,7 @@ function ModuleBoard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: HEALTH_COLOR[m.health] || 'var(--t3)', flexShrink: 0 }} title={m.health} />
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)' }}>{m.name}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--brand)', background: 'var(--brand-bg)', padding: '2px 7px', borderRadius: 999 }}>{m.area}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--accent-strong)', background: 'var(--brand-bg)', padding: '2px 7px', borderRadius: 999 }}>{m.area}</span>
                     </div>
                     <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.5, margin: '0 0 8px' }}>{m.summary}</p>
                     {m.recentChanges?.length > 0 && (
@@ -621,7 +621,7 @@ function PipelineBoard() {
                     <div key={p.id} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-s)', padding: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)', lineHeight: 1.3 }}>{p.name}</span>
-                        <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--brand)', background: 'var(--brand-bg)', padding: '2px 7px', borderRadius: 999, flexShrink: 0 }}>{p.area}</span>
+                        <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--accent-strong)', background: 'var(--brand-bg)', padding: '2px 7px', borderRadius: 999, flexShrink: 0 }}>{p.area}</span>
                       </div>
                       <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.5, margin: '0 0 10px' }}>{p.summary}</p>
                       <div className="adm-pipe-bar" role="progressbar" aria-valuenow={p.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${p.name} progress`}>
@@ -811,7 +811,7 @@ function StripeSetupPanel({ toast }) {
                         <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
                           <span style={{ fontWeight: 600 }}>{c.code.toUpperCase()}</span>
                           <span style={{ color: 'var(--t3)', marginLeft: 6 }}>{c.label}</span>
-                          {c.code === config.baseCurrency && <span style={{ color: 'var(--accent)', marginLeft: 6, fontSize: 10 }}>base</span>}
+                          {c.code === config.baseCurrency && <span style={{ color: 'var(--accent-strong)', marginLeft: 6, fontSize: 10 }}>base</span>}
                         </td>
                         {['monthly', 'yearly'].map(interval => (
                           <td key={interval}>
@@ -1695,7 +1695,7 @@ export default function Admin({ toast }) {
                 <div className="adm-stat-label">Submissions</div>
                 <div className="adm-stat-sub">
                   <span style={{ color: 'var(--warn)' }}>{newCount} new</span>{' / '}
-                  <span style={{ color: 'var(--accent)' }}>{inProgressCount} open</span>
+                  <span style={{ color: 'var(--accent-strong)' }}>{inProgressCount} open</span>
                 </div>
               </div>
             </div>
@@ -2206,7 +2206,7 @@ export default function Admin({ toast }) {
             <div className="adm-section-title"><span className="adm-section-bar" />Submissions ({filteredFeedback.length}{filteredFeedback.length !== feedback.length ? ` of ${feedback.length}` : ''})</div>
             <div className="adm-sub-summary">
               <span style={{ color: 'var(--warn)' }}>{newCount} new</span>
-              <span style={{ color: 'var(--accent)' }}>{inProgressCount} in progress</span>
+              <span style={{ color: 'var(--accent-strong)' }}>{inProgressCount} in progress</span>
               <span style={{ color: 'var(--ok)' }}>{statusCounts.done || 0} done</span>
             </div>
           </div>
