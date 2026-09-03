@@ -1026,3 +1026,53 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
+
+// THE PACK LABEL UNDER EVERY ICON CELL.
+// The 2026-09-01 audit found /create/icons repeating a tiny pack label under
+// every cell; #298 dropped it below 980px and left it above, where it still
+// drew "LUCIDE" under all 120 cells of the default single-pack grid. A word
+// identical across the whole grid discriminates nothing, and it was costing a
+// line to the one thing that does discriminate - the icon's own name.
+// Both halves are asserted, because only the pair is the actual rule. Dropping
+// the label everywhere would pass the first assertion and is NOT the fix:
+// where a set genuinely mixes packs, the word is the only thing telling two
+// identical-looking brand marks apart.
+test('the icon grid labels the pack only when the results actually mix packs', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, 'a designer browsing icons on a laptop')
+  await page.goto('/create/icons')
+  await page.locator('.ic').first().waitFor({ timeout: 20000 })
+
+  const read = () => page.evaluate(() => {
+    const visible = [...document.querySelectorAll('.ic .ic-pack')]
+      .filter((n) => getComputedStyle(n).display !== 'none')
+    const packs = [...document.querySelectorAll('.ic')].length
+    return {
+      cells: packs,
+      labels: visible.length,
+      words: [...new Set(visible.map((n) => n.textContent.trim().toLowerCase()))],
+      fontSize: visible[0] ? Math.round(parseFloat(getComputedStyle(visible[0]).fontSize)) : null,
+    }
+  })
+
+  const single = await read()
+  expect(single.cells, 'the default grid should be populated').toBeGreaterThan(20)
+  expect(single.words, 'a single-pack grid must not repeat one pack name under every cell')
+    .toEqual([])
+
+  // Brand logos genuinely mixes packs - logo.dev marks alongside glyph packs.
+  const chip = page.getByRole('button', { name: /Brand logos/i }).first()
+  await chip.click()
+  await expect.poll(async () => (await read()).words.length, {
+    message: 'a mixed-pack result set must still name each cell’s pack',
+    timeout: 20000,
+  }).toBeGreaterThan(1)
+
+  const mixed = await read()
+  expect(mixed.labels, 'every cell in a mixed set carries its pack').toBe(mixed.cells)
+  // 9px was below the smallest size in the type scale; --fs-micro is 11px.
+  expect(mixed.fontSize, 'the pack label must not sit under the type scale floor')
+    .toBeGreaterThanOrEqual(11)
+  await ctx.close()
+})
