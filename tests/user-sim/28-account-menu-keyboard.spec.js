@@ -19,7 +19,7 @@
 // The pure key→index decision is asserted separately, without a DOM, in
 // tests/unit/popover-keys.test.js.
 import { test, expect } from './base.js'
-import { keyToRest, restingScrollY, watch } from './helpers.js'
+import { restAfterMove, restingScrollY, watch } from './helpers.js'
 
 const PANEL = '#pnav-account-pop'
 const TRIGGER = '.pnav-more'
@@ -49,6 +49,50 @@ async function focusPosition(page) {
       inPanel: panel === active || panel.contains(active),
     }
   }, PANEL)
+}
+
+/**
+ * Press a key, and report the verdict the PAGE reached on it: whether anything
+ * called preventDefault, and where focus stood once every handler had run.
+ *
+ * The listener goes on `window` in the BUBBLE phase deliberately. usePopover
+ * binds its handler on `document` in the CAPTURE phase — window-bubble is the
+ * last position in the propagation path, and therefore the only one that can
+ * see what every earlier handler already decided. A capture listener, or one on
+ * `document`, would read the event before usePopover had touched it and report
+ * `defaultPrevented: false` for a build that hijacks the key a moment later.
+ *
+ * `activeId` is read inside the listener rather than afterwards for the same
+ * reason: usePopover moves focus SYNCHRONOUSLY during its capture handler, so
+ * by the time this runs the theft (if any) has already happened, and reading it
+ * here cannot be raced by anything the test does next.
+ */
+async function pressAndInspect(page, key) {
+  await page.evaluate(() => {
+    window.__keyVerdict = null
+    window.__keyProbe = (event) => {
+      window.__keyVerdict = {
+        key: event.key,
+        defaultPrevented: event.defaultPrevented,
+        activeId: document.activeElement?.id || null,
+        activeTag: document.activeElement?.tagName || null,
+      }
+    }
+    window.addEventListener('keydown', window.__keyProbe)
+  })
+  await page.keyboard.press(key)
+  const verdict = await page.evaluate(() => {
+    window.removeEventListener('keydown', window.__keyProbe)
+    const seen = window.__keyVerdict
+    delete window.__keyVerdict
+    delete window.__keyProbe
+    return seen
+  })
+  // A null verdict means the key never reached the page at all, which is a
+  // finding rather than a pass — say so here instead of letting the assertions
+  // below read properties off nothing.
+  expect(verdict, `the ${key} press never reached the page`).not.toBeNull()
+  return verdict
 }
 
 async function openPanel(page) {
@@ -153,19 +197,54 @@ test.describe('nav popover keyboard movement', () => {
     await expect(page.locator(PANEL), 'the panel must still be open, or the handler is not installed').toBeVisible()
     expect((await focusPosition(page)).inPanel, 'focus never left the panel').toBe(false)
 
-    // keyToRest, not a poll for "it has moved yet": a poll waits for the
-    // movement to BEGIN and gives up on a deadline, so a keyboard scroll whose
-    // take-up outlasts the deadline is recorded as no scroll at all. That is
-    // what failed 2 of 4 CI runs here. See helpers.js.
-    const openY = await keyToRest(page, 'ArrowDown', 'the home page after an arrow key aimed past the open panel')
-    expect(openY, 'the open panel swallowed an arrow key that was not aimed at it').toBeGreaterThan(before)
+    // THE CONTRACT, ASSERTED DIRECTLY. What "the panel does not claim this key"
+    // MEANS is that the panel's handler left the key alone: it did not
+    // preventDefault it and it did not pull focus. Both are facts about the
+    // event, readable from the page, and neither depends on anything outside
+    // this app deciding to act on the key afterwards.
+    const openPress = await pressAndInspect(page, 'ArrowDown')
+    expect(openPress.defaultPrevented, 'the open panel called preventDefault on an arrow key aimed past it').toBe(false)
+    expect(openPress.activeId, 'the open panel dragged focus back into itself from an arrow key aimed past it').toBe('main')
+    const openY = await restAfterMove(page, before, 'the home page after an arrow key aimed past the open panel')
 
     // …and it lets go completely once the panel closes, rather than leaking a
     // document listener that outlives the panel it belongs to.
     await page.locator('h1').first().click()          // focus leaves → panel closes
     await expect(page.locator(PANEL)).toHaveCount(0)
     const afterClose = await restingScrollY(page, 'the home page once the panel closed')
-    const closedY = await keyToRest(page, 'ArrowDown', 'the home page after the panel closed')
-    expect(closedY, 'a closed panel was still holding on to the arrow keys').toBeGreaterThan(afterClose)
+    const closedPress = await pressAndInspect(page, 'ArrowDown')
+    expect(closedPress.defaultPrevented, 'a closed panel was still holding on to the arrow keys').toBe(false)
+    const closedY = await restAfterMove(page, afterClose, 'the home page after the panel closed')
+
+    // ── The scroll, kept as CORROBORATION rather than as the assertion ───────
+    //
+    // The user-visible point of all of the above is that the key reaches the
+    // page and the page moves, so the movement is still measured and still
+    // asserted — but only against a CONTROL that proves this browser produced a
+    // default arrow-key scroll at all in this session. The control is the press
+    // above with the panel CLOSED and therefore with no popover handler
+    // installed anywhere: whatever it does is what an arrow key does here when
+    // nothing in this app is listening.
+    //
+    // That control is not decoration. `expect(openY).toBeGreaterThan(before)`
+    // failed CI twice on 2026-09-03 — run 33715948705 attempt 1 (PR #325) and
+    // run 33713466234 (main) — both reporting `Expected: > 0, Received: 0` from
+    // a page sitting at scrollY 0 with 7422px of room below it, focus correctly
+    // on <main> and the panel correctly open. The arrow key produced NO default
+    // scroll. #301 had already taken the clock out of the measurement, so this
+    // was not a reading taken too early: `keyToRest` waits for take-up and then
+    // for rest and honestly reported zero movement. Nothing was left for the
+    // test to wait for, because there was nothing to wait for.
+    //
+    // A press the popover has demonstrably not touched cannot be evidence about
+    // the popover. So when the control moves the page, the open-panel press must
+    // have moved it too — a real regression still shows up here as a page that
+    // sat still while an untouched press moved. When the control does NOT move
+    // the page, this environment did not give us a default scroll to measure,
+    // which is a fact about the runner and not about the disclosure, and the
+    // assertions above have already carried the contract.
+    if (closedY > afterClose) {
+      expect(openY, 'an arrow key aimed past the open panel left the page still, though the same key moved it with the panel closed').toBeGreaterThan(before)
+    }
   })
 })
