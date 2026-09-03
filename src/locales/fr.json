@@ -124,10 +124,6 @@
       "label": "Bibliothèque d'icônes",
       "description": "Recherchez des milliers d'icônes via l'API Iconify."
     },
-    "imageConverter": {
-      "label": "Convertisseur d'images",
-      "description": "Convertissez, compressez et redimensionnez des images localement."
-    },
     "altText": {
       "label": "Alt Text Generator",
       "description": "Generate accessible alt text for images in batch using Gemini."
@@ -140,25 +136,9 @@
       "label": "Réseaux sociaux et marketing",
       "description": "Bonnes pratiques pour les réseaux sociaux et le marketing."
     },
-    "designReference": {
-      "label": "Référence de design",
-      "description": "Espacement, ombres, rayons, échelles de polices et référence de jetons de design."
-    },
-    "designExport": {
-      "label": "Exportation du système de design",
-      "description": "Exportez votre système de design complet en HTML pour les développeurs et les clients."
-    },
-    "cadConverter": {
-      "label": "CAD Converter",
-      "description": "Convert DXF files to OBJ for Blender with 3D preview."
-    },
     "externalResources": {
       "label": "Ressources externes",
       "description": "Liens sélectionnés vers des polices, des couleurs, des outils IA et de l'inspiration."
-    },
-    "videoFrames": {
-      "label": "Vidéo en images",
-      "description": "Extraire des images individuelles de fichiers vidéo en haute qualité."
     },
     "promptLibrary": {
       "label": "Bibliothèque de prompts",
