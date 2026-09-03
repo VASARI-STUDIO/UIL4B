@@ -124,10 +124,6 @@
       "label": "图标库",
       "description": "通过 Iconify API 搜索数千个图标。"
     },
-    "imageConverter": {
-      "label": "图像转换器",
-      "description": "在本地转换、压缩和调整图像大小。"
-    },
     "altText": {
       "label": "Alt Text Generator",
       "description": "Generate accessible alt text for images in batch using Gemini."
@@ -140,25 +136,9 @@
       "label": "社交与营销",
       "description": "社交媒体和营销最佳实践。"
     },
-    "designReference": {
-      "label": "设计参考",
-      "description": "间距、阴影、圆角、字体比例和设计令牌参考。"
-    },
-    "designExport": {
-      "label": "设计系统导出",
-      "description": "将完整的设计系统导出为 HTML，供开发者和客户使用。"
-    },
-    "cadConverter": {
-      "label": "CAD Converter",
-      "description": "Convert DXF files to OBJ for Blender with 3D preview."
-    },
     "externalResources": {
       "label": "外部资源",
       "description": "精选字体、颜色、AI 工具和灵感链接。"
-    },
-    "videoFrames": {
-      "label": "视频转帧",
-      "description": "从视频文件中提取高质量的单帧图像。"
     },
     "promptLibrary": {
       "label": "提示词库",

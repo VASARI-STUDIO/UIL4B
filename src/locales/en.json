@@ -144,10 +144,6 @@
       "label": "Icon Library",
       "description": "Search thousands of icons via Iconify API."
     },
-    "imageConverter": {
-      "label": "Image Converter",
-      "description": "Convert, compress and resize images locally."
-    },
     "altText": {
       "label": "Alt Text Generator",
       "description": "Generate accessible alt text for images in batch using Gemini."
@@ -159,22 +155,6 @@
     "docsSocial": {
       "label": "Social & Marketing",
       "description": "Social media and marketing best practices."
-    },
-    "designReference": {
-      "label": "Design Reference",
-      "description": "Spacing, shadows, radii, font scales, and design token reference."
-    },
-    "designExport": {
-      "label": "Design System Export",
-      "description": "Export your complete design system as HTML for developers and clients."
-    },
-    "videoFrames": {
-      "label": "Video to Frames",
-      "description": "Extract individual frames from video files as high-quality images."
-    },
-    "cadConverter": {
-      "label": "CAD Converter",
-      "description": "Convert DXF files to OBJ for Blender with 3D preview."
     },
     "externalResources": {
       "label": "External Resources",

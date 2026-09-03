@@ -124,10 +124,6 @@
       "label": "アイコンライブラリ",
       "description": "Iconify API で数千のアイコンを検索。"
     },
-    "imageConverter": {
-      "label": "画像コンバーター",
-      "description": "画像をローカルで変換、圧縮、リサイズ。"
-    },
     "altText": {
       "label": "Alt Text Generator",
       "description": "Generate accessible alt text for images in batch using Gemini."
@@ -140,25 +136,9 @@
       "label": "ソーシャル＆マーケティング",
       "description": "ソーシャルメディアとマーケティングのベストプラクティス。"
     },
-    "designReference": {
-      "label": "デザインリファレンス",
-      "description": "スペーシング、シャドウ、角丸、フォントスケール、デザイントークンのリファレンス。"
-    },
-    "designExport": {
-      "label": "デザインシステムエクスポート",
-      "description": "完成したデザインシステムを開発者やクライアント向けの HTML としてエクスポート。"
-    },
-    "cadConverter": {
-      "label": "CAD Converter",
-      "description": "Convert DXF files to OBJ for Blender with 3D preview."
-    },
     "externalResources": {
       "label": "外部リソース",
       "description": "フォント、カラー、AI ツール、インスピレーションへの厳選リンク集。"
-    },
-    "videoFrames": {
-      "label": "ビデオからフレーム",
-      "description": "ビデオファイルから高品質な画像として個々のフレームを抽出。"
     },
     "promptLibrary": {
       "label": "プロンプトライブラリ",

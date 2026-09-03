@@ -124,10 +124,6 @@
       "label": "아이콘 라이브러리",
       "description": "Iconify API로 수천 개의 아이콘을 검색."
     },
-    "imageConverter": {
-      "label": "이미지 변환기",
-      "description": "로컬에서 이미지 변환, 압축 및 크기 조절."
-    },
     "altText": {
       "label": "Alt Text Generator",
       "description": "Generate accessible alt text for images in batch using Gemini."
@@ -140,25 +136,9 @@
       "label": "소셜 및 마케팅",
       "description": "소셜 미디어 및 마케팅 모범 사례."
     },
-    "designReference": {
-      "label": "디자인 레퍼런스",
-      "description": "간격, 그림자, 모서리 반경, 폰트 스케일, 디자인 토큰 참조."
-    },
-    "designExport": {
-      "label": "디자인 시스템 내보내기",
-      "description": "완성된 디자인 시스템을 개발자와 고객을 위한 HTML로 내보내기."
-    },
-    "cadConverter": {
-      "label": "CAD Converter",
-      "description": "Convert DXF files to OBJ for Blender with 3D preview."
-    },
     "externalResources": {
       "label": "외부 리소스",
       "description": "폰트, 색상, AI 도구, 영감 관련 엄선된 링크 모음."
-    },
-    "videoFrames": {
-      "label": "비디오에서 프레임 추출",
-      "description": "비디오 파일에서 고품질 이미지로 개별 프레임 추출."
     },
     "promptLibrary": {
       "label": "프롬프트 라이브러리",
