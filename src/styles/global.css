@@ -9664,11 +9664,28 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .drh-head h2{margin:0;font-family:var(--serif);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
 .drh-head p{margin:0;font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
 @media(max-width:720px){
-  .dgh-hero{grid-template-columns:1fr;min-height:430px;border-radius:20px}
+  /* min-height 300, NOT 430. THE 430 WAS BACKWARDS: this block hides .dgh-mark,
+     the 92px serif numeral the 390px desktop floor was sized around, and then
+     raised the floor by 40px anyway. So the layout with LESS in it got a TALLER
+     box, and the difference was dead black above the copy — measured 125px at
+     390, 163px at 480 and 180px at 641, where it was 42% of the whole hero. The
+     radial glow got pushed out of frame with it, so the one decorative gesture
+     the masthead has was invisible on a phone.
+     300 is the floor that still binds where the copy is shortest (252px of
+     content at 641) and stays out of the way where it is longest (307px at 390).
+     If you change the type scale here, re-measure both ends.
+     NOT A DEFECT, checked and recorded so it is not re-reported: .dgh-hero
+     reports scrollWidth - clientWidth of 36px at 390 and 61px at 641, scaling
+     with the viewport. That is ::before, whose `inset:auto -10% -65% 42%` puts
+     the glow 10% past the right edge ON PURPOSE, where `overflow:hidden` on the
+     same element clips it. Suppress ::before and the figure is exactly 0 at
+     every width; the document itself never scrolls horizontally. */
+  .dgh-hero{grid-template-columns:1fr;min-height:300px;border-radius:20px}
   .dgh-mark{display:none}
   /* The mark is dropped here; the aside is NOT. It carries the only route to
-     the other library, so it stacks under the copy instead of disappearing.
-     The min-height also goes, because the stacked aside already fills it. */
+     the other library, so it stacks under the copy instead of disappearing, and
+     that stacked aside already gives the box more height than the floor above
+     would. */
   .dgh-hero--controls{min-height:0}
 }
 @media(max-width:480px){
