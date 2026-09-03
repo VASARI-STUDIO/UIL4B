@@ -15,7 +15,8 @@
     "test:users:report": "node tests/user-sim/summarize.js",
     "prerender": "node scripts/prerender.mjs",
     "og:cards": "node scripts/og-cards.mjs",
-    "sync:rewrites": "node scripts/sync-vercel-rewrites.mjs"
+    "sync:rewrites": "node scripts/sync-vercel-rewrites.mjs",
+    "sync:sitemap": "node scripts/sync-sitemap.mjs"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.6",
