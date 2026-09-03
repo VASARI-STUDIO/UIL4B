@@ -7031,7 +7031,13 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-dense-inspector code{font-family:var(--mono)}
 .tt-dense-inspector span:last-child{margin-left:auto}
 .tt-ramp-scroll{display:none;margin:0;font-size:10px;color:var(--t2)}
-.tt-delivery{margin-top:6px;padding-top:var(--s-5);border-top:1px solid var(--border)}
+/* `.tt-delivery` is its own card now, not a block nested in the 01 card - which
+   is what made the page number its steps 01, 03, 02 with no CSS able to fix it
+   (03 was a CHILD of the first card, 02 was that card's SIBLING). It therefore
+   drops the nested block's top rule and spacing and takes the panel's own.
+   At >=1344px, where the workbench is two columns, it spans the full width
+   beneath the working column and its config rail so the numbers still ascend. */
+.tt-delivery{grid-column:1/-1}
 .tt-delivery-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4);margin-bottom:var(--s-4)}
 .tt-delivery-head>div:first-child{display:flex;align-items:flex-start;gap:12px}
 .tt-view-switch{display:flex;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}

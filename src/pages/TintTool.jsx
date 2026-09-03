@@ -454,121 +454,6 @@ export default function TintTool({ onCopy, toast }) {
             })}
           </div>
 
-          <div className="tt-delivery">
-            <div className="tt-delivery-head">
-              <div>
-                <span className="tt-section-num">03</span>
-                <div>
-                  <h2>{audience === 'designer' ? 'Evaluate the system' : 'Prepare the handoff'}</h2>
-                  <p>
-                    {audience === 'designer'
-                      ? `Scale ${selectedRampIndex + 1} is mapped to common interface roles.`
-                      : `Scale ${selectedRampIndex + 1} is named and ready to paste.`}
-                  </p>
-                </div>
-              </div>
-              <div className="tt-view-switch" aria-label="Output view">
-                <button
-                  type="button"
-                  className={audience === 'designer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
-                  aria-pressed={audience === 'designer'}
-                  onClick={() => setAudience('designer')}
-                >
-                  Design preview
-                </button>
-                <button
-                  type="button"
-                  className={audience === 'developer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
-                  aria-pressed={audience === 'developer'}
-                  onClick={() => setAudience('developer')}
-                >
-                  Developer handoff
-                </button>
-              </div>
-            </div>
-
-            <div
-              id="tt-audience-panel"
-              role="tabpanel"
-              aria-labelledby={audience === 'designer' ? 'tt-tab-designer' : 'tt-tab-developer'}
-            >
-              {audience === 'designer' ? (
-                <div className="tt-design-view">
-                  <div className="tt-preview" ref={previewRef(labels, primaryRamp)}>
-                    <div className="tt-preview-bar">
-                      <span className="tt-preview-mark" aria-hidden="true" />
-                      <span>Interface preview</span>
-                      <span className="tt-preview-status">Role mapping</span>
-                    </div>
-                    <div className="tt-preview-body">
-                      <div className="tt-preview-copy">
-                        <span className="tt-preview-eyebrow">Release-ready colour</span>
-                        <h3>One scale, clear hierarchy.</h3>
-                        <p>
-                          Test surfaces, borders, text and actions together before
-                          handing the tokens to engineering.
-                        </p>
-                        <div className="tt-preview-actions">
-                          <span className="tt-preview-primary">Primary action</span>
-                          <span className="tt-preview-secondary">Secondary</span>
-                        </div>
-                      </div>
-                      <div className="tt-preview-card">
-                        <span className="tt-preview-card-k">Token coverage</span>
-                        <strong>{roleSamples.length} roles</strong>
-                        <span>{labels.length} stops available</span>
-                        <div className="tt-preview-spectrum" aria-hidden="true">
-                          {roleSamples.map(([name, sample]) => (
-                            <span key={name} ref={cellRef(sample.color)} />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="tt-role-map" aria-label="Suggested semantic role mapping">
-                    {roleSamples.map(([name, sample]) => (
-                      <button
-                        key={name}
-                        type="button"
-                        className="tt-role-sample"
-                        ref={cellRef(sample.color)}
-                        onClick={() => onCopy?.(sample.color)}
-                        aria-label={`Copy ${name} role colour ${sample.color}`}
-                      >
-                        <span>{name}</span>
-                        <strong>{sample.label}</strong>
-                        <code>{sample.color}</code>
-                      </button>
-                    ))}
-                  </div>
-                  {ramps.length > 1 && (
-                    <p className="tt-view-note">Previewing Scale {selectedRampIndex + 1}. Select any source scale above to compare it in the same interface.</p>
-                  )}
-                </div>
-              ) : (
-                <div className="tt-developer-view">
-                  <div className="tt-code-meta">
-                    <div>
-                      <span className="seg-label">CSS custom properties</span>
-                      <p>Scale {selectedRampIndex + 1} · {labels.length} variables · deterministic names</p>
-                    </div>
-                    <div className="tt-code-actions">
-                      {ramps.length > 1 && (
-                        <button type="button" className="tt-copy-all" onClick={() => onCopy?.(allCss)}>
-                          Copy all scales
-                        </button>
-                      )}
-                      <button type="button" className="tt-copy-primary" onClick={() => onCopy?.(selectedCss)}>
-                        Copy selected CSS
-                      </button>
-                    </div>
-                  </div>
-                  <pre id="tt-export" className="tt-export" tabIndex="0"><code>{selectedCss}</code></pre>
-                </div>
-              )}
-            </div>
-          </div>
         </section>
 
         {/* ── Controls ── */}
@@ -659,6 +544,136 @@ export default function TintTool({ onCopy, toast }) {
           <button type="button" className="tt-reset" onClick={resetTuning}>
             Reset tuning
           </button>
+        </section>
+
+        {/* ── 03 · Evaluate / Handoff ─────────────────────────────────────────
+            THIS WAS NESTED INSIDE THE 01 CARD, which is why the page numbered
+            its steps 01, 03, 02 and why no CSS `order` could fix it: 03 was a
+            CHILD of the first card and 02 was that card's SIBLING.
+
+            Measured before moving it. `.tt-page` is capped at 940px and the
+            workbench is a SINGLE column from 0 to 1343px - two columns start at
+            1344 (see "The workbench two-column threshold" in global.css). So the
+            01/03/02 reading order was not a wide-screen quirk; it was what every
+            viewport up to and including the 1280 reference desktop rendered.
+
+            As its own card it reads 01 -> 02 -> 03 stacked, and at >=1344 it
+            spans the full width beneath the working column and its config rail,
+            so the numbers ascend in both layouts. */}
+        <section className="card tt-panel tt-delivery" aria-labelledby="tt-delivery-title">
+          <div className="tt-delivery-head">
+            <div>
+              <span className="tt-section-num">03</span>
+              <div>
+                <h2 id="tt-delivery-title">{audience === 'designer' ? 'Evaluate the system' : 'Prepare the handoff'}</h2>
+                <p>
+                  {audience === 'designer'
+                    ? `Scale ${selectedRampIndex + 1} is mapped to common interface roles.`
+                    : `Scale ${selectedRampIndex + 1} is named and ready to paste.`}
+                </p>
+              </div>
+            </div>
+            <div className="tt-view-switch" aria-label="Output view">
+              <button
+                type="button"
+                className={audience === 'designer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
+                aria-pressed={audience === 'designer'}
+                onClick={() => setAudience('designer')}
+              >
+                Design preview
+              </button>
+              <button
+                type="button"
+                className={audience === 'developer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
+                aria-pressed={audience === 'developer'}
+                onClick={() => setAudience('developer')}
+              >
+                Developer handoff
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="tt-audience-panel"
+            role="tabpanel"
+            aria-labelledby={audience === 'designer' ? 'tt-tab-designer' : 'tt-tab-developer'}
+          >
+            {audience === 'designer' ? (
+              <div className="tt-design-view">
+                <div className="tt-preview" ref={previewRef(labels, primaryRamp)}>
+                  <div className="tt-preview-bar">
+                    <span className="tt-preview-mark" aria-hidden="true" />
+                    <span>Interface preview</span>
+                    <span className="tt-preview-status">Role mapping</span>
+                  </div>
+                  <div className="tt-preview-body">
+                    <div className="tt-preview-copy">
+                      <span className="tt-preview-eyebrow">Release-ready colour</span>
+                      <h3>One scale, clear hierarchy.</h3>
+                      <p>
+                        Test surfaces, borders, text and actions together before
+                        handing the tokens to engineering.
+                      </p>
+                      <div className="tt-preview-actions">
+                        <span className="tt-preview-primary">Primary action</span>
+                        <span className="tt-preview-secondary">Secondary</span>
+                      </div>
+                    </div>
+                    <div className="tt-preview-card">
+                      <span className="tt-preview-card-k">Token coverage</span>
+                      <strong>{roleSamples.length} roles</strong>
+                      <span>{labels.length} stops available</span>
+                      <div className="tt-preview-spectrum" aria-hidden="true">
+                        {roleSamples.map(([name, sample]) => (
+                          <span key={name} ref={cellRef(sample.color)} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="tt-role-map" aria-label="Suggested semantic role mapping">
+                  {roleSamples.map(([name, sample]) => (
+                    <button
+                      key={name}
+                      type="button"
+                      className="tt-role-sample"
+                      ref={cellRef(sample.color)}
+                      onClick={() => onCopy?.(sample.color)}
+                      aria-label={`Copy ${name} role colour ${sample.color}`}
+                    >
+                      <span>{name}</span>
+                      <strong>{sample.label}</strong>
+                      <code>{sample.color}</code>
+                    </button>
+                  ))}
+                </div>
+                {ramps.length > 1 && (
+                  <p className="tt-view-note">Previewing Scale {selectedRampIndex + 1}. Select any source scale above to compare it in the same interface.</p>
+                )}
+              </div>
+            ) : (
+              <div className="tt-developer-view">
+                <div className="tt-code-meta">
+                  <div>
+                    <span className="seg-label">CSS custom properties</span>
+                    <p>Scale {selectedRampIndex + 1} · {labels.length} variables · deterministic names</p>
+                  </div>
+                  <div className="tt-code-actions">
+                    {ramps.length > 1 && (
+                      <button type="button" className="tt-copy-all" onClick={() => onCopy?.(allCss)}>
+                        Copy all scales
+                      </button>
+                    )}
+                    <button type="button" className="tt-copy-primary" onClick={() => onCopy?.(selectedCss)}>
+                      Copy selected CSS
+                    </button>
+                  </div>
+                </div>
+                <pre id="tt-export" className="tt-export" tabIndex="0"><code>{selectedCss}</code></pre>
+              </div>
+            )}
+          </div>
         </section>
       </div>
 
