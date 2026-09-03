@@ -36,12 +36,13 @@ import {
   HOME_FAMILY_LABEL,
   HOME_SATELLITES,
   HOME_WORKBENCH_TABS,
+  categoryDestination,
   createRoutes,
   createTools,
 } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'
-import { arrayBlock, assertStripperWorks } from './helpers/source-text.js'
+import { arrayBlock, assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
 const TREE = 'src/data/toolTree.js'
 const byId = () => new Map(createTools().map((t) => [t.id, t]))
@@ -171,4 +172,86 @@ test('the Discover spec writes no /create/ route down', () => {
   assert.ok(!block.includes('/create/'),
     'DISCOVER_SPEC types a /create/ route again — name the tool id and let the tree answer')
   assert.match(block, /tool: '/, 'no Discover row names a tool id any more')
+})
+
+// ── Links into the Create tree from outside it ──────────────────────────────
+
+/** Every absolute path this .jsx file writes down, comments stripped. */
+function pathLiterals(file) {
+  const src = stripComments(read(file))
+  return [...new Set([...src.matchAll(/(['"])(\/[a-z0-9\-/]*)\1/g)].map((m) => m[2]))]
+}
+
+test('categoryDestination restates CreateTool own rule, and never returns a bounce', () => {
+  // The rule lives in CreateTool.jsx as a redirect branch inside a .jsx module
+  // Node cannot import, so it is read as source — the same treatment
+  // prerender-routes.test.js gives it, and for the same reason: several
+  // surfaces were each guessing at it, and one guessed wrong.
+  const createTool = stripComments(read('src/pages/CreateTool.jsx'))
+  assert.match(createTool, /if \(isHome && !group\.soon && !homeIsLive && firstTool/,
+    'CreateTool.jsx redirect branch has changed shape — categoryDestination may now be lying')
+
+  const bounces = bouncingHomes()
+  assert.ok(bounces.length >= 4, `only ${bounces.length} redirect-only homes — this would pass vacuously`)
+  for (const group of CREATE_GROUPS) {
+    const to = categoryDestination(group)
+    assert.equal(to, categoryDestination(group.id), 'the id and object forms disagree')
+    if (group.soon) {
+      assert.equal(to, group.home,
+        `${group.id} is Soon — its home renders the workshop state and IS the destination`)
+      continue
+    }
+    assert.ok(!bounces.includes(to),
+      `categoryDestination(${group.id}) returns ${to}, which only redirects`)
+    if (CREATE_HOMES_THAT_RENDER.includes(group.home)) {
+      assert.equal(to, group.home, `${group.id} home is a real page and should stay the destination`)
+    } else {
+      assert.equal(to, group.tools[0].route,
+        `${group.id} home only redirects, so the link should go straight to its first tool`)
+    }
+  }
+  assert.throws(() => categoryDestination('not-a-group'), /not a Create group/)
+})
+
+test('THE FOOTER ONE: no footer link sends a visitor through a bounce or a 301', () => {
+  // The defect: "Imagery" pointed at /create/imagery, a category home with no
+  // screen of its own, so the click was spent arriving at /create/file-converter
+  // anyway. The comment on the row ABOVE it explained that exact hazard.
+  const dead = retired()
+  const bounces = bouncingHomes()
+  const known = renderable()
+  const paths = pathLiterals('src/components/AppFooter.jsx')
+  assert.ok(paths.length >= 8, `only ${paths.length} paths read out of AppFooter.jsx`)
+  for (const to of paths) {
+    assert.ok(!bounces.includes(to), `the footer links ${to}, a category home that only redirects`)
+    assert.ok(!dead.has(to), `the footer links ${to}, which is a retired URL`)
+    assert.ok(known.has(to), `the footer links ${to}, which the app cannot render`)
+  }
+})
+
+test('the footer names Create groups rather than typing their URLs', () => {
+  // The subtractive half. Three of the four rows happened to be right by hand;
+  // the guard is that they are no longer written by hand at all, so the next
+  // one cannot be wrong. /create/color survives as the "Start with colour" CTA
+  // — it is a real page, and a hero button naming its own destination is not
+  // the same thing as a category list guessing at four of them.
+  const src = stripComments(read('src/components/AppFooter.jsx'))
+  const createPaths = [...src.matchAll(/(['"])(\/create\/[a-z0-9-]+)\1/g)].map((m) => m[2])
+  assert.deepEqual([...new Set(createPaths)], ['/create/color'],
+    'AppFooter.jsx types a /create/ category URL again — name the group id and let the tree answer')
+  assert.match(src, /categoryDestination\(groupId\)/, 'the footer no longer derives its Create links')
+})
+
+test('the homepage tools grid links the destination, not the bouncing home', () => {
+  // The same defect, four instances, on the surface that matters most: every
+  // category head on the homepage linked `group.home`, and four of the six only
+  // redirect. The five literal step-rail routes elsewhere in Home.jsx are NOT
+  // in scope — they are tracked as C9 of the homepage triage — so this reads
+  // the one expression that changed rather than every path in the file.
+  const src = stripComments(read('src/pages/Home.jsx'))
+  assert.ok(src.includes('htool-head'), 'stripping ate Home.jsx own JSX')
+  assert.ok(!src.includes('to={group.home}'),
+    'the homepage category heads link group.home again — four of the six only redirect')
+  assert.match(src, /to=\{categoryDestination\(group\)\}/,
+    'the homepage no longer asks the tree where a category link should go')
 })

@@ -1,4 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
+import { categoryDestination } from '../data/toolTree'
 
 // Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
 // decisions — 2026-08-20", decision 3 — and the Help Centre and Settings already
@@ -10,18 +11,28 @@ import { Link, NavLink } from 'react-router-dom'
 // ours, and we want it followed.
 const FOUNDER_PORTFOLIO = 'https://dylan-coleman.com/'
 
+// The Create column names CREATE_GROUPS ids, not URLs.
+//
+// The LABEL is the footer own — "Colour systems" is not what the nav calls that
+// group — but the DESTINATION belongs to the tool tree, and typing it out here
+// is how three of these four rows ended up correct by hand and one did not:
+// "Imagery" pointed at /create/imagery, a category home with no screen of its
+// own, so CreateTool.jsx bounced the visitor on to /create/file-converter. The
+// comment that used to sit on the Typography row explained that exact hazard
+// while the row below it walked into it.
+//
+// categoryDestination() answers it once, from CreateTool.jsx own rule.
+const FOOTER_CREATE = [
+  ['colour', 'Colour systems'],
+  ['type', 'Typography'],
+  ['icons', 'Icons & emoji'],
+  ['imagery', 'Imagery'],
+]
+
 const FOOTER_GROUPS = [
   {
     label: 'Create',
-    links: [
-      ['/create/color', 'Colour systems'],
-      // Straight to the Font Gallery rather than /create/typography: the category home
-      // has no screen of its own and only redirects here, so linking it would
-      // spend a navigation to arrive at the same place.
-      ['/create/font-gallery', 'Typography'],
-      ['/create/icons', 'Icons & emoji'],
-      ['/create/imagery', 'Imagery'],
-    ],
+    links: FOOTER_CREATE.map(([groupId, label]) => [categoryDestination(groupId), label]),
   },
   {
     label: 'Explore',
