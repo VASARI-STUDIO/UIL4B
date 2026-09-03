@@ -3397,14 +3397,7 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:36px;position:relative;overflow:hidden}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .onb-brand{font-family:var(--serif);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
-.onb-skip{background:none;border:none;color:var(--t2);font-size:13px;font-family:var(--font);cursor:pointer;padding:6px 10px;border-radius:var(--radius-s);transition:all var(--t)}
-.onb-skip:hover{color:var(--t0);background:var(--hvr)}
 
-.onb-progress{display:flex;gap:6px;margin-bottom:28px}
-.onb-dot{width:100%;height:3px;border-radius:999px;background:var(--bg-3);transition:background var(--dur-3) var(--ease-standard)}
-.onb-dot.done{background:var(--accent)}
-.onb-dot.active{background:var(--accent);animation:onb-pulse .8s ease-in-out}
-@keyframes onb-pulse{0%{opacity:.4}100%{opacity:1}}
 
 .onb-step{animation:onb-fade var(--dur-3) var(--ease-entrance)}
 @keyframes onb-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -3417,7 +3410,6 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .onb-options{display:flex;flex-direction:column;gap:8px}
 .onb-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:all var(--dur-2) var(--ease-out);text-align:left}
 .onb-option:hover{border-color:var(--bh);background:var(--hvr);transform:translateX(3px)}
-.onb-option.selected{border-color:var(--accent);background:var(--accent-bg)}
 .onb-option-arrow{color:var(--t3);transition:color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .onb-option:hover .onb-option-arrow{color:var(--accent);transform:translateX(3px)}
 

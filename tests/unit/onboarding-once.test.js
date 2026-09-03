@@ -77,13 +77,19 @@ test('the router asks the account, not localStorage', () => {
     'App.jsx must not decide onboarding from localStorage alone')
 })
 
-test('skipping records completion on the account, not just in this browser', () => {
-  // The half that made it permanent for anyone who skipped.
+test('declining a starting point records completion on the account, not just in this browser', () => {
+  // The half that made it permanent for anyone who skipped. The three unread
+  // survey questions are gone, so the old top-right skip() went with them —
+  // declining is now skipFirstWin(). The guarantee is identical and is what is
+  // pinned here: the DECLINE path must reach the profile, not only localStorage.
   const src = stripComments(read('src/pages/Onboarding.jsx'))
-  const skip = /const skip = \(\) => \{[\s\S]*?\n {2}\}/.exec(src)?.[0] || ''
-  assert.ok(skip, 'skip() must still exist')
-  assert.ok(/markOnboardingComplete\(\)/.test(skip),
-    'skip() must record completion on the profile')
+  const decline = /const skipFirstWin = \(\) => \{[\s\S]*?\n {2}\}/.exec(src)?.[0] || ''
+  assert.ok(decline, 'the decline path must still exist')
+  assert.ok(/persist\(\)/.test(decline),
+    'declining must record completion on the profile')
+  // And it must not smuggle a non-answer onto the profile as a first-win choice.
+  assert.ok(!/persist\(\{/.test(decline),
+    'declining must not persist a first-win choice nobody made')
 })
 
 test('both completion paths go through one function', () => {
@@ -91,24 +97,35 @@ test('both completion paths go through one function', () => {
   // skip path lost it in the first place.
   const src = stripComments(read('src/pages/Onboarding.jsx'))
   assert.ok(/const markOnboardingComplete = /.test(src))
-  // persist() now takes an optional `extra` (the first-win choice rides along
-  // with the survey answers), so the old exact-signature match no longer holds.
-  // The invariant it was really guarding does, and is what is asserted here:
-  // persist() must DELEGATE rather than write the profile itself, and it must
-  // still carry `answers`. Two call sites that each remembered to write the
-  // profile is how the skip path lost it in the first place.
+  // persist() used to be pinned by its exact signature, `() =>
+  // markOnboardingComplete(answers)`. There are no survey answers now, and it
+  // carries the first-win choice instead. The invariant that actually mattered
+  // is what is asserted: persist() DELEGATES rather than writing the profile
+  // itself, so there stays exactly one writer.
   assert.ok(/const persist = \([^)]*\) => markOnboardingComplete\(/.test(src),
-    'finishing with answers must reuse the same writer')
-  assert.ok(/const persist = \([^)]*\) => markOnboardingComplete\([^)]*answers/.test(src),
-    'persist() must still carry the survey answers')
+    'finishing must reuse the same writer')
   assert.equal((src.match(/updateProfile\?\.\(/g) || []).length, 1,
     'exactly one place may write onboarding completion to the profile')
 })
 
-test('skipping does not invent survey answers', () => {
-  // They declined to answer. Writing blanks would put empty values in the admin
-  // table and misrepresent them as responses.
+test('the unread survey is gone, not merely hidden', () => {
+  // onboarding-survey-unused: source, use and role were persisted and read by
+  // nothing a user could feel — `source` was read by nothing at all. Leaving
+  // the questions in place behind a flag would keep the cost and keep the
+  // dishonesty, so they are removed. This fails if any come back unread.
   const src = stripComments(read('src/pages/Onboarding.jsx'))
-  assert.ok(!/markOnboardingComplete\(answers\)[\s\S]{0,200}navigate\(takeResumeTarget/.test(src),
-    'skip() must not persist the (unanswered) survey')
+  assert.ok(!/How did you hear about us/.test(src), 'the attribution question must be gone')
+  assert.ok(!/What best describes you/.test(src), 'the role question must be gone')
+  assert.ok(!/const QUESTIONS/.test(src), 'the survey table must be gone')
+})
+
+test('the one answer still collected has a reader', () => {
+  // The defect being fixed was a persisted field nothing consumed. Writing
+  // onboarding.firstWin with no reader would recreate it exactly.
+  const onboarding = stripComments(read('src/pages/Onboarding.jsx'))
+  assert.ok(/persist\(\{ firstWin: win\.id \}\)/.test(onboarding),
+    'the chosen start must be persisted')
+  const admin = stripComments(read('src/pages/Admin.jsx'))
+  assert.ok(/onboarding\?\.firstWin/.test(admin),
+    'onboarding.firstWin must be read somewhere, or it must not be written')
 })

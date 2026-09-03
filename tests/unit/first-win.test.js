@@ -11,7 +11,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  FIRST_WINS, FIRST_WIN_SKIPPED, FIRST_WIN_EXITED,
+  FIRST_WINS, FIRST_WIN_SKIPPED,
   firstWinById, firstWinRoute, firstWinIds, isFirstWinChoice,
 } from '../../src/utils/firstWin.js'
 import { liveToolRoutes } from '../../src/data/toolTree.js'
@@ -81,23 +81,26 @@ test('an unknown id resolves to null rather than somewhere arbitrary', () => {
 
 test('only a real card may be persisted as a first-win choice', () => {
   for (const win of FIRST_WINS) assert.equal(isFirstWinChoice(win.id), true)
-  // skip() has always refused to write answers nobody gave. A profile field
-  // reading "skipped" or "exited" is that same invented blank with a nicer name.
+  // The decline path has always refused to write an answer nobody gave. A
+  // profile field reading "skipped" is that same invented blank, renamed.
   assert.equal(isFirstWinChoice(FIRST_WIN_SKIPPED), false)
-  assert.equal(isFirstWinChoice(FIRST_WIN_EXITED), false)
   for (const bad of ['', null, undefined, 7, {}, 'palette ']) {
     assert.equal(isFirstWinChoice(bad), false, `${String(bad)} must not be persistable`)
   }
 })
 
-test('declining and never arriving are counted apart', () => {
-  // Same outcome, different failures: one is a problem with the three cards,
-  // the other with everything in front of them. One counter would average them.
-  assert.notEqual(FIRST_WIN_SKIPPED, FIRST_WIN_EXITED)
+test('declining is counted, and is the only non-card outcome', () => {
+  // Someone who declines is the most important cohort on this screen; a counter
+  // that only knew about the three cards could not see them at all.
+  //
+  // There is no 'exited' id any more. It existed while three survey questions
+  // stood in front of this screen. This is now the only screen, so nothing can
+  // leave before it, and a counter nothing can increment is a permanent zero
+  // that reads like a finding. This assertion fails if one reappears unwired.
   const ids = firstWinIds()
-  assert.ok(ids.includes(FIRST_WIN_SKIPPED) && ids.includes(FIRST_WIN_EXITED))
+  assert.ok(ids.includes(FIRST_WIN_SKIPPED))
   assert.equal(new Set(ids).size, ids.length, 'counter ids must be unique')
-  assert.equal(ids.length, FIRST_WINS.length + 2)
+  assert.equal(ids.length, FIRST_WINS.length + 1)
 })
 
 // ── The page actually uses it ───────────────────────────────────────────────

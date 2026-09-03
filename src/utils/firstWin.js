@@ -99,19 +99,14 @@ export function firstWinRoute(id) {
  */
 export const FIRST_WIN_SKIPPED = 'skipped'
 
-/**
- * Left the flow BEFORE the first-win screen — the top-right Skip.
- *
- * Kept apart from 'skipped' because they are different failures and want
- * different fixes. 'skipped' is "saw three starting points and wanted none of
- * them", which is a problem with the three. 'exited' is "never got that far",
- * which is a problem with everything in front of them. One counter covering
- * both would average the two into a number nobody can act on.
- */
-export const FIRST_WIN_EXITED = 'exited'
+// There is no 'exited' counter. There was one while three survey questions sat
+// in front of this screen — leaving before reaching the cards is a different
+// failure from seeing them and wanting none. With the survey gone this is the
+// ONLY screen, so nothing can exit before it, and a counter no code path can
+// ever increment is a permanent zero that reads like a finding.
 
 export function firstWinIds() {
-  return [...FIRST_WINS.map((w) => w.id), FIRST_WIN_SKIPPED, FIRST_WIN_EXITED]
+  return [...FIRST_WINS.map((w) => w.id), FIRST_WIN_SKIPPED]
 }
 
 /**
@@ -119,8 +114,8 @@ export function firstWinIds() {
  * choice? Guards the persisted shape: the admin table and the counters both
  * read it, and neither should ever have to cope with an arbitrary string.
  *
- * Only a real card qualifies. 'skipped' and 'exited' are counted but never
- * persisted — skip() has always refused to write answers nobody gave, on the
+ * Only a real card qualifies. 'skipped' is counted but never persisted — the
+ * decline path has always refused to write an answer nobody gave, on the
  * grounds that inventing blanks puts empty values in the admin table, and a
  * profile field reading "skipped" would be exactly that with extra steps.
  */
