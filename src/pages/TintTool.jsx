@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
+import ColorPickerPop from '../components/ColorPickerPop'
 import { useProject } from '../contexts/ProjectContext'
 import {
   hexToHct, hctToHex, hexToHsl, hslToHex, textColorForBg,
@@ -388,12 +389,14 @@ export default function TintTool({ onCopy, toast }) {
                     </button>
                   </div>
                   <div className="tt-ramp-head">
-                    <input
-                      type="color"
-                      className="tt-picker tt-picker--s"
+                    {/* The shared picker. A tint ramp is opaque-colour maths
+                        end to end, which is the same reason the panel offers no
+                        alpha — see the component header. */}
+                    <ColorPickerPop
                       value={b.hex}
-                      onChange={(e) => setBaseHex(b.id, e.target.value.toUpperCase())}
-                      aria-label={`Pick base colour ${ri + 1}`}
+                      onChange={(hex) => setBaseHex(b.id, hex.toUpperCase())}
+                      ariaLabel={`Pick base colour ${ri + 1}`}
+                      triggerClassName="tt-picker tt-picker--s"
                     />
                     <input
                       type="text"

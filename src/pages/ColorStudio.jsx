@@ -10,6 +10,7 @@ import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
+import ColorPickerPop from '../components/ColorPickerPop'
 import SnapSlider from '../components/SnapSlider'
 import ShuffleIcon from '../components/ShuffleIcon'
 import { extractColorPointsFromImage } from '../utils/extractColors'
@@ -395,7 +396,6 @@ function SwatchPopup({ idx, color, role, anchorRect, isSheet, siblings, isLocked
   const underlineRef = useRef(null)
   const heroRef = useRef(null)
   const hexInputRef = useRef(null)
-  const colorInputRef = useRef(null)
   const [tab, setTab] = useState(initialTab || 'values')
   const [copied, setCopied] = useState(null)
   const [hexDraft, setHexDraft] = useState(color.toUpperCase())
@@ -707,17 +707,23 @@ function SwatchPopup({ idx, color, role, anchorRect, isSheet, siblings, isLocked
             <>
               <div className="cs-sw-edit-label">Exact colour</div>
               <div className="cs-sw-edit-field">
-                <label className="cs-sw-edit-chip" ref={el => el && el.style.setProperty('--cs-edit-chip', color)}>
-                  <input ref={colorInputRef} type="color" value={color}
-                    onChange={e => onReplace(e.target.value, 'edit')} aria-label="Pick colour" />
-                </label>
+                {/* The shared picker. The chip is now the trigger itself — a
+                    real button with aria-haspopup — so the `--cs-edit-chip`
+                    custom property, the invisible overlaid native input and the
+                    separate "Pick" button that existed only to click it are all
+                    gone with it. */}
+                <ColorPickerPop
+                  value={color}
+                  onChange={hex => onReplace(hex, 'edit')}
+                  ariaLabel="Pick colour"
+                  triggerClassName="cs-sw-edit-chip"
+                />
                 <input ref={hexInputRef} type="text" inputMode="text"
                   className={`cs-sw-edit-hex${hexErr ? ' invalid' : ''}`}
                   value={hexDraft} onChange={e => onHexChange(e.target.value)}
                   aria-label="Hex value" aria-invalid={hexErr}
                   aria-describedby={hexErr ? `cs-sw-edit-err-${idx}` : undefined}
                   spellCheck={false} autoComplete="off" />
-                <button className="cs-sw-edit-pick" onClick={() => colorInputRef.current?.click()}>Pick</button>
               </div>
               {hexErr && (
                 <div className="cs-sw-edit-err" id={`cs-sw-edit-err-${idx}`}>
@@ -1865,7 +1871,6 @@ export default function ColorStudio({ onCopy, toast }) {
   // a11y live region for randomise / insert / lock announcements.
   const [liveMsg, setLiveMsg] = useState('')
   const [cssExpanded, setCssExpanded] = useState(false)
-  const colorRef = useRef(null)
   // ── Slice 2 surfaces (§5.2) ──
   // Both menu+popup are tracked by INDEX (not colour value) so they follow live
   // edits (shade-replace/fix/edit) and survive duplicate colours. Opening one
@@ -1892,7 +1897,6 @@ export default function ColorStudio({ onCopy, toast }) {
   const [gradStops, setGradStops] = useState(() => design?.gradient?.stops || [{ color: null, position: 0 }, { color: null, position: 100 }])
   const [gradAngle, setGradAngle] = useState(() => design?.gradient?.angle ?? 135)
   const [gradType, setGradType] = useState(() => design?.gradient?.type || 'Linear')
-  const [stopPickerIdx, setStopPickerIdx] = useState(null)
 
   const SECTIONS = useMemo(() => [
     { id: 'palette', label: 'Palette' },
@@ -2594,6 +2598,15 @@ ${stateVars}
     }))
   }, [allColors, lumBias, satDecay, oled])
 
+  // The gradient-stop picker offers the palette and its tints as its swatches:
+  // that is this surface's own value, and it is what the popover this replaced
+  // existed to provide. Deduped and lowercased because ColorPickerPop keys each
+  // swatch by its value, and a palette can legitimately repeat a tint.
+  const gradStopSwatches = useMemo(() => {
+    const flat = [...allColors, ...allTintScales.filter(Boolean).flat()]
+    return [...new Set(flat.filter(Boolean).map(c => String(c).toLowerCase()))]
+  }, [allColors, allTintScales])
+
   const paletteGradients = useMemo(() => {
     if (allColors.length < 2) return []
     const results = []
@@ -2627,11 +2640,12 @@ ${stateVars}
     setCsysOpen(false)
   }
 
-  // The native <input type="color"> fires onChange continuously while the user
-  // drags inside the picker, and a real 'change' event only once on commit.
-  // We append a single swatch on the first onChange of a session, then update
-  // that same swatch in place for the rest of the drag — and reset the session
-  // on commit so the next pick adds a fresh swatch instead of clobbering.
+  // ColorPickerPop emits onChange continuously while the user drags its pad,
+  // and calls onClose once when the panel is dismissed — the same input/change
+  // pair the native <input type="color"> gave us before this became the shared
+  // picker. We append a single swatch on the first onChange of a session, then
+  // update that same swatch in place for the rest of the drag, and reset the
+  // session on close so the next pick adds a fresh swatch instead of clobbering.
   const addSessionRef = useRef(null)
   const addCustomColor = (hex) => {
     if (addSessionRef.current == null) {
@@ -2645,10 +2659,10 @@ ${stateVars}
       setExtraColors(extraColors.map((c, i) => (i === at ? hex : c)))
     }
   }
-  const endAddSession = useCallback((node) => {
-    if (!node) return
-    node.addEventListener('change', () => { addSessionRef.current = null })
-  }, [])
+  // The popover's onClose is the boundary the native control's `change` event
+  // used to give us: dismissing the panel ends one pick, so the NEXT one
+  // appends a fresh swatch instead of continuing to rewrite the last.
+  const endAddSession = useCallback(() => { addSessionRef.current = null }, [])
 
   const handleDragStart = (idx) => setDragIdx(idx)
   const handleDragOver = (e, idx) => { e.preventDefault(); setDragOverIdx(idx) }
@@ -2997,7 +3011,7 @@ ${stateVars}
   }
   const removeGradStop = (idx) => { if (!guardGradEdit()) return; if (gradStops.length > 2) setGradStops(gradStops.filter((_, i) => i !== idx)) }
   const updateStop = (idx, updates) => { if (!guardGradEdit()) return; setGradStops(gradStops.map((s, i) => i === idx ? { ...s, ...updates } : s)) }
-  const applyPreset = (preset) => { setGradStops(preset.stops.map(s => ({ color: s.color, position: s.pos }))); setGradAngle(preset.angle); setGradType(preset.type); setStopPickerIdx(null); setGradient({ source: 'own' }) }
+  const applyPreset = (preset) => { setGradStops(preset.stops.map(s => ({ color: s.color, position: s.pos }))); setGradAngle(preset.angle); setGradType(preset.type); setGradient({ source: 'own' }) }
 
   return (
     <div className="sec">
@@ -3148,17 +3162,16 @@ ${stateVars}
             harmony *systems* are Pro (CS#3.7) — a non-Pro click routes to the
             gate and does NOT recompute the harmony (anti-tamper). */}
         <div className="cs-pb-base">
-          <div className="cs-pb-base-swatch">
-            <span className="cs-pb-base-chip" style={{ background: baseColor }} aria-hidden="true" />
-            <input
-              ref={colorRef}
-              type="color"
-              value={baseColor}
-              onChange={e => { setBaseColor(e.target.value); setOverrides({}); trackColourPick(e.target.value) }}
-              aria-label="Pick base colour"
-              className="cs-pb-base-input"
-            />
-          </div>
+          {/* The shared picker. The base colour is free (only the harmony
+              SYSTEMS are Pro), so no gate here — and the chip the trigger draws
+              replaces the separate .cs-pb-base-chip that used to sit under an
+              invisible native input. */}
+          <ColorPickerPop
+            value={baseColor}
+            onChange={hex => { setBaseColor(hex); setOverrides({}); trackColourPick(hex) }}
+            ariaLabel="Pick base colour"
+            triggerClassName="cs-pb-base-swatch"
+          />
           <input
             type="text" value={baseColor.toUpperCase()} className="cs-pb-base-hex"
             aria-label="Base colour hex"
@@ -3321,14 +3334,23 @@ ${stateVars}
 
           {/* Trailing "+ Add" card (CS#3.14) — the free single-colour add path
               and the entry point that becomes the Colour System popup later. */}
-          <label className="cs-pb-add">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
-            <span className="cs-pb-add-label">Add</span>
-            <input ref={endAddSession} type="color" value={baseColor}
-              onChange={e => addCustomColor(e.target.value)}
-              aria-label="Add a custom colour"
-              className="cs-pb-add-input" />
-          </label>
+          {/* The shared picker wearing the card as its trigger. `onClose` is
+              what replaces the native `change` event here — see addCustomColor:
+              the first emit of a session appends a swatch and the rest of the
+              drag rewrites it, so something has to say when one pick ended. */}
+          <ColorPickerPop
+            value={baseColor}
+            onChange={addCustomColor}
+            onClose={endAddSession}
+            ariaLabel="Add a custom colour"
+            triggerClassName="cs-pb-add"
+            triggerChildren={(
+              <>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                <span className="cs-pb-add-label">Add</span>
+              </>
+            )}
+          />
         </div>
 
         {/* Global adjust strip (CS#3.15) — non-destructive H/S/B/Temp lens over
@@ -3675,15 +3697,27 @@ ${stateVars}
                 const resolved = resolveStop(stop, si)
                 return (
                   <div key={si} style={{ display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
-                    <button type="button" onClick={() => { if (!guardGradEdit()) return; setStopPickerIdx(stopPickerIdx === si ? null : si) }}
-                      style={{ width: 32, height: 32, borderRadius: 6, cursor: 'pointer', background: resolved, border: '2px solid var(--border)', padding: 0, flexShrink: 0, transition: 'border-color .15s' }}
-                      title="Pick from palette & tints"
-                      aria-label="Pick from palette and tints"
+                    {/* The shared picker, replacing a hand-rolled popover that
+                        had no dismissal contract at all: it was a div with
+                        stopPropagation, so Escape did nothing, a click outside
+                        did nothing and focus never entered it. Routing through
+                        ColorPickerPop buys the usePopover contract and #316's
+                        scroll containment. The palette and its tints survive as
+                        the panel's own swatch section. */}
+                    <ColorPickerPop
+                      value={resolved}
+                      onChange={hex => updateStop(si, { color: hex })}
+                      ariaLabel={`Stop ${si + 1} colour`}
+                      swatches={gradStopSwatches}
+                      swatchesLabel="From your palette"
+                      disabled={gradEditLocked}
+                      onDisabledClick={guardGradEdit}
+                      triggerClassName="cs-grad-stop-trigger"
                     />
-                    <input type="text" value={resolved.toUpperCase()} disabled={gradEditLocked} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, minWidth: 0 }}
+                    <input type="text" value={resolved.toUpperCase()} disabled={gradEditLocked} aria-label={`Stop ${si + 1} hex`} style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, minWidth: 0 }}
                       onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) updateStop(si, { color: e.target.value }) }}
                     />
-                    <input type="number" min="0" max="100" value={stop.position} disabled={gradEditLocked} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
+                    <input type="number" min="0" max="100" value={stop.position} disabled={gradEditLocked} aria-label={`Stop ${si + 1} position`} onChange={e => updateStop(si, { position: Math.max(0, Math.min(100, +e.target.value)) })}
                       style={{ width: 52, fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center', padding: '4px 2px', MozAppearance: 'textfield' }}
                     />
                     <span style={{ fontSize: 9, color: 'var(--t3)' }}>%</span>
@@ -3692,48 +3726,6 @@ ${stateVars}
                         style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 14, padding: '2px 4px', lineHeight: 1 }}
                         aria-label="Remove gradient stop"
                       >&times;</button>
-                    )}
-                    {stopPickerIdx === si && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--warm-shadow-lg)', padding: 12, marginTop: 4, width: 300 }}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)' }}>Custom</div>
-                          <input type="color" value={resolved} onChange={e => { updateStop(si, { color: e.target.value }) }}
-                            aria-label="Pick a custom gradient stop colour"
-                            style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', padding: 0 }}
-                          />
-                        </div>
-                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 6 }}>From Palette</div>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
-                          {allColors.map((c, ci) => (
-                            <div key={ci} onClick={() => { updateStop(si, { color: c }); setStopPickerIdx(null) }}
-                              style={{ width: 24, height: 24, borderRadius: 4, background: c, cursor: 'pointer', border: '1px solid var(--border)' }} title={`${ROLES[ci] || 'Custom'}: ${c}`}
-                            />
-                          ))}
-                        </div>
-                        {allColors.map((c, ci) => {
-                          const scale = allTintScales[ci]
-                          if (!scale) return null
-                          return (
-                            <div key={ci} style={{ marginBottom: 8 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                                <div style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
-                                <span style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t3)' }}>
-                                  {ROLES[ci] || `Custom ${ci - colors.length + 1}`} tints
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                                {scale.map((t, ti) => (
-                                  <div key={ti} onClick={() => { updateStop(si, { color: t }); setStopPickerIdx(null) }}
-                                    style={{ width: 18, height: 18, borderRadius: 2, background: t, cursor: 'pointer', border: '1px solid var(--border)' }} title={`${T_LABELS[ti]}: ${t}`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
                     )}
                   </div>
                 )
