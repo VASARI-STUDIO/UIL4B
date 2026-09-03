@@ -40,19 +40,21 @@
 //
 // THE ALLOWLIST IS KEYED ON FILE **AND** CONTEXT, never on the amount. The app
 // renders fake money inside UI mock-ups — an order summary in PaletteBuilder
-// and UiSystemLab, a dashboard KPI in ColorStudio — and those mock-ups contain
-// $18 and $84 and $110. $18 is a real ladder amount. An allowlist that said
-// "ignore $18" would punch a hole in the guard on the exact tier it was meant
-// to protect, so every entry below names a file and a surrounding context and
-// says why.
+// and UiSystemLab — and those mock-ups contain $18 and $84 and $110. $18 is a
+// real ladder amount. An allowlist that said "ignore $18" would punch a hole in
+// the guard on the exact tier it was meant to protect, so every entry below
+// names a file and a surrounding context and says why.
 //
-// The list also used to carry an entry for src/components/UIPreviewModal.jsx —
-// a specimen pricing card in a preview modal that turned out to be unreachable
-// and has since been deleted. Its entry went with it, and nothing had to be
-// remembered to make that happen: "no allowlist entry outlives the thing it
-// excuses" at the foot of this file fails any entry that stops matching, which
-// is what a file-keyed allowlist needs, because a stale entry never fires and
-// so cannot announce itself.
+// TWO ENTRIES CAME OFF THIS LIST when the surfaces they excused turned out to
+// be unreachable and were deleted: src/components/UIPreviewModal.jsx (a
+// specimen pricing card in a preview modal nothing rendered) and
+// src/pages/ColorStudio.jsx (a fake analytics dashboard in the "see it shipped"
+// preview scenes, which no shipped route could reach). Neither removal had to
+// be remembered. "No allowlist entry outlives the thing it excuses" at the foot
+// of this file failed on both the moment the markup went, which is exactly what
+// a file-keyed allowlist needs: a stale entry never fires, so it cannot
+// announce itself, and it would sit there excusing $18 in a file that no longer
+// exists until something recreated that path.
 //
 // IT FAILS LOUDLY IF IT MATCHES NOTHING. This repository has been bitten twice
 // by scanning tests that silently matched zero files and passed green. The
@@ -203,12 +205,6 @@ const NOT_A_PLAN_PRICE = [
     context: /\.replace\(/,
     why: 'Not money at all: normalizeCustomBase substitutes with the backreference '
       + '"$1" when rewriting an SVG stroke and fill.',
-  },
-  {
-    file: 'src/pages/ColorStudio.jsx',
-    context: /cs-pv-kpis|cs-pv-kpi-num|Churn/,
-    why: 'A fake analytics dashboard used as a colour-preview surface. "$48.2k '
-      + 'Revenue" is invented data sitting beside invented user and churn numbers.',
   },
   {
     file: 'src/pages/DocsDesign.jsx',
