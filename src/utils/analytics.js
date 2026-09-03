@@ -1,5 +1,6 @@
 import { db, auth } from './firebase'
 import { canWriteSharedAnalytics } from './environment'
+import { startTtvClock, takeTimeToValue } from './timeToValue'
 import { doc, setDoc, collection, getDocs, query, orderBy, limit, increment, deleteField } from 'firebase/firestore'
 
 const ANALYTICS_KEY = 'vs-analytics'
@@ -329,8 +330,62 @@ export function trackActivation(toolId, kind = 'save') {
   const k = kind === 'export' ? 'export' : 'save'
   const data = loadDesignAnalytics()
   data.toolUsage[`activation:${id}:${k}`] = (data.toolUsage[`activation:${id}:${k}`] || 0) + 1
+
+  // TIME TO FIRST VALUE, folded into the SAME load/save as the activation it
+  // belongs to. Two loadDesignAnalytics()/saveDesignAnalytics() pairs around
+  // one event would make the second read stale data and drop the first write.
+  //
+  // takeTimeToValue is one-shot: it clears the clock, so this block does
+  // nothing on the second and every later activation. That is the point — the
+  // number is "how long until this person first got somewhere", not "how often
+  // do already-activated people save things".
+  let ttv = null
+  try { ttv = takeTimeToValue(Date.now()) } catch { /* never break an activation */ }
+  if (ttv) {
+    data.toolUsage[`ttv:${ttv.bucket}`] = (data.toolUsage[`ttv:${ttv.bucket}`] || 0) + 1
+    data.toolUsage[`ttv:${ttv.bucket}:${id}`] = (data.toolUsage[`ttv:${ttv.bucket}:${id}`] || 0) + 1
+  }
+
   saveDesignAnalytics(data)
   recordAggregateTool(`activation__${id}__${k}`)
+  if (ttv) {
+    // Two counters, not one. The bare bucket is the headline distribution; the
+    // per-tool bucket says WHICH first win the time was spent reaching, which
+    // is the only way to tell a slow starting point from a slow product.
+    recordAggregateTool(`ttv__${ttv.bucket}`)
+    recordAggregateTool(`ttv__${ttv.bucket}__${id}`)
+  }
+}
+
+/**
+ * Start the time-to-value clock. Called once, when the first-win screen is
+ * answered — see utils/timeToValue.js for why it is a clock rather than an
+ * event, and why the reading is bucketed.
+ */
+export function startTimeToValue() {
+  try { startTtvClock(Date.now()) } catch { /* metrics never block onboarding */ }
+}
+
+/**
+ * WHICH starting point a new account chose on the first-win screen, including
+ * 'skipped'.
+ *
+ * Paired with the ttv__ and activation__ counters this makes the one question
+ * the onboarding flow exists to answer answerable: of the people who chose a
+ * palette, how many saved one, and how long did it take? Before this there was
+ * no way to tell a starting point nobody picks from one everybody picks and
+ * nobody finishes.
+ *
+ * Separate from trackActivation on purpose. Choosing a card is a statement of
+ * intent, not a piece of completed work, and folding it into the activation
+ * number would make the metric say the flow worked because someone clicked.
+ */
+export function trackFirstWinChoice(winId) {
+  const id = String(winId || 'unknown').slice(0, 48)
+  const data = loadDesignAnalytics()
+  data.toolUsage[`firstwin:${id}`] = (data.toolUsage[`firstwin:${id}`] || 0) + 1
+  saveDesignAnalytics(data)
+  recordAggregateTool(`firstwin__${id}`)
 }
 
 export function trackToolAction(toolId) {
