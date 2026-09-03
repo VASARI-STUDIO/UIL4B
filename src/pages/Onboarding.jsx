@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useRef, useEffect } from 'react'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
-import { useProPrice } from '../hooks/usePrices'
+import { FIRST_WINS, FIRST_WIN_SKIPPED } from '../utils/firstWin'
+import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
 
-// Where a brand-new account lands.
+// Where a brand-new account lands when it does NOT pick a starting point.
 //
 // Was '/home' — the ANONYMOUS SALES PAGE. Home.jsx has no auth awareness at all
 // (it does not import useAuth), so someone who had just created an account was
@@ -12,88 +12,82 @@ import { useProPrice } from '../hooks/usePrices'
 // · No setup". That CTA then loops: App.jsx bounces a signed-in user from
 // /login straight back to /home.
 //
-// /projects instead, because that is where the first real win lives — the first
-// saved project is the first thing that requires an account and survives the
-// session — and because its empty state already names the two tools to start
-// with and offers the action. That teaching state existed and was simply not on
-// the path anyone actually walked.
+// /projects instead, because its empty state is the one surface that teaches
+// without being asked — it names the tools to start with and offers the action.
 const FIRST_RUN_DESTINATION = '/projects'
 
 const ONBOARDED_KEY = 'vs-onboarded'
 const RESUME_KEY = 'vs-resume-after-onboarding'
 
-const QUESTIONS = [
-  {
-    id: 'source',
-    q: 'How did you hear about us?',
-    options: ['Search engine', 'Social media', 'Friend or colleague', 'YouTube / video', 'Somewhere else'],
-  },
-  {
-    id: 'use',
-    q: 'What will you mainly use UIL4B for?',
-    options: ['Web design', 'Branding & identity', 'UI / UX work', 'Marketing & social', 'Just exploring'],
-  },
-  {
-    id: 'role',
-    q: 'What best describes you?',
-    options: ['Designer', 'Developer', 'Founder / entrepreneur', 'Student', 'Hobbyist'],
-  },
-]
+// ─────────────────────────────────────────────────────────────────────────────
+// WHAT HAPPENED TO THE SURVEY
+// ─────────────────────────────────────────────────────────────────────────────
+// There were three questions here — source, use and role — and the COMPLETE
+// list of things that read the answers was: the admin user table, for `use` and
+// `role`. `source` ("How did you hear about us?") was read by nothing at all.
+// No personalisation, no tool ordering, no copy variation, nothing the person
+// answering could ever feel. Three screens of friction in front of a brand-new
+// account, delivering value only to an internal table.
+//
+// The routing test that settles it: which screen, content, default or
+// recommendation changes because of this answer? For all three, nothing did.
+// So they are gone rather than kept and quietly ignored — asking a question you
+// do not use costs the user time and costs you the trust that they are being
+// asked for a reason.
+//
+// What remains is ONE question that routes: which of three things do you want
+// to make? The answer picks the next screen, opens that tool, and is recorded
+// as `onboarding.firstWin` — which the admin table reads, so the persisted
+// field has a consumer rather than repeating the defect this removed.
+//
+// If attribution is wanted back, the honest place for it is AFTER the first
+// win, not in front of it, and it is one entry in a list — not a fourth
+// question in front of someone who has not yet been shown anything.
 
-const PRO_FEATURES = [
-  `${AI_LIMITS.pro.daily} AI generations a day · ${AI_LIMITS.pro.monthly} a month`,
-  'Advanced colour controls and HCT editing',
-  'Projects synced across devices',
-  'Advanced design-system exports',
-  'Priority support',
-]
+// Record completion on the ACCOUNT, with localStorage as a fast local mirror.
+// The account copy is the one that matters: it is what stops onboarding
+// reappearing on a second device.
+//
+// Module scope, not the component body, because of the Date.now() stamp. The
+// React compiler refuses an impure call made during render, and it is right to:
+// the timestamp belongs to the moment the user actually finished, not to
+// whichever render happened to construct the closure.
+function completeOnboarding(updateProfile, extra = null) {
+  try { updateProfile?.({ onboarding: { ...(extra || {}), completedAt: Date.now() } }) } catch { /* ignore */ }
+  try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
+}
 
-function CheckIcon() {
+function ArrowIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
+    <svg className="onb-option-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
     </svg>
   )
 }
 
 export default function Onboarding() {
   const { user, userProfile, updateProfile, loading } = useAuth()
-  const { checkout } = useSubscription()
   const navigate = useNavigate()
-  const [step, setStep] = useState(0)
-  const [answers, setAnswers] = useState({})
-  const [billing, setBilling] = useState('yearly')
-  const [busy, setBusy] = useState(false)
-  const proPrice = useProPrice()
   const headingRef = useRef(null)
 
-  // New sign-ups now reach /onboarding via a `navigate(..., {replace:true})` that
-  // manages no focus of its own (App.jsx), so a keyboard/AT user would be dropped
-  // to <body> with no announcement. Move focus to the step heading on mount and on
-  // every step change so the flow is keyboard-navigable and screen-reader-announced
-  // (audit C5 / QA Q3). The heading carries tabIndex={-1} to be programmatically
-  // focusable without becoming a tab stop.
+  // New sign-ups reach /onboarding via a `navigate(..., {replace:true})` that
+  // manages no focus of its own (App.jsx), so a keyboard/AT user would be
+  // dropped to <body> with no announcement. Move focus to the heading on mount
+  // so the screen is announced (audit C5 / QA Q3). The heading carries
+  // tabIndex={-1} to be programmatically focusable without becoming a tab stop.
   useEffect(() => {
     headingRef.current?.focus()
-  }, [step])
+  }, [])
 
   // Onboarding only makes sense for a signed-in user. While auth is still
   // resolving we show the flow shell; if definitively signed out, go to login.
   if (!loading && !user) return <Navigate to="/login" replace />
 
-  const total = QUESTIONS.length
-  const onPricing = step >= total
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
 
-  // Record completion on the ACCOUNT, with localStorage as a fast local mirror.
-  // The account copy is the one that matters: it is what stops onboarding
-  // reappearing on a second device.
-  const markOnboardingComplete = (extra = null) => {
-    try { updateProfile?.({ onboarding: { ...(extra || {}), completedAt: Date.now() } }) } catch { /* ignore */ }
-    try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
-  }
+  const markOnboardingComplete = (extra = null) => completeOnboarding(updateProfile, extra)
 
-  const persist = () => markOnboardingComplete(answers)
+  const persist = (extra = null) => markOnboardingComplete(extra)
 
   // A mid-action sign-up (e.g. clicked "Upgrade to Pro" → created an account)
   // is intercepted into onboarding by App.jsx, which would otherwise silently
@@ -109,47 +103,46 @@ export default function Onboarding() {
     } catch { return null }
   }
 
-  const choose = (qid, value) => {
-    setAnswers(prev => ({ ...prev, [qid]: value }))
-    setTimeout(() => setStep(s => s + 1), 160)
+  // Analytics for this screen. Always in this order and always wrapped: the
+  // counter records WHICH start was chosen, and the clock is what
+  // utils/timeToValue.js later measures the gap from. Neither may throw a user
+  // out of their own onboarding, so a broken metric is swallowed and the
+  // navigation below happens regardless.
+  const recordFirstWin = (choiceId) => {
+    try { trackFirstWinChoice(choiceId) } catch { /* metrics never block a flow */ }
+    try { startTimeToValue() } catch { /* metrics never block a flow */ }
   }
 
-  const back = () => setStep(s => Math.max(0, s - 1))
-
-  const finishFree = () => {
-    persist()
-    // Explicit Free choice on the pricing step — drop any stashed checkout
-    // intent rather than pushing the user into a checkout they just declined.
+  // Picked a starting point. The next thing they see is the real tool, open, on
+  // the artefact the sign-up dialog promised them ("your palettes, type scales
+  // and gradients, kept").
+  //
+  // The stashed resume target is DROPPED, exactly as the old pricing step's
+  // Free button dropped a stashed checkout intent: choosing a start here is a
+  // newer and more specific statement of intent than whatever they clicked
+  // before the account existed.
+  const chooseFirstWin = (win) => {
+    persist({ firstWin: win.id })
+    recordFirstWin(win.id)
     takeResumeTarget()
-    navigate(FIRST_RUN_DESTINATION)
+    navigate(win.route)
   }
 
-  const finishPro = async () => {
+  // Declined all three. Onboarding is still COMPLETE — the screen was answered
+  // and the answer was "none of these".
+  //
+  // Completion is recorded on the PROFILE, not just localStorage. This used to
+  // be the skip path's bug: it wrote localStorage only, so the account never
+  // learned it had happened and onboarding reappeared on every new browser,
+  // device or cleared cache, forever, for anyone who skipped.
+  //
+  // `firstWin` is deliberately not persisted: nothing was chosen, and writing
+  // "skipped" onto the profile would put a non-answer in the admin table.
+  const skipFirstWin = () => {
     persist()
-    // Chose Pro here — checkout() fulfils the intent directly. Capture (and
-    // clear) the stashed target up front so the Stripe redirect can't leave a
-    // stale key; fall back to it only if checkout itself fails.
-    const resume = takeResumeTarget() || FIRST_RUN_DESTINATION
-    setBusy(true)
-    try {
-      await checkout(billing)
-    } catch {
-      navigate(resume)
-    }
-  }
-
-  const skip = () => {
-    // Skipping still COMPLETES onboarding — it just declines the survey.
-    //
-    // This used to write localStorage only, so the account never learned it had
-    // happened. Onboarding then reappeared on the next browser, device or
-    // cleared cache, forever, for anyone who skipped. Recording it on the
-    // profile is what makes "seen once" true of the person rather than of one
-    // browser. `answers` is deliberately not persisted here: they did not
-    // answer, and inventing blanks would put empty values in the admin table.
-    markOnboardingComplete()
-    // Skipping the survey shouldn't discard why they signed up — resume to the
-    // stashed destination (e.g. /checkout) when there is one.
+    recordFirstWin(FIRST_WIN_SKIPPED)
+    // Declining a starting point shouldn't discard why they signed up — resume
+    // to the stashed destination (e.g. /checkout) when there is one.
     navigate(takeResumeTarget() || FIRST_RUN_DESTINATION)
   }
 
@@ -158,88 +151,50 @@ export default function Onboarding() {
       <div className="onb-card" id="main" tabIndex={-1}>
         <div className="onb-top">
           <div className="onb-brand">UIL4B</div>
-          <button type="button" className="onb-skip" onClick={skip}>Skip</button>
         </div>
 
-        <div className="onb-progress">
-          {QUESTIONS.map((_, i) => (
-            <span key={i} className={`onb-dot${i < step ? ' done' : ''}${i === step ? ' active' : ''}`} />
-          ))}
-          <span className={`onb-dot${onPricing ? ' active' : ''}`} />
-        </div>
+        {/* One screen, so there is no progress bar and no corner Skip: a row of
+            dots that is always full says nothing, and a "Skip" beside a "Not
+            now" that does the identical thing is two names for one action. */}
+        <div className="onb-step onb-firstwin-step" data-testid="onboarding-first-win">
+          <div className="onb-greeting">You're in, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
+          <h1 className="onb-q" ref={headingRef} tabIndex={-1}>What do you want to make first?</h1>
+          <p className="onb-sub">
+            Whichever you pick opens next. You can switch at any time — nothing here is locked in.
+          </p>
 
-        {!onPricing ? (
-          <div className="onb-step" key={step}>
-            {step === 0 && (
-              <div className="onb-greeting">Welcome, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
-            )}
-            <h1 className="onb-q" ref={headingRef} tabIndex={-1}>{QUESTIONS[step].q}</h1>
-            <p className="onb-sub">Quick question {step + 1} of {total} — this helps us improve UIL4B.</p>
-            <div className="onb-options">
-              {QUESTIONS[step].options.map(opt => (
-                <button
-                  key={opt}
-                  type="button"
-                  className={`onb-option${answers[QUESTIONS[step].id] === opt ? ' selected' : ''}`}
-                  onClick={() => choose(QUESTIONS[step].id, opt)}
-                >
-                  <span>{opt}</span>
-                  <svg className="onb-option-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </button>
-              ))}
-            </div>
-            {step > 0 && (
-              <button type="button" className="onb-back" onClick={back}>← Back</button>
-            )}
-          </div>
-        ) : (
-          <div className="onb-step onb-pricing-step">
-            <div className="onb-greeting">You're all set, <em>{firstName}</em>.</div>
-            <h1 className="onb-q" ref={headingRef} tabIndex={-1}>Pick the plan that fits.</h1>
-            <p className="onb-sub">Everything core is free forever. Upgrade any time for more AI — or start free and decide later.</p>
-
-            <div className="onb-billing">
-              <button className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
-              <button className={billing === 'yearly' ? 'active' : ''} onClick={() => setBilling('yearly')}>
-                Yearly {proPrice.savingsPct > 0 && <span className="onb-save">Save {proPrice.savingsPct}%</span>}
+          <div className="onb-options onb-firstwin-options">
+            {FIRST_WINS.map(win => (
+              <button
+                key={win.id}
+                type="button"
+                className="onb-option onb-firstwin-option"
+                data-first-win={win.id}
+                onClick={() => chooseFirstWin(win)}
+              >
+                <span className="onb-firstwin-text">
+                  <span className="onb-firstwin-label">{win.label}</span>
+                  <span className="onb-firstwin-blurb">{win.blurb}</span>
+                </span>
+                <ArrowIcon />
               </button>
-            </div>
-
-            <div className="onb-tiers">
-              <div className="onb-tier">
-                <div className="onb-tier-name">Free</div>
-                <div className="onb-tier-price"><span className="onb-tier-amount">$0</span><span className="onb-tier-per">forever</span></div>
-                <ul className="onb-tier-list">
-                  <li><CheckIcon /> All core design tools</li>
-                  <li><CheckIcon /> Unlimited palettes &amp; exports</li>
-                  <li><CheckIcon /> {AI_LIMITS.free.daily} AI generations a day</li>
-                </ul>
-                <button className="btn onb-tier-btn" onClick={finishFree} disabled={busy}>Start with Free</button>
-              </div>
-
-              <div className="onb-tier onb-tier-pro">
-                <span className="onb-tier-flag">Best value</span>
-                <div className="onb-tier-name">Pro</div>
-                <div className="onb-tier-price">
-                  <span className="onb-tier-amount">{billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly}</span>
-                  <span className="onb-tier-per">{billing === 'yearly' ? '/year' : '/month'}</span>
-                </div>
-                <div className="onb-tier-sub">{billing === 'yearly' ? `AUD · ${proPrice.yearlyPerMonth}/mo` : 'AUD · billed monthly'}</div>
-                <ul className="onb-tier-list">
-                  {PRO_FEATURES.map(f => <li key={f}><CheckIcon /> {f}</li>)}
-                </ul>
-                <button className="btn btn-accent onb-tier-btn" onClick={finishPro} disabled={busy}>
-                  {busy ? 'Redirecting to Stripe…' : `Go Pro — ${billing === 'yearly' ? `${proPrice.yearlyTotal}/yr` : `${proPrice.monthly}/mo`}`}
-                </button>
-                <div className="onb-tier-foot">Secure checkout via Stripe · cancel anytime</div>
-              </div>
-            </div>
-
-            <button type="button" className="onb-back" onClick={finishFree} disabled={busy}>Maybe later — continue free</button>
+            ))}
           </div>
-        )}
+
+          <button type="button" className="onb-back" onClick={skipFirstWin}>
+            Not now — take me to my projects
+          </button>
+
+          {/* The pricing STEP is gone; the pricing is not hidden. Shortening the
+              path by concealing a cost the user meets later buys an easy finish
+              with distrust, so the tier truth stays as one sentence with a real
+              link, instead of a two-column table and a Stripe button in front of
+              someone who has not yet made anything. What Pro costs and contains
+              is unchanged. */}
+          <p className="onb-sub onb-firstwin-foot">
+            All of this is free. <Link to="/plans">Pro</Link> adds more AI and advanced exports when you want it.
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -964,6 +964,7 @@ const USER_SORTS = {
   plan: (u) => (u.plan === 'pro' ? 0 : 1),
   role: (u) => u.onboarding?.role || '￿',
   use: (u) => u.onboarding?.use || '￿',
+  firstWin: (u) => u.onboarding?.firstWin || '￿',
   country: (u) => (u.country ? countryName(u.country) : '￿'),
   createdAt: (u) => u.joinedTs || 0,
   lastLoginAt: (u) => (u.lastLoginAt ? new Date(u.lastLoginAt).getTime() : 0),
@@ -1005,7 +1006,7 @@ function UsersPanel({ localUsers, toast }) {
         setUsers((localUsers || []).map(u => ({
           uid: u.uid, email: u.email || '', displayName: u.displayName || '', provider: u.provider || 'email',
           emailVerified: null, createdAt: u.createdAt || null, lastLoginAt: null,
-          subscription: { status: null, interval: null }, onboarding: { role: null, use: null }, location: '', company: '',
+          subscription: { status: null, interval: null }, onboarding: { role: null, use: null, firstWin: null }, location: '', company: '',
         })))
       }
     })()
@@ -1033,7 +1034,7 @@ function UsersPanel({ localUsers, toast }) {
     const out = rows.filter(r => {
       if (planFilter !== 'all' && r.plan !== planFilter) return false
       if (countryFilter !== 'all' && (r.country || 'unknown') !== countryFilter) return false
-      if (q && ![r.email, r.displayName, r.location, r.company, r.onboarding?.role, r.onboarding?.use]
+      if (q && ![r.email, r.displayName, r.location, r.company, r.onboarding?.role, r.onboarding?.use, r.onboarding?.firstWin]
         .some(v => v && String(v).toLowerCase().includes(q))) return false
       return true
     })
@@ -1059,11 +1060,11 @@ function UsersPanel({ localUsers, toast }) {
   const allRevealed = rows.length > 0 && revealed.size >= rows.length
 
   const exportUsersCSV = () => {
-    const cols = ['email', 'displayName', 'provider', 'emailVerified', 'plan', 'role', 'use', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
+    const cols = ['email', 'displayName', 'provider', 'emailVerified', 'plan', 'role', 'use', 'firstWin', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
     // displayName, company and location are user-controlled profile fields, so
     // the cells go through csvCell rather than bare quote-escaping. See utils/csv.js.
     const csv = toCsv(cols, filtered, (r, c) => (
-      c === 'role' || c === 'use' ? r.onboarding?.[c]
+      c === 'role' || c === 'use' || c === 'firstWin' ? r.onboarding?.[c]
         : c === 'country' ? (r.country ? countryName(r.country) : '')
           : r[c]
     ))
@@ -1168,6 +1169,7 @@ function UsersPanel({ localUsers, toast }) {
                     <SortTh k="plan">Plan</SortTh>
                     <SortTh k="role">Role</SortTh>
                     <SortTh k="use">Category</SortTh>
+                    <SortTh k="firstWin">First win</SortTh>
                     <SortTh k="country">Country</SortTh>
                     <SortTh k="createdAt">Joined</SortTh>
                     <SortTh k="lastLoginAt">Last Login</SortTh>
@@ -1188,6 +1190,7 @@ function UsersPanel({ localUsers, toast }) {
                       </td>
                       <td>{u.onboarding?.role || <span style={{ color: 'var(--t3)' }}>—</span>}</td>
                       <td>{u.onboarding?.use || <span style={{ color: 'var(--t3)' }}>—</span>}</td>
+                      <td>{u.onboarding?.firstWin || <span style={{ color: 'var(--t3)' }}>—</span>}</td>
                       <td>
                         {u.country
                           ? <span className="adm-flag-cell" title={u.location ? `${u.location} — ${countryName(u.country)}` : countryName(u.country)}>
