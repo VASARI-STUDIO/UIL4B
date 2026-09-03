@@ -140,6 +140,18 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
     // fights the scroll position under the pointer. This was ALSO the
     // toolbar-label-clipping report: the old absolutely-positioned label sat
     // outside the button box, and a scroll container clips on both axes.
+    //
+    // THE DEFECT THIS GUARDS IS A LABEL RENDERED OUTSIDE ITS BUTTON, not a
+    // button without a word on it. Two controls are now deliberately icon-only
+    // below 961px — Undo and Reset, promoted to the front of the rail so that
+    // Save / export fits on screen (palette-save-export-off-rail). A
+    // `display:none` label has a zero rect at the origin, which the `inside`
+    // proxy below reads as "outside the button" even though nothing is
+    // painted anywhere. So the row set is split rather than the assertion
+    // weakened: every DISPLAYED label must still be open and inside its
+    // button, and the hidden set must be EXACTLY the two we intended, which
+    // is a tighter contract than before — an accidental third hidden label
+    // now fails here.
     for (const width of [960, 900, 800, 768, 700, 480, 380, 320]) {
       // Load AT the width rather than resizing into it: this is how a phone or
       // tablet actually arrives, and it does not depend on the engine's
@@ -157,6 +169,7 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
             width: i.width,
             natural: inner.scrollWidth,
             inside: i.left >= b.left - 0.5 && i.right <= b.right + 0.5,
+            hidden: getComputedStyle(el.querySelector('.plb-lbl')).display === 'none',
           }
         })
         return {
@@ -164,8 +177,12 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
           overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         }
       })
-      expect(state.rows.length).toBeGreaterThan(3)
-      for (const row of state.rows) {
+      const shown = state.rows.filter((r) => !r.hidden)
+      const hidden = state.rows.filter((r) => r.hidden).map((r) => r.name).sort()
+
+      expect(hidden, `${width}px · exactly Undo and Reset may be icon-only`).toEqual(['Reset', 'Undo'])
+      expect(shown.length).toBeGreaterThan(3)
+      for (const row of shown) {
         expect(row.width, `${width}px · ${row.name}: label is open at its real width`)
           .toBeGreaterThanOrEqual(row.natural - 1)
         expect(row.inside, `${width}px · ${row.name}: label is inside its button, not clipped beside it`).toBe(true)
