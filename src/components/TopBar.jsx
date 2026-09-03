@@ -330,7 +330,7 @@ function ExportDropdown({ onSaveProject }) {
                     <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
                   JSON Design Tokens
-                  <span className="export-dropdown-hint" style={{ color: 'var(--accent)' }}>Pro feature — Upgrade</span>
+                  <span className="export-dropdown-hint" style={{ color: 'var(--accent-strong)' }}>Pro feature — Upgrade</span>
                 </button>
               )}
 
@@ -385,7 +385,7 @@ function SaveProjectModal({ open, onClose, onSave }) {
         className="card"
         style={{ width: '100%', maxWidth: 460, padding: 24 }}
       >
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>Save project</div>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent-strong)', marginBottom: 12 }}>Save project</div>
         <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-.02em', marginBottom: 6 }}>Name this design</h3>
         <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>Captures your palette, fonts, type scale, and CSS.</p>
         <input

@@ -36,7 +36,7 @@ export default function PromptModal({ prompt, onClose, onCopy, onSave, onRemove,
                   href={profileLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', marginLeft: 4 }}
+                  style={{ fontSize: 11, color: 'var(--accent-strong)', textDecoration: 'none', marginLeft: 4 }}
                   onClick={e => e.stopPropagation()}
                 >
                   View profile
