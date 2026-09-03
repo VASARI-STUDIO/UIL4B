@@ -5529,12 +5529,30 @@ html.lenis,html.lenis body{height:auto}
 .pnav-util .pnav-pop-wrap{flex:0 0 auto}
 .pnav-pop{position:absolute;top:calc(100% + 10px);right:0;z-index:130;width:260px;max-width:calc(100vw - 24px);padding:8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .pnav-pop-head{padding:8px 10px 4px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
-.pnav-pop-row{display:flex;flex-direction:column;gap:8px;padding:6px 10px 10px}
+/* 6px of side padding, not 10: the theme control went from two cells to three
+   (Light / Dark / System) inside a 260px popover, and "System" plus its glyph
+   needs every pixel of the row. This row holds nothing else. */
+.pnav-pop-row{display:flex;flex-direction:column;gap:8px;padding:6px 6px 10px}
 .pnav-pop-row-label{font-size:var(--fs-body-s);font-weight:560;color:var(--t0)}
-.pnav-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--bg-2);border-radius:var(--radius-l)}
-.pnav-seg-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;border:none;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
-.pnav-seg-btn:hover{color:var(--t0)}
-.pnav-seg-btn[aria-pressed="true"]{background:var(--bg-1);color:var(--t0);box-shadow:var(--shadow-xs)}
+/* THEME SEGMENT — Light / Dark / System. Named .theme-seg rather than .pnav-seg
+   because it is no longer only the nav's: the same ThemeChoice.jsx renders it in
+   the account popover, the compact popover, the mobile sheet and
+   /settings › Accessibility. One class, so the four cannot drift apart the way
+   the control and the comments describing it already did.
+   THREE columns, and "System" is the widest label — --fs-caption and a 5px gap
+   are what keep it on one line inside the 260px popover; check that row at 260px
+   before growing either. */
+.theme-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;background:var(--bg-2);border-radius:var(--radius-l)}
+.theme-seg-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:0;height:34px;padding:0 4px;border:none;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-caption);font-weight:560;line-height:1;white-space:nowrap;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
+.theme-seg-btn svg{flex:0 0 auto}
+.theme-seg-btn:hover{color:var(--t0)}
+.theme-seg-btn[aria-pressed="true"]{background:var(--bg-1);color:var(--t0);box-shadow:var(--shadow-xs)}
+/* In the mobile sheet and in Settings the control sits in a wide row, so cap it
+   — a segmented control stretched across a 1280px settings card reads as three
+   buttons, not as one choice of three. */
+.pnav-sheet-theme{margin-top:20px}
+.pnav-sheet-theme .theme-seg{max-width:320px}
+.toggle-row .theme-seg{flex:0 0 auto;width:250px}
 .pnav-pop-sep{height:1px;margin:4px 6px;background:var(--border)}
 .pnav-pop-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
@@ -7110,7 +7128,12 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
   .pnav-iconbtn{display:none}
   /* Touch: the hamburger sheet IS the menu, so the resting 3-dots (a desktop
      hover-state affordance) is redundant — drop it. Signed-in users keep the
-     avatar; theme + auth live in the sheet / Settings. */
+     avatar; theme + auth live in the sheet / Settings.
+     That last clause was ASPIRATIONAL until 2026-09-03: auth was in the sheet,
+     the theme control was not, and this rule was the only thing standing between
+     a phone visitor and the one place it existed. The sheet now renders the same
+     ThemeChoice control, so the sentence is finally true — if the sheet's theme
+     block is ever removed, this rule has to go with it. */
   .pnav-more-wrap{display:none}
   .home-foot-feat{grid-template-columns:repeat(2,1fr)}
   .home-foot-cols{grid-template-columns:repeat(2,1fr);gap:24px 32px}
@@ -11317,7 +11340,7 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 /* Focus visibility on the bar itself. A pill trigger with only a background
    change on :hover leaves keyboard users guessing. */
 .pnav-trigger:focus-visible,.pnav-search-field:focus-visible,.pnav-avatar-btn:focus-visible,.pnav-more:focus-visible,.pnav-iconbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.pnav-seg-btn:focus-visible,.pnav-pop-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.theme-seg-btn:focus-visible,.pnav-pop-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .pnav-pop-item:focus-visible{background:var(--hvr);color:var(--t0)}
 
 /* The mobile sheet is a real modal (role=dialog aria-modal=true) and already

@@ -71,15 +71,32 @@ html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[dat
 html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="true"] .boot-action::after,html[data-reduced-motion="true"] .boot-copy::after,html[data-reduced-motion="true"] .boot-card::after{animation:none}
 </style>
 <script>
-// Apply the saved theme synchronously, before first paint, so there is no
-// light/dark flash (FOUC). vs-t holds an explicit choice ('dark'|'light');
-// absent that we default to light — matching ThemeContext, which also defaults
-// to light and never auto-follows the OS. Keeping the two in agreement is what
-// kills the first-time visitor theme flip. The rebuilt design ships light-first;
-// dark returns later as an explicit opt-in.
+// Apply the resolved theme synchronously, before first paint, so there is no
+// light/dark flash (FOUC). THEME IS NOW THREE-STATE, and it follows exactly the
+// contract data-reduced-motion has always used one paragraph down:
 //
-// data-reduced-motion is THREE-state and motion is the opposite of theme here:
-// it DOES auto-follow the OS. Only a boolean in vs-appearance counts as an
+//   vs-t 'light' / 'dark' → an explicit choice; it beats the OS, both ways.
+//   vs-t 'system', absent, or junk → no opinion; prefers-color-scheme decides.
+//
+// html[data-theme] itself is never "system": it is always resolved to a concrete
+// 'light' or 'dark', because the whole token layer in global.css is keyed on
+// [data-theme="light"] / [data-theme="dark"] and neither set lives on a bare
+// :root. Resolving here rather than in CSS is also what keeps the pre-paint
+// guarantee — one attribute, written before the stylesheet paints anything.
+//
+// RETIRED: vs-t-lightreset. It was added on 2026-07-04 with the light-first
+// rebuild (#132), whose own comment said "dark returns later as an explicit
+// opt-in": a ONE-TIME migration that cleared a stale vs-t=dark left over from
+// the pre-rebuild design, because dark was not being maintained at the time.
+// Dark has now returned as an explicit opt-in, which is the condition the
+// migration was waiting on, so honouring a returning visitor's old choice is
+// the correct behaviour rather than a regression. The flag is no longer read or
+// written; an inert vs-t-lightreset=1 may linger in old profiles and means
+// nothing. Keep this in step with ThemeContext.jsx — the theme is resolved in
+// two places and fixing only one brings back the first-paint flip.
+//
+// data-reduced-motion is THREE-state in the same way. Only a boolean in
+// vs-appearance counts as an
 // explicit choice; absent one we mirror the OS query. Writing String(!!a.reducedMotion)
 // unconditionally — which this line used to do — fabricates an explicit "false"
 // for every visitor who has never opened Settings, and by the contract in
@@ -87,7 +104,15 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 // That single `!!` disabled every reduced-motion rule in the stylesheet app-wide.
 // Keep this in step with AppearanceContext.jsx: the same fabricated "false" lived
 // in both files, and fixing only one leaves the defect alive.
-(function(){try{var r=document.documentElement;var t=localStorage.getItem('vs-t');if(t!=='dark'&&t!=='light'){t='light'}if(localStorage.getItem('vs-t-lightreset')!=='1'){t='light';localStorage.setItem('vs-t','light');localStorage.setItem('vs-t-lightreset','1')}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a=JSON.parse(localStorage.getItem('vs-appearance')||'{}');var m=typeof a.reducedMotion==='boolean'?a.reducedMotion:!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);r.setAttribute('data-reduced-motion',String(m))}catch(e){}})();
+// EVERY STORAGE READ GETS ITS OWN try/catch, and that is not belt-and-braces.
+// localStorage THROWS when storage is blocked (Safari private browsing, "block
+// all cookies", a sandboxed iframe). One shared try/catch meant the first throw
+// abandoned the whole function — so those visitors got NO data-theme attribute
+// at all, and because neither theme's tokens are declared on a bare :root, that
+// is an unthemed page rather than a light one. Same reasoning AppearanceContext
+// records for its own hardened read: a visitor who cannot persist a choice must
+// still get the resolved one.
+(function(){try{var r=document.documentElement;var q=function(s){return !!(window.matchMedia&&window.matchMedia(s).matches)};var g=function(k){try{return localStorage.getItem(k)}catch(e){return null}};var t=g('vs-t');if(t!=='dark'&&t!=='light'){t=q('(prefers-color-scheme: dark)')?'dark':'light'}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a={};try{a=JSON.parse(g('vs-appearance')||'{}')||{}}catch(e){}var m=typeof a.reducedMotion==='boolean'?a.reducedMotion:q('(prefers-reduced-motion: reduce)');r.setAttribute('data-reduced-motion',String(m))}catch(e){}})();
 </script>
 </head>
 <body>
