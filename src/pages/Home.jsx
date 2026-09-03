@@ -9,7 +9,7 @@ import HomeHeroDirections from '../components/HomeHeroDirections'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
-import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS } from '../data/toolTree'
+import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, categoryDestination } from '../data/toolTree'
 import { COMMUNITY_DESIGNS } from '../data/communityDesigns'
 
 // ── The V2 homepage ──────────────────────────────────────────────────────────
@@ -399,7 +399,7 @@ export default function Home() {
             <ul className="htools-grid" data-reveal-group>
               {CREATE_GROUPS.map((group) => (
                 <li className="htool" key={group.id} data-hue={group.hue}>
-                  <Link className="htool-head" to={group.home}>
+                  <Link className="htool-head" to={categoryDestination(group)}>
                     <span className="htool-glyph" aria-hidden="true">
                       <NavIcon id={group.id} />
                     </span>
