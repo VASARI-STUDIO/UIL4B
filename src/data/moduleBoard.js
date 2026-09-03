@@ -331,18 +331,20 @@ export const MODULE_BOARD = [
     area: 'Infra',
     status: 'live',
     health: 'watch',
-    summary: 'Production Firebase verification and Gemini are healthy. The production OpenRouter key is now set and redeployed; no production request has been verified through the OpenRouter path yet, and a bad key fails over to Gemini silently.',
+    summary: 'Production Firebase verification and Gemini are healthy. The OpenRouter failover is no longer silent: every generation shows which provider served it, failovers are counted per day in an admin-only Firestore collection, and Admin → Overview carries a seven-day verdict. Verifying the live OpenRouter path is now a glance at the badge rather than a devtools session, and still needs a founder generation.',
     recentChanges: [
       'Migrated primary provider DeepSeek → OpenRouter, kept Gemini fallback (DS-01)',
       'Chain-of-thought prompt + tuned sampling (temp 0.75 / top_p 0.9) (DS-02)',
       'Production OPENROUTER_API_KEY set and redeployed (founder, 2026-08-07)',
+      'Provider badge on every generated prompt, durable per-day failover counters and an Admin health verdict (ai-failover-invisible)',
     ],
     nextSteps: [
       'Verify a production generation is actually served by OpenRouter, not the Gemini fallback',
       'Watch the Vercel 12-function limit when adding AI routes',
-      'Add provider health/latency monitoring',
+      'Set RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL so a failover comes and finds the operator instead of waiting to be looked at',
+      'Latency is still unmeasured — the health counters record success and failure, not how long each provider took',
     ],
-    updated: '2026-08-07',
+    updated: '2026-09-03',
   },
   {
     id: 'infra-deploy',

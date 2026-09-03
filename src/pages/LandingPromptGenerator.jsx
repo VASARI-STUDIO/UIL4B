@@ -3,6 +3,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { auth as firebaseAuth } from '../utils/firebase'
 import AuthGate from '../components/AuthGate'
+import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
 import { LP_CATEGORIES, LP_PRESETS, buildLandingJson, buildLandingText } from '../data/landingPromptRules'
 
 const TOOL_ID = 'prompts-ai'
@@ -70,6 +71,8 @@ export default function LandingPromptGenerator({ toast }) {
       setResults(prev => [{
         id: crypto.randomUUID(),
         prompt: data.prompt,
+        // Same field this page used to discard — see src/utils/aiProvider.js.
+        provider: data.provider || null,
         brief: promptText,
         json: { ...json },
         ts: Date.now(),
@@ -193,6 +196,20 @@ export default function LandingPromptGenerator({ toast }) {
               <div className="aipg-result-meta">
                 <span className="pl-tag">Website</span>
                 <span className="pl-tag">JSON</span>
+                {(() => {
+                  const p = describeProvider(r.provider)
+                  if (!p) return null
+                  return (
+                    <span
+                      data-testid="ai-provider-badge"
+                      data-provider={p.id}
+                      style={providerBadgeStyle(p)}
+                      title={p.title}
+                    >
+                      {p.label}
+                    </span>
+                  )
+                })()}
               </div>
               <div className="aipg-result-prompt">{r.prompt}</div>
               <div className="aipg-result-actions">
