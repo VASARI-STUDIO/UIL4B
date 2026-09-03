@@ -346,6 +346,10 @@
       "destination": "/help/index.html"
     },
     {
+      "source": "/home",
+      "destination": "/home/index.html"
+    },
+    {
       "source": "/info",
       "destination": "/info/index.html"
     },

@@ -12,7 +12,7 @@
 // exact path. There is no ordering subtlety left to be wrong about.
 //
 // Run via `npm run sync:rewrites`. tests/unit/prerender-routes.test.js fails if
-// vercel.json and the sitemap ever disagree, so this cannot rot.
+// vercel.json and the route matrix ever disagree, so this cannot rot.
 //
 // It also generates the `redirects` block, from src/data/legacyRoutes.js. Same
 // reasoning, one step earlier in the request: a retired URL must be answered
@@ -24,18 +24,16 @@ import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { LEGACY_REDIRECTS } from '../src/data/legacyRoutes.js'
+import { prerenderRoutes } from './route-matrix.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-export async function prerenderRoutes() {
-  const xml = await readFile(path.join(root, 'public', 'sitemap.xml'), 'utf8')
-  const out = []
-  for (const m of xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)) {
-    const { pathname } = new URL(m[1])
-    if (pathname !== '/') out.push(pathname.replace(/\/+$/, ''))
-  }
-  return [...new Set(out)].sort()
-}
+// Re-exported so tests/unit/prerender-routes.test.js can ask this file the same
+// question vercel.json was generated from. The list itself is NOT built here
+// any more: it used to be read out of public/sitemap.xml, which silently made
+// "prerendered" and "advertised" the same set. scripts/route-matrix.mjs is the
+// matrix, and the sitemap is the advertised subset of it.
+export { prerenderRoutes }
 
 export function buildRewrites(routes) {
   return [
@@ -72,7 +70,7 @@ if (process.argv[1]?.endsWith('sync-vercel-rewrites.mjs')) {
   const config = {
     ...rest,
     redirects: buildRedirects(),
-    rewrites: buildRewrites(await prerenderRoutes()),
+    rewrites: buildRewrites(prerenderRoutes()),
     headers,
   }
   await writeFile(file, `${JSON.stringify(config, null, 2)}\n`, 'utf8')

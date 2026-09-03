@@ -19,6 +19,20 @@ import path from 'node:path'
 import { isUnknownRoute, isPrivateRoute, robotsFor, canonicalUrl } from '../../src/utils/routeMeta.js'
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { buildRewrites, prerenderRoutes } from '../../scripts/sync-vercel-rewrites.mjs'
+import { sitemapRoutes } from '../../scripts/route-matrix.mjs'
+// ── "prerendered" and "advertised" are no longer the same set ───────────────
+//
+// scripts/route-matrix.mjs now decides which routes get a shell, and
+// public/sitemap.xml is the ADVERTISED SUBSET of that matrix. They differ by
+// /home, which is prerendered so the site's most-linked URL stops unfurling as
+// "Page not found", and is deliberately not advertised because routeMeta.js
+// canonicalises it onto `/`.
+//
+// So every assertion below now asks the right list: sitemapRoutes() where it
+// means "we told Google about this", prerenderRoutes() where it means "a file
+// exists at this path". They used to be one call, which is why several test
+// names below say "sitemap" while reading the prerender list.
+
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
@@ -36,7 +50,7 @@ test('every route with its own metadata is treated as real', () => {
 test('every route in the crawler sitemap is treated as real', async () => {
   // A sitemap entry that the app considers unknown would be advertised to
   // Google and then served `noindex` — actively worse than not listing it.
-  for (const route of await prerenderRoutes()) {
+  for (const route of await sitemapRoutes()) {
     assert.equal(isUnknownRoute(route), false, `${route} is in sitemap.xml but reads as missing`)
   }
 })
@@ -125,8 +139,8 @@ test('the catch-all serves the 404 shell, not the homepage', async () => {
   assert.match(catchAll.source, /\(\?!api\/\|assets\//, 'the API and assets must bypass it')
 })
 
-test('every sitemap route has its own explicit rewrite ahead of the catch-all', async () => {
-  const routes = await prerenderRoutes()
+test('every prerendered route has its own explicit rewrite ahead of the catch-all', async () => {
+  const routes = prerenderRoutes()
   const rewrites = buildRewrites(routes)
   const catchAllIndex = rewrites.length - 1
   for (const route of routes) {
@@ -141,12 +155,12 @@ test('vercel.json on disk matches what the generator produces', async () => {
   // The file is generated; a hand edit would be silently overwritten on the
   // next build, or worse, silently kept and drift.
   const onDisk = JSON.parse(read('vercel.json')).rewrites
-  assert.deepEqual(onDisk, buildRewrites(await prerenderRoutes()),
-    'run `npm run sync:rewrites` — vercel.json has drifted from the sitemap')
+  assert.deepEqual(onDisk, buildRewrites(prerenderRoutes()),
+    'run `npm run sync:rewrites` — vercel.json has drifted from the route matrix')
 })
 
 test('the two genuinely-missing pages are now advertised, and the thin one is not', async () => {
-  const routes = await prerenderRoutes()
+  const routes = await sitemapRoutes()
 
   // /discover is a real surface landing linking three live libraries.
   // /sitemap is the HTML index, and the 404 points at it as "see every page".
@@ -156,15 +170,24 @@ test('the two genuinely-missing pages are now advertised, and the thin one is no
 
   // /learn is NOT, and the 2026-08-11 audit was wrong to group it with those
   // two. Every entry in LEARN_GROUPS carries `soon: true` and the page reads
-  // "Learn is coming soon", so it resolves to noindex. Advertising a thin
-  // coming-soon page is a worse SEO outcome than omitting it, and it would
-  // contradict the page's own head.
+  // "Learn is coming soon", so advertising it would be advertising an empty
+  // library — a worse SEO outcome than omitting it.
+  //
+  // CORRECTION, measured rather than assumed: this comment used to claim
+  // /learn "resolves to noindex". It does not. isSoonRoute() only understands
+  // the Create tree (by design, per its own comment), so robotsFor('/learn')
+  // returns `index,follow`. The conclusion was right and the stated reason was
+  // false, which is the more dangerous of the two — the test was green for a
+  // mechanism that does not exist. What actually keeps /learn out is
+  // SOON_SURFACES in scripts/route-matrix.mjs, which excludes it explicitly.
+  // Left as a founder question there: the served shell says noindex and the
+  // hydrated page says index, and those should agree.'
   assert.ok(!routes.includes('/learn'),
     '/learn is a coming-soon page and must not be advertised until it has content')
 })
 
 test('the sitemap never advertises a private route', async () => {
-  for (const route of await prerenderRoutes()) {
+  for (const route of await sitemapRoutes()) {
     assert.equal(isPrivateRoute(route), false, `${route} is private and must not be in the sitemap`)
   }
 })
@@ -230,9 +253,17 @@ test('the alias does not leak into other routes', () => {
   assert.equal(canonicalUrl('/create/type-scale'), 'https://www.uil4b.com/create/type-scale')
 })
 
-test('/home is not advertised in the sitemap', async () => {
-  assert.ok(!(await prerenderRoutes()).includes('/home'),
+test('/home is not advertised in the sitemap, but IS prerendered', async () => {
+  assert.ok(!(await sitemapRoutes()).includes('/home'),
     'a canonicalised duplicate must not also be advertised as its own page')
+  // The other half, which used to be impossible to state because "advertised"
+  // and "prerendered" were one list. /home is the nav logo's target on every
+  // page, so it is the most-linked URL on the site; without a shell it falls to
+  // the catch-all and is served dist/404.html, which means every share of it
+  // unfurls as "UI L4B | Page not found" and a non-JS crawler reads `noindex`.
+  assert.ok(prerenderRoutes().includes('/home'),
+    '/home must have its own shell — without one the most-linked URL on the '
+    + 'site is served the 404 shell')
 })
 
 test('the sitemap never advertises a page that tells crawlers not to index it', async () => {
@@ -242,7 +273,7 @@ test('the sitemap never advertises a page that tells crawlers not to index it', 
   // coming soon", so robotsFor('/learn') is noindex. Advertising it would have
   // meant sitemap.xml saying "index this" about a page whose own head says the
   // opposite — a contradiction no single-file review would surface.
-  for (const route of await prerenderRoutes()) {
+  for (const route of await sitemapRoutes()) {
     assert.equal(robotsFor(route), 'index,follow',
       `${route} is advertised in sitemap.xml but resolves to ${robotsFor(route)}`)
   }
