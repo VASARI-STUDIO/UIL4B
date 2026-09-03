@@ -60,6 +60,8 @@ written down anywhere before.
 | Ideas awaiting a founder verdict | `docs/PROPOSALS.md` | — no agent may claim a verdict not written on the verdict line |
 | Founder-only console / credential work | `docs/OWNER-ACTIONS.md` | — |
 | Agent roles, tools, evidence classes | `.claude/agents/README.md` | — |
+| What real content exists, and what must never be fabricated | `PRODUCT.md`, "Evidence on Hand" | Any surface's own copy — a mock-up is a claim |
+| Durable product truth for the `impeccable` skill's commands | `PRODUCT.md` | It for values, routes or the backlog; it links to those |
 | Which skill to load | `.claude/skills/README.md` | — |
 | How to use the imported taste skills here | **This file**, "Imported taste skills" below | Those skills' own claims about what fonts and icon packs are "available" |
 
@@ -113,6 +115,7 @@ Verdicts from this pass. **KEEP** = accurate and needed · **UPDATE** = fixed he
 | `CLAUDE.md` | UPDATE | Accurate. Gains a link to this map. |
 | `README.md` | UPDATE | Accurate; said "four unit tests read the prerendered shells" and it is six. Now names the files. |
 | `CHANGELOG.md` | KEEP | Historical record. It names seven files that no longer exist — correctly, because it is the record *of* their deletion. Do not repair those as broken links. |
+| `PRODUCT.md` | NEW | Written by `$impeccable init` (2026-09-04). The durable product record every other Impeccable command reads. Deliberately short: it **links** for positioning, routes, tokens, gate and backlog rather than restating them. What it OWNS is `## Evidence on Hand` — the counted list of real content and, more importantly, the list of things this product has never had and no surface may invent. Also records the deliberate refusal to write a `DESIGN.md`, because `global.css` and `design-language-v2.md` already own that ground and every doc table of design values here has drifted at least once. |
 
 ### `docs/reference/`
 
