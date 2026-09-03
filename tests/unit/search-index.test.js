@@ -51,6 +51,7 @@ import {
 import {
   CREATE_GROUPS,
   CREATE_HOMES_THAT_RENDER,
+  NAV_SECTIONS,
   createRoutes,
   createTools,
   liveToolRoutes,
@@ -310,5 +311,72 @@ test('HomeCommandBar and CommandPalette hide workshop tools by the tree own flag
     const src = stripComments(read(file))
     assert.ok(!src.includes('.alpha'), `${file} still filters on the retired \`alpha\` flag`)
     assert.match(src, /tl\.soon/, `${file} no longer filters on the tree \`soon\` flag`)
+  }
+})
+
+test('the Create mega-menu is derived from CREATE_GROUPS, not a second copy of it', () => {
+  // The nav's `columns` model used to repeat every tool's id, label, route and
+  // `soon` flag beside the authoritative CREATE_GROUPS, in the same file. That
+  // is the defect this suite exists for, one surface over: a parallel list that
+  // drifts. It HAD drifted — the menu row read "AI Image Prompt" where the tool
+  // tree said "Image Prompt" — so a visitor met one name in the nav and another
+  // on the page it opened.
+  //
+  // Derived, not asserted: this compares the rendered menu against
+  // createTools() rather than naming the eighteen tools, so it cannot go stale
+  // the way the code did.
+  const create = NAV_SECTIONS.find((s) => s.id === 'create')
+  assert.ok(create, 'no Create section in NAV_SECTIONS')
+  const rows = create.columns.flat().flatMap((col) => col.tools)
+  const authoritative = new Map(createTools().map((t) => [t.id, t]))
+
+  // 1. Every menu row matches the tool tree on all three routing-relevant facts.
+  for (const row of rows) {
+    const tool = authoritative.get(row.id)
+    assert.ok(tool, `the menu offers "${row.id}", which is not a tool in CREATE_GROUPS`)
+    assert.equal(row.route, tool.route, `menu route for ${row.id} disagrees with the tool tree`)
+    assert.equal(row.label, tool.label, `menu label for ${row.id} disagrees with the tool tree`)
+    assert.equal(row.soon, tool.soon, `menu soon flag for ${row.id} disagrees with the tool tree`)
+  }
+
+  // 2. And nothing is missing: every tool the app mounts is reachable from the
+  //    menu. The "More" safety-net column exists so an unspecced tool still
+  //    renders; this asserts the spec never needs it.
+  assert.deepEqual(
+    rows.map((r) => r.id).sort(),
+    [...authoritative.keys()].sort(),
+    'the Create menu and CREATE_GROUPS list different tools',
+  )
+  assert.ok(
+    !create.columns.flat().some((col) => col.label === 'More'),
+    'a tool reached the "More" safety-net column — add it to CREATE_MENU_SPEC',
+  )
+
+  // 3. The source itself must not reintroduce the copy. A menu row that writes
+  //    a route down is the thing being prevented, so the spec is ids-only.
+  const src = stripComments(read('src/data/toolTree.js'))
+  assert.ok(src.includes('CREATE_MENU_SPEC'), 'stripping ate toolTree own code')
+  const spec = src.slice(src.indexOf('const CREATE_MENU_SPEC'), src.indexOf('function buildCreateMenu'))
+  assert.ok(spec.length > 100, 'could not isolate CREATE_MENU_SPEC from the source')
+  assert.ok(!spec.includes('/create/'),
+    'CREATE_MENU_SPEC writes routes down again — it must carry ids only')
+})
+
+test('no mega-menu row links to a Create category home that only redirects', () => {
+  // #332 fixed this in the search index; the nav is the other surface that can
+  // send someone through a bounce. A category home that is not in
+  // CREATE_HOMES_THAT_RENDER redirects to its first tool, so a menu row
+  // pointing at one costs the visitor a navigation for nothing.
+  const homes = new Set(CREATE_GROUPS.map((g) => g.home))
+  const renders = new Set(CREATE_HOMES_THAT_RENDER)
+  const bouncing = [...homes].filter((h) => !renders.has(h))
+  assert.ok(bouncing.length, 'no redirect-only category homes — this test has lost its subject')
+  for (const section of NAV_SECTIONS) {
+    for (const col of section.columns.flat()) {
+      for (const row of col.tools) {
+        assert.ok(!bouncing.includes(row.route),
+          `the ${section.label} menu row "${row.label}" points at ${row.route}, which only redirects`)
+      }
+    }
   }
 })
