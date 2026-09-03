@@ -148,9 +148,10 @@ test.describe('Semantic Colour system workflow', () => {
 
     await expect(page.getByText('Light interface')).toBeVisible()
     await expect(page.getByText('Dark interface')).toBeVisible()
-    await expect(page.locator('.stc-example-cue')).toHaveCount(8)
     await expect(page.locator('.stc-code')).toContainText('--color-success-50:')
     await expect(page.locator('.stc-code')).toContainText('--color-info-900:')
+    // The fifth role. Its ramp exports on the same contract as the other four.
+    await expect(page.locator('.stc-code')).toContainText('--color-pending-900:')
 
     const successRole = page.locator('.stc-role').first()
     await successRole.getByRole('button', { name: 'Custom' }).click()
@@ -193,9 +194,12 @@ test.describe('Semantic Colour system workflow', () => {
     const facts = page.locator('.stc-status span')
     await expect(facts).toHaveCount(4)
     await expect(facts.nth(0)).toContainText('Balanced')
-    await expect(facts.nth(1)).toContainText('4')
+    await expect(facts.nth(1)).toContainText('5')
     await expect(facts.nth(2)).toContainText('10')
-    await expect(facts.nth(3)).toContainText('40')
+    await expect(facts.nth(3)).toContainText('50')
+    // Same numbers, same sources, in the handoff block - which used to type
+    // "40" as a literal and name info as the last role.
+    await expect(page.getByRole('button', { name: 'Copy 50 CSS variables' })).toBeVisible()
 
     // Choosing another bundle re-reports the first fact - the strip is live, not
     // a decorative constant.

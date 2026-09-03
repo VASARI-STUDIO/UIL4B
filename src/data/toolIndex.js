@@ -191,7 +191,7 @@ export const CREATE_TOOL_SEARCH = {
     keywords: ['palette', 'palette builder', 'palettes', 'colour', 'color', 'swatch', 'scheme', 'harmony', 'brand colours', 'brand colors', 'generator'],
   },
   semantic: {
-    description: 'Success, warning, error and info colours derived from your brand.',
+    description: 'Success, warning, error, info and pending colours derived from your brand.',
     keywords: ['semantic', 'semantic colour', 'semantic color', 'state', 'states', 'success', 'warning', 'error', 'danger', 'info', 'tokens', 'system', 'studio'],
   },
   tint: {
