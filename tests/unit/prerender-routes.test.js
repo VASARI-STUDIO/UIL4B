@@ -27,8 +27,10 @@ import {
   classifyRoute,
   routeMatrix,
   sitemapRoutes,
+  sitemapUrls,
   unadvertised,
 } from '../../scripts/route-matrix.mjs'
+import { ORIGIN, advertisedRoutes, buildSitemap } from '../../scripts/sync-sitemap.mjs'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { CREATE_GROUPS } from '../../src/data/toolTree.js'
 import { canonicalUrl, robotsFor } from '../../src/utils/routeMeta.js'
@@ -233,6 +235,93 @@ test('the sitemap is a SUBSET of the matrix, and every extra route is explainabl
     assert.notEqual(canonicalUrl(route), `https://www.uil4b.com${route}`,
       `${route} is prerendered, self-canonical and NOT in sitemap.xml — either `
       + 'advertise it or explain why it is prerendered at all')
+  }
+})
+
+// ── The sitemap is generated, and both directions are asserted ──────────────
+
+test('public/sitemap.xml is exactly what the generator produces — no hand-edit drift', async () => {
+  // The same guard vercel.json has had since #325, and for the same reason: a
+  // generated file that anyone can hand-edit is a hand-written file with a
+  // misleading comment on top. Text comparison, not set comparison — the set is
+  // checked below; this catches the origin, the ordering and the shape.
+  //
+  // Line endings are normalised on BOTH sides, and that is not a softening: the
+  // repo has no .gitattributes and this machine checks out with
+  // core.autocrlf=true, so the file arrives CRLF on Windows and LF on CI while
+  // the generator always writes LF. Comparing raw bytes would fail for every
+  // Windows contributor on a clean checkout — a red build that says nothing
+  // about the sitemap. Caught by mutation: `git checkout -- public/sitemap.xml`
+  // made this test fail while the file was correct.
+  const eol = (s) => s.replace(/\r\n/g, '\n')
+  assert.equal(eol(read('public/sitemap.xml')), eol(buildSitemap()),
+    'run `npm run sync:sitemap` — public/sitemap.xml has drifted from the route matrix')
+})
+
+test('THE DIRECTION THAT WAS NOT ASSERTED: every self-canonical prerendered route is advertised', async () => {
+  // Containment (below) says everything advertised is prerendered. This is the
+  // other way round and it is the one that lets a real page go missing: a route
+  // that has its own shell, its own title and its own canonical, and which the
+  // sitemap simply never mentions, is a page we built and did not tell anyone
+  // about. Nothing failed for that before — `unadvertised()` was only asked
+  // whether the extras were explainable, one route at a time.
+  const sitemap = new Set(await sitemapRoutes())
+  const missing = prerenderRoutes().filter(
+    (route) => canonicalUrl(route) === `${ORIGIN}${route}` && !sitemap.has(route),
+  )
+  assert.deepEqual(missing, [],
+    'these routes are prerendered and self-canonical but are not in sitemap.xml')
+  // And the generator agrees about which routes those are, so the rule above
+  // and the rule the file was written from cannot be two different rules.
+  assert.deepEqual(advertisedRoutes(), ['/', ...[...sitemap].sort()])
+})
+
+test('nothing advertised is a URL we have canonicalised away', async () => {
+  // The third leg, and the only one the generator cannot fake its way past:
+  // this asks routeMeta.js directly rather than asking sync-sitemap.mjs whether
+  // it agrees with itself. Break the generator rule and regenerate, and the two
+  // tests above both still pass because both sides moved together — this one
+  // does not, because canonicalUrl() has not moved.
+  //
+  // /home is the case. It is prerendered on purpose and canonicalised onto `/`,
+  // so advertising it would be asking Google to crawl a URL whose own head
+  // tells it to index a different one.
+  for (const route of await sitemapRoutes()) {
+    assert.equal(canonicalUrl(route), `${ORIGIN}${route}`,
+      `${route} is advertised in sitemap.xml but canonicalises onto `
+      + `${canonicalUrl(route)} — advertise the canonical, not the duplicate`)
+  }
+})
+
+test('every advertised URL is absolute, on the canonical origin, and listed once', async () => {
+  // sitemapRoutes() keeps only the pathname, so until now none of these three
+  // could fail. An entry on http://uil4b.com is a different site to a crawler;
+  // a duplicate `<loc>` was silently de-duplicated by the parser.
+  const urls = await sitemapUrls()
+  assert.ok(urls.length >= 20, `the sitemap advertises only ${urls.length} URLs`)
+  assert.equal(new Set(urls).size, urls.length, 'a URL is advertised more than once')
+  for (const loc of urls) {
+    assert.ok(loc.startsWith(`${ORIGIN}/`),
+      `${loc} is not on ${ORIGIN} — a crawler treats another host as another site`)
+  }
+  // The homepage is the entry the pathname parser drops on the floor, so it is
+  // the one that could have gone missing without a single test noticing.
+  assert.ok(urls.includes(`${ORIGIN}/`), 'the homepage is not advertised at all')
+  // The origin is not written down here or in the generator: both ask
+  // routeMeta.js, which is what stamps every canonical the site serves.
+  assert.equal(ORIGIN, canonicalUrl('/').replace(/\/$/, ''))
+})
+
+test('the sitemap carries no hand-kept per-URL data left to go stale', async () => {
+  // priority and changefreq are ignored by Google; lastmod was hand-typed and
+  // had not been touched since 2026-08-22 while the pages behind it moved
+  // through #325 and #332 — a lastmod a crawler learns to distrust is worse
+  // than none. See scripts/sync-sitemap.mjs. Asserted rather than merely done,
+  // because re-adding one by hand is exactly how this file rotted the first time.
+  const xml = read('public/sitemap.xml')
+  for (const field of ['priority', 'changefreq', 'lastmod']) {
+    assert.ok(!xml.includes(`<${field}>`),
+      `sitemap.xml carries a hand-kept <${field}> again — it is not derived from anything`)
   }
 })
 
