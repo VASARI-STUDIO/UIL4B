@@ -6,7 +6,9 @@
 // social unfurler (Facebook, LinkedIn, Slack, X, Discord), and any crawler
 // reading raw HTML — was served dist/index.html for every URL. That meant:
 //
-//   • every shared tool link unfurled as the homepage card;
+//   • every shared tool link unfurled as the homepage card — the WORDS were
+//     fixed first and the PICTURE was not, so until og:image was written per
+//     route as well, a link to the Contrast Checker still showed the homepage;
 //   • all ~26 URLs declared `canonical = https://www.uil4b.com`, which is an
 //     explicit instruction to drop them from the index;
 //   • the <noscript> block was homepage copy on every one of them, so a non-JS
@@ -16,15 +18,24 @@
 // the head — which is all that was actually broken. Full SSR would buy little
 // here and cost a second rendering path to keep correct.
 //
-// The route list is the crawler sitemap, and the copy comes from the same
-// src/data/routeMetaMap.js the runtime imports, so the served HTML and the
-// hydrated page cannot disagree.
+// The route list is the explicit matrix in scripts/route-matrix.mjs (it used to
+// be public/sitemap.xml, which could not express a route that must be
+// prerendered but NOT advertised — see that file). The copy comes from the same
+// src/data/routeMetaMap.js the runtime imports, and the canonical and robots
+// directives come from the same src/utils/routeMeta.js functions App.jsx calls
+// on every navigation, so the served HTML and the hydrated page cannot
+// disagree — there is one implementation of each, not two.
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
+import { prerenderRoutes } from './route-matrix.mjs'
+import { DEFAULT_CARD, cardFor, cardUrl } from './share-cards.mjs'
+import { breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
+import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const dist = path.join(root, 'dist')
@@ -40,18 +51,6 @@ const attr = (s) => String(s)
 const text = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-/** The routes to emit: exactly what the crawler sitemap advertises. Reading it
- *  rather than keeping a second list means a route added to one is never
- *  silently missing from the other. */
-async function routesFromSitemap() {
-  const xml = await readFile(path.join(root, 'public', 'sitemap.xml'), 'utf8')
-  const out = []
-  for (const m of xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)) {
-    const url = new URL(m[1])
-    if (url.pathname !== '/') out.push(url.pathname.replace(/\/+$/, ''))
-  }
-  return [...new Set(out)]
-}
 
 /**
  * Rewrite one head. Every replacement is anchored to the exact tag the built
@@ -59,8 +58,7 @@ async function routesFromSitemap() {
  * no-op here would ship the homepage's metadata again while the build stayed
  * green, which is precisely the failure this script exists to end.
  */
-function rewriteHead(html, { route, title, description, robots = null, canonicalUrl = null }) {
-  const canonical = canonicalUrl ?? `${ORIGIN}${route}`
+function rewriteHead(html, { title, description, robots, canonical, card, schema = '' }) {
   const misses = []
   const sub = (label, re, next) => {
     if (!re.test(html)) { misses.push(label); return }
@@ -106,6 +104,38 @@ function rewriteHead(html, { route, title, description, robots = null, canonical
   sub('twitter:description', /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/,
     `<meta name="twitter:description" content="${attr(description)}" />`)
 
+  // ── The share card ────────────────────────────────────────────────────────
+  //
+  // The half of the unfurl this script did not fix the first time. Titles and
+  // descriptions were already per-route; og:image was not, so every one of the
+  // shells pointed at /previews/og-image.png and a link to any tool showed the
+  // homepage picture. See scripts/share-cards.mjs for why the answer is one
+  // card per SECTION rather than 28 pieces of per-route art.
+  //
+  // og:image:alt moves with the image. An alt that still describes the homepage
+  // card while the image is the Colour card is worse than no alt: it is a wrong
+  // description read aloud to exactly the people who cannot see the picture.
+  if (card) {
+    const src = cardUrl(ORIGIN, card)
+    sub('og:image', /<meta\s+property="og:image"\s+content="[^"]*"\s*\/?>/,
+      `<meta property="og:image" content="${attr(src)}" />`)
+    sub('og:image:alt', /<meta\s+property="og:image:alt"\s+content="[^"]*"\s*\/?>/,
+      `<meta property="og:image:alt" content="${attr(card.alt)}" />`)
+    sub('twitter:image', /<meta\s+name="twitter:image"\s+content="[^"]*"\s*\/?>/,
+      `<meta name="twitter:image" content="${attr(src)}" />`)
+  }
+
+  // ── Per-route structured data ─────────────────────────────────────────────
+  //
+  // Appended as its own <script>, beside the site-level WebApplication block
+  // rather than merged into it: they describe different entities, and multiple
+  // ld+json blocks in one head is the shape every consumer expects. Inserted
+  // before </head> and asserted like every other replacement — a silent miss
+  // here would drop the schema while the build stayed green.
+  if (schema) {
+    sub('schema', /<\/head>/, `${schema}</head>`)
+  }
+
   // The <noscript> fallback was the homepage's own sales copy, repeated on
   // every URL. Replaced with something true for the page it is actually on.
   html = html.replace(
@@ -117,15 +147,46 @@ function rewriteHead(html, { route, title, description, robots = null, canonical
   return { html, misses }
 }
 
+/**
+ * The built shell must carry the ladder's price, not a placeholder.
+ *
+ * vite.config.js's `transformIndexHtml` hook fills index.html's pricing markers
+ * from src/config/planLadder.js. This asserts it actually ran and actually
+ * produced the ladder's amounts — because the way that hook fails is silently:
+ * a plugin dropped from the array, an `order` change, a marker renamed in one
+ * file and not the other. Every one of those leaves a green build serving a
+ * page whose price is missing or stale, which is the exact failure the
+ * derivation was built to end. Cheap to check here, and this is the only step
+ * that reads the finished shell.
+ */
+function assertPricingSubstituted(html) {
+  for (const marker of [JSONLD_MARKER, PRICING_MARKER]) {
+    if (html.includes(marker)) {
+      console.error(`prerender: dist/index.html still contains ${marker}.`)
+      console.error('prerender: the pricing hook in vite.config.js did not run — the shell has no price.')
+      process.exit(1)
+    }
+  }
+  const missing = ladderOffers()
+    .filter((offer) => !html.includes(`"price": "${offer.price}"`))
+    .map((offer) => `${offer.name} (${offer.price})`)
+  if (missing.length) {
+    console.error(`prerender: dist/index.html does not quote the plan ladder: ${missing.join(', ')}.`)
+    console.error('prerender: the JSON-LD offers and src/config/planLadder.js disagree.')
+    process.exit(1)
+  }
+}
+
 async function main() {
   if (!existsSync(path.join(dist, 'index.html'))) {
     console.error('prerender: dist/index.html not found — run `vite build` first.')
     process.exit(1)
   }
   const shell = await readFile(path.join(dist, 'index.html'), 'utf8')
-  const routes = await routesFromSitemap()
+  assertPricingSubstituted(shell)
+  const routes = prerenderRoutes()
   if (!routes.length) {
-    console.error('prerender: no routes found in public/sitemap.xml')
+    console.error('prerender: the route matrix is empty — see scripts/route-matrix.mjs')
     process.exit(1)
   }
 
@@ -140,7 +201,19 @@ async function main() {
     // than quietly written.
     if (!title) { untitled.push(route); continue }
 
-    const { html, misses } = rewriteHead(shell, { route, title, description })
+    // Canonical and robots come from the runtime's own functions rather than
+    // being rebuilt here. The old `ORIGIN + route` was right for every route
+    // this script happened to emit and WRONG for /home, which routeMeta.js
+    // canonicalises onto `/` — exactly the kind of near-miss that survives a
+    // review because it is correct on 27 of 28 rows.
+    const { html, misses } = rewriteHead(shell, {
+      title,
+      description,
+      robots: robotsFor(route),
+      canonical: canonicalUrl(route),
+      card: cardFor(route),
+      schema: breadcrumbJsonLd(route, ORIGIN),
+    })
     misses.forEach(m => allMisses.add(m))
 
     const dir = path.join(dist, route.replace(/^\//, ''))
@@ -158,12 +231,16 @@ async function main() {
   // It carries NO canonical of its own. Pointing every unknown URL at `/` would
   // consolidate junk into the homepage's signals, and self-canonicalising would
   // assert the page is real. `noindex` says the true thing: don't keep this.
+  // No card of its own and no breadcrumb: a page that does not exist has no
+  // place in a hierarchy, and drawing it a card would be dressing up a dead
+  // end. It keeps the site card, which is the honest picture for "you are on
+  // uil4b.com, but not on a page".
   const notFound = rewriteHead(shell, {
-    route: '/404',
     title: 'UI L4B | Page not found',
     description: 'That page does not exist. Browse the tools, or head back to the homepage.',
     robots: 'noindex,follow',
-    canonicalUrl: `${ORIGIN}/404`,
+    canonical: `${ORIGIN}/404`,
+    card: DEFAULT_CARD,
   })
   notFound.misses.forEach(m => allMisses.add(m))
   await writeFile(path.join(dist, '404.html'), notFound.html, 'utf8')
@@ -178,7 +255,15 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`prerender: wrote ${routes.length} route shells + a noindex 404 shell.`)
+  // The counts are printed because they are the only place a human sees the
+  // matrix move. A route silently dropping out of the matrix, or a whole
+  // section of share cards going missing, changes a number here.
+  const carded = routes.filter((r) => cardFor(r).id !== DEFAULT_CARD.id).length
+  const crumbed = breadcrumbRoutes(routes, ORIGIN).length
+  console.log(
+    `prerender: wrote ${routes.length} route shells + a noindex 404 shell `
+    + `(${carded} on a section share card, ${crumbed} with a BreadcrumbList).`,
+  )
 }
 
 main().catch((err) => { console.error('prerender failed:', err); process.exit(1) })
