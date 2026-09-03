@@ -199,3 +199,92 @@ test.describe('the shared rail affordance', () => {
     expect(Number(state.left), 'a rail with nothing behind it must not fade its left edge').toBe(0)
   })
 })
+
+test.describe('the journey can be finished, and undone, on a touch device (A5)', () => {
+  // The 2026-09-03 audit measured the palette action ribbon at four touch
+  // widths and found Save / export off the right edge at EVERY one of them,
+  // with Undo and Reset alongside it:
+  //
+  //   390px   4 of 11 fully visible, 6 hidden, 669px of scroll
+  //   640px   6 of 11 fully visible, 4 hidden, 419px
+  //   641px   6 of 11 fully visible, 4 hidden, 418px
+  //   834px   3 of 11 fully visible, 7 hidden, 691px
+  //
+  // Save / export is the only route from a finished palette to a file, so on a
+  // phone the journey simply could not be finished without first discovering
+  // that the row scrolls. Undo and Reset are the worse half: a mis-tap could
+  // not be taken back.
+  //
+  // THIS ASSERTS REACHABILITY AT REST, NOT THAT NOTHING SCROLLS. The rail is a
+  // scroller by design at these widths and the A4 test above pins that; the
+  // question this file exists to answer is WHICH controls you get for free.
+  // Exploratory controls (Explore, Preview, Vision, Gradient, History) are
+  // still behind a swipe and that is the deliberate trade.
+  const FREE = ['Randomise', 'Undo', 'Reset', 'Save / export']
+
+  for (const width of [390, 640, 641, 834]) {
+    test(`Save / export, Undo and Reset need no swipe at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: width < 700 ? 844 : 1112 })
+      watch(page, `someone finishing a palette on a ${width}px screen`)
+      await go(page, '/create/palette')
+      await expectRendered(page)
+      await expect(page.locator('.plb-random')).toBeVisible()
+      await settleRail(page)
+
+      const report = await page.evaluate((names) => {
+        const rail = document.querySelector('.plb-toolbar-group.rail-overflow')
+        const g = rail.getBoundingClientRect()
+        const out = { scrollLeft: Math.round(rail.scrollLeft), controls: {} }
+        for (const name of names) {
+          // Randomise has no aria-label; it is named by its text.
+          const btn = rail.querySelector(`[aria-label="${name}"]`)
+            || [...rail.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(name))
+          if (!btn) { out.controls[name] = { missing: true }; continue }
+          const b = btn.getBoundingClientRect()
+          out.controls[name] = {
+            // Fully inside the ribbon's own clipping box, at rest, no swipe.
+            inside: b.left >= g.left - 1 && b.right <= g.right + 1,
+            box: [Math.round(b.left), Math.round(b.right)],
+            rail: [Math.round(g.left), Math.round(g.right)],
+          }
+        }
+        return out
+      }, FREE)
+
+      expect(report.scrollLeft, 'the ribbon should open at its start, not pre-scrolled').toBe(0)
+      for (const name of FREE) {
+        const c = report.controls[name]
+        expect(c.missing, `${name} should exist in the action ribbon`).toBeFalsy()
+        expect(
+          c.inside,
+          `${name} must be reachable without swiping at ${width}px: button ${JSON.stringify(c.box)} vs rail ${JSON.stringify(c.rail)}`,
+        ).toBe(true)
+      }
+    })
+  }
+
+  test('the promoted controls keep their accessible names when the label is hidden', async ({ page }) => {
+    // Undo and Reset go icon-only below 961px, which is what buys the room for
+    // Save / export. That trades a visible word for a visible BUTTON and must
+    // not trade away the name a screen reader reads.
+    await page.setViewportSize({ width: 390, height: 844 })
+    watch(page, 'a screen-reader user on a phone')
+    await go(page, '/create/palette')
+    await expectRendered(page)
+
+    for (const name of ['Undo', 'Reset', 'Save / export']) {
+      await expect(
+        page.locator('.plb-toolbar').getByRole('button', { name, exact: true }),
+      ).toHaveCount(1)
+    }
+    const labelHidden = await page.evaluate(() => {
+      const q = (s) => document.querySelector(s)
+      return {
+        undo: getComputedStyle(q('.plb-undo .plb-lbl')).display,
+        reset: getComputedStyle(q('.plb-reset .plb-lbl')).display,
+      }
+    })
+    expect(labelHidden.undo, 'Undo should be icon-only at 390px').toBe('none')
+    expect(labelHidden.reset, 'Reset should be icon-only at 390px').toBe('none')
+  })
+})

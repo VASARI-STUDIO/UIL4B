@@ -8008,8 +8008,14 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
      of the whole tool and it owns the Space-bar shortcut, so a user who never
      scrolls the ribbon never learns the tool's main gesture exists. Pulling it
      to the front costs nothing: the ribbon scrolls either way, and this decides
-     only WHICH control the user is given for free. */
-  .plb-random{order:-1}
+     only WHICH control the user is given for free.
+
+     THE PROMOTION ITSELF NOW LIVES IN THE SHARED max-width:960px BLOCK BELOW,
+     alongside Undo, Reset and Save / export, which the 2026-09-03 audit found
+     hidden at every touch width. It was MOVED rather than duplicated because
+     the ≤768 block comes AFTER that shared block: a band-local `order` here
+     would still win at 769–960 but be overridden at ≤768, which is the same
+     one-band-only split that produced "THE MISSED BAND" in the first place. */
 }
 /* Shared bottom-sheet treatment for every width where the action group scrolls
    internally (mid-band 769–960 AND the ≤768 stack): a scroll container clips its
@@ -8051,6 +8057,54 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
      padding used to. */
   .plb-icobtn .plb-lbl{display:contents}
   .plb-icobtn .plb-lbl-i{overflow:visible;min-width:max-content}
+
+  /* WHICH FOUR CONTROLS THE USER IS GIVEN FOR FREE.
+     #318 established the mechanism here with `.plb-random{order:-1}`, and
+     stated the principle: the ribbon scrolls either way, so `order` does not
+     decide WHETHER a control is reachable, only which ones need no gesture.
+     This extends that one promotion to the set the 2026-09-03 audit measured
+     as missing, and it is the audit's own second-choice fix made cheap.
+
+     MEASURED BEFORE, real device metrics, of eleven children:
+       390px   4 full, 1 part-cut, 6 hidden (669px of scroll)
+       640px   6 full, 1 part-cut, 4 hidden (419px)
+       641px   6 full, 1 part-cut, 4 hidden (418px)
+       834px   3 full, 1 part-cut, 7 hidden (691px)
+     Save / export was hidden at ALL FOUR, and Undo and Reset with it. So the
+     control that ends the journey — the only route from a finished palette to
+     a file — was off-screen on every phone and every tablet, and a mis-tap
+     could not be undone without first discovering that the row scrolls.
+     Losing Undo and Reset is the worse half: an export button you cannot find
+     is a dead end, but a Reset you cannot find is a palette you cannot get
+     back.
+
+     THE ORDER IS DOM ORDER WITHIN THE PROMOTED SET (Undo → Reset → Save), not
+     an arbitrary shuffle. `order` moves the box without moving the tab stop,
+     so every promotion is a WCAG 2.4.3 cost; keeping the promoted four in
+     their own DOM sequence means there is exactly ONE jump boundary — the same
+     shape #318 already accepted for Randomise — instead of a new kind of
+     mismatch. #298 rejected reordering outright on `.lbry-toolbar`; the
+     difference here is that this rail is a scroller by design (pinned by
+     tests/user-sim/36-rail-overflow.spec.js and 23-responsive-mid-band.spec.js),
+     so SOMETHING is always off-screen and the only question is what.
+
+     UNDO AND RESET GO ICON-ONLY, which is what buys the room: labelled they
+     are 73px and 76px, icon-only they are 42px, and that 65px is the
+     difference between Save / export being fully visible at 390px and being
+     cut. They keep their `aria-label` and their `title`, so the accessible
+     name is unchanged — this trades a visible word for a visible BUTTON, and
+     an icon you can see beats a label you cannot. Randomise keeps its label
+     because it is the primary action, and Save / export keeps its because it
+     is the one the audit found missing. */
+  .plb-random{order:-4}
+  .plb-undo{order:-3}
+  .plb-reset{order:-2}
+  .plb-savewrap{order:-1}
+  .plb-undo .plb-lbl,.plb-reset .plb-lbl{display:none}
+  /* The separator sat between History and Save / export. With Save / export
+     promoted to the front it divides nothing, so it goes in both bands rather
+     than trailing the rail as a stray rule. ≤768 already hid it. */
+  .plb-toolbar-sep{display:none}
 }
 @media(max-width:768px){
   /* Toolbar stacks: an identity row (seed/hex/system) above a horizontally
@@ -8066,9 +8120,10 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
      `scroll-padding-inline` matches the padding — see the mid-band note. */
   .plb-toolbar-group:last-child{flex-wrap:nowrap;gap:6px;margin:0 -12px;padding:2px 12px;scroll-padding-inline:12px}
   .plb-toolbar-group:last-child>*{flex:0 0 auto;scroll-snap-align:start}
-  .plb-random{order:-1}
+  /* `.plb-random{order:-1}` and `.plb-toolbar-sep{display:none}` moved to the
+     shared max-width:960px block above, which covers this band and the
+     mid-band together. See the note there for the promoted set. */
   .plb-kbd{display:none}
-  .plb-toolbar-sep{display:none}
   /* The bottom-sheet dropdown treatment (.plb-menu / .plb-scrolllist /
      .plb-galpopup*) is shared with the mid-band in the @media(max-width:960px)
      block above — only the ≤768-unique rules live here. */

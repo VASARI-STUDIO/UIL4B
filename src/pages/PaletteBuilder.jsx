@@ -2259,10 +2259,14 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
-          <button type="button" className="btn btn-s plb-icobtn" aria-label="Undo" onClick={undoPalette} disabled={!canUndo} title="Undo the last palette change">
+          {/* `plb-undo` / `plb-reset` are layout hooks, not new styling: below
+              961px these two are promoted out of the rail's overflow and drop
+              their visible label (see the max-width:960px block in global.css).
+              The accessible name stays on aria-label either way. */}
+          <button type="button" className="btn btn-s plb-icobtn plb-undo" aria-label="Undo" onClick={undoPalette} disabled={!canUndo} title="Undo the last palette change">
             <IcoUndo /><span className="plb-lbl"><span className="plb-lbl-i">Undo</span></span>
           </button>
-          <button type="button" className="btn btn-s plb-icobtn" aria-label="Reset" onClick={resetPalette} title="Reset every palette control to its default">
+          <button type="button" className="btn btn-s plb-icobtn plb-reset" aria-label="Reset" onClick={resetPalette} title="Reset every palette control to its default">
             <IcoReset /><span className="plb-lbl"><span className="plb-lbl-i">Reset</span></span>
           </button>
           <div className="plb-menuwrap">
@@ -2326,7 +2330,9 @@ export default function PaletteBuilder({ onCopy, toast }) {
             )}
           </div>
           <span className="plb-toolbar-sep" aria-hidden="true" />
-          <div className="plb-menuwrap">
+          {/* The order hook goes on the WRAPPER, not the button: the wrapper is
+              the rail's flex item, so `order` on the button would do nothing. */}
+          <div className="plb-menuwrap plb-savewrap">
             <button
               type="button"
               className="btn btn-s btn-accent plb-icobtn"
