@@ -602,8 +602,15 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.locator('.hcmd-row')).toHaveCount(0)
     await expect(page.locator('.hcmd-empty')).toContainText('zzzznothing')
 
-    // A quick-fill chip is a real query against the same index.
-    await page.locator('.hcmd-chip', { hasText: 'gradient' }).click()
+    // This used to click a quick-fill chip. The founder removed the chip row on
+    // 2026-09-03 (asserted in test 1–4), but the property the click was standing
+    // in for — a term the page SUGGESTS is a real query against this same index
+    // — did not go with it. That property moved to the typed placeholder and is
+    // asserted harder below, in "every term the placeholder types is a tool the
+    // bar can actually find", which types whatever it observed on screen rather
+    // than a term this file chose. What is left to check here is the recovery
+    // path: a real query after a miss still resolves.
+    await input.fill('gradient')
     await expect(input).toHaveValue('gradient')
     await expect(page.locator('.hcmd-row').first()).toBeVisible()
 
