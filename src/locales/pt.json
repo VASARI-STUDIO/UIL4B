@@ -108,10 +108,6 @@
     }
   },
   "tools": {
-    "colorStudio": {
-      "label": "Estúdio de Cores",
-      "description": "Construtor completo de sistema de cores com paleta, tons, contraste e gradientes."
-    },
     "typeScale": {
       "label": "Escala Tipográfica",
       "description": "Calculadora de escala tipográfica modular com exportação CSS."
