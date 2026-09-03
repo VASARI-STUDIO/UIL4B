@@ -98,6 +98,36 @@ test.describe('Gradient Generator workbench resilience', () => {
     await page.getByRole('button', { name: 'Copy', exact: true }).click()
     await expect(page.getByText('Clipboard is not available in this browser')).toBeVisible()
   })
+
+  // The page used to end with a numbered step called "03 - Starting points /
+  // Begin with colours you trust", BELOW the canvas and the inspector - so it
+  // told you where to begin after you had already composed and exported. For
+  // anyone without a saved palette that whole numbered step rendered a single
+  // apology in a full-height card, and a second card beside it made the same
+  // offer with the curated rail.
+  //
+  // There are two real steps here. This asserts the numbered sequence is exactly
+  // those two and has no gap, which is the part that silently regresses when a
+  // section is added back.
+  test('the numbered steps are the two the page actually has, and the sources are not one of them', async ({ page }) => {
+    watch(page, 'a designer arriving with no saved palette')
+    await go(page, '/create/gradient')
+
+    // The tool is lazy-loaded; read the sequence only once it has mounted.
+    await expect(page.getByRole('heading', { level: 1, name: 'Gradient Generator' })).toBeVisible()
+    await expect(page.locator('.ggn-step').first()).toBeVisible()
+
+    const steps = await page.locator('.ggn-step').allTextContents()
+    expect(steps.map(t => t.trim())).toEqual(['01 · Canvas', '02 · Inspector'])
+
+    // The sources block is present, unnumbered, and never empty: the curated
+    // rail is always populated even when the user has no palettes.
+    const start = page.locator('.ggn-starting')
+    await expect(start).toBeVisible()
+    await expect(start.locator('.ggn-step')).toHaveCount(0)
+    await expect(start.locator('.ggn-preset').first()).toBeVisible()
+    await expect(start.getByRole('link', { name: /Gradient Library/ })).toBeVisible()
+  })
 })
 
 test.describe('Semantic Colour system workflow', () => {

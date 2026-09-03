@@ -8793,8 +8793,14 @@ input.ggn-stop-hex{font-family:var(--mono);padding:0}
 .ggn-stop-hex-field{position:relative;display:flex;flex:1;min-width:0;flex-direction:column}
 .ggn-stop-hex[aria-invalid="true"]{color:var(--err)}
 .ggn-field-error{position:absolute;top:calc(100% + 8px);left:-8px;z-index:5;min-width:max-content;padding:6px 8px;font-size:10px;color:var(--err);background:var(--ggn-panel);border:1px solid color-mix(in srgb,var(--err) 38%,var(--ggn-line));border-radius:var(--radius-xs);box-shadow:var(--shadow-s)}
-.ggn-sources{margin-top:var(--s-5)}
-.ggn-starting{margin-top:var(--s-4)}
+.ggn-starting{margin-top:var(--s-5)}
+/* `.ggn-sources` retired (#323): the palette-import block and the curated rail
+   were two cards making the same offer, and the first was numbered as a third
+   step below the canvas. They are one `.ggn-starting` section now, with each
+   source group labelled inside it. */
+.ggn-start-group+.ggn-start-group{margin-top:var(--s-5)}
+.ggn-start-label{display:block;margin-bottom:10px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ggn-t2)}
+.ggn-starting .ggn-import-empty{margin-top:var(--s-4)}
 /* overflow / scrollbar / snap-type / edge fade come from `.rail-overflow`, which
    is on the element in the markup. */
 .ggn-presets{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(142px,1fr);grid-template-columns:none;padding-bottom:8px}
