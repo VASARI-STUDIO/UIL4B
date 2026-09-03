@@ -124,10 +124,6 @@
     }
   },
   "tools": {
-    "colorStudio": {
-      "label": "Colour Studio",
-      "description": "Complete colour system builder with palette, tints, contrast, and gradients."
-    },
     "typeScale": {
       "label": "Type Scale",
       "description": "Modular type scale calculator with CSS export."

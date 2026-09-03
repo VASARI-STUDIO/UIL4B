@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import { readFile } from 'node:fs/promises'
 import {
   accountProviderIds,
@@ -64,14 +66,43 @@ test('account switching never signs out before target authentication', async () 
   }
 })
 
+// The gate half of this used to be pinned to two named files: App.jsx, and
+// TopBar.jsx — which was the app's nav when the gate was written. TopBar has
+// since been deleted (it was unreachable: App.jsx moved to PillNav, nothing
+// rendered <TopBar>, and no built bundle contained a line of it), and a test
+// that reads a deleted file by name fails for the wrong reason. Re-pinning the
+// assertion to whichever file is the nav TODAY would only buy the next nav
+// rewrite the same failure.
+//
+// So the invariant is kept and the filenames are dropped. "Signing in must
+// never be punted to a popup window" is a property of the WHOLE app, not of one
+// component, and scanning src/ for it is both stricter than the two file-pinned
+// checks were and immune to the next rename. The population floor is what stops
+// it passing by walking nothing.
+function srcFiles(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) return srcFiles(full)
+    return /\.jsx?$/.test(entry.name) ? [full] : []
+  })
+}
+
 test('legacy login window gate is removed and nav handles switch outcomes in place', async () => {
-  const [topBar, app, pillNav] = await Promise.all([
-    readFile(new URL('../../src/components/TopBar.jsx', import.meta.url), 'utf8'),
-    readFile(new URL('../../src/App.jsx', import.meta.url), 'utf8'),
-    readFile(new URL('../../src/components/PillNav.jsx', import.meta.url), 'utf8'),
-  ])
-  assert.ok(!topBar.includes("window.open(`${window.location.origin}/login?gate=1`"))
-  assert.ok(!app.includes('gate=1'))
+  const files = srcFiles(new URL('../../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
+  assert.ok(files.length >= 150,
+    `expected to walk the whole of src/, found only ${files.length} files`)
+  const gated = files.filter((f) => fs.readFileSync(f, 'utf8').includes('gate=1'))
+  assert.deepEqual(gated, [],
+    'the legacy login popup gate is back. Signing in happens in place — a popup '
+    + 'window is blocked by default on mobile and loses the return path.\n\n'
+    + 'If the file named above is src/data/pipeline.js, the match is PROSE, not a '
+    + 'gate: a backlog note has quoted the query flag literally, and this scan '
+    + 'reads that file like any other because it is inside src/. Reword the note '
+    + 'to describe the flag instead of spelling it. That is not a quirk of this '
+    + 'test — a grep proof written into a file that ships is how the neighbouring '
+    + 'item in that same pipeline came to disprove its own claim about uip-modal.')
+
+  const pillNav = await readFile(new URL('../../src/components/PillNav.jsx', import.meta.url), 'utf8')
   assert.ok(pillNav.includes('switchingUid'))
   assert.ok(pillNav.includes('aria-live="polite"'))
   assert.ok(!pillNav.includes("navigate('/login', { state: { email: res.email"))

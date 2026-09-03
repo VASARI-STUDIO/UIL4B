@@ -13,8 +13,11 @@
 //   difficulty    optional 'Beginner' | 'Intermediate' | 'Advanced' chip
 //   whyUseful     longer detail-modal paragraph
 //   relatedTools  [{ label, route, preset? }] — the in-product hand-off.
-//                 `preset` is only honoured by ColorStudio (gradient reader) for
-//                 now; every other tool routes without a reader and toasts.
+//                 `preset` is only honoured by GradientGenerator (/create/gradient),
+//                 which is where every preset entry below points; every other tool
+//                 routes without a reader and toasts. This used to name ColorStudio,
+//                 which carried a second copy of the reader that nothing ever
+//                 reached — deleted 2026-09-04 with that page's dead sections.
 //   added         ISO date — drives the "Recently added" sort
 //   featured      true → appears in the Featured rail with a STAFF PICK badge
 //

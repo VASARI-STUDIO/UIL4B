@@ -32,16 +32,17 @@ const IconEmojiLibrary = lazy(() => import('./IconEmojiLibrary'))
 // workbench, and tint + contrast are light standalone pages — all on the same
 // colour maths.
 //
-// ColorStudio therefore mounts on exactly ONE shipped route, /create/semantic-color,
-// which always resolves to its `states` section. This comment used to say
-// "semantic/ui are the same ColorStudio focused on their section", which is
-// stale and has since misled a brief into treating the semantic hero as shared
-// with a second surface: THERE IS NO /create/ui ROUTE — it is absent from
-// toolTree.js and from LIVE_TOOLS below. Verify with
+// ColorStudio mounts on exactly ONE shipped route, /create/semantic-color, and
+// it is now a single-purpose page: the semantic-colour tool, nothing else.
+//
+// It used to carry four sections (palette, states, systems, gradients) chosen by
+// pathname, and a merged-studio mode reached from a category home. Three of the
+// four could never render — THERE IS NO /create/ui ROUTE (absent from
+// toolTree.js and from LIVE_TOOLS below; /create/ui returns the 404 page), and
+// /create/palette and /create/gradient mount their own components. Verify with
 //   grep -n "create/ui" src/data/toolTree.js src/pages/CreateTool.jsx
-// The consequence, recorded rather than acted on here: ColorStudio's `palette`,
-// `systems` and `gradients` sections, and the SOLO_TITLES / SOLO_DESC entries
-// for them, are unreachable. Tracked as [colorstudio-dead-sections].
+// Those three sections and the merged-studio chrome were deleted, taking the
+// file from 4258 lines to ~1230. Closed as [colorstudio-dead-sections].
 const ColorStudio = lazy(() => import('./ColorStudio'))
 const GradientGenerator = lazy(() => import('./GradientGenerator'))
 const PaletteBuilder = lazy(() => import('./PaletteBuilder'))
@@ -135,9 +136,13 @@ export default function CreateTool() {
 
   // A live group's category home has no screen of its own — send it to the first
   // real tool (e.g. /create/icons-emoji → /create/icons) so visitors never land on an empty home.
-  // Skip when the home IS a live screen (/create/color is the full merged studio, with
-  // its tools as sub-routes) or when the first tool is the home itself —
+  // Skip when the home IS a live screen or when the first tool is the home itself —
   // redirecting either would lose a real page or loop.
+  //
+  // /create/color used to be named here as "the full merged studio, with its
+  // tools as sub-routes". It is not, and it never reaches this line: App.jsx
+  // intercepts it above and renders ColorLanding, the colour SALES page. The
+  // merged studio it referred to has been deleted.
   const firstTool = group.tools?.[0]
   const homeIsLive = !!LIVE_TOOLS[normPath(group.home)]
   if (isHome && !group.soon && !homeIsLive && firstTool && normPath(firstTool.route) !== normPath(group.home)) {

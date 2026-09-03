@@ -1499,44 +1499,6 @@ html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
   .cs-bento .cs-b-2,.cs-bento .cs-b-3,.cs-bento .cs-b-6{grid-column:span 1}
 }
 
-/* UI Preview app layout */
-.uip-layout{display:flex;min-height:280px}
-.uip-sidebar{width:180px;padding:16px;display:flex;flex-direction:column;gap:3px;flex-shrink:0}
-@media(max-width:640px){
-  .uip-layout{flex-direction:column}
-  .uip-sidebar{width:100%;flex-direction:row;flex-wrap:wrap;gap:6px;padding:12px;border-right:none!important;border-bottom:1px solid var(--border)}
-}
-
-/* Universal UI Preview popup */
-.uip-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-start;justify-content:center;padding:clamp(16px,4vw,48px);background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance);overflow-y:auto}
-.uip-modal{width:100%;max-width:1080px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance);display:flex;flex-direction:column;max-height:calc(100dvh - clamp(32px,8vw,96px))}
-.uip-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.uip-modal-eyebrow{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:4px}
-.uip-modal-title{font-size:18px;font-weight:700;letter-spacing:-.02em}
-.uip-modal-head-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.uip-device{display:flex;gap:2px;background:var(--bg-2);border-radius:var(--radius);padding:3px}
-.uip-device-btn{display:flex;align-items:center;justify-content:center;width:30px;height:26px;border:none;cursor:pointer;border-radius:var(--radius-s);background:transparent;color:var(--t2);transition:all var(--dur-2) var(--ease-standard)}
-.uip-device-btn:hover{color:var(--t0)}
-.uip-device-btn.is-active{background:var(--accent-strong);color:var(--accent-fg)}
-.uip-canvas{width:100%;container-type:inline-size}
-/* Reflow the in-preview app layout by CANVAS width so the device selector
-   (tablet/mobile) shows a real responsive collapse, not just a narrower copy. */
-@container (max-width:560px){
-  .uip-layout{flex-direction:column}
-  .uip-sidebar{width:100%!important;flex-direction:row;flex-wrap:wrap;gap:6px;padding:12px;border-right:none!important;border-bottom:1px solid var(--border)}
-}
-.uip-rounding{display:flex;gap:4px;background:var(--bg-2);border-radius:var(--radius);padding:3px}
-.uip-rounding-btn{padding:5px 14px;font-size:11px;font-weight:500;border:none;cursor:pointer;transition:all var(--dur-2) var(--ease-standard);background:transparent;color:var(--t2);font-family:var(--font)}
-.uip-rounding-btn.is-active{background:var(--accent-strong);color:var(--accent-fg);font-weight:600}
-.uip-close{width:36px;height:36px;border-radius:50%;background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all var(--t);flex-shrink:0}
-.uip-close:hover{background:var(--bg-3);color:var(--t0)}
-.uip-modal-body{padding:24px;overflow-y:auto}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@media(max-width:640px){
-  .uip-modal-head{padding:16px}
-  .uip-modal-body{padding:16px}
-}
-
 /* ─── Hero (Dashboard) ─── */
 .hero-section{position:relative;margin-bottom:40px;padding:8px 0 0}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t2);text-transform:uppercase;margin-bottom:20px;position:relative;z-index:1}
@@ -5785,43 +5747,20 @@ html.lenis,html.lenis body{height:auto}
 /* Hairline divider between adjacent grid columns so the regrouped layout reads
    as distinct, captioned sections rather than one undifferentiated grid. */
 .pnav-menu .pnav-colstack + .pnav-colstack::before{content:'';position:absolute;top:3px;bottom:2px;left:-28px;width:1px;background:var(--border)}
-.pnav-col-groups{display:flex;flex-direction:column;gap:30px;min-width:0}
-.pnav-menu[data-menu="discover"] .pnav-col-groups,.pnav-menu[data-menu="learn"] .pnav-col-groups{gap:10px}
 .pnav-group{min-width:0}
-.pnav-group-head{display:flex;align-items:flex-start;gap:12px;text-decoration:none;color:var(--t0)}
-.pnav-group-head:hover{text-decoration:none}
 /* Hue-tinted icon tile — colour comes from the group's data-hue */
 .pnav-ico{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong));transition:background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
-.pnav-group-head:hover .pnav-ico{background:color-mix(in srgb,var(--hue,var(--accent)) 20%,var(--bg-2));transform:translateY(-1px)}
-.pnav-group-text{display:flex;flex-direction:column;gap:3px;min-width:0;padding-top:1px}
 .pnav-group-title{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-h5);font-weight:700;letter-spacing:-.012em;color:var(--t0);transition:color var(--dur-2) var(--ease-out)}
-.pnav-group-head:hover .pnav-group-title{color:var(--hue,var(--accent-strong))}
-.pnav-group-desc{font-size:var(--fs-caption);color:var(--t2);max-width:32ch;line-height:1.45}
 /* Create group-heads are clickable category destinations (they open the group
    home), so give them a trailing arrow affordance — distinguishing the heading
    from the sub-tools listed beneath it. */
-.pnav-menu[data-menu="create"] .pnav-group-head::after{content:'→';margin-left:auto;align-self:center;font-size:16px;color:var(--t3);opacity:.4;transform:translateX(-2px);transition:opacity var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.pnav-menu[data-menu="create"] .pnav-group-head:hover::after{opacity:1;transform:translateX(0);color:var(--hue,var(--accent-strong))}
 /* Sub-tool list — one row per tool: a status dot, the label, and (mixed case
    only) a "Soon" pill. The dot is filled in the category hue when the tool is
    live and a hollow ring when it's still coming, so live vs. upcoming reads at a
    glance without a badge on every row. */
-.pnav-sub{list-style:none;display:flex;flex-direction:column;gap:1px;margin:10px 0 0 52px}
-.pnav-sublink{display:flex;align-items:center;gap:9px;min-height:32px;padding:5px 10px;border-radius:var(--radius-s);font-size:var(--fs-body-s);font-weight:500;color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
-.pnav-sub-dot{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--hue,var(--accent));transition:background var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out),transform var(--dur-2) var(--ease-out)}
-.pnav-sub-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-sublink .soon-badge{margin-left:auto}
-.pnav-sublink:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
-.pnav-sublink:hover .pnav-sub-dot{transform:scale(1.2)}
 /* Coming-soon tool: muted label + hollow ring dot — the router sends every tool
    under a soon-flagged category to the 🤫 state, so the nav says so honestly. */
-.pnav-sublink[data-soon]{color:var(--t3);opacity:.55}
-.pnav-sublink[data-soon] .pnav-sub-dot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--t3)}
-.pnav-sublink[data-soon]:hover{color:var(--t2);opacity:.8}
-.pnav-sublink[data-soon]:hover .pnav-sub-dot{transform:none;box-shadow:inset 0 0 0 1.5px var(--t2)}
 /* Card variant: Discover/Learn groups have no sub-tools, so the whole tile is the link */
-.pnav-group--card .pnav-group-head{padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-0);transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
-.pnav-group--card .pnav-group-head:hover{border-color:color-mix(in srgb,var(--hue,var(--accent)) 40%,var(--border));background:var(--bg-1);transform:translateY(-2px);box-shadow:var(--shadow-s)}
 /* ── Flat icon+label tool rows — one row per tool under a column eyebrow.
    Replaces the old group-head + sub-dot list for maximum scannable density.
    The icon tile takes its colour from the row's data-hue (falls back to accent). */
@@ -5868,8 +5807,6 @@ html.lenis,html.lenis body{height:auto}
 .pnav-toollist li:nth-child(8) .pnav-tool{animation-delay:168ms}
 
 /* "View all … tools →" — spans the full column grid at the foot of the menu. */
-.pnav-viewall{grid-column:1/-1;display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--mono);font-size:var(--fs-caption);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-strong);text-decoration:none;transition:gap var(--dur-2) var(--ease-out)}
-.pnav-viewall:hover{gap:10px;color:var(--accent-strong);text-decoration:none}
 
 /* Promo / feature card — the right-hand rail of every mega-menu. Copy is
    data-driven from NAV_SECTIONS[*].promo; carries an inline SVG mock + two CTAs. */
@@ -6317,7 +6254,6 @@ html.lenis,html.lenis body{height:auto}
 }
 
 /* ══ Kept-page wrapper (nav clearance + container) ══ */
-.pnav-clear{padding-top:calc(var(--nav-clear) + 16px)}
 .page-shell{max-width:1216px;margin:0 auto;padding-inline:clamp(20px,4vw,32px);padding-bottom:var(--s-9);min-height:60vh}
 
 /* ══ App shell — the account / billing / legal / system pages now live under the
@@ -7475,8 +7411,8 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
   .hw-tab{flex:1 1 0;min-width:74px;padding:0 8px;font-size:var(--fs-caption)}
 }
 @media(max-width:480px){
-  /* Phone: a shorter bar. Every offset (menu, sheet, hero padding, .pnav-clear)
-     derives from the token, so one override re-seats them all. */
+  /* Phone: a shorter bar. Every offset (menu, sheet, hero padding) derives from
+     the token, so one override re-seats them all. */
   :root{--nav-h:52px}
   /* Drop the gear + inline action pills — those live in the sheet — so the
      bar stays to logo · search · avatar · menu. */

@@ -8,7 +8,7 @@
 //   ProUpgradeModal   dialog  esc  --    --       --      (the upgrade surface)
 //   LoginPopup        dialog  esc  lock  restore  trap    (the only correct one)
 //   FeedbackModal     dialog  esc  lock  --       --      (on every page)
-//   UIPreviewModal    dialog  esc  lock  --       --
+//   UIPreviewModal    dialog  esc  lock  --       --      (deleted since — see below)
 //   ColorPickerPop    dialog  esc  --    --       --
 //   PromptModal       dialog  esc  --    --       --
 //   UIKitGuide        dialog  --   --    --       --      (a new user's first screen)
@@ -16,6 +16,15 @@
 // Escape alone is the easy half. The trap is the half everyone skipped, and it
 // is the half the attribute actually claims. This test exists so the next
 // dialog cannot be added without it.
+//
+// UIPreviewModal has since been DELETED, and its row is kept rather than tidied
+// away because this table is a dated measurement — editing one to match today is
+// how a record stops being one. It was unreachable: imported only by TopBar,
+// which nothing rendered once App.jsx moved to PillNav, and no built bundle ever
+// contained a line of it. So the focus trap this file's fix gave it was work no
+// user could ever benefit from, which is the part worth carrying forward — check
+// a surface is reachable before spending a fix on it. Every assertion below
+// walks src/ live, so the deletion itself needed no edit here.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'

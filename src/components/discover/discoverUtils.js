@@ -35,9 +35,15 @@ export function monogram(title, category) {
   return (catLabel ? catLabel[0].toUpperCase() : '·')
 }
 
-// Build the in-product hand-off URL for a related tool. Only ColorStudio reads
-// `preset`/`tab`; other tools just route. (We no longer append ?from=discover —
-// no destination reads it, so it was inert dead weight.)
+// Build the in-product hand-off URL for a related tool. Only GradientGenerator
+// reads `preset`/`tab` (see its hand-off effect); other tools just route. (We no
+// longer append ?from=discover — no destination reads it, so it was inert dead
+// weight.)
+//
+// This said ColorStudio until 2026-09-04. ColorStudio did carry a copy of the
+// reader, but every `preset` hand-off in discoverResources.js points at
+// /create/gradient, which mounts GradientGenerator — so ColorStudio's copy had
+// never run, and it went with that page's dead sections.
 export function buildToolHandoffUrl(tool) {
   const params = new URLSearchParams()
   if (tool.preset) params.set('preset', tool.preset)
