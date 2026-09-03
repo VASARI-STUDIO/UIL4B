@@ -75,7 +75,11 @@ test.describe('Type Scale Generator', () => {
     await page.getByLabel('Rounding').selectOption('none')
     await expect(largest).toContainText('61.04px')
 
-    await expect(page.getByRole('tab', { name: /For designers/i })).toHaveAttribute('aria-selected', 'true')
+    // The audience control is now the switch that sits above the panel it
+    // changes, not the pair of hero cards that used to sit two screens away
+    // from it. (Tint Scale still has its own "For designers" hero tabs — see
+    // 05-tint-scale-workflows.spec.js. Only Type Scale's duplicate went.)
+    await expect(page.getByRole('tab', { name: /Design preview/i })).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('.tsc-article')).toBeVisible()
   })
 
@@ -83,7 +87,7 @@ test.describe('Type Scale Generator', () => {
     watch(page, 'front-end developer shipping type tokens')
     await go(page, '/create/type-scale')
 
-    await page.getByRole('button', { name: 'Developer handoff' }).click()
+    await page.getByRole('tab', { name: 'Developer handoff' }).click()
     await expect(page.getByRole('heading', { name: 'Prepare the handoff' })).toBeVisible()
 
     // The scale is now FLUID by default: two ladders (mobile and desktop)
@@ -120,10 +124,18 @@ test.describe('Type Scale Generator', () => {
     watch(page, 'keyboard-only visitor')
     await go(page, '/create/type-scale')
 
-    const designer = page.getByRole('tab', { name: /For designers/i })
+    // ONE tablist, and it is the one beside its own panel. `audience` used to
+    // have two controls: hero cards under role="tablist" whose aria-controls
+    // named a panel 1,593px below them, and a separate aria-pressed switch
+    // sitting next to that panel. The hero pair is gone and the switch carries
+    // the tablist contract, so the arrow keys now move focus and selection
+    // within sight of what they change.
+    await expect(page.getByRole('tablist')).toHaveCount(1)
+
+    const designer = page.getByRole('tab', { name: /Design preview/i })
     await designer.focus()
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('tab', { name: /For developers/i })).toBeFocused()
+    await expect(page.getByRole('tab', { name: /Developer handoff/i })).toBeFocused()
     await expect(page.locator('#tsc-export')).toBeVisible()
     await page.keyboard.press('ArrowLeft')
     await expect(designer).toBeFocused()
@@ -166,7 +178,7 @@ test.describe('Type Scale Generator', () => {
     // clamp rather than a lone rem — the extreme value is still carried
     // losslessly, which is what this test exists to prove, and the comment
     // still names it in pixels.
-    await page.getByRole('button', { name: 'Developer handoff' }).click()
+    await page.getByRole('tab', { name: 'Developer handoff' }).click()
     await expect(page.locator('#tsc-export')).toContainText('787320px')
     await expect(page.locator('#tsc-export')).toContainText('--text-8xl: clamp(')
   })

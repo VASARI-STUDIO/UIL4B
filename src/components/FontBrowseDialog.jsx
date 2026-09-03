@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import LibraryToolbar from './library/LibraryToolbar'
 import LibraryFilterGroup from './library/LibraryFilterGroup'
 import LibraryGrid from './library/LibraryGrid'
@@ -304,7 +305,18 @@ export default function FontBrowseDialog({ title, fonts, value, onPick, onClose 
     [pickable, inspecting],
   )
 
-  return (
+  // PORTALLED TO THE BODY, because a modal must not live inside the stacking
+  // context of whatever opened it. FontPicker sits in the tools' config
+  // sidebar, and that sidebar is `position:sticky` in the two-column band —
+  // sticky creates a stacking context unconditionally, which traps this overlay
+  // inside the sidebar however high its own z-index goes. It only ever worked
+  // because the sidebar happened to come after the output pane in source order,
+  // so it painted last; the moment the controls were moved before their output
+  // (which is the right thing for the workflow) the output pane began painting
+  // over the open dialog and swallowing its clicks. A z-index on the sidebar
+  // would paper over this one instance and leave the trap set for the next
+  // person to reorder anything. The portal removes the class of bug.
+  const overlay = (
     <div className="fbd-overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div
         className="fbd-dialog"
@@ -394,4 +406,9 @@ export default function FontBrowseDialog({ title, fonts, value, onPick, onClose 
       </div>
     </div>
   )
+
+  // Guarded for the prerender pass, which has no document. The dialog only
+  // mounts behind a click so this never fires there, but a component that
+  // reaches for `document` at render time is a trap for whoever mounts it next.
+  return typeof document === 'undefined' ? overlay : createPortal(overlay, document.body)
 }
