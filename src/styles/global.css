@@ -921,15 +921,11 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
    `.rail-content` is rendered only by CreateTool.jsx and the sole consumer of
    `.pl-toolbar` is PromptLibrary, which is not inside it. A correct rule
    scoped to a selector that never matches is the shape this defect had. */
-.pl-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;position:sticky;top:var(--nav-clear);z-index:30;padding:12px 0;background:color-mix(in srgb,var(--bg-0) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-.pl-search-wrap{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;flex:1;min-width:200px;max-width:360px;transition:all var(--t)}
-.pl-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
-.pl-search-wrap svg{color:var(--t3);flex-shrink:0}
-.pl-search{border:none;background:none;color:var(--t0);font-family:var(--font);font-size:13px;outline:none;width:100%;min-width:0;padding:0}
-.pl-search::placeholder{color:var(--t3)}
-.pl-search:focus{box-shadow:none}
-.pl-search-clear{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px;display:flex;border-radius:50%;transition:color var(--t)}
-.pl-search-clear:hover{color:var(--t0)}
+/* RETIRED (#322). `.pl-toolbar` and `.pl-search-*` were the last one-off
+   browse toolbar in the app — the Prompt Library was the only consumer, and
+   it is now on the shared `LibraryToolbar` / `.lbry-toolbar` like every
+   other browse surface. The sticky-offset reasoning above is preserved
+   because it is why `--nav-clear` exists on the shared toolbar too. */
 /* The category row WRAPS (S4, mobile-audit-2026-08). It was
    `flex-wrap:nowrap; overflow-x:auto` with the scrollbar suppressed on both
    `scrollbar-width` and `::-webkit-scrollbar`, which under touch emulation
@@ -958,28 +954,13 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
 .pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
 .pl-add-btn{flex-shrink:0;margin-left:auto}
-/* PATTERN B: THE TABLET BAND WAS NEVER HANDLED. This toolbar column-stacks at
-   ≤640px and is a desktop row above it, so 834px got the desktop row with none
-   of the desktop room. Measured at 834: `.pl-search-wrap` (flex:1, max 360px)
-   and `.pl-chips` (flex:1, min-width:0) competed for the same space, the chips
-   lost, and six categories were crushed into ~200px and wrapped to FOUR ragged
-   lines — with wide dead gaps either side, "Submit prompt" stranded out on the
-   right, and the placeholder truncated to "Search community prompt".
-   The category row is the primary browse control on this page, so it gets a
-   full row of its own and all six chips fit on one line — which is the two-row
-   shape Jira's Teams directory, Claude's connector Directory and Customer.io's
-   integrations browser all reflow into when the width stops being desktop-wide.
-   Below 641px the existing full column stack still wins.
-   The cost, taken deliberately: "Submit prompt" lands on a third row of its
-   own. It could be pulled up beside the search field with `order`, and that was
-   rejected — `order` moves the box and not the tab stop, so it would leave the
-   focus order running search → sort → chips → submit against a visual order of
-   search → sort → submit → chips. A slightly loose row is worth less than a
-   focus order that matches what you can see (WCAG 2.4.3). */
-@media(min-width:641px) and (max-width:980px){
-  .pl-search-wrap{max-width:none}
-  .pl-chips{flex:1 1 100%}
-}
+/* PATTERN B (the tablet band) is now handled for this surface by the shared
+   toolbar: #318 gave `.lbry-toolbar` a 641-980 layout of its own and #322
+   moved the Prompt Library onto it, so the bespoke band rule that used to
+   sit here — uncapping `.pl-search-wrap` so `.pl-chips` could take a full
+   row — has no selectors left to act on. The deliberate cost it recorded
+   ("Submit prompt lands on a third row") is gone with it: the shared
+   toolbar puts the action in `.lbry-toolbar-action`. */
 /* Native select, styled to sit in a .pl-toolbar next to the search field */
 
 /* Add prompt panel */
@@ -1013,8 +994,14 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 
 /* No-image card */
 .pl-card.no-img{background:var(--card-grad)}
-.pl-card-text-hero{padding:28px 24px;min-height:160px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
-.pl-card-text-hero::before{content:'';position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:var(--radius-s);background:var(--accent-bg);display:flex;align-items:center;justify-content:center}
+.pl-card-text-hero{padding:22px 22px;min-height:132px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+/* The 40x40 accent-tinted square that used to sit here was EMPTY — `content:''`
+   with `display:flex;align-items:center;justify-content:center`, i.e. centring
+   rules for a glyph that was never added. On a text-only card it read as a
+   thumbnail that had failed to load, on all 20 cards at once, and it competed
+   with the Pro lock badge for the same corner. Removed rather than filled: the
+   card's categories are TAG_CATEGORIES, which has no glyph set, and the shared
+   CategoryGlyph is keyed to the unrelated discoverCategories taxonomy. */
 .pl-card.no-img .pl-card-title{color:var(--t0)}
 .pl-card.no-img:hover .pl-card-title{color:var(--accent)}
 
@@ -1615,12 +1602,7 @@ img,svg,video{max-width:100%;height:auto}
   .grad-presets{grid-template-columns:repeat(auto-fill,minmax(min(180px,100%),1fr))}
   .img-grid{grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr))}
   .pl-gallery{grid-template-columns:1fr}
-  .pl-toolbar{flex-direction:column;align-items:stretch}
-  .pl-search-wrap{max-width:100%}
   .pl-add-btn{width:100%}
-  /* This used to re-impose the nowrap scroller the base rule has now dropped —
-     see the .pl-chips comment above. Left as a no-op-free reminder that the
-     narrow band is exactly where wrapping matters most. */
   .pl-drop-zone{flex:1 1 100%}
   .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}
 
@@ -10247,19 +10229,17 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .plb-col-tools{width:100%;margin-left:0;justify-content:flex-start}
 }
 
-/* Prompt library toolbar. `.pl-sort` replaces an inline style={{}} that had no
-   class and therefore no responsive control: at 320px its `min-width: auto`
-   established a 519px flex line inside a 283px toolbar, which pushed the
-   "Submit prompt" primary CTA to right:535 — entirely off screen, and
-   unreachable because body carries `overflow-x: clip`. */
-.pl-sort{display:flex;gap:4px;margin-bottom:4px;min-width:0;flex-wrap:wrap}
+/* `.pl-sort` is retired with `.pl-toolbar` (#322): the Prompt Library's sort is
+   a LibraryFilterGroup now, so it reflows with every other filter tray instead
+   of needing its own 320px rescue. `.pl-chips` stays — five other surfaces
+   (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,
+   ColorStudio's named-library switch) still render it. */
 .pl-chips{max-width:100%}
 @media(max-width:520px){
-  /* Below this the toolbar cannot hold a filter row and a button side by side.
-     Giving the CTA its own full-width line keeps it visible and comfortably
-     tappable instead of clipped. */
+  /* The action still gets its own full-width line below this: the shared
+     toolbar stacks here too, and a half-width CTA on a 390px phone is worse
+     than a full-width one. */
   .pl-add-btn{width:100%;margin-left:0}
-  .pl-toolbar{gap:8px}
 }
 
 /* Type-scale ladder: let the specimen actually truncate.

@@ -270,16 +270,16 @@ const CHIP_WIDTHS = [320, 390, 768, 1180]
 const TRAY_WIDTHS = [320, 390, 1180]
 const COLLAPSED_WIDTHS = [768, 834]
 
-const CHIP_ROWS = [
-  // The original `.pl-chips` idiom: one wrapping row of outlined pills.
-  //
-  // /create/emoji and /create/icons LEFT this list rather than being deleted
-  // from the suite: both moved onto the shared Library tray, so they are
-  // measured in FILTER_TRAYS below — same measurement, new selector. The Prompt
-  // Library is the last consumer of the original idiom and is why the block
-  // stays at all.
-  ['/discover/prompts', '.pl-chips', '.pl-chip', 1, 6],
-]
+// The original `.pl-chips` idiom — one wrapping row of outlined pills — no
+// longer has a browse consumer. /create/emoji and /create/icons left it for the
+// shared Library tray, and #322 took the Prompt Library, the last one, with
+// them. The measurement did not go away: every surface that used to be here is
+// in FILTER_TRAYS below, asked the same question through the shared selectors.
+//
+// `.pl-chip` itself is still live OUTSIDE this suite's scope (BoxShadow presets,
+// Projects folders, the AI prompt and alt-text pickers, ColorStudio's
+// named-library switch). None of them is a browse filter row, which is what
+// this block measures, so none of them belongs in it.
 
 // The shared Library segmented tray (PR #254), which replaced the chip row on
 // the browse surfaces. /discover/gradients mounts TWO trays — 8 mood options and
@@ -296,6 +296,10 @@ const FILTER_TRAYS = [
   // the surface any tray regression shows up on first.
   ['/create/emoji', '.lbry-filters', '.lbry-filter', 1, 12],
   ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7],
+  // #322 moved the Prompt Library onto the shared toolbar. It mounts TWO trays
+  // — sort (2 options) and category (All + 5) — which is why the totals column
+  // exists rather than a per-row count.
+  ['/discover/prompts', '.lbry-filters', '.lbry-filter', 2, 8],
 ]
 
 /**
@@ -343,12 +347,6 @@ async function chipRowDamage(browser, surfaces, widths = CHIP_WIDTHS) {
   }
   return damage
 }
-
-test('S4 · every filter chip is inside its own row, on every surface that shares it', async ({ browser }) => {
-  budget(CHIP_ROWS.length * CHIP_WIDTHS.length)
-  const damage = await chipRowDamage(browser, CHIP_ROWS)
-  expect(damage, damage.join('\n')).toEqual([])
-})
 
 test('S4 · every shared Library filter is inside its own tray, on every surface that shares it', async ({ browser }) => {
   budget(FILTER_TRAYS.length * TRAY_WIDTHS.length)
@@ -503,7 +501,7 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
   budget(FAB_SHORT.length + FAB_ROOMY.length)
   const damage = []
   for (const [w, h] of FAB_SHORT) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-chip')
+    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.lbry-toolbar')
     const f = await fabState(page)
     await ctx.close()
     expect(f, `${w}x${h}: no feedback FAB`).not.toBeNull()
@@ -512,7 +510,7 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
     if (f.w < 24 || f.h < 24) damage.push(`${w}x${h}: compact FAB is ${f.w}x${f.h}, under the 24px floor`)
   }
   for (const [w, h] of FAB_ROOMY) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-chip', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.lbry-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     if (f.compact) damage.push(`${w}x${h}: FAB dropped its label on a viewport with room for it`)
@@ -521,7 +519,9 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
 })
 
 const FAB_COVER = [
-  ['/discover/prompts', '.pl-chip', [...FAB_SHORT, [390, 844]]],
+  // Waits on the toolbar, not a chip: in the 641–980 band the trays collapse
+  // to triggers, so no `.lbry-filter` is rendered at some of these shapes.
+  ['/discover/prompts', '.lbry-toolbar', [...FAB_SHORT, [390, 844]]],
   ['/sitemap', '.smap-link-a', [[320, 568], [360, 560], [390, 640], [390, 844], [844, 390]]],
 ]
 
