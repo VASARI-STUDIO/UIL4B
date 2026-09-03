@@ -13,6 +13,13 @@ on:
 permissions:
   contents: read
 
+# One run per ref. When an agent pushes three times in ten minutes, the first
+# two are cancelled instead of each burning a full Playwright suite. That costs
+# nothing in signal: a superseded run is testing code that no longer exists.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality-gates:
     name: Lint, build, unit tests, Firestore rules tests
@@ -67,6 +74,12 @@ jobs:
   browser-acceptance:
     name: User-simulation acceptance suite (Playwright)
     runs-on: ubuntu-latest
+    # Pull requests only. A squash merge lands the tree the PR just tested, and
+    # this suite is ~9 minutes against the quality gate's ~1.5 — so re-running it
+    # on every push to main doubled the bill for a second opinion on the same
+    # code. The quality gate still runs on main, which is what catches semantic
+    # conflicts between PRs merged back to back — the case a PR run cannot see.
+    if: github.event_name == 'pull_request'
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
