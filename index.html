@@ -23,6 +23,13 @@
 <meta property="og:url" content="https://www.uil4b.com">
 <meta property="og:site_name" content="UI L4B">
 <meta property="og:image" content="https://www.uil4b.com/previews/og-image.png">
+<!-- Every card this site serves is 1200x630 (asserted in tests/unit/share-cards.test.js),
+     so these are constants rather than something prerender has to rewrite per
+     route. Without them some unfurlers will not commit to the large card and
+     fall back to a small square thumbnail, which is the one thing
+     summary_large_image is asking them not to do. -->
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="UI L4B Design Toolkit — colour, icon, emoji and imagery tools">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="UI L4B | Design Toolkit">

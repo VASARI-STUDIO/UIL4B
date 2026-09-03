@@ -9,8 +9,29 @@
       "ai": "#BE185D",
       "icons": "#047857"
     },
+    "accent": "#0F6FFF",
+    "hi": "#E9FF64",
+    "hiFg": "#0F0F10",
     "ground": "#EFEEE9",
     "ink": "#0F0F10"
+  },
+  "hero": {
+    "kicker": "UI system toolkit",
+    "headline": [
+      {
+        "text": " Colour, type and tokens that stay ",
+        "hi": false
+      },
+      {
+        "text": "one system",
+        "hi": true
+      },
+      {
+        "text": ". ",
+        "hi": false
+      }
+    ],
+    "sub": "Every tool here reads and writes the same values, so the hex you change in the palette builder is the hex your export ships."
   },
   "sections": [
     {

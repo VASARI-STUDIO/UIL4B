@@ -42,7 +42,7 @@ import {
   crumbName,
   parentOf,
 } from '../../scripts/route-schema.mjs'
-import { readTokens } from '../../scripts/og-cards.mjs'
+import { railSections, readHero, readTokens } from '../../scripts/og-cards.mjs'
 
 const REPO = process.cwd()
 const ORIGIN = 'https://www.uil4b.com'
@@ -156,6 +156,84 @@ test('THE STALENESS ONE: the committed cards were drawn from today\'s tokens', a
   assert.deepEqual(manifest.sections, live,
     'a section\'s label or its tool list has changed since the cards were drawn, '
     + 'so a card is advertising the wrong tools. Run `npm run og:cards`.')
+})
+
+test('THE OTHER STALENESS ONE: the homepage card quotes the homepage', async () => {
+  // ── What this is for ─────────────────────────────────────────────────────
+  //
+  // The homepage card used to be hand-made art sitting outside the generator,
+  // and it drifted exactly the way a hand-made artefact does: it advertised
+  // "No more tab hoarding" for weeks after the homepage stopped saying it —
+  // src/pages/Onboarding.jsx records that line being removed from the anonymous
+  // sales page. The front door's share card promised a sentence that appeared
+  // nowhere on the page it linked to, and nothing could notice.
+  //
+  // The card is now drawn from Home.jsx's own hero, and this is what makes a
+  // hero rewrite fail loudly here instead of silently mis-selling the product.
+  const manifest = JSON.parse(read('public/previews/cards.json'))
+  const hero = await readHero()
+  assert.deepEqual(manifest.hero, hero,
+    'the homepage hero has changed since the front-door card was drawn, so the '
+    + 'card is quoting a headline the page no longer shows. Run `npm run og:cards`.')
+
+  // The highlighted phrase is the claim the page stakes itself on, so the card
+  // has to carry it as a highlight rather than flattening it into plain words.
+  assert.ok(hero.headline.some((run) => run.hi && run.text.length > 2),
+    'the homepage no longer highlights a phrase in its h1 — the card composition '
+    + 'in og-cards.mjs assumes one and would print an unremarkable sentence')
+})
+
+test('the homepage rail names every toolkit area exactly once', () => {
+  // The rail is the front-door card's whole claim: this is the toolkit, not one
+  // area of it. A hue losing its section, or two sections claiming one hue,
+  // would quietly shrink that claim.
+  const rail = railSections()
+  assert.equal(rail.length, 6, `the rail shows ${rail.length} areas, expected 6`)
+  assert.equal(new Set(rail.map((r) => r.hue)).size, 6, 'a hue appears twice in the rail')
+  assert.equal(new Set(rail.map((r) => r.label)).size, 6, 'two rail bands carry the same label')
+  // Plans is deliberately absent: it reuses the colour hue and owns no band.
+  assert.ok(!rail.some((r) => r.label === 'Plans'),
+    'Plans has taken a rail band, but it shares --hue-colour and owns none')
+})
+
+test('no card is heavy enough to be dropped or to cost a reader real bandwidth', () => {
+  // The defect that started this: the hand-made homepage card was 785 KB — about
+  // twenty times the generated section cards — on a 1200x630 image that is flat
+  // colour and type. Several scrapers cap the file size they will fetch, and
+  // every unfurl anywhere pays for it. 200 KB is deliberately loose; the point is
+  // to catch a return to that ORDER of weight, not to police a few kilobytes.
+  const LIMIT = 200 * 1024
+  for (const file of allCardFiles()) {
+    const bytes = fs.statSync(previews(file)).size
+    assert.ok(bytes <= LIMIT,
+      `public/previews/${file} is ${(bytes / 1024).toFixed(0)} KB. A share card this `
+      + 'heavy gets skipped by some unfurlers. Redraw it with `npm run og:cards` '
+      + 'rather than shipping hand-exported art.')
+  }
+})
+
+test('index.html declares the card dimensions', () => {
+  // twitter:card is already summary_large_image, but some platforms will not
+  // commit to the large card without explicit dimensions and fall back to a
+  // small square thumbnail. Every card is 1200x630 (asserted above), so these
+  // are constants rather than something prerender rewrites per route.
+  const html = read('index.html')
+  assert.match(html, /<meta property="og:image:width" content="1200">/,
+    'index.html does not declare og:image:width')
+  assert.match(html, /<meta property="og:image:height" content="630">/,
+    'index.html does not declare og:image:height')
+})
+
+test('the built shells carry the card dimensions too', {
+  skip: !built && 'run `npm run build` first',
+}, () => {
+  for (const route of prerenderRoutes()) {
+    const html = read(`dist${route}/index.html`)
+    assert.equal(meta(html, 'property', 'og:image:width'), '1200',
+      `dist${route}/index.html does not declare its card width`)
+    assert.equal(meta(html, 'property', 'og:image:height'), '630',
+      `dist${route}/index.html does not declare its card height`)
+  }
 })
 
 // ── The structured data ─────────────────────────────────────────────────────
