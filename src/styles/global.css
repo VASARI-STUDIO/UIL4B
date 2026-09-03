@@ -11038,3 +11038,13 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .tsc-row-meta{flex-direction:row;flex-basis:auto;gap:8px;flex-wrap:wrap}
   .tsc-row-text{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
 }
+
+/* ══ Export dialog — the Pro badge on a paid format (design-system-book-export).
+   APPENDED as a new block; nothing above is edited. Structural sibling of
+   .exp-fmt-soon at :5628 — same pill geometry and the same slot in the row, so
+   the two badges can never disagree about where a badge sits. It differs only
+   in that it is FILLED rather than outlined: "Soon" reports that a format is
+   absent, "Pro" reports that a present format is paid for, and an outline for
+   both made the two read as the same kind of unavailability. ══ */
+.exp-fmt-pro{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--bg-0);background:var(--t1);border:1px solid var(--t1);border-radius:var(--radius-pill);padding:2px 8px}
+.exp-fmt.is-active .exp-fmt-pro{background:var(--accent);border-color:var(--accent);color:#fff}
