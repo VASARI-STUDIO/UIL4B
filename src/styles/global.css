@@ -580,23 +580,38 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .tag-pass{background:color-mix(in srgb, var(--ok) 8%, transparent);color:var(--ok)}.tag-fail{background:color-mix(in srgb, var(--err) 8%, transparent);color:var(--err)}
 
 /* ─── Inputs ─── */
-input[type="text"],input[type="number"],input[type="email"],input[type="password"],select,textarea{font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--inp);color:var(--t0);outline:none;transition:all var(--dur-2) var(--ease-standard);max-width:100%}
-input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-input[type="number"]{-moz-appearance:textfield}
+/* THE BARE-TYPE-SELECTOR TRAP. `input[type="text"]` is (0,1,1); a component
+   class like .cc-hex-input is (0,1,0), so for years the reset below silently
+   BEAT every field component in the app — .cp-input asked for 17px and got 13,
+   .tt-hex-input asked for a 46px mono field with `padding:0 14px` and got the
+   generic 13px Manrope box, and .pl-input-title carried two `!important`s that
+   existed only to fight this rule. #320 (hero search bar: a second bordered box
+   and a second focus ring) and #319 (the colour picker's hue slider never once
+   painted its rainbow) were two instances of it.
+   The failure is invisible to review — both rules read correctly in isolation —
+   and invisible to a geometry sweep, because nothing overflows. It only shows
+   up as double-painting, or as a computed style that does not match the class.
+   So the reset is now wrapped in :where(), which contributes ZERO specificity.
+   It is a default, and every component class outranks it. Do not unwrap it, and
+   do not add a bare `input[type=...]` rule beside it — put new element defaults
+   inside the :where() list. Pinned by tests/unit/input-specificity.test.js. */
+:where(input[type="text"],input[type="number"],input[type="email"],input[type="password"],select,textarea){font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--inp);color:var(--t0);outline:none;transition:all var(--dur-2) var(--ease-standard);max-width:100%}
+:where(input[type="number"])::-webkit-inner-spin-button,:where(input[type="number"])::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+:where(input[type="number"]){-moz-appearance:textfield}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
-input[type="color"]{width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
-input[type="color"]:hover{border-color:var(--bh)}
+:where(input[type="color"]){width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
+:where(input[type="color"]):hover{border-color:var(--bh)}
 /* Strip the native swatch chrome so the colour well reads as one clean, rounded
    chip on every picker in the app (Colour Studio, Box-Shadow, UI Builder, …), not
    just the icon editor — a single, consistent colour control everywhere. */
-input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
-input[type="color"]::-webkit-color-swatch{border:none;border-radius:var(--radius-xs)}
-input[type="color"]::-moz-color-swatch{border:none;border-radius:var(--radius-xs)}
-input[type="range"]{-webkit-appearance:none;width:100%;height:32px;border-radius:2px;background:transparent;outline:none;cursor:pointer;padding:0;border:none}
-input[type="range"]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--bg-4)}
-input[type="range"]::-moz-range-track{height:4px;border-radius:2px;background:var(--bg-4)}
-input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15);margin-top:-8px;position:relative;z-index:2}
-input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+:where(input[type="color"])::-webkit-color-swatch-wrapper{padding:0}
+:where(input[type="color"])::-webkit-color-swatch{border:none;border-radius:var(--radius-xs)}
+:where(input[type="color"])::-moz-color-swatch{border:none;border-radius:var(--radius-xs)}
+:where(input[type="range"]){-webkit-appearance:none;width:100%;height:32px;border-radius:2px;background:transparent;outline:none;cursor:pointer;padding:0;border:none}
+:where(input[type="range"])::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--bg-4)}
+:where(input[type="range"])::-moz-range-track{height:4px;border-radius:2px;background:var(--bg-4)}
+:where(input[type="range"])::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15);margin-top:-8px;position:relative;z-index:2}
+:where(input[type="range"])::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .seg-label{font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:6px}
 
 /* ─── Code ─── */
@@ -1000,7 +1015,9 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-add-panel.open{max-height:600px;opacity:1;margin-bottom:28px}
 .pl-add-inner{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:24px;box-shadow:var(--warm-shadow)}
 .pl-add-fields{display:flex;flex-direction:column;gap:12px}
-.pl-input-title{font-size:16px!important;font-weight:600;padding:12px 16px!important}
+/* The two !important here were a workaround for the bare-type-selector trap,
+   not a real override. The reset is :where()-wrapped now, so the class wins. */
+.pl-input-title{font-size:16px;font-weight:600;padding:12px 16px}
 .pl-textarea{min-height:100px;resize:vertical;font-size:13px;line-height:1.7}
 .pl-add-row{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
 .pl-add-field{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px}
@@ -1641,8 +1658,13 @@ img,svg,video{max-width:100%;height:auto}
   .pl-drop-zone{flex:1 1 100%}
   .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}
 
-  /* Forms / inputs */
-  input[type="text"],input[type="number"],input[type="email"],input[type="password"],select,textarea{font-size:16px;padding:11px 14px}
+  /* Forms / inputs. Split deliberately: the 16px floor is POLICY — iOS zooms
+     the viewport when a focused field is under 16px — so it keeps element-level
+     strength and outranks component classes. The padding is only a DEFAULT, so
+     it sits in :where() and a component's own padding wins. See the note on the
+     reset at the top of the Inputs section. */
+  input[type="text"],input[type="number"],input[type="email"],input[type="password"],select,textarea{font-size:16px}
+  :where(input[type="text"],input[type="number"],input[type="email"],input[type="password"],select,textarea){padding:11px 14px}
 
   /* Color Studio */
   .tint-grid-responsive{grid-template-columns:repeat(auto-fill,minmax(min(56px,calc((100% - 32px)/4)),1fr))!important}
