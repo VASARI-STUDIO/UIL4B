@@ -7,6 +7,7 @@ import LibraryGrid from '../components/library/LibraryGrid'
 import LibraryCard from '../components/library/LibraryCard'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
+import { FontAboutPanel, FontDossierTabs, FontExamplesPanel } from '../components/FontDossier'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
@@ -458,6 +459,12 @@ function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare
   // most was the one that dropped them.
   const [text, setText] = useState(previewText)
   const [pairings, setPairings] = useState([])
+  // The founder's two tabs, on the same shared component the browse dialog
+  // uses. This dialog already WAS the per-family view, so it needed no new
+  // navigation — only somewhere to put About and Examples that does not make
+  // the specimen scroll past them. Everything that was here is now the Specimen
+  // tab, unchanged.
+  const [tab, setTab] = useState('specimen')
   const scripts = useMemo(() => formatSubsets(font.subsets), [font.subsets])
   const weights = font.variants.length
 
@@ -529,19 +536,31 @@ function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare
             weight slider that re-set a hero already at heading weight; this sets
             the words that every cut in the list is drawn with, which is the only
             variable a person actually wants to change while judging a face. */}
-        <div className="fg-detail-controls">
-          <label className="fg-detail-field">
-            <span>Preview text</span>
-            <input
-              type="text"
-              value={text}
-              maxLength={72}
-              spellCheck="false"
-              placeholder={PANGRAM}
-              onChange={e => setText(e.target.value)}
-            />
-          </label>
-        </div>
+        <FontDossierTabs
+          value={tab}
+          onChange={setTab}
+          idBase="fg"
+          label={`${font.family} details`}
+        />
+
+        {/* The preview field drives the weight list and nothing else, so it
+            belongs to the Specimen tab rather than sitting above all three as a
+            control that does nothing on two of them. */}
+        {tab === 'specimen' && (
+          <div className="fg-detail-controls">
+            <label className="fg-detail-field">
+              <span>Preview text</span>
+              <input
+                type="text"
+                value={text}
+                maxLength={72}
+                spellCheck="false"
+                placeholder={PANGRAM}
+                onChange={e => setText(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
 
         <div className="fg-detail-body">
 
@@ -569,6 +588,8 @@ function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare
           </div>
         )}
 
+        {tab === 'specimen' && (
+        <div className="fdx-panel" id="fg-panel-specimen" role="tabpanel" aria-labelledby="fg-tab-specimen" tabIndex={0}>
         {/* THE BODY IS THE WEIGHT LIST. Every cut the family actually ships,
             one full-width line each, drawn in that cut, set in the reader's own
             words. This is the section the six "Ag" tiles were standing in for,
@@ -633,6 +654,17 @@ function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare
               ))}
             </div>
           </div>
+        )}
+
+        </div>
+        )}
+
+        {tab === 'about' && (
+          <FontAboutPanel font={font} id="fg-panel-about" labelledBy="fg-tab-about" />
+        )}
+
+        {tab === 'examples' && (
+          <FontExamplesPanel font={font} id="fg-panel-examples" labelledBy="fg-tab-examples" />
         )}
 
         </div>

@@ -289,10 +289,100 @@ export default function FontMatcher({ onCopy, toast }) {
       </div>
 
       <div className="fpr-grid">
+        {/* ── Controls ── */}
+        <section className="card fpr-panel fpr-config" aria-labelledby="fpr-config-title">
+          <div className="fpr-section-head">
+            <span className="fpr-section-num">01</span>
+            <div>
+              <h2 id="fpr-config-title">Choose the pair</h2>
+              <p>The heading drives the suggestions; the body is yours to override.</p>
+            </div>
+          </div>
+
+          <NavLink to="/create/font-gallery" className="fpr-gallery-callout">
+            <span className="fpr-gallery-callout-mark" aria-hidden="true">Aa</span>
+            <span>
+              <strong>Select from the Font Gallery</strong>
+              <small>Browse live specimens, compare families, then send one back here.</small>
+            </span>
+            <span aria-hidden="true">↗</span>
+          </NavLink>
+
+          <FontPicker
+            label="Heading family"
+            fonts={catalog}
+            value={headingFont}
+            onChange={chooseHeading}
+          />
+          <div className="fpr-weights" role="group" aria-label="Heading weight">
+            {headingFont.variants.map(w => (
+              <button
+                key={w}
+                type="button"
+                className={headingW === w ? 'fpr-weight fpr-weight--on' : 'fpr-weight'}
+                aria-pressed={headingW === w}
+                onClick={() => {
+                  setHeadingW(w)
+                  setFonts({ heading: { family: headingFont.family, weight: w, category: headingFont.category } })
+                }}
+              >
+                {w}
+              </button>
+            ))}
+          </div>
+
+          <FontPicker
+            label="Body family"
+            fonts={catalog}
+            value={bodyFont}
+            onChange={chooseBody}
+          />
+          <div className="fpr-weights" role="group" aria-label="Body weight">
+            {bodyFont.variants.map(w => (
+              <button
+                key={w}
+                type="button"
+                className={bodyW === w ? 'fpr-weight fpr-weight--on' : 'fpr-weight'}
+                aria-pressed={bodyW === w}
+                onClick={() => {
+                  setBodyW(w)
+                  setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
+                }}
+              >
+                {w}
+              </button>
+            ))}
+          </div>
+
+          <label className="seg-label" htmlFor="fpr-text">Preview text</label>
+          <input
+            id="fpr-text"
+            className="fpr-input"
+            type="text"
+            value={previewText}
+            placeholder="Your own words…"
+            maxLength={90}
+            spellCheck="false"
+            onChange={e => setPreviewText(e.target.value)}
+          />
+          <p className="typ-hint">
+            Brand words behave differently from a pangram — try the real headline
+            before you commit to a face.
+          </p>
+
+          <button type="button" className="fpr-shuffle" onClick={shuffle}>
+            <ShuffleIcon size={14} />
+            Shuffle the heading
+          </button>
+          <button type="button" className="fpr-handoff" onClick={openInTypeScale}>
+            Build a scale from this pair &rarr;
+          </button>
+        </section>
+
         {/* ── Specimen + suggestions ── */}
         <section className="card fpr-panel fpr-output" aria-labelledby="fpr-output-title">
           <div className="fpr-section-head">
-            <span className="fpr-section-num">01</span>
+            <span className="fpr-section-num">02</span>
             <div>
               <h2 id="fpr-output-title">Read the pairing</h2>
               <p>The two faces together, at the sizes and weights they&rsquo;ll actually ship at.</p>
@@ -439,96 +529,6 @@ export default function FontMatcher({ onCopy, toast }) {
             </div>
             <pre id="fpr-export" className="fpr-export" tabIndex="0"><code>{cssExport}</code></pre>
           </div>
-        </section>
-
-        {/* ── Controls ── */}
-        <section className="card fpr-panel fpr-config" aria-labelledby="fpr-config-title">
-          <div className="fpr-section-head">
-            <span className="fpr-section-num">02</span>
-            <div>
-              <h2 id="fpr-config-title">Choose the pair</h2>
-              <p>The heading drives the suggestions; the body is yours to override.</p>
-            </div>
-          </div>
-
-          <NavLink to="/create/font-gallery" className="fpr-gallery-callout">
-            <span className="fpr-gallery-callout-mark" aria-hidden="true">Aa</span>
-            <span>
-              <strong>Select from the Font Gallery</strong>
-              <small>Browse live specimens, compare families, then send one back here.</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </NavLink>
-
-          <FontPicker
-            label="Heading family"
-            fonts={catalog}
-            value={headingFont}
-            onChange={chooseHeading}
-          />
-          <div className="fpr-weights" role="group" aria-label="Heading weight">
-            {headingFont.variants.map(w => (
-              <button
-                key={w}
-                type="button"
-                className={headingW === w ? 'fpr-weight fpr-weight--on' : 'fpr-weight'}
-                aria-pressed={headingW === w}
-                onClick={() => {
-                  setHeadingW(w)
-                  setFonts({ heading: { family: headingFont.family, weight: w, category: headingFont.category } })
-                }}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
-
-          <FontPicker
-            label="Body family"
-            fonts={catalog}
-            value={bodyFont}
-            onChange={chooseBody}
-          />
-          <div className="fpr-weights" role="group" aria-label="Body weight">
-            {bodyFont.variants.map(w => (
-              <button
-                key={w}
-                type="button"
-                className={bodyW === w ? 'fpr-weight fpr-weight--on' : 'fpr-weight'}
-                aria-pressed={bodyW === w}
-                onClick={() => {
-                  setBodyW(w)
-                  setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
-                }}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
-
-          <label className="seg-label" htmlFor="fpr-text">Preview text</label>
-          <input
-            id="fpr-text"
-            className="fpr-input"
-            type="text"
-            value={previewText}
-            placeholder="Your own words…"
-            maxLength={90}
-            spellCheck="false"
-            onChange={e => setPreviewText(e.target.value)}
-          />
-          <p className="typ-hint">
-            Brand words behave differently from a pangram — try the real headline
-            before you commit to a face.
-          </p>
-
-          <button type="button" className="fpr-shuffle" onClick={shuffle}>
-            <ShuffleIcon size={14} />
-            Shuffle the heading
-          </button>
-          <button type="button" className="fpr-handoff" onClick={openInTypeScale}>
-            Build a scale from this pair &rarr;
-          </button>
         </section>
       </div>
 
