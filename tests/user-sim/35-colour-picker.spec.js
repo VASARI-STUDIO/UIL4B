@@ -115,6 +115,15 @@ test.describe('colour picker', () => {
     const text = await page.locator(PANEL).innerText()
     expect(text).not.toMatch(/\bImage\b/)
     expect(text).not.toMatch(/\bGradient\b/)
+    // Also by ROLE, not only by text. The panel now shows a title supplied
+    // by its caller, so a future ariaLabel containing one of those words
+    // could fire the text assertion for an innocent reason — and, worse, a
+    // tab strip labelled "Fill"/"Blend" would slip past it entirely. A
+    // tablist is what "tabs have appeared" actually means.
+    await expect(page.locator(`${PANEL} [role="tablist"], ${PANEL} [role="tab"]`)).toHaveCount(0)
+    // The only range control in this panel is the hue. A second one is the
+    // shape an alpha track would arrive in.
+    await expect(page.locator(`${PANEL} input[type="range"]`)).toHaveCount(1)
   })
 
   test('the panel keeps its keyboard contract', async ({ page }) => {
@@ -124,5 +133,67 @@ test.describe('colour picker', () => {
     await page.keyboard.press('Escape')
     await expect(page.locator(PANEL)).toHaveCount(0)
     await expect(page.locator(TRIGGER).first()).toBeFocused()
+  })
+
+  // -- The hue strip actually paints a hue -----------------------------------
+  // Regression guard for a defect that shipped from the day this component was
+  // written. `input[type="range"]` near the top of global.css is (0,1,1) and
+  // sets `background:transparent`; a bare `.cpk-hue` is (0,1,0), so the app's
+  // generic slider won every contested declaration and the strip rendered as a
+  // 4px grey track with the standard blue thumb. Every rainbow declaration was
+  // present in the stylesheet and none of them applied - which is why reading
+  // the CSS never revealed it and rendering the panel did, in one look.
+  test('the hue strip is a hue strip, not the app default slider', async ({ page }) => {
+    await openPicker(page)
+    const hue = page.locator('.cpk-hue')
+    await expect(hue).toBeVisible()
+    const painted = await hue.evaluate((el) => ({
+      image: getComputedStyle(el).backgroundImage,
+      height: Math.round(el.getBoundingClientRect().height),
+    }))
+    expect(painted.image).toContain('gradient')
+    // A hue wheel, not a two-stop fade: red round through to red again.
+    expect(painted.image.match(/rgb\(/g)?.length || 0).toBeGreaterThanOrEqual(5)
+    // And it is the strip, not the 32px generic slider box.
+    expect(painted.height).toBeLessThan(32)
+  })
+
+  // -- One picker, everywhere ------------------------------------------------
+  // The founder's second half: "i want this one used for all colour pickers".
+  // A native <input type="color"> opens the OPERATING SYSTEM's dialog, so any
+  // that survive are surfaces where the app's own picker - and the shared
+  // recents with it - is simply not on offer.
+  for (const route of ['/create/contrast', '/create/tint', '/create/palette', '/create/gradient']) {
+    test(`${route} offers the app own picker and no OS colour dialog`, async ({ page }) => {
+      await page.goto(route)
+      await expect(page.locator(TRIGGER).first()).toBeVisible()
+      await expect(page.locator('input[type="color"]')).toHaveCount(0)
+    })
+  }
+
+  // The point of the shared list, measured across two tools that BOTH used to
+  // open the OS picker and so could not participate in it at all.
+  test('a colour mixed in the contrast checker reaches the tint tool', async ({ page }) => {
+    await page.goto('/create/contrast')
+    await page.locator(TRIGGER).first().click()
+    await expect(page.locator(PANEL)).toBeVisible()
+    await page.locator(FIELD).fill('#4338e0')
+    await page.locator(FIELD).press('Enter')
+    await page.keyboard.press('Escape')
+
+    await page.goto('/create/tint')
+    await page.locator(TRIGGER).first().click()
+    await expect(page.locator(PANEL)).toBeVisible()
+    await expect(page.locator('.cpk-recents .cpk-swatch').first())
+      .toHaveAttribute('aria-label', '#4338e0')
+  })
+
+  // The panel says WHICH of the many colours on a surface it is editing. A
+  // gradient opens one of these per stop, and before this they were identical.
+  test('the panel names the colour it is editing', async ({ page }) => {
+    await page.goto(ROUTE)
+    await page.locator(TRIGGER).nth(1).click()
+    await expect(page.locator(PANEL)).toBeVisible()
+    await expect(page.locator('.cpk-head-name')).toHaveText('Stop 2 colour')
   })
 })
