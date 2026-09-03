@@ -9488,6 +9488,34 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .ggn-presets{display:flex}
   .ggn-preset{flex:0 0 calc((100% - 20px) / 2.4)}
 }
+/* THE DESKTOP CASE: WRAP, DO NOT SCROLL.
+   The rail above is right for a phone, where sixteen 142px tiles cannot share a
+   296px box on any terms. It is wrong from 981px up, and it was measured wrong:
+   at 1280 AND at 1440 the strip is 2422px inside a 1142px box, so 1280px of it
+   sits behind a 34px fade with SEVEN of the sixteen visible. The eight a desktop
+   visitor never reaches without a gesture are Sunset, Lagoon, Grape, Citrus,
+   Twilight, Aurora, Bloom and Ocean, and the page was holding ~300px of empty
+   ground under the card while it hid them.
+   The fix vocabulary in the `.rail-overflow` note says to wrap first where the
+   item set is small and discrete, and to keep the three layered affordances for
+   rails where wrapping is genuinely not on the table. Sixteen named presets is
+   small and discrete, and a preset strip is a BROWSE-AND-COMPARE surface: the
+   reader is working out what is on offer, which is the one job scrolling is
+   worst at. Mobbin, web, searched for the opposite pattern and it is not there
+   - Mural, Aave and Discord all lay a named-swatch library out WRAPPED and
+   entire, and none of the four references puts one in a horizontal scroller.
+   `auto-fill` at a 132px minimum lands on eight columns in the 1142px card, so
+   the sixteen become two rows of eight at 1280 and at 1440, and three rows
+   lower in the band - the whole library, no gesture, for one extra row of
+   height that the page already had spare.
+   The rail affordances are switched OFF here rather than on below, because
+   `.rail-overflow` is on the element in the markup: same shape as the
+   `.plb-toolbar-group.rail-overflow` opt-out at >=961px. */
+@media(min-width:981px){
+  .ggn-presets{display:grid;grid-auto-flow:row;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));padding-bottom:0}
+  .ggn-presets.rail-overflow{overflow:visible;scroll-snap-type:none;animation:none;-webkit-mask-image:none;mask-image:none}
+  .ggn-preset{scroll-snap-align:none}
+}
 .ggn-import:focus-visible,.ggn-css:focus-visible,.ggn-btn:focus-visible,.ggn-seg-btn:focus-visible,.ggn-copy:focus-visible,.ggn-stop-x:focus-visible,.ggn-angle-input:focus-visible,.ggn-stop-pos input:focus-visible,.ggn-stop-hex:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
 @media(max-width:980px){
   .ggn-grid{grid-template-columns:1fr}
