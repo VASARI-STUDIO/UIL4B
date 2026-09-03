@@ -6888,6 +6888,68 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hw-panel{padding:20px;background:var(--bg-1)}
 .hw-body{display:flex;flex-direction:column;gap:14px}
 
+/* ── The two zones ───────────────────────────────────────────────────────────
+   Founder: "use mobbin to improve our UI preview designs."
+
+   Canvas above, controls below. Every token editor sampled on Mobbin is built
+   this way — v0, Lovable, GitBook, Gamma, Stitch, Squarespace — and it is the
+   split the rest of this block falls out of: `.hw-stage` holds what a mode
+   PRODUCES, `.hw-controls` holds what changes it, and the two are never
+   interleaved. Extracted from the parked PR #269 (its C4), minus the parts of
+   that slice which depend on #262's unmerged fixed frame: the capping and
+   internal scrolling of these zones is only meaningful once `.hw-panel` has a
+   height to cap against, so those rules stay with #262 rather than being
+   half-landed here. As plain blocks the zones cost nothing and are correct. */
+.hw-stage,.hw-controls{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* ── The palette mode's artefact: real product UI, not a swatch row ──────────
+   The Palette panel's preview WAS its five swatches. Mobbin's answer is
+   unanimous and it is the reason this exists: v0 previews tokens on a revenue
+   chart, an account form and a payments table; Lovable on a metric card, a
+   payment-method chooser and an issue form; GitBook on a whole rendered docs
+   site; Gamma on a page with a primary/secondary button pair. Not one of them
+   previews a palette as a labelled colour row, because the row cannot answer
+   the only question a preview is for — not "what are these five colours" but
+   "do they compose".
+
+   THEME SAFETY IS A RULE, NOT A TUNING. A generated colour is only ever a
+   FILL here; text sitting on a generated fill takes readableInk() of that fill
+   in the JSX. Everything else — ground, borders, body text — uses the app's own
+   tokens, which already flip. Painting label text in a palette step is exactly
+   how a preview like this disappears in one of the two themes, and no amount of
+   colour-mixing afterwards fixes it. */
+.hw-ui{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);box-shadow:var(--shadow-s);overflow:hidden}
+.hw-ui-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--bg-0)}
+.hw-ui-mark{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:800}
+.hw-ui-app{font-family:var(--font);font-size:var(--fs-body-s);font-weight:700;color:var(--t0)}
+.hw-ui-crumb{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+.hw-ui-avatar{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;margin-left:auto;border-radius:50%;font-family:var(--font);font-size:10px;font-weight:700}
+.hw-ui-main{display:flex;flex-direction:column;gap:12px;padding:14px}
+.hw-ui-metric{display:flex;flex-direction:column;gap:2px}
+.hw-ui-metric-label{font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
+.hw-ui-metric-row{display:flex;align-items:baseline;gap:9px}
+.hw-ui-metric-num{font-family:var(--font);font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.05;color:var(--t0)}
+.hw-ui-delta{padding:2px 8px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700}
+/* `vector-effect:non-scaling-stroke` is load-bearing, not polish: the viewBox
+   is stretched with preserveAspectRatio="none", so without it a 1.6 stroke is
+   scaled by the x and y factors independently and the line arrives thick on one
+   axis and hairline on the other. */
+.hw-ui-chart{display:block;width:100%;height:52px}
+/* Rows, not a swatch strip: same dot size, same gap, a real label beside each.
+   Two ramp steps that failed to separate are visible here and nowhere else. */
+.hw-ui-rows{display:flex;flex-direction:column;list-style:none;margin:0;padding:0}
+.hw-ui-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--border)}
+.hw-ui-row:first-child{border-top:0}
+.hw-ui-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.hw-ui-row-name{font-family:var(--font);font-size:var(--fs-caption);color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hw-ui-row-state{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+.hw-ui-acts{display:flex;gap:8px;flex-wrap:wrap}
+.hw-ui-btn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 14px;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-caption);font-weight:650}
+/* Neutral, like Gamma's greyed "Secondary button" beside its coloured primary.
+   A second palette colour here would be a second primary, and the pair would
+   stop reading as a hierarchy. */
+.hw-ui-btn--ghost{border:1px solid var(--border);background:var(--bg-1);color:var(--t1)}
+
 /* Shared panel furniture */
 .hw-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .hw-btn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:580;cursor:pointer;transition:background var(--t),border-color var(--t)}
@@ -6917,7 +6979,11 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hw-field-err{margin:0;font-size:var(--fs-caption);line-height:1.45;color:var(--err)}
 
 /* 1 · Palette */
-.hw-pal{display:flex;gap:0;height:154px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-s);list-style:none}
+/* 154px → 96px. The strip is no longer the preview, it is the palette RAIL
+   under the canvas, and at its old height it out-weighed the artefact it is
+   supposed to be driving. 96px still clears the 40px lock target plus the hex
+   label with room, so nothing about the controls got tighter. */
+.hw-pal{display:flex;gap:0;height:96px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-s);list-style:none}
 /* V2 signature: a hovered swatch grows and pushes its neighbours (flex 1 → 1.8).
    Geometry, so it takes --dur-3, never anything faster. */
 .hw-pal-sw{position:relative;flex:1 1 0;min-width:0;display:flex;transition:flex-grow var(--dur-3) var(--ease-standard)}
@@ -6999,7 +7065,9 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 
 @media (max-width:640px){
   .hw-panel{padding:16px}
-  .hw-pal{height:126px}
+  .hw-pal{height:88px}
+  .hw-ui-metric-num{font-size:22px}
+  .hw-ui-chart{height:48px}
   .hw-icon-split,.hw-img-split,.hw-type-split{grid-template-columns:1fr}
   .hw-type-side .hw-fields{flex-direction:column}
   .hw-type-side .hw-field-grow{flex:none}

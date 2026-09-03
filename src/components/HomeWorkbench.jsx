@@ -64,12 +64,48 @@ function hslToHex(h, s, l) {
   return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase()
 }
 
-// Perceived luminance → a readable ink for a swatch label.
-function readableInk(hex) {
+// Perceived luminance, 0–1. Shared by the swatch labels and the preview's role
+// assignment so the two can never disagree about which end of a ramp is light.
+function luminance(hex) {
   const r = parseInt(hex.slice(1, 3), 16) / 255
   const g = parseInt(hex.slice(3, 5), 16) / 255
   const b = parseInt(hex.slice(5, 7), 16) / 255
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.58 ? '#141414' : '#FFFFFF'
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+// Perceived luminance → a readable ink for a swatch label.
+function readableInk(hex) {
+  return luminance(hex) > 0.58 ? '#141414' : '#FFFFFF'
+}
+
+/**
+ * Assign UI roles to a generated ramp by MEASURED lightness, never by index.
+ *
+ * The generator happens to emit its five steps dark→light (L_RAMP), so index
+ * order and lightness order agree today. Reading the roles off the index anyway
+ * would be a preview that is right by coincidence: lock the light end, change
+ * the ramp, or reorder the generator, and the mock would start painting body
+ * text in the lightest colour while still claiming to show the palette. Sorting
+ * by luminance costs five comparisons and cannot drift.
+ *
+ * `primary` is the darkest step because that is the one a filled control can
+ * carry white text on; `tint` is the lightest, which is the only one that works
+ * as a fill behind ink. Everything between drives the chart, where the point is
+ * that adjacent steps stay distinguishable from each other.
+ */
+function previewRoles(swatches) {
+  const hexes = swatches.map((s) => s.hex)
+  const byLight = [...hexes].sort((a, b) => luminance(a) - luminance(b))
+  return {
+    primary: byLight[0],
+    ink: byLight[0],
+    accent: byLight[Math.min(1, byLight.length - 1)],
+    tint: byLight[byLight.length - 1],
+    // Chart series stay in GENERATED order, not lightness order: a ramp that
+    // reads as a ramp is the thing being demonstrated, and re-sorting the bars
+    // would hide a generator that produced two near-identical steps.
+    series: hexes,
+  }
 }
 
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -147,6 +183,107 @@ function makePalette() {
   return L_RAMP.map((_, i) => makeSwatch(baseHue, i))
 }
 
+// The chart's shape is FIXED. Only the colours come from the palette, so
+// pressing Generate changes the thing under test and nothing else — a chart
+// that also re-rolled its curve would make two variables move at once and you
+// could no longer tell whether the ramp or the data had changed.
+//
+// Twelve readings on a 100 × 32 viewBox, plotted with preserveAspectRatio
+// "none" so the curve stretches to whatever width the panel has. Values are
+// the SVG y (small = high), so this series trends upward.
+const UI_SERIES = [24, 27, 20, 25, 18, 22, 14, 17, 10, 13, 7, 4]
+
+const UI_CHART_W = 100
+const UI_CHART_H = 32
+
+function seriesPath(values, close) {
+  const step = UI_CHART_W / (values.length - 1)
+  const line = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(2)},${v}`).join(' ')
+  return close ? `${line} L${UI_CHART_W},${UI_CHART_H} L0,${UI_CHART_H} Z` : line
+}
+
+// Three rows is enough to put ramp steps side by side in a real context and
+// short enough that the card never becomes the page.
+const UI_ROWS = [
+  { name: 'Design tokens', state: 'Shipped' },
+  { name: 'Component library', state: 'In review' },
+  { name: 'Documentation', state: 'Draft' },
+]
+
+/**
+ * Zone 1 of the Palette mode: the artefact.
+ *
+ * This panel used to BE the five swatches — a labelled colour row presented as
+ * a live product preview. Every comparable token editor sampled on Mobbin
+ * (v0, Lovable, GitBook, Gamma) previews a palette on real application UI and
+ * none of them previews it as a row of swatches, for the reason the row cannot
+ * answer: swatches show you five colours, a UI shows you whether they COMPOSE.
+ * The swatch row is still here — it moved to the controls zone, where it is the
+ * input it always was.
+ *
+ * THE RULE THAT MAKES THIS SAFE IN BOTH THEMES: a generated colour is only ever
+ * used as a FILL, never as text on the app's own ground. Text that sits on a
+ * generated fill takes readableInk() of that fill, so it is legible whatever
+ * the generator produced; all remaining furniture uses the app's own tokens,
+ * which already handle light and dark. Painting body text in a palette step is
+ * how a preview like this ends up invisible on one of the two themes.
+ *
+ * Inert and aria-hidden, exactly like `.hw-chrome` and `.hw-grad-preview`
+ * above it: nothing inside is focusable, no control is impersonated, and every
+ * hex it paints is announced for real by the swatch buttons below.
+ */
+function PaletteStage({ swatches }) {
+  const role = previewRoles(swatches)
+  return (
+    <div className="hw-ui" aria-hidden="true">
+      <div className="hw-ui-bar">
+        <span className="hw-ui-mark" style={{ background: role.primary, color: readableInk(role.primary) }}>A</span>
+        <span className="hw-ui-app">Acme</span>
+        <span className="hw-ui-crumb">Overview</span>
+        <span className="hw-ui-avatar" style={{ background: role.accent, color: readableInk(role.accent) }}>M</span>
+      </div>
+
+      <div className="hw-ui-main">
+        <div className="hw-ui-metric">
+          <span className="hw-ui-metric-label">Sessions this week</span>
+          <span className="hw-ui-metric-row">
+            <strong className="hw-ui-metric-num">12,480</strong>
+            <span className="hw-ui-delta" style={{ background: role.tint, color: readableInk(role.tint) }}>+12.4%</span>
+          </span>
+        </div>
+
+        {/* An area chart, because that is what the sampled editors preview a
+            palette on — v0 and Lovable both lead with one. It is also the
+            element that shows an accent doing its actual job: carrying a shape
+            at 2px against a background, which a 96px swatch never has to. */}
+        <svg className="hw-ui-chart" viewBox={`0 0 ${UI_CHART_W} ${UI_CHART_H}`} preserveAspectRatio="none" focusable="false">
+          <path d={seriesPath(UI_SERIES, true)} fill={role.primary} opacity=".14" />
+          <path d={seriesPath(UI_SERIES, false)} fill="none" stroke={role.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+
+        {/* Where the ramp gets compared. Three dots of adjacent steps, the same
+            size, a fixed distance apart, in a real list — the only arrangement
+            that reveals two steps a generator failed to separate. Isolated
+            swatches cannot, because nothing sits beside them. */}
+        <ul className="hw-ui-rows">
+          {UI_ROWS.map((row, i) => (
+            <li className="hw-ui-row" key={row.name}>
+              <span className="hw-ui-dot" style={{ background: role.series[i % role.series.length] }} />
+              <span className="hw-ui-row-name">{row.name}</span>
+              <span className="hw-ui-row-state">{row.state}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hw-ui-acts">
+          <span className="hw-ui-btn" style={{ background: role.primary, color: readableInk(role.primary) }}>Primary action</span>
+          <span className="hw-ui-btn hw-ui-btn--ghost">Secondary</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PalettePanel({ swatches, onChange, announce }) {
   const [copyError, setCopyError] = useState('')
   const [copiedHex, setCopiedHex] = useState('')
@@ -178,6 +315,17 @@ function PalettePanel({ swatches, onChange, announce }) {
 
   return (
     <div className="hw-body">
+      {/* Zone 1 — the artefact. See the `.hw-stage` / `.hw-controls` block in
+          global.css: the stage holds what the mode produces, the controls hold
+          what changes it, and the two are never interleaved. */}
+      <div className="hw-stage">
+        <PaletteStage swatches={swatches} />
+      </div>
+
+      {/* Zone 2 — the controls. The swatch row is an INPUT: lock, copy, and
+          the value each button announces. It reads as the palette rail under
+          the canvas, which is where every sampled editor puts it. */}
+      <div className="hw-controls">
       <ul className="hw-pal">
         {swatches.map((s, i) => (
           <li className="hw-pal-sw" key={i} style={{ background: s.hex }}>
@@ -230,6 +378,7 @@ function PalettePanel({ swatches, onChange, announce }) {
           <span aria-hidden="true">→</span>
         </Link>
         <span className="hw-foot-note">Your five swatches carry over on the free Auto system · full ramps, roles and export there.</span>
+      </div>
       </div>
     </div>
   )
