@@ -130,6 +130,35 @@ export const CREATE_GROUPS = [
 // better manners, so both are read as source text by the tests above.
 export const CREATE_HOMES_THAT_RENDER = Object.freeze(['/create/color'])
 
+// WHERE A LINK TO A CATEGORY SHOULD ACTUALLY GO.
+//
+// The fact above says which homes are real pages. This is what a link is
+// supposed to do about it, and it exists because two surfaces were getting it
+// wrong by hand: AppFooter.jsx pointed "Imagery" at /create/imagery, and the
+// homepage tools grid linked every category head at `group.home` — four of the
+// six only bounce. CreateTool.jsx then 302s the visitor to the group first
+// tool, so the click cost a navigation to arrive where a direct link would have
+// gone. That is the same defect #332 fixed in the search index, where "alt
+// text" landed a visitor on /create/ai-tools.
+//
+// The rule is CreateTool.jsx own, restated once here instead of guessed at four
+// times: a live group whose home is not a real screen sends you to its first
+// tool; a Soon group keeps its home, because that home renders the workshop
+// state and IS a destination. tests/unit/tool-tree-surfaces.test.js reads the
+// redirect branch out of CreateTool.jsx and fails if the two stop agreeing.
+export function categoryDestination(groupOrId) {
+  const group = typeof groupOrId === 'string'
+    ? CREATE_GROUPS.find((g) => g.id === groupOrId)
+    : groupOrId
+  if (!group) throw new Error(`categoryDestination: "${groupOrId}" is not a Create group`)
+  const first = group.tools?.[0]
+  const bounces = !group.soon
+    && !CREATE_HOMES_THAT_RENDER.includes(group.home)
+    && !!first
+    && normalise(first.route) !== normalise(group.home)
+  return bounces ? first.route : group.home
+}
+
 // Every Create tool the app can actually mount, flattened out of the groups.
 // `soon` is inherited from the group as well as the tool, because a tool inside
 // a Soon group renders the workshop state whatever its own flag says.
