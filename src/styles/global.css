@@ -6853,6 +6853,53 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
   .hstep[data-active="true"]{opacity:1}
   .hsteps-sticky{position:sticky;top:calc(var(--nav-clear) + var(--s-4))}
   .hsteps-sticky .hw-shell{box-shadow:var(--shadow-panel)}
+  /* ── The panel may never be taller than the screen it is stuck to ──────────
+     A position:sticky element taller than the viewport cannot be fully seen:
+     you reach its bottom only by scrolling past the whole section, and by then
+     it has unstuck. The "Continue in ..." hand-off lives at that bottom, so the
+     failure is not cosmetic — it is the panel's entire purpose becoming
+     unreachable. Measured at 1440x900 before this cap, with the modes stacked
+     one-column: image 966px against an 852px budget.
+
+     This is a CAP, not #262's fixed frame. #262 wants one constant height so
+     the panel stops resizing between modes at all (measured swing on main:
+     317px; 391px after the re-layout below, because a stacked mode is taller
+     than a split one). That is a bigger change and it is still its own item —
+     this rule only guarantees nothing becomes unreachable, and the swing is
+     left for #262, stated rather than implied. */
+  .hsteps-sticky .hw-shell{display:flex;flex-direction:column;max-height:calc(100vh - var(--nav-clear) - var(--s-4) - var(--s-5))}
+  .hsteps-sticky .hw-panel{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  .hsteps-sticky .hw-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  /* THE ARTEFACT IS NEVER SQUEEZED. The first version of this cap let the stage
+     flex down and clip, and every measurement passed — panel inside its budget,
+     hand-off on screen, nothing overflowing. Looking at it showed the type
+     ladder had lost its caption step and been sliced through the body step: a
+     scale preview showing 2.5 of its 4 sizes, still claiming to be the scale.
+     A preview that quietly drops content is worse than one that scrolls, so the
+     stage takes its natural height and the CONTROLS absorb the difference. */
+  .hsteps-sticky .hw-stage{flex:0 0 auto;justify-content:center}
+  /* The only zone allowed to scroll, and only when a mode genuinely needs it.
+     `scrollbar-gutter:stable` reserves the gutter in every mode, so the modes
+     that fit are not a few px narrower than the ones that do not. */
+  .hsteps-sticky .hw-controls{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+  /* A scrolling flex column still shrinks its own children by default, and the
+     ones that carry `overflow:hidden` then clip instead of pushing the scroll.
+     Caught in typography: `.hw-type-tools` swallowed its third row (Type Scale)
+     while the container reported scrollHeight === clientHeight, so nothing was
+     scrollable and a whole hand-off was simply missing. The zone scrolls; its
+     children keep their size. */
+  .hsteps-sticky .hw-controls>*{flex:0 0 auto}
+  /* When a mode's controls do scroll, the hand-off must not scroll out of
+     reach — a CTA you have to go looking for is a CTA that does not get
+     pressed. Sticky inside the scroll container, on the panel's own ground so
+     the controls pass behind it rather than through it. */
+  .hsteps-sticky .hw-foot{position:sticky;bottom:0;z-index:1;margin-top:auto;padding-bottom:2px;background:var(--bg-1)}
+  /* The reference image is the one stage item that MAY be cut, because it is a
+     photograph and not information: the <img> is already absolutely positioned
+     with object-fit:cover, so a shorter box crops it centred rather than losing
+     a value. Everything else in a stage keeps its natural size. Without this
+     the 880x495 ratio alone claims 311px of a 593px column. */
+  .hsteps-sticky .hw-ref{min-height:0;max-height:34vh}
   /* The sticky column is roughly half the page, so the workbench's 118px tab
      floor overflowed its own strip and clipped "Typography". The tabs share the
      width evenly here and the icons carry the recognition. */
@@ -6971,8 +7018,129 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hw-panel{padding:20px;background:var(--bg-1)}
 .hw-body{display:flex;flex-direction:column;gap:14px}
 
+/* ── The two zones ───────────────────────────────────────────────────────────
+   Founder: "use mobbin to improve our UI preview designs."
+
+   Canvas above, controls below. Every token editor sampled on Mobbin is built
+   this way — v0, Lovable, GitBook, Gamma, Stitch, Squarespace — and it is the
+   split the rest of this block falls out of: `.hw-stage` holds what a mode
+   PRODUCES, `.hw-controls` holds what changes it, and the two are never
+   interleaved. Extracted from the parked PR #269 (its C4), minus the parts of
+   that slice which depend on #262's unmerged fixed frame: the capping and
+   internal scrolling of these zones is only meaningful once `.hw-panel` has a
+   height to cap against, so those rules stay with #262 rather than being
+   half-landed here. As plain blocks the zones cost nothing and are correct. */
+.hw-stage,.hw-controls{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* ── The palette mode's artefact: real product UI, not a swatch row ──────────
+   The Palette panel's preview WAS its five swatches. Mobbin's answer is
+   unanimous and it is the reason this exists: v0 previews tokens on a revenue
+   chart, an account form and a payments table; Lovable on a metric card, a
+   payment-method chooser and an issue form; GitBook on a whole rendered docs
+   site; Gamma on a page with a primary/secondary button pair. Not one of them
+   previews a palette as a labelled colour row, because the row cannot answer
+   the only question a preview is for — not "what are these five colours" but
+   "do they compose".
+
+   EVERY COLOUR IN HERE IS PAINTED FROM derivePreviewRoles() IN THE JSX, not
+   from app tokens — the same engine the Palette Builder and Colour Studio
+   previews use, so one palette produces one set of roles wherever a visitor
+   meets it. That engine derives `text` by contrast rather than ever using a
+   swatch for copy, and self-heals every pair to AA before returning, which is
+   what keeps the mock legible for any palette in either theme. The rules below
+   are geometry only; the fallback colours here are what shows if the roles ever
+   fail to arrive. */
+.hw-ui{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);box-shadow:var(--shadow-s);overflow:hidden}
+.hw-ui-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)}
+.hw-ui-mark{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:800}
+.hw-ui-app{font-family:var(--font);font-size:var(--fs-body-s);font-weight:700}
+.hw-ui-crumb{font-family:var(--mono);font-size:var(--fs-micro)}
+.hw-ui-avatar{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;margin-left:auto;border-radius:50%;font-family:var(--font);font-size:10px;font-weight:700}
+.hw-ui-main{display:flex;flex-direction:column;gap:12px;padding:14px}
+.hw-ui-metric{display:flex;flex-direction:column;gap:2px}
+.hw-ui-metric-label{font-family:var(--font);font-size:var(--fs-caption)}
+.hw-ui-metric-row{display:flex;align-items:baseline;gap:9px}
+.hw-ui-metric-num{font-family:var(--font);font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.hw-ui-delta{padding:2px 8px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700}
+/* `vector-effect:non-scaling-stroke` is load-bearing, not polish: the viewBox
+   is stretched with preserveAspectRatio="none", so without it a 1.6 stroke is
+   scaled by the x and y factors independently and the line arrives thick on one
+   axis and hairline on the other. */
+.hw-ui-chart{display:block;width:100%;height:52px}
+/* Rows, not a swatch strip: same dot size, same gap, a real label beside each.
+   Two ramp steps that failed to separate are visible here and nowhere else. */
+.hw-ui-rows{display:flex;flex-direction:column;list-style:none;margin:0;padding:0}
+.hw-ui-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 0;border-top:1px solid transparent}
+.hw-ui-row:first-child{border-top:0}
+.hw-ui-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.hw-ui-row-name{font-family:var(--font);font-size:var(--fs-caption);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hw-ui-row-state{font-family:var(--mono);font-size:var(--fs-micro)}
+.hw-ui-acts{display:flex;gap:8px;flex-wrap:wrap}
+.hw-ui-btn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 14px;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-caption);font-weight:650}
+/* Outlined and unfilled, like Gamma's secondary beside its coloured primary.
+   A second palette colour as a FILL here would be a second primary and the pair
+   would stop reading as a hierarchy, so it takes the derived border and text. */
+.hw-ui-btn--ghost{border:1px solid;background:none}
+
 /* Shared panel furniture */
 .hw-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+
+/* ── One control language: OPTIONS are rails, PROPERTIES are rows ────────────
+   Extracted from the parked PR #269 (its C4). The modes used a stack of
+   label+select pairs for everything, which is why they read like a settings
+   form rather than like the tools they are a slice of.
+
+   The split, and the Mobbin evidence for it:
+
+   OPTIONS — a small closed set you pick one of — are a rail of pill tiles with
+   `aria-pressed`, active one INVERTED. Lovable's payment-method chooser
+   (Card / PayPal / Apple) and Stitch's Mode control (Light / Dark) are both
+   exactly this. Inverted rather than tinted because at this size a tint is not
+   a strong enough selected signal beside four neighbours.
+
+   PROPERTIES — a continuous value — are label-left / control-right rows with an
+   EDITABLE numeric readout in a fixed right-hand column. Salesforce prints the
+   live value (`58`) at the right end of its Border Radius track; MagicPath
+   right-aligns the rem value in mono beside every type-scale step. On a ~471px
+   column a slider alone cannot hit 135 degrees, so the number is the real input
+   and the slider is the coarse one.
+
+   Rails and rows are never mixed inside one stack. That separation is also what
+   buys the vertical space back: two selects with labels cost ~130px, two rails
+   ~76px, and every value becomes one click instead of two. */
+.hw-prop{display:grid;grid-template-columns:minmax(72px,auto) minmax(0,1fr) auto;align-items:center;gap:10px;min-height:34px}
+.hw-prop-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
+.hw-prop-range{min-width:0}
+.hw-prop-select,.hw-prop-text{grid-column:2 / -1;width:100%}
+.hw-prop-num{display:inline-flex;align-items:center;justify-content:flex-end;justify-self:end;gap:2px;min-height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
+.hw-prop-num:focus-within{border-color:var(--hue,var(--accent))}
+.hw-prop-num--wide{min-width:96px}
+/* `.hw-num`, NOT `input.hw-num`. #269 wrote this qualified and explained why:
+   the base reset was a bare `input[type="number"]` at (0,1,1), which beat a
+   class, and the readout inherited `padding:9px 14px` — 31px of content box for
+   a 42px value, clipping "16" to "1". #331 moved that reset inside `:where()`,
+   so it is (0,0,0) now and a plain class wins. The qualification came out with
+   its comment; keeping it would have taught the next reader a rule that is no
+   longer true. `appearance` stays because the `:where()` block sets only the
+   `-moz-` form. Pinned by tests/unit/input-specificity.test.js. */
+.hw-num{width:4ch;min-width:0;padding:0;border:0;background:none;color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-align:right;appearance:textfield}
+.hw-num:focus{outline:none;box-shadow:none;border:0}
+.hw-num-unit{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2)}
+
+.hw-rail-group{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hw-rail-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
+.hw-rail{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.hw-rail::-webkit-scrollbar{display:none}
+.hw-tile{display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;min-height:32px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;white-space:nowrap;transition:color var(--dur-2) var(--ease-standard),background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
+.hw-tile--wide{font-family:var(--font)}
+.hw-tile-unit{font-family:var(--mono);font-size:var(--fs-micro);opacity:.7}
+.hw-tile:hover{color:var(--t0);border-color:var(--bh)}
+.hw-tile:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:2px}
+.hw-tile[aria-pressed="true"]{background:var(--t0);border-color:transparent;color:var(--bg-1)}
+.hw-tile[aria-pressed="true"] .hw-tile-unit{opacity:.75}
+/* Names the colour space rather than just "Hex" — four characters, and correct
+   for a product whose pitch is defensible colour systems. */
+.hw-label-space{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--t3);text-transform:none}
 .hw-btn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:580;cursor:pointer;transition:background var(--t),border-color var(--t)}
 .hw-btn:hover{background:var(--hvr);border-color:var(--bh)}
 .hw-btn:disabled{opacity:.55;cursor:not-allowed}
@@ -6993,24 +7161,36 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 /* Fields */
 .hw-fields{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
 .hw-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.hw-field-grow{flex:1 1 180px}
 .hw-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--t2)}
 .hw-select,.hw-input{min-height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s)}
 .hw-select:focus-visible,.hw-input:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:1px}
 .hw-field-err{margin:0;font-size:var(--fs-caption);line-height:1.45;color:var(--err)}
 
 /* 1 · Palette */
-.hw-pal{display:flex;gap:0;height:154px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-s);list-style:none}
+/* 154px → 96px. The strip is no longer the preview, it is the palette RAIL
+   under the canvas, and at its old height it out-weighed the artefact it is
+   supposed to be driving. 96px still clears the 40px lock target plus the hex
+   label with room, so nothing about the controls got tighter. */
+.hw-pal{display:flex;gap:0;height:96px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-s);list-style:none}
 /* V2 signature: a hovered swatch grows and pushes its neighbours (flex 1 → 1.8).
    Geometry, so it takes --dur-3, never anything faster. */
 .hw-pal-sw{position:relative;flex:1 1 0;min-width:0;display:flex;transition:flex-grow var(--dur-3) var(--ease-standard)}
 .hw-pal-sw:hover,.hw-pal-sw:focus-within{flex-grow:1.8}
 .hw-pal-lock{position:absolute;top:0;right:0;display:grid;place-items:center;width:40px;height:40px;border:none;background:none;border-radius:50%;cursor:pointer;opacity:.5;transition:opacity var(--t)}
 .hw-pal-sw:hover .hw-pal-lock,.hw-pal-lock[aria-pressed="true"],.hw-pal-lock:focus-visible{opacity:1}
-.hw-pal-copy{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:0 6px 12px;border:none;background:none;cursor:pointer}
-.hw-pal-hex{font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.02em;opacity:.78}
-.hw-pal-sw:hover .hw-pal-hex{opacity:1}
-.hw-pal-tick{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
+/* `min-width:0` is the structural half of the 320px fix below: without it a
+   flex item refuses to shrink under its content, so the label's intrinsic width
+   sets the swatch's floor and five of them push the row past the viewport. */
+.hw-pal-copy{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:0 6px 12px;border:none;background:none;cursor:pointer}
+/* The hex label carries its own ground (set inline by labelGround), because on
+   a mid-luminance chromatic swatch NO ink clears 4.5:1 — the fill is the
+   problem, not the ink. Usually that ground is the swatch colour itself and
+   nothing is visible; where it differs it is the same hue a shade deeper, and
+   the padding and radius are what make that read as a chip rather than as an
+   artefact. `opacity` is gone from the resting state: it was dimming ink whose
+   contrast had just been guaranteed, which is the one thing that can undo it. */
+.hw-pal-hex{padding:2px 7px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.02em}
+.hw-pal-tick{padding:1px 7px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 
 /* 2 · Gradient */
 .hw-grad-preview{height:132px;border-radius:var(--radius);box-shadow:var(--shadow-s)}
@@ -7039,20 +7219,17 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hw-intent-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--t2)}
 .hw-intent strong{font-size:var(--fs-body-s);font-weight:700;color:var(--t0)}
 .hw-intent-note{font-size:var(--fs-caption);color:var(--t2)}
-/* Reference beside its settings, so the thumbnail informs the draft instead of
-   dominating the panel. */
-.hw-img-split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(238px,.95fr);gap:16px;align-items:start}
-.hw-img-controls{display:flex;flex-direction:column;gap:12px;min-width:0}
-.hw-img-controls .hw-fields{flex-direction:column;align-items:stretch;gap:10px}
-.hw-img-controls .hw-select{width:100%}
-.hw-img-controls .hw-intent{flex-direction:column;gap:4px}
+/* The reference sits ABOVE its settings now, not beside them. The three
+   per-mode splits were keyed to VIEWPORT width, so in a ~590px sticky column at
+   1440 they stayed two-column and every mode felt cramped — the panel is half
+   the page, not the page. Canvas over controls is the arrangement every sampled
+   editor uses and it needs no breakpoint to be right. */
+.hw-controls .hw-intent{flex-direction:column;gap:4px}
 
 /* 4 · Icon */
-.hw-icon-split{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.2fr);gap:18px;align-items:start}
 .hw-icon-stage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0)}
 .hw-icon-preview{display:grid;place-items:center;min-height:96px;color:var(--t0)}
 .hw-icon-meta{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;color:var(--t2);text-align:center}
-.hw-icon-side{display:flex;flex-direction:column;gap:14px;min-width:0}
 .hw-icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:7px}
 .hw-icon-cell{display:grid;place-items:center;aspect-ratio:1;min-height:44px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
 .hw-icon-cell:hover{color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));border-color:var(--bh)}
@@ -7060,15 +7237,13 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hw-icon-cell[aria-pressed="true"]{color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));border-color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 10%,var(--bg-1));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--hue,var(--accent)) 40%,transparent)}
 
 /* 5 · Typography */
-.hw-type-split{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(270px,.82fr);gap:18px;align-items:start}
 .hw-type-preview{min-width:0;padding:16px 18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0);overflow:hidden}
 .hw-type-row{display:flex;min-width:0;flex-direction:column;gap:3px;padding:10px 0;border-top:1px solid var(--border)}
 .hw-type-row:first-child{padding-top:0;border-top:0}
 .hw-type-row:last-child{padding-bottom:0}
 .hw-type-meta{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
 .hw-type-sample{display:block;max-width:100%;font-size:var(--hw-type-size);font-weight:650;line-height:1.08;letter-spacing:-.025em;color:var(--t0);overflow-wrap:anywhere}
-.hw-type-side{display:flex;min-width:0;flex-direction:column;gap:12px}
-.hw-type-side .hw-fields{flex-wrap:nowrap}
+.hw-type-side{gap:12px}
 .hw-type-tools{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .hw-type-tool{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:54px;padding:8px 11px;border:0;border-top:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--t),color var(--t)}
 .hw-type-tool:first-child{border-top:0}
@@ -7082,15 +7257,34 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 
 @media (max-width:640px){
   .hw-panel{padding:16px}
-  .hw-pal{height:126px}
-  .hw-icon-split,.hw-img-split,.hw-type-split{grid-template-columns:1fr}
-  .hw-type-side .hw-fields{flex-direction:column}
-  .hw-type-side .hw-field-grow{flex:none}
+  .hw-pal{height:88px}
+  /* The label chip costs horizontal room the widest phones do not have: at
+     320px the panel gives each of five swatches 57.6px, and "#215C8C" at
+     12.5px plus 14px of chip padding wants 66px. Measured as a 1px overflow
+     (.hw-pal-copy right:321 in a 320 viewport) — small, and still an element
+     pushed out of reach. The chip shrinks rather than the hex truncating,
+     because a truncated hex is not a value you can read or copy. */
+  .hw-pal-hex{padding:1px 3px;font-size:11px;letter-spacing:0}
+  .hw-pal-tick{padding:1px 3px}
+  .hw-pal-copy{padding:0 2px 10px}
+  .hw-ui-metric-num{font-size:22px}
+  .hw-ui-chart{height:48px}
   .hw-fields{gap:10px}
   .hw-field,.hw-select,.hw-input{width:100%}
   .hw-input-hex{width:auto;flex:1 1 auto;min-width:0}
   .hw-continue,.hw-btn{width:100%;justify-content:center}
   .hw-foot{gap:10px}
+}
+
+/* Below 380 the five swatches share ~51px each, so the hex chip is sized
+   against the SWATCH, not the panel. This block must sit AFTER the 640 one and
+   inside the hw- section: an identical rule placed in the homepage's own 380
+   block earlier in the sheet lost to the 640 rule on source order, at equal
+   specificity, and silently did nothing. */
+@media (max-width:380px){
+  .hw-pal-hex{padding:1px 0;font-size:10px;letter-spacing:0}
+  .hw-pal-tick{padding:1px 0;font-size:9px}
+  .hw-pal-copy{padding:0 1px 9px}
 }
 
 
