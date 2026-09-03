@@ -154,16 +154,22 @@ export function liveToolRoutes() {
 }
 
 // ── Homepage: two deliberately separate models ──────────────────────────────
-// The hero shows ELEVEN live tools; the mini-workbench below it has FIVE task
-// modes. They are not one-to-one — Semantic, Tint and Contrast stay direct tool
-// links, both media tools belong to Image, and the three typography tools resolve
-// into one Typography mode. Keeping the two models apart is the point of the
-// section: it makes the scattered-to-system relationship legible instead of
-// decorative.
+// ELEVEN live tools against FIVE task modes in the mini-workbench. They are not
+// one-to-one — Semantic, Tint and Contrast stay direct tool links, both media
+// tools belong to Image, and the three typography tools resolve into one
+// Typography mode. Keeping the two models apart is the point of the section: it
+// makes the scattered-to-system relationship legible instead of decorative.
 //
-// `family` is the workbench mode a satellite belongs to (used for the hover /
-// focus hint and for the decorative convergence). It never selects a tab and
-// never changes an href.
+// `family` is the workbench mode a tool resolves into. It never selects a tab
+// and never changes an href.
+//
+// CORRECTED: this used to say the hero SHOWS the eleven, and that `family`
+// drives their hover hint and the decorative convergence. Both stopped being
+// true when V2 removed the satellite field — useHomeMotion.js says so in its
+// own comment, Home.jsx says "The satellites are gone, but the RELATIONSHIP is
+// not", and there is no `hsat` left in global.css. What `family` drives now is
+// the aria-describedby on the tools grid, so a screen-reader user still hears
+// which mode a tool resolves into. See HOME_SATELLITE_SPEC below.
 
 export const HOME_WORKBENCH_TABS = [
   { id: 'palette', label: 'Palette', hue: 'colour', icon: 'palette' },
@@ -173,27 +179,79 @@ export const HOME_WORKBENCH_TABS = [
   { id: 'typography', label: 'Typography', hue: 'type', icon: 'typography' },
 ]
 
-// Source order IS the reading order (and the ≤768px list order). The authored,
-// deterministic wide-screen offsets live in global.css as `.hsat-item:nth-child()`
-// rules — they are presentation, never data, and are never randomised per load.
-// `zone` documents the intended wide-screen placement so the CSS and this table
-// can be checked against each other.
-export const HOME_SATELLITES = [
-  { id: 'palette', label: 'Palette', route: '/create/palette', family: 'palette', hue: 'colour', icon: 'palette', zone: 'upper left' },
-  { id: 'semantic', label: 'Semantic', route: '/create/semantic-color', family: 'palette', hue: 'colour', icon: 'semantic', zone: 'left' },
-  { id: 'tint', label: 'Tint', route: '/create/tint', family: 'palette', hue: 'colour', icon: 'tint', zone: 'lower left' },
-  { id: 'gradient', label: 'Gradient Generator', route: '/create/gradient', family: 'gradient', hue: 'colour', icon: 'gradient', zone: 'upper right' },
-  { id: 'contrast', label: 'Contrast', route: '/create/contrast', family: 'palette', hue: 'colour', icon: 'contrast', zone: 'right' },
-  { id: 'icons', label: 'Icon Library', route: '/create/icons', family: 'icon', hue: 'icons', icon: 'icons', zone: 'outer right' },
-  { id: 'file-converter', label: 'File Converter', route: '/create/file-converter', family: 'image', hue: 'imagery', icon: 'imagery', zone: 'lower right' },
-  { id: 'ratio', label: 'Aspect & Resolution', route: '/create/aspect-ratio', family: 'image', hue: 'imagery', icon: 'ratio', zone: 'lower outer edge' },
-  { id: 'font-gallery', label: 'Font Gallery', route: '/create/font-gallery', family: 'typography', hue: 'type', icon: 'type', zone: 'upper inner left' },
-  { id: 'font-pair', label: 'Font Pair', route: '/create/font-pair', family: 'typography', hue: 'type', icon: 'font-pair', zone: 'upper inner right' },
-  { id: 'type-scale', label: 'Type Scale', route: '/create/type-scale', family: 'typography', hue: 'type', icon: 'typography', zone: 'upper centre' },
+// Source order IS the reading order (and the ≤768px list order).
+//
+// ── What this table may and may not say ─────────────────────────────────────
+//
+// The spec below is PRESENTATION, keyed by a tool own id in CREATE_GROUPS. It
+// can choose which live tools appear, in what order, with which glyph, in which
+// zone, and it can give one a shorter name than the nav uses. It CANNOT invent
+// a tool, and it never writes a ROUTE or a HUE down — both are read back out of
+// the group that owns the tool, so a satellite can no longer point at a URL the
+// router does not have. Same split src/data/toolIndex.js makes for search: this
+// file owns identity, the consumer owns its own presentation.
+//
+// Before this, all seven fields were typed by hand next to the table they were
+// copied from, and three of the eleven labels had already diverged from the
+// tree ("Semantic" vs "Semantic Colour", "Contrast" vs "Contrast Checker",
+// "Gradient Generator" vs "Gradient"). Those three are deliberate — the chips
+// are small — so they stay as explicit overrides, and the test fails an
+// override that has become identical to the tree label, because a redundant
+// copy is just the next thing to go stale.
+//
+// FLAGGED, NOT ACTIONED. The comment that used to sit here said the wide-screen
+// offsets live in global.css as `.hsat-item:nth-child()` rules. There are ZERO
+// occurrences of `hsat` in global.css: the satellite field was removed from the
+// hero and its CSS with it. The only field any consumer still reads is
+// `family` — Home.jsx builds a route → family map so the tools grid can carry
+// the same many-tools-into-five-modes relationship for assistive tech. So
+// `label`, `hue`, `icon` and `zone` currently render nowhere. They are kept
+// because the surfaces above them are being restyled right now and the fields
+// are the whole description of the satellite model; deleting them is a separate
+// call from de-duplicating them, which is what this change is.
+const HOME_SATELLITE_SPEC = [
+  { id: 'palette', family: 'palette', icon: 'palette', zone: 'upper left' },
+  { id: 'semantic', label: 'Semantic', family: 'palette', icon: 'semantic', zone: 'left' },
+  { id: 'tint', family: 'palette', icon: 'tint', zone: 'lower left' },
+  { id: 'gradient', label: 'Gradient Generator', family: 'gradient', icon: 'gradient', zone: 'upper right' },
+  { id: 'contrast', label: 'Contrast', family: 'palette', icon: 'contrast', zone: 'right' },
+  { id: 'icons', family: 'icon', icon: 'icons', zone: 'outer right' },
+  { id: 'file-converter', family: 'image', icon: 'imagery', zone: 'lower right' },
+  { id: 'ratio', family: 'image', icon: 'ratio', zone: 'lower outer edge' },
+  { id: 'font-gallery', family: 'typography', icon: 'type', zone: 'upper inner left' },
+  { id: 'font-pair', family: 'typography', icon: 'font-pair', zone: 'upper inner right' },
+  { id: 'type-scale', family: 'typography', icon: 'typography', zone: 'upper centre' },
 ]
 
-// Family id → the workbench tab it resolves into. Used for the satellite's
-// family hint and the decorative convergence; it never selects a tab.
+// A tool id resolved against the tree, or a loud failure. Silently dropping an
+// unknown id is how a homepage entry disappears without anyone noticing — the
+// exact failure mode toolIndex.js names for an orphan metadata key — so this
+// throws at import, which fails `npm run build` (prerender.mjs imports this
+// module) as well as the unit suite.
+function requireTool(id, where) {
+  const tool = createTools().find((t) => t.id === id)
+  if (!tool) throw new Error(`${where} names "${id}", which is not a tool in CREATE_GROUPS`)
+  return tool
+}
+
+export const HOME_SATELLITES = HOME_SATELLITE_SPEC.map((sat) => {
+  const tool = requireTool(sat.id, 'HOME_SATELLITE_SPEC')
+  const group = CREATE_GROUPS.find((g) => g.id === tool.group)
+  return {
+    id: tool.id,
+    label: sat.label || tool.label,
+    route: tool.route,
+    family: sat.family,
+    hue: group.hue,
+    icon: sat.icon,
+    zone: sat.zone,
+  }
+})
+
+// Family id → the workbench tab it resolves into. Read by Home.jsx for the
+// accessible description on each tool link; it never selects a tab. (It used to
+// say "the satellite's family hint and the decorative convergence" — both went
+// with the satellite field.)
 export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) => [t.id, t.label]))
 
 // Discover + Learn are landing shells in Phase 1: most menu entries route to the
@@ -201,10 +259,24 @@ export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) 
 // no dead links and nothing claims to be live before it is. The exception is the
 // Gradient Library — a real, curated browse surface — which is `soon: false` and
 // links straight to its live page, so it renders as a live card and menu row.
-export const DISCOVER_GROUPS = [
+//
+// TWO KINDS OF ROW, and only one of them may write a route down.
+//
+//   `tool:` names a CREATE_GROUPS tool id. The route AND the `soon` flag come
+//   from the tree, so a Discover row cannot point at a Create URL the router
+//   does not have, and a tool that goes back into the workshop dims its
+//   Discover card on the same edit. Two rows are this kind — Font Gallery and
+//   Icon Library — and both used to carry a hand-typed second copy of a
+//   /create/ route sitting eighty lines below the table it was copied from.
+//
+//   `route:` is for the surfaces the Create tree does not own (/discover and
+//   its galleries). Those are still declared, because nothing else declares
+//   them — but the test asserts every one is a route the app can actually
+//   render and is not a retired URL.
+const DISCOVER_SPEC = [
   { id: 'palette-library', icon: 'palette', label: 'Palette Library', desc: 'Curated colour systems ready to copy, save or open in the Palette Builder.', route: '/discover/palettes', soon: false },
   { id: 'gradient-gallery', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
-  { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', route: '/create/font-gallery', soon: false },
+  { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', tool: 'font-gallery' },
   // Reachable from BOTH surfaces on purpose. The page is already a Discover
   // gallery in everything but its URL — #292 put it on the shared Library
   // browse components and #306 put it under DiscoverGalleryHero — so listing it
@@ -213,12 +285,19 @@ export const DISCOVER_GROUPS = [
   // no redirect table entry and no change to the prerendered route count. The
   // Emoji Library is deliberately not a second entry — it is the other tab of
   // this same page, one click away inside the hero #306 shipped.
-  { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search 200,000+ icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', route: '/create/icons', soon: false },
+  { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search 200,000+ icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
   { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/discover', soon: true },
   { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
   { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab.', route: '/discover', soon: true },
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
 ]
+
+export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
+  if (!row.tool) return row
+  const { tool: id, ...rest } = row
+  const tool = requireTool(id, 'DISCOVER_SPEC')
+  return { ...rest, route: tool.route, soon: tool.soon }
+})
 
 export const LEARN_GROUPS = [
   { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/learn', soon: true },
