@@ -6959,23 +6959,25 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
    the only question a preview is for — not "what are these five colours" but
    "do they compose".
 
-   THEME SAFETY IS A RULE, NOT A TUNING. A generated colour is only ever a
-   FILL here; text sitting on a generated fill takes readableInk() of that fill
-   in the JSX. Everything else — ground, borders, body text — uses the app's own
-   tokens, which already flip. Painting label text in a palette step is exactly
-   how a preview like this disappears in one of the two themes, and no amount of
-   colour-mixing afterwards fixes it. */
+   EVERY COLOUR IN HERE IS PAINTED FROM derivePreviewRoles() IN THE JSX, not
+   from app tokens — the same engine the Palette Builder and Colour Studio
+   previews use, so one palette produces one set of roles wherever a visitor
+   meets it. That engine derives `text` by contrast rather than ever using a
+   swatch for copy, and self-heals every pair to AA before returning, which is
+   what keeps the mock legible for any palette in either theme. The rules below
+   are geometry only; the fallback colours here are what shows if the roles ever
+   fail to arrive. */
 .hw-ui{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);box-shadow:var(--shadow-s);overflow:hidden}
-.hw-ui-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--bg-0)}
+.hw-ui-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)}
 .hw-ui-mark{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:800}
-.hw-ui-app{font-family:var(--font);font-size:var(--fs-body-s);font-weight:700;color:var(--t0)}
-.hw-ui-crumb{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+.hw-ui-app{font-family:var(--font);font-size:var(--fs-body-s);font-weight:700}
+.hw-ui-crumb{font-family:var(--mono);font-size:var(--fs-micro)}
 .hw-ui-avatar{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;margin-left:auto;border-radius:50%;font-family:var(--font);font-size:10px;font-weight:700}
 .hw-ui-main{display:flex;flex-direction:column;gap:12px;padding:14px}
 .hw-ui-metric{display:flex;flex-direction:column;gap:2px}
-.hw-ui-metric-label{font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
+.hw-ui-metric-label{font-family:var(--font);font-size:var(--fs-caption)}
 .hw-ui-metric-row{display:flex;align-items:baseline;gap:9px}
-.hw-ui-metric-num{font-family:var(--font);font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.05;color:var(--t0)}
+.hw-ui-metric-num{font-family:var(--font);font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
 .hw-ui-delta{padding:2px 8px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700}
 /* `vector-effect:non-scaling-stroke` is load-bearing, not polish: the viewBox
    is stretched with preserveAspectRatio="none", so without it a 1.6 stroke is
@@ -6985,17 +6987,17 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 /* Rows, not a swatch strip: same dot size, same gap, a real label beside each.
    Two ramp steps that failed to separate are visible here and nowhere else. */
 .hw-ui-rows{display:flex;flex-direction:column;list-style:none;margin:0;padding:0}
-.hw-ui-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--border)}
+.hw-ui-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 0;border-top:1px solid transparent}
 .hw-ui-row:first-child{border-top:0}
 .hw-ui-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
-.hw-ui-row-name{font-family:var(--font);font-size:var(--fs-caption);color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hw-ui-row-state{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+.hw-ui-row-name{font-family:var(--font);font-size:var(--fs-caption);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hw-ui-row-state{font-family:var(--mono);font-size:var(--fs-micro)}
 .hw-ui-acts{display:flex;gap:8px;flex-wrap:wrap}
 .hw-ui-btn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 14px;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-caption);font-weight:650}
-/* Neutral, like Gamma's greyed "Secondary button" beside its coloured primary.
-   A second palette colour here would be a second primary, and the pair would
-   stop reading as a hierarchy. */
-.hw-ui-btn--ghost{border:1px solid var(--border);background:var(--bg-1);color:var(--t1)}
+/* Outlined and unfilled, like Gamma's secondary beside its coloured primary.
+   A second palette colour as a FILL here would be a second primary and the pair
+   would stop reading as a hierarchy, so it takes the derived border and text. */
+.hw-ui-btn--ghost{border:1px solid;background:none}
 
 /* Shared panel furniture */
 .hw-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}

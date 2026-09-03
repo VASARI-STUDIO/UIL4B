@@ -23,6 +23,8 @@ import {
 } from '../utils/iconHandoff'
 import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
 import { setBoardDraft } from '../utils/colorHandoff'
+import { derivePreviewRoles } from '../utils/colors'
+import { useTheme } from '../contexts/ThemeContext'
 import { HOME_WORKBENCH_TABS } from '../data/toolTree'
 import NavIcon from './NavIcon'
 
@@ -64,48 +66,12 @@ function hslToHex(h, s, l) {
   return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase()
 }
 
-// Perceived luminance, 0–1. Shared by the swatch labels and the preview's role
-// assignment so the two can never disagree about which end of a ramp is light.
-function luminance(hex) {
+// Perceived luminance → a readable ink for a swatch label.
+function readableInk(hex) {
   const r = parseInt(hex.slice(1, 3), 16) / 255
   const g = parseInt(hex.slice(3, 5), 16) / 255
   const b = parseInt(hex.slice(5, 7), 16) / 255
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-
-// Perceived luminance → a readable ink for a swatch label.
-function readableInk(hex) {
-  return luminance(hex) > 0.58 ? '#141414' : '#FFFFFF'
-}
-
-/**
- * Assign UI roles to a generated ramp by MEASURED lightness, never by index.
- *
- * The generator happens to emit its five steps dark→light (L_RAMP), so index
- * order and lightness order agree today. Reading the roles off the index anyway
- * would be a preview that is right by coincidence: lock the light end, change
- * the ramp, or reorder the generator, and the mock would start painting body
- * text in the lightest colour while still claiming to show the palette. Sorting
- * by luminance costs five comparisons and cannot drift.
- *
- * `primary` is the darkest step because that is the one a filled control can
- * carry white text on; `tint` is the lightest, which is the only one that works
- * as a fill behind ink. Everything between drives the chart, where the point is
- * that adjacent steps stay distinguishable from each other.
- */
-function previewRoles(swatches) {
-  const hexes = swatches.map((s) => s.hex)
-  const byLight = [...hexes].sort((a, b) => luminance(a) - luminance(b))
-  return {
-    primary: byLight[0],
-    ink: byLight[0],
-    accent: byLight[Math.min(1, byLight.length - 1)],
-    tint: byLight[byLight.length - 1],
-    // Chart series stay in GENERATED order, not lightness order: a ramp that
-    // reads as a ramp is the thing being demonstrated, and re-sorting the bars
-    // would hide a generator that produced two near-identical steps.
-    series: hexes,
-  }
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.58 ? '#141414' : '#FFFFFF'
 }
 
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -216,39 +182,57 @@ const UI_ROWS = [
  * This panel used to BE the five swatches — a labelled colour row presented as
  * a live product preview. Every comparable token editor sampled on Mobbin
  * (v0, Lovable, GitBook, Gamma) previews a palette on real application UI and
- * none of them previews it as a row of swatches, for the reason the row cannot
+ * none of them previews it as a swatch row, for the reason the row cannot
  * answer: swatches show you five colours, a UI shows you whether they COMPOSE.
  * The swatch row is still here — it moved to the controls zone, where it is the
  * input it always was.
  *
- * THE RULE THAT MAKES THIS SAFE IN BOTH THEMES: a generated colour is only ever
- * used as a FILL, never as text on the app's own ground. Text that sits on a
- * generated fill takes readableInk() of that fill, so it is legible whatever
- * the generator produced; all remaining furniture uses the app's own tokens,
- * which already handle light and dark. Painting body text in a palette step is
- * how a preview like this ends up invisible on one of the two themes.
+ * ROLES COME FROM derivePreviewRoles(), THE SAME ENGINE THE FULL TOOLS USE.
+ * The first version of this hand-rolled its own luminance sort and picked
+ * darkest-as-primary, lightest-as-tint. That was a seventh copy of a luminance
+ * calculation this codebase already has, and it was worse than the original:
+ * derivePreviewRoles picks `primary` by CHROMA subject to a 3:1 floor on the
+ * surface (not by darkness), rejects a primary that clashes with its own
+ * background, falls back to the brand focal for an all-grey palette, derives
+ * `text` by contrast rather than ever using a swatch for copy, and self-heals
+ * every pair to AA before returning. It is also mode-aware, which is what makes
+ * this mock correct in dark theme rather than merely legible.
+ *
+ * Using it also means the homepage preview and the Palette Builder / Colour
+ * Studio previews now speak one language: the same palette produces the same
+ * roles wherever a visitor meets it.
  *
  * Inert and aria-hidden, exactly like `.hw-chrome` and `.hw-grad-preview`
  * above it: nothing inside is focusable, no control is impersonated, and every
  * hex it paints is announced for real by the swatch buttons below.
  */
 function PaletteStage({ swatches }) {
-  const role = previewRoles(swatches)
+  const { theme } = useTheme()
+  const hexes = swatches.map((s) => s.hex)
+  const role = derivePreviewRoles(hexes, { mode: theme === 'dark' ? 'dark' : 'light' })
+  // The step the engine spent as the card's own background cannot also be a dot
+  // ON that card — it paints itself invisible. Caught in dark theme, where `bg`
+  // is the darkest step and the first row simply had no dot: a preview implying
+  // the palette contains an unusable colour, when in fact the preview had taken
+  // that colour for its ground. The dots compare steps against each other on
+  // the card; a step that IS the card is not one of them.
+  const dots = hexes.filter((h) => h.toLowerCase() !== String(role.bg).toLowerCase())
+  const dotSeries = dots.length ? dots : hexes
   return (
-    <div className="hw-ui" aria-hidden="true">
-      <div className="hw-ui-bar">
-        <span className="hw-ui-mark" style={{ background: role.primary, color: readableInk(role.primary) }}>A</span>
-        <span className="hw-ui-app">Acme</span>
-        <span className="hw-ui-crumb">Overview</span>
+    <div className="hw-ui" aria-hidden="true" style={{ background: role.bg, borderColor: role.border }}>
+      <div className="hw-ui-bar" style={{ background: role.surface, borderBottomColor: role.border }}>
+        <span className="hw-ui-mark" style={{ background: role.primary, color: role.onPrimary }}>A</span>
+        <span className="hw-ui-app" style={{ color: role.text }}>Acme</span>
+        <span className="hw-ui-crumb" style={{ color: role.muted }}>Overview</span>
         <span className="hw-ui-avatar" style={{ background: role.accent, color: readableInk(role.accent) }}>M</span>
       </div>
 
       <div className="hw-ui-main">
         <div className="hw-ui-metric">
-          <span className="hw-ui-metric-label">Sessions this week</span>
+          <span className="hw-ui-metric-label" style={{ color: role.muted }}>Sessions this week</span>
           <span className="hw-ui-metric-row">
-            <strong className="hw-ui-metric-num">12,480</strong>
-            <span className="hw-ui-delta" style={{ background: role.tint, color: readableInk(role.tint) }}>+12.4%</span>
+            <strong className="hw-ui-metric-num" style={{ color: role.text }}>12,480</strong>
+            <span className="hw-ui-delta" style={{ background: role.surface, color: role.muted, border: `1px solid ${role.border}` }}>+12.4%</span>
           </span>
         </div>
 
@@ -261,23 +245,27 @@ function PaletteStage({ swatches }) {
           <path d={seriesPath(UI_SERIES, false)} fill="none" stroke={role.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
 
-        {/* Where the ramp gets compared. Three dots of adjacent steps, the same
-            size, a fixed distance apart, in a real list — the only arrangement
-            that reveals two steps a generator failed to separate. Isolated
-            swatches cannot, because nothing sits beside them. */}
+        {/* Where the ramp gets compared. The dots stay the RAW generated
+            colours in generated order — this is the one place the palette is
+            shown as itself rather than through a role, and re-sorting or
+            re-deriving them would hide a generator that produced two
+            near-identical steps. They are decoration beside a text label, never
+            the only carrier of meaning. */}
         <ul className="hw-ui-rows">
           {UI_ROWS.map((row, i) => (
-            <li className="hw-ui-row" key={row.name}>
-              <span className="hw-ui-dot" style={{ background: role.series[i % role.series.length] }} />
-              <span className="hw-ui-row-name">{row.name}</span>
-              <span className="hw-ui-row-state">{row.state}</span>
+            <li className="hw-ui-row" key={row.name} style={{ borderTopColor: role.border }}>
+              <span className="hw-ui-dot" style={{ background: dotSeries[i % dotSeries.length] || role.primary }} />
+              <span className="hw-ui-row-name" style={{ color: role.text }}>{row.name}</span>
+              <span className="hw-ui-row-state" style={{ color: role.muted }}>{row.state}</span>
             </li>
           ))}
         </ul>
 
         <div className="hw-ui-acts">
-          <span className="hw-ui-btn" style={{ background: role.primary, color: readableInk(role.primary) }}>Primary action</span>
-          <span className="hw-ui-btn hw-ui-btn--ghost">Secondary</span>
+          {/* `primaryBorder` is the engine's own remedy for a CTA that cannot
+              clear 3:1 on its card — transparent when it is not needed. */}
+          <span className="hw-ui-btn" style={{ background: role.primary, color: role.onPrimary, border: `1px solid ${role.primaryBorder}` }}>Primary action</span>
+          <span className="hw-ui-btn hw-ui-btn--ghost" style={{ borderColor: role.border, color: role.text }}>Secondary</span>
         </div>
       </div>
     </div>

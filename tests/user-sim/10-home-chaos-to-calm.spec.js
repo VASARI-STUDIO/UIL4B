@@ -886,6 +886,91 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('linear-gradient(90deg')
   })
 
+  // The palette mode's artefact. It replaced a row of five labelled swatches,
+  // and the two things that make it worth more than the row are the two things
+  // asserted here: it is painted from the palette that is actually on screen,
+  // and no part of it paints itself invisible.
+  test('8a · the palette preview is a real UI painted from the live swatches', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const stage = page.locator('.hw-stage .hw-ui')
+    await expect(stage).toBeVisible()
+
+    // Decorative and inert: the swatch buttons below carry every value for
+    // real, so nothing in the mock is focusable or reachable by name.
+    await expect(stage).toHaveAttribute('aria-hidden', 'true')
+    await expect(stage.locator('button, a, input, [tabindex]')).toHaveCount(0)
+
+    // A DOT MAY NEVER BE THE CARD IT SITS ON. `derivePreviewRoles` spends one
+    // palette step as the card's background; in dark theme that is the darkest
+    // step, which was also the first dot — so the first row rendered with no
+    // dot at all and the preview implied the palette held an unusable colour,
+    // when in fact the preview had taken that colour for its own ground.
+    const dotsMatchCard = async () => page.evaluate(() => {
+      const card = document.querySelector('.hw-stage .hw-ui')
+      const bg = getComputedStyle(card).backgroundColor
+      const dots = [...card.querySelectorAll('.hw-ui-dot')]
+      return { count: dots.length, clashes: dots.filter((d) => getComputedStyle(d).backgroundColor === bg).length }
+    })
+
+    let seen = await dotsMatchCard()
+    expect(seen.count, 'the ramp is compared on three rows').toBe(3)
+    expect(seen.clashes, 'no status dot is painted in the card background').toBe(0)
+
+    // Generate rerolls the palette; the mock must follow it, and must still not
+    // paint a dot in its own ground for the NEW palette.
+    const before = await page.locator('.hw-ui-chart path').first().getAttribute('fill')
+    await page.getByRole('button', { name: 'Generate' }).click()
+    await expect
+      .poll(async () => page.locator('.hw-ui-chart path').first().getAttribute('fill'))
+      .not.toBe(before)
+    seen = await dotsMatchCard()
+    expect(seen.clashes, 'still true after a fresh generate').toBe(0)
+
+    // DARK THEME IS WHERE THE CLASH LIVES, and it must be entered for real.
+    // Stamping data-theme on the element does not re-render React, so the mock
+    // kept deriving its roles in light mode and this assertion passed against
+    // the very defect it names — verified by mutation. ThemeContext seeds from
+    // localStorage 'vs-t' at mount, so the choice has to be in place before the
+    // page loads.
+    await page.addInitScript(() => { localStorage.setItem('vs-t', 'dark') })
+    await go(page, '/')
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.getAttribute('data-theme')))
+      .toBe('dark')
+
+    seen = await dotsMatchCard()
+    expect(seen.count, 'the mock still renders in dark theme').toBe(3)
+    expect(seen.clashes, 'no dot is the card background in dark theme either').toBe(0)
+  })
+
+  // The type ladder is the artefact of its mode: it must show every step it
+  // claims. The sticky column caps the panel to the viewport, and the first
+  // version of that cap let the stage shrink — the ladder silently lost its
+  // CAPTION row and was sliced through BODY while every geometry check passed.
+  test('8b · the type scale preview shows all four steps, uncropped', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+    await page.locator('.hw-tab[data-tab="typography"]').click()
+
+    const rows = page.locator('.hw-type-row')
+    await expect(rows).toHaveCount(4)
+
+    const cropped = await page.evaluate(() => {
+      const box = document.querySelector('.hw-type-preview').getBoundingClientRect()
+      return [...document.querySelectorAll('.hw-type-row')]
+        .filter((r) => {
+          const b = r.getBoundingClientRect()
+          return b.bottom > box.bottom + 0.5 || b.top < box.top - 0.5
+        })
+        .map((r) => r.querySelector('.hw-type-meta').textContent)
+    })
+    expect(cropped, 'no step is cut off by the preview box').toEqual([])
+  })
+
   test('9 · the three references and the 4K · WebP · Lossless output intent', async ({ page }) => {
     await reducedMotion(page)
     watch(page, PERSONA)
