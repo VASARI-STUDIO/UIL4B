@@ -6,7 +6,7 @@ Engineering work belongs in `src/data/pipeline.js`; ideas awaiting a founder
 verdict belong in [`PROPOSALS.md`](PROPOSALS.md), and decisions already made are
 recorded in [`CHANGELOG.md`](../CHANGELOG.md).
 
-_Last reviewed: 2026-08-07._
+_Last reviewed: 2026-09-04._ The OpenRouter P1 row was rewritten on 2026-09-03 when provider visibility shipped, and the RESEND row now buys two things rather than one.
 
 ## Confirmed complete
 

@@ -222,7 +222,13 @@ If you want a number above the fold anyway, `13` survives in the command-bar
 placeholder and the proof band carries `n of 6 pairs clear AA`. The question is
 just: is that enough?
 
-**Verdict:** _(PENDING)_
+**Verdict: RESOLVED on `main`, and by a third option neither side proposed.**
+Recorded 2026-09-04 by the Director after #328's triage measured it. `main`
+deleted the *strip* and **kept the numbers**, re-sited beside the toolset grid
+with attribution — so they no longer read as ours, which was the entire
+objection, without discarding two true facts. Note this also settles part of
+#270: landing that PR as written would now *delete honest attributed facts*, so
+it must not be revived for this reason.
 
 ---
 
@@ -289,6 +295,21 @@ visitor meets the argument in.
 ---
 
 ## P-012 · When the four parked homepage PRs resume
+
+> **ANSWERED 2026-09-03 by #328.** A triage re-measured all four in Chromium
+> against a fresh build of `main` — not read off the PR bodies — and returned a
+> verdict and a cost per PR: **#262 revive** (its defects still reproduce with
+> byte-identical numbers, and #293's `line-height:1` never fixed the sheared
+> mark and could not have, because an inline background paints over the font's
+> content area, not the line box); **#264 extract four items, then close** (its
+> copy half now contradicts #290, which deliberately deleted the bracketed
+> eyebrow motif that #264 adds three more of); **#269 extract C2 and C4, close
+> the rest** (C6 shipped in #320); **#270 extract the specimen band only**, and
+> that band is **gated on the founder's hero-shape choice**, because it adds
+> 96–144px desktop / 240px phone under the headline and so changes the very
+> shape being chosen between. Full detail is on each PR as a comment and in
+> `homepage-parked-prs-triage` in `src/data/pipeline.js`. **The text below is
+> the pre-triage framing, kept for its context only.**
 
 **Evidence: `observed`** — founder instruction, 2026-08-20.
 
