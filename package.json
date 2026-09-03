@@ -16,7 +16,8 @@
     "prerender": "node scripts/prerender.mjs",
     "og:cards": "node scripts/og-cards.mjs",
     "sync:rewrites": "node scripts/sync-vercel-rewrites.mjs",
-    "sync:sitemap": "node scripts/sync-sitemap.mjs"
+    "sync:sitemap": "node scripts/sync-sitemap.mjs",
+    "icons": "node scripts/brand-icons.mjs"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.6",
