@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getCategory, localiseCategories, localiseTools, queryCommandIndex } from '../data/tools'
+import { getCategory, localiseCategories, localiseTools, queryCommandIndex, searchHints } from '../data/tools'
 import { useI18n } from '../contexts/I18nContext'
+import { useAppearance } from '../contexts/AppearanceContext'
 
 // The V2 hero's command bar — the "front door" the design gives the ⌘K palette.
 //
@@ -20,9 +21,50 @@ import { useI18n } from '../contexts/I18nContext'
 
 const MAX_ROWS = 5
 
-// Quick-fills are real queries against the real index — each one is asserted to
-// return results by tests/user-sim. They are prompts, not promises.
-const CHIPS = ['contrast', 'gradient', 'icons', 'type scale', 'convert']
+// ── The typed placeholder ───────────────────────────────────────────────────
+//
+// The founder asked on 2026-09-03 for the nav search's typing animation to play
+// here instead, on load rather than on hover, and for the "Search every tool"
+// line above the bar and the "Try …" chips below it to go.
+//
+// Those chips were the only thing on the page telling a visitor what is
+// searchable. That job does not disappear with them — it moves here, which is
+// the only reason this animation is not decoration. So the terms are DERIVED
+// FROM THE REGISTRY rather than written out:
+//
+//   • Real tools, so a visitor who types what they just watched gets hits.
+//     PillNav keeps a hand-written SEARCH_HINTS array and that array is already
+//     one rename away from advertising a tool that no longer exists.
+//   • `/create/` only — the things you can go and make. Docs and resources are
+//     findable in the bar but they are not what the hero is selling.
+//   • Short labels only. "Aspect & Resolution Calculator" is 30 characters and
+//     overflows the input at 390px mid-word, which reads as a bug.
+//
+// A term that finds nothing when typed would be a lie, so
+// tests/user-sim/10-home-chaos-to-calm.spec.js types every one of them into the
+// real bar and requires a result. The selection rule itself lives in
+// data/tools beside the other registry helpers — see `searchHints`.
+
+// Milliseconds per character typed and deleted, and the caret blink while a
+// completed word is held. From PillNav, which the founder has already signed
+// off on the feel of — this is the same animation, moved.
+const TYPE_MS = 55
+const ERASE_MS = 28
+const BLINK_MS = 420
+const HOLD_BLINKS = 3
+
+// Nothing types until the hero has finished arriving. `.hcmd` runs its own
+// entrance from .52s for .62s (global.css), so 1200ms starts the typing just
+// after the bar lands rather than through it — a sequence instead of a
+// collision — and keeps every one of these timers off the first-paint path.
+const START_MS = 1200
+
+// U+258F, the caret. It is a CHARACTER because the placeholder is a real
+// `placeholder` attribute rather than an overlaid span: the browser then hides
+// it the instant the visitor types, with no state of ours to get out of sync,
+// and it can never be mistaken for the input's own value. PillNav renders an
+// <i> instead because its "field" is a button with no placeholder to animate.
+const CARET = '▏'
 
 function RowIcon({ item }) {
   const cat = item.kind === 'tool' ? getCategory(item.category) : getCategory(item.id)
@@ -38,9 +80,14 @@ function RowIcon({ item }) {
 export default function HomeCommandBar({ labelledBy } = {}) {
   const { t } = useI18n()
   const navigate = useNavigate()
+  const { reducedMotion } = useAppearance()
   const inputRef = useRef(null)
   const listRef = useRef(null)
   const [query, setQuery] = useState('')
+  const [focused, setFocused] = useState(false)
+  // null means "not typing" — the static placeholder below is showing. Any
+  // string, including an empty one, means the animation owns the placeholder.
+  const [typed, setTyped] = useState(null)
   const listId = useId()
 
   const tools = useMemo(() => localiseTools(t).filter(tl => !tl.alpha), [t])
@@ -60,6 +107,75 @@ export default function HomeCommandBar({ labelledBy } = {}) {
   }, [hit])
 
   const open = query.trim().length > 0
+
+  const hints = useMemo(() => searchHints(tools), [tools])
+
+  // WHAT A REDUCED-MOTION VISITOR SEES, decided rather than defaulted.
+  //
+  // Not the animation slowed down, and not an empty box. A character-by-
+  // character reveal is animation however it is driven, and the global
+  // `transition-duration:0.01ms` rule cannot reach a setState loop — so the
+  // timer must not start at all. What they get instead is the same information
+  // the animation exists to deliver, from the same registry-derived list, said
+  // once and held still. That is the only version of this feature that anyone
+  // reads at a glance anyway.
+  const restingPlaceholder = useMemo(
+    () => (hints.length ? `Search tools — ${hints.slice(0, 3).join(', ')}…` : 'Search every tool'),
+    [hints],
+  )
+
+  // Three reasons the animation is not running, and all three are deliberate.
+  //
+  // `reducedMotion` — from AppearanceContext, so the in-app toggle wins over the
+  // OS query in BOTH directions, the same resolution the hero entrance uses.
+  // `focused` — a placeholder that keeps moving underneath a live caret is noise
+  // at exactly the moment the visitor has decided to type. It also means the
+  // animation never fights the visitor for the main thread mid-keystroke.
+  // `query` — the placeholder is not painted at all once there is a value, so
+  // the timers would be burning for nothing.
+  const animating = !reducedMotion && !focused && !query
+
+  // Every setState below happens inside a timer callback, never synchronously in
+  // the effect body, and the reset happens in the cleanup. That is what keeps
+  // this off the `react-hooks/set-state-in-effect` warning count, which the
+  // build gate holds at a fixed number.
+  //
+  // The whole cycle runs inside ONE effect pass with a local index, rather than
+  // advancing a `term` state and re-running. Re-running would fire this
+  // cleanup between every word, and the cleanup's `setTyped(null)` would flash
+  // the long resting placeholder for a frame each time a word finished.
+  useEffect(() => {
+    if (!animating || !hints.length) return undefined
+    let cancelled = false
+    let timer
+    let index = 0
+
+    const word = () => hints[index % hints.length]
+
+    const type = (i, erasing) => {
+      if (cancelled) return
+      setTyped(word().slice(0, i) + CARET)
+      if (!erasing && i < word().length) timer = setTimeout(() => type(i + 1, false), TYPE_MS)
+      else if (!erasing) timer = setTimeout(() => blink(1), BLINK_MS)
+      else if (i > 0) timer = setTimeout(() => type(i - 1, true), ERASE_MS)
+      else { index += 1; timer = setTimeout(() => type(0, false), TYPE_MS) }
+    }
+
+    // The caret blinks on the completed word instead of the word simply sitting
+    // there, which is the difference between "this is being typed" and "this is
+    // a label that changes". Odd ticks drop the caret, even ticks restore it.
+    const blink = (n) => {
+      if (cancelled) return
+      setTyped(n % 2 ? word() : word() + CARET)
+      if (n < HOLD_BLINKS * 2) timer = setTimeout(() => blink(n + 1), BLINK_MS)
+      else timer = setTimeout(() => type(word().length - 1, true), ERASE_MS)
+    }
+
+    timer = setTimeout(() => type(0, false), START_MS)
+    return () => { cancelled = true; clearTimeout(timer); setTyped(null) }
+  }, [animating, hints])
+
+  const placeholder = animating && typed !== null ? typed : restingPlaceholder
 
   // The design's ⌘K keycap has to DO something, or it is a decoration that
   // lies about a shortcut. The app's global key is "/" (PillNav owns it and
@@ -129,8 +245,10 @@ export default function HomeCommandBar({ labelledBy } = {}) {
           autoComplete="off"
           {...(labelledBy ? { 'aria-labelledby': labelledBy } : { 'aria-label': 'Search every UIL4B tool' })}
           aria-describedby={`${listId}-count`}
-          placeholder="Search tools — contrast, gradient, type scale…"
+          placeholder={placeholder}
           onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           onKeyDown={onInputKeyDown}
         />
         <button
@@ -188,21 +306,6 @@ export default function HomeCommandBar({ labelledBy } = {}) {
           )}
         </div>
       )}
-
-      <div className="hcmd-chips">
-        <span className="hcmd-chips-label" aria-hidden="true">Try</span>
-        {CHIPS.map((chip) => (
-          <button
-            key={chip}
-            type="button"
-            className="hcmd-chip"
-            aria-label={`Search for ${chip}`}
-            onClick={() => { setQuery(chip); inputRef.current?.focus() }}
-          >
-            {chip}
-          </button>
-        ))}
-      </div>
     </div>
   )
 }
