@@ -9134,14 +9134,14 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 /* The name is the specimen — it is set in the family it names, which is the
    same contract the tiles keep. */
 .fbd-detail-name{margin:0;min-width:0;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,700);font-size:clamp(21px,3.2vw,30px);line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
-.fbd-tabs{display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
-.fbd-tab{position:relative;padding:9px 14px;font:inherit;font-size:13px;font-weight:550;color:var(--t2);background:none;border:0;border-radius:var(--radius-s) var(--radius-s) 0 0;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
-.fbd-tab:hover{color:var(--t0)}
-.fbd-tab:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
-.fbd-tab--on{color:var(--t0)}
+.fdx-tabs{display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.fdx-tab{position:relative;padding:9px 14px;font:inherit;font-size:13px;font-weight:550;color:var(--t2);background:none;border:0;border-radius:var(--radius-s) var(--radius-s) 0 0;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
+.fdx-tab:hover{color:var(--t0)}
+.fdx-tab:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.fdx-tab--on{color:var(--t0)}
 /* Sits ON the 1px border rather than above it, so the pair reads as one edge
    and not as a rule with a second rule stacked on it. */
-.fbd-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--brand);border-radius:2px 2px 0 0}
+.fdx-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--brand);border-radius:2px 2px 0 0}
 .fbd-detail-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
 .fbd-detail-actions{flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .fbd-use{width:100%;padding:12px 18px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:var(--brand);border:1px solid var(--brand);border-radius:var(--radius);cursor:pointer}

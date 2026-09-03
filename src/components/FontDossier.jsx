@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import {
-  CATEGORY_LABEL, CATEGORY_NOTE, facesThinCatalogue, fontFacts, titleCase,
+  CATEGORY_LABEL, CATEGORY_NOTE, DOSSIER_TABS, facesThinCatalogue, fontFacts, titleCase,
 } from '../utils/fontDossier'
 import { bodyWeight, fontStack, headingWeight } from '../utils/googleFonts'
 
@@ -58,6 +58,50 @@ import { bodyWeight, fontStack, headingWeight } from '../utils/googleFonts'
 const varsRef = (vars) => (el) => {
   if (!el) return
   for (const key of Object.keys(vars)) el.style.setProperty(key, vars[key])
+}
+
+/**
+ * The tab strip, shared by both font popups for the same reason the panels are:
+ * two dialogs that show the same three tabs must not each grow their own
+ * keyboard handling. Arrow keys wrap, focus follows selection, and the roving
+ * tabindex keeps the strip a single tab stop — the APG tabs contract, written
+ * once.
+ *
+ * `idBase` namespaces the ids so both dialogs can be in the DOM without
+ * colliding, and so each panel can point back at its own tab.
+ */
+export function FontDossierTabs({ value, onChange, idBase, label }) {
+  const move = (event) => {
+    const keys = { ArrowRight: 1, ArrowLeft: -1 }
+    const step = keys[event.key]
+    if (!step) return
+    event.preventDefault()
+    const i = DOSSIER_TABS.findIndex(t => t.id === value)
+    const next = DOSSIER_TABS[(i + step + DOSSIER_TABS.length) % DOSSIER_TABS.length]
+    onChange(next.id)
+    requestAnimationFrame(() => document.getElementById(`${idBase}-tab-${next.id}`)?.focus())
+  }
+
+  return (
+    <div className="fdx-tabs" role="tablist" aria-label={label}>
+      {DOSSIER_TABS.map(t => (
+        <button
+          key={t.id}
+          type="button"
+          role="tab"
+          id={`${idBase}-tab-${t.id}`}
+          aria-selected={value === t.id}
+          aria-controls={`${idBase}-panel-${t.id}`}
+          tabIndex={value === t.id ? 0 : -1}
+          className={value === t.id ? 'fdx-tab fdx-tab--on' : 'fdx-tab'}
+          onClick={() => onChange(t.id)}
+          onKeyDown={move}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 export function FontAboutPanel({ font, id, labelledBy }) {

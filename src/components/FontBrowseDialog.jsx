@@ -6,8 +6,7 @@ import LibraryGrid from './library/LibraryGrid'
 import LibraryCard from './library/LibraryCard'
 import LibraryEmpty from './library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
-import { FontAboutPanel, FontExamplesPanel } from './FontDossier'
-import { DOSSIER_TABS } from '../utils/fontDossier'
+import { FontAboutPanel, FontDossierTabs, FontExamplesPanel } from './FontDossier'
 import { filterPickableTypefaces, ladderWeights, weightName } from '../utils/fontGallery'
 import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleFonts'
 
@@ -189,32 +188,12 @@ function FontDetail({ font, selected, onUse, onBack }) {
         <p className="fbd-detail-name" ref={setVars}>{font.family}</p>
       </div>
 
-      <div className="fbd-tabs" role="tablist" aria-label={`${font.family} details`}>
-        {DOSSIER_TABS.map(t => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            id={`fbd-tab-${t.id}`}
-            aria-selected={tab === t.id}
-            aria-controls={`fbd-panel-${t.id}`}
-            tabIndex={tab === t.id ? 0 : -1}
-            className={tab === t.id ? 'fbd-tab fbd-tab--on' : 'fbd-tab'}
-            onClick={() => setTab(t.id)}
-            onKeyDown={(e) => {
-              const i = DOSSIER_TABS.findIndex(x => x.id === tab)
-              const next = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : null
-              if (next == null) return
-              e.preventDefault()
-              const target = DOSSIER_TABS[(next + DOSSIER_TABS.length) % DOSSIER_TABS.length]
-              setTab(target.id)
-              document.getElementById(`fbd-tab-${target.id}`)?.focus()
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <FontDossierTabs
+        value={tab}
+        onChange={setTab}
+        idBase="fbd"
+        label={`${font.family} details`}
+      />
 
       <div className="fbd-detail-body" ref={panelRef}>
         {tab === 'specimen' && (
