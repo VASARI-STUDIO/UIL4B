@@ -588,13 +588,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const task = TASKS[req.body?.task]
-  if (!task) {
-    return res.status(400).json({ error: `Unknown task — expected one of: ${Object.keys(TASKS).join(', ')}` })
-  }
-
-  if (!task.configured()) return res.status(500).json({ error: task.configError })
-
+  // ── Authentication comes FIRST ────────────────────────────────────────────
+  // Ahead of the task lookup, and — the part that matters — ahead of
+  // task.configured(). It used to run after, and the ordering was a secret
+  // oracle: an anonymous POST that answered 401 meant "that provider's key is
+  // set", and one that answered 500 ("AI is not configured on the server:
+  // GEMINI_API_KEY is missing") meant it is not. Because each task declares its
+  // OWN configured() — the vision tasks need Gemini, generate-prompt takes
+  // either — three unauthenticated requests enumerated which provider keys the
+  // deployment holds. No key VALUE ever leaked, only its existence, which is
+  // exactly the leak /api/ai?diag=1 was locked behind an admin gate to stop:
+  // "the endpoint enumerates which of the deployment's secrets exist".
+  //
+  // An anonymous caller now gets 401 for every task, in every configuration
+  // state, and learns nothing. The diagnostic value is NOT lost — see the
+  // configured() check below, which still runs, just for a verified caller.
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentication required' })
@@ -608,10 +616,28 @@ export default async function handler(req, res) {
     // an unverified signup could otherwise claim someone else's address.
     email = decoded.email_verified ? decoded.email : null
   } catch {
+    // This 500 reports the state of FIREBASE_SERVICE_ACCOUNT_KEY to a caller who
+    // has not proved anything, and that is deliberate rather than an oversight
+    // of the same class as the one above. When the credential is broken,
+    // verifyIdToken fails for EVERYONE — the endpoint is 100% unusable, so its
+    // brokenness is already plain from outside and the message adds no hidden
+    // fact. It is also the one diagnostic that survives a broken credential,
+    // which is the same reason the diag break-glass exists at all.
     const cp = credentialProblem()
     if (cp) return res.status(500).json({ error: cp })
     return res.status(401).json({ error: 'Invalid or expired session — sign out and back in.' })
   }
+
+  const task = TASKS[req.body?.task]
+  if (!task) {
+    return res.status(400).json({ error: `Unknown task — expected one of: ${Object.keys(TASKS).join(', ')}` })
+  }
+
+  // …and only now, to a caller Firebase has vouched for, does the server say
+  // anything about which provider keys it holds. A signed-in user staring at a
+  // broken deployment still gets the specific, actionable message naming the
+  // missing env var, which is the whole reason this check has its own text.
+  if (!task.configured()) return res.status(500).json({ error: task.configError })
 
   // Per-user daily cap — every task is a paid provider call, so an
   // authenticated user can't run any of them past their plan's limit.

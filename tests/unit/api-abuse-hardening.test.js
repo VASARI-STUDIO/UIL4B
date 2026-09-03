@@ -166,3 +166,88 @@ test('an unknown client is not silently given its own private bucket', async () 
   const verdict = await consume(fakeDb(), { ...WINDOW, key: '', now: 1000 })
   assert.equal(verdict.allowed, true)
 })
+
+// ── /api/ai — the unauthenticated config probe ───────────────────────────────
+//
+// The same fault as the diagnostic at the top of this file, one level down. The
+// handler used to check `task.configured()` BEFORE the Authorization header, so
+// an anonymous POST distinguished "this provider key is set" (401) from "it is
+// not" (500, "AI is not configured on the server: GEMINI_API_KEY is missing").
+// Each task declares its own configured() — the vision tasks need Gemini,
+// generate-prompt takes either — so three unauthenticated requests enumerated
+// which provider keys the deployment holds. That is precisely the sentence this
+// file already records as the reason the diagnostic was locked down: "the
+// endpoint enumerates which of the deployment's secrets exist".
+//
+// These run the REAL handler rather than a description of it. The provider keys
+// are deleted first because api/ai.js reads them into module constants at import
+// time, and "no key configured" is the one state where the old ordering leaked
+// and the new one does not — with a key present BOTH orderings answer 401 and
+// the test would prove nothing.
+for (const k of ['GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'GOOGLE_API_KEY', 'OPENROUTER_API_KEY']) {
+  delete process.env[k]
+}
+const { default: aiHandler } = await import('../../api/ai.js')
+
+function fakeRes() {
+  const sent = { status: 0, body: null }
+  return {
+    sent,
+    setHeader() {},
+    status(code) { sent.status = code; return this },
+    json(payload) { sent.body = payload; return this },
+  }
+}
+
+/** POST /api/ai with no credentials of any kind. */
+async function anonymousPost(task) {
+  const res = fakeRes()
+  await aiHandler({ method: 'POST', headers: {}, query: {}, body: { task } }, res)
+  return res.sent
+}
+
+test('an anonymous POST is refused before the server says anything about its keys', async () => {
+  // No provider key is configured in this process, so the OLD ordering answered
+  // 500 "AI is not configured on the server: GEMINI_API_KEY is missing" here.
+  const sent = await anonymousPost('alt-text')
+  assert.equal(sent.status, 401, 'a stranger got something other than 401 — the response is a config oracle')
+  assert.equal(sent.body.error, 'Authentication required')
+  assert.doesNotMatch(JSON.stringify(sent.body), /GEMINI_API_KEY|OPENROUTER_API_KEY|not configured/i,
+    'the refusal names a server env var, which is the fact an anonymous caller must not learn')
+})
+
+test('THE ONE THAT MATTERS: every task answers a stranger identically, so none can be told apart', async () => {
+  // alt-text and scan-photo require the Gemini key; generate-prompt accepts
+  // either. Under the old ordering those configured() answers were separately
+  // observable responses. An unknown task is in here too: if the task lookup
+  // still ran before auth, that one alone would come back 400 and confirm to a
+  // stranger which task names the deployment knows.
+  const replies = await Promise.all(
+    ['alt-text', 'scan-photo', 'generate-prompt', 'no-such-task', undefined].map(anonymousPost)
+  )
+  const first = JSON.stringify(replies[0])
+  for (const [i, r] of replies.entries()) {
+    assert.equal(JSON.stringify(r), first,
+      `reply #${i} differs from the others — the difference IS the enumeration`)
+  }
+  assert.equal(replies[0].status, 401)
+})
+
+test('a signed-in caller is still told exactly which key the server is missing', () => {
+  // The fix is NOT "delete the configured() check". A signed-in user staring at
+  // a broken deployment must still learn that the server is misconfigured and
+  // which env var to set — that message is the only thing standing between the
+  // founder and a blind redeploy. It simply has to run AFTER the token check.
+  const ai = stripJs(read('ai.js'))
+  const verify = ai.indexOf('verifyIdToken(')
+  const configured = ai.indexOf('task.configured()')
+  assert.ok(verify > -1, 'the handler no longer verifies an ID token')
+  assert.ok(configured > -1,
+    'the configured() guard is gone — a misconfigured server now fails deep inside a provider call instead of naming the env var')
+  assert.ok(configured > verify,
+    'configured() still runs before the caller is verified — an anonymous POST can tell a set key from an unset one')
+  assert.match(ai, /configError:\s*'AI is not configured on the server: GEMINI_API_KEY is missing\.'/,
+    'the vision tasks no longer name the env var an operator has to set')
+  assert.match(ai, /configError:[^\n]*OPENROUTER_API_KEY/,
+    'generate-prompt no longer names the env vars an operator has to set')
+})
