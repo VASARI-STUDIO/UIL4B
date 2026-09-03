@@ -107,11 +107,25 @@ const SUBSET_NAMES = {
   menclosedalphanum: 'Enclosed Alphanumerics',
 }
 
+// `menu` is not a script. It is Google's tiny per-family subset containing just
+// the glyphs needed to draw the family's own NAME in a font menu, and it ships
+// on nearly every family in the catalogue. Listing it alongside Cyrillic and
+// Vietnamese answers "can I set my copy in this" with a word that means nothing
+// to the person asking.
+//
+// Dropped HERE rather than at each call site, because it was already being
+// rendered in three places from this one function — the specimen dialog's
+// header tags, the gallery rows, and now the About tab — and a filter applied
+// at two of the three is how the specimen dialog came to state its script
+// coverage twice, in the same dialog, with two different answers.
+const NON_SCRIPT_SUBSETS = new Set(['menu'])
+
 export function formatSubsets(subsets) {
   if (!Array.isArray(subsets)) return []
   const seen = subsets
     .filter(s => typeof s === 'string' && s.trim())
     .map(s => s.trim().toLowerCase())
+    .filter(s => !NON_SCRIPT_SUBSETS.has(s))
   return [...new Set(seen)].map(id => (
     SUBSET_NAMES[id]
     || id.replace(/(^|[-_])([a-z])/g, (_, sep, ch) => (sep ? ' ' : '') + ch.toUpperCase())

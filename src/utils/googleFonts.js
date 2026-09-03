@@ -1,5 +1,6 @@
 import { FALLBACK_FONTS } from '../data/fallbackFonts'
 import { detectCanvasFontRendered } from './fontDetection'
+import { rankPairings } from './fontPairing'
 
 const API_KEY = import.meta.env.VITE_GOOGLE_FONTS_API_KEY || ''
 const API_URL = `https://www.googleapis.com/webfonts/v1/webfonts?key=${API_KEY}&sort=popularity`
@@ -33,7 +34,14 @@ function transformFont(item, index) {
     category: item.category,
     variants: numericWeights,
     subsets: item.subsets,
-    popularity: index
+    popularity: index,
+    // The WebFonts API cannot supply the designer or the date a family was
+    // added — only /api/fonts (the metadata endpoint) can, and the About tab
+    // renders every one of those fields conditionally for exactly this reason.
+    // Italic availability IS derivable here, and was being thrown away with the
+    // rest of the variant strings, so a family shipping twelve italics looked
+    // identical to one shipping none.
+    italics: (item.variants || []).some(v => String(v).includes('italic')),
   }
 }
 
@@ -327,55 +335,8 @@ export async function verifyFontLoaded(family, weight = 400, { timeout = 6000 } 
   }
 }
 
-// Which body categories earn a look under a heading of each category, and WHY.
-// The reason is shown next to every suggestion — a pairing tool that can't say
-// why it suggested something is a random-font button with extra steps.
-const PAIRING_RULES = {
-  serif: [
-    ['sans-serif', 'A neutral sans under a serif headline is the classic editorial split — maximum contrast, zero competition.'],
-    ['monospace', 'Mono body copy keeps a serif headline literary while signalling something technical underneath.'],
-  ],
-  'sans-serif': [
-    ['serif', 'A serif body warms up a geometric headline and makes long-form reading easier.'],
-    ['sans-serif', 'Same-genre pairing — lean on a clear weight and size jump to keep the hierarchy obvious.'],
-  ],
-  display: [
-    ['sans-serif', 'Display faces carry the personality; a plain sans body keeps the page readable.'],
-    ['serif', 'A restrained serif body gives an expressive display headline somewhere calm to land.'],
-  ],
-  handwriting: [
-    ['sans-serif', 'Script headlines need a completely neutral body or the page starts shouting.'],
-    ['serif', 'A quiet serif body steadies a handwritten headline without flattening it.'],
-  ],
-  monospace: [
-    ['sans-serif', 'A humanist sans body offsets the fixed rhythm of a mono headline.'],
-    ['serif', 'A serif body adds warmth beneath the mechanical feel of monospace.'],
-  ],
-}
-
-// Rank body candidates for a heading face. Returns
-// `[{ font, reason, score }]`, best first, so callers can show the suggestion
-// AND its rationale. Scored on popularity (a well-known face is a safer body
-// choice) plus variant richness (a body face needs weights to build hierarchy).
 export async function suggestPairings(font, { limit = 6 } = {}) {
-  const fonts = await getRawFonts()
-  const rules = PAIRING_RULES[font?.category] || PAIRING_RULES['sans-serif']
-  const reasonFor = Object.fromEntries(rules)
-  const targets = rules.map(([cat]) => cat)
-
-  const scored = fonts
-    .filter(f => f.family !== font?.family && targets.includes(f.category))
-    .map(f => ({
-      font: f,
-      reason: reasonFor[f.category],
-      // Category order is a preference, not a hard filter — the first listed
-      // target keeps a small edge so the canonical pairing leads the list.
-      score: (1 / (f.popularity + 1)) + (f.variants.length / 20)
-        + (f.category === targets[0] ? 0.05 : 0),
-    }))
-
-  scored.sort((a, b) => b.score - a.score)
-  return scored.slice(0, limit)
+  return rankPairings(await getRawFonts(), font, { limit })
 }
 
 export function getFontImportUrl(families) {
