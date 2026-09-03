@@ -20,21 +20,15 @@
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.uil4b.com">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": "UIL4B Design Toolkit",
-  "url": "https://www.uil4b.com",
-  "applicationCategory": "DesignApplication",
-  "operatingSystem": "Web",
-  "description": "Free browser-based design toolkit for building colour systems, browsing icons and emoji, converting imagery, calculating aspect ratios, and checking interface colour.",
-  "offers": [
-    { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "AUD" },
-    { "@type": "Offer", "name": "Pro", "price": "4.99", "priceCurrency": "AUD" }
-  ]
-}
-</script>
+<!-- The site-level WebApplication JSON-LD, generated at build time from
+     src/config/planLadder.js by scripts/site-pricing.mjs, via the
+     transformIndexHtml hook in vite.config.js. This block used to hold a
+     literal Offer, and it kept quoting the pre-ladder price long after the
+     approved ladder moved, so the only price a crawler could read was wrong.
+     NEVER type an amount back in here — not even the correct one. Two sources
+     of truth for one price IS the defect, and a unit test fails the build if a
+     price-shaped string reappears in this file. -->
+<!--uil4b:jsonld-->
 <!-- Manrope + JetBrains Mono are self-hosted (see the @font-face block at the top
      of global.css for why). Preloaded because a font is only DISCOVERED once the
      stylesheet parses; without this it starts a round trip late and swaps
@@ -127,7 +121,9 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 <li>Copy colour values and CSS from the individual tools that support them</li>
 </ul>
 <h2>Pricing</h2>
-<p>Free forever for all core tools, with 40 AI generations per day. Upgrade to Pro from $4.99 AUD/month for 1,000 AI generations per day, higher-quality models, and synced projects.</p>
+<!-- Generated with the JSON-LD above: the price, both AI allowances and
+     what Pro actually buys, all read from config. -->
+<!--uil4b:pricing-->
 <p>This application requires JavaScript. Please enable JavaScript to use UIL4B.</p>
 </div>
 </noscript>

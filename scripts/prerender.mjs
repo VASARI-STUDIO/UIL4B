@@ -25,6 +25,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const dist = path.join(root, 'dist')
@@ -117,12 +118,43 @@ function rewriteHead(html, { route, title, description, robots = null, canonical
   return { html, misses }
 }
 
+/**
+ * The built shell must carry the ladder's price, not a placeholder.
+ *
+ * vite.config.js's `transformIndexHtml` hook fills index.html's pricing markers
+ * from src/config/planLadder.js. This asserts it actually ran and actually
+ * produced the ladder's amounts — because the way that hook fails is silently:
+ * a plugin dropped from the array, an `order` change, a marker renamed in one
+ * file and not the other. Every one of those leaves a green build serving a
+ * page whose price is missing or stale, which is the exact failure the
+ * derivation was built to end. Cheap to check here, and this is the only step
+ * that reads the finished shell.
+ */
+function assertPricingSubstituted(html) {
+  for (const marker of [JSONLD_MARKER, PRICING_MARKER]) {
+    if (html.includes(marker)) {
+      console.error(`prerender: dist/index.html still contains ${marker}.`)
+      console.error('prerender: the pricing hook in vite.config.js did not run — the shell has no price.')
+      process.exit(1)
+    }
+  }
+  const missing = ladderOffers()
+    .filter((offer) => !html.includes(`"price": "${offer.price}"`))
+    .map((offer) => `${offer.name} (${offer.price})`)
+  if (missing.length) {
+    console.error(`prerender: dist/index.html does not quote the plan ladder: ${missing.join(', ')}.`)
+    console.error('prerender: the JSON-LD offers and src/config/planLadder.js disagree.')
+    process.exit(1)
+  }
+}
+
 async function main() {
   if (!existsSync(path.join(dist, 'index.html'))) {
     console.error('prerender: dist/index.html not found — run `vite build` first.')
     process.exit(1)
   }
   const shell = await readFile(path.join(dist, 'index.html'), 'utf8')
+  assertPricingSubstituted(shell)
   const routes = await routesFromSitemap()
   if (!routes.length) {
     console.error('prerender: no routes found in public/sitemap.xml')
