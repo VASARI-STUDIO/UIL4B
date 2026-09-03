@@ -3850,7 +3850,10 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .arc-ratio-card:hover{border-color:var(--accent)}
 .arc-ratio-card.on{border-color:var(--accent);background:var(--accent-bg)}
 .arc-ratio-card-name{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t0)}
-.arc-ratio-card-use{font-size:10px;color:var(--t3);text-align:center;line-height:1.3}
+/* --t2, not --t3: at 10px on the card ground this measured 4.32:1 in dark
+   (#8e8e88 on #232b38), just under AA. --t2 takes it to 5.35:1 and light
+   improves with it. --t3 is the FAINTEST ink and is sized for larger text. */
+.arc-ratio-card-use{font-size:10px;color:var(--t2);text-align:center;line-height:1.3}
 .arc-ppi-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .arc-ppi-field{display:inline-flex;align-items:center;gap:6px}
 .arc-ppi-field input{width:88px}
@@ -4026,7 +4029,10 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .ic-bp-marker{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--card);box-shadow:0 0 0 1px var(--accent);transform:translate(-50%,-50%);transition:left var(--dur-2) var(--ease-standard);z-index:2}
 .ic-bp-tick{position:absolute;top:50%;width:2px;height:8px;background:var(--border);transform:translate(-50%,-50%)}
 .ic-bp-tick-lbl{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
-.ic-bp-tick-px{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;color:var(--t3)}
+/* 9px is the smallest type in the product and --t3 cannot carry it: measured
+   3.70:1 in light (#6c6c66 on #dad8cf) and 4.29:1 in dark, so LIGHT was the
+   worse of the two and had been shipping that way. --t2 clears both. */
+.ic-bp-tick-px{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;color:var(--t2)}
 @media(max-width:560px){.ic-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ic-head-title{font-size:24px}}
 
 /* SEO Specialist — Meta & SERP Inspector */
