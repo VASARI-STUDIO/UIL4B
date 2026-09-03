@@ -5,7 +5,9 @@ import LibraryGrid from './library/LibraryGrid'
 import LibraryCard from './library/LibraryCard'
 import LibraryEmpty from './library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
-import { filterPickableTypefaces } from '../utils/fontGallery'
+import { FontAboutPanel, FontExamplesPanel } from './FontDossier'
+import { DOSSIER_TABS } from '../utils/fontDossier'
+import { filterPickableTypefaces, ladderWeights, weightName } from '../utils/fontGallery'
 import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleFonts'
 
 // Browse the catalogue and pick a family by LOOKING at it.
@@ -51,7 +53,15 @@ const PAGE = 36
 
 const SAMPLE = 'Handgloves'
 
-function FontTile({ font, selected, onPick }) {
+function InfoIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  )
+}
+
+function FontTile({ font, selected, onPick, onInspect }) {
   const ref = useRef(null)
   const [ready, setReady] = useState(false)
 
@@ -113,9 +123,137 @@ function FontTile({ font, selected, onPick }) {
           </span>
         </button>
       )}
+      // A SECOND ROUTE, not a replacement for the first. Clicking the tile still
+      // picks the family and closes — that fast path is the whole reason this
+      // dialog is quick, and putting a detail step in front of it would tax
+      // every selection to serve the occasional one. This is the route for the
+      // occasional one: the dialog previously had NO way to look at a family
+      // before committing to it, so "what is this face, actually?" could only
+      // be answered by choosing it and then undoing that.
+      //
+      // It lives in LibraryCard's `actions` slot, which is a SIBLING of the
+      // tile button rather than a child of it — a button inside a button is
+      // invalid and would not be reachable by keyboard anyway. The slot is real
+      // DOM at all times and revealed on hover AND focus-within, so tabbing
+      // reaches exactly what a pointer reveals.
+      actionsLabel={`About ${font.family}`}
+      actions={(
+        <button
+          type="button"
+          className="fbd-info"
+          onClick={() => onInspect(font)}
+          aria-label={`About ${font.family} — weights, designer and examples`}
+        >
+          <InfoIcon />
+        </button>
+      )}
       name={font.family}
       meta={`${font.category} · ${font.variants.length}w`}
     />
+  )
+}
+
+// The per-family view the browse grid never had. Head and actions are pinned
+// and only the tab panel scrolls, so "Use this family" is reachable the moment
+// it opens — #305 found the Font Gallery's specimen dialog 1,763px tall in a
+// 900px viewport with every action below the fold, and a tabbed detail view is
+// exactly how that returns if the whole thing is allowed to grow.
+function FontDetail({ font, selected, onUse, onBack }) {
+  const [tab, setTab] = useState('specimen')
+  const cuts = useMemo(() => ladderWeights(font.variants, 5), [font])
+
+  useEffect(() => { loadFont(font.family, cuts) }, [font, cuts])
+  // Back to the top of the panel on every tab change: the panels are different
+  // heights, and landing halfway down "About" because "Examples" was scrolled
+  // reads as a broken tab rather than a preserved position.
+  const panelRef = useRef(null)
+  useEffect(() => { panelRef.current?.scrollTo?.({ top: 0 }) }, [tab])
+
+  const ff = fontStack(font)
+  const setVars = (el) => {
+    if (!el) return
+    el.style.setProperty('--fbd-ff', ff)
+    el.style.setProperty('--fbd-fw', String(headingWeight(font)))
+  }
+
+  return (
+    <div className="fbd-detail">
+      <div className="fbd-detail-head">
+        <button type="button" className="fbd-back" onClick={onBack}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          All families
+        </button>
+        <p className="fbd-detail-name" ref={setVars}>{font.family}</p>
+      </div>
+
+      <div className="fbd-tabs" role="tablist" aria-label={`${font.family} details`}>
+        {DOSSIER_TABS.map(t => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            id={`fbd-tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`fbd-panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
+            className={tab === t.id ? 'fbd-tab fbd-tab--on' : 'fbd-tab'}
+            onClick={() => setTab(t.id)}
+            onKeyDown={(e) => {
+              const i = DOSSIER_TABS.findIndex(x => x.id === tab)
+              const next = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : null
+              if (next == null) return
+              e.preventDefault()
+              const target = DOSSIER_TABS[(next + DOSSIER_TABS.length) % DOSSIER_TABS.length]
+              setTab(target.id)
+              document.getElementById(`fbd-tab-${target.id}`)?.focus()
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="fbd-detail-body" ref={panelRef}>
+        {tab === 'specimen' && (
+          <div className="fdx-panel" id="fbd-panel-specimen" role="tabpanel" aria-labelledby="fbd-tab-specimen" tabIndex={0}>
+            {/* One full line per cut, set in the cut it names — the Pitch
+                specimen pattern, and the reason #305 replaced six "Ag" tiles
+                with it: two letters cannot show what a weight does to a word. */}
+            <ul className="fbd-cuts">
+              {cuts.map(w => (
+                <li key={w}>
+                  <span
+                    className="fbd-cut-line"
+                    ref={(el) => {
+                      if (!el) return
+                      el.style.setProperty('--fbd-ff', ff)
+                      el.style.setProperty('--fbd-fw', String(w))
+                    }}
+                  >
+                    The quick brown fox jumps over the lazy dog
+                  </span>
+                  <span className="fbd-cut-label">{w}{weightName(w) ? ` ${weightName(w)}` : ''}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {tab === 'about' && (
+          <FontAboutPanel font={font} id="fbd-panel-about" labelledBy="fbd-tab-about" />
+        )}
+        {tab === 'examples' && (
+          <FontExamplesPanel font={font} id="fbd-panel-examples" labelledBy="fbd-tab-examples" />
+        )}
+      </div>
+
+      <div className="fbd-detail-actions">
+        <button type="button" className="fbd-use" onClick={() => onUse(font)}>
+          {selected ? `${font.family} is in use` : `Use ${font.family}`}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -124,6 +262,10 @@ export default function FontBrowseDialog({ title, fonts, value, onPick, onClose 
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [page, setPage] = useState(1)
+  // The family being inspected, or null while browsing. Held as the FAMILY NAME
+  // rather than the object so a catalogue refresh underneath cannot leave the
+  // detail view rendering a stale entry.
+  const [inspecting, setInspecting] = useState(null)
 
   // Paging resets where the filter changes, not in an effect watching it: an
   // effect would render one frame of page N against the new, shorter result set.
@@ -155,6 +297,13 @@ export default function FontBrowseDialog({ title, fonts, value, onPick, onClose 
 
   const clear = useCallback(() => { setQuery(''); setCategory('all'); setPage(1) }, [])
 
+  // Resolved against the live list, so a family that vanished from the
+  // catalogue drops the detail view rather than rendering a ghost.
+  const detailFont = useMemo(
+    () => (inspecting ? pickable.find(f => f.family === inspecting) || null : null),
+    [pickable, inspecting],
+  )
+
   return (
     <div className="fbd-overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div
@@ -174,58 +323,74 @@ export default function FontBrowseDialog({ title, fonts, value, onPick, onClose 
           </button>
         </div>
 
-        <LibraryToolbar
-          className="fbd-toolbar"
-          search={{
-            value: query,
-            onChange: changeQuery,
-            placeholder: 'Search families…',
-            label: 'Search font families',
-          }}
-        >
-          <LibraryFilterGroup
-            label="Filter by category"
-            triggerLabel="Category"
-            value={category}
-            onChange={changeCategory}
-            options={CATS}
+        {/* Browsing and inspecting are one dialog, not two stacked ones. A
+            second overlay on top of this one would trap focus twice and give
+            Escape two meanings; swapping the body keeps one focus trap, one
+            Escape, and a Back button that is plainly not a close button. */}
+        {detailFont ? (
+          <FontDetail
+            font={detailFont}
+            selected={value?.family === detailFont.family}
+            onUse={pick}
+            onBack={() => setInspecting(null)}
           />
-        </LibraryToolbar>
+        ) : (
+          <>
+            <LibraryToolbar
+              className="fbd-toolbar"
+              search={{
+                value: query,
+                onChange: changeQuery,
+                placeholder: 'Search families…',
+                label: 'Search font families',
+              }}
+            >
+              <LibraryFilterGroup
+                label="Filter by category"
+                triggerLabel="Category"
+                value={category}
+                onChange={changeCategory}
+                options={CATS}
+              />
+            </LibraryToolbar>
 
-        <p className="fbd-count" aria-live="polite">
-          {matches.length.toLocaleString()} famil{matches.length === 1 ? 'y' : 'ies'}
-        </p>
+            <p className="fbd-count" aria-live="polite">
+              {matches.length.toLocaleString()} famil{matches.length === 1 ? 'y' : 'ies'}
+            </p>
 
-        <div className="fbd-body">
-          {matches.length === 0 ? (
-            <LibraryEmpty
-              className="fbd-empty"
-              title="No family matches that."
-              detail={`Nothing in the loaded catalogue ${query.trim() ? `contains “${query.trim()}”` : 'is in this category'}. Clear the filters to see all ${pickable.length.toLocaleString()} again.`}
-              onClear={clear}
-            />
-          ) : (
-            <>
-              <LibraryGrid className="fbd-grid">
-                {shown.map((font) => (
-                  <FontTile
-                    key={font.family}
-                    font={font}
-                    selected={value?.family === font.family}
-                    onPick={pick}
-                  />
-                ))}
-              </LibraryGrid>
-              {shown.length < matches.length && (
-                <div className="fbd-more">
-                  <button type="button" className="fg-more-btn" onClick={() => setPage(p => p + 1)}>
-                    Show more families ({(matches.length - shown.length).toLocaleString()} left)
-                  </button>
-                </div>
+            <div className="fbd-body">
+              {matches.length === 0 ? (
+                <LibraryEmpty
+                  className="fbd-empty"
+                  title="No family matches that."
+                  detail={`Nothing in the loaded catalogue ${query.trim() ? `contains “${query.trim()}”` : 'is in this category'}. Clear the filters to see all ${pickable.length.toLocaleString()} again.`}
+                  onClear={clear}
+                />
+              ) : (
+                <>
+                  <LibraryGrid className="fbd-grid">
+                    {shown.map((font) => (
+                      <FontTile
+                        key={font.family}
+                        font={font}
+                        selected={value?.family === font.family}
+                        onPick={pick}
+                        onInspect={f => setInspecting(f.family)}
+                      />
+                    ))}
+                  </LibraryGrid>
+                  {shown.length < matches.length && (
+                    <div className="fbd-more">
+                      <button type="button" className="fg-more-btn" onClick={() => setPage(p => p + 1)}>
+                        Show more families ({(matches.length - shown.length).toLocaleString()} left)
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

@@ -33,7 +33,14 @@ function transformFont(item, index) {
     category: item.category,
     variants: numericWeights,
     subsets: item.subsets,
-    popularity: index
+    popularity: index,
+    // The WebFonts API cannot supply the designer or the date a family was
+    // added — only /api/fonts (the metadata endpoint) can, and the About tab
+    // renders every one of those fields conditionally for exactly this reason.
+    // Italic availability IS derivable here, and was being thrown away with the
+    // rest of the variant strings, so a family shipping twelve italics looked
+    // identical to one shipping none.
+    italics: (item.variants || []).some(v => String(v).includes('italic')),
   }
 }
 

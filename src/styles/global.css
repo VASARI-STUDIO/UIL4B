@@ -9114,6 +9114,101 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fbd-sample--pending{color:transparent;background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;border-radius:var(--radius-xs);animation:fg-shimmer 1.4s linear infinite}
 .fbd-more{display:flex;justify-content:center;padding:18px 0 4px}
 .fbd-empty{margin-bottom:8px}
+
+/* ── The per-family detail view, and the two tabs the founder asked for ──────
+   Three fixed rows and ONE scroller: head, tabs, scrolling panel, pinned
+   action. #305 found the Font Gallery's specimen dialog 1,763px tall in a 900px
+   viewport with every action below the fold, and noted that adding tabs is
+   exactly how that comes back. It does not come back here because the dialog
+   never grows — .fbd-detail is a flex column inside the same capped
+   .fbd-dialog, so a longer panel scrolls the panel, not the dialog. */
+.fbd-info{display:flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.fbd-info:hover{color:var(--t0);border-color:var(--bh)}
+.fbd-info:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fbd-detail{display:flex;flex-direction:column;flex:1;min-height:0}
+.fbd-detail-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.fbd-back{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;font:inherit;font-size:12px;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.fbd-back:hover{color:var(--t0);border-color:var(--bh)}
+.fbd-back:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* The name is the specimen — it is set in the family it names, which is the
+   same contract the tiles keep. */
+.fbd-detail-name{margin:0;min-width:0;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,700);font-size:clamp(21px,3.2vw,30px);line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
+.fbd-tabs{display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.fbd-tab{position:relative;padding:9px 14px;font:inherit;font-size:13px;font-weight:550;color:var(--t2);background:none;border:0;border-radius:var(--radius-s) var(--radius-s) 0 0;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
+.fbd-tab:hover{color:var(--t0)}
+.fbd-tab:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.fbd-tab--on{color:var(--t0)}
+/* Sits ON the 1px border rather than above it, so the pair reads as one edge
+   and not as a rule with a second rule stacked on it. */
+.fbd-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--brand);border-radius:2px 2px 0 0}
+.fbd-detail-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+.fbd-detail-actions{flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.fbd-use{width:100%;padding:12px 18px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:var(--brand);border:1px solid var(--brand);border-radius:var(--radius);cursor:pointer}
+.fbd-use:hover{filter:brightness(1.06)}
+.fbd-use:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fbd-cuts{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
+.fbd-cuts li{display:flex;flex-direction:column;gap:3px;padding-bottom:13px;border-bottom:1px solid var(--border)}
+.fbd-cuts li:last-child{border-bottom:0;padding-bottom:0}
+.fbd-cut-line{font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,400);font-size:clamp(15px,2.4vw,20px);line-height:1.32;color:var(--t0)}
+.fbd-cut-label{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
+
+/* ── FontDossier: the About and Examples panels, shared by both font popups ──
+   Prefixed fdx- rather than fbd- because these two panels are NOT the browse
+   dialog's — they are the shared component the Font Gallery specimen dialog
+   uses too, and a fbd- name would have made the next person move them. */
+.fdx-panel:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:var(--radius-s)}
+/* A definition list, not a card grid. Nine facts in nine equally-weighted
+   rounded boxes is the "every idea in a card" failure — these are rows of a
+   spec, they have a natural label/value shape, and dl says so semantically. */
+.fdx-facts{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:0;margin:0}
+.fdx-fact{display:contents}
+.fdx-fact dt{grid-column:1;padding:9px 20px 9px 0;font-size:12px;font-weight:550;color:var(--t2);white-space:nowrap;border-bottom:1px solid var(--border)}
+.fdx-fact dd{grid-column:2;margin:0;padding:9px 0;font-size:13px;line-height:1.45;color:var(--t0);border-bottom:1px solid var(--border)}
+.fdx-fact:last-child dt,.fdx-fact:last-child dd{border-bottom:0}
+.fdx-note{margin-top:18px;padding:14px 16px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius)}
+.fdx-note h4{margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--t0)}
+.fdx-note p{margin:0;font-size:13px;line-height:1.5;color:var(--t1)}
+.fdx-source{margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--t2)}
+.fdx-source--lead{margin:0 0 16px}
+
+/* Each example is the family doing a job, with the question it answers stated
+   above it. Aave's brand-typography section states a role under each face
+   rather than adjectives; the caption here is that idea turned into a question,
+   because an example a reader cannot interpret teaches nothing. */
+.fdx-examples{display:flex;flex-direction:column;gap:22px}
+.fdx-ex-head h4{margin:0;font-size:12px;font-weight:600;color:var(--t0)}
+.fdx-ex-head p{margin:2px 0 10px;font-size:11.5px;line-height:1.45;color:var(--t2)}
+.fdx-ex-body{padding:18px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--fdx-ff,var(--font));color:var(--t0)}
+.fdx-ex-body p,.fdx-ex-body h5,.fdx-ex-body li,.fdx-ex-body td,.fdx-ex-body th{font-family:inherit}
+
+.fdx-ex-kicker{display:block;margin-bottom:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+.fdx-ex-editorial h5{margin:0 0 8px;font-weight:var(--fdx-hw,700);font-size:clamp(19px,3vw,25px);line-height:1.16;letter-spacing:-.015em}
+.fdx-ex-lede{margin:0 0 10px;font-weight:var(--fdx-bw,400);font-size:15px;line-height:1.5;color:var(--t1)}
+.fdx-ex-editorial p:last-child{margin:0;font-weight:var(--fdx-bw,400);font-size:13.5px;line-height:1.6;color:var(--t1)}
+
+.fdx-ex-bar{display:flex;gap:4px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.fdx-ex-tab{padding:5px 10px;font-weight:var(--fdx-bw,400);font-size:13px;color:var(--t2);border-radius:var(--radius-s)}
+.fdx-ex-tab--on{font-weight:var(--fdx-hw,600);color:var(--t0);background:var(--bg-2)}
+.fdx-ex-table{width:100%;border-collapse:collapse;font-size:13px}
+.fdx-ex-table th{padding:0 0 7px;font-weight:var(--fdx-hw,600);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;color:var(--t2);border-bottom:1px solid var(--border)}
+.fdx-ex-table td{padding:8px 0;font-weight:var(--fdx-bw,400);color:var(--t1);border-bottom:1px solid var(--border)}
+.fdx-ex-table td:first-child{color:var(--t0)}
+.fdx-ex-table th:not(:first-child),.fdx-ex-table td:not(:first-child){text-align:right}
+.fdx-ex-table tr:last-child td{border-bottom:0}
+
+/* Two plans, not three. The point is the numerals under pressure, and a third
+   column only narrows them. */
+.fdx-ex-pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:14px}
+.fdx-ex-plan{padding:15px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius)}
+.fdx-ex-plan-name{font-weight:var(--fdx-hw,600);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--t2)}
+.fdx-ex-price{display:flex;align-items:baseline;gap:1px;margin:6px 0 12px;font-weight:var(--fdx-hw,700);font-size:clamp(30px,5vw,40px);line-height:1;letter-spacing:-.02em}
+.fdx-ex-currency{font-size:.55em;align-self:flex-start;padding-top:.22em}
+.fdx-ex-period{font-weight:var(--fdx-bw,400);font-size:.34em;color:var(--t2);padding-left:.3em}
+.fdx-ex-plan ul{margin:0 0 14px;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+.fdx-ex-plan li{font-weight:var(--fdx-bw,400);font-size:12.5px;color:var(--t1)}
+.fdx-ex-btn{display:block;padding:9px 14px;font-weight:var(--fdx-hw,600);font-size:13px;text-align:center;color:var(--t0);background:var(--bg-1);border:1px solid var(--bh);border-radius:var(--radius-s)}
+
+.fdx-ex-huge{margin:0;font-weight:var(--fdx-hw,700);font-size:clamp(30px,7.5vw,54px);line-height:1.02;letter-spacing:-.03em}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
   /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
