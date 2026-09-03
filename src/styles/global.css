@@ -6218,14 +6218,59 @@ html.lenis,html.lenis body{height:auto}
 .soon-actions{display:flex;gap:12px;flex-wrap:wrap}
 
 /* ══ Surface landing (Discover / Learn) — surface- ══ */
-.surface-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4);margin-top:var(--s-7)}
+/* `align-items:start` so a card is as tall as what it holds. Stretched, the
+   four coming-soon cards were pulled to the height of the preview cards beside
+   them and carried 150px of empty white with a Soon badge stranded at the
+   bottom. Tines' resource grid on Mobbin varies card weight deliberately —
+   it is what stops a grid of one shape reading as a table. */
+.surface-grid{display:grid;grid-template-columns:repeat(3,1fr);align-items:start;gap:var(--s-4);margin-top:var(--s-7)}
 .surface-card{display:flex;flex-direction:column;gap:8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px;box-shadow:var(--shadow-xs)}
 .surface-card-title{display:flex;align-items:center;gap:8px;font-size:var(--fs-h3);font-weight:600;letter-spacing:-.016em;color:var(--t0)}
 .surface-card-desc{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
-.surface-card .soon-badge{align-self:flex-start;margin-top:auto}
+.surface-card .soon-badge{align-self:center}
 .surface-card--link{text-decoration:none;transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .surface-card--link:hover{border-color:var(--brand);box-shadow:var(--shadow-s)}
-.surface-card-go{align-self:flex-start;margin-top:auto;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong)}
+.surface-card-go{font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong)}
+
+/* ── Discover card previews ─────────────────────────────────────────────────
+   A browse surface has to show what there is to browse. These sit above the
+   title and are drawn from the real gallery data (see PREVIEWS in
+   SurfaceLanding.jsx), with the count as a pill over the corner — the shape
+   Webflow's Libraries grid uses. Cards for libraries that have not shipped
+   carry no preview, which is what makes live and coming-soon read apart at a
+   glance instead of via a badge you have to find. */
+.surface-card-preview{position:relative;display:block;overflow:hidden;margin:-4px 0 6px;padding:14px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-2)}
+/* The card's bottom rail: the call to action on the left, how much is in there
+   on the right. `margin-top:auto` moves here from .surface-card-go, so it is
+   the rail that is pushed to the foot and the two stay on one baseline. */
+.surface-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:4px}
+.surface-card-meta{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--t3);white-space:nowrap}
+/* Palettes — three real systems, each a row of its own swatches. */
+.scp-stack{display:flex;flex-direction:column;gap:6px}
+.scp-row{display:flex;gap:4px;height:22px}
+.scp-chip{flex:1 1 0;min-width:0;border-radius:5px;box-shadow:inset 0 0 0 1px rgb(0 0 0/.06)}
+/* Gradients — three real gradients at the angle they are actually stored at. */
+.scp-tiles{display:flex;gap:6px;height:78px}
+.scp-tile{flex:1 1 0;min-width:0;border-radius:var(--radius-s);box-shadow:inset 0 0 0 1px rgb(0 0 0/.06)}
+/* Type — a specimen block in the two families the app actually ships (see the
+   note in SurfaceLanding.jsx: --serif is Manrope, not a serif). */
+.scp-type{display:flex;flex-direction:column;justify-content:center;gap:4px;height:78px;color:var(--t0);overflow:hidden}
+.scp-type-display{font-size:30px;font-weight:750;letter-spacing:-.03em;line-height:1}
+.scp-type-body{font-size:14px;font-weight:400;color:var(--t1);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scp-type-mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--t2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scp-icons{display:flex;align-items:center;justify-content:space-between;gap:8px;height:78px;color:var(--t1)}
+.scp-icon svg{width:24px;height:24px}
+.scp-lines{display:flex;flex-direction:column;justify-content:center;gap:6px;height:78px}
+.scp-line{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 9px;border-radius:var(--radius-s);background:var(--bg-1);border:1px solid var(--border);font-size:var(--fs-micro);color:var(--t2)}
+.surface-card--link:hover .surface-card-preview{border-color:var(--brand)}
+
+/* The surface heroes are NOT the homepage hero. See the note in
+   SurfaceLanding.jsx: they carry a fraction of the content and inherited a
+   min-height that left 401px of the first screen empty at 1440x900.
+   Doubled class on purpose: `.home-hero` is declared 100+ lines further down
+   the sheet, so at equal specificity IT would win and this rule would be a
+   dead letter — which is exactly what happened on the first attempt. */
+.home-hero.home-hero--surface{min-height:0;padding-bottom:var(--s-7)}
 
 /* ══ Surface sales — value pillars (sl-) ══ */
 .sl-pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4);margin-top:var(--s-7)}
