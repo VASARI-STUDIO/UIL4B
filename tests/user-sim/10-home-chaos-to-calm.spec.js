@@ -808,7 +808,13 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await page.keyboard.type('20')
     await page.keyboard.press('Tab')
     await expect(baseInput).toHaveValue('20')
-    await page.getByLabel('Scale ratio').selectOption('1.333')
+    // Scale ratio is an OPTIONS rail of toggles now, not a select. A click does
+    // not imply a value the way selectOption did, so the pressed state — the
+    // thing a screen reader is actually told — is asserted explicitly. The
+    // contract did not cover that before.
+    const ratio = page.getByRole('button', { name: 'Perfect fourth · 1.333' })
+    await ratio.click()
+    await expect(ratio).toHaveAttribute('aria-pressed', 'true')
     await page.getByLabel('Preview text').fill('Systems need typographic rhythm')
     await expect(page.locator('.hw-type-row').first()).toContainText('47.4px')
     await expect(page.locator('.hw-type-sample')).toHaveText([
@@ -880,6 +886,128 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('linear-gradient(90deg')
   })
 
+  // The palette mode's artefact. It replaced a row of five labelled swatches,
+  // and the two things that make it worth more than the row are the two things
+  // asserted here: it is painted from the palette that is actually on screen,
+  // and no part of it paints itself invisible.
+  test('8a · the palette preview is a real UI painted from the live swatches', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const stage = page.locator('.hw-stage .hw-ui')
+    await expect(stage).toBeVisible()
+
+    // Decorative and inert: the swatch buttons below carry every value for
+    // real, so nothing in the mock is focusable or reachable by name.
+    await expect(stage).toHaveAttribute('aria-hidden', 'true')
+    await expect(stage.locator('button, a, input, [tabindex]')).toHaveCount(0)
+
+    // A DOT MAY NEVER BE THE CARD IT SITS ON. `derivePreviewRoles` spends one
+    // palette step as the card's background; in dark theme that is the darkest
+    // step, which was also the first dot — so the first row rendered with no
+    // dot at all and the preview implied the palette held an unusable colour,
+    // when in fact the preview had taken that colour for its own ground.
+    const dotsMatchCard = async () => page.evaluate(() => {
+      const card = document.querySelector('.hw-stage .hw-ui')
+      const bg = getComputedStyle(card).backgroundColor
+      const dots = [...card.querySelectorAll('.hw-ui-dot')]
+      return { count: dots.length, clashes: dots.filter((d) => getComputedStyle(d).backgroundColor === bg).length }
+    })
+
+    let seen = await dotsMatchCard()
+    expect(seen.count, 'the ramp is compared on three rows').toBe(3)
+    expect(seen.clashes, 'no status dot is painted in the card background').toBe(0)
+
+    // Generate rerolls the palette; the mock must follow it, and must still not
+    // paint a dot in its own ground for the NEW palette.
+    const before = await page.locator('.hw-ui-chart path').first().getAttribute('fill')
+    await page.getByRole('button', { name: 'Generate' }).click()
+    await expect
+      .poll(async () => page.locator('.hw-ui-chart path').first().getAttribute('fill'))
+      .not.toBe(before)
+    seen = await dotsMatchCard()
+    expect(seen.clashes, 'still true after a fresh generate').toBe(0)
+
+    // DARK THEME IS WHERE THE CLASH LIVES, and it must be entered for real.
+    // Stamping data-theme on the element does not re-render React, so the mock
+    // kept deriving its roles in light mode and this assertion passed against
+    // the very defect it names — verified by mutation. ThemeContext seeds from
+    // localStorage 'vs-t' at mount, so the choice has to be in place before the
+    // page loads.
+    await page.addInitScript(() => { localStorage.setItem('vs-t', 'dark') })
+    await go(page, '/')
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.getAttribute('data-theme')))
+      .toBe('dark')
+
+    seen = await dotsMatchCard()
+    expect(seen.count, 'the mock still renders in dark theme').toBe(3)
+    expect(seen.clashes, 'no dot is the card background in dark theme either').toBe(0)
+  })
+
+  // The palette is regenerated at RANDOM on every load, so a contrast bug here
+  // is a dice roll rather than a constant - which is exactly how these survived.
+  // Main was failing 39-accent-contrast intermittently on .hw-pal-hex for this
+  // reason. Rerolling samples the generator's space instead of whichever single
+  // palette happened to load.
+  test('8c · every label on a generated colour clears AA, whatever is generated', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const worstOf = async () => page.evaluate(() => {
+      const chan = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+      const lum = (c) => 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2])
+      const rgb = (s) => s.match(/\d+/g).map(Number).slice(0, 3)
+      const ratio = (a, b) => {
+        const l1 = lum(rgb(a)); const l2 = lum(rgb(b))
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+      }
+      const bad = []
+      // Every bit of text this panel paints ON a generated colour.
+      for (const el of document.querySelectorAll('.hw-pal-hex, .hw-ui-avatar')) {
+        const cs = getComputedStyle(el)
+        const r = ratio(cs.color, cs.backgroundColor)
+        if (r < 4.5) bad.push(`${el.className} ${el.textContent.trim()} ${r.toFixed(2)}:1 on ${cs.backgroundColor}`)
+      }
+      return bad
+    })
+
+    const NL = String.fromCharCode(10)
+    const failures = []
+    for (let i = 0; i < 24; i++) {
+      failures.push(...await worstOf())
+      await page.getByRole('button', { name: 'Generate' }).click()
+    }
+    expect(failures.join(NL), 'label on a generated fill under 4.5:1').toBe('')
+  })
+
+  // The type ladder is the artefact of its mode: it must show every step it
+  // claims. The sticky column caps the panel to the viewport, and the first
+  // version of that cap let the stage shrink — the ladder silently lost its
+  // CAPTION row and was sliced through BODY while every geometry check passed.
+  test('8b · the type scale preview shows all four steps, uncropped', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+    await page.locator('.hw-tab[data-tab="typography"]').click()
+
+    const rows = page.locator('.hw-type-row')
+    await expect(rows).toHaveCount(4)
+
+    const cropped = await page.evaluate(() => {
+      const box = document.querySelector('.hw-type-preview').getBoundingClientRect()
+      return [...document.querySelectorAll('.hw-type-row')]
+        .filter((r) => {
+          const b = r.getBoundingClientRect()
+          return b.bottom > box.bottom + 0.5 || b.top < box.top - 0.5
+        })
+        .map((r) => r.querySelector('.hw-type-meta').textContent)
+    })
+    expect(cropped, 'no step is cut off by the preview box').toEqual([])
+  })
+
   test('9 · the three references and the 4K · WebP · Lossless output intent', async ({ page }) => {
     await reducedMotion(page)
     watch(page, PERSONA)
@@ -904,7 +1032,11 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(active).toHaveAttribute('alt', /.{20,}/)
 
     // Changing a reference does not discard edited output choices.
-    await page.locator('#hw-img-fmt').selectOption('image/png')
+    // File type is an OPTIONS rail now. Scoped by the rail's own label so the
+    // match cannot wander into another group.
+    const png = page.locator('[aria-labelledby="hw-img-fmt-label"] .hw-tile', { hasText: 'PNG' })
+    await png.click()
+    await expect(png).toHaveAttribute('aria-pressed', 'true')
     await page.locator('#hw-img-res').selectOption('2k')
     await subtabs.nth(2).click()
     await expect(subtabs.nth(2)).toHaveAttribute('aria-selected', 'true')
@@ -933,7 +1065,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="image"]').click()
-    await page.locator('#hw-img-fmt').selectOption('image/png')
+    await page.locator('[aria-labelledby="hw-img-fmt-label"] .hw-tile', { hasText: 'PNG' }).click()
 
     const button = page.getByRole('button', { name: 'Try your image' })
 
@@ -961,7 +1093,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="image"]').click()
-    await page.locator('#hw-img-fmt').selectOption('image/png')
+    await page.locator('[aria-labelledby="hw-img-fmt-label"] .hw-tile', { hasText: 'PNG' }).click()
     await page.locator('#hw-img-res').selectOption('2k')
 
     await page.locator('.hw-body input[type="file"]').setInputFiles([png('one.png'), png('two.png')])
@@ -1048,8 +1180,15 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // 14 · controls mutate the preview and nothing else.
     await page.getByRole('button', { name: /Preview the zap icon/ }).click()
-    await page.locator('#hw-icon-size').selectOption('32')
-    await page.locator('#hw-icon-stroke').selectOption('2')
+    // Size and stroke are OPTIONS rails now. Each is scoped by its own rail's
+    // label so "32" cannot match a tile in the other rail, and the stroke
+    // filter is anchored so /^2$/ does not also select 2.5.
+    const size32 = page.locator('[aria-labelledby="hw-icon-size-label"] .hw-tile', { hasText: '32' })
+    const stroke2 = page.locator('[aria-labelledby="hw-icon-stroke-label"] .hw-tile').filter({ hasText: /^2$/ })
+    await size32.click()
+    await stroke2.click()
+    await expect(size32).toHaveAttribute('aria-pressed', 'true')
+    await expect(stroke2).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.hw-icon-meta')).toContainText('zap · 32px · 2 stroke')
     await expect(page.locator('.hw-icon-preview svg')).toHaveAttribute('width', '32')
     expect(await snapshot(), 'no storage, recents or quota write').toBe(before)

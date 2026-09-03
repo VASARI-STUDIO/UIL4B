@@ -23,6 +23,8 @@ import {
 } from '../utils/iconHandoff'
 import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
 import { setBoardDraft } from '../utils/colorHandoff'
+import { contrastRatio, derivePreviewRoles, fixBackground, fixForeground } from '../utils/colors'
+import { useTheme } from '../contexts/ThemeContext'
 import { HOME_WORKBENCH_TABS } from '../data/toolTree'
 import NavIcon from './NavIcon'
 
@@ -64,12 +66,50 @@ function hslToHex(h, s, l) {
   return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase()
 }
 
-// Perceived luminance → a readable ink for a swatch label.
-function readableInk(hex) {
-  const r = parseInt(hex.slice(1, 3), 16) / 255
-  const g = parseInt(hex.slice(3, 5), 16) / 255
-  const b = parseInt(hex.slice(5, 7), 16) / 255
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.58 ? '#141414' : '#FFFFFF'
+/**
+ * A readable ink for text on an arbitrary generated fill — one that actually
+ * clears AA rather than assuming it does.
+ *
+ * This used to be a naive luminance sum against a hand-tuned 0.58 threshold,
+ * which decides which POLE looks better and then hopes. Hoping is not enough
+ * here: the palette is regenerated at random on every load, so a swatch like
+ * #2887C8 took white ink at 3.9:1 and #5588DD at 3.53:1. Both are AA failures
+ * on the homepage's own swatch labels, and because the input is random they
+ * appeared only on some loads — which is exactly why they survived. Caught by
+ * 39-accent-contrast on CI, on the run that also flagged the preview avatar.
+ *
+ * Now: pick the winning pole by MEASURED contrast, then let fixForeground walk
+ * it until it clears 4.5:1. Same two starting colours, but the result is a
+ * guarantee instead of an estimate, and it uses the sheet's own maths rather
+ * than a private copy of it.
+ */
+function readableInk(bg) {
+  const pole = contrastRatio('#141414', bg) >= contrastRatio('#FFFFFF', bg) ? '#141414' : '#FFFFFF'
+  return contrastRatio(pole, bg) >= 4.5 ? pole : fixForeground(pole, bg, 4.5)
+}
+
+/**
+ * The ground a label needs in order to be readable ON a generated colour.
+ *
+ * Choosing a better ink is not always enough, because for a mid-luminance
+ * chromatic fill there is NO ink that clears 4.5:1 — #1A8993 tops out at 4.42
+ * against black and 4.16 against white. The fill is the problem, so the label
+ * gets its own ground: the swatch's own hue and saturation, walked in lightness
+ * only as far as the ink requires.
+ *
+ * Usually it returns the swatch unchanged and nothing is drawn; #2D9EC3 and
+ * #519AE1 both come back identical. It moves only where it must, and barely —
+ * #1A8993 becomes #1B8D98. The swatch itself is NEVER touched: the large area a
+ * visitor reads the colour from stays the exact value the hex claims, which is
+ * the whole point of the control.
+ *
+ * Swept over all 16,200 colours the generator can emit (360 hues x 5 ramp steps
+ * x the saturation band): every ink/ground pair clears 4.5:1, against 669 that
+ * did not before.
+ */
+function labelGround(bg) {
+  const ink = readableInk(bg)
+  return contrastRatio(ink, bg) >= 4.5 ? bg : fixBackground(ink, bg, 4.5)
 }
 
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -147,6 +187,129 @@ function makePalette() {
   return L_RAMP.map((_, i) => makeSwatch(baseHue, i))
 }
 
+// The chart's shape is FIXED. Only the colours come from the palette, so
+// pressing Generate changes the thing under test and nothing else — a chart
+// that also re-rolled its curve would make two variables move at once and you
+// could no longer tell whether the ramp or the data had changed.
+//
+// Twelve readings on a 100 × 32 viewBox, plotted with preserveAspectRatio
+// "none" so the curve stretches to whatever width the panel has. Values are
+// the SVG y (small = high), so this series trends upward.
+const UI_SERIES = [24, 27, 20, 25, 18, 22, 14, 17, 10, 13, 7, 4]
+
+const UI_CHART_W = 100
+const UI_CHART_H = 32
+
+function seriesPath(values, close) {
+  const step = UI_CHART_W / (values.length - 1)
+  const line = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(2)},${v}`).join(' ')
+  return close ? `${line} L${UI_CHART_W},${UI_CHART_H} L0,${UI_CHART_H} Z` : line
+}
+
+// Three rows is enough to put ramp steps side by side in a real context and
+// short enough that the card never becomes the page.
+const UI_ROWS = [
+  { name: 'Design tokens', state: 'Shipped' },
+  { name: 'Component library', state: 'In review' },
+  { name: 'Documentation', state: 'Draft' },
+]
+
+/**
+ * Zone 1 of the Palette mode: the artefact.
+ *
+ * This panel used to BE the five swatches — a labelled colour row presented as
+ * a live product preview. Every comparable token editor sampled on Mobbin
+ * (v0, Lovable, GitBook, Gamma) previews a palette on real application UI and
+ * none of them previews it as a swatch row, for the reason the row cannot
+ * answer: swatches show you five colours, a UI shows you whether they COMPOSE.
+ * The swatch row is still here — it moved to the controls zone, where it is the
+ * input it always was.
+ *
+ * ROLES COME FROM derivePreviewRoles(), THE SAME ENGINE THE FULL TOOLS USE.
+ * The first version of this hand-rolled its own luminance sort and picked
+ * darkest-as-primary, lightest-as-tint. That was a seventh copy of a luminance
+ * calculation this codebase already has, and it was worse than the original:
+ * derivePreviewRoles picks `primary` by CHROMA subject to a 3:1 floor on the
+ * surface (not by darkness), rejects a primary that clashes with its own
+ * background, falls back to the brand focal for an all-grey palette, derives
+ * `text` by contrast rather than ever using a swatch for copy, and self-heals
+ * every pair to AA before returning. It is also mode-aware, which is what makes
+ * this mock correct in dark theme rather than merely legible.
+ *
+ * Using it also means the homepage preview and the Palette Builder / Colour
+ * Studio previews now speak one language: the same palette produces the same
+ * roles wherever a visitor meets it.
+ *
+ * Inert and aria-hidden, exactly like `.hw-chrome` and `.hw-grad-preview`
+ * above it: nothing inside is focusable, no control is impersonated, and every
+ * hex it paints is announced for real by the swatch buttons below.
+ */
+function PaletteStage({ swatches }) {
+  const { theme } = useTheme()
+  const hexes = swatches.map((s) => s.hex)
+  const role = derivePreviewRoles(hexes, { mode: theme === 'dark' ? 'dark' : 'light' })
+  // The step the engine spent as the card's own background cannot also be a dot
+  // ON that card — it paints itself invisible. Caught in dark theme, where `bg`
+  // is the darkest step and the first row simply had no dot: a preview implying
+  // the palette contains an unusable colour, when in fact the preview had taken
+  // that colour for its ground. The dots compare steps against each other on
+  // the card; a step that IS the card is not one of them.
+  const dots = hexes.filter((h) => h.toLowerCase() !== String(role.bg).toLowerCase())
+  const dotSeries = dots.length ? dots : hexes
+  return (
+    <div className="hw-ui" aria-hidden="true" style={{ background: role.bg, borderColor: role.border }}>
+      <div className="hw-ui-bar" style={{ background: role.surface, borderBottomColor: role.border }}>
+        <span className="hw-ui-mark" style={{ background: role.primary, color: role.onPrimary }}>A</span>
+        <span className="hw-ui-app" style={{ color: role.text }}>Acme</span>
+        <span className="hw-ui-crumb" style={{ color: role.muted }}>Overview</span>
+        <span className="hw-ui-avatar" style={{ background: labelGround(role.accent), color: readableInk(role.accent) }}>M</span>
+      </div>
+
+      <div className="hw-ui-main">
+        <div className="hw-ui-metric">
+          <span className="hw-ui-metric-label" style={{ color: role.muted }}>Sessions this week</span>
+          <span className="hw-ui-metric-row">
+            <strong className="hw-ui-metric-num" style={{ color: role.text }}>12,480</strong>
+            <span className="hw-ui-delta" style={{ background: role.surface, color: role.muted, border: `1px solid ${role.border}` }}>+12.4%</span>
+          </span>
+        </div>
+
+        {/* An area chart, because that is what the sampled editors preview a
+            palette on — v0 and Lovable both lead with one. It is also the
+            element that shows an accent doing its actual job: carrying a shape
+            at 2px against a background, which a 96px swatch never has to. */}
+        <svg className="hw-ui-chart" viewBox={`0 0 ${UI_CHART_W} ${UI_CHART_H}`} preserveAspectRatio="none" focusable="false">
+          <path d={seriesPath(UI_SERIES, true)} fill={role.primary} opacity=".14" />
+          <path d={seriesPath(UI_SERIES, false)} fill="none" stroke={role.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+
+        {/* Where the ramp gets compared. The dots stay the RAW generated
+            colours in generated order — this is the one place the palette is
+            shown as itself rather than through a role, and re-sorting or
+            re-deriving them would hide a generator that produced two
+            near-identical steps. They are decoration beside a text label, never
+            the only carrier of meaning. */}
+        <ul className="hw-ui-rows">
+          {UI_ROWS.map((row, i) => (
+            <li className="hw-ui-row" key={row.name} style={{ borderTopColor: role.border }}>
+              <span className="hw-ui-dot" style={{ background: dotSeries[i % dotSeries.length] || role.primary }} />
+              <span className="hw-ui-row-name" style={{ color: role.text }}>{row.name}</span>
+              <span className="hw-ui-row-state" style={{ color: role.muted }}>{row.state}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hw-ui-acts">
+          {/* `primaryBorder` is the engine's own remedy for a CTA that cannot
+              clear 3:1 on its card — transparent when it is not needed. */}
+          <span className="hw-ui-btn" style={{ background: role.primary, color: role.onPrimary, border: `1px solid ${role.primaryBorder}` }}>Primary action</span>
+          <span className="hw-ui-btn hw-ui-btn--ghost" style={{ borderColor: role.border, color: role.text }}>Secondary</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PalettePanel({ swatches, onChange, announce }) {
   const [copyError, setCopyError] = useState('')
   const [copiedHex, setCopiedHex] = useState('')
@@ -178,6 +341,17 @@ function PalettePanel({ swatches, onChange, announce }) {
 
   return (
     <div className="hw-body">
+      {/* Zone 1 — the artefact. See the `.hw-stage` / `.hw-controls` block in
+          global.css: the stage holds what the mode produces, the controls hold
+          what changes it, and the two are never interleaved. */}
+      <div className="hw-stage">
+        <PaletteStage swatches={swatches} />
+      </div>
+
+      {/* Zone 2 — the controls. The swatch row is an INPUT: lock, copy, and
+          the value each button announces. It reads as the palette rail under
+          the canvas, which is where every sampled editor puts it. */}
+      <div className="hw-controls">
       <ul className="hw-pal">
         {swatches.map((s, i) => (
           <li className="hw-pal-sw" key={i} style={{ background: s.hex }}>
@@ -198,8 +372,8 @@ function PalettePanel({ swatches, onChange, announce }) {
               aria-label={`Copy ${s.hex}`}
               onClick={() => copy(s.hex)}
             >
-              <span className="hw-pal-hex">{s.hex}</span>
-              {copiedHex === s.hex && <span className="hw-pal-tick" aria-hidden="true">Copied</span>}
+              <span className="hw-pal-hex" style={{ background: labelGround(s.hex) }}>{s.hex}</span>
+              {copiedHex === s.hex && <span className="hw-pal-tick" aria-hidden="true" style={{ background: labelGround(s.hex) }}>Copied</span>}
             </button>
           </li>
         ))}
@@ -230,6 +404,7 @@ function PalettePanel({ swatches, onChange, announce }) {
           <span aria-hidden="true">→</span>
         </Link>
         <span className="hw-foot-note">Your five swatches carry over on the free Auto system · full ramps, roles and export there.</span>
+      </div>
       </div>
     </div>
   )
@@ -277,9 +452,14 @@ function GradientPanel({ gradient, onChange, announce }) {
     if (ok) announce('Gradient CSS copied.')
   }
 
+  // "sRGB hex", not "Hex". For a product whose pitch is defensible colour
+  // systems, naming the space is both more correct and a credibility signal,
+  // and it costs four characters.
   const stopField = (stop, label) => (
     <div className="hw-field">
-      <label className="hw-label" htmlFor={`hw-grad-${stop}`}>{label}</label>
+      <label className="hw-label" htmlFor={`hw-grad-${stop}`}>
+        {label} <span className="hw-label-space">sRGB hex</span>
+      </label>
       <div className="hw-stop">
         {/* The shared picker — the homepage demo is the first colour control
             most visitors ever touch here, so it must be the same one the tools
@@ -313,22 +493,49 @@ function GradientPanel({ gradient, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      <div className="hw-grad-preview" style={{ background: css }} aria-hidden="true" />
+      <div className="hw-stage">
+        <div className="hw-grad-preview" style={{ background: css }} aria-hidden="true" />
+      </div>
 
+      <div className="hw-controls">
       <div className="hw-fields">
         {stopField('from', 'Start')}
         {stopField('to', 'End')}
-        <div className="hw-field hw-field-grow">
-          <label className="hw-label" htmlFor="hw-grad-angle">Angle · {gradient.angle}°</label>
+      </div>
+
+      {/* A property, so a label-left / control-right row with the number as a
+          real input. On this column a slider alone cannot land on 135 degrees,
+          so the readout is the precise control and the slider the coarse one —
+          the arrangement Salesforce uses for Border Radius and MagicPath for
+          every type-scale value. The range keeps the id, so the existing
+          contract (`#hw-grad-angle`) still points at the slider. */}
+      <div className="hw-prop">
+        <label className="hw-prop-label" htmlFor="hw-grad-angle">Angle</label>
+        <input
+          id="hw-grad-angle"
+          className="hw-prop-range"
+          type="range"
+          min="0"
+          max="360"
+          step="1"
+          value={gradient.angle}
+          onChange={(e) => onChange({ ...gradient, angle: Number(e.target.value) })}
+        />
+        <div className="hw-prop-num">
           <input
-            id="hw-grad-angle"
-            type="range"
+            className="hw-num"
+            type="number"
             min="0"
             max="360"
             step="1"
             value={gradient.angle}
-            onChange={(e) => onChange({ ...gradient, angle: Number(e.target.value) })}
+            aria-label="Gradient angle in degrees"
+            onChange={(e) => {
+              const next = Number(e.target.value)
+              if (Number.isFinite(next)) onChange({ ...gradient, angle: Math.min(360, Math.max(0, next)) })
+            }}
           />
+          <span className="hw-num-unit" aria-hidden="true">&deg;</span>
         </div>
       </div>
 
@@ -349,6 +556,7 @@ function GradientPanel({ gradient, onChange, announce }) {
           <span aria-hidden="true">→</span>
         </Link>
         <span className="hw-foot-note">Two stops here · multi-stop, presets and gallery there.</span>
+      </div>
       </div>
     </div>
   )
@@ -485,6 +693,9 @@ function ImagePanel({ state, onChange, announce }) {
 
   return (
     <div className="hw-body">
+      {/* The reference picker belongs to the ARTEFACT, not the controls — it
+          chooses what the canvas shows, so it travels with the canvas. */}
+      <div className="hw-stage">
       <div className="hw-subtabs" role="tablist" aria-label="Built-in reference images">
         {IMAGE_REFERENCES.map((r, index) => (
           <button
@@ -505,7 +716,6 @@ function ImagePanel({ state, onChange, announce }) {
         ))}
       </div>
 
-      <div className="hw-img-split">
         <div
           className="hw-ref"
           id="hw-ref-panel"
@@ -536,54 +746,63 @@ function ImagePanel({ state, onChange, announce }) {
           ))}
         </div>
 
-        <div className="hw-img-controls">
-          <div className="hw-fields">
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-img-res">Resolution</label>
-              <select
-                id="hw-img-res"
-                className="hw-select"
-                value={draft.resolution}
-                onChange={(e) => setDraft({ resolution: e.target.value })}
-              >
-                {DRAFT_RESOLUTIONS.map((r) => (
-                  <option key={r.id} value={r.id}>{r.label} — {r.detail}</option>
-                ))}
-              </select>
-            </div>
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-img-fmt">File type</label>
-              <select
-                id="hw-img-fmt"
-                className="hw-select"
-                value={draft.format}
-                onChange={(e) => setDraft({ format: e.target.value })}
-              >
-                {DRAFT_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
-            </div>
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-img-comp">Compression</label>
-              <select
-                id="hw-img-comp"
-                className="hw-select"
-                value={draft.compression}
-                onChange={(e) => setDraft({ compression: e.target.value })}
-              >
-                {DRAFT_COMPRESSIONS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <p className="hw-intent">
-            <span className="hw-intent-label">Output intent</span>
-            <strong>{intent}</strong>
-            <span className="hw-intent-note">Nothing is converted here — File Converter does the encoding.</span>
-          </p>
-
-          {limit && <p className="hw-limit">{limit}</p>}
-        </div>
       </div>
+
+      <div className="hw-controls">
+        {/* File type is a closed set of OPTIONS, so a rail. Resolution and
+            compression are PROPERTIES with a described value, so rows. The
+            rail also collapses a label+select pair onto one line, which is
+            most of the vertical room this mode was short of. */}
+        <div className="hw-rail-group">
+          <span className="hw-rail-label" id="hw-img-fmt-label">File type</span>
+          <div className="hw-rail" role="group" aria-labelledby="hw-img-fmt-label">
+            {DRAFT_FORMATS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className="hw-tile"
+                aria-pressed={draft.format === f.id}
+                onClick={() => setDraft({ format: f.id })}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="hw-prop">
+          <label className="hw-prop-label" htmlFor="hw-img-res">Resolution</label>
+          <select
+            id="hw-img-res"
+            className="hw-select hw-prop-select"
+            value={draft.resolution}
+            onChange={(e) => setDraft({ resolution: e.target.value })}
+          >
+            {DRAFT_RESOLUTIONS.map((r) => (
+              <option key={r.id} value={r.id}>{r.label} — {r.detail}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="hw-prop">
+          <label className="hw-prop-label" htmlFor="hw-img-comp">Compression</label>
+          <select
+            id="hw-img-comp"
+            className="hw-select hw-prop-select"
+            value={draft.compression}
+            onChange={(e) => setDraft({ compression: e.target.value })}
+          >
+            {DRAFT_COMPRESSIONS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        </div>
+
+        <p className="hw-intent">
+          <span className="hw-intent-label">Output intent</span>
+          <strong>{intent}</strong>
+          <span className="hw-intent-note">Nothing is converted here — File Converter does the encoding.</span>
+        </p>
+
+        {limit && <p className="hw-limit">{limit}</p>}
 
       {error && (
         <p className="hw-alert" role="alert">
@@ -613,6 +832,7 @@ function ImagePanel({ state, onChange, announce }) {
         </button>
         <button type="button" className="hw-btn" onClick={reset} disabled={handingOff}>Reset</button>
         <span className="hw-foot-note">Your files open in File Converter with this draft applied.</span>
+      </div>
       </div>
     </div>
   )
@@ -701,56 +921,67 @@ function IconPanel({ state, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      <div className="hw-icon-split">
-        <div className="hw-icon-stage">
-          <div className="hw-icon-preview">
-            <IconGlyph name={state.name} size={state.size} stroke={state.stroke} />
-          </div>
-          <p className="hw-icon-meta">{state.name} · {state.size}px · {state.stroke} stroke</p>
+      <div className="hw-stage hw-icon-stage">
+        <div className="hw-icon-preview">
+          <IconGlyph name={state.name} size={state.size} stroke={state.stroke} />
+        </div>
+        <p className="hw-icon-meta">{state.name} · {state.size}px · {state.stroke} stroke</p>
+      </div>
+
+      <div className="hw-controls">
+        <div className="hw-icon-grid" role="group" aria-label="Preview icon">
+          {ICON_DRAFT_NAMES.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className="hw-icon-cell"
+              aria-pressed={state.name === name}
+              aria-label={`Preview the ${name.replace(/-/g, ' ')} icon`}
+              onClick={() => patch({ name })}
+            >
+              <IconGlyph name={name} size={22} stroke={state.stroke} />
+            </button>
+          ))}
         </div>
 
-        <div className="hw-icon-side">
-          <div className="hw-icon-grid" role="group" aria-label="Preview icon">
-            {ICON_DRAFT_NAMES.map((name) => (
+        {/* Sizes and strokes are OPTIONS, so rails rather than a stack of
+            selects. Two selects with labels cost ~130px, two rails ~76px, and
+            every value is now one click instead of two. */}
+        <div className="hw-rail-group">
+          <span className="hw-rail-label" id="hw-icon-size-label">Size</span>
+          <div className="hw-rail" role="group" aria-labelledby="hw-icon-size-label">
+            {ICON_DRAFT_SIZES.map((sz) => (
               <button
-                key={name}
+                key={sz}
                 type="button"
-                className="hw-icon-cell"
-                aria-pressed={state.name === name}
-                aria-label={`Preview the ${name.replace(/-/g, ' ')} icon`}
-                onClick={() => patch({ name })}
+                className="hw-tile"
+                aria-pressed={state.size === sz}
+                aria-label={`Icon size ${sz} pixels`}
+                onClick={() => patch({ size: sz })}
               >
-                <IconGlyph name={name} size={22} stroke={state.stroke} />
+                {sz}<span className="hw-tile-unit" aria-hidden="true">px</span>
               </button>
             ))}
           </div>
+        </div>
 
-          <div className="hw-fields">
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-icon-size">Size</label>
-              <select
-                id="hw-icon-size"
-                className="hw-select"
-                value={state.size}
-                onChange={(e) => patch({ size: Number(e.target.value) })}
+        <div className="hw-rail-group">
+          <span className="hw-rail-label" id="hw-icon-stroke-label">Stroke</span>
+          <div className="hw-rail" role="group" aria-labelledby="hw-icon-stroke-label">
+            {ICON_DRAFT_STROKES.map((st) => (
+              <button
+                key={st}
+                type="button"
+                className="hw-tile"
+                aria-pressed={state.stroke === st}
+                aria-label={`Stroke width ${st}`}
+                onClick={() => patch({ stroke: st })}
               >
-                {ICON_DRAFT_SIZES.map((s) => <option key={s} value={s}>{s} px</option>)}
-              </select>
-            </div>
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-icon-stroke">Stroke</label>
-              <select
-                id="hw-icon-stroke"
-                className="hw-select"
-                value={state.stroke}
-                onChange={(e) => patch({ stroke: Number(e.target.value) })}
-              >
-                {ICON_DRAFT_STROKES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
+                {st}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
 
       <p className="hw-note">
         A free taste of the editor: twelve Lucide icons, three sizes, four stroke widths. Nothing here
@@ -771,16 +1002,20 @@ function IconPanel({ state, onChange, announce }) {
         </button>
         <span className="hw-foot-note">Opens {state.name} in the real editor · 200k+ icons there.</span>
       </div>
+      </div>
     </div>
   )
 }
 
 /* ── 5 · Typography ─────────────────────────────────────────────────────── */
 
+// `short` is the tile face; `label` stays the accessible name, so the rail
+// reads "Minor third · 1.2" to a screen reader while the tile shows the
+// interval and its number.
 const TYPE_RATIOS = [
-  { value: 1.2, label: 'Minor third · 1.2' },
-  { value: 1.25, label: 'Major third · 1.25' },
-  { value: 1.333, label: 'Perfect fourth · 1.333' },
+  { value: 1.2, short: 'Minor 3rd', label: 'Minor third · 1.2' },
+  { value: 1.25, short: 'Major 3rd', label: 'Major third · 1.25' },
+  { value: 1.333, short: 'Perfect 4th', label: 'Perfect fourth · 1.333' },
 ]
 
 const DEFAULT_TYPE_STATE = {
@@ -846,7 +1081,7 @@ function TypographyPanel({ state, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      <div className="hw-type-split">
+      <div className="hw-stage">
         <div className="hw-type-preview" aria-label="Live type scale preview">
           {TYPE_STEPS.map((step) => {
             const size = Math.round(state.base * Math.pow(state.ratio, step.exponent) * 10) / 10
@@ -864,13 +1099,18 @@ function TypographyPanel({ state, onChange, announce }) {
           })}
         </div>
 
-        <div className="hw-type-side">
-          <div className="hw-fields">
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-type-base">Base size</label>
+      </div>
+
+        <div className="hw-controls hw-type-side">
+          {/* Base size is a PROPERTY: label left, editable number right. Ratio
+              is a set of named OPTIONS, so it becomes a rail below rather than
+              a third select. */}
+          <div className="hw-prop">
+            <label className="hw-prop-label" htmlFor="hw-type-base">Base size</label>
+            <div className="hw-prop-num hw-prop-num--wide">
               <input
                 id="hw-type-base"
-                className="hw-input"
+                className="hw-num"
                 type="number"
                 min="8"
                 max="40"
@@ -895,27 +1135,33 @@ function TypographyPanel({ state, onChange, announce }) {
                   }
                 }}
               />
-            </div>
-            <div className="hw-field hw-field-grow">
-              <label className="hw-label" htmlFor="hw-type-ratio">Scale ratio</label>
-              <select
-                id="hw-type-ratio"
-                className="hw-select"
-                value={state.ratio}
-                onChange={(event) => patch({ ratio: Number(event.target.value) })}
-              >
-                {TYPE_RATIOS.map((ratio) => (
-                  <option key={ratio.value} value={ratio.value}>{ratio.label}</option>
-                ))}
-              </select>
+              <span className="hw-num-unit" aria-hidden="true">px</span>
             </div>
           </div>
 
-          <div className="hw-field">
-            <label className="hw-label" htmlFor="hw-type-sample">Preview text</label>
+          <div className="hw-rail-group">
+            <span className="hw-rail-label" id="hw-type-ratio-label">Scale ratio</span>
+            <div className="hw-rail" role="group" aria-labelledby="hw-type-ratio-label">
+              {TYPE_RATIOS.map((ratio) => (
+                <button
+                  key={ratio.value}
+                  type="button"
+                  className="hw-tile hw-tile--wide"
+                  aria-pressed={state.ratio === ratio.value}
+                  aria-label={ratio.label}
+                  onClick={() => patch({ ratio: ratio.value })}
+                >
+                  {ratio.short}<span className="hw-tile-unit" aria-hidden="true">{ratio.value}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="hw-prop">
+            <label className="hw-prop-label" htmlFor="hw-type-sample">Preview text</label>
             <input
               id="hw-type-sample"
-              className="hw-input"
+              className="hw-input hw-prop-text"
               type="text"
               value={state.sample}
               onChange={(event) => patch({ sample: event.target.value })}
@@ -939,8 +1185,6 @@ function TypographyPanel({ state, onChange, announce }) {
               <span aria-hidden="true">→</span>
             </button>
           </nav>
-        </div>
-      </div>
 
       <p className="hw-note">
         This preview calculates real sizes from your base and ratio. It does not save a font kit;
@@ -961,6 +1205,7 @@ function TypographyPanel({ state, onChange, announce }) {
         </button>
         <span className="hw-foot-note">Carries the {state.base}px base and {state.ratio} ratio once.</span>
       </div>
+        </div>
     </div>
   )
 }
