@@ -66,46 +66,7 @@ import {
   localiseCategoriesWith,
   localiseWith,
 } from '../../src/data/toolIndex.js'
-
-const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
-
-/**
- * Strip // and block comments, leaving string and template literals alone.
- * Asserted below before anything relies on it — a source read is only as good
- * as its stripper, and a test here once passed because a comment still named
- * the old value.
- */
-function stripComments(src) {
-  let out = ''
-  let mode = 'code'
-  let i = 0
-  while (i < src.length) {
-    const c = src[i]
-    const next = src[i + 1]
-    if (mode === 'code') {
-      if (c === '/' && next === '/') { mode = 'line'; i += 2; continue }
-      if (c === '/' && next === '*') { mode = 'block'; i += 2; continue }
-      if (c === "'") mode = 'single'
-      else if (c === '"') mode = 'double'
-      else if (c === '`') mode = 'template'
-      out += c; i += 1; continue
-    }
-    if (mode === 'line') {
-      if (c === '\n') { mode = 'code'; out += c }
-      i += 1; continue
-    }
-    if (mode === 'block') {
-      if (c === '*' && next === '/') { mode = 'code'; i += 2 } else i += 1
-      continue
-    }
-    if (c === '\\') { out += c + (next || ''); i += 2; continue }
-    if ((mode === 'single' && c === "'") || (mode === 'double' && c === '"') || (mode === 'template' && c === '`')) {
-      mode = 'code'
-    }
-    out += c; i += 1
-  }
-  return out
-}
+import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
 /** Every .js / .jsx file under src/, minus the locale JSON itself. */
 function sourceFiles(dir = 'src') {
@@ -155,13 +116,10 @@ function consumedKeys() {
 test('the comment stripper works, so the source scan can be trusted', () => {
   // Both halves matter. A stripper that removed nothing would let a comment
   // satisfy the scan; one that ate code would make the scan miss a real reader
-  // and delete a key that is still in use.
-  const fixture = "const a = 1 // note\nconst b = 'http://x//y' /* block */\nconst c = `t // t`\n"
-  const stripped = stripComments(fixture)
-  assert.ok(!stripped.includes('note'), 'a line comment survived')
-  assert.ok(!stripped.includes('block'), 'a block comment survived')
-  assert.ok(stripped.includes("'http://x//y'"), 'a // inside a string was eaten')
-  assert.ok(stripped.includes('`t // t`'), 'a // inside a template was eaten')
+  // and delete a key that is still in use. The fixture half lives beside the
+  // stripper in tests/unit/helpers/source-text.js so the guard cannot be left
+  // behind when a new caller copies the read but not the check.
+  assertStripperWorks(assert)
 
   // On a real file, with tokens that appear on ONE side only. This file quotes
   // every retired key in its own header comment, so a stripper that did nothing

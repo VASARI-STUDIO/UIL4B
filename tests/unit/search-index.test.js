@@ -38,8 +38,6 @@
 // stripper is itself asserted before it is trusted.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import path from 'node:path'
 import {
   CATEGORY_ENTRIES,
   CREATE_TOOL_SEARCH,
@@ -59,8 +57,7 @@ import {
 } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'
-
-const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
+import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
 // What the two live search surfaces actually pass to the query: the localised
 // index minus anything still in the workshop. Derived here the same way
@@ -75,52 +72,15 @@ const firstHit = (query) => {
   return hit.tools[0] || hit.categories[0] || null
 }
 
-/**
- * Strip // and /* *\/ comments, leaving string and template literals alone.
- * Asserted below before anything relies on it.
- */
-function stripComments(src) {
-  let out = ''
-  let mode = 'code'
-  let i = 0
-  while (i < src.length) {
-    const c = src[i]
-    const next = src[i + 1]
-    if (mode === 'code') {
-      if (c === '/' && next === '/') { mode = 'line'; i += 2; continue }
-      if (c === '/' && next === '*') { mode = 'block'; i += 2; continue }
-      if (c === "'") mode = 'single'
-      else if (c === '"') mode = 'double'
-      else if (c === '`') mode = 'template'
-      out += c; i += 1; continue
-    }
-    if (mode === 'line') {
-      if (c === '\n') { mode = 'code'; out += c }
-      i += 1; continue
-    }
-    if (mode === 'block') {
-      if (c === '*' && next === '/') { mode = 'code'; i += 2 } else i += 1
-      continue
-    }
-    if (c === '\\') { out += c + (next || ''); i += 2; continue }
-    if ((mode === 'single' && c === "'") || (mode === 'double' && c === '"') || (mode === 'template' && c === '`')) {
-      mode = 'code'
-    }
-    out += c; i += 1
-  }
-  return out
-}
 
 test('the comment stripper works, so the source reads below can be trusted', () => {
   // Both halves matter. A stripper that removed nothing would let a comment
   // satisfy an assertion; one that ate code would make a real regression
-  // invisible. Checked on a fixture AND on the real file.
-  const fixture = "const a = 1 // note\nconst b = 'http://x//y' /* block */\nconst c = `t // t`\n"
-  const stripped = stripComments(fixture)
-  assert.ok(!stripped.includes('note'), 'a line comment survived')
-  assert.ok(!stripped.includes('block'), 'a block comment survived')
-  assert.ok(stripped.includes("'http://x//y'"), 'a // inside a string was eaten')
-  assert.ok(stripped.includes('`t // t`'), 'a // inside a template was eaten')
+  // invisible. Checked on a fixture AND on the real file. The fixture half now
+  // lives beside the stripper in tests/unit/helpers/source-text.js — it was
+  // copied into a second test file the moment a second file needed it, which is
+  // the same defect this suite exists to catch, one level down.
+  assertStripperWorks(assert)
 
   // On the real file, with tokens chosen because each appears ONLY on one side.
   // ("still in the workshop" is not one of them: it is in a comment AND in the
