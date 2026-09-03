@@ -75,7 +75,7 @@
    warm-neutral steps between ink and mute, not new roles. Borders are opaque
    now (the spec ships a line COLOUR, not an ink alpha), which also stops them
    compounding unpredictably when surfaces stack. */
-[data-theme="dark"]{--bg-0:#101012;--bg-1:#151619;--bg-2:#191A1D;--bg-3:#212327;--bg-4:#2A2B2F;--border:#2A2B2F;--bh:#3C3D42;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#151619;--hvr:rgba(242,241,236,.05);--card:#191A1D;--card-grad:#191A1D;--inp:#191A1D;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(8,8,10,.62);
+[data-theme="dark"]{--bg-0:#101012;--bg-1:#151619;--bg-2:#191A1D;--bg-3:#212327;--bg-4:#2A2B2F;--border:#2A2B2F;--bh:#3C3D42;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#151619;--hvr:rgba(242,241,236,.05);--card:#191A1D;--card-grad:#191A1D;--inp:#191A1D;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--pending:#a78bfa;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(8,8,10,.62);
   /* ON-ACCENT FLIPS IN DARK. The dark accent is a LIGHT blue, so white on it
      measures 2.41:1 — a bad failure, and it applies to every accent-filled
      control, not just buttons. Ink on the same fill measures 7.89:1. This is
@@ -89,7 +89,7 @@
 /* ── LIGHT — V2 reseed. NOTE: the authoritative light values are the second
    [data-theme="light"] block further down (same specificity, later wins). Both
    are kept in agreement so reading either one tells the truth. ── */
-[data-theme="light"]{--bg-0:#EFEEE9;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#0F6FFF;--accent-strong:#0B5ED7;--accent-soft:#4D90FF;--accent-bg:rgba(15,111,255,.08);--accent-glow:rgba(15,111,255,.14);--icon-inv:none;--brand:#0F6FFF;--brand-soft:#4D90FF;--brand-bg:rgba(15,111,255,.08);--brand-glow:rgba(15,111,255,.12);--info:#0F6FFF;--info-bg:rgba(15,111,255,.08);--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
+[data-theme="light"]{--bg-0:#EFEEE9;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--pending:#7c3aed;--accent:#0F6FFF;--accent-strong:#0B5ED7;--accent-soft:#4D90FF;--accent-bg:rgba(15,111,255,.08);--accent-glow:rgba(15,111,255,.14);--icon-inv:none;--brand:#0F6FFF;--brand-soft:#4D90FF;--brand-bg:rgba(15,111,255,.08);--brand-glow:rgba(15,111,255,.12);--info:#0F6FFF;--info-bg:rgba(15,111,255,.08);--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
 html{scroll-behavior:smooth}
 /* Reduced motion = near-instant, not merely fast. Duration alone is not enough:
    an infinite loop at 0.01ms spins thousands of times a second (CPU burn, and
@@ -705,6 +705,21 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .stc-toolbar-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
 .stc-toolbar-copy>span:last-child{font-size:11px;color:var(--t2)}
 .stc-bundles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 var(--s-6)}
+/* THE TRAY LISTS EVENLY (founder, 2026-08-08: "so the premade packs list
+   evenly"). Measured before it was touched: seven cards is a PRIME number, so
+   it was ragged at every width the suite checks - rows of 4,3 at 1280 and
+   2,2,2,1 at 390/640/834. No column count fixes that; only the cell count does.
+   The extra cell goes to the FIRST card rather than to an invented eighth pack,
+   because the first card is Balanced - the default, selected on load, and the
+   one whose description ("Familiar, calm defaults for most product UI") is the
+   start-here advice. 7 cards + a 2-cell lead = 8 cells, which fills a 4-column
+   grid in exactly 2 rows and a 2-column grid in exactly 4. The emphasis is
+   TRUE - it marks the recommended option - which a stretched last card or a
+   filler eighth pack would not be. Weighting one card deliberately rather than
+   forcing a uniform row is the same call #340 took from Tines on the Discover
+   grid. IF AN 8TH PACK IS EVER ADDED the arithmetic changes: 9 cells leaves one
+   over at 4 columns, so drop this rule rather than adding a 9th. */
+.stc-bundle:first-child{grid-column:span 2}
 .stc-bundle{display:flex;min-width:0;min-height:128px;flex-direction:column;gap:10px;padding:14px;text-align:left;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t),box-shadow var(--t)}
 .stc-bundle:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
 .stc-bundle--on{color:var(--t0);border-color:color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
@@ -737,16 +752,78 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .stc-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid color-mix(in srgb,currentColor 14%,transparent)}
 .stc-preview-head strong{font-size:12px}
 .stc-preview-head span{font-size:9px;letter-spacing:.04em;text-transform:uppercase;opacity:.6}
-.stc-example-list{display:flex;flex-direction:column;gap:8px}
-.stc-example{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:64px;padding:10px 12px;color:var(--stc-ink);background:var(--stc-soft);border:1px solid var(--stc-border);border-radius:var(--radius-s)}
-.stc-preview--dark .stc-example{color:var(--stc-soft);background:color-mix(in srgb,var(--stc-ink) 84%,#111318);border-color:color-mix(in srgb,var(--stc-strong) 55%,#111318)}
-.stc-example-cue{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;font-family:var(--mono);font-size:13px;font-weight:750;color:#fff;background:var(--stc-strong);border-radius:50%}
-.stc-example>span:nth-child(2){display:flex;min-width:0;flex-direction:column;gap:2px}
-.stc-example strong{font-size:11px}
-.stc-example small{font-size:9px;line-height:1.35;opacity:.74}
-.stc-example button{padding:5px 7px;font-family:var(--font);font-size:9px;font-weight:650;color:inherit;background:transparent;border:1px solid currentColor;border-radius:var(--radius-xs);cursor:pointer;opacity:.7}
-.stc-example button:hover{opacity:1}
-.stc-example button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+/* ── SEMANTIC USAGE EXAMPLES (.stc-sc-*) ──────────────────────────────────
+   Replaces .stc-example, which was five identical captioned circles. Every
+   colour below resolves from the six --stc-* custom properties set per scene in
+   ColorStudio.jsx from the user's own ramp; there is not one fixed sample hex in
+   this block, so the demo cannot drift from the pack it claims to show.
+
+   The panels are FIXED light (#f7f8fa) and dark (#111318) grounds on purpose -
+   they are a picture of two interfaces, not of this page - so both are painted
+   here regardless of the app theme, and both were contrast-measured. Type is
+   var(--font) only: --serif in this project resolves to Manrope, the same face,
+   and is filed as [serif-token-is-not-a-serif]. */
+.stc-scene-list{display:flex;flex-direction:column;gap:10px}
+.stc-scene{min-width:0}
+.stc-scene-ico{flex:0 0 auto}
+.stc-scene-ico--spin{animation:stc-sc-spin 1.1s linear infinite;transform-origin:50% 50%}
+@keyframes stc-sc-spin{to{transform:rotate(360deg)}}
+
+/* Shared row shell: icon / two-line lead / trailing control. */
+.stc-sc-row,.stc-sc-alert{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:var(--stc-soft);color:var(--stc-ink)}
+.stc-sc-row{grid-template-columns:minmax(0,1fr) auto}
+.stc-sc-row:has(.stc-sc-act-ico){grid-template-columns:auto minmax(0,1fr) auto}
+.stc-sc-lead{display:flex;min-width:0;flex-direction:column;gap:2px}
+.stc-sc-lead strong{font-size:11.5px;font-weight:650;line-height:1.25}
+.stc-sc-lead small{font-size:9.5px;line-height:1.35;opacity:.78}
+
+/* SUCCESS - a switch. The track is the 600 so the control reads as filled. */
+.stc-sc-switch{position:relative;display:inline-flex;flex:0 0 auto;width:34px;height:20px;padding:2px;border-radius:999px;background:color-mix(in srgb,var(--stc-ink) 22%,transparent)}
+.stc-sc-switch--on{background:var(--stc-solid);justify-content:flex-end}
+.stc-sc-switch i{width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+
+/* WARNING - an advisory field. The border carries it and the action stays live. */
+.stc-sc-field{display:flex;flex-direction:column;gap:5px;padding:11px 12px;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:var(--stc-soft);color:var(--stc-ink)}
+.stc-sc-label{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.72}
+.stc-sc-input{width:100%;padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--stc-ink);background:#fff;border:1.5px solid var(--stc-strong);border-radius:var(--radius-xs);pointer-events:none}
+.stc-sc-help{display:flex;align-items:center;gap:6px;font-size:10px;line-height:1.3;color:var(--stc-ink)}
+.stc-sc-ghost{margin-left:auto;padding:3px 8px;font-family:var(--font);font-size:9.5px;font-weight:650;color:var(--stc-ink);background:transparent;border:1px solid var(--stc-strong);border-radius:var(--radius-xs);cursor:default}
+
+/* ERROR - the alert, and the only solid fill in the set. */
+.stc-sc-alert-ico{display:inline-flex;color:var(--stc-strong)}
+.stc-sc-solid{flex:0 0 auto;padding:6px 11px;font-family:var(--font);font-size:10px;font-weight:700;color:#fff;background:var(--stc-solid);border:1px solid var(--stc-solid);border-radius:var(--radius-xs);cursor:default;white-space:nowrap}
+
+/* INFO - the quietest object here, deliberately. No fill, a hairline only. */
+.stc-sc-note{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:10.5px;line-height:1.4;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:transparent;color:var(--stc-onpanel)}
+.stc-sc-note .stc-scene-ico{color:var(--stc-onpanel)}
+.stc-sc-link{margin-left:auto;padding:0;font-family:var(--font);font-size:10px;font-weight:700;color:var(--stc-onpanel);background:none;border:0;text-decoration:underline;text-underline-offset:2px;cursor:default;white-space:nowrap}
+
+/* PENDING - an activity row with a turning icon and a status badge. */
+.stc-sc-act-ico{display:inline-flex;color:var(--stc-strong)}
+.stc-sc-badge{flex:0 0 auto;padding:3px 9px;font-family:var(--font);font-size:9.5px;font-weight:700;color:var(--stc-ink);background:var(--stc-tint);border:1px solid var(--stc-border);border-radius:999px;white-space:nowrap}
+
+/* THE DARK PANEL. Not a filter over the light one: a dark interface inverts
+   which end of the ramp does which job. The fill becomes a deep mix of the 800
+   with the panel ground, the ink becomes the 50, and anything that was the 600
+   moves to the 400 - the 600 is a mid-tone that was chosen to sit on white and
+   loses separation against #111318. Measured, not assumed. */
+.stc-preview--dark .stc-sc-row,
+.stc-preview--dark .stc-sc-alert,
+.stc-preview--dark .stc-sc-field{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 15%,#111318);border-color:color-mix(in srgb,var(--stc-liftd) 38%,#111318)}
+.stc-preview--dark .stc-sc-help,
+.stc-preview--dark .stc-sc-label{color:var(--stc-inkd)}
+.stc-preview--dark .stc-sc-note{color:var(--stc-onpaneld);border-color:color-mix(in srgb,var(--stc-liftd) 38%,#111318)}
+.stc-preview--dark .stc-sc-note .stc-scene-ico{color:var(--stc-onpaneld)}
+.stc-preview--dark .stc-sc-act-ico,
+.stc-preview--dark .stc-sc-alert-ico{color:var(--stc-liftd)}
+.stc-preview--dark .stc-sc-link{color:var(--stc-onpaneld)}
+.stc-preview--dark .stc-sc-input{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 10%,#111318);border-color:var(--stc-liftd)}
+.stc-preview--dark .stc-sc-ghost{color:var(--stc-inkd);border-color:var(--stc-liftd)}
+.stc-preview--dark .stc-sc-badge{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 26%,#111318);border-color:color-mix(in srgb,var(--stc-liftd) 45%,#111318)}
+.stc-preview--dark .stc-sc-switch{background:color-mix(in srgb,var(--stc-inkd) 22%,transparent)}
+.stc-preview--dark .stc-sc-switch--on{background:var(--stc-solidd)}
+.stc-preview--dark .stc-sc-switch i{background:#111318}
+.stc-preview--dark .stc-sc-solid{color:#111318;background:var(--stc-solidd);border-color:var(--stc-solidd)}
 .stc-handoff{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.25fr);gap:var(--s-6);align-items:start;margin-top:var(--s-5);padding:var(--s-6);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l)}
 .stc-handoff-copy{display:flex;align-items:flex-start;flex-direction:column}
 .stc-handoff p code{font-family:var(--mono);font-size:10px;color:var(--t1)}
@@ -813,8 +890,14 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
      needs no gesture to discover. */
   .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start}
   .stc-preview{padding:16px}
-  .stc-example{grid-template-columns:32px minmax(0,1fr)}
-  .stc-example button{grid-column:2;justify-self:start}
+  /* Narrow: the trailing control drops under the lead rather than squeezing
+     it. The switch and the badge stay on the row - they are small and they are
+     the state, so putting them on a second line would separate the state from
+     the thing it describes. */
+  .stc-sc-alert{grid-template-columns:auto minmax(0,1fr)}
+  .stc-sc-solid{grid-column:2;justify-self:start}
+  .stc-sc-note{flex-wrap:wrap}
+  .stc-sc-link{margin-left:0}
   .stc-handoff{padding:16px}
 }
 
@@ -2584,7 +2667,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .alt-card-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px}
 .alt-card-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1);font-weight:500}
 .alt-card-size{color:var(--t2);font-family:var(--mono);flex-shrink:0}
-.alt-card-status{font-size:12px;color:var(--accent-strong);font-weight:500}
+.alt-card-status{font-size:12px;color:var(--pending);font-weight:500}
 .alt-card-error{font-size:12px;color:var(--err);background:rgba(239,68,68,.08);padding:8px 10px;border-radius:var(--radius-s);border:1px solid rgba(239,68,68,.2)}
 /* A 'detailed' result runs to 300 characters, which never fit the old fixed
    3-row box — a complete answer arrived looking clipped. AutoGrowTextarea in
@@ -3574,7 +3657,7 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .adm-check-row:last-child{border-bottom:none}
 .adm-check-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 .adm-check-icon.done{background:rgba(16,185,129,.1)}
-.adm-check-icon.pending{background:rgba(245,158,11,.1)}
+.adm-check-icon.pending{background:color-mix(in srgb,var(--pending) 12%,transparent)}
 .adm-check-label{font-size:12px;font-weight:600;color:var(--t0)}
 .adm-check-note{font-size:11px;color:var(--t2);margin-top:2px;line-height:1.5}
 

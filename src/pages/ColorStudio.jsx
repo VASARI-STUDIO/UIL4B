@@ -90,24 +90,64 @@ const STATE_PRESETS = {
     { name: 'Material', shades: ['#e3f2fd', '#bbdefb', '#90caf9', '#64b5f6', '#42a5f5', '#2196F3', '#1e88e5', '#1565c0', '#0d47a1', '#0a3880'] },
     { name: 'Tailwind', shades: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a'] },
   ],
+  // PENDING — the fifth role, added 2026-09-04. Success, warning, error and info
+  // are all SETTLED conditions: three outcomes and one piece of ambient context.
+  // Nothing in the set covers "underway, outcome not known yet".
+  //
+  // IT IS NOT A COLOUR LOOKING FOR A JOB. This app already needs a fifth signal
+  // and, having no token for it, spells it FIVE different ways — every one of
+  // these was read off the source and confirmed to have a live consumer:
+  //   .alt-card-status   "Generating..."  var(--accent-strong)   the BRAND colour
+  //   .fc-status         "Converting..."  var(--t2)              gave up on colour
+  //   Admin STATUS_*     'in-progress'    var(--accent)/-bg      the BRAND colour
+  //   Admin TYPE_*/DONUT 'help', slice 5  #a855f7 raw hex        no dark value
+  //   .adm-check-icon.pending             rgba(245,158,11,.1)    WARNING amber
+  // Two tools that do the same thing - run a job and report on it - answer the
+  // question differently, and a state colour that IS the brand colour cannot
+  // signal a state, it signals "us". #a855f7 is Tailwind purple-500: the app had
+  // already picked this hue by hand, it just had nowhere to put it.
+  //
+  // CHECKED AND DELIBERATELY NOT COUNTED: the .fp-* roadmap block in global.css
+  // has .fp-dot-progress{background:var(--accent)}, which looks like a sixth
+  // site. The whole .fp-* block is DEAD CSS - zero JSX consumers anywhere in
+  // src/ or tests/. Recorded so it is not re-reported as evidence.
+  //
+  // Violet, because it is the only large gap left in the wheel. The four
+  // reference hues are 0 (error), 38 (warning), 142 (success) and 217 (info):
+  // the arc from 217 back round to 360 is 143 degrees wide and empty, and it is
+  // also the arc info's own Custom slider used to spill into unopposed.
+  pending: [
+    { name: 'Violet', shades: ['#f5f3ff', '#ede9fe', '#ddd6fe', '#c4b5fd', '#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95'] },
+    { name: 'Purple', shades: ['#faf5ff', '#f3e8ff', '#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea', '#7e22ce', '#6b21a8', '#581c87'] },
+    { name: 'Fuchsia', shades: ['#fdf4ff', '#fae8ff', '#f5d0fe', '#f0abfc', '#e879f9', '#d946ef', '#c026d3', '#a21caf', '#86198f', '#701a75'] },
+    { name: 'Apple', shades: ['#faf5ff', '#f3e8ff', '#e9d5ff', '#d8b4fe', '#c084fc', '#AF52DE', '#9546bd', '#7a399b', '#642f7f', '#522768'] },
+    { name: 'Material', shades: ['#ede7f6', '#d1c4e9', '#b39ddb', '#9575cd', '#7e57c2', '#673AB7', '#5e35b1', '#512da8', '#4527a0', '#311b92'] },
+    { name: 'Tailwind', shades: ['#f5f3ff', '#ede9fe', '#ddd6fe', '#c4b5fd', '#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95'] },
+  ],
 }
 const STATE_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
 
 const STATE_BUNDLES = [
-  { name: 'Balanced', desc: 'Familiar, calm defaults for most product UI.', config: { success: 1, warning: 0, error: 0, info: 0 } },
-  { name: 'Material', desc: 'Established Material state foundations.', config: { success: 4, warning: 4, error: 4, info: 4 } },
-  { name: 'Vivid', desc: 'Higher chroma for expressive interfaces.', config: { success: 0, warning: 2, error: 1, info: 2 } },
-  { name: 'Cool', desc: 'Teal, yellow, pink and sky emphasis.', config: { success: 2, warning: 1, error: 2, info: 1 } },
-  { name: 'Warm', desc: 'Classic green, amber and red signals.', config: { success: 1, warning: 0, error: 0, info: 2 } },
-  { name: 'Apple', desc: 'System colours aligned with Apple platforms.', config: { success: 3, warning: 3, error: 3, info: 3 } },
-  { name: 'Tailwind', desc: 'Direct mapping to Tailwind colour ramps.', config: { success: 5, warning: 5, error: 5, info: 5 } },
+  { name: 'Balanced', desc: 'Familiar, calm defaults for most product UI.', config: { success: 1, warning: 0, error: 0, info: 0, pending: 0 } },
+  { name: 'Material', desc: 'Established Material state foundations.', config: { success: 4, warning: 4, error: 4, info: 4, pending: 4 } },
+  { name: 'Vivid', desc: 'Higher chroma for expressive interfaces.', config: { success: 0, warning: 2, error: 1, info: 2, pending: 2 } },
+  { name: 'Cool', desc: 'Teal, yellow, pink, sky and violet emphasis.', config: { success: 2, warning: 1, error: 2, info: 1, pending: 0 } },
+  { name: 'Warm', desc: 'Classic green, amber and red signals.', config: { success: 1, warning: 0, error: 0, info: 2, pending: 2 } },
+  { name: 'Apple', desc: 'System colours aligned with Apple platforms.', config: { success: 3, warning: 3, error: 3, info: 3, pending: 3 } },
+  { name: 'Tailwind', desc: 'Direct mapping to Tailwind colour ramps.', config: { success: 5, warning: 5, error: 5, info: 5, pending: 5 } },
 ]
 
+// The cue is the NON-COLOUR half of each role — WCAG 1.4.1, and the reason the
+// preview can be read by someone who cannot separate the hues. '…' is the one
+// this product already uses: every long job in the app says "Generating…",
+// "Converting…", "Loading engine…". It is also inside the self-hosted subset
+// (U+2026 falls in the U+2000-206F range both webfonts ship), which ✓ is not.
 const STATE_META = {
   success: { label: 'Success', cue: '✓', intent: 'Completed, connected or ready' },
   warning: { label: 'Warning', cue: '!', intent: 'Needs attention before continuing' },
   error: { label: 'Error', cue: '×', intent: 'Failed, destructive or blocked' },
   info: { label: 'Information', cue: 'i', intent: 'Helpful context or neutral update' },
+  pending: { label: 'Pending', cue: '…', intent: 'Underway — no outcome yet' },
 }
 
 // Reference "500" hex per role, taken from the Balanced bundle — the canonical
@@ -190,14 +230,207 @@ function StateShade({ shade, label, onCopy }) {
   )
 }
 
-function semanticExampleRef(colours) {
+// Every usage example below paints from the --stc-* custom properties this
+// writes and nothing else, and they are derived from the user's own resolved
+// ramp by sceneColours() above - so a scene cannot show a colour the pack does
+// not contain. That is the rule #340 applied to the Discover cards when it made
+// them read from the gallery data, and it is the reason this demo cannot drift
+// from the pack it claims to show.
+function semanticSceneRef(colours) {
   return (element) => {
     if (!element) return
-    element.style.setProperty('--stc-soft', colours.soft)
-    element.style.setProperty('--stc-border', colours.border)
-    element.style.setProperty('--stc-strong', colours.strong)
-    element.style.setProperty('--stc-ink', colours.ink)
+    for (const [key, value] of Object.entries(colours)) {
+      element.style.setProperty(`--stc-${key.toLowerCase()}`, value)
+    }
   }
+}
+
+// Lucide-shaped inline glyphs, drawn the way the rest of this file draws SVG
+// (currentColor, 2px stroke, round caps) so they inherit the role colour. Lucide
+// is the project's icon pack; these are not a second icon language.
+const SCENE_ICONS = {
+  success: <><path d="M20 6 9 17l-5-5" /></>,
+  warning: <><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></>,
+  error: <><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></>,
+  info: <><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></>,
+  // A broken ring: it reads as "in progress" even when it is not turning, which
+  // is what a visitor with reduced motion gets.
+  pending: <><path d="M21 12a9 9 0 1 1-6.2-8.6" /></>,
+}
+
+// The two panel grounds. They are FIXED on purpose: the panels are a picture of
+// a light interface and a dark one, not of this page, so they do not follow the
+// app theme. Both are measured against below.
+const SCENE_LIGHT_BG = '#f7f8fa'
+const SCENE_DARK_BG = '#111318'
+
+// Pick the first candidate that clears `floor` against `ground`; fall back to
+// the last (the most extreme) rather than throwing, so a hand-built ramp can
+// never blank the preview.
+function pickForContrast(candidates, ground, floor) {
+  return candidates.find(c => contrastRatio(c, ground) >= floor) || candidates[candidates.length - 1]
+}
+
+// WHY THIS IS DERIVED RATHER THAN INDEXED. The first cut of these scenes took
+// fixed steps - text at 800, fills at 600 - the way the old swatch rows did.
+// Measured across all 7 bundles x 2 panels x 5 roles, that produced 18 failures,
+// and they were NOT eyeballable: Material's warning ramp puts a bright orange at
+// 800 (#ef6c00), so "Already used by 2 projects" was 2.90:1 on its own fill,
+// and white on Material's error 600 (#e53935) is 4.23:1 - a destructive button
+// whose label misses AA. A fixed index is an assumption about a ramp's shape,
+// and the packs do not all have the same shape.
+//
+// So each job asks for the first shade that actually clears its floor. 4.5:1 for
+// text, 3:1 for icons and control boundaries (WCAG 1.4.11). The colours still
+// come only from the user's own ramp - nothing is invented, the ramp is just
+// read at the step that works.
+function sceneColours(shades) {
+  // The dark fill is computed here the same way the CSS computes it, so the
+  // number measured is the number painted: color-mix(strong 15%, #111318).
+  const strong = pickForContrast([shades[6], shades[7], shades[8]], shades[0], 3)
+  const darkFill = mixHex(SCENE_DARK_BG, strong, 0.15)
+  return {
+    soft: shades[0],
+    tint: shades[1],
+    border: shades[2],
+    strong,
+    // Text on the pale fill.
+    ink: pickForContrast([shades[8], shades[9], '#101014'], shades[0], 4.5),
+    // A fill that can carry a white label: the destructive button, the switch.
+    solid: pickForContrast([shades[6], shades[7], shades[8], shades[9]], '#ffffff', 4.5),
+    // Text and icons sitting straight on the light panel, with no fill under
+    // them - the info note and its link.
+    onPanel: pickForContrast([shades[6], shades[7], shades[8], shades[9]], SCENE_LIGHT_BG, 4.5),
+    // Dark panel: the same jobs, from the light end of the ramp.
+    inkD: pickForContrast([shades[1], shades[0], shades[2]], darkFill, 4.5),
+    liftD: pickForContrast([shades[4], shades[3], shades[2], shades[1]], darkFill, 3),
+    solidD: pickForContrast([shades[4], shades[3], shades[2], shades[1]], SCENE_DARK_BG, 4.5),
+    onPanelD: pickForContrast([shades[4], shades[3], shades[2], shades[1]], SCENE_DARK_BG, 4.5),
+  }
+}
+
+// ─── THE USAGE EXAMPLES (founder, 2026-08-08) ──────────────────────────────
+// "swatch demos replaced with real usage examples - icons, buttons, switches,
+// alerts". What was here was five identical rows: a coloured circle, the role
+// name, the role's own definition, and a Copy button. That is a swatch with a
+// caption - it shows you the colour, it does not show you the DECISION.
+//
+// Mobbin (web) drove the replacement. Lovable, Stitch and GitBook all pair token
+// editing with a preview built from real product UI, and the pattern repeats:
+//   v0            token list beside a live account form, KPI card and a payments
+//                 table whose Status column is the semantic colour doing its job
+//   Base44        an "App Colors" list beside a working finance dashboard
+//   Stitch        a component sheet - buttons in every variant, fields, chips
+//   Framer        one real button shown in its STATES, not one swatch per state
+//   MagicPath     each colour captioned with the job it does, not just its name
+// And for the roles themselves:
+//   Plane         In Progress is its own colour beside Done and Cancelled
+//   Mistral AI    Pending is a first-class tab beside Fetched and Failed
+//   Laravel Cloud every pending step is grey - a system with no pending colour
+//   Confluence    the status picker ships FIVE colours; the fifth is purple
+//
+// So: one scene per role, and every scene a DIFFERENT component - which is the
+// whole point. Five identical shapes cannot show that a colour behaves
+// differently as a 1px border than as a 40px fill. Each role gets the component
+// it actually governs, and between them they cover the four things the founder
+// named: icons, buttons, switches, alerts.
+//
+// The copy is plausible product content on purpose (anti-slop: "decorative
+// product mock-ups contain implausible data or controls"). Nothing here claims a
+// number about UIL4B itself.
+//
+// The dark panel is handled entirely in CSS, off .stc-preview--dark, so a scene
+// is written once and there is one colour source and no fixed sample values.
+const SEMANTIC_SCENES = [
+  {
+    // SUCCESS - a switch. Green-when-on is the one place a semantic colour
+    // governs a control rather than a message, and "on" is a settled good state.
+    role: 'success',
+    render: () => (
+      <div className="stc-sc-row">
+        <span className="stc-sc-lead">
+          <strong>Two-factor authentication</strong>
+          <small>Protecting 3 devices</small>
+        </span>
+        <span className="stc-sc-switch stc-sc-switch--on" role="img" aria-label="Two-factor authentication is on">
+          <i />
+        </span>
+      </div>
+    ),
+  },
+  {
+    // WARNING - a field that is advisory, not blocking. The border and the
+    // helper text carry it, and the action stays available: that IS the
+    // difference between warning and error, and it is invisible on a swatch.
+    role: 'warning',
+    render: () => (
+      <div className="stc-sc-field">
+        <label className="stc-sc-label" htmlFor="stc-sc-slug">Project slug</label>
+        <input id="stc-sc-slug" className="stc-sc-input" type="text" defaultValue="aurora-design-system" readOnly tabIndex={-1} />
+        <span className="stc-sc-help">
+          <SceneIcon role="warning" size={13} />
+          Already used by 2 projects
+          <button type="button" className="stc-sc-ghost" tabIndex={-1}>Use anyway</button>
+        </span>
+      </div>
+    ),
+  },
+  {
+    // ERROR - the alert, and the only solid button in the set. Error is the one
+    // role that blocks, so it gets the loudest object and the strongest fill.
+    role: 'error',
+    render: () => (
+      <div className="stc-sc-alert">
+        <span className="stc-sc-alert-ico"><SceneIcon role="error" size={16} /></span>
+        <span className="stc-sc-lead">
+          <strong>Payment declined</strong>
+          <small>Your card was declined on 2 September.</small>
+        </span>
+        <button type="button" className="stc-sc-solid" tabIndex={-1}>Update card</button>
+      </div>
+    ),
+  },
+  {
+    // INFO - the quietest thing in the set, deliberately. If info is as loud as
+    // error the scale has no top, and that is a judgement you can only make by
+    // seeing them stacked.
+    role: 'info',
+    render: () => (
+      <div className="stc-sc-note">
+        <SceneIcon role="info" size={15} />
+        <span>Billing runs on the 1st. Changes apply next cycle.</span>
+        <button type="button" className="stc-sc-link" tabIndex={-1}>Learn more</button>
+      </div>
+    ),
+  },
+  {
+    // PENDING - the new role, in the place it actually lives: an activity row
+    // with a turning icon and a status badge. The spin is a plain CSS animation
+    // and is NOT given its own prefers-reduced-motion block - the global clamp
+    // in global.css already stops it and honours an explicit data-reduced-motion
+    // choice, which a bare media block would override. That is the exact fault
+    // #336 fixed on 13 blocks; do not add a fourteenth.
+    role: 'pending',
+    render: () => (
+      <div className="stc-sc-row">
+        <span className="stc-sc-act-ico"><SceneIcon role="pending" size={16} spin /></span>
+        <span className="stc-sc-lead">
+          <strong>Publishing design system</strong>
+          <small>3 of 5 token files written</small>
+        </span>
+        <span className="stc-sc-badge">In progress</span>
+      </div>
+    ),
+  },
+]
+
+function SceneIcon({ role, size = 16, spin = false }) {
+  return (
+    <svg className={spin ? 'stc-scene-ico stc-scene-ico--spin' : 'stc-scene-ico'}
+      width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+    >{SCENE_ICONS[role]}</svg>
+  )
 }
 
 function TintSwatch({ color, label, onCopy }) {
@@ -1770,7 +2003,7 @@ function PreviewUpsell({ onUpgrade }) {
 // links across to all of them. Order mirrors the mega-menu.
 const COLOUR_TOOLS = [
   { id: 'palette', label: 'Palette', route: '/create/palette', desc: 'Build the core ramp' },
-  { id: 'semantic', label: 'Semantic Colour', route: '/create/semantic-color', desc: 'Success, warning, error' },
+  { id: 'semantic', label: 'Semantic Colour', route: '/create/semantic-color', desc: 'Success, error, pending' },
   { id: 'gradient', label: 'Gradient', route: '/create/gradient', desc: 'Blend across your palette' },
   { id: 'tint', label: 'Tint', route: '/create/tint', desc: 'Scale any swatch' },
   { id: 'contrast', label: 'Contrast Checker', route: '/create/contrast', desc: 'Verify AA / AAA' },
@@ -1786,7 +2019,7 @@ const SOLO_TITLES = { palette: 'Palette Builder', states: 'Semantic Colours', sy
 // same standard the Tint and Contrast pages set.
 const SOLO_DESC = {
   palette: 'Build your core palette from one seed colour. Pick a harmony, fine-tune every swatch, and get tonal ramps with accessibility checks built in.',
-  states: 'Dial in success, warning, error and info colours. Start from a preset bundle or tune each state’s hue — every state gets a full 50–900 ramp.',
+  states: 'Dial in success, warning, error, info and pending colours. Start from a preset bundle or tune each state’s hue — every state gets a full 50–900 ramp.',
   systems: 'Start your UI colours from a proven foundation — load a design-system palette, borrow a brand’s colours, or pull named swatches from the classic libraries.',
   gradients: 'Blend gradients across your palette. Add and reposition stops, switch between linear, radial and conic, then copy the CSS in one click.',
 }
@@ -1863,7 +2096,14 @@ export default function ColorStudio({ onCopy, toast }) {
     }
     return merged
   })
-  const [stateColors, setStateColors] = useState(() => design?.states || { success: 1, warning: 0, error: 0, info: 0 })
+  // A project saved before `pending` existed carries four keys. stateColors is
+  // read by JSON.stringify equality (activeStateBundle) and by Object.entries
+  // (the ramps, the CSS, the export, the localStorage cache), so a missing key
+  // would drop the role from all five AND pin the tray to "Custom mix" forever.
+  // Seed from the default bundle and let the saved values win.
+  const [stateColors, setStateColors] = useState(
+    () => ({ ...STATE_BUNDLES[0].config, ...(design?.states || {}) }),
+  )
   const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
   const [dragIdx, setDragIdx] = useState(null)
@@ -2942,6 +3182,10 @@ ${stateVars}
     const shades = resolveStateShades(state, sel)
     return shades.map((c, i) => `  --color-${state}-${STATE_LABELS[i]}: ${c};`).join('\n')
   }).join('\n')
+  // One source for "how many roles / how many tokens", so the hero strip, the
+  // section header and the handoff button cannot drift apart again.
+  const stateRoleIds = Object.keys(STATE_META)
+  const stateTokenCount = stateRoleIds.length * STATE_LABELS.length
   const activeStateBundle = STATE_BUNDLES.find(
     (bundle) => JSON.stringify(stateColors) === JSON.stringify(bundle.config),
   )
@@ -2965,7 +3209,7 @@ ${stateVars}
   const statePreview = Object.fromEntries(
     Object.entries(stateColors).map(([state, selection]) => {
       const shades = resolveStateShades(state, selection)
-      return [state, { soft: shades[0], border: shades[2], strong: shades[6], ink: shades[8] }]
+      return [state, sceneColours(shades)]
     }),
   )
 
@@ -3091,9 +3335,9 @@ ${stateVars}
       {soloSection === 'states' && (
         <div className="stc-status" aria-live="polite">
           <span><strong>{activeStateBundle?.name || 'Custom mix'}</strong> bundle</span>
-          <span><strong>{Object.keys(STATE_META).length}</strong> state roles</span>
+          <span><strong>{stateRoleIds.length}</strong> state roles</span>
           <span><strong>{STATE_LABELS.length}</strong> stops per ramp</span>
-          <span><strong>{Object.keys(STATE_META).length * STATE_LABELS.length}</strong> canonical tokens</span>
+          <span><strong>{stateTokenCount}</strong> canonical tokens</span>
         </div>
       )}
 
@@ -3447,7 +3691,7 @@ ${stateVars}
             <div className="stc-toolbar" onClick={e => e.stopPropagation()}>
               <div className="stc-toolbar-copy">
                 <span className="stc-kicker">Semantic bundle</span>
-                <span>{activeStateBundle?.name || 'Custom mix'} · {Object.keys(STATE_META).length * STATE_LABELS.length} canonical tokens</span>
+                <span>{activeStateBundle?.name || 'Custom mix'} · {stateTokenCount} canonical tokens</span>
               </div>
               <button className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
             </div>
@@ -3558,8 +3802,8 @@ ${stateVars}
           <div className="stc-subhead">
             <div>
               <span className="stc-kicker">Live UI proof</span>
-              <h2 id="stc-preview-title">Check every state in context</h2>
-              <p>Light and dark surfaces use the same roles, with a symbol and message so meaning never depends on colour alone.</p>
+              <h2 id="stc-preview-title">See each role do its job</h2>
+              <p>One component per role, on the same surfaces you ship on. Every scene paints from the ramp you chose above &mdash; change a role and it changes here. Each carries a symbol and a message, so meaning never depends on colour alone.</p>
             </div>
           </div>
           <div className="stc-preview-grid">
@@ -3569,17 +3813,10 @@ ${stateVars}
                   <strong>{themeLabel}</strong>
                   <span>{activeStateBundle?.name || 'Custom mix'} bundle</span>
                 </div>
-                <div className="stc-example-list">
-                  {Object.entries(STATE_META).map(([state, meta]) => (
-                    <div className="stc-example" key={state} ref={semanticExampleRef(statePreview[state])}>
-                      <span className="stc-example-cue" aria-hidden="true">{meta.cue}</span>
-                      <span>
-                        <strong>{meta.label}</strong>
-                        <small>{meta.intent}</small>
-                      </span>
-                      <button type="button" onClick={() => onCopy(resolveStateShades(state, stateColors[state])[6])}>
-                        Copy 600
-                      </button>
+                <div className="stc-scene-list">
+                  {SEMANTIC_SCENES.map(({ role, render }) => (
+                    <div className="stc-scene" key={role} ref={semanticSceneRef(statePreview[role])}>
+                      {render()}
                     </div>
                   ))}
                 </div>
@@ -3592,8 +3829,11 @@ ${stateVars}
           <div className="stc-handoff-copy">
             <span className="stc-kicker">Developer handoff</span>
             <h2 id="stc-handoff-title">Canonical, predictable token names</h2>
-            <p>Each role exports from <code>--color-success-50</code> through <code>--color-info-900</code>, ready for CSS or a token pipeline.</p>
-            <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy 40 CSS variables</button>
+            {/* Derived, not typed. The status strip above was already pinned to
+                its real source; this block still said "40" and named info as the
+                last role, both of which a fifth role makes false. */}
+            <p>Each role exports from <code>--color-{stateRoleIds[0]}-{STATE_LABELS[0]}</code> through <code>--color-{stateRoleIds[stateRoleIds.length - 1]}-{STATE_LABELS[STATE_LABELS.length - 1]}</code>, ready for CSS or a token pipeline.</p>
+            <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy {stateTokenCount} CSS variables</button>
           </div>
           <pre className="stc-code" tabIndex="0"><code>{`:root {\n${stateCSS}\n}`}</code></pre>
         </section>
