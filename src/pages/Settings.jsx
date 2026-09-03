@@ -982,7 +982,7 @@ export default function Settings({ toast }) {
       </div>
 
       <div style={{ textAlign: 'center', padding: '24px 0 12px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)', letterSpacing: '.03em' }}>
-        UIL4B · <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Dylan Coleman</a>
+        UIL4B · <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-strong)', textDecoration: 'none' }}>Dylan Coleman</a>
       </div>
     </div>
   )
