@@ -170,8 +170,19 @@ export function readBook(design) {
  */
 export function bookTokens(d) {
   const rows = []
+  // A belt-and-braces guard behind slugRole's sign handling: a custom harmony
+  // added later could collide again, and a duplicate property is invisible in
+  // the printed book but silently drops a colour in the stylesheet.
+  const used = new Set()
+  const unique = (name) => {
+    if (!used.has(name)) { used.add(name); return name }
+    let n = 2
+    while (used.has(`${name}-${n}`)) n += 1
+    used.add(`${name}-${n}`)
+    return `${name}-${n}`
+  }
   d.palette.forEach((hex, i) => {
-    rows.push({ name: `--color-${slugRole(d.harmony, i)}`, value: hex })
+    rows.push({ name: unique(`--color-${slugRole(d.harmony, i)}`), value: hex })
   })
   rows.push({ name: '--font-heading', value: `"${d.heading}", system-ui, sans-serif` })
   rows.push({ name: '--font-body', value: `"${d.body}", system-ui, sans-serif` })
@@ -195,10 +206,24 @@ export function bookTokens(d) {
   return rows
 }
 
-/** A role label reduced to a CSS-safe token segment, uniquely. */
+/**
+ * A role label reduced to a CSS-safe token segment.
+ *
+ * THE SIGN IS SPELLED OUT, and that is a bug fix rather than a style choice.
+ * Stripping non-alphanumerics turned both "ANALOGOUS −30°" and "ANALOGOUS +30°"
+ * into `analogous-30`, and the same for the two SOFT slots — so an analogous
+ * palette emitted two pairs of DUPLICATE custom properties and the second of
+ * each silently overrode the first. A token file that quietly loses two of its
+ * colours is worse than no token file.
+ *
+ * Note the minus is U+2212, not a hyphen: paletteRoles.js sets the labels with
+ * a real minus sign, so matching only ASCII "-" would miss it.
+ */
 function slugRole(harmony, index) {
   const slug = roleLabel(harmony, index)
     .toLowerCase()
+    .replace(/[−-]\s*(?=\d)/g, 'minus-')
+    .replace(/\+\s*(?=\d)/g, 'plus-')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
   return slug || `colour-${index + 1}`
