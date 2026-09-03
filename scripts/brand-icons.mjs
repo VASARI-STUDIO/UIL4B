@@ -223,7 +223,11 @@ async function main() {
       mark: MARK,
       maskableScale: MASKABLE_SCALE,
       sizes: { ico: ICO_SIZES, apple: APPLE_SIZE, manifest: MANIFEST_SIZE },
-      faviconSvgSha256: createHash('sha256').update(svg).digest('hex'),
+      // Newlines normalised before hashing. core.autocrlf is true here, so git
+      // stores LF and checks the file out as CRLF — hashing raw bytes would
+      // make this fingerprint depend on which side of a checkout you read it
+      // from, and the staleness test would fail on a clean tree.
+      faviconSvgSha256: createHash('sha256').update(svg.replace(/\r\n/g, '\n')).digest('hex'),
     }, null, 2)}\n`,
     'utf8',
   )

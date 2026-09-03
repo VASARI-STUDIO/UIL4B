@@ -300,7 +300,11 @@ test('THE STALENESS ONE: the committed icons were drawn from today\'s sources', 
 
   // And the SVG itself, so a hand-edit to the committed file is caught too —
   // the rasters are renderings OF it and would silently disagree.
-  const sha = createHash('sha256').update(read('public/favicon.svg')).digest('hex')
+  // Normalised the same way the generator does: core.autocrlf is true, so the
+  // file is LF in the repo and CRLF in the working tree, and hashing raw bytes
+  // would fail on a clean checkout rather than on a real edit.
+  const sha = createHash('sha256')
+    .update(read('public/favicon.svg').replace(/\r\n/g, '\n')).digest('hex')
   assert.equal(manifest.faviconSvgSha256, sha,
     'public/favicon.svg has been edited by hand since the rasters were generated, '
     + 'so favicon.ico and the PNGs no longer show the same mark. Run `npm run icons`.')
