@@ -752,16 +752,78 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .stc-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid color-mix(in srgb,currentColor 14%,transparent)}
 .stc-preview-head strong{font-size:12px}
 .stc-preview-head span{font-size:9px;letter-spacing:.04em;text-transform:uppercase;opacity:.6}
-.stc-example-list{display:flex;flex-direction:column;gap:8px}
-.stc-example{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:64px;padding:10px 12px;color:var(--stc-ink);background:var(--stc-soft);border:1px solid var(--stc-border);border-radius:var(--radius-s)}
-.stc-preview--dark .stc-example{color:var(--stc-soft);background:color-mix(in srgb,var(--stc-ink) 84%,#111318);border-color:color-mix(in srgb,var(--stc-strong) 55%,#111318)}
-.stc-example-cue{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;font-family:var(--mono);font-size:13px;font-weight:750;color:#fff;background:var(--stc-strong);border-radius:50%}
-.stc-example>span:nth-child(2){display:flex;min-width:0;flex-direction:column;gap:2px}
-.stc-example strong{font-size:11px}
-.stc-example small{font-size:9px;line-height:1.35;opacity:.74}
-.stc-example button{padding:5px 7px;font-family:var(--font);font-size:9px;font-weight:650;color:inherit;background:transparent;border:1px solid currentColor;border-radius:var(--radius-xs);cursor:pointer;opacity:.7}
-.stc-example button:hover{opacity:1}
-.stc-example button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+/* ── SEMANTIC USAGE EXAMPLES (.stc-sc-*) ──────────────────────────────────
+   Replaces .stc-example, which was five identical captioned circles. Every
+   colour below resolves from the six --stc-* custom properties set per scene in
+   ColorStudio.jsx from the user's own ramp; there is not one fixed sample hex in
+   this block, so the demo cannot drift from the pack it claims to show.
+
+   The panels are FIXED light (#f7f8fa) and dark (#111318) grounds on purpose -
+   they are a picture of two interfaces, not of this page - so both are painted
+   here regardless of the app theme, and both were contrast-measured. Type is
+   var(--font) only: --serif in this project resolves to Manrope, the same face,
+   and is filed as [serif-token-is-not-a-serif]. */
+.stc-scene-list{display:flex;flex-direction:column;gap:10px}
+.stc-scene{min-width:0}
+.stc-scene-ico{flex:0 0 auto}
+.stc-scene-ico--spin{animation:stc-sc-spin 1.1s linear infinite;transform-origin:50% 50%}
+@keyframes stc-sc-spin{to{transform:rotate(360deg)}}
+
+/* Shared row shell: icon / two-line lead / trailing control. */
+.stc-sc-row,.stc-sc-alert{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:var(--stc-soft);color:var(--stc-ink)}
+.stc-sc-row{grid-template-columns:minmax(0,1fr) auto}
+.stc-sc-row:has(.stc-sc-act-ico){grid-template-columns:auto minmax(0,1fr) auto}
+.stc-sc-lead{display:flex;min-width:0;flex-direction:column;gap:2px}
+.stc-sc-lead strong{font-size:11.5px;font-weight:650;line-height:1.25}
+.stc-sc-lead small{font-size:9.5px;line-height:1.35;opacity:.78}
+
+/* SUCCESS - a switch. The track is the 600 so the control reads as filled. */
+.stc-sc-switch{position:relative;display:inline-flex;flex:0 0 auto;width:34px;height:20px;padding:2px;border-radius:999px;background:color-mix(in srgb,var(--stc-ink) 22%,transparent)}
+.stc-sc-switch--on{background:var(--stc-solid);justify-content:flex-end}
+.stc-sc-switch i{width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+
+/* WARNING - an advisory field. The border carries it and the action stays live. */
+.stc-sc-field{display:flex;flex-direction:column;gap:5px;padding:11px 12px;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:var(--stc-soft);color:var(--stc-ink)}
+.stc-sc-label{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.72}
+.stc-sc-input{width:100%;padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--stc-ink);background:#fff;border:1.5px solid var(--stc-strong);border-radius:var(--radius-xs);pointer-events:none}
+.stc-sc-help{display:flex;align-items:center;gap:6px;font-size:10px;line-height:1.3;color:var(--stc-ink)}
+.stc-sc-ghost{margin-left:auto;padding:3px 8px;font-family:var(--font);font-size:9.5px;font-weight:650;color:var(--stc-ink);background:transparent;border:1px solid var(--stc-strong);border-radius:var(--radius-xs);cursor:default}
+
+/* ERROR - the alert, and the only solid fill in the set. */
+.stc-sc-alert-ico{display:inline-flex;color:var(--stc-strong)}
+.stc-sc-solid{flex:0 0 auto;padding:6px 11px;font-family:var(--font);font-size:10px;font-weight:700;color:#fff;background:var(--stc-solid);border:1px solid var(--stc-solid);border-radius:var(--radius-xs);cursor:default;white-space:nowrap}
+
+/* INFO - the quietest object here, deliberately. No fill, a hairline only. */
+.stc-sc-note{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:10.5px;line-height:1.4;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:transparent;color:var(--stc-onpanel)}
+.stc-sc-note .stc-scene-ico{color:var(--stc-onpanel)}
+.stc-sc-link{margin-left:auto;padding:0;font-family:var(--font);font-size:10px;font-weight:700;color:var(--stc-onpanel);background:none;border:0;text-decoration:underline;text-underline-offset:2px;cursor:default;white-space:nowrap}
+
+/* PENDING - an activity row with a turning icon and a status badge. */
+.stc-sc-act-ico{display:inline-flex;color:var(--stc-strong)}
+.stc-sc-badge{flex:0 0 auto;padding:3px 9px;font-family:var(--font);font-size:9.5px;font-weight:700;color:var(--stc-ink);background:var(--stc-tint);border:1px solid var(--stc-border);border-radius:999px;white-space:nowrap}
+
+/* THE DARK PANEL. Not a filter over the light one: a dark interface inverts
+   which end of the ramp does which job. The fill becomes a deep mix of the 800
+   with the panel ground, the ink becomes the 50, and anything that was the 600
+   moves to the 400 - the 600 is a mid-tone that was chosen to sit on white and
+   loses separation against #111318. Measured, not assumed. */
+.stc-preview--dark .stc-sc-row,
+.stc-preview--dark .stc-sc-alert,
+.stc-preview--dark .stc-sc-field{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 15%,#111318);border-color:color-mix(in srgb,var(--stc-liftd) 38%,#111318)}
+.stc-preview--dark .stc-sc-help,
+.stc-preview--dark .stc-sc-label{color:var(--stc-inkd)}
+.stc-preview--dark .stc-sc-note{color:var(--stc-onpaneld);border-color:color-mix(in srgb,var(--stc-liftd) 38%,#111318)}
+.stc-preview--dark .stc-sc-note .stc-scene-ico{color:var(--stc-onpaneld)}
+.stc-preview--dark .stc-sc-act-ico,
+.stc-preview--dark .stc-sc-alert-ico{color:var(--stc-liftd)}
+.stc-preview--dark .stc-sc-link{color:var(--stc-onpaneld)}
+.stc-preview--dark .stc-sc-input{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 10%,#111318);border-color:var(--stc-liftd)}
+.stc-preview--dark .stc-sc-ghost{color:var(--stc-inkd);border-color:var(--stc-liftd)}
+.stc-preview--dark .stc-sc-badge{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 26%,#111318);border-color:color-mix(in srgb,var(--stc-liftd) 45%,#111318)}
+.stc-preview--dark .stc-sc-switch{background:color-mix(in srgb,var(--stc-inkd) 22%,transparent)}
+.stc-preview--dark .stc-sc-switch--on{background:var(--stc-solidd)}
+.stc-preview--dark .stc-sc-switch i{background:#111318}
+.stc-preview--dark .stc-sc-solid{color:#111318;background:var(--stc-solidd);border-color:var(--stc-solidd)}
 .stc-handoff{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.25fr);gap:var(--s-6);align-items:start;margin-top:var(--s-5);padding:var(--s-6);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l)}
 .stc-handoff-copy{display:flex;align-items:flex-start;flex-direction:column}
 .stc-handoff p code{font-family:var(--mono);font-size:10px;color:var(--t1)}
@@ -828,8 +890,14 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
      needs no gesture to discover. */
   .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start}
   .stc-preview{padding:16px}
-  .stc-example{grid-template-columns:32px minmax(0,1fr)}
-  .stc-example button{grid-column:2;justify-self:start}
+  /* Narrow: the trailing control drops under the lead rather than squeezing
+     it. The switch and the badge stay on the row - they are small and they are
+     the state, so putting them on a second line would separate the state from
+     the thing it describes. */
+  .stc-sc-alert{grid-template-columns:auto minmax(0,1fr)}
+  .stc-sc-solid{grid-column:2;justify-self:start}
+  .stc-sc-note{flex-wrap:wrap}
+  .stc-sc-link{margin-left:0}
   .stc-handoff{padding:16px}
 }
 
