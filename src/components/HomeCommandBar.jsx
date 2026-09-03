@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getCategory, localiseCategories, localiseTools } from '../data/tools'
-import { queryCommandIndex, searchHints } from '../data/toolIndex'
+import { categoryPillFor, queryCommandIndex, searchHints } from '../data/toolIndex'
 import { useI18n } from '../contexts/I18nContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 
@@ -288,8 +288,10 @@ export default function HomeCommandBar({ labelledBy } = {}) {
             <ul className="hcmd-list" ref={listRef} aria-label="Search results">
               {rows.map((item, index) => {
                 const cat = item.kind === 'tool' ? getCategory(item.category) : null
+                // See categoryPillFor: the pill must not be localised past
+                // the row's own words, or one row reads in two spellings.
                 const pill = item.kind === 'tool'
-                  ? (cat ? t(cat.labelKey) || cat.label : 'Tool')
+                  ? (categoryPillFor(item, cat, t) || 'Tool')
                   : t('common.category')
                 return (
                   <li key={`${item.kind}-${item.id}`}>
