@@ -400,8 +400,6 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 /* Base colour + harmony quick-switch */
 .cs-pb-base{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--s-3)}
 .cs-pb-base-swatch{position:relative;width:40px;height:40px;flex-shrink:0;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border)}
-.cs-pb-base-chip{position:absolute;inset:0}
-.cs-pb-base-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
 .cs-pb-base-hex{width:104px;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;padding:9px 12px;min-height:40px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);color:var(--t0)}
 .cs-pb-base-div{width:1px;height:24px;background:var(--border);flex-shrink:0}
 .cs-pb-harms{display:flex;gap:4px;flex-wrap:wrap}
@@ -457,10 +455,19 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .cs-pb-gap-count{font-family:var(--mono);font-size:12px;font-weight:700;line-height:1}
 
 /* Trailing "+ Add" card */
-.cs-pb-add{position:relative;flex:1 1 0;min-width:84px;min-height:160px;border-radius:var(--radius-l);border:1px dashed var(--border);background:var(--bg-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-.cs-pb-add:hover{color:var(--t0);border-color:var(--accent);background:var(--hvr)}
+/* The "+ Add" card is the shared picker's TRIGGER now, not a label wrapping an
+   invisible native input — so it has to out-specify `.cpk-trigger`, which is
+   later in this file and would otherwise impose its 40x40 grid box. The card
+   sizing moves to the wrapper, because ColorPickerPop renders `.cpk-wrap`
+   between the rail and the trigger and the rail flexes its own children. */
+.cs-pb-rail>.cpk-wrap{flex:1 1 0;min-width:84px}
+/* The gradient stop's trigger keeps the 32px box its hand-rolled predecessor
+   had, so the stop row's rhythm is unchanged. */
+.cpk-trigger.cs-grad-stop-trigger{width:32px;height:32px;border-radius:var(--radius-xs)}
+.cpk-trigger.cs-grad-stop-trigger .cpk-trigger-chip{width:22px;height:22px}
+.cpk-trigger.cs-pb-add{width:100%;height:auto;min-height:160px;border-radius:var(--radius-l);border:1px dashed var(--border);background:var(--bg-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.cpk-trigger.cs-pb-add:hover{color:var(--t0);border-color:var(--accent);background:var(--hvr)}
 .cs-pb-add-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.cs-pb-add-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
 
 /* Global adjust strip (CS#3.15) */
 .cs-pb-adjust{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-4);padding:var(--s-4) var(--s-5);background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow);margin-bottom:var(--s-3)}
@@ -5815,7 +5822,7 @@ html.lenis,html.lenis body{height:auto}
 .cpk-section-label{margin:0;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .cpk-swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--s-1)}
 /* Rounded squares, NOT the circles most of the references use: a colour sample
-   is a rounded rectangle everywhere else in this app (.plb-col, .cs-pb-base-chip,
+   is a rounded rectangle everywhere else in this app (.plb-col and
    .cpk-trigger-chip), and matching Canva here would have cost matching ourselves. */
 .cpk-swatch{aspect-ratio:1;padding:0;border-radius:var(--radius-xs);border:1px solid var(--border);cursor:pointer;transition:transform var(--dur-2) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
 .cpk-swatch:hover{transform:scale(1.08)}
