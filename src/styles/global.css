@@ -921,7 +921,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
    `.rail-content` is rendered only by CreateTool.jsx and the sole consumer of
    `.pl-toolbar` is PromptLibrary, which is not inside it. A correct rule
    scoped to a selector that never matches is the shape this defect had. */
-/* RETIRED (#322). `.pl-toolbar` and `.pl-search-*` were the last one-off
+/* RETIRED (#323). `.pl-toolbar` and `.pl-search-*` were the last one-off
    browse toolbar in the app — the Prompt Library was the only consumer, and
    it is now on the shared `LibraryToolbar` / `.lbry-toolbar` like every
    other browse surface. The sticky-offset reasoning above is preserved
@@ -955,7 +955,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
 .pl-add-btn{flex-shrink:0;margin-left:auto}
 /* PATTERN B (the tablet band) is now handled for this surface by the shared
-   toolbar: #318 gave `.lbry-toolbar` a 641-980 layout of its own and #322
+   toolbar: #318 gave `.lbry-toolbar` a 641-980 layout of its own and #323
    moved the Prompt Library onto it, so the bespoke band rule that used to
    sit here — uncapping `.pl-search-wrap` so `.pl-chips` could take a full
    row — has no selectors left to act on. The deliberate cost it recorded
@@ -10229,7 +10229,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .plb-col-tools{width:100%;margin-left:0;justify-content:flex-start}
 }
 
-/* `.pl-sort` is retired with `.pl-toolbar` (#322): the Prompt Library's sort is
+/* `.pl-sort` is retired with `.pl-toolbar` (#323): the Prompt Library's sort is
    a LibraryFilterGroup now, so it reflows with every other filter tray instead
    of needing its own 320px rescue. `.pl-chips` stays — five other surfaces
    (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,

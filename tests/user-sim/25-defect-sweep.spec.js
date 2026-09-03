@@ -272,7 +272,7 @@ const COLLAPSED_WIDTHS = [768, 834]
 
 // The original `.pl-chips` idiom — one wrapping row of outlined pills — no
 // longer has a browse consumer. /create/emoji and /create/icons left it for the
-// shared Library tray, and #322 took the Prompt Library, the last one, with
+// shared Library tray, and #323 took the Prompt Library, the last one, with
 // them. The measurement did not go away: every surface that used to be here is
 // in FILTER_TRAYS below, asked the same question through the shared selectors.
 //
@@ -296,7 +296,7 @@ const FILTER_TRAYS = [
   // the surface any tray regression shows up on first.
   ['/create/emoji', '.lbry-filters', '.lbry-filter', 1, 12],
   ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7],
-  // #322 moved the Prompt Library onto the shared toolbar. It mounts TWO trays
+  // #323 moved the Prompt Library onto the shared toolbar. It mounts TWO trays
   // — sort (2 options) and category (All + 5) — which is why the totals column
   // exists rather than a per-row count.
   ['/discover/prompts', '.lbry-filters', '.lbry-filter', 2, 8],

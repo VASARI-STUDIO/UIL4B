@@ -59,7 +59,7 @@ const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
 //
 // /discover/prompts WAS in this table at its unimproved height, as the one
 // surface still on the one-off `.pl-toolbar`: #298 had given it a bespoke tablet
-// treatment and #318 deliberately left it alone. #322 moved it onto the shared
+// treatment and #318 deliberately left it alone. #323 moved it onto the shared
 // toolbar with the rest, so it now takes the same ceiling and the same search
 // share as its siblings, and its bespoke band rule is gone from global.css.
 //
@@ -69,7 +69,7 @@ const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
 // Every surface now carries a share, because every surface is now on the shared
 // toolbar. `.pl-toolbar` used to be the null here — #298 had uncapped its search
 // field so the category chips could hold a full row, and asserting a share would
-// have overruled a recorded choice on a surface #318 did not touch. #322 retired
+// have overruled a recorded choice on a surface #318 did not touch. #323 retired
 // that toolbar, so the exemption retired with it.
 const TOOLBARS = [
   ['/discover/gradients', '.lbry-toolbar', 92, 0.6],
