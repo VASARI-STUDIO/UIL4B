@@ -426,9 +426,14 @@ function GradientPanel({ gradient, onChange, announce }) {
     if (ok) announce('Gradient CSS copied.')
   }
 
+  // "sRGB hex", not "Hex". For a product whose pitch is defensible colour
+  // systems, naming the space is both more correct and a credibility signal,
+  // and it costs four characters.
   const stopField = (stop, label) => (
     <div className="hw-field">
-      <label className="hw-label" htmlFor={`hw-grad-${stop}`}>{label}</label>
+      <label className="hw-label" htmlFor={`hw-grad-${stop}`}>
+        {label} <span className="hw-label-space">sRGB hex</span>
+      </label>
       <div className="hw-stop">
         {/* The shared picker — the homepage demo is the first colour control
             most visitors ever touch here, so it must be the same one the tools
@@ -462,22 +467,49 @@ function GradientPanel({ gradient, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      <div className="hw-grad-preview" style={{ background: css }} aria-hidden="true" />
+      <div className="hw-stage">
+        <div className="hw-grad-preview" style={{ background: css }} aria-hidden="true" />
+      </div>
 
+      <div className="hw-controls">
       <div className="hw-fields">
         {stopField('from', 'Start')}
         {stopField('to', 'End')}
-        <div className="hw-field hw-field-grow">
-          <label className="hw-label" htmlFor="hw-grad-angle">Angle · {gradient.angle}°</label>
+      </div>
+
+      {/* A property, so a label-left / control-right row with the number as a
+          real input. On this column a slider alone cannot land on 135 degrees,
+          so the readout is the precise control and the slider the coarse one —
+          the arrangement Salesforce uses for Border Radius and MagicPath for
+          every type-scale value. The range keeps the id, so the existing
+          contract (`#hw-grad-angle`) still points at the slider. */}
+      <div className="hw-prop">
+        <label className="hw-prop-label" htmlFor="hw-grad-angle">Angle</label>
+        <input
+          id="hw-grad-angle"
+          className="hw-prop-range"
+          type="range"
+          min="0"
+          max="360"
+          step="1"
+          value={gradient.angle}
+          onChange={(e) => onChange({ ...gradient, angle: Number(e.target.value) })}
+        />
+        <div className="hw-prop-num">
           <input
-            id="hw-grad-angle"
-            type="range"
+            className="hw-num"
+            type="number"
             min="0"
             max="360"
             step="1"
             value={gradient.angle}
-            onChange={(e) => onChange({ ...gradient, angle: Number(e.target.value) })}
+            aria-label="Gradient angle in degrees"
+            onChange={(e) => {
+              const next = Number(e.target.value)
+              if (Number.isFinite(next)) onChange({ ...gradient, angle: Math.min(360, Math.max(0, next)) })
+            }}
           />
+          <span className="hw-num-unit" aria-hidden="true">&deg;</span>
         </div>
       </div>
 
@@ -498,6 +530,7 @@ function GradientPanel({ gradient, onChange, announce }) {
           <span aria-hidden="true">→</span>
         </Link>
         <span className="hw-foot-note">Two stops here · multi-stop, presets and gallery there.</span>
+      </div>
       </div>
     </div>
   )
@@ -634,6 +667,9 @@ function ImagePanel({ state, onChange, announce }) {
 
   return (
     <div className="hw-body">
+      {/* The reference picker belongs to the ARTEFACT, not the controls — it
+          chooses what the canvas shows, so it travels with the canvas. */}
+      <div className="hw-stage">
       <div className="hw-subtabs" role="tablist" aria-label="Built-in reference images">
         {IMAGE_REFERENCES.map((r, index) => (
           <button
@@ -654,7 +690,6 @@ function ImagePanel({ state, onChange, announce }) {
         ))}
       </div>
 
-      <div className="hw-img-split">
         <div
           className="hw-ref"
           id="hw-ref-panel"
@@ -685,54 +720,63 @@ function ImagePanel({ state, onChange, announce }) {
           ))}
         </div>
 
-        <div className="hw-img-controls">
-          <div className="hw-fields">
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-img-res">Resolution</label>
-              <select
-                id="hw-img-res"
-                className="hw-select"
-                value={draft.resolution}
-                onChange={(e) => setDraft({ resolution: e.target.value })}
-              >
-                {DRAFT_RESOLUTIONS.map((r) => (
-                  <option key={r.id} value={r.id}>{r.label} — {r.detail}</option>
-                ))}
-              </select>
-            </div>
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-img-fmt">File type</label>
-              <select
-                id="hw-img-fmt"
-                className="hw-select"
-                value={draft.format}
-                onChange={(e) => setDraft({ format: e.target.value })}
-              >
-                {DRAFT_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
-            </div>
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-img-comp">Compression</label>
-              <select
-                id="hw-img-comp"
-                className="hw-select"
-                value={draft.compression}
-                onChange={(e) => setDraft({ compression: e.target.value })}
-              >
-                {DRAFT_COMPRESSIONS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <p className="hw-intent">
-            <span className="hw-intent-label">Output intent</span>
-            <strong>{intent}</strong>
-            <span className="hw-intent-note">Nothing is converted here — File Converter does the encoding.</span>
-          </p>
-
-          {limit && <p className="hw-limit">{limit}</p>}
-        </div>
       </div>
+
+      <div className="hw-controls">
+        {/* File type is a closed set of OPTIONS, so a rail. Resolution and
+            compression are PROPERTIES with a described value, so rows. The
+            rail also collapses a label+select pair onto one line, which is
+            most of the vertical room this mode was short of. */}
+        <div className="hw-rail-group">
+          <span className="hw-rail-label" id="hw-img-fmt-label">File type</span>
+          <div className="hw-rail" role="group" aria-labelledby="hw-img-fmt-label">
+            {DRAFT_FORMATS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className="hw-tile"
+                aria-pressed={draft.format === f.id}
+                onClick={() => setDraft({ format: f.id })}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="hw-prop">
+          <label className="hw-prop-label" htmlFor="hw-img-res">Resolution</label>
+          <select
+            id="hw-img-res"
+            className="hw-select hw-prop-select"
+            value={draft.resolution}
+            onChange={(e) => setDraft({ resolution: e.target.value })}
+          >
+            {DRAFT_RESOLUTIONS.map((r) => (
+              <option key={r.id} value={r.id}>{r.label} — {r.detail}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="hw-prop">
+          <label className="hw-prop-label" htmlFor="hw-img-comp">Compression</label>
+          <select
+            id="hw-img-comp"
+            className="hw-select hw-prop-select"
+            value={draft.compression}
+            onChange={(e) => setDraft({ compression: e.target.value })}
+          >
+            {DRAFT_COMPRESSIONS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        </div>
+
+        <p className="hw-intent">
+          <span className="hw-intent-label">Output intent</span>
+          <strong>{intent}</strong>
+          <span className="hw-intent-note">Nothing is converted here — File Converter does the encoding.</span>
+        </p>
+
+        {limit && <p className="hw-limit">{limit}</p>}
 
       {error && (
         <p className="hw-alert" role="alert">
@@ -762,6 +806,7 @@ function ImagePanel({ state, onChange, announce }) {
         </button>
         <button type="button" className="hw-btn" onClick={reset} disabled={handingOff}>Reset</button>
         <span className="hw-foot-note">Your files open in File Converter with this draft applied.</span>
+      </div>
       </div>
     </div>
   )
@@ -850,56 +895,67 @@ function IconPanel({ state, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      <div className="hw-icon-split">
-        <div className="hw-icon-stage">
-          <div className="hw-icon-preview">
-            <IconGlyph name={state.name} size={state.size} stroke={state.stroke} />
-          </div>
-          <p className="hw-icon-meta">{state.name} · {state.size}px · {state.stroke} stroke</p>
+      <div className="hw-stage hw-icon-stage">
+        <div className="hw-icon-preview">
+          <IconGlyph name={state.name} size={state.size} stroke={state.stroke} />
+        </div>
+        <p className="hw-icon-meta">{state.name} · {state.size}px · {state.stroke} stroke</p>
+      </div>
+
+      <div className="hw-controls">
+        <div className="hw-icon-grid" role="group" aria-label="Preview icon">
+          {ICON_DRAFT_NAMES.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className="hw-icon-cell"
+              aria-pressed={state.name === name}
+              aria-label={`Preview the ${name.replace(/-/g, ' ')} icon`}
+              onClick={() => patch({ name })}
+            >
+              <IconGlyph name={name} size={22} stroke={state.stroke} />
+            </button>
+          ))}
         </div>
 
-        <div className="hw-icon-side">
-          <div className="hw-icon-grid" role="group" aria-label="Preview icon">
-            {ICON_DRAFT_NAMES.map((name) => (
+        {/* Sizes and strokes are OPTIONS, so rails rather than a stack of
+            selects. Two selects with labels cost ~130px, two rails ~76px, and
+            every value is now one click instead of two. */}
+        <div className="hw-rail-group">
+          <span className="hw-rail-label" id="hw-icon-size-label">Size</span>
+          <div className="hw-rail" role="group" aria-labelledby="hw-icon-size-label">
+            {ICON_DRAFT_SIZES.map((sz) => (
               <button
-                key={name}
+                key={sz}
                 type="button"
-                className="hw-icon-cell"
-                aria-pressed={state.name === name}
-                aria-label={`Preview the ${name.replace(/-/g, ' ')} icon`}
-                onClick={() => patch({ name })}
+                className="hw-tile"
+                aria-pressed={state.size === sz}
+                aria-label={`Icon size ${sz} pixels`}
+                onClick={() => patch({ size: sz })}
               >
-                <IconGlyph name={name} size={22} stroke={state.stroke} />
+                {sz}<span className="hw-tile-unit" aria-hidden="true">px</span>
               </button>
             ))}
           </div>
+        </div>
 
-          <div className="hw-fields">
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-icon-size">Size</label>
-              <select
-                id="hw-icon-size"
-                className="hw-select"
-                value={state.size}
-                onChange={(e) => patch({ size: Number(e.target.value) })}
+        <div className="hw-rail-group">
+          <span className="hw-rail-label" id="hw-icon-stroke-label">Stroke</span>
+          <div className="hw-rail" role="group" aria-labelledby="hw-icon-stroke-label">
+            {ICON_DRAFT_STROKES.map((st) => (
+              <button
+                key={st}
+                type="button"
+                className="hw-tile"
+                aria-pressed={state.stroke === st}
+                aria-label={`Stroke width ${st}`}
+                onClick={() => patch({ stroke: st })}
               >
-                {ICON_DRAFT_SIZES.map((s) => <option key={s} value={s}>{s} px</option>)}
-              </select>
-            </div>
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-icon-stroke">Stroke</label>
-              <select
-                id="hw-icon-stroke"
-                className="hw-select"
-                value={state.stroke}
-                onChange={(e) => patch({ stroke: Number(e.target.value) })}
-              >
-                {ICON_DRAFT_STROKES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
+                {st}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
 
       <p className="hw-note">
         A free taste of the editor: twelve Lucide icons, three sizes, four stroke widths. Nothing here
@@ -920,16 +976,20 @@ function IconPanel({ state, onChange, announce }) {
         </button>
         <span className="hw-foot-note">Opens {state.name} in the real editor · 200k+ icons there.</span>
       </div>
+      </div>
     </div>
   )
 }
 
 /* ── 5 · Typography ─────────────────────────────────────────────────────── */
 
+// `short` is the tile face; `label` stays the accessible name, so the rail
+// reads "Minor third · 1.2" to a screen reader while the tile shows the
+// interval and its number.
 const TYPE_RATIOS = [
-  { value: 1.2, label: 'Minor third · 1.2' },
-  { value: 1.25, label: 'Major third · 1.25' },
-  { value: 1.333, label: 'Perfect fourth · 1.333' },
+  { value: 1.2, short: 'Minor 3rd', label: 'Minor third · 1.2' },
+  { value: 1.25, short: 'Major 3rd', label: 'Major third · 1.25' },
+  { value: 1.333, short: 'Perfect 4th', label: 'Perfect fourth · 1.333' },
 ]
 
 const DEFAULT_TYPE_STATE = {
@@ -995,7 +1055,7 @@ function TypographyPanel({ state, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      <div className="hw-type-split">
+      <div className="hw-stage">
         <div className="hw-type-preview" aria-label="Live type scale preview">
           {TYPE_STEPS.map((step) => {
             const size = Math.round(state.base * Math.pow(state.ratio, step.exponent) * 10) / 10
@@ -1013,13 +1073,18 @@ function TypographyPanel({ state, onChange, announce }) {
           })}
         </div>
 
-        <div className="hw-type-side">
-          <div className="hw-fields">
-            <div className="hw-field">
-              <label className="hw-label" htmlFor="hw-type-base">Base size</label>
+      </div>
+
+        <div className="hw-controls hw-type-side">
+          {/* Base size is a PROPERTY: label left, editable number right. Ratio
+              is a set of named OPTIONS, so it becomes a rail below rather than
+              a third select. */}
+          <div className="hw-prop">
+            <label className="hw-prop-label" htmlFor="hw-type-base">Base size</label>
+            <div className="hw-prop-num hw-prop-num--wide">
               <input
                 id="hw-type-base"
-                className="hw-input"
+                className="hw-num"
                 type="number"
                 min="8"
                 max="40"
@@ -1044,27 +1109,33 @@ function TypographyPanel({ state, onChange, announce }) {
                   }
                 }}
               />
-            </div>
-            <div className="hw-field hw-field-grow">
-              <label className="hw-label" htmlFor="hw-type-ratio">Scale ratio</label>
-              <select
-                id="hw-type-ratio"
-                className="hw-select"
-                value={state.ratio}
-                onChange={(event) => patch({ ratio: Number(event.target.value) })}
-              >
-                {TYPE_RATIOS.map((ratio) => (
-                  <option key={ratio.value} value={ratio.value}>{ratio.label}</option>
-                ))}
-              </select>
+              <span className="hw-num-unit" aria-hidden="true">px</span>
             </div>
           </div>
 
-          <div className="hw-field">
-            <label className="hw-label" htmlFor="hw-type-sample">Preview text</label>
+          <div className="hw-rail-group">
+            <span className="hw-rail-label" id="hw-type-ratio-label">Scale ratio</span>
+            <div className="hw-rail" role="group" aria-labelledby="hw-type-ratio-label">
+              {TYPE_RATIOS.map((ratio) => (
+                <button
+                  key={ratio.value}
+                  type="button"
+                  className="hw-tile hw-tile--wide"
+                  aria-pressed={state.ratio === ratio.value}
+                  aria-label={ratio.label}
+                  onClick={() => patch({ ratio: ratio.value })}
+                >
+                  {ratio.short}<span className="hw-tile-unit" aria-hidden="true">{ratio.value}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="hw-prop">
+            <label className="hw-prop-label" htmlFor="hw-type-sample">Preview text</label>
             <input
               id="hw-type-sample"
-              className="hw-input"
+              className="hw-input hw-prop-text"
               type="text"
               value={state.sample}
               onChange={(event) => patch({ sample: event.target.value })}
@@ -1088,8 +1159,6 @@ function TypographyPanel({ state, onChange, announce }) {
               <span aria-hidden="true">→</span>
             </button>
           </nav>
-        </div>
-      </div>
 
       <p className="hw-note">
         This preview calculates real sizes from your base and ratio. It does not save a font kit;
@@ -1110,6 +1179,7 @@ function TypographyPanel({ state, onChange, announce }) {
         </button>
         <span className="hw-foot-note">Carries the {state.base}px base and {state.ratio} ratio once.</span>
       </div>
+        </div>
     </div>
   )
 }

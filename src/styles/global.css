@@ -6770,6 +6770,53 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
   .hstep[data-active="true"]{opacity:1}
   .hsteps-sticky{position:sticky;top:calc(var(--nav-clear) + var(--s-4))}
   .hsteps-sticky .hw-shell{box-shadow:var(--shadow-panel)}
+  /* ── The panel may never be taller than the screen it is stuck to ──────────
+     A position:sticky element taller than the viewport cannot be fully seen:
+     you reach its bottom only by scrolling past the whole section, and by then
+     it has unstuck. The "Continue in ..." hand-off lives at that bottom, so the
+     failure is not cosmetic — it is the panel's entire purpose becoming
+     unreachable. Measured at 1440x900 before this cap, with the modes stacked
+     one-column: image 966px against an 852px budget.
+
+     This is a CAP, not #262's fixed frame. #262 wants one constant height so
+     the panel stops resizing between modes at all (measured swing on main:
+     317px; 391px after the re-layout below, because a stacked mode is taller
+     than a split one). That is a bigger change and it is still its own item —
+     this rule only guarantees nothing becomes unreachable, and the swing is
+     left for #262, stated rather than implied. */
+  .hsteps-sticky .hw-shell{display:flex;flex-direction:column;max-height:calc(100vh - var(--nav-clear) - var(--s-4) - var(--s-5))}
+  .hsteps-sticky .hw-panel{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  .hsteps-sticky .hw-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  /* THE ARTEFACT IS NEVER SQUEEZED. The first version of this cap let the stage
+     flex down and clip, and every measurement passed — panel inside its budget,
+     hand-off on screen, nothing overflowing. Looking at it showed the type
+     ladder had lost its caption step and been sliced through the body step: a
+     scale preview showing 2.5 of its 4 sizes, still claiming to be the scale.
+     A preview that quietly drops content is worse than one that scrolls, so the
+     stage takes its natural height and the CONTROLS absorb the difference. */
+  .hsteps-sticky .hw-stage{flex:0 0 auto;justify-content:center}
+  /* The only zone allowed to scroll, and only when a mode genuinely needs it.
+     `scrollbar-gutter:stable` reserves the gutter in every mode, so the modes
+     that fit are not a few px narrower than the ones that do not. */
+  .hsteps-sticky .hw-controls{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+  /* A scrolling flex column still shrinks its own children by default, and the
+     ones that carry `overflow:hidden` then clip instead of pushing the scroll.
+     Caught in typography: `.hw-type-tools` swallowed its third row (Type Scale)
+     while the container reported scrollHeight === clientHeight, so nothing was
+     scrollable and a whole hand-off was simply missing. The zone scrolls; its
+     children keep their size. */
+  .hsteps-sticky .hw-controls>*{flex:0 0 auto}
+  /* When a mode's controls do scroll, the hand-off must not scroll out of
+     reach — a CTA you have to go looking for is a CTA that does not get
+     pressed. Sticky inside the scroll container, on the panel's own ground so
+     the controls pass behind it rather than through it. */
+  .hsteps-sticky .hw-foot{position:sticky;bottom:0;z-index:1;margin-top:auto;padding-bottom:2px;background:var(--bg-1)}
+  /* The reference image is the one stage item that MAY be cut, because it is a
+     photograph and not information: the <img> is already absolutely positioned
+     with object-fit:cover, so a shorter box crops it centred rather than losing
+     a value. Everything else in a stage keeps its natural size. Without this
+     the 880x495 ratio alone claims 311px of a 593px column. */
+  .hsteps-sticky .hw-ref{min-height:0;max-height:34vh}
   /* The sticky column is roughly half the page, so the workbench's 118px tab
      floor overflowed its own strip and clipped "Typography". The tabs share the
      width evenly here and the icons carry the recognition. */
@@ -6952,6 +6999,63 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 
 /* Shared panel furniture */
 .hw-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+
+/* ── One control language: OPTIONS are rails, PROPERTIES are rows ────────────
+   Extracted from the parked PR #269 (its C4). The modes used a stack of
+   label+select pairs for everything, which is why they read like a settings
+   form rather than like the tools they are a slice of.
+
+   The split, and the Mobbin evidence for it:
+
+   OPTIONS — a small closed set you pick one of — are a rail of pill tiles with
+   `aria-pressed`, active one INVERTED. Lovable's payment-method chooser
+   (Card / PayPal / Apple) and Stitch's Mode control (Light / Dark) are both
+   exactly this. Inverted rather than tinted because at this size a tint is not
+   a strong enough selected signal beside four neighbours.
+
+   PROPERTIES — a continuous value — are label-left / control-right rows with an
+   EDITABLE numeric readout in a fixed right-hand column. Salesforce prints the
+   live value (`58`) at the right end of its Border Radius track; MagicPath
+   right-aligns the rem value in mono beside every type-scale step. On a ~471px
+   column a slider alone cannot hit 135 degrees, so the number is the real input
+   and the slider is the coarse one.
+
+   Rails and rows are never mixed inside one stack. That separation is also what
+   buys the vertical space back: two selects with labels cost ~130px, two rails
+   ~76px, and every value becomes one click instead of two. */
+.hw-prop{display:grid;grid-template-columns:minmax(72px,auto) minmax(0,1fr) auto;align-items:center;gap:10px;min-height:34px}
+.hw-prop-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
+.hw-prop-range{min-width:0}
+.hw-prop-select,.hw-prop-text{grid-column:2 / -1;width:100%}
+.hw-prop-num{display:inline-flex;align-items:center;justify-content:flex-end;justify-self:end;gap:2px;min-height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
+.hw-prop-num:focus-within{border-color:var(--hue,var(--accent))}
+.hw-prop-num--wide{min-width:96px}
+/* `.hw-num`, NOT `input.hw-num`. #269 wrote this qualified and explained why:
+   the base reset was a bare `input[type="number"]` at (0,1,1), which beat a
+   class, and the readout inherited `padding:9px 14px` — 31px of content box for
+   a 42px value, clipping "16" to "1". #331 moved that reset inside `:where()`,
+   so it is (0,0,0) now and a plain class wins. The qualification came out with
+   its comment; keeping it would have taught the next reader a rule that is no
+   longer true. `appearance` stays because the `:where()` block sets only the
+   `-moz-` form. Pinned by tests/unit/input-specificity.test.js. */
+.hw-num{width:4ch;min-width:0;padding:0;border:0;background:none;color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-align:right;appearance:textfield}
+.hw-num:focus{outline:none;box-shadow:none;border:0}
+.hw-num-unit{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2)}
+
+.hw-rail-group{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hw-rail-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
+.hw-rail{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.hw-rail::-webkit-scrollbar{display:none}
+.hw-tile{display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;min-height:32px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;white-space:nowrap;transition:color var(--dur-2) var(--ease-standard),background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
+.hw-tile--wide{font-family:var(--font)}
+.hw-tile-unit{font-family:var(--mono);font-size:var(--fs-micro);opacity:.7}
+.hw-tile:hover{color:var(--t0);border-color:var(--bh)}
+.hw-tile:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:2px}
+.hw-tile[aria-pressed="true"]{background:var(--t0);border-color:transparent;color:var(--bg-1)}
+.hw-tile[aria-pressed="true"] .hw-tile-unit{opacity:.75}
+/* Names the colour space rather than just "Hex" — four characters, and correct
+   for a product whose pitch is defensible colour systems. */
+.hw-label-space{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--t3);text-transform:none}
 .hw-btn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:580;cursor:pointer;transition:background var(--t),border-color var(--t)}
 .hw-btn:hover{background:var(--hvr);border-color:var(--bh)}
 .hw-btn:disabled{opacity:.55;cursor:not-allowed}
@@ -6972,7 +7076,6 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 /* Fields */
 .hw-fields{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
 .hw-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.hw-field-grow{flex:1 1 180px}
 .hw-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--t2)}
 .hw-select,.hw-input{min-height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s)}
 .hw-select:focus-visible,.hw-input:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:1px}
@@ -7022,20 +7125,17 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hw-intent-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--t2)}
 .hw-intent strong{font-size:var(--fs-body-s);font-weight:700;color:var(--t0)}
 .hw-intent-note{font-size:var(--fs-caption);color:var(--t2)}
-/* Reference beside its settings, so the thumbnail informs the draft instead of
-   dominating the panel. */
-.hw-img-split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(238px,.95fr);gap:16px;align-items:start}
-.hw-img-controls{display:flex;flex-direction:column;gap:12px;min-width:0}
-.hw-img-controls .hw-fields{flex-direction:column;align-items:stretch;gap:10px}
-.hw-img-controls .hw-select{width:100%}
-.hw-img-controls .hw-intent{flex-direction:column;gap:4px}
+/* The reference sits ABOVE its settings now, not beside them. The three
+   per-mode splits were keyed to VIEWPORT width, so in a ~590px sticky column at
+   1440 they stayed two-column and every mode felt cramped — the panel is half
+   the page, not the page. Canvas over controls is the arrangement every sampled
+   editor uses and it needs no breakpoint to be right. */
+.hw-controls .hw-intent{flex-direction:column;gap:4px}
 
 /* 4 · Icon */
-.hw-icon-split{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.2fr);gap:18px;align-items:start}
 .hw-icon-stage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0)}
 .hw-icon-preview{display:grid;place-items:center;min-height:96px;color:var(--t0)}
 .hw-icon-meta{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;color:var(--t2);text-align:center}
-.hw-icon-side{display:flex;flex-direction:column;gap:14px;min-width:0}
 .hw-icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:7px}
 .hw-icon-cell{display:grid;place-items:center;aspect-ratio:1;min-height:44px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
 .hw-icon-cell:hover{color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));border-color:var(--bh)}
@@ -7043,15 +7143,13 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hw-icon-cell[aria-pressed="true"]{color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));border-color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 10%,var(--bg-1));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--hue,var(--accent)) 40%,transparent)}
 
 /* 5 · Typography */
-.hw-type-split{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(270px,.82fr);gap:18px;align-items:start}
 .hw-type-preview{min-width:0;padding:16px 18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0);overflow:hidden}
 .hw-type-row{display:flex;min-width:0;flex-direction:column;gap:3px;padding:10px 0;border-top:1px solid var(--border)}
 .hw-type-row:first-child{padding-top:0;border-top:0}
 .hw-type-row:last-child{padding-bottom:0}
 .hw-type-meta{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
 .hw-type-sample{display:block;max-width:100%;font-size:var(--hw-type-size);font-weight:650;line-height:1.08;letter-spacing:-.025em;color:var(--t0);overflow-wrap:anywhere}
-.hw-type-side{display:flex;min-width:0;flex-direction:column;gap:12px}
-.hw-type-side .hw-fields{flex-wrap:nowrap}
+.hw-type-side{gap:12px}
 .hw-type-tools{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .hw-type-tool{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:54px;padding:8px 11px;border:0;border-top:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--t),color var(--t)}
 .hw-type-tool:first-child{border-top:0}
@@ -7068,9 +7166,6 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
   .hw-pal{height:88px}
   .hw-ui-metric-num{font-size:22px}
   .hw-ui-chart{height:48px}
-  .hw-icon-split,.hw-img-split,.hw-type-split{grid-template-columns:1fr}
-  .hw-type-side .hw-fields{flex-direction:column}
-  .hw-type-side .hw-field-grow{flex:none}
   .hw-fields{gap:10px}
   .hw-field,.hw-select,.hw-input{width:100%}
   .hw-input-hex{width:auto;flex:1 1 auto;min-width:0}
