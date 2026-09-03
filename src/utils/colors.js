@@ -138,10 +138,28 @@ export function contrastRatio(hex1, hex2) {
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
 }
 
+/**
+ * Ink for a label painted ON a generated colour.
+ *
+ * The pole is chosen by MEASURED contrast rather than by a luminance threshold,
+ * and it is returned OPAQUE. Both of those were defects:
+ *
+ * - The alpha was the expensive one. `rgba(255,255,255,.9)` composites to a
+ *   tinted near-white, and that last 10% is worth about 0.7:1. On the state
+ *   ramp the Colour Studio paints, white on --err #DC2626 measures 4.83:1 and
+ *   the 90% version 4.14:1 — so .stc-cell-tone and .stc-cell-hex were BELOW AA
+ *   on a swatch whose whole job is to state a colour's contrast. Same shape on
+ *   --ok: 5.02 opaque, 4.39 at 90%.
+ * - A fixed luminance threshold is the same mistake #341 removed from
+ *   HomeWorkbench's readableInk: it does not sit at the 4.5:1 crossover, so it
+ *   picks the wrong pole for a band of mid-lightness colours.
+ *
+ * For a mid-luminance chromatic fill there may be NO ink that clears 4.5:1 —
+ * that is a property of the fill, not of this choice — so this returns the
+ * better pole and leaves the caller to move the ground (labelGround does).
+ */
 export function textColorForBg(hex) {
-  const rgb = hexToRgb(hex)
-  const lum = luminance(rgb[0], rgb[1], rgb[2])
-  return lum > 0.179 ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)'
+  return contrastRatio('#000000', hex) >= contrastRatio('#FFFFFF', hex) ? '#000000' : '#FFFFFF'
 }
 
 function soften(s, factor) { return Math.max(10, Math.round(s * factor)) }
