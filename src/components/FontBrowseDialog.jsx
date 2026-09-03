@@ -28,12 +28,20 @@ import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleF
 // (useModalDialog), and every card is a real button, so arrow-free tabbing,
 // screen-reader names and touch targets all hold.
 
+// Every category the pickable corpus actually contains, so the tray can reach
+// all of it. Mono was missing, and it was not a cosmetic gap: this picker keeps
+// monospace families on purpose (see `filterPickableTypefaces` — a mono body
+// face is a legitimate choice for a technical product), so the catalogue served
+// 51 mono families that no chip could reach and that EVERY non-"All" chip hid.
+// The only route to one was knowing its name and typing it — which is the exact
+// remember-and-type failure this dialog was built to end.
 const CATS = [
   { id: 'all', label: 'All' },
   { id: 'sans-serif', label: 'Sans' },
   { id: 'serif', label: 'Serif' },
   { id: 'display', label: 'Display' },
   { id: 'handwriting', label: 'Script' },
+  { id: 'monospace', label: 'Mono' },
 ]
 
 // The catalogue can be ~1,700 families. Rendering every card would mount

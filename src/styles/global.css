@@ -9077,11 +9077,37 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fbd-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
 .fbd-grid{--lbry-col-min:190px}
 .fbd-card .lbry-card-meta{text-transform:capitalize}
-.fbd-tile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+/* `container-type:inline-size` is here so the specimen can size itself off the
+   TILE rather than off the viewport — see .fbd-sample for why that matters. */
+.fbd-tile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;container-type:inline-size;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .fbd-tile:hover{border-color:var(--bh)}
 .fbd-tile:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .fbd-card.is-selected .fbd-tile{border-color:var(--brand);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--brand)}
-.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:30px;line-height:1.15;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
+/* THE SPECIMEN IS THE CONTROL, SO IT MUST NEVER BE TRUNCATED.
+   At 390px this read "Hand…", "Handgl…", "Handg…" — a different amount of a
+   different word per family, so the tiles stopped being comparable at exactly
+   the width where comparing them is hardest. A fixed 30px inside a column that
+   drops to 150px cannot fit ten characters, and the ellipsis quietly hid that.
+
+   `cqw` sizes the word off the TILE, so the specimen shrinks with its own box
+   instead of overflowing it, at any column count and any viewport. Note cqw
+   resolves against the container's CONTENT box, so the tile's 14px side padding
+   is already discounted — calibrating against the border box gets this wrong by
+   exactly that much, which is how the first attempt landed on the floor.
+
+   15cqw is measured, not guessed: "Handgloves" renders between 4.8× and 6.0×
+   its font-size across the five categories (serif narrowest, some display and
+   mono faces widest), so the widest face needs 15cqw × 6.0 = 90% of the box and
+   keeps ~10% headroom. The 30px ceiling keeps every tile from ~228px up
+   identical to what shipped; the floor never binds at any shipped column count.
+
+   The ellipsis stays as the backstop. It is genuinely last-resort now rather
+   than the normal case, but it is NOT claimed to be unreachable: "Handgloves"
+   is 6.3× its font-size in the widest face measured across the loaded corpus,
+   and nothing stops family 1,947 being wider. If it ever fires again the
+   answer is this ratio, not a shorter word — a specimen trimmed to fit is the
+   fault being fixed here, not a fix for it. */
+.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(17px,15cqw,30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
 /* A tile whose face has not registered yet shows nothing rather than the
    fallback: the tile exists to be judged, and a fallback pretending to be the
    family is the one thing it must never do. */
@@ -9090,7 +9116,15 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fbd-empty{margin-bottom:8px}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
-  .fbd-grid{--lbry-col-min:150px}
+  /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
+     box cannot hold ten characters of a display face at a judgeable size — the
+     specimen either ellipsised (what shipped) or shrank under 17px (what the
+     first fix did). 200 makes a 390px phone one full-width tile, where the face
+     renders at the full 30px ceiling, and still gives two tiles from ~470px up.
+     Fewer families per screen is the right trade for a picker whose entire
+     premise is that you choose by LOOKING: search and the category tray are how
+     a 1,852-family corpus is actually navigated, not scrolling. */
+  .fbd-grid{--lbry-col-min:200px}
   /* NO `width` here. This is the third time this control has been given a fixed
      face box and the second time it has had to be taken away again — the design
      note above `.typ-picker-trigger` records the first, where a 104px box cut
