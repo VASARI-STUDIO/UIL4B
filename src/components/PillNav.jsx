@@ -3,8 +3,16 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { localiseTools } from '../data/tools'
 import { searchHints } from '../data/toolIndex'
+// The menu shows the product's real contents, so it reads the same gallery
+// data the tools themselves read. This costs NOTHING at the bar's first
+// paint: both modules are already in the main bundle today (verified by
+// grepping the built asset for a known palette id and a known gradient id --
+// paletteLibrary.js and SurfaceLanding.jsx already pull them in), so this is
+// a second consumer of bytes that ship regardless, not new weight.
+import { GALLERY_PALETTES } from '../data/paletteGallery'
+import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
 import usePopover from '../hooks/usePopover'
-import { UIKIT_GUIDE_KEY } from './UIKitGuide'
+import { UIKIT_GUIDE_KEY, UIKIT_STEPS } from './UIKitGuide'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -299,55 +307,75 @@ function initials(profile, user) {
   return (first + second).toUpperCase()
 }
 
-// Inline mini design-system mock for the promo card — zero external assets (strict
-// CSP compliant). Every fill/stroke references a design token, so the visual
-// re-themes with the app and stays crisp at any DPI. Keyed by section so each
-// mega-menu gets a distinct picture: Create = a swatch/type card, Discover =
-// stacked inspiration cards, Learn = an open book. Purely decorative → aria-hidden
-// is set by the wrapping `.pnav-promo-visual`.
-function PromoMock({ section }) {
+// What the card shows is the product's REAL contents, not a drawing of them.
+//
+// PromoMock, which this replaces, drew grey <rect> bars standing in for text and
+// coloured rectangles standing in for swatches -- a picture of a UI that does not
+// exist. At the card's 260px that reads as a component which failed to load, and
+// it is the single loudest generic tell in the panel: the menu that leads to 64
+// real palettes and 100 real gradients was showing none of them.
+//
+// #340 already proved the fix on this exact product. The eight /discover cards
+// were eight identical white rectangles; they now lead with three actual
+// palettes, three actual gradients at their STORED angles and a real specimen,
+// read from the gallery data the tools use. This is that same move, applied to
+// the last surface still showing the fake version. Keyed by section here rather
+// than in NAV_SECTIONS because it is presentation, which also keeps it clear of
+// [handkept-tool-lists-remaining] -- the same reasoning SurfaceLanding.jsx uses.
+//
+// LEARN DELIBERATELY GETS NOTHING. It is honestly coming-soon, and #340
+// established that withholding the preview is what makes live and unbuilt read
+// apart without hunting for a badge. A drawing of a book is a picture of content
+// that has not been written, which is the one claim this pass exists to remove.
+//
+// This component owns its own frame and returns null when there is nothing
+// honest to show, so "which sections have a preview" is stated exactly once. A
+// caller-side list would be a second copy free to drift from these branches, and
+// Learn would end up rendering an empty bordered box.
+function MenuPreview({ section }) {
+  const inner = previewFor(section)
+  if (!inner) return null
+  return <div className="pnav-editorial-visual" aria-hidden="true">{inner}</div>
+}
+
+function previewFor(section) {
+  if (section === 'create') {
+    // The artefacts the guided flow actually produces: a real palette, and the
+    // two families that are genuinely installed. A third specimen is impossible
+    // to do honestly here -- --serif resolves to 'Manrope', the same value as
+    // --font, so it would render a duplicate and pass it off as variety. That is
+    // the trap the Font Gallery preview hit first; see serif-token-is-not-a-serif.
+    const palette = GALLERY_PALETTES[0]
+    return (
+      <div className="pnav-prev pnav-prev--create">
+        <div className="pnav-prev-swatches">
+          {palette.colors.map((c, i) => (
+            <span className="pnav-prev-swatch" key={`${c}-${i}`} style={{ background: c }} />
+          ))}
+        </div>
+        <div className="pnav-prev-type">
+          <span className="pnav-prev-ag">Ag</span>
+          <span className="pnav-prev-mono">0123 abc</span>
+        </div>
+      </div>
+    )
+  }
   if (section === 'discover') {
+    // At their stored angles, so a gradient in the nav is the same object the
+    // gallery renders rather than a flat approximation of it.
     return (
-      <svg className="pnav-promo-svg" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <rect x="8" y="8" width="184" height="104" rx="10" fill="var(--bg-1)" stroke="var(--border)" />
-        <rect x="26" y="32" width="98" height="66" rx="8" fill="var(--bg-2)" stroke="var(--border)" />
-        <rect x="46" y="22" width="98" height="66" rx="8" fill="var(--bg-1)" stroke="var(--border)" />
-        <rect x="58" y="34" width="30" height="18" rx="5" fill="var(--hue-colour)" />
-        <rect x="94" y="34" width="30" height="18" rx="5" fill="var(--hue-ai)" />
-        <rect x="58" y="60" width="72" height="7" rx="3.5" fill="var(--t2)" />
-        <rect x="58" y="73" width="48" height="7" rx="3.5" fill="var(--t3)" />
-      </svg>
+      <div className="pnav-prev pnav-prev--discover">
+        {GALLERY_GRADIENTS.slice(0, 3).map((g) => (
+          <span
+            className="pnav-prev-grad"
+            key={g.id}
+            style={{ backgroundImage: gradientCss(g.type, g.angle, g.stops) }}
+          />
+        ))}
+      </div>
     )
   }
-  if (section === 'learn') {
-    return (
-      <svg className="pnav-promo-svg" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <rect x="8" y="8" width="184" height="104" rx="10" fill="var(--bg-1)" stroke="var(--border)" />
-        <path d="M100 28c-13-8-29-8-42-4v64c13-4 29-4 42 4z" fill="var(--bg-2)" stroke="var(--border)" strokeLinejoin="round" />
-        <path d="M100 28c13-8 29-8 42-4v64c-13-4-29-4-42 4z" fill="var(--bg-2)" stroke="var(--border)" strokeLinejoin="round" />
-        <path d="M100 28v64" stroke="var(--border)" />
-        <rect x="66" y="42" width="26" height="6" rx="3" fill="var(--t3)" />
-        <rect x="66" y="56" width="22" height="6" rx="3" fill="var(--t3)" />
-        <rect x="66" y="70" width="24" height="6" rx="3" fill="var(--t3)" />
-        <rect x="108" y="42" width="26" height="6" rx="3" fill="var(--t3)" />
-        <rect x="108" y="56" width="18" height="6" rx="3" fill="var(--t3)" />
-        <rect x="118" y="18" width="14" height="26" rx="2" fill="var(--accent)" />
-      </svg>
-    )
-  }
-  // create (default) — swatch row, type ramp, one outlined component chip.
-  return (
-    <svg className="pnav-promo-svg" viewBox="0 0 200 120" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <rect x="8" y="8" width="184" height="104" rx="10" fill="var(--bg-1)" stroke="var(--border)" />
-      <rect x="20" y="20" width="34" height="22" rx="6" fill="var(--hue-colour)" />
-      <rect x="61" y="20" width="34" height="22" rx="6" fill="var(--hue-type)" />
-      <rect x="102" y="20" width="34" height="22" rx="6" fill="var(--hue-component)" />
-      <rect x="143" y="20" width="34" height="22" rx="6" fill="var(--hue-ai)" />
-      <rect x="20" y="56" width="120" height="8" rx="4" fill="var(--t2)" />
-      <rect x="20" y="72" width="80" height="8" rx="4" fill="var(--t3)" />
-      <rect x="20" y="90" width="66" height="16" rx="8" fill="none" stroke="var(--accent)" strokeWidth="1.5" />
-    </svg>
-  )
+  return null
 }
 
 export default function PillNav() {
@@ -578,7 +606,16 @@ export default function PillNav() {
   const openSearch = () => { closeAll(); setSearchOpen(true) }
   const openExport = () => { closeAll(); setExportOpen(true) }
   const onSignOut = () => { setMenu(null); logout() }
+  // Only items that are actually RENDERED belong in the keyboard ring.
+  // querySelectorAll happily returns elements inside a display:none subtree,
+  // and .focus() on one of those is a silent no-op -- so an unfiltered list
+  // would make ArrowDown appear to do nothing. That is not hypothetical now:
+  // .pnav-editorial is display:none below 1240px and it carries menu items,
+  // so between 769 and 1240 the ring would have started with a dead entry.
+  // getClientRects() is the canonical is-rendered test and, unlike
+  // offsetParent, stays correct inside a position:fixed panel.
   const megaItems = () => [...(menuRef.current?.querySelectorAll('[data-pnav-menuitem]') || [])]
+    .filter((el) => el.getClientRects().length > 0)
   // The mega panel is rendered AFTER </nav> in the DOM, because one shared node
   // serves all three sections. That is the right structure — the founder asked
   // to keep this navigation — but it means a keyboard user who opens "Create"
@@ -611,8 +648,13 @@ export default function PillNav() {
       setMenu(null)
       setOpen(id)
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        const items = menuRef.current?.querySelectorAll('[data-pnav-menuitem]')
-        const target = event.key === 'ArrowDown' ? items?.[0] : items?.[items.length - 1]
+        // megaItems(), not a raw querySelectorAll: this path used the unfiltered
+        // list, which was harmless only while every menu item was always
+        // visible. It is not any more -- .pnav-editorial is display:none below
+        // 1240px and now carries the first item, so a raw list would hand
+        // ArrowDown a hidden button and .focus() would silently do nothing.
+        const items = megaItems()
+        const target = event.key === 'ArrowDown' ? items[0] : items[items.length - 1]
         target?.focus()
       }))
     }
@@ -1049,13 +1091,64 @@ export default function PillNav() {
           <div className="pnav-menu-body">
             <div className="pnav-menu-cols">
               <aside className="pnav-editorial">
-                <div className="pnav-editorial-visual" aria-hidden="true"><PromoMock section={activeSection.id} /></div>
+                {/* Renders nothing at all where the section has no real
+                    contents to show -- frame included. See MenuPreview. */}
+                <MenuPreview section={activeSection.id} />
                 <span className="pnav-promo-eyebrow">{activeSection.promo?.eyebrow || activeSection.label}</span>
                 <p className="pnav-editorial-title">{activeSection.promo?.title}</p>
                 <p className="pnav-editorial-blurb">{activeSection.promo?.blurb}</p>
-                <Link className="pnav-editorial-link" to={activeSection.viewAllHref} onClick={closeAll}>
-                  Explore {activeSection.label} <span aria-hidden="true">&rarr;</span>
-                </Link>
+                {/* THE ANSWER TO "WHICH ONE DO I OPEN FIRST".
+                    The founder’s complaint was that nothing in the panel says
+                    where a new visitor should start. The product already has an
+                    opinion and the desktop menu was the one place not stating
+                    it: promo.guide + promo.cta are honoured by the MOBILE SHEET
+                    (which renders a "Build a brand kit" button calling
+                    launchBrandKit) and were dropped on desktop, where the card
+                    headed "Build your brand kit, step by step" offered a single
+                    link to /sitemap instead.
+                    The steps are DERIVED from UIKIT_STEPS, the same exported
+                    array the guide itself walks, so this can never drift into an
+                    eighth hand-kept copy of an ordered list. Numbers and labels
+                    only -- the blurbs are in the guide, and a four-line card in a
+                    260px column is a wall. Reference: Retool’s nav sequence
+                    (01-05, collapsed to number + label) and Homerun’s "5 steps"
+                    rail with step 1 carried forward. */}
+                {activeSection.promo?.guide && (
+                  // The numeral is aria-hidden because <ol> already conveys the
+                  // order; without the label a screen reader would meet a bare
+                  // four-item list sitting between a blurb and a button and have
+                  // to infer what it enumerates.
+                  <ol className="pnav-steps" aria-label={`${activeSection.promo.cta || 'Guided flow'}: steps`}>
+                    {UIKIT_STEPS.map((s, i) => (
+                      <li className="pnav-step" key={s.id}>
+                        <span className="pnav-step-n" aria-hidden="true">{i + 1}</span>
+                        <span className="pnav-step-label">{s.label}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {/* Both of these are data-pnav-menuitem, and that is a FIX
+                    rather than a side effect: the Tab bridge jumps from the
+                    trigger straight to the first TOOL and back again, so the
+                    card’s only call to action was unreachable by keyboard for
+                    as long as it has existed. In DOM order the card precedes
+                    the columns, so the ring now opens on the recommended
+                    starting point -- which is what ArrowDown should land on. */}
+                <div className="pnav-editorial-actions">
+                  {activeSection.promo?.guide && (
+                    <button
+                      type="button"
+                      className="ui-pill ui-pill-accent ui-pill-sm pnav-editorial-cta"
+                      onClick={launchBrandKit}
+                      data-pnav-menuitem
+                    >
+                      {activeSection.promo.cta || 'Start building'}
+                    </button>
+                  )}
+                  <Link className="pnav-editorial-link" to={activeSection.viewAllHref} onClick={closeAll} data-pnav-menuitem>
+                    Explore {activeSection.label} <span aria-hidden="true">&rarr;</span>
+                  </Link>
+                </div>
               </aside>
               <div className="pnav-grid">
                 {/* Each stack = one grid column; a stack can hold several
@@ -1065,7 +1158,20 @@ export default function PillNav() {
                 {activeSection.columns.map((stack) => (
                   <div className="pnav-colstack" key={stack[0].label}>
                     {stack.map((col) => (
-                      <div className="pnav-col" key={col.label} data-soon={col.tools.length > 0 && col.tools.every((t) => t.soon) ? 'true' : undefined}>
+                      // Six column heads all drew the same --accent rule while the
+                      // icons directly beneath them were already hue-coded, so the
+                      // panel read as one undifferentiated field. The hue is read
+                      // off the column’s own tools -- no new data, and Discover /
+                      // Learn (whose rows carry no category hue) fall back to accent.
+                      // The RULE takes the hue, never the label text: these tokens
+                      // are measured for non-text contrast, and #331 swept small
+                      // accent text out of this surface for good reason.
+                      <div
+                        className="pnav-col"
+                        key={col.label}
+                        data-hue={col.tools.find((t) => t.hue)?.hue}
+                        data-soon={col.tools.length > 0 && col.tools.every((t) => t.soon) ? 'true' : undefined}
+                      >
                         <p className="pnav-col-label">{col.label}</p>
                         <ul className="pnav-toollist">
                           {col.tools.map((t) => (
@@ -1108,7 +1214,7 @@ export default function PillNav() {
           </div>
           <div className="pnav-menu-foot">
             <span className="pnav-menu-foot-note">Every {activeSection.label} tool · one workspace</span>
-            <Link className="pnav-menu-foot-link" to="/home" onClick={closeAll}>
+            <Link className="pnav-menu-foot-link" to="/home" onClick={closeAll} data-pnav-menuitem>
               How UIL4B works &rarr;
             </Link>
           </div>
