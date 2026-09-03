@@ -81,6 +81,29 @@ async function fromMetadataEndpoint() {
       // a spec sheet rather than an answer.
       axes: (f.axes || []).map(a => a && a.tag).filter(Boolean),
       openSource: f.isOpenSource === true,
+      // ── The two fields the Examples tab picks its scenes from ─────────────
+      //
+      // Both were being dropped, and dropping them is why every family got the
+      // same four examples. `category` — the only descriptor that survived —
+      // CANNOT do this job on its own:
+      //
+      //   `classifications` disagrees with `category` for 351 families. Playfair
+      //   Display is category "Serif" with classifications ["Display"], and so
+      //   are Anton, Bebas Neue, Archivo Black and DM Serif Display. It is also
+      //   the ONLY field that identifies the 22 SYMBOL families (Libre Barcode,
+      //   Noto Music, Yarndings), where setting a paragraph is not a weak
+      //   example, it is nonsense.
+      //
+      //   `stroke` recovers Slab Serif, a distinction `category` erases by
+      //   folding it into Serif.
+      //
+      // Carried straight through and NEVER defaulted: an absent field must stay
+      // absent so src/utils/fontScenes.js can tell "this family is not a
+      // display face" apart from "this catalogue does not say", and degrade to
+      // `category` on the second. Guessing a value here would make the degraded
+      // path invisible at exactly the point it matters.
+      classifications: Array.isArray(f.classifications) ? f.classifications.filter(Boolean) : [],
+      stroke: typeof f.stroke === 'string' ? f.stroke : '',
     }
   }).filter(f => f.variants.length)
   return fonts.length ? fonts : null
