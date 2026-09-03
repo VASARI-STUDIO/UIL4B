@@ -138,6 +138,59 @@ test.describe('Semantic Colour system workflow', () => {
     })
   })
 
+  // The founder asked for the Semantic Colour HERO specifically (2026-09-03).
+  // The four colour tools ran two hero languages: Tint and Gradient open with an
+  // eyebrow, a large title, a description, the tool's own action and a strip of
+  // live facts; Semantic Colours and the Contrast Checker were on the site-wide
+  // `.sec-h`, which has none of that.
+  //
+  // This pins the SHAPE, not the styling: the parts a person can name. It also
+  // pins the numbers in the strip against their real sources, because the copy
+  // it replaced said "40 canonical tokens" as a hard-coded string and the ramp
+  // it describes is 10 stops of 11 possible ones - the kind of number that goes
+  // quietly wrong when a scale changes.
+  test('the Semantic Colours hero carries the same parts as its sibling colour tools', async ({ page }) => {
+    watch(page, 'a designer landing on the semantic tool')
+    await go(page, '/create/semantic-color')
+
+    const hero = page.locator('.stc-hero')
+    await expect(hero).toBeVisible()
+    await expect(hero.locator('.stc-hero-eyebrow')).toHaveText('Create / Colour')
+    await expect(hero.getByRole('heading', { level: 1, name: 'Semantic Colours' })).toBeVisible()
+    // The action belongs to the hero, the way Gradient's Random/Reset do.
+    await expect(hero.getByRole('button', { name: 'Copy all tokens' })).toBeVisible()
+
+    const facts = page.locator('.stc-status span')
+    await expect(facts).toHaveCount(4)
+    await expect(facts.nth(0)).toContainText('Balanced')
+    await expect(facts.nth(1)).toContainText('4')
+    await expect(facts.nth(2)).toContainText('10')
+    await expect(facts.nth(3)).toContainText('40')
+
+    // Choosing another bundle re-reports the first fact - the strip is live, not
+    // a decorative constant.
+    await page.getByRole('radio', { name: /Tailwind/ }).click()
+    await expect(facts.nth(0)).toContainText('Tailwind')
+  })
+
+  // The three onward-navigation blocks this page used to end with offered
+  // overlapping destinations: "Next in the workflow" listed contrast, tint and
+  // palette, all three of which the "More colour tools" footer ~200px below it
+  // already offered alongside gradient. One choice, asked twice.
+  test('the page offers each sibling colour tool exactly once on the way out', async ({ page }) => {
+    watch(page, 'a designer deciding where to go next')
+    await go(page, '/create/semantic-color')
+
+    for (const route of ['/create/contrast', '/create/tint', '/create/palette', '/create/gradient']) {
+      await expect(
+        page.locator(`a[href="${route}"]`),
+        `${route} should be offered exactly once on the way out of this page`,
+      ).toHaveCount(1)
+    }
+    // The sequencing advice the removed block carried is kept.
+    await expect(page.locator('.cs-tools-footer-lead')).toContainText('Validate the states')
+  })
+
   test('the semantic editor and handoff remain contained on a narrow screen', async ({ page }) => {
     watch(page, 'mobile product designer')
     await page.setViewportSize({ width: 390, height: 844 })
