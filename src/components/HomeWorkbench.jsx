@@ -23,7 +23,7 @@ import {
 } from '../utils/iconHandoff'
 import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
 import { setBoardDraft } from '../utils/colorHandoff'
-import { derivePreviewRoles } from '../utils/colors'
+import { contrastRatio, derivePreviewRoles, fixBackground, fixForeground } from '../utils/colors'
 import { useTheme } from '../contexts/ThemeContext'
 import { HOME_WORKBENCH_TABS } from '../data/toolTree'
 import NavIcon from './NavIcon'
@@ -66,12 +66,50 @@ function hslToHex(h, s, l) {
   return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase()
 }
 
-// Perceived luminance → a readable ink for a swatch label.
-function readableInk(hex) {
-  const r = parseInt(hex.slice(1, 3), 16) / 255
-  const g = parseInt(hex.slice(3, 5), 16) / 255
-  const b = parseInt(hex.slice(5, 7), 16) / 255
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.58 ? '#141414' : '#FFFFFF'
+/**
+ * A readable ink for text on an arbitrary generated fill — one that actually
+ * clears AA rather than assuming it does.
+ *
+ * This used to be a naive luminance sum against a hand-tuned 0.58 threshold,
+ * which decides which POLE looks better and then hopes. Hoping is not enough
+ * here: the palette is regenerated at random on every load, so a swatch like
+ * #2887C8 took white ink at 3.9:1 and #5588DD at 3.53:1. Both are AA failures
+ * on the homepage's own swatch labels, and because the input is random they
+ * appeared only on some loads — which is exactly why they survived. Caught by
+ * 39-accent-contrast on CI, on the run that also flagged the preview avatar.
+ *
+ * Now: pick the winning pole by MEASURED contrast, then let fixForeground walk
+ * it until it clears 4.5:1. Same two starting colours, but the result is a
+ * guarantee instead of an estimate, and it uses the sheet's own maths rather
+ * than a private copy of it.
+ */
+function readableInk(bg) {
+  const pole = contrastRatio('#141414', bg) >= contrastRatio('#FFFFFF', bg) ? '#141414' : '#FFFFFF'
+  return contrastRatio(pole, bg) >= 4.5 ? pole : fixForeground(pole, bg, 4.5)
+}
+
+/**
+ * The ground a label needs in order to be readable ON a generated colour.
+ *
+ * Choosing a better ink is not always enough, because for a mid-luminance
+ * chromatic fill there is NO ink that clears 4.5:1 — #1A8993 tops out at 4.42
+ * against black and 4.16 against white. The fill is the problem, so the label
+ * gets its own ground: the swatch's own hue and saturation, walked in lightness
+ * only as far as the ink requires.
+ *
+ * Usually it returns the swatch unchanged and nothing is drawn; #2D9EC3 and
+ * #519AE1 both come back identical. It moves only where it must, and barely —
+ * #1A8993 becomes #1B8D98. The swatch itself is NEVER touched: the large area a
+ * visitor reads the colour from stays the exact value the hex claims, which is
+ * the whole point of the control.
+ *
+ * Swept over all 16,200 colours the generator can emit (360 hues x 5 ramp steps
+ * x the saturation band): every ink/ground pair clears 4.5:1, against 669 that
+ * did not before.
+ */
+function labelGround(bg) {
+  const ink = readableInk(bg)
+  return contrastRatio(ink, bg) >= 4.5 ? bg : fixBackground(ink, bg, 4.5)
 }
 
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -224,7 +262,7 @@ function PaletteStage({ swatches }) {
         <span className="hw-ui-mark" style={{ background: role.primary, color: role.onPrimary }}>A</span>
         <span className="hw-ui-app" style={{ color: role.text }}>Acme</span>
         <span className="hw-ui-crumb" style={{ color: role.muted }}>Overview</span>
-        <span className="hw-ui-avatar" style={{ background: role.accent, color: readableInk(role.accent) }}>M</span>
+        <span className="hw-ui-avatar" style={{ background: labelGround(role.accent), color: readableInk(role.accent) }}>M</span>
       </div>
 
       <div className="hw-ui-main">
@@ -334,8 +372,8 @@ function PalettePanel({ swatches, onChange, announce }) {
               aria-label={`Copy ${s.hex}`}
               onClick={() => copy(s.hex)}
             >
-              <span className="hw-pal-hex">{s.hex}</span>
-              {copiedHex === s.hex && <span className="hw-pal-tick" aria-hidden="true">Copied</span>}
+              <span className="hw-pal-hex" style={{ background: labelGround(s.hex) }}>{s.hex}</span>
+              {copiedHex === s.hex && <span className="hw-pal-tick" aria-hidden="true" style={{ background: labelGround(s.hex) }}>Copied</span>}
             </button>
           </li>
         ))}

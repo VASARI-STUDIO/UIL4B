@@ -7096,9 +7096,15 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hw-pal-lock{position:absolute;top:0;right:0;display:grid;place-items:center;width:40px;height:40px;border:none;background:none;border-radius:50%;cursor:pointer;opacity:.5;transition:opacity var(--t)}
 .hw-pal-sw:hover .hw-pal-lock,.hw-pal-lock[aria-pressed="true"],.hw-pal-lock:focus-visible{opacity:1}
 .hw-pal-copy{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:0 6px 12px;border:none;background:none;cursor:pointer}
-.hw-pal-hex{font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.02em;opacity:.78}
-.hw-pal-sw:hover .hw-pal-hex{opacity:1}
-.hw-pal-tick{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
+/* The hex label carries its own ground (set inline by labelGround), because on
+   a mid-luminance chromatic swatch NO ink clears 4.5:1 — the fill is the
+   problem, not the ink. Usually that ground is the swatch colour itself and
+   nothing is visible; where it differs it is the same hue a shade deeper, and
+   the padding and radius are what make that read as a chip rather than as an
+   artefact. `opacity` is gone from the resting state: it was dimming ink whose
+   contrast had just been guaranteed, which is the one thing that can undo it. */
+.hw-pal-hex{padding:2px 7px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.02em}
+.hw-pal-tick{padding:1px 7px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 
 /* 2 · Gradient */
 .hw-grad-preview{height:132px;border-radius:var(--radius);box-shadow:var(--shadow-s)}

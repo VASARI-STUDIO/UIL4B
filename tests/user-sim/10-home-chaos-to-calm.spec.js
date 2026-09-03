@@ -946,6 +946,43 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect(seen.clashes, 'no dot is the card background in dark theme either').toBe(0)
   })
 
+  // The palette is regenerated at RANDOM on every load, so a contrast bug here
+  // is a dice roll rather than a constant - which is exactly how these survived.
+  // Main was failing 39-accent-contrast intermittently on .hw-pal-hex for this
+  // reason. Rerolling samples the generator's space instead of whichever single
+  // palette happened to load.
+  test('8c · every label on a generated colour clears AA, whatever is generated', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const worstOf = async () => page.evaluate(() => {
+      const chan = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+      const lum = (c) => 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2])
+      const rgb = (s) => s.match(/\d+/g).map(Number).slice(0, 3)
+      const ratio = (a, b) => {
+        const l1 = lum(rgb(a)); const l2 = lum(rgb(b))
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+      }
+      const bad = []
+      // Every bit of text this panel paints ON a generated colour.
+      for (const el of document.querySelectorAll('.hw-pal-hex, .hw-ui-avatar')) {
+        const cs = getComputedStyle(el)
+        const r = ratio(cs.color, cs.backgroundColor)
+        if (r < 4.5) bad.push(`${el.className} ${el.textContent.trim()} ${r.toFixed(2)}:1 on ${cs.backgroundColor}`)
+      }
+      return bad
+    })
+
+    const NL = String.fromCharCode(10)
+    const failures = []
+    for (let i = 0; i < 24; i++) {
+      failures.push(...await worstOf())
+      await page.getByRole('button', { name: 'Generate' }).click()
+    }
+    expect(failures.join(NL), 'label on a generated fill under 4.5:1').toBe('')
+  })
+
   // The type ladder is the artefact of its mode: it must show every step it
   // claims. The sticky column caps the panel to the viewport, and the first
   // version of that cap let the stage shrink — the ladder silently lost its
