@@ -2640,11 +2640,12 @@ ${stateVars}
     setCsysOpen(false)
   }
 
-  // The native <input type="color"> fires onChange continuously while the user
-  // drags inside the picker, and a real 'change' event only once on commit.
-  // We append a single swatch on the first onChange of a session, then update
-  // that same swatch in place for the rest of the drag — and reset the session
-  // on commit so the next pick adds a fresh swatch instead of clobbering.
+  // ColorPickerPop emits onChange continuously while the user drags its pad,
+  // and calls onClose once when the panel is dismissed — the same input/change
+  // pair the native <input type="color"> gave us before this became the shared
+  // picker. We append a single swatch on the first onChange of a session, then
+  // update that same swatch in place for the rest of the drag, and reset the
+  // session on close so the next pick adds a fresh swatch instead of clobbering.
   const addSessionRef = useRef(null)
   const addCustomColor = (hex) => {
     if (addSessionRef.current == null) {
