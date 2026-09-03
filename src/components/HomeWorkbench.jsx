@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import ColorPickerPop from './ColorPickerPop'
 import {
   ACCEPT_IMAGE,
   DEFAULT_IMAGE_DRAFT,
@@ -280,12 +281,14 @@ function GradientPanel({ gradient, onChange, announce }) {
     <div className="hw-field">
       <label className="hw-label" htmlFor={`hw-grad-${stop}`}>{label}</label>
       <div className="hw-stop">
-        <input
-          type="color"
-          className="hw-stop-well"
+        {/* The shared picker — the homepage demo is the first colour control
+            most visitors ever touch here, so it must be the same one the tools
+            use rather than the operating system's. */}
+        <ColorPickerPop
           value={gradient[stop]}
-          aria-label={`${label} colour picker`}
-          onChange={(e) => pickStop(stop, e.target.value)}
+          ariaLabel={`${label} colour picker`}
+          onChange={(hex) => pickStop(stop, hex)}
+          triggerClassName="hw-stop-well"
         />
         <input
           id={`hw-grad-${stop}`}

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import ColorPickerPop from '../components/ColorPickerPop'
 import { contrastRatio, fixForeground, fixBackground, textColorForBg } from '../utils/colors'
 
 // Colour Contrast Checker — the standalone /create/contrast page. Test a
@@ -53,15 +54,17 @@ function ColorField({ id, label, raw, valid, committed, onRaw, onBlur }) {
     <div className="cc-field">
       <label className="seg-label" htmlFor={id}>{label}</label>
       <div className="cc-field-row">
-        <input
-          type="color"
-          className="cc-picker"
+        {/* The shared picker, not `<input type="color">`. `onRaw` already both
+            records the text and commits a valid hex, so the picker's emitted
+            `#rrggbb` lands exactly where the native control's value did. */}
+        <ColorPickerPop
           value={committed}
-          onChange={(e) => onRaw(e.target.value.toUpperCase())}
+          onChange={(hex) => onRaw(hex.toUpperCase())}
           // `label` is already "Text colour" / "Background colour", so appending
           // "colour" produced "Pick text colour colour" — which is what a screen
           // reader actually announced.
-          aria-label={`Pick ${label.toLowerCase()}`}
+          ariaLabel={`Pick ${label.toLowerCase()}`}
+          triggerClassName="cc-picker"
         />
         <input
           id={id}
