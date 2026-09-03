@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
 import HomeCommandBar from '../components/HomeCommandBar'
+// TEMPORARY — the hero-direction explorer for `hero-copy-still-reads-ai`.
+// Renders `children` (the shipped hero) unless ?hero=a|b|c is present.
+import HomeHeroDirections from '../components/HomeHeroDirections'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
@@ -233,6 +236,7 @@ export default function Home() {
             index as the ⌘K palette, and it is the most product-specific thing
             on the page — but it now carries its own small label instead of
             being the referent for a pun in the headline. */}
+        <HomeHeroDirections toolCount={LIVE_TOOL_COUNT}>
         <header className="home-hero">
           <div className="home-hero-core">
             <p className="home-hero-kicker">UI system toolkit</p>
@@ -283,6 +287,7 @@ export default function Home() {
             <p className="home-hero-hint">Free to use. No card.</p>
           </div>
         </header>
+        </HomeHeroDirections>
 
         {/* ── The working half: five steps, one live workbench ──
             The left column narrates; the right column is the REAL
