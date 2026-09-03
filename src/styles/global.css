@@ -6665,7 +6665,8 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
    a 2px underline sitting on the panel's own top edge). On a second row that
    weld is impossible: an active tab in row one would draw its underline across
    the middle of the strip against row two's top border — the exact stranded-
-   underline artefact recorded on `.tsc-audience-tab`. So it stays one row and
+   underline artefact once recorded on Type Scale's hero tabs (that control has
+   since been removed as a duplicate, but the artefact is real). So it stays one row and
    takes `.rail-overflow`, with the peek forced at ≤480 below. */
 .hw-tabs{display:flex;gap:2px;padding:8px 8px 0;background:var(--bg-2);border-bottom:1px solid var(--border)}
 .hw-tab{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:1 1 0;min-width:118px;height:44px;padding:0 12px;border:1px solid transparent;border-bottom:none;border-radius:var(--radius-l) var(--radius-l) 0 0;background:none;color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;white-space:nowrap;transition:color var(--t),background var(--t)}
@@ -9077,20 +9078,149 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fbd-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
 .fbd-grid{--lbry-col-min:190px}
 .fbd-card .lbry-card-meta{text-transform:capitalize}
-.fbd-tile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+/* `container-type:inline-size` is here so the specimen can size itself off the
+   TILE rather than off the viewport — see .fbd-sample for why that matters. */
+.fbd-tile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;container-type:inline-size;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .fbd-tile:hover{border-color:var(--bh)}
 .fbd-tile:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .fbd-card.is-selected .fbd-tile{border-color:var(--brand);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--brand)}
-.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:30px;line-height:1.15;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
+/* THE SPECIMEN IS THE CONTROL, SO IT MUST NEVER BE TRUNCATED.
+   At 390px this read "Hand…", "Handgl…", "Handg…" — a different amount of a
+   different word per family, so the tiles stopped being comparable at exactly
+   the width where comparing them is hardest. A fixed 30px inside a column that
+   drops to 150px cannot fit ten characters, and the ellipsis quietly hid that.
+
+   `cqw` sizes the word off the TILE, so the specimen shrinks with its own box
+   instead of overflowing it, at any column count and any viewport. Note cqw
+   resolves against the container's CONTENT box, so the tile's 14px side padding
+   is already discounted — calibrating against the border box gets this wrong by
+   exactly that much, which is how the first attempt landed on the floor.
+
+   15cqw is measured, not guessed: "Handgloves" renders between 4.8× and 6.0×
+   its font-size across the five categories (serif narrowest, some display and
+   mono faces widest), so the widest face needs 15cqw × 6.0 = 90% of the box and
+   keeps ~10% headroom. The 30px ceiling keeps every tile from ~228px up
+   identical to what shipped; the floor never binds at any shipped column count.
+
+   The ellipsis stays as the backstop. It is genuinely last-resort now rather
+   than the normal case, but it is NOT claimed to be unreachable: "Handgloves"
+   is 6.3× its font-size in the widest face measured across the loaded corpus,
+   and nothing stops family 1,947 being wider. If it ever fires again the
+   answer is this ratio, not a shorter word — a specimen trimmed to fit is the
+   fault being fixed here, not a fix for it. */
+.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(17px,15cqw,30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
 /* A tile whose face has not registered yet shows nothing rather than the
    fallback: the tile exists to be judged, and a fallback pretending to be the
    family is the one thing it must never do. */
 .fbd-sample--pending{color:transparent;background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;border-radius:var(--radius-xs);animation:fg-shimmer 1.4s linear infinite}
 .fbd-more{display:flex;justify-content:center;padding:18px 0 4px}
 .fbd-empty{margin-bottom:8px}
+
+/* ── The per-family detail view, and the two tabs the founder asked for ──────
+   Three fixed rows and ONE scroller: head, tabs, scrolling panel, pinned
+   action. #305 found the Font Gallery's specimen dialog 1,763px tall in a 900px
+   viewport with every action below the fold, and noted that adding tabs is
+   exactly how that comes back. It does not come back here because the dialog
+   never grows — .fbd-detail is a flex column inside the same capped
+   .fbd-dialog, so a longer panel scrolls the panel, not the dialog. */
+.fbd-info{display:flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.fbd-info:hover{color:var(--t0);border-color:var(--bh)}
+.fbd-info:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fbd-detail{display:flex;flex-direction:column;flex:1;min-height:0}
+.fbd-detail-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.fbd-back{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;font:inherit;font-size:12px;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.fbd-back:hover{color:var(--t0);border-color:var(--bh)}
+.fbd-back:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* The name is the specimen — it is set in the family it names, which is the
+   same contract the tiles keep. */
+.fbd-detail-name{margin:0;min-width:0;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,700);font-size:clamp(21px,3.2vw,30px);line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
+.fdx-tabs{display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.fdx-tab{position:relative;padding:9px 14px;font:inherit;font-size:13px;font-weight:550;color:var(--t2);background:none;border:0;border-radius:var(--radius-s) var(--radius-s) 0 0;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
+.fdx-tab:hover{color:var(--t0)}
+.fdx-tab:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.fdx-tab--on{color:var(--t0)}
+/* Sits ON the 1px border rather than above it, so the pair reads as one edge
+   and not as a rule with a second rule stacked on it. */
+.fdx-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--brand);border-radius:2px 2px 0 0}
+.fbd-detail-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+.fbd-detail-actions{flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.fbd-use{width:100%;padding:12px 18px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:var(--brand);border:1px solid var(--brand);border-radius:var(--radius);cursor:pointer}
+.fbd-use:hover{filter:brightness(1.06)}
+.fbd-use:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fbd-cuts{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
+.fbd-cuts li{display:flex;flex-direction:column;gap:3px;padding-bottom:13px;border-bottom:1px solid var(--border)}
+.fbd-cuts li:last-child{border-bottom:0;padding-bottom:0}
+.fbd-cut-line{font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,400);font-size:clamp(15px,2.4vw,20px);line-height:1.32;color:var(--t0)}
+.fbd-cut-label{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
+
+/* ── FontDossier: the About and Examples panels, shared by both font popups ──
+   Prefixed fdx- rather than fbd- because these two panels are NOT the browse
+   dialog's — they are the shared component the Font Gallery specimen dialog
+   uses too, and a fbd- name would have made the next person move them. */
+.fdx-panel:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:var(--radius-s)}
+/* A definition list, not a card grid. Nine facts in nine equally-weighted
+   rounded boxes is the "every idea in a card" failure — these are rows of a
+   spec, they have a natural label/value shape, and dl says so semantically. */
+.fdx-facts{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:0;margin:0}
+.fdx-fact{display:contents}
+.fdx-fact dt{grid-column:1;padding:9px 20px 9px 0;font-size:12px;font-weight:550;color:var(--t2);white-space:nowrap;border-bottom:1px solid var(--border)}
+.fdx-fact dd{grid-column:2;margin:0;padding:9px 0;font-size:13px;line-height:1.45;color:var(--t0);border-bottom:1px solid var(--border)}
+.fdx-fact:last-child dt,.fdx-fact:last-child dd{border-bottom:0}
+.fdx-note{margin-top:18px;padding:14px 16px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius)}
+.fdx-note h4{margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--t0)}
+.fdx-note p{margin:0;font-size:13px;line-height:1.5;color:var(--t1)}
+.fdx-source{margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--t2)}
+.fdx-source--lead{margin:0 0 16px}
+
+/* Each example is the family doing a job, with the question it answers stated
+   above it. Aave's brand-typography section states a role under each face
+   rather than adjectives; the caption here is that idea turned into a question,
+   because an example a reader cannot interpret teaches nothing. */
+.fdx-examples{display:flex;flex-direction:column;gap:22px}
+.fdx-ex-head h4{margin:0;font-size:12px;font-weight:600;color:var(--t0)}
+.fdx-ex-head p{margin:2px 0 10px;font-size:11.5px;line-height:1.45;color:var(--t2)}
+.fdx-ex-body{padding:18px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--fdx-ff,var(--font));color:var(--t0)}
+.fdx-ex-body p,.fdx-ex-body h5,.fdx-ex-body li,.fdx-ex-body td,.fdx-ex-body th{font-family:inherit}
+
+.fdx-ex-kicker{display:block;margin-bottom:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+.fdx-ex-editorial h5{margin:0 0 8px;font-weight:var(--fdx-hw,700);font-size:clamp(19px,3vw,25px);line-height:1.16;letter-spacing:-.015em}
+.fdx-ex-lede{margin:0 0 10px;font-weight:var(--fdx-bw,400);font-size:15px;line-height:1.5;color:var(--t1)}
+.fdx-ex-editorial p:last-child{margin:0;font-weight:var(--fdx-bw,400);font-size:13.5px;line-height:1.6;color:var(--t1)}
+
+.fdx-ex-bar{display:flex;gap:4px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.fdx-ex-tab{padding:5px 10px;font-weight:var(--fdx-bw,400);font-size:13px;color:var(--t2);border-radius:var(--radius-s)}
+.fdx-ex-tab--on{font-weight:var(--fdx-hw,600);color:var(--t0);background:var(--bg-2)}
+.fdx-ex-table{width:100%;border-collapse:collapse;font-size:13px}
+.fdx-ex-table th{padding:0 0 7px;font-weight:var(--fdx-hw,600);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;color:var(--t2);border-bottom:1px solid var(--border)}
+.fdx-ex-table td{padding:8px 0;font-weight:var(--fdx-bw,400);color:var(--t1);border-bottom:1px solid var(--border)}
+.fdx-ex-table td:first-child{color:var(--t0)}
+.fdx-ex-table th:not(:first-child),.fdx-ex-table td:not(:first-child){text-align:right}
+.fdx-ex-table tr:last-child td{border-bottom:0}
+
+/* Two plans, not three. The point is the numerals under pressure, and a third
+   column only narrows them. */
+.fdx-ex-pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:14px}
+.fdx-ex-plan{padding:15px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius)}
+.fdx-ex-plan-name{font-weight:var(--fdx-hw,600);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--t2)}
+.fdx-ex-price{display:flex;align-items:baseline;gap:1px;margin:6px 0 12px;font-weight:var(--fdx-hw,700);font-size:clamp(30px,5vw,40px);line-height:1;letter-spacing:-.02em}
+.fdx-ex-currency{font-size:.55em;align-self:flex-start;padding-top:.22em}
+.fdx-ex-period{font-weight:var(--fdx-bw,400);font-size:.34em;color:var(--t2);padding-left:.3em}
+.fdx-ex-plan ul{margin:0 0 14px;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+.fdx-ex-plan li{font-weight:var(--fdx-bw,400);font-size:12.5px;color:var(--t1)}
+.fdx-ex-btn{display:block;padding:9px 14px;font-weight:var(--fdx-hw,600);font-size:13px;text-align:center;color:var(--t0);background:var(--bg-1);border:1px solid var(--bh);border-radius:var(--radius-s)}
+
+.fdx-ex-huge{margin:0;font-weight:var(--fdx-hw,700);font-size:clamp(30px,7.5vw,54px);line-height:1.02;letter-spacing:-.03em}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
-  .fbd-grid{--lbry-col-min:150px}
+  /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
+     box cannot hold ten characters of a display face at a judgeable size — the
+     specimen either ellipsised (what shipped) or shrank under 17px (what the
+     first fix did). 200 makes a 390px phone one full-width tile, where the face
+     renders at the full 30px ceiling, and still gives two tiles from ~470px up.
+     Fewer families per screen is the right trade for a picker whose entire
+     premise is that you choose by LOOKING: search and the category tray are how
+     a 1,852-family corpus is actually navigated, not scrolling. */
+  .fbd-grid{--lbry-col-min:200px}
   /* NO `width` here. This is the third time this control has been given a fixed
      face box and the second time it has had to be taken away again — the design
      note above `.typ-picker-trigger` records the first, where a 104px box cut
@@ -9120,6 +9250,33 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fpr-status strong{min-width:0;font-family:var(--mono);font-size:12px;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fpr-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--s-5);align-items:start;min-width:0}
 .fpr-grid>*{min-width:0}
+/* ── THE CONTROLS COME FIRST IN THE DOM NOW ──────────────────────────────────
+   Font Pair is a workbench: you choose two families, then read what they do
+   together. The markup said the opposite. "Read the pairing" was first and
+   "Choose the pair" was a sibling after it, which was invisible at ≥1344px
+   (where the sidebar sits alongside) and severe below it — the two-column
+   layout only starts at 1344px, so at 1280, a completely ordinary laptop
+   width, the page stacked and the font pickers landed 1,930px BELOW the
+   specimen, after the suggestions and after the CSS export. Changing a font
+   meant scrolling past everything the font was supposed to affect. The step
+   numbers recorded the inversion rather than fixing it: they ran 01, 03, 04
+   down the main card with 02 stranded in the sidebar.
+
+   The backlog left this open as "a RESTRUCTURE of the card ... explicitly left
+   as a design decision", and the decision taken here is to REORDER THE DOM
+   rather than renumber to match a broken order. So the source order is now
+   choose → read → suggestions → handoff, the numbers are 01/02/03/04 in that
+   order at every width, and the sidebar is put back on the right by grid
+   placement in the one band that has a sidebar. Tab order follows the DOM, so
+   the keyboard now reaches the controls before their output — which is the
+   right order for a workbench regardless of which column things land in.
+
+   Scoped to the two-column band ONLY: below it the grid is a single column and
+   an explicit `grid-column:2` would invent a phantom second track. */
+@media(min-width:1344px){
+  .fpr-output{grid-column:1;grid-row:1}
+  .fpr-config{grid-column:2;grid-row:1}
+}
 .fpr-panel{display:flex;flex-direction:column;min-width:0;padding:24px;background:var(--card);overflow:hidden}
 .fpr-panel.card:hover{border-color:var(--border)}
 /* Sticky config column. The sticky offset is a custom property so the premium
@@ -9249,22 +9406,21 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .tsc-hero-copy{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,560px);gap:var(--s-8);align-items:end}
 .tsc-hero h1{margin:0;font-family:var(--serif);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
 .tsc-hero-copy>p{max-width:600px;margin:0 0 4px;font-size:15px;line-height:1.65;color:var(--t1)}
-.tsc-audience{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:var(--s-7);overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--ring)}
-.tsc-audience-tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;min-height:116px;padding:18px 20px;text-align:left;color:var(--t1);background:transparent;border:0;cursor:pointer;transition:background var(--t),color var(--t)}
-.tsc-audience-tab+.tsc-audience-tab{border-left:1px solid var(--border)}
-.tsc-audience-tab::after{content:'';position:absolute;right:20px;bottom:0;left:20px;height:2px;background:transparent;transition:background var(--t)}
-.tsc-audience-tab:hover{background:var(--hvr);color:var(--t0)}
-.tsc-audience-tab--on{background:var(--card);color:var(--t0)}
-.tsc-audience-tab--on::after{background:var(--brand)}
-.tsc-audience-tab:focus-visible{z-index:1;outline:2px solid var(--brand);outline-offset:-2px}
-.tsc-audience-tab strong{margin:5px 0 3px;font-size:16px;font-weight:650;letter-spacing:-.01em}
-.tsc-audience-tab>span:last-child{font-size:12px;line-height:1.45;color:var(--t2)}
-.tsc-audience-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand)}
 .tsc-status{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:var(--s-5);border-block:1px solid var(--border)}
 .tsc-status span{display:flex;align-items:baseline;gap:6px;padding:12px 16px;font-size:11px;color:var(--t2)}
 .tsc-status span+span{border-left:1px solid var(--border)}
 .tsc-status strong{font-family:var(--mono);font-size:12px;color:var(--t0)}
 .tsc-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--s-5);align-items:start;min-width:0}
+/* Same reorder as .fpr-grid, same reason, same band — see the long note there.
+   Type Scale had it worse: "Tune the scale" holds the base, the ratio, the step
+   counts, leading, tracking and rounding, i.e. every input the tool has, and at
+   1280 it sat 1,836px below the ladder those inputs drive. Adjusting a ratio
+   meant scrolling away from the only thing that shows what the ratio did.
+   Numbers now read 01 Tune → 02 Read → 03 Evaluate/Ship in DOM order. */
+@media(min-width:1344px){
+  .tsc-output{grid-column:1;grid-row:1}
+  .tsc-config{grid-column:2;grid-row:1}
+}
 .tsc-grid>*{min-width:0}
 .tsc-panel{display:flex;flex-direction:column;min-width:0;padding:24px;background:var(--card);overflow:hidden}
 .tsc-panel.card:hover{border-color:var(--border)}
@@ -9356,10 +9512,6 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .tsc-status span:nth-child(5){border-top:1px solid var(--border)}
 }
 @media(max-width:768px){
-  .tsc-audience{grid-template-columns:1fr}
-  .tsc-audience-tab+.tsc-audience-tab{border-left:0;border-top:1px solid var(--border)}
-  /* Rotates with the layout — see the identical note on `.tt-audience-tab`. */
-  .tsc-audience-tab::after{top:0;right:auto;bottom:0;left:0;width:2px;height:auto}
   .tsc-delivery-head{flex-direction:column}
   .tsc-more{align-items:flex-start;flex-direction:column}
   .tsc-more-links{justify-content:flex-start}
@@ -9367,8 +9519,6 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 @media(max-width:560px){
   .tsc-hero h1{font-size:36px}
   .tsc-hero-copy>p{font-size:13px}
-  .tsc-audience{margin-top:var(--s-5)}
-  .tsc-audience-tab{min-height:104px;padding:16px}
   .tsc-panel{padding:18px}
   .tsc-section-head{margin-bottom:18px}
   .tsc-status{grid-template-columns:repeat(2,minmax(0,1fr))}

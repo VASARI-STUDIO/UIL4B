@@ -459,38 +459,33 @@ export default function TypeScale({ onCopy, toast }) {
             complete set of CSS custom properties.
           </p>
         </div>
-        <div className="tsc-audience" role="tablist" aria-label="Choose your type scale workflow">
-          <button
-            type="button"
-            role="tab"
-            id="tsc-tab-designer"
-            aria-selected={audience === 'designer'}
-            aria-controls="tsc-audience-panel"
-            tabIndex={audience === 'designer' ? 0 : -1}
-            className={audience === 'designer' ? 'tsc-audience-tab tsc-audience-tab--on' : 'tsc-audience-tab'}
-            onClick={() => setAudience('designer')}
-            onKeyDown={handleAudienceKeyDown}
-          >
-            <span className="tsc-audience-kicker">For designers</span>
-            <strong>Preview the hierarchy</strong>
-            <span>See the scale as a real page before you commit.</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="tsc-tab-developer"
-            aria-selected={audience === 'developer'}
-            aria-controls="tsc-audience-panel"
-            tabIndex={audience === 'developer' ? 0 : -1}
-            className={audience === 'developer' ? 'tsc-audience-tab tsc-audience-tab--on' : 'tsc-audience-tab'}
-            onClick={() => setAudience('developer')}
-            onKeyDown={handleAudienceKeyDown}
-          >
-            <span className="tsc-audience-kicker">For developers</span>
-            <strong>Ship the tokens</strong>
-            <span>Copy CSS custom properties, Tailwind or SCSS.</span>
-          </button>
-        </div>
+        {/* THE HERO TABLIST IS GONE, AND THE STATE IT SET IS NOT.
+            `audience` had TWO controls. This one — a pair of large cards
+            captioned "For designers" and "For developers" — sat at the top of
+            the page under `role="tablist"`, and the panel it declared via
+            aria-controls was 1,593px further down: roughly two full screens on
+            a 900px viewport. Pressing it changed nothing you could see. The
+            other control, a plain segmented switch, sits directly above that
+            same panel and sets the same variable, in a different visual
+            language and with different ARIA (aria-pressed, no tablist).
+
+            One piece of state, two controls, neither agreeing with the other
+            about what kind of control it was. The one that survives is the one
+            adjacent to the thing it changes; it is promoted to the real tablist
+            below. The split itself is kept — the backlog asked whether the
+            designer/developer division earns its place, and it does: it is a
+            genuine either/or on one output panel. What it does not earn is
+            being posed as a workflow choice before the tool has been used.
+
+            The hero paragraph above already tells both audiences what the tool
+            does ("read it back in a real layout, then copy a complete set of
+            CSS custom properties"), so no information is lost with the cards.
+
+            NB #298 fixed a stacked-indicator glitch on these cards' ::after
+            when they wrapped on a phone. That fix is not being reverted — the
+            element it corrected no longer exists on the page, and its dead
+            rules went with it. The lesson it recorded is preserved in the
+            `.hw-tabs` note in global.css, which cites it. */}
       </header>
 
       <FontCatalogNotice
@@ -510,170 +505,10 @@ export default function TypeScale({ onCopy, toast }) {
       </div>
 
       <div className="tsc-grid">
-        {/* ── Scale + delivery ── */}
-        <section className="card tsc-panel tsc-output" aria-labelledby="tsc-output-title">
-          <div className="tsc-section-head tsc-section-head--output">
-            <span className="tsc-section-num">01</span>
-            <div>
-              <h2 id="tsc-output-title">Read the scale</h2>
-              <p>Every step at its real size, weight and tracking. Select one to copy its declaration.</p>
-            </div>
-          </div>
-
-          <div className="tsc-width-switch" role="group" aria-label="Preview width">
-            {WIDTHS.map(w => (
-              <button
-                key={w.id}
-                type="button"
-                className={width === w.id ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
-                aria-pressed={width === w.id}
-                onClick={() => setWidth(w.id)}
-              >
-                {w.label}{w.px ? ` · ${w.px}px` : ''}
-              </button>
-            ))}
-          </div>
-
-          <div
-            className={activeWidth.px ? 'tsc-ladder tsc-ladder--clamped' : 'tsc-ladder'}
-            ref={varsRef({ ...previewVars, '--tsc-w': activeWidth.px ? `${activeWidth.px}px` : '100%' })}
-          >
-            {previewIsFitted && (
-              <p className="tsc-fit-note" role="status">
-                Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
-              </p>
-            )}
-            {steps.map(s => (
-              <button
-                key={s.name}
-                type="button"
-                className="tsc-row"
-                onClick={() => onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)}
-                aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
-              >
-                <span className="tsc-row-meta">
-                  <span className="tsc-row-name">--text-{s.name}</span>
-                  {/* The size AT THE PREVIEWED WIDTH, not the desktop size. The
-                      old readout always said the desktop figure even while the
-                      Mobile preview was selected, which is what made the
-                      breakpoint control look decorative. The mobile→desktop
-                      range sits underneath so both ends stay visible. */}
-                  <span className="tsc-row-num">{s.previewPx}px · {trim(+(s.previewPx / 16).toFixed(4))}rem</span>
-                  <span className="tsc-row-sub">
-                    {s.mobilePx !== s.px ? `${s.mobilePx} → ${s.px}px · ` : ''}{s.weight} · {s.lineHeight}px line
-                  </span>
-                </span>
-                <span
-                  className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
-                  ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
-                >
-                  {PANGRAM}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="tsc-delivery">
-            <div className="tsc-delivery-head">
-              <div>
-                <span className="tsc-section-num">03</span>
-                <div>
-                  <h2>{audience === 'designer' ? 'Evaluate the hierarchy' : 'Prepare the handoff'}</h2>
-                  <p>
-                    {audience === 'designer'
-                      ? 'The same scale, laid out as a page — check the jumps actually read.'
-                      : `${steps.length} sizes plus leading, tracking and both families, ready to paste.`}
-                  </p>
-                </div>
-              </div>
-              <div className="tsc-view-switch" aria-label="Output view">
-                <button
-                  type="button"
-                  className={audience === 'designer' ? 'tsc-view-btn tsc-view-btn--on' : 'tsc-view-btn'}
-                  aria-pressed={audience === 'designer'}
-                  onClick={() => setAudience('designer')}
-                >
-                  Design preview
-                </button>
-                <button
-                  type="button"
-                  className={audience === 'developer' ? 'tsc-view-btn tsc-view-btn--on' : 'tsc-view-btn'}
-                  aria-pressed={audience === 'developer'}
-                  onClick={() => setAudience('developer')}
-                >
-                  Developer handoff
-                </button>
-              </div>
-            </div>
-
-            <div
-              id="tsc-audience-panel"
-              role="tabpanel"
-              aria-labelledby={audience === 'designer' ? 'tsc-tab-designer' : 'tsc-tab-developer'}
-            >
-              {audience === 'designer' ? (
-                <article className="tsc-article" ref={varsRef(previewVars)}>
-                  <span className="tsc-article-eyebrow">Article preview</span>
-                  <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.px || steps[0].px, { max: 72 })}px` })}>
-                    A scale you can defend in a review
-                  </h3>
-                  <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.px || base, { max: 28 })}px` })}>
-                    Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
-                    hand-picked, so the rhythm holds when the page grows.
-                  </p>
-                  <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.px || base, { max: 48 })}px` })}>
-                    Where the jumps matter
-                  </h4>
-                  <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(base, { max: 24 })}px` })}>
-                    A ratio that looks elegant in isolation can flatten a page: if the step between
-                    body copy and a subheading is too small, the hierarchy stops doing its job.
-                    Read this paragraph at each preview width before you copy the tokens.
-                  </p>
-                  <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.px || base, { max: 18 })}px` })}>
-                    Captions and helper text live down here — check they are still comfortably legible.
-                  </p>
-                </article>
-              ) : (
-                <div className="tsc-developer-view">
-                  <div className="tsc-code-meta">
-                    <div>
-                      <span className="seg-label">Export format</span>
-                      <div className="tsc-fmt" role="group" aria-label="Export format">
-                        {[['css', 'CSS variables'], ['tailwind', 'Tailwind'], ['scss', 'SCSS']].map(([id, label]) => (
-                          <button
-                            key={id}
-                            type="button"
-                            className={format === id ? 'tsc-fmt-btn tsc-fmt-btn--on' : 'tsc-fmt-btn'}
-                            aria-pressed={format === id}
-                            onClick={() => setFormat(id)}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="tsc-code-actions">
-                      {importUrl && (
-                        <button type="button" className="tsc-copy-all" onClick={() => onCopy?.(importUrl)}>
-                          Copy font import
-                        </button>
-                      )}
-                      <button type="button" className="tsc-copy-primary" onClick={() => onCopy?.(currentExport)}>
-                        Copy {format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'}
-                      </button>
-                    </div>
-                  </div>
-                  <pre id="tsc-export" className="tsc-export" tabIndex="0"><code>{currentExport}</code></pre>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
         {/* ── Controls ── */}
         <section className="card tsc-panel tsc-config" aria-labelledby="tsc-config-title">
           <div className="tsc-section-head">
-            <span className="tsc-section-num">02</span>
+            <span className="tsc-section-num">01</span>
             <div>
               <h2 id="tsc-config-title">Tune the scale</h2>
               <p>A base and a ratio at each end. Everything between is interpolated.</p>
@@ -989,6 +824,180 @@ export default function TypeScale({ onCopy, toast }) {
           <button type="button" className="tsc-reset" onClick={reset}>
             Reset scale
           </button>
+        </section>
+
+        {/* ── Scale + delivery ── */}
+        <section className="card tsc-panel tsc-output" aria-labelledby="tsc-output-title">
+          <div className="tsc-section-head tsc-section-head--output">
+            <span className="tsc-section-num">02</span>
+            <div>
+              <h2 id="tsc-output-title">Read the scale</h2>
+              <p>Every step at its real size, weight and tracking. Select one to copy its declaration.</p>
+            </div>
+          </div>
+
+          <div className="tsc-width-switch" role="group" aria-label="Preview width">
+            {WIDTHS.map(w => (
+              <button
+                key={w.id}
+                type="button"
+                className={width === w.id ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
+                aria-pressed={width === w.id}
+                onClick={() => setWidth(w.id)}
+              >
+                {w.label}{w.px ? ` · ${w.px}px` : ''}
+              </button>
+            ))}
+          </div>
+
+          <div
+            className={activeWidth.px ? 'tsc-ladder tsc-ladder--clamped' : 'tsc-ladder'}
+            ref={varsRef({ ...previewVars, '--tsc-w': activeWidth.px ? `${activeWidth.px}px` : '100%' })}
+          >
+            {previewIsFitted && (
+              <p className="tsc-fit-note" role="status">
+                Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
+              </p>
+            )}
+            {steps.map(s => (
+              <button
+                key={s.name}
+                type="button"
+                className="tsc-row"
+                onClick={() => onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)}
+                aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
+              >
+                <span className="tsc-row-meta">
+                  <span className="tsc-row-name">--text-{s.name}</span>
+                  {/* The size AT THE PREVIEWED WIDTH, not the desktop size. The
+                      old readout always said the desktop figure even while the
+                      Mobile preview was selected, which is what made the
+                      breakpoint control look decorative. The mobile→desktop
+                      range sits underneath so both ends stay visible. */}
+                  <span className="tsc-row-num">{s.previewPx}px · {trim(+(s.previewPx / 16).toFixed(4))}rem</span>
+                  <span className="tsc-row-sub">
+                    {s.mobilePx !== s.px ? `${s.mobilePx} → ${s.px}px · ` : ''}{s.weight} · {s.lineHeight}px line
+                  </span>
+                </span>
+                <span
+                  className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
+                  ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
+                >
+                  {PANGRAM}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="tsc-delivery">
+            <div className="tsc-delivery-head">
+              <div>
+                <span className="tsc-section-num">03</span>
+                <div>
+                  <h2>{audience === 'designer' ? 'Evaluate the hierarchy' : 'Prepare the handoff'}</h2>
+                  <p>
+                    {audience === 'designer'
+                      ? 'The same scale, laid out as a page — check the jumps actually read.'
+                      : `${steps.length} sizes plus leading, tracking and both families, ready to paste.`}
+                  </p>
+                </div>
+              </div>
+              {/* Now the ONLY control for `audience`, and a real tablist: it
+                  sits immediately above the tabpanel it switches, so the
+                  arrow-key and roving-tabindex contract it advertises actually
+                  lands somewhere the user can see. */}
+              <div className="tsc-view-switch" role="tablist" aria-label="Output view">
+                <button
+                  type="button"
+                  role="tab"
+                  id="tsc-tab-designer"
+                  aria-selected={audience === 'designer'}
+                  aria-controls="tsc-audience-panel"
+                  tabIndex={audience === 'designer' ? 0 : -1}
+                  className={audience === 'designer' ? 'tsc-view-btn tsc-view-btn--on' : 'tsc-view-btn'}
+                  onClick={() => setAudience('designer')}
+                  onKeyDown={handleAudienceKeyDown}
+                >
+                  Design preview
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="tsc-tab-developer"
+                  aria-selected={audience === 'developer'}
+                  aria-controls="tsc-audience-panel"
+                  tabIndex={audience === 'developer' ? 0 : -1}
+                  className={audience === 'developer' ? 'tsc-view-btn tsc-view-btn--on' : 'tsc-view-btn'}
+                  onClick={() => setAudience('developer')}
+                  onKeyDown={handleAudienceKeyDown}
+                >
+                  Developer handoff
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="tsc-audience-panel"
+              role="tabpanel"
+              aria-labelledby={audience === 'designer' ? 'tsc-tab-designer' : 'tsc-tab-developer'}
+            >
+              {audience === 'designer' ? (
+                <article className="tsc-article" ref={varsRef(previewVars)}>
+                  <span className="tsc-article-eyebrow">Article preview</span>
+                  <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.px || steps[0].px, { max: 72 })}px` })}>
+                    A scale you can defend in a review
+                  </h3>
+                  <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.px || base, { max: 28 })}px` })}>
+                    Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
+                    hand-picked, so the rhythm holds when the page grows.
+                  </p>
+                  <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.px || base, { max: 48 })}px` })}>
+                    Where the jumps matter
+                  </h4>
+                  <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(base, { max: 24 })}px` })}>
+                    A ratio that looks elegant in isolation can flatten a page: if the step between
+                    body copy and a subheading is too small, the hierarchy stops doing its job.
+                    Read this paragraph at each preview width before you copy the tokens.
+                  </p>
+                  <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.px || base, { max: 18 })}px` })}>
+                    Captions and helper text live down here — check they are still comfortably legible.
+                  </p>
+                </article>
+              ) : (
+                <div className="tsc-developer-view">
+                  <div className="tsc-code-meta">
+                    <div>
+                      <span className="seg-label">Export format</span>
+                      <div className="tsc-fmt" role="group" aria-label="Export format">
+                        {[['css', 'CSS variables'], ['tailwind', 'Tailwind'], ['scss', 'SCSS']].map(([id, label]) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className={format === id ? 'tsc-fmt-btn tsc-fmt-btn--on' : 'tsc-fmt-btn'}
+                            aria-pressed={format === id}
+                            onClick={() => setFormat(id)}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="tsc-code-actions">
+                      {importUrl && (
+                        <button type="button" className="tsc-copy-all" onClick={() => onCopy?.(importUrl)}>
+                          Copy font import
+                        </button>
+                      )}
+                      <button type="button" className="tsc-copy-primary" onClick={() => onCopy?.(currentExport)}>
+                        Copy {format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'}
+                      </button>
+                    </div>
+                  </div>
+                  <pre id="tsc-export" className="tsc-export" tabIndex="0"><code>{currentExport}</code></pre>
+                </div>
+              )}
+            </div>
+          </div>
         </section>
       </div>
 

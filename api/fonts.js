@@ -48,18 +48,41 @@ async function fromMetadataEndpoint() {
   const json = JSON.parse(text.replace(/^\)\]\}'/, ''))
   const list = json.familyMetadataList || []
   list.sort((a, b) => (a.popularity || 1e9) - (b.popularity || 1e9))
-  const fonts = list.map((f, i) => ({
-    family: f.family,
-    // Metadata uses 'Sans Serif'; the WebFonts API uses 'sans-serif'.
-    category: (f.category || 'Sans Serif').toLowerCase().replace(/\s+/g, '-'),
-    variants: Object.keys(f.fonts || {})
-      .filter(v => !v.endsWith('i'))
-      .map(Number)
-      .filter(Number.isFinite)
-      .sort((a, b) => a - b),
-    subsets: f.subsets || ['latin'],
-    popularity: i,
-  })).filter(f => f.variants.length)
+  const fonts = list.map((f, i) => {
+    const cuts = Object.keys(f.fonts || {})
+    return {
+      family: f.family,
+      // Metadata uses 'Sans Serif'; the WebFonts API uses 'sans-serif'.
+      category: (f.category || 'Sans Serif').toLowerCase().replace(/\s+/g, '-'),
+      variants: cuts
+        .filter(v => !v.endsWith('i'))
+        .map(Number)
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b),
+      subsets: f.subsets || ['latin'],
+      popularity: i,
+      // ── The About-tab fields ──────────────────────────────────────────────
+      // Everything below is carried STRAIGHT THROUGH from Google's own family
+      // metadata. None of it is inferred, and none of it is written by us: the
+      // About tab states facts about a typeface, so every one of them has to be
+      // traceable to a source, or it does not get shown at all.
+      //
+      // `dateAdded` is the day the family landed ON GOOGLE FONTS. It is NOT the
+      // year the typeface was designed or released, and the two differ by
+      // decades for any revival. The UI labels it as what it is for that reason.
+      designers: Array.isArray(f.designers) ? f.designers.filter(Boolean) : [],
+      dateAdded: typeof f.dateAdded === 'string' ? f.dateAdded : '',
+      // Italic availability is otherwise lost: the weight list drops the 'i'
+      // cuts, so a family that ships twelve italics looked identical to one
+      // that ships none.
+      italics: cuts.some(v => v.endsWith('i')),
+      // Axis TAGS only. The ranges are real too, but "wght 100–900" is a
+      // control the tools do not offer, and printing a range you cannot use is
+      // a spec sheet rather than an answer.
+      axes: (f.axes || []).map(a => a && a.tag).filter(Boolean),
+      openSource: f.isOpenSource === true,
+    }
+  }).filter(f => f.variants.length)
   return fonts.length ? fonts : null
 }
 
@@ -69,10 +92,24 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // METADATA FIRST, WebFonts second. This order is the reverse of what shipped,
+  // and the reason is data rather than reliability: the WebFonts API answers
+  // with family/category/variants/subsets and nothing else, while the metadata
+  // endpoint answers with all of that PLUS the designer, the date the family
+  // was added, its italic cuts and its variable axes — the entire factual basis
+  // of the About tab. Preferring the keyed API meant that on any deployment
+  // with GOOGLE_FONTS_API_KEY set, About would have had nothing to show.
+  //
+  // The metadata endpoint also needs no key at all, so this is the path more
+  // deployments can actually use. It stays behind the server because it sends
+  // no CORS headers, and it is parsed defensively (the )]}' guard, and a
+  // `variants.length` filter) — if its shape ever changes, the WebFonts API
+  // below still answers and the tools degrade to the thinner catalogue rather
+  // than to nothing.
   let fonts = null
-  try { fonts = await fromWebfontsApi() } catch {}
+  try { fonts = await fromMetadataEndpoint() } catch {}
   if (!fonts) {
-    try { fonts = await fromMetadataEndpoint() } catch {}
+    try { fonts = await fromWebfontsApi() } catch {}
   }
 
   if (!fonts) {

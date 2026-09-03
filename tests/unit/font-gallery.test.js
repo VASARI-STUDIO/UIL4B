@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   filterGalleryTypefaces, filterPickableTypefaces, formatSubsets, isGalleryTypeface,
   isPickableTypeface, ladderWeights, weightName,
@@ -127,6 +128,20 @@ test('subsets become script names a reader can act on, not a count', () => {
   assert.deepEqual(formatSubsets(undefined), [])
 })
 
+test('the menu subsetting artefact is never presented as a script', () => {
+  // `menu` is Google's per-family subset holding just the glyphs to draw the
+  // family name in a font menu. It ships on nearly every family, and the
+  // specimen dialog was printing it in its header tags — so the dialog stated
+  // its script coverage twice with two different answers once the About tab
+  // started listing the same field. Dropped in formatSubsets so every caller
+  // agrees, rather than at the call sites that happened to remember.
+  assert.deepEqual(formatSubsets(['menu', 'latin', 'cyrillic']), ['Latin', 'Cyrillic'])
+  assert.deepEqual(formatSubsets(['MENU', ' menu ']), [])
+  // A family with nothing but the menu subset has no script to report, and an
+  // empty list is the honest answer rather than a fabricated "Latin".
+  assert.deepEqual(formatSubsets(['menu']), [])
+})
+
 test('weights are named the way a font menu names them', () => {
   assert.equal(weightName(400), 'Regular')
   assert.equal(weightName(600), 'SemiBold')
@@ -134,4 +149,68 @@ test('weights are named the way a font menu names them', () => {
   // An off-scale value gets no invented name rather than a wrong one.
   assert.equal(weightName(450), '')
   assert.equal(weightName(undefined), '')
+})
+
+// ── The picker's category tray must reach the picker's corpus ───────────────
+//
+// `filterPickableTypefaces` deliberately KEEPS monospace (there is a test above
+// saying exactly that), but FontBrowseDialog's tray offered All/Sans/Serif/
+// Display/Script and no Mono chip. 51 families were served by the corpus,
+// hidden by every non-"All" chip, and reachable only by typing a name you
+// already knew — in the one dialog built specifically to end remember-and-type
+// selection.
+//
+// The corpus contract and the tray were tested separately and were each
+// individually correct, which is how the gap survived. This asserts the
+// RELATIONSHIP between them.
+//
+// COMMENTS ARE STRIPPED FIRST. The rationale comment now above CATS contains
+// the word 'monospace', so a grep over the raw file passes even with the chip
+// deleted; the assertion has to see code, not prose.
+const pickerChipIds = () => {
+  const raw = readFileSync(
+    new URL('../../src/components/FontBrowseDialog.jsx', import.meta.url),
+    'utf8',
+  )
+  const code = raw
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1')
+  const block = code.match(/const CATS\s*=\s*\[([\s\S]*?)\n\]/)
+  assert.ok(block, 'CATS array not found in FontBrowseDialog source')
+  return [...block[1].matchAll(/id:\s*'([^']+)'/g)].map(m => m[1])
+}
+
+test('every category the picker can serve has a chip that reaches it', () => {
+  const chipIds = pickerChipIds()
+  assert.ok(chipIds.includes('all'), 'the tray needs an unfiltered option')
+
+  // Every Google Fonts category that survives the pickable filter.
+  const servable = ['sans-serif', 'serif', 'display', 'handwriting', 'monospace']
+  const sampleFor = {
+    'sans-serif': font('Inter', 'sans-serif'),
+    serif: font('Lora', 'serif'),
+    display: font('Fraunces', 'display'),
+    handwriting: font('Caveat', 'handwriting'),
+    monospace: font('JetBrains Mono', 'monospace'),
+  }
+
+  for (const category of servable) {
+    assert.equal(
+      isPickableTypeface(sampleFor[category]), true,
+      `${category} should be in the picker corpus`,
+    )
+    assert.ok(
+      chipIds.includes(category),
+      `the picker serves ${category} families but no chip filters to them`,
+    )
+  }
+
+  // And nothing the tray filters by is missing from the corpus — a chip that
+  // can only ever return an empty grid is its own defect.
+  for (const id of chipIds.filter(c => c !== 'all')) {
+    assert.ok(
+      servable.includes(id),
+      `the tray offers a "${id}" chip for a category the corpus never contains`,
+    )
+  }
 })

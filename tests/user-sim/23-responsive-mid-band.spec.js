@@ -162,23 +162,31 @@ test.describe('Palette Builder toolbar, 961–1080px', () => {
 })
 
 test.describe('workbench two-column threshold', () => {
-  // The working column is the grid's first track — the pane the tool's output
-  // lives in. Measuring the track rather than the innermost text box keeps the
-  // assertion about the LAYOUT decision and not about a panel's padding.
-  const workingColumn = (grid) => async (page) => page.evaluate((sel) => {
-    const g = document.querySelector(sel)
-    if (!g) return null
-    const first = g.firstElementChild
-    return first ? Math.round(first.getBoundingClientRect().width) : null
-  }, grid)
+  // The working column is the OUTPUT pane — the grid item the tool's result
+  // lives in. Measuring that item rather than the innermost text box keeps the
+  // assertion about the LAYOUT decision and not about a panel's padding; it is
+  // itself a grid item, so its width IS the track's.
+  //
+  // It used to be found as `grid.firstElementChild`, which quietly assumed the
+  // output pane comes first in source order. That assumption stopped being true
+  // when Font Pair and Type Scale moved their controls ahead of their output
+  // (the controls had been landing ~1,900px BELOW the thing they drive at
+  // 1280). The layout was unchanged — the sidebar is still placed right at
+  // ≥1344px — but the test began measuring the 340px sidebar and reporting a
+  // 600px "shrink". Naming the pane makes the check immune to source order,
+  // which is the right property for an assertion about rendered geometry.
+  const workingColumn = (pane) => async (page) => page.evaluate((sel) => {
+    const el = document.querySelector(sel)
+    return el ? Math.round(el.getBoundingClientRect().width) : null
+  }, pane)
 
   const cases = [
-    { route: '/color/tint', grid: '.tt-grid', persona: 'a designer building a tonal ramp' },
-    { route: '/typescale', grid: '.tsc-grid', persona: 'a designer reading a type scale back' },
-    { route: '/fontpairs', grid: '.fpr-grid', persona: 'a designer testing a type pairing' },
+    { route: '/color/tint', grid: '.tt-grid', pane: '.tt-output', persona: 'a designer building a tonal ramp' },
+    { route: '/typescale', grid: '.tsc-grid', pane: '.tsc-output', persona: 'a designer reading a type scale back' },
+    { route: '/fontpairs', grid: '.fpr-grid', pane: '.fpr-output', persona: 'a designer testing a type pairing' },
   ]
 
-  for (const { route, grid, persona } of cases) {
+  for (const { route, grid, pane, persona } of cases) {
     test(`${route} never narrows its working column as the window widens`, async ({ page }) => {
       watch(page, persona)
       await page.setViewportSize({ width: WORKBENCH_WIDTHS[0], height: 900 })
@@ -186,13 +194,13 @@ test.describe('workbench two-column threshold', () => {
       await expect(page.locator(grid)).toBeVisible()
       await settle(page)
 
-      const measure = workingColumn(grid)
+      const measure = workingColumn(pane)
       const seen = []
       for (const width of WORKBENCH_WIDTHS) {
         await page.setViewportSize({ width, height: 900 })
         await page.waitForTimeout(140)
         const w = await measure(page)
-        expect(w, `${grid} has no first track at ${width}px`).toBeGreaterThan(0)
+        expect(w, `${pane} is not rendered inside ${grid} at ${width}px`).toBeGreaterThan(0)
         seen.push({ width, column: w })
       }
 
