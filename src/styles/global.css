@@ -3425,31 +3425,25 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .onb-back:hover{color:var(--t0)}
 .onb-back:disabled{opacity:.4;cursor:default}
 
-.onb-pricing-step .onb-q{margin-bottom:4px}
+/* The first-win step, where the pricing table used to be. Three real
+   starting points; picking one ends onboarding and opens that tool. The
+   two-column tier grid and the billing toggle went with the step. */
+.onb-firstwin-step .onb-q{margin-bottom:6px}
+.onb-firstwin-options{gap:10px}
+.onb-firstwin-option{align-items:flex-start;padding:16px}
+.onb-firstwin-text{display:flex;flex-direction:column;gap:4px;min-width:0}
+.onb-firstwin-label{font-size:15px;font-weight:600;color:var(--t0);letter-spacing:-.01em}
+.onb-firstwin-blurb{font-size:12.5px;font-weight:400;line-height:1.5;color:var(--t2)}
+.onb-firstwin-option .onb-option-arrow{flex:none;margin-top:3px}
+/* The tier truth, kept as one line rather than a table in front of someone
+   who has not made anything yet. */
+.onb-firstwin-foot{margin:18px 0 0;font-size:12px;color:var(--t3)}
+.onb-firstwin-foot a{color:var(--t1);text-decoration:underline;text-underline-offset:2px}
+.onb-firstwin-foot a:hover{color:var(--accent-strong)}
 
-.onb-billing{display:inline-flex;padding:4px;gap:4px;background:var(--bg-2);border:1px solid var(--border);border-radius:999px;margin-bottom:20px}
-.onb-billing button{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:none;background:none;border-radius:999px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--dur-2) var(--ease-standard)}
-.onb-billing button.active{background:var(--card);color:var(--t0);box-shadow:var(--warm-shadow)}
-.onb-save{font-size:10px;font-weight:700;color:var(--ok-strong);letter-spacing:.03em}
-
-.onb-tiers{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:16px}
-.onb-tier{position:relative;display:flex;flex-direction:column;gap:14px;padding:22px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow)}
-.onb-tier-pro{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));box-shadow:0 16px 36px -18px color-mix(in srgb,var(--accent) 45%,transparent)}
-.onb-tier-flag{position:absolute;top:-10px;right:20px;padding:4px 10px;border-radius:999px;background:var(--accent-strong);color:var(--accent-fg);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-.onb-tier-name{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
-.onb-tier-price{display:flex;align-items:baseline;gap:7px}
-.onb-tier-amount{font-size:28px;font-weight:800;letter-spacing:-.03em;color:var(--t0);line-height:1}
-.onb-tier-per{font-size:12px;color:var(--t2);font-weight:500}
-.onb-tier-sub{font-size:11px;color:var(--accent-strong);font-weight:600}
-.onb-tier-list{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none;flex:1}
-.onb-tier-list li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--t1);line-height:1.45}
-.onb-tier-btn{width:100%;justify-content:center}
-.onb-tier-btn:disabled{opacity:.55;cursor:default}
-.onb-tier-foot{text-align:center;font-size:11px;color:var(--t3)}
 
 @media(max-width:520px){
   .onb-card{padding:24px 20px}
-  .onb-tiers{grid-template-columns:1fr}
 }
 
 /* ─── UI Builder: Code tabs ─── */

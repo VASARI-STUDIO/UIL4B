@@ -91,8 +91,18 @@ test('both completion paths go through one function', () => {
   // skip path lost it in the first place.
   const src = stripComments(read('src/pages/Onboarding.jsx'))
   assert.ok(/const markOnboardingComplete = /.test(src))
-  assert.ok(/const persist = \(\) => markOnboardingComplete\(answers\)/.test(src),
+  // persist() now takes an optional `extra` (the first-win choice rides along
+  // with the survey answers), so the old exact-signature match no longer holds.
+  // The invariant it was really guarding does, and is what is asserted here:
+  // persist() must DELEGATE rather than write the profile itself, and it must
+  // still carry `answers`. Two call sites that each remembered to write the
+  // profile is how the skip path lost it in the first place.
+  assert.ok(/const persist = \([^)]*\) => markOnboardingComplete\(/.test(src),
     'finishing with answers must reuse the same writer')
+  assert.ok(/const persist = \([^)]*\) => markOnboardingComplete\([^)]*answers/.test(src),
+    'persist() must still carry the survey answers')
+  assert.equal((src.match(/updateProfile\?\.\(/g) || []).length, 1,
+    'exactly one place may write onboarding completion to the profile')
 })
 
 test('skipping does not invent survey answers', () => {

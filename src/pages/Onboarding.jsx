@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
-import { useProPrice } from '../hooks/usePrices'
+import { FIRST_WINS, FIRST_WIN_SKIPPED, FIRST_WIN_EXITED } from '../utils/firstWin'
+import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
 
 // Where a brand-new account lands.
 //
@@ -22,6 +22,21 @@ const FIRST_RUN_DESTINATION = '/projects'
 const ONBOARDED_KEY = 'vs-onboarded'
 const RESUME_KEY = 'vs-resume-after-onboarding'
 
+// Record completion on the ACCOUNT, with localStorage as a fast local mirror.
+// The account copy is the one that matters: it is what stops onboarding
+// reappearing on a second device.
+//
+// Module scope, not the component body, because of the Date.now() stamp. The
+// React compiler refuses an impure call made during render, and it is right to:
+// the timestamp belongs to the moment the user actually finished, not to
+// whichever render happened to construct the closure. (The rule only started
+// firing here once the pricing step's async checkout handler was removed and
+// the component became simple enough for the compiler to analyse at all.)
+function completeOnboarding(updateProfile, extra = null) {
+  try { updateProfile?.({ onboarding: { ...(extra || {}), completedAt: Date.now() } }) } catch { /* ignore */ }
+  try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
+}
+
 const QUESTIONS = [
   {
     id: 'source',
@@ -40,31 +55,19 @@ const QUESTIONS = [
   },
 ]
 
-const PRO_FEATURES = [
-  `${AI_LIMITS.pro.daily} AI generations a day · ${AI_LIMITS.pro.monthly} a month`,
-  'Advanced colour controls and HCT editing',
-  'Projects synced across devices',
-  'Advanced design-system exports',
-  'Priority support',
-]
-
-function CheckIcon() {
+function ArrowIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
+    <svg className="onb-option-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
     </svg>
   )
 }
 
 export default function Onboarding() {
   const { user, userProfile, updateProfile, loading } = useAuth()
-  const { checkout } = useSubscription()
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState({})
-  const [billing, setBilling] = useState('yearly')
-  const [busy, setBusy] = useState(false)
-  const proPrice = useProPrice()
   const headingRef = useRef(null)
 
   // New sign-ups now reach /onboarding via a `navigate(..., {replace:true})` that
@@ -82,18 +85,12 @@ export default function Onboarding() {
   if (!loading && !user) return <Navigate to="/login" replace />
 
   const total = QUESTIONS.length
-  const onPricing = step >= total
+  const onFirstWin = step >= total
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
 
-  // Record completion on the ACCOUNT, with localStorage as a fast local mirror.
-  // The account copy is the one that matters: it is what stops onboarding
-  // reappearing on a second device.
-  const markOnboardingComplete = (extra = null) => {
-    try { updateProfile?.({ onboarding: { ...(extra || {}), completedAt: Date.now() } }) } catch { /* ignore */ }
-    try { localStorage.setItem(ONBOARDED_KEY, '1') } catch { /* ignore */ }
-  }
+  const markOnboardingComplete = (extra = null) => completeOnboarding(updateProfile, extra)
 
-  const persist = () => markOnboardingComplete(answers)
+  const persist = (extra = null) => markOnboardingComplete({ ...answers, ...(extra || {}) })
 
   // A mid-action sign-up (e.g. clicked "Upgrade to Pro" → created an account)
   // is intercepted into onboarding by App.jsx, which would otherwise silently
@@ -116,26 +113,42 @@ export default function Onboarding() {
 
   const back = () => setStep(s => Math.max(0, s - 1))
 
-  const finishFree = () => {
-    persist()
-    // Explicit Free choice on the pricing step — drop any stashed checkout
-    // intent rather than pushing the user into a checkout they just declined.
-    takeResumeTarget()
-    navigate(FIRST_RUN_DESTINATION)
+  // Analytics for the first-win screen. Always in this order and always
+  // wrapped: the counter records WHICH start was chosen, and the clock is what
+  // utils/timeToValue.js later measures the gap from. Neither may throw a user
+  // out of their own onboarding, so a broken metric is swallowed and the
+  // navigation below happens regardless.
+  const recordFirstWin = (choiceId) => {
+    try { trackFirstWinChoice(choiceId) } catch { /* metrics never block a flow */ }
+    try { startTimeToValue() } catch { /* metrics never block a flow */ }
   }
 
-  const finishPro = async () => {
+  // Picked a starting point. This is the whole point of the screen: the next
+  // thing they see is the real tool, open, on the artefact the sign-up dialog
+  // promised them ("your palettes, type scales and gradients, kept").
+  //
+  // The stashed resume target is DROPPED, exactly as the old Free button
+  // dropped a stashed checkout intent: choosing a start here is a newer and
+  // more specific statement of what they want to do than whatever they clicked
+  // before the account existed.
+  const chooseFirstWin = (win) => {
+    persist({ firstWin: win.id })
+    recordFirstWin(win.id)
+    takeResumeTarget()
+    navigate(win.route)
+  }
+
+  // Declined all three. Onboarding is still COMPLETE — the screen was answered
+  // and the answer was "none of these" — and /projects is the right landing
+  // because its empty state is the one surface that teaches without being asked.
+  //
+  // `firstWin` is deliberately not persisted: nothing was chosen, and writing
+  // "skipped" onto the profile would put a non-answer in the admin table, which
+  // is the same objection skip() has always had to persisting blank answers.
+  const skipFirstWin = () => {
     persist()
-    // Chose Pro here — checkout() fulfils the intent directly. Capture (and
-    // clear) the stashed target up front so the Stripe redirect can't leave a
-    // stale key; fall back to it only if checkout itself fails.
-    const resume = takeResumeTarget() || FIRST_RUN_DESTINATION
-    setBusy(true)
-    try {
-      await checkout(billing)
-    } catch {
-      navigate(resume)
-    }
+    recordFirstWin(FIRST_WIN_SKIPPED)
+    navigate(takeResumeTarget() || FIRST_RUN_DESTINATION)
   }
 
   const skip = () => {
@@ -148,6 +161,12 @@ export default function Onboarding() {
     // browser. `answers` is deliberately not persisted here: they did not
     // answer, and inventing blanks would put empty values in the admin table.
     markOnboardingComplete()
+    // Counted as 'exited', not 'skipped': this Skip is reachable from the very
+    // first screen, so it means "left before the starting points", which is a
+    // different problem from "saw them and wanted none". The clock still starts
+    // — someone who skipped everything and then built something anyway is the
+    // control group that says whether this flow helps at all.
+    recordFirstWin(FIRST_WIN_EXITED)
     // Skipping the survey shouldn't discard why they signed up — resume to the
     // stashed destination (e.g. /checkout) when there is one.
     navigate(takeResumeTarget() || FIRST_RUN_DESTINATION)
@@ -165,10 +184,10 @@ export default function Onboarding() {
           {QUESTIONS.map((_, i) => (
             <span key={i} className={`onb-dot${i < step ? ' done' : ''}${i === step ? ' active' : ''}`} />
           ))}
-          <span className={`onb-dot${onPricing ? ' active' : ''}`} />
+          <span className={`onb-dot${onFirstWin ? ' active' : ''}`} />
         </div>
 
-        {!onPricing ? (
+        {!onFirstWin ? (
           <div className="onb-step" key={step}>
             {step === 0 && (
               <div className="onb-greeting">Welcome, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
@@ -184,9 +203,7 @@ export default function Onboarding() {
                   onClick={() => choose(QUESTIONS[step].id, opt)}
                 >
                   <span>{opt}</span>
-                  <svg className="onb-option-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-                  </svg>
+                  <ArrowIcon />
                 </button>
               ))}
             </div>
@@ -195,49 +212,48 @@ export default function Onboarding() {
             )}
           </div>
         ) : (
-          <div className="onb-step onb-pricing-step">
-            <div className="onb-greeting">You're all set, <em>{firstName}</em>.</div>
-            <h1 className="onb-q" ref={headingRef} tabIndex={-1}>Pick the plan that fits.</h1>
-            <p className="onb-sub">Everything core is free forever. Upgrade any time for more AI — or start free and decide later.</p>
+          /* THE FIRST WIN, where the pricing table used to be.
+             Each card is a live tool, not a description of one — picking it
+             ends onboarding and opens that tool. See utils/firstWin.js for why
+             these three, and for what actually counts as the win. */
+          <div className="onb-step onb-firstwin-step" data-testid="onboarding-first-win">
+            <div className="onb-greeting">You're in, <em>{firstName}</em>.</div>
+            <h1 className="onb-q" ref={headingRef} tabIndex={-1}>What do you want to make first?</h1>
+            <p className="onb-sub">
+              Whichever you pick opens next. You can switch at any time — nothing here is locked in.
+            </p>
 
-            <div className="onb-billing">
-              <button className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Monthly</button>
-              <button className={billing === 'yearly' ? 'active' : ''} onClick={() => setBilling('yearly')}>
-                Yearly {proPrice.savingsPct > 0 && <span className="onb-save">Save {proPrice.savingsPct}%</span>}
-              </button>
-            </div>
-
-            <div className="onb-tiers">
-              <div className="onb-tier">
-                <div className="onb-tier-name">Free</div>
-                <div className="onb-tier-price"><span className="onb-tier-amount">$0</span><span className="onb-tier-per">forever</span></div>
-                <ul className="onb-tier-list">
-                  <li><CheckIcon /> All core design tools</li>
-                  <li><CheckIcon /> Unlimited palettes &amp; exports</li>
-                  <li><CheckIcon /> {AI_LIMITS.free.daily} AI generations a day</li>
-                </ul>
-                <button className="btn onb-tier-btn" onClick={finishFree} disabled={busy}>Start with Free</button>
-              </div>
-
-              <div className="onb-tier onb-tier-pro">
-                <span className="onb-tier-flag">Best value</span>
-                <div className="onb-tier-name">Pro</div>
-                <div className="onb-tier-price">
-                  <span className="onb-tier-amount">{billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly}</span>
-                  <span className="onb-tier-per">{billing === 'yearly' ? '/year' : '/month'}</span>
-                </div>
-                <div className="onb-tier-sub">{billing === 'yearly' ? `AUD · ${proPrice.yearlyPerMonth}/mo` : 'AUD · billed monthly'}</div>
-                <ul className="onb-tier-list">
-                  {PRO_FEATURES.map(f => <li key={f}><CheckIcon /> {f}</li>)}
-                </ul>
-                <button className="btn btn-accent onb-tier-btn" onClick={finishPro} disabled={busy}>
-                  {busy ? 'Redirecting to Stripe…' : `Go Pro — ${billing === 'yearly' ? `${proPrice.yearlyTotal}/yr` : `${proPrice.monthly}/mo`}`}
+            <div className="onb-options onb-firstwin-options">
+              {FIRST_WINS.map(win => (
+                <button
+                  key={win.id}
+                  type="button"
+                  className="onb-option onb-firstwin-option"
+                  data-first-win={win.id}
+                  onClick={() => chooseFirstWin(win)}
+                >
+                  <span className="onb-firstwin-text">
+                    <span className="onb-firstwin-label">{win.label}</span>
+                    <span className="onb-firstwin-blurb">{win.blurb}</span>
+                  </span>
+                  <ArrowIcon />
                 </button>
-                <div className="onb-tier-foot">Secure checkout via Stripe · cancel anytime</div>
-              </div>
+              ))}
             </div>
 
-            <button type="button" className="onb-back" onClick={finishFree} disabled={busy}>Maybe later — continue free</button>
+            <button type="button" className="onb-back" onClick={skipFirstWin}>
+              Not now — take me to my projects
+            </button>
+
+            {/* The pricing STEP is gone; the pricing is not hidden. Shortening
+                the path by concealing a cost the user meets later buys an easy
+                finish with distrust, so the tier truth stays on the screen as
+                one sentence with a real link, instead of a two-column table and
+                a Stripe button in front of someone who has not yet made
+                anything. What Pro costs and contains is unchanged. */}
+            <p className="onb-sub onb-firstwin-foot">
+              All of this is free. <Link to="/plans">Pro</Link> adds more AI and advanced exports when you want it.
+            </p>
           </div>
         )}
       </div>
