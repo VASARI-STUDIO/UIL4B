@@ -3015,10 +3015,28 @@ ${stateVars}
 
   return (
     <div className="sec">
-      <div className="sec-h">
-        <div className="sec-h-eyebrow">Colour</div>
-        <h1>{soloSection ? SOLO_TITLES[soloSection] : t('color.title')}</h1>
-        <p>{soloSection ? SOLO_DESC[soloSection] : t('tools.colorStudio.description')}</p>
+      {/* THE SOLO TOOL HEADER. The four colour tools ran TWO hero languages: the
+          Tint Scale Generator (.tt-hero) and the Gradient Generator (.ggn-head)
+          both open with an eyebrow, a large serif title, a description and the
+          page's own actions, then a live status strip that reports the tool's
+          current state in four facts. Semantic Colours and the Contrast Checker
+          were still on `.sec-h`, the site-wide section header, which has no
+          actions and no status and says nothing about the tool you are in.
+
+          This is convergence on the shape two of the four already shipped, not a
+          fifth pattern. `.sec-h` itself is untouched — it is site-wide, and
+          restyling it here would reach every page that uses it. */}
+      <div className={soloSection ? 'stc-hero' : 'sec-h'}>
+        <div className={soloSection ? 'stc-hero-id' : undefined}>
+          <div className={soloSection ? 'stc-hero-eyebrow' : 'sec-h-eyebrow'}>{soloSection ? 'Create / Colour' : 'Colour'}</div>
+          <h1>{soloSection ? SOLO_TITLES[soloSection] : t('color.title')}</h1>
+          <p>{soloSection ? SOLO_DESC[soloSection] : t('tools.colorStudio.description')}</p>
+        </div>
+        {soloSection === 'states' && (
+          <div className="stc-hero-actions">
+            <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
+          </div>
+        )}
         {canSaveProjects && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'sticky', bottom: 16, zIndex: 20, background: 'var(--card)', padding: '10px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--warm-shadow-lg)' }}>
             <button className="btn btn-accent btn-s" onClick={() => setSaveMenuOpen(!saveMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -3063,6 +3081,21 @@ ${stateVars}
           </div>
         )}
       </div>
+
+      {/* The live status strip the sibling colour tools carry (.ggn-status on the
+          Gradient Generator, the stat row on the Tint Scale Generator): four
+          facts about what the tool currently holds, so the header reports state
+          rather than only naming the page. The bundle name was previously the
+          only one of these on the page and it was buried in the section header
+          below, next to the copy button. */}
+      {soloSection === 'states' && (
+        <div className="stc-status" aria-live="polite">
+          <span><strong>{activeStateBundle?.name || 'Custom mix'}</strong> bundle</span>
+          <span><strong>{Object.keys(STATE_META).length}</strong> state roles</span>
+          <span><strong>{STATE_LABELS.length}</strong> stops per ramp</span>
+          <span><strong>{Object.keys(STATE_META).length * STATE_LABELS.length}</strong> canonical tokens</span>
+        </div>
+      )}
 
       {/* Section pill-nav only exists on the merged /create/color studio — a
           standalone tool page has exactly one section, nothing to jump to. */}
@@ -3401,21 +3434,25 @@ ${stateVars}
       {/* ═══ SECTION 2: UI STATE COLORS ═══ */}
       {(!soloSection || soloSection === 'states') && (
       <section id="states" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
-        <div className={`cs-section-header stc-head${soloSection ? ' solo' : ''}`} onClick={soloSection ? undefined : () => toggleCollapse('states')} style={{ marginBottom: collapsed.states && !soloSection ? 0 : 14 }}>
-          {!soloSection && (
+        {/* The solo page's copy of this header is gone: the bundle name is in the
+            status strip and "Copy all tokens" is in the hero, so rendering it
+            again here was the same two facts twice, 300px apart. The merged
+            studio still needs it as a collapse control. */}
+        {!soloSection && (
+          <div className="cs-section-header stc-head" onClick={() => toggleCollapse('states')} style={{ marginBottom: collapsed.states ? 0 : 14 }}>
             <div className="stc-head-title">
               <svg className={`cs-chevron${collapsed.states ? '' : ' open'}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>Semantic Colours</h2>
             </div>
-          )}
-          <div className="stc-toolbar" onClick={e => e.stopPropagation()}>
-            <div className="stc-toolbar-copy">
-              <span className="stc-kicker">Semantic bundle</span>
-              <span>{activeStateBundle?.name || 'Custom mix'} · 40 canonical tokens</span>
+            <div className="stc-toolbar" onClick={e => e.stopPropagation()}>
+              <div className="stc-toolbar-copy">
+                <span className="stc-kicker">Semantic bundle</span>
+                <span>{activeStateBundle?.name || 'Custom mix'} · {Object.keys(STATE_META).length * STATE_LABELS.length} canonical tokens</span>
+              </div>
+              <button className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
             </div>
-            <button className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
           </div>
-        </div>
+        )}
         {(soloSection === 'states' || !collapsed.states) && <>
         <div className="stc-bundles" role="radiogroup" aria-label="Semantic colour bundle">
           {STATE_BUNDLES.map((bundle, bundleIndex) => {
@@ -3561,17 +3598,13 @@ ${stateVars}
           <pre className="stc-code" tabIndex="0"><code>{`:root {\n${stateCSS}\n}`}</code></pre>
         </section>
 
-        <nav className="stc-next" aria-label="Continue building the colour system">
-          <div>
-            <span className="stc-kicker">Next in the workflow</span>
-            <strong>Validate the states, then connect them to the rest of your interface foundation.</strong>
-          </div>
-          <div>
-            <NavLink to="/create/contrast">Check contrast <span aria-hidden="true">→</span></NavLink>
-            <NavLink to="/create/tint">Build tonal scales <span aria-hidden="true">→</span></NavLink>
-            <NavLink to="/create/palette">Return to palette <span aria-hidden="true">→</span></NavLink>
-          </div>
-        </nav>
+        {/* The "Next in the workflow" nav that used to sit here is gone. It
+            offered contrast, tint and palette - a strict SUBSET of the "More
+            colour tools" footer ~200px below it, which offers those three plus
+            gradient. Two navigation blocks that close together, one wholly
+            contained in the other, is a choice the reader has to make twice.
+            Its editorial line survives as the footer's lead, so the sequencing
+            advice is kept and only the duplicate destinations are dropped. */}
         </>}
       </section>
       )}
@@ -3876,6 +3909,9 @@ ${stateVars}
           their standalone pages. */}
       <nav className="cs-tools-footer" aria-label="More colour tools">
         <h2 className="cs-tools-footer-title">More colour tools</h2>
+        {soloSection === 'states' && (
+          <p className="cs-tools-footer-lead">Validate the states, then connect them to the rest of your interface foundation.</p>
+        )}
         <div className="cs-tools-footer-grid">
           {/* Never link a page to itself — filter the tool you're already on. */}
           {COLOUR_TOOLS.filter(tool => tool.route !== pathname).map(tool => (

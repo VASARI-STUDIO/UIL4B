@@ -98,6 +98,36 @@ test.describe('Gradient Generator workbench resilience', () => {
     await page.getByRole('button', { name: 'Copy', exact: true }).click()
     await expect(page.getByText('Clipboard is not available in this browser')).toBeVisible()
   })
+
+  // The page used to end with a numbered step called "03 - Starting points /
+  // Begin with colours you trust", BELOW the canvas and the inspector - so it
+  // told you where to begin after you had already composed and exported. For
+  // anyone without a saved palette that whole numbered step rendered a single
+  // apology in a full-height card, and a second card beside it made the same
+  // offer with the curated rail.
+  //
+  // There are two real steps here. This asserts the numbered sequence is exactly
+  // those two and has no gap, which is the part that silently regresses when a
+  // section is added back.
+  test('the numbered steps are the two the page actually has, and the sources are not one of them', async ({ page }) => {
+    watch(page, 'a designer arriving with no saved palette')
+    await go(page, '/create/gradient')
+
+    // The tool is lazy-loaded; read the sequence only once it has mounted.
+    await expect(page.getByRole('heading', { level: 1, name: 'Gradient Generator' })).toBeVisible()
+    await expect(page.locator('.ggn-step').first()).toBeVisible()
+
+    const steps = await page.locator('.ggn-step').allTextContents()
+    expect(steps.map(t => t.trim())).toEqual(['01 · Canvas', '02 · Inspector'])
+
+    // The sources block is present, unnumbered, and never empty: the curated
+    // rail is always populated even when the user has no palettes.
+    const start = page.locator('.ggn-starting')
+    await expect(start).toBeVisible()
+    await expect(start.locator('.ggn-step')).toHaveCount(0)
+    await expect(start.locator('.ggn-preset').first()).toBeVisible()
+    await expect(start.getByRole('link', { name: /Gradient Library/ })).toBeVisible()
+  })
 })
 
 test.describe('Semantic Colour system workflow', () => {
@@ -138,6 +168,59 @@ test.describe('Semantic Colour system workflow', () => {
     })
   })
 
+  // The founder asked for the Semantic Colour HERO specifically (2026-09-03).
+  // The four colour tools ran two hero languages: Tint and Gradient open with an
+  // eyebrow, a large title, a description, the tool's own action and a strip of
+  // live facts; Semantic Colours and the Contrast Checker were on the site-wide
+  // `.sec-h`, which has none of that.
+  //
+  // This pins the SHAPE, not the styling: the parts a person can name. It also
+  // pins the numbers in the strip against their real sources, because the copy
+  // it replaced said "40 canonical tokens" as a hard-coded string and the ramp
+  // it describes is 10 stops of 11 possible ones - the kind of number that goes
+  // quietly wrong when a scale changes.
+  test('the Semantic Colours hero carries the same parts as its sibling colour tools', async ({ page }) => {
+    watch(page, 'a designer landing on the semantic tool')
+    await go(page, '/create/semantic-color')
+
+    const hero = page.locator('.stc-hero')
+    await expect(hero).toBeVisible()
+    await expect(hero.locator('.stc-hero-eyebrow')).toHaveText('Create / Colour')
+    await expect(hero.getByRole('heading', { level: 1, name: 'Semantic Colours' })).toBeVisible()
+    // The action belongs to the hero, the way Gradient's Random/Reset do.
+    await expect(hero.getByRole('button', { name: 'Copy all tokens' })).toBeVisible()
+
+    const facts = page.locator('.stc-status span')
+    await expect(facts).toHaveCount(4)
+    await expect(facts.nth(0)).toContainText('Balanced')
+    await expect(facts.nth(1)).toContainText('4')
+    await expect(facts.nth(2)).toContainText('10')
+    await expect(facts.nth(3)).toContainText('40')
+
+    // Choosing another bundle re-reports the first fact - the strip is live, not
+    // a decorative constant.
+    await page.getByRole('radio', { name: /Tailwind/ }).click()
+    await expect(facts.nth(0)).toContainText('Tailwind')
+  })
+
+  // The three onward-navigation blocks this page used to end with offered
+  // overlapping destinations: "Next in the workflow" listed contrast, tint and
+  // palette, all three of which the "More colour tools" footer ~200px below it
+  // already offered alongside gradient. One choice, asked twice.
+  test('the page offers each sibling colour tool exactly once on the way out', async ({ page }) => {
+    watch(page, 'a designer deciding where to go next')
+    await go(page, '/create/semantic-color')
+
+    for (const route of ['/create/contrast', '/create/tint', '/create/palette', '/create/gradient']) {
+      await expect(
+        page.locator(`a[href="${route}"]`),
+        `${route} should be offered exactly once on the way out of this page`,
+      ).toHaveCount(1)
+    }
+    // The sequencing advice the removed block carried is kept.
+    await expect(page.locator('.cs-tools-footer-lead')).toContainText('Validate the states')
+  })
+
   test('the semantic editor and handoff remain contained on a narrow screen', async ({ page }) => {
     watch(page, 'mobile product designer')
     await page.setViewportSize({ width: 390, height: 844 })
@@ -152,4 +235,69 @@ test.describe('Semantic Colour system workflow', () => {
       fullPage: true,
     })
   })
+})
+
+// ── The Contrast Checker has to pass its own test ────────────────────────────
+// Found during the 2026-09-03 five-surface review, and it is the worst place in
+// the product for this defect to live. Measured on the white card in light
+// theme, against the 4.5:1 that this page exists to enforce:
+//
+//     .cc-ratio-verdict.cc-mixed  "Passes some checks"  2.94:1   <- the verdict
+//     .cc-check-mark  (pass glyph)                      2.70:1
+//     .cc-check-mark  (fail glyph)                      3.43:1
+//
+// All three were hard-coded hexes rather than the project's --ok/--warn/--err,
+// so they never responded to the theme either - and the fail red measured
+// 3.97:1 on the dark card, failing there too. BOTH THEMES are asserted here for
+// that reason: fixing only the one you happened to screenshot is how this
+// returns.
+//
+// The check is computed the way the page itself computes it (WCAG relative
+// luminance), against the nearest opaque ancestor background, so it measures
+// what is painted rather than what the stylesheet says.
+test.describe('The Contrast Checker meets the standard it enforces', () => {
+  for (const theme of ['light', 'dark']) {
+    test(`its own verdict and check text passes AA in ${theme} theme`, async ({ page }) => {
+      watch(page, 'an accessibility reviewer auditing the auditor')
+      await go(page, '/create/contrast')
+      await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
+      await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
+
+      const failures = await page.evaluate(() => {
+        const lum = ([r, g, b]) => {
+          const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+          return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+        }
+        const parse = (c) => (c.match(/[\d.]+/g) || []).slice(0, 4).map(Number)
+        const bgOf = (el) => {
+          let n = el
+          while (n && n !== document.documentElement) {
+            const c = parse(getComputedStyle(n).backgroundColor)
+            if (c.length >= 3 && (c[3] === undefined || c[3] > 0.95)) return c.slice(0, 3)
+            n = n.parentElement
+          }
+          return [255, 255, 255]
+        }
+        const out = []
+        for (const el of document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc')) {
+          const cs = getComputedStyle(el)
+          const bg = bgOf(el)
+          const raw = parse(cs.color)
+          const a = raw[3] === undefined ? 1 : raw[3]
+          const fg = [0, 1, 2].map(i => raw[i] * a + bg[i] * (1 - a))
+          const L1 = lum(fg), L2 = lum(bg)
+          const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
+          const px = parseFloat(cs.fontSize)
+          const large = px >= 24 || (px >= 18.66 && Number(cs.fontWeight) >= 700)
+          const need = large ? 3 : 4.5
+          if (ratio < need) {
+            out.push(`${el.className} "${(el.textContent || '').trim().slice(0, 24)}" ${Math.round(ratio * 100) / 100}:1 < ${need}:1 (${cs.color} on rgb(${bg.join(',')}))`)
+          }
+        }
+        return out
+      })
+
+      expect(failures, `the contrast checker's own UI must meet AA in ${theme}:\n${failures.join('\n')}`).toEqual([])
+    })
+  }
 })

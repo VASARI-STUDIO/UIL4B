@@ -51,35 +51,33 @@ const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
 //   /create/emoji             213          225          68       237
 //   /create/icons              68          178          68        92
 //   /create/font-gallery      135          195         135       159
-//   /discover/prompts          80          172         172       196
+//   /discover/prompts          80          172          80        92
 //
 // /create/emoji's 1440 height is 213 because its 12-category tray genuinely
 // wraps to three lines on a desktop too; the ceiling is derived the same way
 // regardless, and the surface still went 225 → 68.
 //
-// /discover/prompts is in the table at its CURRENT height, not an improved one.
-// `.pl-toolbar` is the one surface here that already had an explicit tablet
-// treatment — #298 gave it one — and this work did not change it. It is listed
-// so the band has a pin on every toolbar rather than only the ones that moved.
+// /discover/prompts WAS in this table at its unimproved height, as the one
+// surface still on the one-off `.pl-toolbar`: #298 had given it a bespoke tablet
+// treatment and #318 deliberately left it alone. #323 moved it onto the shared
+// toolbar with the rest, so it now takes the same ceiling and the same search
+// share as its siblings, and its bespoke band rule is gone from global.css.
 //
 // THE FOURTH COLUMN is the search field's largest allowed share of the row, or
 // null where the surface has a recorded reason to let it take the row.
 //
-// `.pl-toolbar` is the null, and it is deliberate: #298 gave that surface its
-// tablet treatment by letting `.pl-search-wrap` off its 360px desktop cap
-// (`max-width:none`) so that `.pl-chips` — six categories, the primary browse
-// control on that page — could have a full row instead of losing a fight for
-// half of one. Measured here it takes 78–80% of the row, which is that decision
-// working, not the defect this column is looking for. Asserting a share on it
-// would be this test overruling a recorded choice on a surface this work did
-// not touch.
+// Every surface now carries a share, because every surface is now on the shared
+// toolbar. `.pl-toolbar` used to be the null here — #298 had uncapped its search
+// field so the category chips could hold a full row, and asserting a share would
+// have overruled a recorded choice on a surface #318 did not touch. #323 retired
+// that toolbar, so the exemption retired with it.
 const TOOLBARS = [
   ['/discover/gradients', '.lbry-toolbar', 92, 0.6],
   ['/discover/palettes', '.lbry-toolbar', 92, 0.6],
   ['/create/emoji', '.lbry-toolbar', 237, 0.6],
   ['/create/icons', '.lbry-toolbar', 92, 0.6],
   ['/create/font-gallery', '.lbry-toolbar', 159, 0.6],
-  ['/discover/prompts', '.pl-toolbar', 196, null],
+  ['/discover/prompts', '.lbry-toolbar', 92, 0.6],
 ]
 
 async function open(browser, width, path, waitFor) {
