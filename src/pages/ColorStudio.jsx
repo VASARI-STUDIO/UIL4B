@@ -90,24 +90,64 @@ const STATE_PRESETS = {
     { name: 'Material', shades: ['#e3f2fd', '#bbdefb', '#90caf9', '#64b5f6', '#42a5f5', '#2196F3', '#1e88e5', '#1565c0', '#0d47a1', '#0a3880'] },
     { name: 'Tailwind', shades: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a'] },
   ],
+  // PENDING — the fifth role, added 2026-09-04. Success, warning, error and info
+  // are all SETTLED conditions: three outcomes and one piece of ambient context.
+  // Nothing in the set covers "underway, outcome not known yet".
+  //
+  // IT IS NOT A COLOUR LOOKING FOR A JOB. This app already needs a fifth signal
+  // and, having no token for it, spells it FIVE different ways — every one of
+  // these was read off the source and confirmed to have a live consumer:
+  //   .alt-card-status   "Generating..."  var(--accent-strong)   the BRAND colour
+  //   .fc-status         "Converting..."  var(--t2)              gave up on colour
+  //   Admin STATUS_*     'in-progress'    var(--accent)/-bg      the BRAND colour
+  //   Admin TYPE_*/DONUT 'help', slice 5  #a855f7 raw hex        no dark value
+  //   .adm-check-icon.pending             rgba(245,158,11,.1)    WARNING amber
+  // Two tools that do the same thing - run a job and report on it - answer the
+  // question differently, and a state colour that IS the brand colour cannot
+  // signal a state, it signals "us". #a855f7 is Tailwind purple-500: the app had
+  // already picked this hue by hand, it just had nowhere to put it.
+  //
+  // CHECKED AND DELIBERATELY NOT COUNTED: the .fp-* roadmap block in global.css
+  // has .fp-dot-progress{background:var(--accent)}, which looks like a sixth
+  // site. The whole .fp-* block is DEAD CSS - zero JSX consumers anywhere in
+  // src/ or tests/. Recorded so it is not re-reported as evidence.
+  //
+  // Violet, because it is the only large gap left in the wheel. The four
+  // reference hues are 0 (error), 38 (warning), 142 (success) and 217 (info):
+  // the arc from 217 back round to 360 is 143 degrees wide and empty, and it is
+  // also the arc info's own Custom slider used to spill into unopposed.
+  pending: [
+    { name: 'Violet', shades: ['#f5f3ff', '#ede9fe', '#ddd6fe', '#c4b5fd', '#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95'] },
+    { name: 'Purple', shades: ['#faf5ff', '#f3e8ff', '#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea', '#7e22ce', '#6b21a8', '#581c87'] },
+    { name: 'Fuchsia', shades: ['#fdf4ff', '#fae8ff', '#f5d0fe', '#f0abfc', '#e879f9', '#d946ef', '#c026d3', '#a21caf', '#86198f', '#701a75'] },
+    { name: 'Apple', shades: ['#faf5ff', '#f3e8ff', '#e9d5ff', '#d8b4fe', '#c084fc', '#AF52DE', '#9546bd', '#7a399b', '#642f7f', '#522768'] },
+    { name: 'Material', shades: ['#ede7f6', '#d1c4e9', '#b39ddb', '#9575cd', '#7e57c2', '#673AB7', '#5e35b1', '#512da8', '#4527a0', '#311b92'] },
+    { name: 'Tailwind', shades: ['#f5f3ff', '#ede9fe', '#ddd6fe', '#c4b5fd', '#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95'] },
+  ],
 }
 const STATE_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
 
 const STATE_BUNDLES = [
-  { name: 'Balanced', desc: 'Familiar, calm defaults for most product UI.', config: { success: 1, warning: 0, error: 0, info: 0 } },
-  { name: 'Material', desc: 'Established Material state foundations.', config: { success: 4, warning: 4, error: 4, info: 4 } },
-  { name: 'Vivid', desc: 'Higher chroma for expressive interfaces.', config: { success: 0, warning: 2, error: 1, info: 2 } },
-  { name: 'Cool', desc: 'Teal, yellow, pink and sky emphasis.', config: { success: 2, warning: 1, error: 2, info: 1 } },
-  { name: 'Warm', desc: 'Classic green, amber and red signals.', config: { success: 1, warning: 0, error: 0, info: 2 } },
-  { name: 'Apple', desc: 'System colours aligned with Apple platforms.', config: { success: 3, warning: 3, error: 3, info: 3 } },
-  { name: 'Tailwind', desc: 'Direct mapping to Tailwind colour ramps.', config: { success: 5, warning: 5, error: 5, info: 5 } },
+  { name: 'Balanced', desc: 'Familiar, calm defaults for most product UI.', config: { success: 1, warning: 0, error: 0, info: 0, pending: 0 } },
+  { name: 'Material', desc: 'Established Material state foundations.', config: { success: 4, warning: 4, error: 4, info: 4, pending: 4 } },
+  { name: 'Vivid', desc: 'Higher chroma for expressive interfaces.', config: { success: 0, warning: 2, error: 1, info: 2, pending: 2 } },
+  { name: 'Cool', desc: 'Teal, yellow, pink, sky and violet emphasis.', config: { success: 2, warning: 1, error: 2, info: 1, pending: 0 } },
+  { name: 'Warm', desc: 'Classic green, amber and red signals.', config: { success: 1, warning: 0, error: 0, info: 2, pending: 2 } },
+  { name: 'Apple', desc: 'System colours aligned with Apple platforms.', config: { success: 3, warning: 3, error: 3, info: 3, pending: 3 } },
+  { name: 'Tailwind', desc: 'Direct mapping to Tailwind colour ramps.', config: { success: 5, warning: 5, error: 5, info: 5, pending: 5 } },
 ]
 
+// The cue is the NON-COLOUR half of each role — WCAG 1.4.1, and the reason the
+// preview can be read by someone who cannot separate the hues. '…' is the one
+// this product already uses: every long job in the app says "Generating…",
+// "Converting…", "Loading engine…". It is also inside the self-hosted subset
+// (U+2026 falls in the U+2000-206F range both webfonts ship), which ✓ is not.
 const STATE_META = {
   success: { label: 'Success', cue: '✓', intent: 'Completed, connected or ready' },
   warning: { label: 'Warning', cue: '!', intent: 'Needs attention before continuing' },
   error: { label: 'Error', cue: '×', intent: 'Failed, destructive or blocked' },
   info: { label: 'Information', cue: 'i', intent: 'Helpful context or neutral update' },
+  pending: { label: 'Pending', cue: '…', intent: 'Underway — no outcome yet' },
 }
 
 // Reference "500" hex per role, taken from the Balanced bundle — the canonical
@@ -1863,7 +1903,14 @@ export default function ColorStudio({ onCopy, toast }) {
     }
     return merged
   })
-  const [stateColors, setStateColors] = useState(() => design?.states || { success: 1, warning: 0, error: 0, info: 0 })
+  // A project saved before `pending` existed carries four keys. stateColors is
+  // read by JSON.stringify equality (activeStateBundle) and by Object.entries
+  // (the ramps, the CSS, the export, the localStorage cache), so a missing key
+  // would drop the role from all five AND pin the tray to "Custom mix" forever.
+  // Seed from the default bundle and let the saved values win.
+  const [stateColors, setStateColors] = useState(
+    () => ({ ...STATE_BUNDLES[0].config, ...(design?.states || {}) }),
+  )
   const [activeColorIdx, setActiveColorIdx] = useState(() => design?.palette?.activeIdx || 0)
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
   const [dragIdx, setDragIdx] = useState(null)
@@ -2942,6 +2989,10 @@ ${stateVars}
     const shades = resolveStateShades(state, sel)
     return shades.map((c, i) => `  --color-${state}-${STATE_LABELS[i]}: ${c};`).join('\n')
   }).join('\n')
+  // One source for "how many roles / how many tokens", so the hero strip, the
+  // section header and the handoff button cannot drift apart again.
+  const stateRoleIds = Object.keys(STATE_META)
+  const stateTokenCount = stateRoleIds.length * STATE_LABELS.length
   const activeStateBundle = STATE_BUNDLES.find(
     (bundle) => JSON.stringify(stateColors) === JSON.stringify(bundle.config),
   )
@@ -3091,9 +3142,9 @@ ${stateVars}
       {soloSection === 'states' && (
         <div className="stc-status" aria-live="polite">
           <span><strong>{activeStateBundle?.name || 'Custom mix'}</strong> bundle</span>
-          <span><strong>{Object.keys(STATE_META).length}</strong> state roles</span>
+          <span><strong>{stateRoleIds.length}</strong> state roles</span>
           <span><strong>{STATE_LABELS.length}</strong> stops per ramp</span>
-          <span><strong>{Object.keys(STATE_META).length * STATE_LABELS.length}</strong> canonical tokens</span>
+          <span><strong>{stateTokenCount}</strong> canonical tokens</span>
         </div>
       )}
 
@@ -3447,7 +3498,7 @@ ${stateVars}
             <div className="stc-toolbar" onClick={e => e.stopPropagation()}>
               <div className="stc-toolbar-copy">
                 <span className="stc-kicker">Semantic bundle</span>
-                <span>{activeStateBundle?.name || 'Custom mix'} · {Object.keys(STATE_META).length * STATE_LABELS.length} canonical tokens</span>
+                <span>{activeStateBundle?.name || 'Custom mix'} · {stateTokenCount} canonical tokens</span>
               </div>
               <button className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
             </div>
@@ -3592,8 +3643,11 @@ ${stateVars}
           <div className="stc-handoff-copy">
             <span className="stc-kicker">Developer handoff</span>
             <h2 id="stc-handoff-title">Canonical, predictable token names</h2>
-            <p>Each role exports from <code>--color-success-50</code> through <code>--color-info-900</code>, ready for CSS or a token pipeline.</p>
-            <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy 40 CSS variables</button>
+            {/* Derived, not typed. The status strip above was already pinned to
+                its real source; this block still said "40" and named info as the
+                last role, both of which a fifth role makes false. */}
+            <p>Each role exports from <code>--color-{stateRoleIds[0]}-{STATE_LABELS[0]}</code> through <code>--color-{stateRoleIds[stateRoleIds.length - 1]}-{STATE_LABELS[STATE_LABELS.length - 1]}</code>, ready for CSS or a token pipeline.</p>
+            <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy {stateTokenCount} CSS variables</button>
           </div>
           <pre className="stc-code" tabIndex="0"><code>{`:root {\n${stateCSS}\n}`}</code></pre>
         </section>

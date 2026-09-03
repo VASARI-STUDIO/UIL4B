@@ -75,7 +75,7 @@
    warm-neutral steps between ink and mute, not new roles. Borders are opaque
    now (the spec ships a line COLOUR, not an ink alpha), which also stops them
    compounding unpredictably when surfaces stack. */
-[data-theme="dark"]{--bg-0:#101012;--bg-1:#151619;--bg-2:#191A1D;--bg-3:#212327;--bg-4:#2A2B2F;--border:#2A2B2F;--bh:#3C3D42;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#151619;--hvr:rgba(242,241,236,.05);--card:#191A1D;--card-grad:#191A1D;--inp:#191A1D;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(8,8,10,.62);
+[data-theme="dark"]{--bg-0:#101012;--bg-1:#151619;--bg-2:#191A1D;--bg-3:#212327;--bg-4:#2A2B2F;--border:#2A2B2F;--bh:#3C3D42;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#151619;--hvr:rgba(242,241,236,.05);--card:#191A1D;--card-grad:#191A1D;--inp:#191A1D;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--pending:#a78bfa;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(8,8,10,.62);
   /* ON-ACCENT FLIPS IN DARK. The dark accent is a LIGHT blue, so white on it
      measures 2.41:1 — a bad failure, and it applies to every accent-filled
      control, not just buttons. Ink on the same fill measures 7.89:1. This is
@@ -89,7 +89,7 @@
 /* ── LIGHT — V2 reseed. NOTE: the authoritative light values are the second
    [data-theme="light"] block further down (same specificity, later wins). Both
    are kept in agreement so reading either one tells the truth. ── */
-[data-theme="light"]{--bg-0:#EFEEE9;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--accent:#0F6FFF;--accent-strong:#0B5ED7;--accent-soft:#4D90FF;--accent-bg:rgba(15,111,255,.08);--accent-glow:rgba(15,111,255,.14);--icon-inv:none;--brand:#0F6FFF;--brand-soft:#4D90FF;--brand-bg:rgba(15,111,255,.08);--brand-glow:rgba(15,111,255,.12);--info:#0F6FFF;--info-bg:rgba(15,111,255,.08);--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
+[data-theme="light"]{--bg-0:#EFEEE9;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#6C6C66;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--pending:#7c3aed;--accent:#0F6FFF;--accent-strong:#0B5ED7;--accent-soft:#4D90FF;--accent-bg:rgba(15,111,255,.08);--accent-glow:rgba(15,111,255,.14);--icon-inv:none;--brand:#0F6FFF;--brand-soft:#4D90FF;--brand-bg:rgba(15,111,255,.08);--brand-glow:rgba(15,111,255,.12);--info:#0F6FFF;--info-bg:rgba(15,111,255,.08);--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
 html{scroll-behavior:smooth}
 /* Reduced motion = near-instant, not merely fast. Duration alone is not enough:
    an infinite loop at 0.01ms spins thousands of times a second (CPU burn, and
@@ -705,6 +705,21 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .stc-toolbar-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
 .stc-toolbar-copy>span:last-child{font-size:11px;color:var(--t2)}
 .stc-bundles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 var(--s-6)}
+/* THE TRAY LISTS EVENLY (founder, 2026-08-08: "so the premade packs list
+   evenly"). Measured before it was touched: seven cards is a PRIME number, so
+   it was ragged at every width the suite checks - rows of 4,3 at 1280 and
+   2,2,2,1 at 390/640/834. No column count fixes that; only the cell count does.
+   The extra cell goes to the FIRST card rather than to an invented eighth pack,
+   because the first card is Balanced - the default, selected on load, and the
+   one whose description ("Familiar, calm defaults for most product UI") is the
+   start-here advice. 7 cards + a 2-cell lead = 8 cells, which fills a 4-column
+   grid in exactly 2 rows and a 2-column grid in exactly 4. The emphasis is
+   TRUE - it marks the recommended option - which a stretched last card or a
+   filler eighth pack would not be. Weighting one card deliberately rather than
+   forcing a uniform row is the same call #340 took from Tines on the Discover
+   grid. IF AN 8TH PACK IS EVER ADDED the arithmetic changes: 9 cells leaves one
+   over at 4 columns, so drop this rule rather than adding a 9th. */
+.stc-bundle:first-child{grid-column:span 2}
 .stc-bundle{display:flex;min-width:0;min-height:128px;flex-direction:column;gap:10px;padding:14px;text-align:left;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t),box-shadow var(--t)}
 .stc-bundle:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
 .stc-bundle--on{color:var(--t0);border-color:color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
@@ -2584,7 +2599,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .alt-card-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px}
 .alt-card-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1);font-weight:500}
 .alt-card-size{color:var(--t2);font-family:var(--mono);flex-shrink:0}
-.alt-card-status{font-size:12px;color:var(--accent-strong);font-weight:500}
+.alt-card-status{font-size:12px;color:var(--pending);font-weight:500}
 .alt-card-error{font-size:12px;color:var(--err);background:rgba(239,68,68,.08);padding:8px 10px;border-radius:var(--radius-s);border:1px solid rgba(239,68,68,.2)}
 /* A 'detailed' result runs to 300 characters, which never fit the old fixed
    3-row box — a complete answer arrived looking clipped. AutoGrowTextarea in
@@ -3574,7 +3589,7 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .adm-check-row:last-child{border-bottom:none}
 .adm-check-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 .adm-check-icon.done{background:rgba(16,185,129,.1)}
-.adm-check-icon.pending{background:rgba(245,158,11,.1)}
+.adm-check-icon.pending{background:color-mix(in srgb,var(--pending) 12%,transparent)}
 .adm-check-label{font-size:12px;font-weight:600;color:var(--t0)}
 .adm-check-note{font-size:11px;color:var(--t2);margin-top:2px;line-height:1.5}
 
