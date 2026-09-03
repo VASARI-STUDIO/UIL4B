@@ -28,11 +28,36 @@ const stripComments = (src) => src
 
 test('every onboarding exit lands somewhere that acknowledges the account', () => {
   const src = stripComments(read('src/pages/Onboarding.jsx'))
-  // All three exits — finish-free, the checkout fallback, and skip — go through
-  // one constant, so they cannot drift apart again.
   assert.match(src, /const FIRST_RUN_DESTINATION = '\/projects'/)
-  const exits = src.match(/navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)/g) || []
-  assert.ok(exits.length >= 2, `expected the onboarding exits to share the constant, found ${exits.length}`)
+
+  // There used to be three exits and all three went through the constant:
+  // finish-free, the checkout fallback, and skip. Two of those were the pricing
+  // step, which is gone, and the survey skip, which went with the survey.
+  //
+  // The exits now are: DECLINE, through the constant; and the three first-win
+  // cards, which leave to the tool the user picked. So a count of the constant
+  // no longer describes the flow, and asserting one would just be pinning an
+  // arithmetic fact. What B4 actually cared about is asserted instead, and more
+  // strictly than before: EVERY navigate() in this file must be accounted for —
+  // the constant, a resume target the user themselves chose, or a first-win
+  // route. Anything else is a new exit that has not been thought about.
+  // One level of nesting, so `navigate(takeResumeTarget() || X)` is captured
+  // whole rather than truncated at the inner bracket.
+  const navigations = src.match(/navigate\((?:[^()]|\([^()]*\))*\)/g) || []
+  assert.ok(navigations.length > 0, 'onboarding must still leave somewhere')
+  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(win\.route\)$/
+  for (const nav of navigations) {
+    assert.match(nav, allowed,
+      `${nav} is an onboarding exit that does not go to the first-run destination or a chosen first win`)
+  }
+
+  // The card routes are the other exit, so they must be real tools. firstWin.js
+  // owns that guarantee and tests/unit/first-win.test.js checks it against
+  // liveToolRoutes(); this asserts the page still takes them from there rather
+  // than spelling a path of its own.
+  assert.match(src, /navigate\(win\.route\)/)
+  assert.match(src, /FIRST_WINS\.map/)
+
   assert.ok(!/navigate\('\/home'\)/.test(src),
     'an onboarding exit still sends a brand-new account to the anonymous sales page')
 })
