@@ -56,7 +56,7 @@ const MENU_TOOL_COPY = {
   // The Discover surface lists the same page under its own group id, and a menu
   // row is one line — without this it would fall back to the group's full
   // sentence and run three lines deep beside its one-line neighbours.
-  'icon-library': 'Search, customise and copy SVG icons.',
+  'icon-library': 'Search and copy 200k+ SVG icons.',
   emoji: 'Find and copy emoji by category.',
   'file-converter': 'Convert and compress files locally.',
   ratio: 'Calculate dimensions and aspect ratios.',
@@ -64,6 +64,19 @@ const MENU_TOOL_COPY = {
   'landing-prompts': 'Plan a page around a clear outcome.',
   'alt-text': 'Write useful image descriptions.',
   prompts: 'Reuse prompts proven by the community.',
+  // Discover rows. Without these the row falls back to the group's `desc` in
+  // toolTree.js, which is page copy — a full sentence written for the card on
+  // /discover, not for a menu row. Measured in the browser at 1440: Gradient
+  // Library and Prompt Library each ran THREE lines, making an 84px row next to
+  // a 54px neighbour and pushing the panel past the bottom of a 768px screen.
+  // A menu row is one line (the Higgsfield and Hers mega-menus on Mobbin are
+  // both strictly one), so these are the one-line forms of the same promise.
+  'palette-library': 'Copy a curated colour system.',
+  'gradient-gallery': 'Production-ready CSS gradients.',
+  'community-prompts': 'Reuse prompts proven by the community.',
+  inspiration: 'Community UI systems, curated.',
+  curated: 'External tools that earn a tab.',
+  collections: 'Save and organise what you find.',
 }
 
 function menuDescription(section, tool) {
@@ -1101,10 +1114,20 @@ export default function PillNav() {
                               >
                                 <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
                                 <span className="pnav-tool-copy">
-                                  <span className="pnav-tool-label">{t.label}</span>
+                                  {/* Label and badge share a row so "Soon" reads as
+                                      part of the tool's name. It used to be a
+                                      sibling of this block with margin-left:auto,
+                                      which parked it against the far edge of the
+                                      column — up to 80px of gap between the word it
+                                      qualifies and the badge. Hers, Fiverr and
+                                      Higgsfield all set the badge immediately after
+                                      the label. */}
+                                  <span className="pnav-tool-line">
+                                    <span className="pnav-tool-label">{t.label}</span>
+                                    {t.soon && <span className="soon-badge">Soon</span>}
+                                  </span>
                                   {menuDescription(activeSection, t) && <span className="pnav-tool-desc">{menuDescription(activeSection, t)}</span>}
                                 </span>
-                                {t.soon && <span className="soon-badge">Soon</span>}
                               </Link>
                             </li>
                           ))}
@@ -1160,10 +1183,12 @@ export default function PillNav() {
                               <NavIcon id={t.icon} />
                             </span>
                             <span className="pnav-acc-copy">
-                              <span className="pnav-acc-label">{t.label}</span>
+                              <span className="pnav-tool-line">
+                                <span className="pnav-acc-label">{t.label}</span>
+                                {t.soon && <span className="soon-badge">Soon</span>}
+                              </span>
                               {menuDescription(section, t) && <span className="pnav-acc-desc">{menuDescription(section, t)}</span>}
                             </span>
-                            {t.soon && <span className="soon-badge">Soon</span>}
                           </Link>
                         ))}
                       </div>
