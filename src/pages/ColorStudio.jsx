@@ -10,6 +10,7 @@ import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import UIKitGuide from '../components/UIKitGuide'
+import ColorPickerPop from '../components/ColorPickerPop'
 import SnapSlider from '../components/SnapSlider'
 import ShuffleIcon from '../components/ShuffleIcon'
 import { extractColorPointsFromImage } from '../utils/extractColors'
@@ -395,7 +396,6 @@ function SwatchPopup({ idx, color, role, anchorRect, isSheet, siblings, isLocked
   const underlineRef = useRef(null)
   const heroRef = useRef(null)
   const hexInputRef = useRef(null)
-  const colorInputRef = useRef(null)
   const [tab, setTab] = useState(initialTab || 'values')
   const [copied, setCopied] = useState(null)
   const [hexDraft, setHexDraft] = useState(color.toUpperCase())
@@ -707,17 +707,23 @@ function SwatchPopup({ idx, color, role, anchorRect, isSheet, siblings, isLocked
             <>
               <div className="cs-sw-edit-label">Exact colour</div>
               <div className="cs-sw-edit-field">
-                <label className="cs-sw-edit-chip" ref={el => el && el.style.setProperty('--cs-edit-chip', color)}>
-                  <input ref={colorInputRef} type="color" value={color}
-                    onChange={e => onReplace(e.target.value, 'edit')} aria-label="Pick colour" />
-                </label>
+                {/* The shared picker. The chip is now the trigger itself — a
+                    real button with aria-haspopup — so the `--cs-edit-chip`
+                    custom property, the invisible overlaid native input and the
+                    separate "Pick" button that existed only to click it are all
+                    gone with it. */}
+                <ColorPickerPop
+                  value={color}
+                  onChange={hex => onReplace(hex, 'edit')}
+                  ariaLabel="Pick colour"
+                  triggerClassName="cs-sw-edit-chip"
+                />
                 <input ref={hexInputRef} type="text" inputMode="text"
                   className={`cs-sw-edit-hex${hexErr ? ' invalid' : ''}`}
                   value={hexDraft} onChange={e => onHexChange(e.target.value)}
                   aria-label="Hex value" aria-invalid={hexErr}
                   aria-describedby={hexErr ? `cs-sw-edit-err-${idx}` : undefined}
                   spellCheck={false} autoComplete="off" />
-                <button className="cs-sw-edit-pick" onClick={() => colorInputRef.current?.click()}>Pick</button>
               </div>
               {hexErr && (
                 <div className="cs-sw-edit-err" id={`cs-sw-edit-err-${idx}`}>

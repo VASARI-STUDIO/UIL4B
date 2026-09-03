@@ -4217,13 +4217,13 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* D. Edit tab (manual per-swatch set) */
 .cs-sw-edit-label{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--t3);text-transform:uppercase;margin-bottom:8px}
 .cs-sw-edit-field{display:flex;gap:8px;align-items:center;margin-bottom:var(--s-3)}
-.cs-sw-edit-chip{position:relative;width:40px;height:40px;border-radius:var(--radius-s);border:1px solid var(--border);flex:0 0 auto;overflow:hidden;cursor:pointer;background:var(--cs-edit-chip,#000)}
-.cs-sw-edit-chip input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
+/* Sizing only now. The chip used to BE this element (a --cs-edit-chip ground
+   under an invisible native input); it is now the shared trigger's own chip,
+   so a background here would paint over it. */
+.cs-sw-edit-chip{width:40px;height:40px;flex:0 0 auto}
 .cs-sw-edit-hex{flex:1 1 auto;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.04em;padding:0 12px;height:40px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);color:var(--t0);min-width:0}
 .cs-sw-edit-hex:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
 .cs-sw-edit-hex.invalid{border-color:var(--err)}
-.cs-sw-edit-pick{height:40px;padding:0 14px;font-size:12px;font-weight:700;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);color:var(--t1);cursor:pointer;flex:0 0 auto}
-.cs-sw-edit-pick:hover{border-color:var(--bh);background:var(--hvr)}
 .cs-sw-edit-err{font-size:11px;color:var(--err);display:flex;align-items:center;gap:5px;margin-bottom:var(--s-3)}
 .cs-sw-edit-note{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:var(--s-3)}
 .cs-sw-edit-note button{font:inherit;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline}
