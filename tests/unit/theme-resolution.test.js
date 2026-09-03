@@ -36,7 +36,15 @@ const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
 // ── A DOM small enough to run both writers ──────────────────────────────────
 
-function makeDom({ osDark = false, stored = undefined } = {}) {
+function makeDom({
+  osDark = false,
+  stored = undefined,
+  // What --bg-0 resolves to per theme. Only the MECHANISM is under test here —
+  // that a media-less theme-color tag is created, put first, and kept in step
+  // with the resolved theme. That the values match the real grounds is asserted
+  // against index.html in tests/unit/brand-icons.test.js.
+  grounds = { light: '#EFEEE9', dark: '#101012' },
+} = {}) {
   const attrs = new Map()
   const store = new Map()
   if (stored !== undefined) store.set('vs-t', String(stored))
@@ -66,10 +74,64 @@ function makeDom({ osDark = false, stored = undefined } = {}) {
     getAttribute: (k) => (attrs.has(k) ? attrs.get(k) : null),
   }
 
+  // A <head> just deep enough for the theme-color tag. ORDER MATTERS and is
+  // recorded: the spec takes the first theme-color whose media matches, and a
+  // tag with no media always matches, so a tag that is appended rather than
+  // prepended sits behind index.html's light-scoped tag and never wins.
+  const makeEl = (init = {}) => {
+    const own = new Map(Object.entries(init).map(([k, v]) => [k, String(v)]))
+    return {
+      setAttribute: (k, v) => own.set(k, String(v)),
+      getAttribute: (k) => (own.has(k) ? own.get(k) : null),
+    }
+  }
+  // SEEDED with the two media-scoped tags index.html actually ships, because
+  // those are what the runtime tag has to outrank. Starting from an empty head
+  // would make prepend and append indistinguishable — the tag would be first
+  // either way — and the position assertion would pass while the real page
+  // stayed broken.
+  const metas = [
+    makeEl({ name: 'theme-color', content: grounds.light, media: '(prefers-color-scheme: light)' }),
+    makeEl({ name: 'theme-color', content: grounds.dark, media: '(prefers-color-scheme: dark)' }),
+  ]
+  const isBareThemeColor = (el) => el.getAttribute('name') === 'theme-color'
+    && el.getAttribute('media') === null
+
+  dom.metaOrder = () => metas.map((m) => ({
+    name: m.getAttribute('name'),
+    media: m.getAttribute('media'),
+    content: m.getAttribute('content'),
+  }))
+  dom.themeColor = () => {
+    const el = metas.find(isBareThemeColor)
+    return el ? el.getAttribute('content') : null
+  }
+  dom.themeColorIsFirst = () => metas.length > 0 && isBareThemeColor(metas[0])
+  dom.themeColorCount = () => metas.filter(isBareThemeColor).length
+
   dom.sandbox = {
     JSON,
     console,
-    document: { documentElement },
+    document: {
+      documentElement,
+      head: {
+        prepend: (el) => metas.unshift(el),
+        append: (el) => metas.push(el),
+      },
+      createElement: () => makeEl(),
+      querySelector: (sel) => {
+        if (sel === 'meta[name="theme-color"]:not([media])') {
+          return metas.find(isBareThemeColor) || null
+        }
+        return null
+      },
+    },
+    // --bg-0 as the resolved theme would paint it.
+    getComputedStyle: () => ({
+      getPropertyValue: (prop) => (prop === '--bg-0'
+        ? (grounds[attrs.get('data-theme')] || '')
+        : ''),
+    }),
     localStorage: {
       getItem: (k) => (store.has(k) ? store.get(k) : null),
       setItem: (k, v) => store.set(k, String(v)),
@@ -395,6 +457,58 @@ test('ThemeContext · unreadable storage still resolves off the OS', () => {
 })
 
 // ── The two writers must agree, for every input ─────────────────────────────
+
+test('ThemeContext · the browser chrome follows an explicit choice, not the OS', () => {
+  // ── What this is for ──────────────────────────────────────────────────────
+  //
+  // index.html carries two theme-color tags scoped with prefers-color-scheme,
+  // and a media query CANNOT READ localStorage — so it cannot see the third
+  // state this file exists to resolve. On a light phone, a visitor who
+  // explicitly chose dark got a light status bar sitting over a dark page.
+  //
+  // The fix is a media-less tag maintained here, and its POSITION is the whole
+  // mechanism: a browser takes the first theme-color whose media matches, and a
+  // tag with no media always matches, so this one has to go FIRST or the
+  // light-scoped tag in index.html outranks it and nothing changes.
+  const dom = makeDom({ osDark: false, stored: 'dark' })
+  const provider = mountProvider(dom)
+
+  assert.equal(provider.value.theme, 'dark', 'the explicit choice must win over the OS')
+  assert.equal(dom.themeColor(), '#101012',
+    'the chrome tint still shows the light ground while the page is painted dark')
+  assert.ok(dom.themeColorIsFirst(),
+    'the media-less theme-color is not first in head, so the media-scoped tags outrank it')
+})
+
+test('ThemeContext · the chrome tint follows the theme and never accumulates tags', () => {
+  // One tag, reused. An effect that created a fresh meta on every theme change
+  // would leave a stack of them, and the FIRST would be the stalest — so the
+  // tint would freeze on whatever the page happened to open with.
+  const dom = makeDom({ osDark: false })
+  const provider = mountProvider(dom)
+  assert.equal(dom.themeColor(), '#EFEEE9')
+
+  provider.value.setTheme('dark')
+  assert.equal(dom.themeColor(), '#101012', 'the tint did not follow the theme')
+  provider.value.setTheme('light')
+  assert.equal(dom.themeColor(), '#EFEEE9', 'the tint did not follow the theme back')
+
+  assert.equal(dom.themeColorCount(), 1,
+    `${dom.themeColorCount()} media-less theme-color tags in head; only the first is read, `
+    + 'so the others are dead weight and the first may be stale')
+})
+
+test('ThemeContext · a page with no computed styles still gets its theme', () => {
+  // The attribute is the part that must never be skipped. getComputedStyle is
+  // absent outside a browser, and reaching for the chrome tint must not throw
+  // on the way past and leave the page unthemed — neither token set is declared
+  // on a bare :root, so no attribute means no colours at all.
+  const dom = makeDom({ osDark: true })
+  delete dom.sandbox.getComputedStyle
+  assert.equal(mountProvider(dom).value.theme, 'dark')
+  assert.equal(dom.theme, 'dark', 'the theme attribute was lost when the tint could not be read')
+  assert.equal(dom.themeColor(), null, 'a tint was invented with no styles to read it from')
+})
 
 test('the boot script and ThemeContext resolve identically — no flash', () => {
   // Any input where these two disagree is a visible theme flip on hydration.

@@ -66,6 +66,41 @@ export function ThemeProvider({ children }) {
     // The attribute goes on FIRST and unguarded — a visitor whose storage throws
     // still gets a correctly themed page, they just start from system each load.
     document.documentElement.setAttribute('data-theme', theme)
+
+    // Then the browser chrome tint, which index.html cannot finish on its own.
+    //
+    // The two theme-color tags there are scoped with prefers-color-scheme, and
+    // a media query cannot read localStorage — so it cannot see the third state
+    // this file exists to resolve. On a light phone, a visitor who explicitly
+    // chose dark got a light status bar sitting over a dark page, and the
+    // reverse on a dark phone. That is the same class of bug as the pre-paint
+    // flip the boot script prevents, one layer out.
+    //
+    // The colour is READ BACK from --bg-0 rather than restated, so a token move
+    // takes it along and there is no fourth copy of the two grounds to keep in
+    // step. Before the stylesheet arrives it resolves to '' — in that window the
+    // media-scoped tags are still correct for everyone except an explicit
+    // chooser, so returning is the right thing to do.
+    // Guarded the same way matchMedia and every storage read in this file are.
+    // getComputedStyle is absent outside a browser, and the theme attribute
+    // above is the part that must never be skipped — so a missing chrome tint
+    // degrades to the media-scoped tags rather than throwing on the way past.
+    const styles = typeof getComputedStyle === 'function'
+      ? getComputedStyle(document.documentElement)
+      : null
+    const ground = styles?.getPropertyValue('--bg-0')?.trim()
+    if (!ground) return
+    let meta = document.querySelector('meta[name="theme-color"]:not([media])')
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'theme-color')
+      // FIRST in head, and that placement is the whole mechanism: the spec says
+      // a browser takes the first theme-color element whose media matches, and
+      // a tag carrying no media always matches. Appending it would leave the
+      // light-scoped tag ahead of it and change nothing.
+      document.head.prepend(meta)
+    }
+    meta.setAttribute('content', ground)
   }, [theme])
 
   useEffect(() => {
