@@ -236,3 +236,68 @@ test.describe('Semantic Colour system workflow', () => {
     })
   })
 })
+
+// ── The Contrast Checker has to pass its own test ────────────────────────────
+// Found during the 2026-09-03 five-surface review, and it is the worst place in
+// the product for this defect to live. Measured on the white card in light
+// theme, against the 4.5:1 that this page exists to enforce:
+//
+//     .cc-ratio-verdict.cc-mixed  "Passes some checks"  2.94:1   <- the verdict
+//     .cc-check-mark  (pass glyph)                      2.70:1
+//     .cc-check-mark  (fail glyph)                      3.43:1
+//
+// All three were hard-coded hexes rather than the project's --ok/--warn/--err,
+// so they never responded to the theme either - and the fail red measured
+// 3.97:1 on the dark card, failing there too. BOTH THEMES are asserted here for
+// that reason: fixing only the one you happened to screenshot is how this
+// returns.
+//
+// The check is computed the way the page itself computes it (WCAG relative
+// luminance), against the nearest opaque ancestor background, so it measures
+// what is painted rather than what the stylesheet says.
+test.describe('The Contrast Checker meets the standard it enforces', () => {
+  for (const theme of ['light', 'dark']) {
+    test(`its own verdict and check text passes AA in ${theme} theme`, async ({ page }) => {
+      watch(page, 'an accessibility reviewer auditing the auditor')
+      await go(page, '/create/contrast')
+      await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
+      await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
+
+      const failures = await page.evaluate(() => {
+        const lum = ([r, g, b]) => {
+          const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+          return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+        }
+        const parse = (c) => (c.match(/[\d.]+/g) || []).slice(0, 4).map(Number)
+        const bgOf = (el) => {
+          let n = el
+          while (n && n !== document.documentElement) {
+            const c = parse(getComputedStyle(n).backgroundColor)
+            if (c.length >= 3 && (c[3] === undefined || c[3] > 0.95)) return c.slice(0, 3)
+            n = n.parentElement
+          }
+          return [255, 255, 255]
+        }
+        const out = []
+        for (const el of document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc')) {
+          const cs = getComputedStyle(el)
+          const bg = bgOf(el)
+          const raw = parse(cs.color)
+          const a = raw[3] === undefined ? 1 : raw[3]
+          const fg = [0, 1, 2].map(i => raw[i] * a + bg[i] * (1 - a))
+          const L1 = lum(fg), L2 = lum(bg)
+          const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
+          const px = parseFloat(cs.fontSize)
+          const large = px >= 24 || (px >= 18.66 && Number(cs.fontWeight) >= 700)
+          const need = large ? 3 : 4.5
+          if (ratio < need) {
+            out.push(`${el.className} "${(el.textContent || '').trim().slice(0, 24)}" ${Math.round(ratio * 100) / 100}:1 < ${need}:1 (${cs.color} on rgb(${bg.join(',')}))`)
+          }
+        }
+        return out
+      })
+
+      expect(failures, `the contrast checker's own UI must meet AA in ${theme}:\n${failures.join('\n')}`).toEqual([])
+    })
+  }
+})

@@ -921,7 +921,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
 .pl-tab{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;background:none;color:var(--t2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
 .pl-tab:hover{color:var(--t0)}
-.pl-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.pl-tab.active{color:var(--accent-strong);border-bottom-color:var(--accent);font-weight:600}
 .pl-tab-count{font-size:10px;font-weight:700;background:var(--bg-3);color:var(--t2);padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
 .pl-tab.active .pl-tab-count{background:var(--accent-bg);color:var(--accent-strong)}
 .pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
@@ -1040,7 +1040,10 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 /* Tags */
 .pl-card-tags{display:flex;gap:5px;flex-wrap:wrap}
 .pl-tag{padding:3px 10px;border-radius:var(--radius);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);backdrop-filter:blur(4px);transition:background var(--dur-2) var(--ease-standard)}
-.pl-card.no-img .pl-tag{background:var(--accent-bg);color:var(--accent)}
+/* --accent is #0F6FFF in light theme: 4.43:1 on the white card, 3.82:1 on the
+   page ground - under AA at these sizes, and this page renders ~80 tags at once.
+   --accent-strong is the same blue at 5.84 / 5.03. See [accent-small-text-contrast]. */
+.pl-card.no-img .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
 
 /* Card date inline */
 .pl-card-date-inline{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:8px}
@@ -1053,7 +1056,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-modal-close:hover{background:var(--bg-3);color:var(--t0)}
 .pl-modal-header{padding:28px 28px 0;flex-shrink:0}
 .pl-modal-header h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;padding-right:32px}
-.pl-modal-header .pl-tag{background:var(--accent-bg);color:var(--accent)}
+.pl-modal-header .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
 .pl-modal-author{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--t2)}
 .pl-modal-body{flex:1;overflow-y:auto;padding:20px 28px}
 .pl-modal-prompt{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;position:relative;transition:background var(--dur-2) var(--ease-standard)}
@@ -6947,7 +6950,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-audience-tab:focus-visible{z-index:1;outline:2px solid var(--brand);outline-offset:-2px}
 .tt-audience-tab strong{margin:5px 0 3px;font-size:16px;font-weight:650;letter-spacing:-.01em}
 .tt-audience-tab>span:last-child{font-size:12px;line-height:1.45;color:var(--t2)}
-.tt-audience-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand)}
+.tt-audience-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
 .tt-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--s-5);border-block:1px solid var(--border)}
 .tt-status span{display:flex;align-items:baseline;gap:6px;padding:12px 16px;font-size:11px;color:var(--t2)}
 .tt-status span+span{border-left:1px solid var(--border)}
@@ -6966,7 +6969,12 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-config{--tt-sticky-top:calc(var(--nav-clear) + var(--s-5));position:sticky;top:var(--tt-sticky-top);max-height:calc(100vh - var(--tt-sticky-top) - var(--s-4));max-height:calc(100dvh - var(--tt-sticky-top) - var(--s-4));overflow-y:auto;overscroll-behavior:contain}
 .tt-section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:var(--s-5);padding-bottom:var(--s-4);border-bottom:1px solid var(--border)}
 .tt-section-head--output{justify-content:flex-start}
-.tt-section-num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--brand);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:var(--radius-xs)}
+/* --brand is #0F6FFF in light theme, which measures 4.43:1 on the white card
+   and 3.82:1 on the page ground - under AA for text this size. --accent-strong
+   (#0B5ED7) is the same blue at 5.84 / 5.03 and already exists for exactly this,
+   which is the fix #306 applied to .lib-keyhint. Scoped to this tool's own small
+   text; the product-wide instances are recorded as [accent-small-text-contrast]. */
+.tt-section-num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--accent-strong);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:var(--radius-xs)}
 .tt-section-head h2,.tt-delivery-head h2{margin:0;font-size:16px;font-weight:650;letter-spacing:-.015em;color:var(--t0)}
 .tt-section-head p,.tt-delivery-head p{margin:3px 0 0;font-size:11.5px;line-height:1.45;color:var(--t2)}
 .tt-picker{width:46px;height:46px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);cursor:pointer;flex-shrink:0}
@@ -7010,7 +7018,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-ramp-select strong{font-size:12px;font-style:normal;font-weight:650;color:inherit}
 .tt-ramp-select small{font-family:var(--mono);font-size:9px;color:var(--t2)}
 .tt-ramp-select em{margin-left:auto;font-size:9px;font-style:normal;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
-.tt-ramp-select[aria-checked="true"] em{color:var(--brand)}
+.tt-ramp-select[aria-checked="true"] em{color:var(--accent-strong)}
 .tt-ramp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tt-ramp-head .tt-hex-input{height:40px;flex:0 1 132px}
 .tt-mini,.tt-copy-all{min-height:34px;padding:7px 11px;font-size:10.5px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
@@ -7083,7 +7091,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-export:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .tt-more{display:flex;align-items:center;justify-content:space-between;gap:var(--s-5);margin-top:var(--s-6);padding:var(--s-5) 0;border-top:1px solid var(--border)}
 .tt-more>div:first-child{display:flex;flex-direction:column;gap:4px;max-width:470px}
-.tt-more-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand)}
+.tt-more-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
 .tt-more strong{font-size:13px;font-weight:600;line-height:1.45;color:var(--t0)}
 .tt-more-links{display:flex;justify-content:flex-end;gap:20px;flex-wrap:wrap}
 .tt-more-link{font-size:11px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
@@ -7178,14 +7186,35 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .cc-ratio{display:flex;align-items:baseline;gap:14px;margin:24px 0 16px}
 .cc-ratio-num{font-family:var(--mono);font-size:36px;font-weight:700;letter-spacing:-.02em;color:var(--t0)}
 .cc-ratio-verdict{font-size:13px;font-weight:600}
-.cc-pass{color:#2E9E5B}
-.cc-mixed{color:#C98A1B}
-.cc-fail{color:#D64545}
+/* THE CONTRAST CHECKER WAS FAILING ITS OWN TEST. Measured on the white card in
+   light theme, against the 4.5:1 that 13px/600 text needs and that this page
+   exists to enforce:
+       .cc-pass  #2E9E5B  3.41:1
+       .cc-mixed #C98A1B  2.94:1   <- the verdict line, the page's headline
+       .cc-fail  #D64545  4.38:1
+   All three were hard-coded hexes, so they also never responded to the theme -
+   and #D64545 measured 3.97:1 on the dark card, failing there too.
+
+   Light values below are the smallest hue-preserving darkening that clears 4.5
+   with headroom. Dark theme hands off to the project's own --ok/--warn/--err,
+   which already measure 9.99 / 11.36 / 6.29 on the dark card - the tokens this
+   page should have been using all along. */
+.cc-pass{color:#1F7040}
+.cc-mixed{color:#8A5E10}
+.cc-fail{color:#C02F2F}
+[data-theme="dark"] .cc-pass{color:var(--ok)}
+[data-theme="dark"] .cc-mixed{color:var(--warn)}
+[data-theme="dark"] .cc-fail{color:var(--err)}
 .cc-checks{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:6px}
 .cc-check{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
 .cc-check-mark{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0}
-.cc-check--pass .cc-check-mark{background:rgba(46,158,91,.14);color:#2E9E5B}
-.cc-check--fail .cc-check-mark{background:rgba(214,69,69,.12);color:#D64545}
+/* The glyph sits on its own tint over --bg-2, which is a LIGHTER ground than the
+   card - so it needs to be darker than the verdict text, not the same colour.
+   Measured before: pass 2.70:1, fail 3.43:1 on those tints. */
+.cc-check--pass .cc-check-mark{background:rgba(46,158,91,.14);color:#1B6238}
+.cc-check--fail .cc-check-mark{background:rgba(214,69,69,.12);color:#AF2323}
+[data-theme="dark"] .cc-check--pass .cc-check-mark{color:var(--ok)}
+[data-theme="dark"] .cc-check--fail .cc-check-mark{color:var(--err)}
 .cc-check-label{font-weight:600;color:var(--t0)}
 .cc-check-min{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--t2)}
 /* Fix rows — chip colour + ink arrive as custom props set via ref */
