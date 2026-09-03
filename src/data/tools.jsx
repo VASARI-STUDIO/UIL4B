@@ -268,6 +268,28 @@ export function queryCommandIndex(query, { tools = [], categories = [], actions 
   }
 }
 
+// ── Example terms for a search placeholder ──────────────────────────────────
+// The homepage hero bar types these one character at a time, so they stand in
+// for the "Try …" chips the founder removed on 2026-09-03: they are the only
+// thing left telling a visitor what is in the box. That makes correctness the
+// whole point, which is why they are SELECTED FROM THE REGISTRY rather than
+// written down — a hand-kept list is one rename away from advertising a tool
+// that no longer exists, and a term that finds nothing when typed is a lie.
+//
+// `/create/` only, because those are the things a visitor can go and make;
+// docs and resources are findable in the bar but are not what the hero sells.
+// The length cap keeps a term inside the input at 390px — "Aspect & Resolution
+// Calculator" is 30 characters and truncates mid-word, which reads as a bug.
+//
+// Caller passes an already-localised, already-alpha-filtered list, the same way
+// queryCommandIndex takes its index.
+export const HINT_MAX_LEN = 20
+export function searchHints(tools) {
+  return tools
+    .filter(tool => tool.path.startsWith('/create/') && tool.label.length <= HINT_MAX_LEN)
+    .map(tool => tool.label)
+}
+
 export function searchToolsLocalised(query, t) {
   const q = query.trim().toLowerCase()
   if (!q) return []

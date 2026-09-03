@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
 import HomeCommandBar from '../components/HomeCommandBar'
+// TEMPORARY — the hero-direction explorer for `hero-copy-still-reads-ai`.
+// Renders `children` (the shipped hero) unless ?hero=a|b|c is present.
+import HomeHeroDirections from '../components/HomeHeroDirections'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
@@ -233,6 +236,7 @@ export default function Home() {
             index as the ⌘K palette, and it is the most product-specific thing
             on the page — but it now carries its own small label instead of
             being the referent for a pun in the headline. */}
+        <HomeHeroDirections toolCount={LIVE_TOOL_COUNT}>
         <header className="home-hero">
           <div className="home-hero-core">
             <p className="home-hero-kicker">UI system toolkit</p>
@@ -251,13 +255,22 @@ export default function Home() {
               palette builder is the hex your export ships. Nothing to install.
             </p>
 
-            {/* The bar is INTRODUCED, which is the property the founder asked
-                for on 2026-08-16 ("the --hi mark pointed at nothing" — the bar
-                used to arrive unannounced). That instruction was met by making
-                the headline a pun on "search box"; this label meets the same
-                requirement without spending the headline on it, so the headline
-                can say what the product makes. */}
-            <p className="home-hero-searchlabel" id="home-search-label">Search every tool</p>
+            {/* The visible "Search every tool" line above the bar is gone on the
+                founder's 2026-09-03 instruction, along with the "Try …" chips
+                below it. The ACCESSIBLE NAME cannot go with them.
+
+                `aria-labelledby` on the input points at this id. Delete the
+                element and the search box has no accessible name at all, which
+                is a WCAG 4.1.2 failure and reads to a screen reader as an
+                unlabelled edit field in the middle of a heading. So the element
+                stays exactly where it was in the reading order — it is simply
+                no longer painted.
+
+                What the two removed lines did for a SIGHTED visitor — say that
+                this is a search box, and say what is in it — now belongs to the
+                bar itself: the `>` prompt says what it is, and the placeholder
+                types real tool names to say what is in it. See HomeCommandBar. */}
+            <p className="sr-only" id="home-search-label">Search every tool</p>
             <HomeCommandBar labelledBy="home-search-label" />
 
             <div className="home-hero-cta">
@@ -274,6 +287,7 @@ export default function Home() {
             <p className="home-hero-hint">Free to use. No card.</p>
           </div>
         </header>
+        </HomeHeroDirections>
 
         {/* ── The working half: five steps, one live workbench ──
             The left column narrates; the right column is the REAL
