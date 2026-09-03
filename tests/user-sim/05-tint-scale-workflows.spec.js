@@ -117,4 +117,55 @@ test.describe('Tint Scale designer and developer workflows', () => {
     )
     expect(hasPageOverflow, 'Dense tint ramps should scroll locally without widening the page').toBe(false)
   })
+
+  // The page numbered its steps 01, 03, 02. "03 - Evaluate the system" was a
+  // block nested INSIDE the 01 card while "02 - Tune the system" was that card's
+  // SIBLING, so no CSS `order` could interleave them - it needed the restructure
+  // this test now pins.
+  //
+  // MEASURED before deciding: `.tt-page` is capped at 940px and this workbench is
+  // a SINGLE column from 0 to 1343px, going two-column only at 1344 (see "The
+  // workbench two-column threshold" in global.css). So 01/03/02 was not a
+  // wide-screen quirk - it was what every viewport up to and including the 1280
+  // reference desktop rendered. Hence the widths below: three in the stacked
+  // band, one past the threshold.
+  for (const width of [390, 834, 1280]) {
+    test(`the steps are numbered in the order they are read at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 })
+      watch(page, 'a designer reading the tool top to bottom')
+      await go(page, '/create/tint')
+
+      await expect(page.locator('.tt-section-num').first()).toBeVisible()
+      const nums = await page.locator('.tt-section-num').allTextContents()
+      expect(nums.map(n => n.trim())).toEqual(['01', '02', '03'])
+
+      // Ascending document order is only meaningful if it is also ascending on
+      // screen - the whole defect was a number that rendered out of place.
+      const tops = await page.evaluate(() => [...document.querySelectorAll('.tt-section-num')]
+        .map(el => Math.round(el.getBoundingClientRect().top + window.scrollY)))
+      expect(tops, `steps should descend the page in order at ${width}px`)
+        .toEqual([...tops].sort((a, b) => a - b))
+    })
+  }
+
+  // Past the two-column threshold 02 is a sticky rail beside 01, so "below" is
+  // the wrong question; what must hold is that 03 spans the full width UNDER
+  // both, rather than being tucked back inside the working column.
+  test('past the two-column threshold the handoff spans beneath both columns', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    watch(page, 'a designer on a wide display')
+    await go(page, '/create/tint')
+
+    await expect(page.locator('.tt-delivery')).toBeVisible()
+    const box = await page.evaluate(() => {
+      const r = (sel) => {
+        const b = document.querySelector(sel).getBoundingClientRect()
+        return { x: Math.round(b.x), w: Math.round(b.width), top: Math.round(b.y + scrollY), bottom: Math.round(b.bottom + scrollY) }
+      }
+      return { out: r('.tt-output'), cfg: r('.tt-config'), del: r('.tt-delivery') }
+    })
+    expect(box.cfg.x, 'the config rail sits beside the working column').toBeGreaterThan(box.out.x + box.out.w - 1)
+    expect(box.del.top, 'the handoff starts below the working column').toBeGreaterThanOrEqual(box.out.bottom)
+    expect(box.del.w, 'the handoff spans wider than the working column alone').toBeGreaterThan(box.out.w)
+  })
 })

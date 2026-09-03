@@ -500,7 +500,10 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .cs-next-link svg{color:var(--brand);flex-shrink:0}
 /* More colour tools — cross-link footer at the bottom of every colour tool */
 .cs-tools-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border)}
-.cs-tools-footer-title{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin:0 0 16px}
+.cs-tools-footer-title{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin:0 0 6px}
+/* The sequencing line inherited from the removed `.stc-next` block. It is the
+   reason this footer is a workflow step and not just a list of siblings. */
+.cs-tools-footer-lead{max-width:620px;margin:0 0 18px;font-size:14px;line-height:1.6;color:var(--t1)}
 .cs-tools-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .cs-tools-footer-link{display:flex;flex-direction:column;gap:2px;text-align:left;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t0);cursor:pointer;text-decoration:none;transition:all var(--t)}
 .cs-tools-footer-link:hover{border-color:var(--brand);background:var(--brand-bg)}
@@ -623,6 +626,37 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .cs-hue-hex:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
 
 /* ─── UI State Colours section (ColorStudio States) ─── */
+/* ── The solo Semantic Colours tool header ──────────────────────────────────
+   The four colour tools shipped TWO hero languages. `.tt-hero` (Tint) and
+   `.ggn-head` (Gradient) both open with an eyebrow, a large serif title, a
+   description and the tool's own actions, then a status strip of four live
+   facts. Semantic Colours and the Contrast Checker were on `.sec-h`, the
+   site-wide section header, which carries none of that.
+
+   These metrics are taken from `.tt-hero` rather than invented: the same
+   clamp() on the title, the same eyebrow treatment, the same status row as
+   `.ggn-status`. `.sec-h` is deliberately NOT touched - it is site-wide. */
+.stc-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-6);flex-wrap:wrap;margin-bottom:var(--s-5)}
+.stc-hero-id{max-width:680px;min-width:0}
+.stc-hero-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t2)}
+.stc-hero-eyebrow::before{content:'';width:24px;height:1px;background:var(--t3)}
+.stc-hero h1{margin:0;font-family:var(--serif);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
+.stc-hero-id>p{max-width:600px;margin:12px 0 0;font-size:15px;line-height:1.65;color:var(--t1)}
+.stc-hero-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+/* The action is already a button with its own metrics; the hero must not also
+   push it right with `margin-left:auto`, which is what `.stc-copy-btn` does for
+   the section-header context it was written for. */
+.stc-hero-actions .stc-copy-btn{margin-left:0}
+
+/* Four live facts about what the tool currently holds - the same row the
+   Gradient Generator carries as `.ggn-status`. It is `aria-live=polite` in the
+   markup: changing bundle changes the first cell, and that is worth announcing
+   once rather than on every swatch hover. */
+.stc-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--s-6);border-block:1px solid var(--border)}
+.stc-status span{display:flex;align-items:baseline;gap:6px;min-width:0;padding:12px 16px;font-size:11px;color:var(--t2)}
+.stc-status span+span{border-left:1px solid var(--border)}
+.stc-status strong{font-family:var(--mono);font-size:12px;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 .stc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;cursor:pointer}
 .stc-head.solo{cursor:default}
 .stc-head-title{display:flex;align-items:center;gap:12px}
@@ -704,13 +738,9 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .stc-handoff .stc-copy-btn{margin:var(--s-5) 0 0}
 .stc-code{max-height:360px;margin:0;padding:16px;font-family:var(--mono);font-size:10px;line-height:1.65;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);overflow:auto}
 .stc-code:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.stc-next{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-6);margin-top:var(--s-7);padding:var(--s-6) 0;border-block:1px solid var(--border)}
-.stc-next>div:first-child{display:flex;max-width:520px;flex-direction:column;gap:5px}
-.stc-next strong{font-size:13px;line-height:1.5;color:var(--t0)}
-.stc-next>div:last-child{display:flex;justify-content:flex-end;gap:18px;flex-wrap:wrap}
-.stc-next a{font-size:11px;font-weight:650;color:var(--t1);text-decoration:none}
-.stc-next a:hover{color:var(--accent)}
-.stc-next a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+/* `.stc-next` retired (#323): its nav offered contrast, tint and palette, a
+   strict subset of the `.cs-tools-footer` block ~200px below it. The
+   sequencing sentence it carried moved to `.cs-tools-footer-lead`. */
 @media(max-width:980px){
   .stc-bundles{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stc-handoff{grid-template-columns:1fr}
@@ -733,8 +763,6 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
   .stc-cell{flex:none;min-width:0}
   .stc-preview-grid{grid-template-columns:1fr}
   .stc-preview+.stc-preview{border-left:0;border-top:1px solid var(--border)}
-  .stc-next{flex-direction:column}
-  .stc-next>div:last-child{justify-content:flex-start}
 }
 @media(max-width:560px){
   .stc-head.solo .stc-toolbar{align-items:flex-start;flex-direction:column}
@@ -753,6 +781,11 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
      scrolls vertically, and buys every option being seen without a gesture. */
   .stc-bundles{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stc-bundle{min-height:0}
+  /* Four facts in four columns is ~80px each on a phone, which truncates the
+     bundle name - the one cell whose value is a word rather than a number. */
+  .stc-status{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stc-status span:nth-child(-n+2){border-bottom:1px solid var(--border)}
+  .stc-status span:nth-child(odd){border-left:0}
   .stc-role{padding:16px}
   /* Wraps, like .stc-bundles above and for the same reason (S3,
      mobile-audit-2026-08). The base rule at the top of this section already
@@ -768,7 +801,6 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
   .stc-example{grid-template-columns:32px minmax(0,1fr)}
   .stc-example button{grid-column:2;justify-self:start}
   .stc-handoff{padding:16px}
-  .stc-next>div:last-child{align-items:flex-start;flex-direction:column;gap:12px}
 }
 
 /* ─── Harmony radio ─── */
@@ -889,7 +921,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
 .pl-tab{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;background:none;color:var(--t2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
 .pl-tab:hover{color:var(--t0)}
-.pl-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.pl-tab.active{color:var(--accent-strong);border-bottom-color:var(--accent);font-weight:600}
 .pl-tab-count{font-size:10px;font-weight:700;background:var(--bg-3);color:var(--t2);padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
 .pl-tab.active .pl-tab-count{background:var(--accent-bg);color:var(--accent-strong)}
 .pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
@@ -921,15 +953,11 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
    `.rail-content` is rendered only by CreateTool.jsx and the sole consumer of
    `.pl-toolbar` is PromptLibrary, which is not inside it. A correct rule
    scoped to a selector that never matches is the shape this defect had. */
-.pl-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;position:sticky;top:var(--nav-clear);z-index:30;padding:12px 0;background:color-mix(in srgb,var(--bg-0) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-.pl-search-wrap{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;flex:1;min-width:200px;max-width:360px;transition:all var(--t)}
-.pl-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
-.pl-search-wrap svg{color:var(--t3);flex-shrink:0}
-.pl-search{border:none;background:none;color:var(--t0);font-family:var(--font);font-size:13px;outline:none;width:100%;min-width:0;padding:0}
-.pl-search::placeholder{color:var(--t3)}
-.pl-search:focus{box-shadow:none}
-.pl-search-clear{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px;display:flex;border-radius:50%;transition:color var(--t)}
-.pl-search-clear:hover{color:var(--t0)}
+/* RETIRED (#323). `.pl-toolbar` and `.pl-search-*` were the last one-off
+   browse toolbar in the app — the Prompt Library was the only consumer, and
+   it is now on the shared `LibraryToolbar` / `.lbry-toolbar` like every
+   other browse surface. The sticky-offset reasoning above is preserved
+   because it is why `--nav-clear` exists on the shared toolbar too. */
 /* The category row WRAPS (S4, mobile-audit-2026-08). It was
    `flex-wrap:nowrap; overflow-x:auto` with the scrollbar suppressed on both
    `scrollbar-width` and `::-webkit-scrollbar`, which under touch emulation
@@ -958,28 +986,13 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
 .pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
 .pl-add-btn{flex-shrink:0;margin-left:auto}
-/* PATTERN B: THE TABLET BAND WAS NEVER HANDLED. This toolbar column-stacks at
-   ≤640px and is a desktop row above it, so 834px got the desktop row with none
-   of the desktop room. Measured at 834: `.pl-search-wrap` (flex:1, max 360px)
-   and `.pl-chips` (flex:1, min-width:0) competed for the same space, the chips
-   lost, and six categories were crushed into ~200px and wrapped to FOUR ragged
-   lines — with wide dead gaps either side, "Submit prompt" stranded out on the
-   right, and the placeholder truncated to "Search community prompt".
-   The category row is the primary browse control on this page, so it gets a
-   full row of its own and all six chips fit on one line — which is the two-row
-   shape Jira's Teams directory, Claude's connector Directory and Customer.io's
-   integrations browser all reflow into when the width stops being desktop-wide.
-   Below 641px the existing full column stack still wins.
-   The cost, taken deliberately: "Submit prompt" lands on a third row of its
-   own. It could be pulled up beside the search field with `order`, and that was
-   rejected — `order` moves the box and not the tab stop, so it would leave the
-   focus order running search → sort → chips → submit against a visual order of
-   search → sort → submit → chips. A slightly loose row is worth less than a
-   focus order that matches what you can see (WCAG 2.4.3). */
-@media(min-width:641px) and (max-width:980px){
-  .pl-search-wrap{max-width:none}
-  .pl-chips{flex:1 1 100%}
-}
+/* PATTERN B (the tablet band) is now handled for this surface by the shared
+   toolbar: #318 gave `.lbry-toolbar` a 641-980 layout of its own and #323
+   moved the Prompt Library onto it, so the bespoke band rule that used to
+   sit here — uncapping `.pl-search-wrap` so `.pl-chips` could take a full
+   row — has no selectors left to act on. The deliberate cost it recorded
+   ("Submit prompt lands on a third row") is gone with it: the shared
+   toolbar puts the action in `.lbry-toolbar-action`. */
 /* Native select, styled to sit in a .pl-toolbar next to the search field */
 
 /* Add prompt panel */
@@ -1013,15 +1026,24 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 
 /* No-image card */
 .pl-card.no-img{background:var(--card-grad)}
-.pl-card-text-hero{padding:28px 24px;min-height:160px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
-.pl-card-text-hero::before{content:'';position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:var(--radius-s);background:var(--accent-bg);display:flex;align-items:center;justify-content:center}
+.pl-card-text-hero{padding:22px 22px;min-height:132px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+/* The 40x40 accent-tinted square that used to sit here was EMPTY — `content:''`
+   with `display:flex;align-items:center;justify-content:center`, i.e. centring
+   rules for a glyph that was never added. On a text-only card it read as a
+   thumbnail that had failed to load, on all 20 cards at once, and it competed
+   with the Pro lock badge for the same corner. Removed rather than filled: the
+   card's categories are TAG_CATEGORIES, which has no glyph set, and the shared
+   CategoryGlyph is keyed to the unrelated discoverCategories taxonomy. */
 .pl-card.no-img .pl-card-title{color:var(--t0)}
 .pl-card.no-img:hover .pl-card-title{color:var(--accent)}
 
 /* Tags */
 .pl-card-tags{display:flex;gap:5px;flex-wrap:wrap}
 .pl-tag{padding:3px 10px;border-radius:var(--radius);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);backdrop-filter:blur(4px);transition:background var(--dur-2) var(--ease-standard)}
-.pl-card.no-img .pl-tag{background:var(--accent-bg);color:var(--accent)}
+/* --accent is #0F6FFF in light theme: 4.43:1 on the white card, 3.82:1 on the
+   page ground - under AA at these sizes, and this page renders ~80 tags at once.
+   --accent-strong is the same blue at 5.84 / 5.03. See [accent-small-text-contrast]. */
+.pl-card.no-img .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
 
 /* Card date inline */
 .pl-card-date-inline{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:8px}
@@ -1034,7 +1056,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-modal-close:hover{background:var(--bg-3);color:var(--t0)}
 .pl-modal-header{padding:28px 28px 0;flex-shrink:0}
 .pl-modal-header h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;padding-right:32px}
-.pl-modal-header .pl-tag{background:var(--accent-bg);color:var(--accent)}
+.pl-modal-header .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
 .pl-modal-author{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--t2)}
 .pl-modal-body{flex:1;overflow-y:auto;padding:20px 28px}
 .pl-modal-prompt{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;position:relative;transition:background var(--dur-2) var(--ease-standard)}
@@ -1615,12 +1637,7 @@ img,svg,video{max-width:100%;height:auto}
   .grad-presets{grid-template-columns:repeat(auto-fill,minmax(min(180px,100%),1fr))}
   .img-grid{grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr))}
   .pl-gallery{grid-template-columns:1fr}
-  .pl-toolbar{flex-direction:column;align-items:stretch}
-  .pl-search-wrap{max-width:100%}
   .pl-add-btn{width:100%}
-  /* This used to re-impose the nowrap scroller the base rule has now dropped —
-     see the .pl-chips comment above. Left as a no-op-free reminder that the
-     narrow band is exactly where wrapping matters most. */
   .pl-drop-zone{flex:1 1 100%}
   .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}
 
@@ -6933,7 +6950,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-audience-tab:focus-visible{z-index:1;outline:2px solid var(--brand);outline-offset:-2px}
 .tt-audience-tab strong{margin:5px 0 3px;font-size:16px;font-weight:650;letter-spacing:-.01em}
 .tt-audience-tab>span:last-child{font-size:12px;line-height:1.45;color:var(--t2)}
-.tt-audience-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand)}
+.tt-audience-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
 .tt-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--s-5);border-block:1px solid var(--border)}
 .tt-status span{display:flex;align-items:baseline;gap:6px;padding:12px 16px;font-size:11px;color:var(--t2)}
 .tt-status span+span{border-left:1px solid var(--border)}
@@ -6952,7 +6969,12 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-config{--tt-sticky-top:calc(var(--nav-clear) + var(--s-5));position:sticky;top:var(--tt-sticky-top);max-height:calc(100vh - var(--tt-sticky-top) - var(--s-4));max-height:calc(100dvh - var(--tt-sticky-top) - var(--s-4));overflow-y:auto;overscroll-behavior:contain}
 .tt-section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:var(--s-5);padding-bottom:var(--s-4);border-bottom:1px solid var(--border)}
 .tt-section-head--output{justify-content:flex-start}
-.tt-section-num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--brand);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:var(--radius-xs)}
+/* --brand is #0F6FFF in light theme, which measures 4.43:1 on the white card
+   and 3.82:1 on the page ground - under AA for text this size. --accent-strong
+   (#0B5ED7) is the same blue at 5.84 / 5.03 and already exists for exactly this,
+   which is the fix #306 applied to .lib-keyhint. Scoped to this tool's own small
+   text; the product-wide instances are recorded as [accent-small-text-contrast]. */
+.tt-section-num{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--accent-strong);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:var(--radius-xs)}
 .tt-section-head h2,.tt-delivery-head h2{margin:0;font-size:16px;font-weight:650;letter-spacing:-.015em;color:var(--t0)}
 .tt-section-head p,.tt-delivery-head p{margin:3px 0 0;font-size:11.5px;line-height:1.45;color:var(--t2)}
 .tt-picker{width:46px;height:46px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);cursor:pointer;flex-shrink:0}
@@ -6996,7 +7018,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-ramp-select strong{font-size:12px;font-style:normal;font-weight:650;color:inherit}
 .tt-ramp-select small{font-family:var(--mono);font-size:9px;color:var(--t2)}
 .tt-ramp-select em{margin-left:auto;font-size:9px;font-style:normal;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
-.tt-ramp-select[aria-checked="true"] em{color:var(--brand)}
+.tt-ramp-select[aria-checked="true"] em{color:var(--accent-strong)}
 .tt-ramp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tt-ramp-head .tt-hex-input{height:40px;flex:0 1 132px}
 .tt-mini,.tt-copy-all{min-height:34px;padding:7px 11px;font-size:10.5px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
@@ -7017,7 +7039,13 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-dense-inspector code{font-family:var(--mono)}
 .tt-dense-inspector span:last-child{margin-left:auto}
 .tt-ramp-scroll{display:none;margin:0;font-size:10px;color:var(--t2)}
-.tt-delivery{margin-top:6px;padding-top:var(--s-5);border-top:1px solid var(--border)}
+/* `.tt-delivery` is its own card now, not a block nested in the 01 card - which
+   is what made the page number its steps 01, 03, 02 with no CSS able to fix it
+   (03 was a CHILD of the first card, 02 was that card's SIBLING). It therefore
+   drops the nested block's top rule and spacing and takes the panel's own.
+   At >=1344px, where the workbench is two columns, it spans the full width
+   beneath the working column and its config rail so the numbers still ascend. */
+.tt-delivery{grid-column:1/-1}
 .tt-delivery-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4);margin-bottom:var(--s-4)}
 .tt-delivery-head>div:first-child{display:flex;align-items:flex-start;gap:12px}
 .tt-view-switch{display:flex;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
@@ -7063,7 +7091,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-export:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .tt-more{display:flex;align-items:center;justify-content:space-between;gap:var(--s-5);margin-top:var(--s-6);padding:var(--s-5) 0;border-top:1px solid var(--border)}
 .tt-more>div:first-child{display:flex;flex-direction:column;gap:4px;max-width:470px}
-.tt-more-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand)}
+.tt-more-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
 .tt-more strong{font-size:13px;font-weight:600;line-height:1.45;color:var(--t0)}
 .tt-more-links{display:flex;justify-content:flex-end;gap:20px;flex-wrap:wrap}
 .tt-more-link{font-size:11px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
@@ -7158,14 +7186,35 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .cc-ratio{display:flex;align-items:baseline;gap:14px;margin:24px 0 16px}
 .cc-ratio-num{font-family:var(--mono);font-size:36px;font-weight:700;letter-spacing:-.02em;color:var(--t0)}
 .cc-ratio-verdict{font-size:13px;font-weight:600}
-.cc-pass{color:#2E9E5B}
-.cc-mixed{color:#C98A1B}
-.cc-fail{color:#D64545}
+/* THE CONTRAST CHECKER WAS FAILING ITS OWN TEST. Measured on the white card in
+   light theme, against the 4.5:1 that 13px/600 text needs and that this page
+   exists to enforce:
+       .cc-pass  #2E9E5B  3.41:1
+       .cc-mixed #C98A1B  2.94:1   <- the verdict line, the page's headline
+       .cc-fail  #D64545  4.38:1
+   All three were hard-coded hexes, so they also never responded to the theme -
+   and #D64545 measured 3.97:1 on the dark card, failing there too.
+
+   Light values below are the smallest hue-preserving darkening that clears 4.5
+   with headroom. Dark theme hands off to the project's own --ok/--warn/--err,
+   which already measure 9.99 / 11.36 / 6.29 on the dark card - the tokens this
+   page should have been using all along. */
+.cc-pass{color:#1F7040}
+.cc-mixed{color:#8A5E10}
+.cc-fail{color:#C02F2F}
+[data-theme="dark"] .cc-pass{color:var(--ok)}
+[data-theme="dark"] .cc-mixed{color:var(--warn)}
+[data-theme="dark"] .cc-fail{color:var(--err)}
 .cc-checks{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:6px}
 .cc-check{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
 .cc-check-mark{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0}
-.cc-check--pass .cc-check-mark{background:rgba(46,158,91,.14);color:#2E9E5B}
-.cc-check--fail .cc-check-mark{background:rgba(214,69,69,.12);color:#D64545}
+/* The glyph sits on its own tint over --bg-2, which is a LIGHTER ground than the
+   card - so it needs to be darker than the verdict text, not the same colour.
+   Measured before: pass 2.70:1, fail 3.43:1 on those tints. */
+.cc-check--pass .cc-check-mark{background:rgba(46,158,91,.14);color:#1B6238}
+.cc-check--fail .cc-check-mark{background:rgba(214,69,69,.12);color:#AF2323}
+[data-theme="dark"] .cc-check--pass .cc-check-mark{color:var(--ok)}
+[data-theme="dark"] .cc-check--fail .cc-check-mark{color:var(--err)}
 .cc-check-label{font-weight:600;color:var(--t0)}
 .cc-check-min{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--t2)}
 /* Fix rows — chip colour + ink arrive as custom props set via ref */
@@ -8779,8 +8828,14 @@ input.ggn-stop-hex{font-family:var(--mono);padding:0}
 .ggn-stop-hex-field{position:relative;display:flex;flex:1;min-width:0;flex-direction:column}
 .ggn-stop-hex[aria-invalid="true"]{color:var(--err)}
 .ggn-field-error{position:absolute;top:calc(100% + 8px);left:-8px;z-index:5;min-width:max-content;padding:6px 8px;font-size:10px;color:var(--err);background:var(--ggn-panel);border:1px solid color-mix(in srgb,var(--err) 38%,var(--ggn-line));border-radius:var(--radius-xs);box-shadow:var(--shadow-s)}
-.ggn-sources{margin-top:var(--s-5)}
-.ggn-starting{margin-top:var(--s-4)}
+.ggn-starting{margin-top:var(--s-5)}
+/* `.ggn-sources` retired (#323): the palette-import block and the curated rail
+   were two cards making the same offer, and the first was numbered as a third
+   step below the canvas. They are one `.ggn-starting` section now, with each
+   source group labelled inside it. */
+.ggn-start-group+.ggn-start-group{margin-top:var(--s-5)}
+.ggn-start-label{display:block;margin-bottom:10px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ggn-t2)}
+.ggn-starting .ggn-import-empty{margin-top:var(--s-4)}
 /* overflow / scrollbar / snap-type / edge fade come from `.rail-overflow`, which
    is on the element in the markup. */
 .ggn-presets{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(142px,1fr);grid-template-columns:none;padding-bottom:8px}
@@ -10247,19 +10302,17 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .plb-col-tools{width:100%;margin-left:0;justify-content:flex-start}
 }
 
-/* Prompt library toolbar. `.pl-sort` replaces an inline style={{}} that had no
-   class and therefore no responsive control: at 320px its `min-width: auto`
-   established a 519px flex line inside a 283px toolbar, which pushed the
-   "Submit prompt" primary CTA to right:535 — entirely off screen, and
-   unreachable because body carries `overflow-x: clip`. */
-.pl-sort{display:flex;gap:4px;margin-bottom:4px;min-width:0;flex-wrap:wrap}
+/* `.pl-sort` is retired with `.pl-toolbar` (#323): the Prompt Library's sort is
+   a LibraryFilterGroup now, so it reflows with every other filter tray instead
+   of needing its own 320px rescue. `.pl-chips` stays — five other surfaces
+   (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,
+   ColorStudio's named-library switch) still render it. */
 .pl-chips{max-width:100%}
 @media(max-width:520px){
-  /* Below this the toolbar cannot hold a filter row and a button side by side.
-     Giving the CTA its own full-width line keeps it visible and comfortably
-     tappable instead of clipped. */
+  /* The action still gets its own full-width line below this: the shared
+     toolbar stacks here too, and a half-width CTA on a 390px phone is worse
+     than a full-width one. */
   .pl-add-btn{width:100%;margin-left:0}
-  .pl-toolbar{gap:8px}
 }
 
 /* Type-scale ladder: let the specimen actually truncate.

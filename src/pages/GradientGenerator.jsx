@@ -1068,60 +1068,72 @@ export default function GradientGenerator({ onCopy, toast }) {
         </div>
       </section>
 
-      {/* Import colours — from the Palette Builder or a saved project */}
-      <section className="ggn-block ggn-sources">
-        <div className="ggn-block-head">
-          <div>
-            <span className="ggn-step">03 · Starting points</span>
-            <h2>Begin with colours you trust</h2>
-          </div>
-        </div>
-        {importSources.length > 0 ? (
-          <div className="ggn-imports">
-            {importSources.map(src => (
-              <button key={src.key} type="button" className="ggn-import" onClick={() => importColors(src)}>
-                <span className="ggn-import-stripes" aria-hidden="true">
-                  {src.colors.map((c, i) => <span key={i} style={{ background: c }} />)}
-                </span>
-                <span className="ggn-import-id">
-                  <span className="ggn-import-name">{src.name}</span>
-                  <span className="ggn-import-meta">{src.meta} · {src.colors.length} colours</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="ggn-import-empty">
-            Nothing to import yet — build a palette in the <Link to="/create/palette">Palette Builder</Link> and its colours will appear here as gradient stops.
-          </p>
-        )}
-      </section>
+      {/* ── Start from ─────────────────────────────────────────────────────
+          This was TWO cards making the same offer, and the first of them was a
+          numbered step. "03 - Starting points / Begin with colours you trust"
+          sat BELOW the canvas and the inspector, so the page told you where to
+          begin after you had already composed and exported; and for anyone
+          without a saved palette that whole numbered step rendered a single
+          apology ("Nothing to import yet") in a full-height card.
 
-      {/* Presets */}
-      <section className="ggn-block ggn-starting">
+          There are two real steps on this page - compose (01) and refine and
+          export (02). Where the colours come from is not a third one, it is a
+          source, so it is one unnumbered block that always has something in it:
+          the curated rail is never empty, and your own palettes join it above
+          when they exist. */}
+      <section className="ggn-block ggn-starting" aria-labelledby="ggn-start-title">
         <div className="ggn-block-head">
           <div>
-            <span className="ggn-label">Curated gradients</span>
-            <p>Choose a direction, then make it yours in the canvas.</p>
+            <span className="ggn-label">Start from</span>
+            <h2 id="ggn-start-title">Pick a direction, then make it yours in the canvas</h2>
           </div>
           <Link className="ggn-gal-link" to="/discover/gradients">
             Browse the Gradient Library <span aria-hidden="true">→</span>
           </Link>
         </div>
-        <div className="ggn-presets rail-overflow">
-          {palettePresets.map((p, i) => (
-            <button key={`mine-${i}`} type="button" className="ggn-preset ggn-preset--mine" onClick={() => applyPreset(p)} title={`Gradient from ${p.n}`}>
-              <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />
-              <span className="ggn-preset-name">{p.n}</span>
-            </button>
-          ))}
-          {PRESETS.map(p => (
-            <button key={p.n} type="button" className="ggn-preset" onClick={() => applyPreset(p)}>
-              <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />
-              <span className="ggn-preset-name">{p.n}</span>
-            </button>
-          ))}
+
+        {importSources.length > 0 && (
+          <div className="ggn-start-group">
+            <span className="ggn-start-label">From your palettes</span>
+            <div className="ggn-imports">
+              {importSources.map(src => (
+                <button key={src.key} type="button" className="ggn-import" onClick={() => importColors(src)}>
+                  <span className="ggn-import-stripes" aria-hidden="true">
+                    {src.colors.map((c, i) => <span key={i} style={{ background: c }} />)}
+                  </span>
+                  <span className="ggn-import-id">
+                    <span className="ggn-import-name">{src.name}</span>
+                    <span className="ggn-import-meta">{src.meta} · {src.colors.length} colours</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="ggn-start-group">
+          <span className="ggn-start-label">Curated gradients</span>
+          <div className="ggn-presets rail-overflow">
+            {palettePresets.map((p, i) => (
+              <button key={`mine-${i}`} type="button" className="ggn-preset ggn-preset--mine" onClick={() => applyPreset(p)} title={`Gradient from ${p.n}`}>
+                <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />
+                <span className="ggn-preset-name">{p.n}</span>
+              </button>
+            ))}
+            {PRESETS.map(p => (
+              <button key={p.n} type="button" className="ggn-preset" onClick={() => applyPreset(p)}>
+                <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />
+                <span className="ggn-preset-name">{p.n}</span>
+              </button>
+            ))}
+          </div>
         </div>
+
+        {importSources.length === 0 && (
+          <p className="ggn-import-empty">
+            Building a palette in the <Link to="/create/palette">Palette Builder</Link> adds its colours here as gradient stops.
+          </p>
+        )}
       </section>
 
       {/* Only ever mounted for a signed-in user — see openSubmit above. */}
