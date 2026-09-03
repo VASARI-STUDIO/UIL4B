@@ -35,9 +35,16 @@ const OPENROUTER_MODEL = (process.env.OPENROUTER_MODEL || 'deepseek/deepseek-cha
 const OPENROUTER_REFERER = process.env.OPENROUTER_SITE_URL || 'https://uil4b.com'
 const GEMINI_MODEL = 'gemini-2.0-flash'
 
-function todayStr() {
+// `daysAgo` days back, as YYYY-MM-DD. The provider-health window reads a fixed
+// set of day docs by id, which needs no composite index and no ordering trick.
+function dayStr(daysAgo = 0) {
   const d = new Date()
+  if (daysAgo) d.setDate(d.getDate() - daysAgo)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function todayStr() {
+  return dayStr(0)
 }
 
 // The month bucket, as a doc id that can never collide with a day bucket: days
@@ -449,6 +456,221 @@ async function callGemini(userMessage, opts = {}) {
   return prompt
 }
 
+// ── provider health ──────────────────────────────────────────────────────────
+//
+// THE DEFECT THIS EXISTS FOR. The failover above is silent and total: a wrong,
+// revoked or rate-limited OpenRouter key produces a perfectly good generation
+// from Gemini, the user sees nothing, and the app looks healthy while the
+// primary provider is dead. Until now the only trace a failover left anywhere
+// was one console.error in a Vercel function log — never counted, never
+// aggregated, never alerted on, short retention, no admin surface. OpenRouter
+// could have been dead since August and nothing in the product would say so.
+//
+// The test being answered: would an operator who is NOT looking at devtools
+// find out, within a day, that every generation is coming from the fallback?
+// These counters are the durable half of making that a yes.
+//
+// WHERE IT LIVES, and why that needed nothing from the founder: `provider-health`
+// appears NOWHERE in firestore.rules, which default-denies, so it is unreachable
+// from every client and only the Admin SDK (which bypasses rules) can touch it.
+// That is the same property `daily-usage` already relies on, and it is what
+// keeps this clear of a rules change — rules changes are founder-gated and
+// published separately.
+const PROVIDER_HEALTH = 'provider-health'
+const HEALTH_WINDOW_DAYS = 7
+
+/**
+ * Record what each provider did on one generate-prompt call.
+ *
+ * Best-effort, unconditionally. An observability write must never fail a
+ * generation the caller has already spent a quota unit on — that would trade a
+ * silent failure for a loud one at the user's expense.
+ */
+// Exported and pure so the fields that get written are testable without a
+// Firestore. `inc` is passed in because FieldValue.increment arrives through an
+// async import, and `now` because a timestamp nobody can pin is a timestamp
+// nobody can assert on.
+export function buildProviderHealthPatch({ openrouterFailed, geminiFailed, served }, inc, now) {
+  const patch = { updatedAt: now }
+  if (served === 'openrouter') patch.openrouterOk = inc
+  if (served === 'gemini') patch.geminiOk = inc
+  if (openrouterFailed) patch.openrouterFail = inc
+  if (geminiFailed) patch.geminiFail = inc
+  if (!served) patch.noProvider = inc
+  if (openrouterFailed) {
+    patch.lastFailoverAt = now
+    patch.lastFailoverStatus = String(openrouterFailed.status || '')
+    // The MESSAGE only. `err.detail` is the provider's raw response body, and
+    // gateways have been known to echo the offending key back inside one. A
+    // health counter is not worth writing a credential into Firestore for.
+    patch.lastFailoverMessage = String(openrouterFailed.message || '').slice(0, 200)
+    patch.lastFailoverServedBy = served || 'nothing'
+  }
+  return patch
+}
+
+async function recordProviderOutcome(outcome) {
+  try {
+    const db = adminDb()
+    const date = todayStr()
+    const inc = await FieldValueIncrement(1)
+    const patch = buildProviderHealthPatch(outcome, inc, new Date().toISOString())
+    await db.doc(`${PROVIDER_HEALTH}/${date}`).set(patch, { merge: true })
+    if (outcome.openrouterFailed) await alertFirstFailoverOfDay(db, date, patch)
+  } catch (e) {
+    console.error('provider-health write failed:', String(e?.message || e).slice(0, 200))
+  }
+}
+
+/**
+ * Email the operator the FIRST time OpenRouter fails on any given day.
+ *
+ * Vercel gives a serverless function no scheduler, no metrics store and no
+ * alerting, and the standing constraint is no new paid dependency — so this
+ * reuses the one outbound channel this deployment already has: the Resend key
+ * /api/support sends bug reports through. Unprovisioned, it is silence rather
+ * than an error, and the counters and the admin panel still do their work.
+ *
+ * The Resend call is written out here rather than shared with api/support.js on
+ * purpose. tests/unit/api-abuse-hardening.test.js proves the support limiter
+ * runs before the outbound email by locating 'api.resend.com' INSIDE support.js,
+ * so lifting that string into _lib would leave the assertion green and guarding
+ * nothing.
+ *
+ * `.create()` is the deduplication: it throws when the marker for today already
+ * exists, so exactly one concurrent invocation wins the day. No transaction, no
+ * read-then-write race, and at most one email however hard an outage is being
+ * hammered.
+ */
+async function alertFirstFailoverOfDay(db, date, summary) {
+  const resendKey = process.env.RESEND_API_KEY
+  const notifyEmail = process.env.SUPPORT_NOTIFY_EMAIL
+  if (!resendKey || !notifyEmail) return
+
+  try {
+    await db.doc(`${PROVIDER_HEALTH}/alert-${date}`).create({ at: new Date().toISOString() })
+  } catch {
+    return // already alerted today
+  }
+
+  const text = [
+    summary.lastFailoverServedBy === 'gemini'
+      ? 'OpenRouter failed and the Gemini fallback answered in its place. Users are getting normal, working prompts — nothing in the product looks wrong, which is exactly the problem.'
+      : 'OpenRouter failed and so did the Gemini fallback. Prompt generation is DOWN.',
+    '',
+    `First failure today: ${summary.lastFailoverAt}`,
+    `HTTP status from OpenRouter: ${summary.lastFailoverStatus || '(none — the request never completed)'}`,
+    `Error: ${summary.lastFailoverMessage || '(none)'}`,
+    '',
+    '401 or 403 means OPENROUTER_API_KEY is wrong or revoked. 429 means rate-limited or out of credit. A 5xx is an OpenRouter outage and there is nothing to do but wait.',
+    '',
+    'Seven-day counts are on Admin -> Overview, under AI provider health.',
+    'This mail is sent at most once a day.',
+  ].join('\n')
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5_000)
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'UIL4B <onboarding@resend.dev>',
+        to: [notifyEmail],
+        subject: '[UIL4B] OpenRouter is failing — AI prompts are running on the fallback',
+        text,
+      }),
+    })
+  } catch (e) {
+    console.error('provider-health alert email failed:', String(e?.message || e).slice(0, 200))
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+/**
+ * Summarise the last HEALTH_WINDOW_DAYS for the admin diagnostic.
+ *
+ * A verdict, not a pile of numbers. `openrouterKey: "set (73 chars)"` is what a
+ * revoked key looks like too — that is precisely why the old owner action could
+ * never be completed. This reports what the key DID.
+ */
+// Exported and pure. This is the sentence an operator actually reads, so it is
+// the part most worth pinning: `days` is `[{ date, data }]`, newest first.
+export function summariseProviderHealth(days, { alerting = false } = {}) {
+  const totals = { openrouterOk: 0, openrouterFail: 0, geminiOk: 0, geminiFail: 0, noProvider: 0 }
+  const byDay = []
+  let lastFailover = null
+
+  for (const { date, data } of days) {
+    const d = data || {}
+    for (const k of Object.keys(totals)) totals[k] += Number(d[k] || 0)
+    byDay.push({
+      date,
+      openrouterOk: Number(d.openrouterOk || 0),
+      openrouterFail: Number(d.openrouterFail || 0),
+      geminiOk: Number(d.geminiOk || 0),
+    })
+    if (d.lastFailoverAt && (!lastFailover || d.lastFailoverAt > lastFailover.at)) {
+      lastFailover = {
+        at: d.lastFailoverAt,
+        status: d.lastFailoverStatus || '',
+        message: d.lastFailoverMessage || '',
+        servedBy: d.lastFailoverServedBy || '',
+      }
+    }
+  }
+
+  const window = days.length
+  const attempts = totals.openrouterOk + totals.openrouterFail
+  let status, summary
+  if (attempts === 0) {
+    // NOT 'ok'. Silence is not health — reading no traffic as a pass is how the
+    // previous owner action recorded a check that never ran.
+    status = 'no-data'
+    summary = `No prompt generations in the last ${window} days, so nothing has exercised the OpenRouter path. This is not a pass — generate one prompt and look again.`
+  } else if (totals.openrouterFail === 0) {
+    status = 'ok'
+    summary = `OpenRouter served all ${totals.openrouterOk} generations in the last ${window} days.`
+  } else if (totals.openrouterOk === 0) {
+    status = 'failing'
+    summary = `OpenRouter failed all ${totals.openrouterFail} times in the last ${window} days. EVERY generation came from the Gemini fallback, and every one of them looked perfectly fine to the user.`
+  } else {
+    status = 'degraded'
+    summary = `OpenRouter failed ${totals.openrouterFail} of ${attempts} attempts in the last ${window} days.`
+  }
+
+  return {
+    status,
+    summary,
+    windowDays: window,
+    totals,
+    byDay,
+    lastFailover,
+    alerting: alerting
+      ? 'on — the first OpenRouter failure of each day is emailed to SUPPORT_NOTIFY_EMAIL'
+      : 'OFF — set RESEND_API_KEY and SUPPORT_NOTIFY_EMAIL in Vercel to be emailed the first time OpenRouter fails on any day. Until then this panel is the only place a failover surfaces.',
+  }
+}
+
+async function readProviderHealth() {
+  try {
+    const db = adminDb()
+    const dates = Array.from({ length: HEALTH_WINDOW_DAYS }, (_, i) => dayStr(i))
+    const snaps = await db.getAll(...dates.map(d => db.doc(`${PROVIDER_HEALTH}/${d}`)))
+    return summariseProviderHealth(
+      snaps.map((snap, i) => ({ date: dates[i], data: snap.data() || {} })),
+      { alerting: Boolean(process.env.RESEND_API_KEY && process.env.SUPPORT_NOTIFY_EMAIL) },
+    )
+  } catch (e) {
+    return {
+      status: 'unavailable',
+      summary: `Could not read ${PROVIDER_HEALTH} from Firestore: ${String(e?.message || e).slice(0, 160)}`,
+    }
+  }
+}
+
 async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, monthLimit }) {
   const { description, style, platform } = req.body || {}
   if (!description || typeof description !== 'string') {
@@ -464,6 +686,10 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
   let prompt = ''
   let provider = ''
   let lastErr = null
+  // What actually happened to each provider, so the failover can be COUNTED and
+  // not merely logged. `null` means "did not fail" (including "not attempted").
+  let openrouterFailed = null
+  let geminiFailed = null
 
   if (OPENROUTER_KEY) {
     try {
@@ -472,6 +698,7 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
     } catch (err) {
       lastErr = err
       console.error('OpenRouter failed, will try Gemini fallback:', err.status || '', err.detail || err.message)
+      openrouterFailed = err
     }
   }
 
@@ -482,8 +709,14 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
     } catch (err) {
       lastErr = err
       console.error('Gemini fallback failed:', err.status || '', err.detail || err.message)
+      geminiFailed = err
     }
   }
+
+  // Written HERE, before the error returns below, so a total outage is counted
+  // too — that is the case most worth alerting on, and returning early would
+  // have skipped it. recordProviderOutcome swallows its own failures.
+  await recordProviderOutcome({ openrouterFailed, geminiFailed, served: provider })
 
   if (!prompt) {
     if (lastErr?.status === 429) {
@@ -580,6 +813,10 @@ export default async function handler(req, res) {
       geminiKey: GEMINI_KEY ? `set (${GEMINI_KEY.length} chars)` : 'MISSING',
       firebaseCredential: cred,
       node: process.version,
+      // The key rows above report EXISTENCE, which is what a revoked key also
+      // looks like. This one reports what the key did on real traffic, and it is
+      // the only thing here that can tell a live OpenRouter from a dead one.
+      providerHealth: await readProviderHealth(),
     })
   }
 
@@ -588,13 +825,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const task = TASKS[req.body?.task]
-  if (!task) {
-    return res.status(400).json({ error: `Unknown task — expected one of: ${Object.keys(TASKS).join(', ')}` })
-  }
-
-  if (!task.configured()) return res.status(500).json({ error: task.configError })
-
+  // ── Authentication comes FIRST ────────────────────────────────────────────
+  // Ahead of the task lookup, and — the part that matters — ahead of
+  // task.configured(). It used to run after, and the ordering was a secret
+  // oracle: an anonymous POST that answered 401 meant "that provider's key is
+  // set", and one that answered 500 ("AI is not configured on the server:
+  // GEMINI_API_KEY is missing") meant it is not. Because each task declares its
+  // OWN configured() — the vision tasks need Gemini, generate-prompt takes
+  // either — three unauthenticated requests enumerated which provider keys the
+  // deployment holds. No key VALUE ever leaked, only its existence, which is
+  // exactly the leak /api/ai?diag=1 was locked behind an admin gate to stop:
+  // "the endpoint enumerates which of the deployment's secrets exist".
+  //
+  // An anonymous caller now gets 401 for every task, in every configuration
+  // state, and learns nothing. The diagnostic value is NOT lost — see the
+  // configured() check below, which still runs, just for a verified caller.
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentication required' })
@@ -608,10 +853,28 @@ export default async function handler(req, res) {
     // an unverified signup could otherwise claim someone else's address.
     email = decoded.email_verified ? decoded.email : null
   } catch {
+    // This 500 reports the state of FIREBASE_SERVICE_ACCOUNT_KEY to a caller who
+    // has not proved anything, and that is deliberate rather than an oversight
+    // of the same class as the one above. When the credential is broken,
+    // verifyIdToken fails for EVERYONE — the endpoint is 100% unusable, so its
+    // brokenness is already plain from outside and the message adds no hidden
+    // fact. It is also the one diagnostic that survives a broken credential,
+    // which is the same reason the diag break-glass exists at all.
     const cp = credentialProblem()
     if (cp) return res.status(500).json({ error: cp })
     return res.status(401).json({ error: 'Invalid or expired session — sign out and back in.' })
   }
+
+  const task = TASKS[req.body?.task]
+  if (!task) {
+    return res.status(400).json({ error: `Unknown task — expected one of: ${Object.keys(TASKS).join(', ')}` })
+  }
+
+  // …and only now, to a caller Firebase has vouched for, does the server say
+  // anything about which provider keys it holds. A signed-in user staring at a
+  // broken deployment still gets the specific, actionable message naming the
+  // missing env var, which is the whole reason this check has its own text.
+  if (!task.configured()) return res.status(500).json({ error: task.configError })
 
   // Per-user daily cap — every task is a paid provider call, so an
   // authenticated user can't run any of them past their plan's limit.
