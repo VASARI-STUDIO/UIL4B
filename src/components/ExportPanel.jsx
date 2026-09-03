@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { trackActivation } from '../utils/analytics'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { useProject } from '../contexts/ProjectContext'
+import { useProModal } from '../contexts/ProModalContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 
@@ -16,6 +17,10 @@ import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuid
 // the opener (the Export button) on unmount.
 
 const FORMATS = [
+  // The Pro deliverable, listed first because it is the best thing this panel
+  // makes. `pro: true` drives BOTH the badge and the gate — one flag, so a
+  // format can never be badged and ungated, or gated and unbadged.
+  { id: 'book', name: 'Design system book (PDF)', desc: 'A 12-page A4 manual — cover, contents, numbered sections, full-bleed colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true },
   { id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true },
   { id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true },
   { id: 'png', name: 'Style guide (PNG)', desc: 'A single A4 sheet at 2× — palette, contrast grades and the type ladder. For pasting into a deck or a handoff ticket.', live: true },
@@ -32,8 +37,13 @@ export default function ExportPanel({ onClose }) {
   const [error, setError] = useState('')
   const { design } = useProject()
   const { isPro } = useSubscription()
+  const { openProModal } = useProModal()
   const activeFormat = FORMATS.find(f => f.id === format)
-  const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG' }
+  const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', book: 'book' }
+  // P-003, "every gate EXPLICIT rather than silent". The free user is told what
+  // they are about to hit BEFORE they click, by the button's own label, rather
+  // than finding out from a modal after it.
+  const locked = Boolean(activeFormat?.pro) && !isPro
 
   // Build and download in the browser. No server round trip: the document is a
   // pure function of the saved design (see utils/styleGuideExport.js), so there
@@ -56,13 +66,88 @@ export default function ExportPanel({ onClose }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
+  // Open the book in its own window and raise the print dialog, so "Save as
+  // PDF" is one click away. The BROWSER's print engine is what makes this a
+  // real deliverable: it embeds the user's actual webfont, keeps the type
+  // vector and selectable, and costs nothing in bundle — none of which a
+  // client-side PDF library or an html2canvas raster can do.
+  //
+  // The print bootstrap is appended HERE, never inside the generator, so the
+  // downloaded artefact keeps its no-script guarantee.
+  const printBook = (html, filename) => {
+    const doc = html.replace(
+      '</body>',
+      '<script>(function(){function go(){try{window.focus();window.print()}catch(e){}}'
+      + 'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(go,200)})}'
+      // The closing tag is split rather than escaped: a literal </scr+ipt> in a
+      // bundled string can terminate an inline script tag early if this bundle
+      // is ever inlined, and `<\/` is a useless escape the linter rejects.
+      + `else{window.addEventListener("load",function(){setTimeout(go,400)})}})()<${'/'}script></body>`,
+    )
+    const url = URL.createObjectURL(new Blob([doc], { type: 'text/html;charset=utf-8' }))
+    const win = window.open(url, '_blank')
+    if (!win) {
+      // Popup blocked. Fall back to the file rather than failing: the user
+      // still gets the book, and is told what happened instead of watching
+      // the button do nothing.
+      URL.revokeObjectURL(url)
+      download(new Blob([html], { type: 'text/html;charset=utf-8' }), filename)
+      return false
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+    return true
+  }
+
   const runExport = async () => {
     const projectName = design?.name || 'Design System'
     const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
+
+    // ── ENTITLEMENT GATE. FAILS CLOSED. ───────────────────────────────────
+    // The check lives HERE, at the top of the function that builds the file,
+    // and not only on the button. A disabled or relabelled button is a hint;
+    // this is the gate. Nothing has been generated at this point, so a free
+    // user cannot reach the artefact by calling this directly either.
+    //
+    // `gate` is named rather than left to fall back to the modal title — P-001
+    // wants the funnel to say WHICH wall converted, and "Unlock everything with
+    // Pro" groups every wall into one.
+    if (FORMATS.find(f => f.id === format)?.pro && !isPro) {
+      openProModal({
+        gate: 'design-system-book-export',
+        eyebrow: 'UIL4B Pro',
+        title: 'Export the design system book',
+        subtitle: 'A 12-page A4 manual of your system — cover, contents, numbered sections, full-bleed colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
+        features: [
+          'Cover, contents and numbered section openings',
+          'Every colour with its role, three notations and its reading ink',
+          'A contrast matrix measuring every pair in the palette',
+          'Type specimens set in your own families, and all your tokens',
+        ],
+        seed: design?.palette?.colors?.[0],
+      })
+      return
+    }
+
     setBusy(true)
     setError('')
+    // Which activation this export completed, and whether the panel may close.
+    let activation = 'style-guide'
+    let keepOpen = false
     try {
-      if (format === 'png' || format === 'jpeg') {
+      if (format === 'book') {
+        // Loaded on demand: the book generator costs nothing to anyone who
+        // never exports one, which keeps it off the homepage's JS budget.
+        const { buildDesignSystemBook } = await import('../utils/designSystemBook')
+        const html = buildDesignSystemBook(design, { projectName })
+        activation = 'design-system-book'
+        if (!printBook(html, `${slug}-design-system-book.html`)) {
+          // The book WAS produced, so this is a notice and not an error — the
+          // panel stays open to carry it rather than closing over it.
+          setError('Your browser blocked the print window, so the book was downloaded instead. Open it and print to PDF.')
+          setBusy(false)
+          keepOpen = true
+        }
+      } else if (format === 'png' || format === 'jpeg') {
         // Drawn on a canvas rather than rasterised from the HTML — see the note
         // at the top of utils/styleGuideRaster.js. Loaded on demand so the
         // raster path costs nothing to anyone exporting HTML.
@@ -82,9 +167,10 @@ export default function ExportPanel({ onClose }) {
       // P-001 ACTIVATION (export half). Fired only after the file actually
       // downloaded — an export that threw is not a piece of completed work,
       // and counting the attempt would inflate the one number meant to say
-      // whether the product was useful.
-      try { trackActivation('style-guide', 'export') } catch { /* never break an export */ }
-      onClose()
+      // whether the product was useful. The book reports under its own name so
+      // the paid deliverable is not averaged into the free one.
+      try { trackActivation(activation, 'export') } catch { /* never break an export */ }
+      if (!keepOpen) onClose()
     } catch (err) {
       // The panel stays open on failure: closing it would leave the user with
       // no file and no explanation, which reads as the button doing nothing.
@@ -150,7 +236,7 @@ export default function ExportPanel({ onClose }) {
             <span className="exp-eyebrow">Export</span>
             <h2 className="exp-title" id="exp-title">Export your design system</h2>
             <p className="exp-sub">
-              The style guide exports for real. The token formats are still on their way and say so.
+              The book and the style guide export for real. The token formats are still on their way and say so.
             </p>
           </div>
           <button type="button" className="exp-close" onClick={onClose} aria-label="Close export">
@@ -177,6 +263,7 @@ export default function ExportPanel({ onClose }) {
                   <span className="exp-fmt-name">{f.name}</span>
                   <span className="exp-fmt-desc">{f.desc}</span>
                 </span>
+                {f.pro && !isPro && <span className="exp-fmt-pro">Pro</span>}
                 {!f.live && <span className="exp-fmt-soon">Soon</span>}
               </button>
             )
@@ -191,7 +278,7 @@ export default function ExportPanel({ onClose }) {
           </button>
           {activeFormat?.live ? (
             <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={runExport} disabled={busy}>
-              {busy ? 'Exporting…' : `Export ${EXPORT_LABEL[format] || 'file'}`}
+              {busy ? 'Exporting…' : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
             </button>
           ) : (
             <button
