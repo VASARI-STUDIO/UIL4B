@@ -327,6 +327,22 @@ test('the cycled hints are real live tools, and every one finds itself', () => {
   }
 })
 
+test('PillNav no longer keeps its own hint list', () => {
+  // The second half of the same defect, and the reason it is in this file: the
+  // hero was fixed in #320 while the persistent nav — on every page — kept a
+  // hand-written array. Read with comments stripped, because the array is
+  // QUOTED in the comment that replaced it, and an assertion a comment can
+  // satisfy is not an assertion.
+  const src = stripComments(read('src/components/PillNav.jsx'))
+  assert.ok(src.includes('SearchPlaceholder'), 'stripping ate PillNav own code')
+  assert.ok(!src.includes('SEARCH_HINTS'),
+    'PillNav has a hand-kept SEARCH_HINTS array again — it must read searchHints()')
+  assert.match(src, /import \{ searchHints \} from '\.\.\/data\/toolIndex'/,
+    'PillNav no longer reads the registry-derived hints')
+  // The one thing that legitimately differs between the two surfaces.
+  assert.match(src, /pnav-search-ph/, 'PillNav renders its hint into a span, not a placeholder')
+})
+
 test('HomeCommandBar and CommandPalette hide workshop tools by the tree own flag', () => {
   // They used to filter a hand-set `alpha` that disagreed with toolTree: it hid
   // File Converter and Alt Text (both live) and offered Box Shadow (not built).
