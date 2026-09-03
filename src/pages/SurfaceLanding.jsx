@@ -1,11 +1,98 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
+import NavIcon from '../components/NavIcon'
 import WorldMap from '../components/WorldMap'
 import SystemCTA from '../components/SystemCTA'
 import { useReveal } from '../hooks/useReveal'
 import { DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
+import { GALLERY_PALETTES } from '../data/paletteGallery'
+import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
+import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
+
+// ── Card previews: what is actually inside each library ─────────────────────
+// The eight cards on /discover were eight identical white rectangles carrying a
+// title and a sentence. On a page whose whole job is "come and look at things",
+// not one card showed a single thing you could look at — you had to click to
+// find out whether a library was worth the click.
+//
+// Every library card on Mobbin leads with its contents: Webflow's Libraries
+// grid is thumbnail-first with a count badge over it, and Tines varies card
+// weight so a grid of the same shape still reads as edited rather than
+// tabulated. These previews are drawn from the REAL gallery data the tools
+// read — 64 palettes, 100 gradients, 20 prompts — so the card cannot advertise
+// something the library does not contain, and the count is a fact rather than
+// a claim.
+//
+// Keyed by group id and living here rather than in DISCOVER_GROUPS on purpose:
+// this is presentation. The array in toolTree.js stays exactly as it is, which
+// also keeps this clear of [handkept-tool-lists-remaining].
+const PREVIEWS = {
+  'palette-library': () => ({
+    meta: `${GALLERY_PALETTES.length} palettes`,
+    node: (
+      <div className="scp-stack">
+        {GALLERY_PALETTES.slice(0, 3).map((p) => (
+          <div className="scp-row" key={p.id}>
+            {p.colors.map((c, i) => <span className="scp-chip" key={i} style={{ background: c }} />)}
+          </div>
+        ))}
+      </div>
+    ),
+  }),
+  'gradient-gallery': () => ({
+    meta: `${GALLERY_GRADIENTS.length} gradients`,
+    node: (
+      <div className="scp-tiles">
+        {GALLERY_GRADIENTS.slice(0, 3).map((g) => (
+          <span className="scp-tile" key={g.id} style={{ backgroundImage: gradientCss(g.type, g.angle, g.stops) }} />
+        ))}
+      </div>
+    ),
+  }),
+  // A specimen BLOCK — display line, reading line, mono line — rather than
+  // three faces side by side.
+  //
+  // The first attempt set three "Ag"s in var(--serif), var(--font) and
+  // var(--mono), and two of them rendered identically: `--serif` in this
+  // project resolves to 'Manrope', the same value as `--font`. It is a
+  // misnamed token, not a serif. A Font Gallery card whose whole claim is
+  // "type variety" showing the same face twice is the kind of preview that is
+  // decorative and false, so this shows the two families that ARE installed
+  // doing the three jobs type actually does. Nothing here can fall back
+  // silently to a system face and pass itself off as the catalogue.
+  'font-gallery': () => ({
+    meta: 'Live specimens',
+    node: (
+      <div className="scp-type" aria-hidden="true">
+        <span className="scp-type-display">Ag</span>
+        <span className="scp-type-body">The quick brown fox</span>
+        <span className="scp-type-mono">abcdefgh 0123456</span>
+      </div>
+    ),
+  }),
+  'icon-library': () => ({
+    meta: '200,000+ icons',
+    node: (
+      <div className="scp-icons" aria-hidden="true">
+        {['palette', 'type', 'icons', 'imagery', 'ai', 'community-prompts'].map((id) => (
+          <span className="scp-icon" key={id}><NavIcon id={id} /></span>
+        ))}
+      </div>
+    ),
+  }),
+  'community-prompts': () => ({
+    meta: `${COMMUNITY_PROMPTS.length} prompts`,
+    node: (
+      <div className="scp-lines" aria-hidden="true">
+        {COMMUNITY_PROMPTS.slice(0, 3).map((p, i) => (
+          <span className="scp-line" key={p.id || i}>{p.title || p.name || p.label}</span>
+        ))}
+      </div>
+    ),
+  }),
+}
 
 // The Discover + Learn landing shells. Phase 1 is structure-only: both surfaces
 // render a hero band over a grid of the sections that are on the way, each
@@ -77,8 +164,14 @@ export default function SurfaceLanding({ surface }) {
       <PillNav />
 
       <main id="main" tabIndex={-1}>
-      {/* ── Hero ── */}
-      <header className="home-hero">
+      {/* ── Hero ──
+          `home-hero` alone carries min-height:min(100svh,980px), which the
+          HOMEPAGE earns: it holds a search field, eleven satellites and the
+          workbench. This hero holds an eyebrow, a heading, a line of lede, two
+          buttons and a hint — measured at 1440x900 its content ended at 499px
+          inside a 900px box, so 401px of the first screen of /discover was
+          nothing at all. The modifier lets it be as tall as it is. */}
+      <header className="home-hero home-hero--surface">
         <span className="home-eyebrow">{s.eyebrow}</span>
         <h1 className="home-hero-h1">{s.title}</h1>
         <p className="home-hero-sub">{s.lede}</p>
@@ -125,16 +218,30 @@ export default function SurfaceLanding({ surface }) {
           <div className="surface-grid">
             {s.groups.map((g) => {
               const hue = g.accent ? 'accent' : s.hue
+              // Live libraries lead with what is inside them; the ones still on
+              // the way stay a plain card, which is the honest difference and
+              // also the thing that stops eight identical rectangles.
+              const preview = !g.soon && PREVIEWS[g.id] ? PREVIEWS[g.id]() : null
               const body = (
                 <>
+                  {preview && (
+                    <span className="surface-card-preview" aria-hidden="true">{preview.node}</span>
+                  )}
                   <h3 className="surface-card-title">
                     <span className="fx-dot" aria-hidden="true" />
                     {g.label}
                   </h3>
                   <p className="surface-card-desc">{g.desc}</p>
-                  {g.soon
-                    ? <span className="soon-badge">Soon</span>
-                    : <span className="surface-card-go">Browse&nbsp;&rarr;</span>}
+                  {/* The meta sits beside the call to action rather than over
+                      the preview: these previews are dense (three palettes,
+                      three prompt titles), so a badge laid on top of them
+                      covered the very thing it was counting. */}
+                  <span className="surface-card-foot">
+                    {g.soon
+                      ? <span className="soon-badge">Soon</span>
+                      : <span className="surface-card-go">Browse&nbsp;&rarr;</span>}
+                    {preview && <span className="surface-card-meta">{preview.meta}</span>}
+                  </span>
                 </>
               )
               // Live groups (soon:false) link to their real page; everything else

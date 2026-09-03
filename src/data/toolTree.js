@@ -342,66 +342,105 @@ export const LEARN_GROUPS = [
 
 // ── Menu-only column model ──────────────────────────────────────────────────
 // The mega-menu renders one flat icon+label row per tool, grouped under a short
-// eyebrow. This model drives ONLY the menu presentation — it deliberately does
-// NOT share references with CREATE_GROUPS above, which still owns the router,
-// route resolution and the in-tool rail. A menu tweak can therefore never break
-// routing.
+// eyebrow.
+//
+// This USED to be a hand-written table that repeated every tool's id, label,
+// route and `soon` flag beside the authoritative CREATE_GROUPS above, with a
+// comment explaining that the duplication was deliberate. It was the same
+// defect class #332 removed from the search index — "a parallel list with
+// better manners" — and it had already drifted: the menu said "AI Image
+// Prompt" where CREATE_GROUPS says "Image Prompt". A nav that keeps its own
+// copy of the route table is one edit away from advertising a tool that does
+// not exist, which is exactly what #332 found search doing.
+//
+// So the menu now owns only what is genuinely PRESENTATION — the column
+// grouping, the order within a column, and the icon glyph — and resolves
+// everything else (label, route, soon) out of CREATE_GROUPS at build time.
+// A menu tweak still cannot break routing, because the menu never writes a
+// route down. tests/unit/search-index.test.js asserts the two agree.
 //
 // Shape: `columns` is an array of STACKS; a stack is an array of captioned
 // groups `{ label, tools }` that render top-to-bottom inside one grid column.
 // Most stacks hold a single group; Create's third column stacks three small
 // groups — "Icons", "Media" (converter + aspect calculator) and "AI" — so each
 // gets its own eyebrow without forcing a fourth (cramped) grid column.
-//
-// NOTE: the five Colour rows are real pages under /create/<pagetitle> (see
-// CREATE_GROUPS above) — createRoutes() picks them up automatically.
-const CREATE_MENU = [
-  [{
-    label: 'Colour',
-    tools: [
-      { id: 'palette', label: 'Palette', route: '/create/palette', icon: 'palette', hue: 'colour', soon: false },
-      { id: 'gradient', label: 'Gradient', route: '/create/gradient', icon: 'gradient', hue: 'colour', soon: false },
-      { id: 'contrast', label: 'Contrast Checker', route: '/create/contrast', icon: 'contrast', hue: 'colour', soon: false },
-      { id: 'tint', label: 'Tint', route: '/create/tint', icon: 'tint', hue: 'colour', soon: false },
-      { id: 'semantic', label: 'Semantic Colour', route: '/create/semantic-color', icon: 'semantic', hue: 'colour', soon: false },
-    ],
-  }],
-  [{
-    label: 'Type & UI',
-    tools: [
-      { id: 'font-gallery', label: 'Font Gallery', route: '/create/font-gallery', icon: 'type', hue: 'type', soon: false },
-      { id: 'font-pair', label: 'Font Pair', route: '/create/font-pair', icon: 'font-pair', hue: 'type', soon: false },
-      { id: 'type-scale', label: 'Type Scale', route: '/create/type-scale', icon: 'typography', hue: 'type', soon: false },
-      { id: 'component-designer', label: 'Component Designer', route: '/create/component-designer', icon: 'component', hue: 'component', soon: true },
-      { id: 'box-shadow', label: 'Box Shadow', route: '/create/box-shadow', icon: 'box-shadow', hue: 'component', soon: true },
-      { id: 'auto-builder', label: 'Auto-Builder', route: '/create/auto-builder', icon: 'auto', hue: 'component', soon: true },
-    ],
-  }],
+
+// Which NavIcon glyph a tool row shows. Presentation only: an id missing here
+// falls back to the tool's own id, which is what NavIcon keys on anyway.
+const MENU_ICONS = {
+  'font-gallery': 'type',
+  'type-scale': 'typography',
+  'component-designer': 'component',
+  'auto-builder': 'auto',
+  icons: 'icons',
+  emoji: 'emoji',
+  'file-converter': 'imagery',
+  'ai-prompt': 'ai',
+  'landing-prompts': 'marketing',
+}
+
+// Which category hue a tool row wears. Read off the owning CREATE_GROUP, so a
+// tool that moves group changes colour automatically.
+const TOOL_HUE = Object.fromEntries(
+  CREATE_GROUPS.flatMap((g) => g.tools.map((t) => [t.id, g.hue])),
+)
+
+// The column layout: eyebrow + the tool ids under it, in reading order. Ids
+// only — no labels, no routes, no soon flags.
+const CREATE_MENU_SPEC = [
+  [{ label: 'Colour', ids: ['palette', 'gradient', 'contrast', 'tint', 'semantic'] }],
+  // "Type & UI" was one eyebrow over six rows drawn from two different
+  // categories — three typography tools that all work today and three component
+  // tools that are all still Soon. Under one heading the live half inherited the
+  // dead half's reputation. Split, using the names CREATE_GROUPS already gives
+  // these categories, so a scanner sees three working type tools and a
+  // separately-labelled group that has not shipped.
   [
-    {
-      label: 'Icons',
-      tools: [
-        { id: 'icons', label: 'Icon Library', route: '/create/icons', icon: 'icons', hue: 'icons', soon: false },
-        { id: 'emoji', label: 'Emoji Library', route: '/create/emoji', icon: 'emoji', hue: 'icons', soon: false },
-      ],
-    },
-    {
-      label: 'Media',
-      tools: [
-        { id: 'file-converter', label: 'File Converter', route: '/create/file-converter', icon: 'imagery', hue: 'imagery', soon: false },
-        { id: 'ratio', label: 'Aspect & Resolution', route: '/create/aspect-ratio', icon: 'ratio', hue: 'imagery', soon: false },
-      ],
-    },
-    {
-      label: 'AI',
-      tools: [
-        { id: 'alt-text', label: 'Alt Text', route: '/create/alt-text', icon: 'alt-text', hue: 'ai', soon: false },
-        { id: 'ai-prompt', label: 'AI Image Prompt', route: '/create/ai-prompt', icon: 'ai', hue: 'ai', soon: true },
-        { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/create/landing-prompts', icon: 'marketing', hue: 'ai', soon: true },
-      ],
-    },
+    { label: 'Typography', ids: ['font-gallery', 'font-pair', 'type-scale'] },
+    { label: 'Components', ids: ['component-designer', 'box-shadow', 'auto-builder'] },
+  ],
+  [
+    { label: 'Icons', ids: ['icons', 'emoji'] },
+    { label: 'Media', ids: ['file-converter', 'ratio'] },
+    { label: 'AI', ids: ['alt-text', 'ai-prompt', 'landing-prompts'] },
   ],
 ]
+
+// Resolve the spec against the authoritative tool list. Label, route and soon
+// come from CREATE_GROUPS every time; the spec supplies only grouping + order.
+function buildCreateMenu() {
+  const tools = createTools()
+  const byId = new Map(tools.map((t) => [t.id, t]))
+  const placed = new Set()
+  const toRow = (t) => ({
+    id: t.id,
+    label: t.label,
+    route: t.route,
+    soon: t.soon,
+    icon: MENU_ICONS[t.id] || t.id,
+    hue: TOOL_HUE[t.id],
+  })
+  const columns = CREATE_MENU_SPEC.map((stack) =>
+    stack
+      .map(({ label, ids }) => ({
+        label,
+        tools: ids
+          .map((id) => byId.get(id))
+          .filter((t) => t && !placed.has(t.id) && placed.add(t.id))
+          .map(toRow),
+      }))
+      .filter((group) => group.tools.length),
+  ).filter((stack) => stack.length)
+  // Same safety net groupsToMenu uses below: a tool added to CREATE_GROUPS but
+  // not to the spec surfaces in a trailing "More" column rather than being
+  // silently dropped from the nav. The test asserts this stays empty, so the
+  // net catches the omission in CI as well as in the UI.
+  const rest = tools.filter((t) => !placed.has(t.id))
+  if (rest.length) columns.push([{ label: 'More', tools: rest.map(toRow) }])
+  return columns
+}
+
+const CREATE_MENU = buildCreateMenu()
 
 // Discover / Learn have flat groups with no sub-tools; deal them into the same
 // { label, tools } column shape so the menu renderer is uniform. Each group maps
