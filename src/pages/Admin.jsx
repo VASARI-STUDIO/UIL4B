@@ -1327,6 +1327,35 @@ export default function Admin({ toast }) {
     })()
   }, [isAdminUser, serverVerified]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── AI provider health ──
+  // The diagnostic at GET /api/ai?diag=1 is already gated on a VERIFIED
+  // administrator, so this reuses it rather than inventing a second admin
+  // surface — and it has to reuse it: /api holds twelve route files and Vercel's
+  // limit on this plan is twelve, so there is no room for a route of its own.
+  //
+  // This is the surface that answers "would an operator who is not looking at
+  // devtools find out, within a day?". The key rows the diagnostic already
+  // returned report EXISTENCE, which is exactly what a revoked key looks like.
+  // `providerHealth` reports what the key DID on real traffic.
+  const [aiHealth, setAiHealth] = useState(null)
+  const [aiHealthError, setAiHealthError] = useState('')
+
+  useEffect(() => {
+    if (!isAdminUser || tab !== 'overview' || aiHealth) return
+    ;(async () => {
+      try {
+        const { auth: fbAuth } = await import('../utils/firebase')
+        const token = await fbAuth.currentUser?.getIdToken()
+        if (!token) return
+        const res = await fetch('/api/ai?diag=1', { headers: { Authorization: `Bearer ${token}` } })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) { setAiHealthError(data.error || `Diagnostic returned ${res.status}`); return }
+        setAiHealth(data.providerHealth || { status: 'unavailable', summary: 'The diagnostic answered without a providerHealth block.' })
+        setAiHealthError('')
+      } catch { setAiHealthError('Could not reach the AI diagnostic') }
+    })()
+  }, [isAdminUser, tab, aiHealth])
+
   const effectiveUnlocked = unlocked || isAdminUser
 
   useEffect(() => {
@@ -1897,6 +1926,63 @@ export default function Admin({ toast }) {
               <div className="adm-cat-title"><span className="adm-section-bar" />Setup</div>
               <span className="adm-cat-desc">Infrastructure checklist</span>
             </div>
+
+            {/* AI provider health — the failover made visible. A dead OpenRouter
+                returns a perfect prompt from the Gemini fallback, so nothing
+                else on any screen would ever say so. */}
+            <div className="adm-card" style={{ marginBottom: 16 }}>
+              <div className="adm-card-header">
+                <span className="adm-card-title">AI provider health</span>
+                <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+                  {aiHealth?.windowDays ? `last ${aiHealth.windowDays} days` : 'live'}
+                </span>
+              </div>
+              <div className="adm-card-body">
+                {aiHealthError && <div style={{ fontSize: 12, color: 'var(--warn)' }}>{aiHealthError}</div>}
+                {!aiHealth && !aiHealthError && <div style={{ fontSize: 12, color: 'var(--t2)' }}>Checking…</div>}
+                {aiHealth && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                        background: aiHealth.status === 'ok' ? 'var(--ok)'
+                          : aiHealth.status === 'failing' ? 'var(--err)'
+                            : aiHealth.status === 'degraded' ? 'var(--warn)' : 'var(--t3)',
+                      }} />
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>
+                        {aiHealth.status === 'ok' ? 'OpenRouter is serving generations'
+                          : aiHealth.status === 'failing' ? 'OpenRouter is dead — everything is on the fallback'
+                            : aiHealth.status === 'degraded' ? 'OpenRouter is failing intermittently'
+                              : aiHealth.status === 'no-data' ? 'No generations to judge by'
+                                : 'Health unavailable'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.5 }}>{aiHealth.summary}</div>
+                    {aiHealth.totals && (
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--t2)' }}>
+                        <span>OpenRouter served <strong style={{ color: 'var(--t0)' }}>{aiHealth.totals.openrouterOk}</strong></span>
+                        <span>OpenRouter failed <strong style={{ color: 'var(--t0)' }}>{aiHealth.totals.openrouterFail}</strong></span>
+                        <span>Gemini fallback served <strong style={{ color: 'var(--t0)' }}>{aiHealth.totals.geminiOk}</strong></span>
+                        <span>Both down <strong style={{ color: 'var(--t0)' }}>{aiHealth.totals.noProvider}</strong></span>
+                      </div>
+                    )}
+                    {aiHealth.lastFailover && (
+                      <div style={{ fontSize: 11, color: 'var(--t3)', lineHeight: 1.5 }}>
+                        Last failover {fmtDateTime(aiHealth.lastFailover.at)}
+                        {aiHealth.lastFailover.status ? ` · HTTP ${aiHealth.lastFailover.status}` : ''}
+                        {aiHealth.lastFailover.message ? ` · ${aiHealth.lastFailover.message}` : ''}
+                      </div>
+                    )}
+                    {aiHealth.alerting && (
+                      <div style={{ fontSize: 11, color: aiHealth.alerting.startsWith('on') ? 'var(--t3)' : 'var(--warn)', lineHeight: 1.5 }}>
+                        Email alerts: {aiHealth.alerting}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="adm-card">
               <div className="adm-card-body">
                 <div className="adm-checklist">
