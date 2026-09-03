@@ -400,8 +400,6 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 /* Base colour + harmony quick-switch */
 .cs-pb-base{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--s-3)}
 .cs-pb-base-swatch{position:relative;width:40px;height:40px;flex-shrink:0;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border)}
-.cs-pb-base-chip{position:absolute;inset:0}
-.cs-pb-base-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
 .cs-pb-base-hex{width:104px;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;padding:9px 12px;min-height:40px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);color:var(--t0)}
 .cs-pb-base-div{width:1px;height:24px;background:var(--border);flex-shrink:0}
 .cs-pb-harms{display:flex;gap:4px;flex-wrap:wrap}
@@ -457,10 +455,19 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .cs-pb-gap-count{font-family:var(--mono);font-size:12px;font-weight:700;line-height:1}
 
 /* Trailing "+ Add" card */
-.cs-pb-add{position:relative;flex:1 1 0;min-width:84px;min-height:160px;border-radius:var(--radius-l);border:1px dashed var(--border);background:var(--bg-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-.cs-pb-add:hover{color:var(--t0);border-color:var(--accent);background:var(--hvr)}
+/* The "+ Add" card is the shared picker's TRIGGER now, not a label wrapping an
+   invisible native input — so it has to out-specify `.cpk-trigger`, which is
+   later in this file and would otherwise impose its 40x40 grid box. The card
+   sizing moves to the wrapper, because ColorPickerPop renders `.cpk-wrap`
+   between the rail and the trigger and the rail flexes its own children. */
+.cs-pb-rail>.cpk-wrap{flex:1 1 0;min-width:84px}
+/* The gradient stop's trigger keeps the 32px box its hand-rolled predecessor
+   had, so the stop row's rhythm is unchanged. */
+.cpk-trigger.cs-grad-stop-trigger{width:32px;height:32px;border-radius:var(--radius-xs)}
+.cpk-trigger.cs-grad-stop-trigger .cpk-trigger-chip{width:22px;height:22px}
+.cpk-trigger.cs-pb-add{width:100%;height:auto;min-height:160px;border-radius:var(--radius-l);border:1px dashed var(--border);background:var(--bg-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.cpk-trigger.cs-pb-add:hover{color:var(--t0);border-color:var(--accent);background:var(--hvr)}
 .cs-pb-add-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.cs-pb-add-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
 
 /* Global adjust strip (CS#3.15) */
 .cs-pb-adjust{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-4);padding:var(--s-4) var(--s-5);background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow);margin-bottom:var(--s-3)}
@@ -4217,13 +4224,13 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* D. Edit tab (manual per-swatch set) */
 .cs-sw-edit-label{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--t3);text-transform:uppercase;margin-bottom:8px}
 .cs-sw-edit-field{display:flex;gap:8px;align-items:center;margin-bottom:var(--s-3)}
-.cs-sw-edit-chip{position:relative;width:40px;height:40px;border-radius:var(--radius-s);border:1px solid var(--border);flex:0 0 auto;overflow:hidden;cursor:pointer;background:var(--cs-edit-chip,#000)}
-.cs-sw-edit-chip input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
+/* Sizing only now. The chip used to BE this element (a --cs-edit-chip ground
+   under an invisible native input); it is now the shared trigger's own chip,
+   so a background here would paint over it. */
+.cs-sw-edit-chip{width:40px;height:40px;flex:0 0 auto}
 .cs-sw-edit-hex{flex:1 1 auto;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.04em;padding:0 12px;height:40px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);color:var(--t0);min-width:0}
 .cs-sw-edit-hex:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
 .cs-sw-edit-hex.invalid{border-color:var(--err)}
-.cs-sw-edit-pick{height:40px;padding:0 14px;font-size:12px;font-weight:700;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);color:var(--t1);cursor:pointer;flex:0 0 auto}
-.cs-sw-edit-pick:hover{border-color:var(--bh);background:var(--hvr)}
 .cs-sw-edit-err{font-size:11px;color:var(--err);display:flex;align-items:center;gap:5px;margin-bottom:var(--s-3)}
 .cs-sw-edit-note{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:var(--s-3)}
 .cs-sw-edit-note button{font:inherit;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline}
@@ -5736,32 +5743,90 @@ html.lenis,html.lenis body{height:auto}
 .icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-xs);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .icust-seg button:hover{color:var(--t0)}
 .icust-seg button.active{background:var(--bg-0);color:var(--t0);box-shadow:var(--shadow-xs)}
-/* cpk — token-styled colour-picker popover (replaces the OS-native colour
-   dialog in the icon customizer; reusable anywhere via ColorPickerPop). */
+/* cpk — THE colour input for this app (src/components/ColorPickerPop.jsx).
+   It replaces the OS-native colour dialog on EVERY surface that picks a colour;
+   the component header carries the call-site inventory and the emit contract.
+
+   The panel's SKIN — background, border, radius, elevation, entry motion, edge
+   flipping, max-height and scroll containment — comes from the shared `.pop`
+   block at the END of this file, because the element carries both classes.
+   Nothing here restates any of it. What lives here is only what is particular
+   to a colour picker: the instrument, the value row and the swatch sections.
+   The one property that has to beat `.pop` is written as `.pop.cpk-pop`, so it
+   wins on specificity from this block rather than having to move to the end of
+   the file and away from its siblings. */
 .cpk-wrap{position:relative;flex:0 0 auto}
-.cpk-trigger{display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out)}
+.cpk-trigger{display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .cpk-trigger:hover,.cpk-trigger[aria-expanded="true"]{border-color:var(--bh)}
-.cpk-trigger-chip{width:22px;height:22px;border-radius:var(--radius-xs);border:1px solid var(--border)}
-.cpk-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:40;display:flex;flex-direction:column;gap:10px;width:232px;padding:12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.cpk-pad{position:relative;width:100%;height:130px;border-radius:var(--radius-s);border:1px solid var(--border);background-image:linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,rgba(255,255,255,0));cursor:crosshair;touch-action:none}
-.cpk-pad:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.cpk-pad-thumb{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
-.cpk-hue{-webkit-appearance:none;appearance:none;width:100%;height:12px;margin:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);cursor:pointer}
-.cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-xs);cursor:grab}
-.cpk-hue::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-xs);cursor:grab}
-.cpk-row{display:flex;align-items:center;gap:8px}
-.cpk-chip{flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--cpk-chip-color,transparent)}
+/* The open state has to be legible WITHOUT hover. A touch user never has one,
+   and this trigger now stands on twelve surfaces rather than three (founder
+   direction 2026-09-02: no hover-dependent affordances on touch). */
+.cpk-trigger[aria-expanded="true"]{box-shadow:0 0 0 3px var(--accent-bg)}
+.cpk-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cpk-trigger[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
+.cpk-trigger-chip{width:26px;height:26px;border-radius:var(--radius-xs);border:1px solid var(--border)}
+/* Width is set here because the shared `.pop` deliberately leaves layout to
+   each popover; padding is overridden because the instrument bleeds through it. */
+.cpk-pop{display:flex;flex-direction:column;gap:var(--s-2);width:244px}
+.pop.cpk-pop{padding:var(--s-3)}
+/* Which colour is being edited, in the shared .pop-head voice. */
+.cpk-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);padding:0}
+.cpk-head-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpk-chip{flex:0 0 auto;width:20px;height:20px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--cpk-chip-color,transparent)}
+/* The instrument. Pad and hue are one object with one frame, bled out to the
+   panel's inner edges so the pad reads as a screen rather than as a third form
+   field stacked above two others. */
+.cpk-instrument{margin:0 calc(var(--s-3) * -1);border-block:1px solid var(--border);background:var(--bg-2)}
+.cpk-pad{position:relative;width:100%;height:148px;border:0;background-image:linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,rgba(255,255,255,0));cursor:crosshair;touch-action:none}
+/* Inset, because a bled pad has no margin to paint an outline into. */
+.cpk-pad:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* Big enough to find on a 148px pad, and legible over both ends of the value
+   axis: a white ring for dark colours, a dark hairline outside it for light ones. */
+.cpk-pad-thumb{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.3);pointer-events:none}
+/* ── The hue slider, and why every rule here is descendant-qualified ────────
+   `input[type="range"]` at the top of this file (~line 585) is the app's
+   standard slider: `background:transparent`, `height:32px`, a 4px `--bg-4`
+   runnable track and a 20px white-on-accent thumb. Its specificity is (0,1,1);
+   a bare `.cpk-hue` is (0,1,0), so the STANDARD SLIDER WON — and had been
+   winning since this component was written. The hue strip has never actually
+   painted its rainbow: what shipped was a thin grey track with the same blue
+   thumb as a stroke-width or a quality slider, on the one control in the app
+   whose entire job is to show you the hue you are choosing.
+
+   Nothing about the old declarations was wrong; they simply never applied.
+   Qualifying by `.cpk-instrument` takes these to (0,2,0)/(0,2,1), which beats
+   the element rule on class count — the same fix `.snapv--grad` already uses
+   two hundred lines below. The gradient goes on the ELEMENT and the runnable
+   track is made transparent and full-height, so the strip is the control. */
+.cpk-instrument .cpk-hue{-webkit-appearance:none;appearance:none;display:block;width:100%;height:22px;margin:0;padding:0;border:0;border-top:1px solid var(--border);border-radius:0;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);outline:none;cursor:pointer}
+.cpk-instrument .cpk-hue::-webkit-slider-runnable-track{height:22px;border-radius:0;background:transparent}
+.cpk-instrument .cpk-hue::-moz-range-track{height:22px;border-radius:0;background:transparent}
+.cpk-instrument .cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:3px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab;position:relative;z-index:2}
+.cpk-instrument .cpk-hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
+.cpk-instrument .cpk-hue:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cpk-row{display:flex;align-items:center;gap:var(--s-1)}
+/* Eyedropper. Present only where the browser has the API — see the component. */
+.cpk-dropper{flex:0 0 auto;display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),border-color var(--dur-1) var(--ease-out)}
+.cpk-dropper:hover{color:var(--t0);border-color:var(--bh)}
+.cpk-dropper:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
+.cpk-hex:focus{outline:none;border-color:var(--accent)}
 /* The notation select. Sized to its widest option (HEX/RGB/HSL are all three
    characters) so switching never reflows the row under the pointer. */
-.cpk-format{flex:0 0 auto;height:32px;padding:0 6px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
+.cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
 .cpk-format:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.cpk-recents-label{margin:2px 0 -2px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
-.cpk-recents{display:grid;gap:6px}
-.cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
-.cpk-hex:focus{outline:none;border-color:var(--accent)}
-.cpk-swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+/* Each swatch group is headed. An unheaded second grid is indistinguishable
+   from the first — to the eye, and to a screen reader, which is why the label
+   IS the listbox's accessible name rather than a decoration beside it. */
+.cpk-section{display:grid;gap:var(--s-1)}
+.cpk-section-label{margin:0;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.cpk-swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--s-1)}
+/* Rounded squares, NOT the circles most of the references use: a colour sample
+   is a rounded rectangle everywhere else in this app (.plb-col and
+   .cpk-trigger-chip), and matching Canva here would have cost matching ourselves. */
 .cpk-swatch{aspect-ratio:1;padding:0;border-radius:var(--radius-xs);border:1px solid var(--border);cursor:pointer;transition:transform var(--dur-2) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
 .cpk-swatch:hover{transform:scale(1.08)}
+.cpk-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cpk-swatch.is-active{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
 .icust-abs{flex:0 0 auto;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .icust-abs:hover{border-color:var(--bh);color:var(--t0)}
@@ -6639,7 +6704,9 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 /* 2 · Gradient */
 .hw-grad-preview{height:132px;border-radius:var(--radius);box-shadow:var(--shadow-s)}
 .hw-stop{display:flex;align-items:center;gap:8px}
-.hw-stop-well{flex:0 0 auto}
+/* Holds the 48px width the base `input[type="color"]` rule used to give this
+   well, so swapping it for the shared picker's trigger did not move the row. */
+.hw-stop-well{flex:0 0 auto;width:48px}
 .hw-input-hex{width:104px;font-family:var(--mono);text-transform:uppercase}
 .hw-out{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-0)}
 .hw-code{flex:1 1 240px;min-width:0;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--t0);word-break:break-all;user-select:all}

@@ -4,40 +4,63 @@ import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/c
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
 
 // ── ColorPickerPop ────────────────────────────────────────────────────────────
-// Token-styled replacement for the OS-native <input type="color"> popup: a
-// swatch trigger that opens a small popover with a saturation/value pad, hue
-// slider, hex field, and preset swatches. Controlled: emits normalised
-// lowercase #rrggbb through onChange on every committed change.
+// THE colour input for this app. Not "a shared component available to surfaces
+// that want it" — the only one. Every place a person picks a colour in UIL4B
+// opens this panel: the palette seed, the swatch editor, gradient stops in both
+// generators, the icon colour, the tint ramps, the contrast pair, the JPEG
+// matte, the UI-system seed and the homepage workbench.
+//
+// Founder request (2026-09-03): "i want a better colour picker maybe even one
+// that matches the apps UI, and i want this one used for all colour pickers."
+// Before that pass this component had THREE call sites and there were NINE live
+// `<input type="color">` elsewhere, so the same act — choose a colour — looked
+// and behaved differently depending on which tool you were standing in. A native
+// colour input cannot be styled, cannot offer the app's shared recents, and
+// opens the operating system's picker, which is the least "part of this app" a
+// control can possibly be.
+//
+// Controlled: emits normalised lowercase `#rrggbb` through onChange on every
+// committed change.
 //
 // Dismissal, focus and edge-flipping come from usePopover — the one popover
-// contract shared with the nav popovers and the tool micro-menus. This file
-// used to hand-roll outside-click and Escape and did neither of the other two:
-// opening it left focus on the trigger (so a keyboard user had to tab through
-// the page to reach the pad), Escape dropped focus to <body>, and next to the
-// right-hand edge of a narrow viewport the panel was simply clipped.
+// contract shared with the nav popovers and the tool micro-menus. Routing
+// through it is also what gives this panel #316's scroll containment for free.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHAT THE FOUNDER ASKED FOR, AND WHAT IS HERE
 // ─────────────────────────────────────────────────────────────────────────────
 // Request (2026-08-08): "Solid / Gradient / Image tabs, an SV field, hue and
-// alpha sliders, a format dropdown and saved swatches." The queue item added:
-// "Shared component — scope which surfaces adopt it before building."
+// alpha sliders, a format dropdown and saved swatches."
 //
-// The SV field, hue slider and preset swatches already existed. Added here:
+// The SV field, hue slider and preset swatches already existed. Added since:
 //
 //   FORMAT DROPDOWN — hex / rgb / hsl. A LENS, not a second value: the
 //   component still emits `#rrggbb` whatever is on screen. Widening the emit
 //   contract is a much larger change than a display preference earns, and every
-//   consumer would have to be taught to read it.
+//   consumer would have to be taught to read it. Squarespace, Hex and Zoho all
+//   place the notation control immediately beside the value field, which is
+//   where ours already was — that reference changed nothing, and saying so is
+//   the point of looking.
 //
 //   SAVED SWATCHES — the last twelve colours committed from ANY picker in the
 //   app, shared across surfaces (utils/recentColors.js). A colour you just
 //   mixed is one you are likely to want in the next tool, and matching it again
-//   by eye is the tedious part of building a system.
+//   by eye is the tedious part of building a system. Now that every surface
+//   routes through here, that list finally spans the whole app rather than
+//   three tools of it.
 //
-// NOT HERE, and both omissions are the same decision rather than an oversight:
-// this component has exactly three call sites, and a control none of them can
-// consume is dead code that merely looks finished.
+//   EYEDROPPER — the one control added in the 2026-09-03 pass, and it is here
+//   rather than in the declined list below because of the emit contract, not
+//   taste: `EyeDropper.open()` resolves to an opaque `sRGBHex`, which is already
+//   exactly what this component emits. Every one of the twelve consumers can
+//   store the result unchanged. It is feature-detected and simply ABSENT outside
+//   Chromium rather than present and broken, and it is never the only route to a
+//   colour — the pad, the field and the swatches all still work without it.
+//
+// NOT HERE, and both omissions are the same decision rather than an oversight.
+// The call-site count that argued it has gone from three to twelve, which
+// STRENGTHENS the argument rather than weakening it: a control none of them can
+// consume is dead code that merely looks finished, now on twelve surfaces.
 //
 //   ALPHA SLIDER. Nothing downstream can store an alpha. A gradient STOP is
 //   `{ color, position }` and its alpha would have to reach gradientCss,
@@ -45,15 +68,22 @@ import { addRecentColor, getRecentColors } from '../utils/recentColors'
 //   data before it meant anything. A PALETTE swatch is worse than unsupported —
 //   the contrast maths, the tint scales and the exports all assume an opaque
 //   colour, so a translucent one would not be a nicer colour, it would be a
-//   corrupt palette. `formatColor` in utils/colorFormats.js already carries
-//   alpha and is tested for it, so the day a stop model can hold one, the
-//   slider is a small change. Transparent gradient stops are their own feature.
+//   corrupt palette. The tint ramps and the contrast checker joined as call
+//   sites in this pass and both are pure opaque-colour maths, as is the JPEG
+//   matte, which exists precisely BECAUSE the format has no alpha.
+//   `formatColor` in utils/colorFormats.js already carries alpha and is tested
+//   for it, so the day a stop model can hold one, the slider is a small change.
+//   Transparent gradient stops are their own feature.
 //
 //   SOLID / GRADIENT / IMAGE TABS. Nothing can consume a gradient or an image
-//   from here either — the three call sites are a palette swatch, a gradient
-//   stop (which cannot itself be a gradient) and an icon colour. Which surface
-//   should take a gradient or image fill is product direction, not a defect, so
-//   it is raised in docs/PROPOSALS.md rather than guessed at.
+//   from here either. Note the shape of the call sites: two of them ARE gradient
+//   stops, and a stop cannot itself be a gradient. Which surface should take a
+//   gradient or image fill is product direction, not a defect, so it is raised
+//   in docs/PROPOSALS.md rather than guessed at.
+//
+// tests/user-sim/35-colour-picker.spec.js asserts the ABSENCE of both — by
+// visible text AND by role, so neither a tab strip nor a bare alpha track can
+// reappear without someone deciding to add one.
 
 function hexToHsv(hex) {
   const n = normalizeHex(hex) || '#000000'
@@ -97,10 +127,17 @@ const DEFAULT_SWATCHES = [
 export default function ColorPickerPop({
   value,
   onChange,
+  onClose,
   ariaLabel = 'Custom colour',
   swatches = DEFAULT_SWATCHES,
+  // The section's name is BOTH the visible label and the listbox's accessible
+  // name. It used to be "Presets" on screen and "Preset colours" to a screen
+  // reader, which is two names for one thing.
+  swatchesLabel = 'Preset colours',
   disabled = false,
   onDisabledClick,
+  triggerClassName = '',
+  triggerChildren,
 }) {
   const [open, setOpen] = useState(false)
   const [format, setFormat] = useState('hex')
@@ -108,7 +145,7 @@ export default function ColorPickerPop({
   // useId, not a counter: two pickers can be open at once (a gradient has a
   // stop picker per stop) and a duplicated id would point every label at the
   // first list.
-  const recentsId = useId()
+  const ids = useId()
   const current = normalizeHex(value) || '#000000'
   // hsv is the working state while the popover is open — it preserves hue when
   // the colour passes through black/white (where hue is lost in hex round-trips).
@@ -116,7 +153,13 @@ export default function ColorPickerPop({
   const [hexText, setHexText] = useState(current)
   const padRef = useRef(null)
   const draggingRef = useRef(false)
-  const close = useCallback(() => setOpen(false), [])
+
+  // onClose is the "that pick is finished" boundary, and it is the popover's
+  // equivalent of the native control's `change` event (onChange being its
+  // `input`). ColorStudio's "+ Add" card needs exactly that signal to know one
+  // pick has ended and the next should append a new swatch rather than keep
+  // rewriting the last one.
+  const close = useCallback(() => { setOpen(false); onClose?.() }, [onClose])
   // Land on the saturation/value pad, not the panel: this popover's whole
   // purpose is that one control, and anything else costs a keyboard user a tab
   // every single time they open it.
@@ -133,8 +176,9 @@ export default function ColorPickerPop({
 
   // Dragging the pad fires this on every pointermove, so the recents list is
   // NOT written here — it would fill with twelve shades of one drag. It is
-  // written on release, on a swatch press and on a typed value: the three
-  // moments a colour was actually chosen rather than passed through.
+  // written on release, on a swatch press, on an eyedropper pick and on a typed
+  // value: the four moments a colour was actually chosen rather than passed
+  // through.
   const commit = (next) => {
     setHsv(next)
     const hex = hsvToHex(next)
@@ -146,6 +190,17 @@ export default function ColorPickerPop({
     const stored = normalizeHex(hex)
     if (stored) setRecents(addRecentColor(stored))
   }, [])
+
+  // One committed choice, wherever it came from: a swatch, a typed value or the
+  // screen. Every route has to move the pad, rewrite the field, emit and
+  // remember — and writing that out three separate times is how two of the
+  // three ended up subtly different from each other.
+  const selectColor = (hex) => {
+    setHsv(hexToHsv(hex))
+    setHexText(formatColor(hex, format))
+    onChange?.(hex)
+    remember(hex)
+  }
 
   const padPointer = (e) => {
     const pad = padRef.current
@@ -159,6 +214,22 @@ export default function ColorPickerPop({
   const hueHex = useMemo(() => hsvToHex({ h: hsv.h, s: 1, v: 1 }), [hsv.h])
   const liveHex = hsvToHex(hsv)
 
+  // Only ever read while the panel is OPEN, which cannot happen before a click,
+  // which cannot happen during the prerender — so this needs no effect (and no
+  // set-state-in-effect) and cannot produce a hydration mismatch.
+  const canSampleScreen = open && typeof window !== 'undefined' && 'EyeDropper' in window
+
+  const sampleScreen = async () => {
+    try {
+      const { sRGBHex } = await new window.EyeDropper().open()
+      const hex = normalizeHex(sRGBHex)
+      if (hex) selectColor(hex)
+    } catch {
+      // Dismissing the eyedropper rejects. That is a person changing their
+      // mind, not a fault, and it must not surface as one.
+    }
+  }
+
   // Accepts hex, rgb() or hsl() whatever the dropdown says — someone pasting a
   // colour out of devtools should not have to change a setting first. An
   // unreadable value snaps back rather than clearing, so a typo never destroys
@@ -166,21 +237,36 @@ export default function ColorPickerPop({
   const applyTypedColor = () => {
     const parsed = parseColor(hexText)
     if (!parsed) { setHexText(formatColor(liveHex, format)); return }
-    setHsv(hexToHsv(parsed.hex))
     // `parsed.alpha` is deliberately discarded. Pasting `#ff000080` or
     // `rgb(255 0 0 / .5)` sets the COLOUR and drops the transparency, because
     // nothing downstream can store one — see the note at the top. Silently
     // keeping it would produce a value the next export could not represent.
-    setHexText(formatColor(parsed.hex, format))
-    onChange?.(parsed.hex)
-    remember(parsed.hex)
+    selectColor(parsed.hex)
   }
+
+  const swatchGrid = (list, labelledBy) => (
+    <div className="cpk-swatches" role="listbox" aria-labelledby={labelledBy}>
+      {list.map((sw) => (
+        <button
+          key={sw}
+          type="button"
+          role="option"
+          aria-selected={sw === liveHex}
+          className={`cpk-swatch${sw === liveHex ? ' is-active' : ''}`}
+          style={{ background: sw }}
+          aria-label={sw}
+          title={sw}
+          onClick={() => selectColor(sw)}
+        />
+      ))}
+    </div>
+  )
 
   return (
     <div className="cpk-wrap">
       <button
         type="button"
-        className="cpk-trigger"
+        className={`cpk-trigger${triggerClassName ? ` ${triggerClassName}` : ''}`}
         ref={triggerRef}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
@@ -193,58 +279,91 @@ export default function ColorPickerPop({
           setOpen((o) => !o)
         }}
       >
-        <span className="cpk-trigger-chip" style={{ background: current }} aria-hidden="true" />
+        {triggerChildren || (
+          <span className="cpk-trigger-chip" style={{ background: current }} aria-hidden="true" />
+        )}
       </button>
 
       {open && (
         <div className="pop cpk-pop" ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
-          <div
-            className="cpk-pad"
-            ref={padRef}
-            style={{ backgroundColor: hueHex }}
-            role="slider"
-            aria-label="Saturation and brightness"
-            aria-valuetext={`Saturation ${Math.round(hsv.s * 100)}%, brightness ${Math.round(hsv.v * 100)}%`}
-            tabIndex={0}
-            onPointerDown={(e) => {
-              draggingRef.current = true
-              e.currentTarget.setPointerCapture(e.pointerId)
-              padPointer(e)
-            }}
-            onPointerMove={(e) => { if (draggingRef.current) padPointer(e) }}
-            onPointerUp={(e) => {
-              draggingRef.current = false
-              e.currentTarget.releasePointerCapture(e.pointerId)
-              remember(hsvToHex(hsv))
-            }}
-            onKeyDown={(e) => {
-              const step = e.shiftKey ? 0.1 : 0.02
-              if (e.key === 'ArrowRight') { e.preventDefault(); commit({ ...hsv, s: Math.min(1, hsv.s + step) }) }
-              else if (e.key === 'ArrowLeft') { e.preventDefault(); commit({ ...hsv, s: Math.max(0, hsv.s - step) }) }
-              else if (e.key === 'ArrowUp') { e.preventDefault(); commit({ ...hsv, v: Math.min(1, hsv.v + step) }) }
-              else if (e.key === 'ArrowDown') { e.preventDefault(); commit({ ...hsv, v: Math.max(0, hsv.v - step) }) }
-            }}
-          >
-            <span
-              className="cpk-pad-thumb"
-              style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, background: liveHex }}
-              aria-hidden="true"
+          {/* The panel says which colour it is editing, in the shared .pop-head
+              voice. Near-free on a surface with one picker; the difference
+              between usable and guesswork on a gradient with five stops, a
+              contrast pair, or a column of tint ramps — all of which now open
+              this same panel. Reference: Google AI Studio, Adobe Express and
+              Stitch all title theirs. */}
+          <p className="pop-head cpk-head">
+            <span className="cpk-head-name">{ariaLabel}</span>
+            <span className="cpk-chip" style={{ '--cpk-chip-color': liveHex }} aria-hidden="true" />
+          </p>
+
+          {/* Pad and hue are ONE instrument, not two stacked fields: they share
+              a bleed to the panel's edges and a single frame, divided by a
+              hairline instead of a gap. */}
+          <div className="cpk-instrument">
+            <div
+              className="cpk-pad"
+              ref={padRef}
+              style={{ backgroundColor: hueHex }}
+              role="slider"
+              aria-label="Saturation and brightness"
+              aria-valuetext={`Saturation ${Math.round(hsv.s * 100)}%, brightness ${Math.round(hsv.v * 100)}%`}
+              tabIndex={0}
+              onPointerDown={(e) => {
+                draggingRef.current = true
+                e.currentTarget.setPointerCapture(e.pointerId)
+                padPointer(e)
+              }}
+              onPointerMove={(e) => { if (draggingRef.current) padPointer(e) }}
+              onPointerUp={(e) => {
+                draggingRef.current = false
+                e.currentTarget.releasePointerCapture(e.pointerId)
+                remember(hsvToHex(hsv))
+              }}
+              onKeyDown={(e) => {
+                const step = e.shiftKey ? 0.1 : 0.02
+                if (e.key === 'ArrowRight') { e.preventDefault(); commit({ ...hsv, s: Math.min(1, hsv.s + step) }) }
+                else if (e.key === 'ArrowLeft') { e.preventDefault(); commit({ ...hsv, s: Math.max(0, hsv.s - step) }) }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); commit({ ...hsv, v: Math.min(1, hsv.v + step) }) }
+                else if (e.key === 'ArrowDown') { e.preventDefault(); commit({ ...hsv, v: Math.max(0, hsv.v - step) }) }
+              }}
+            >
+              <span
+                className="cpk-pad-thumb"
+                style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, background: liveHex }}
+                aria-hidden="true"
+              />
+            </div>
+
+            <input
+              className="cpk-hue"
+              type="range"
+              min="0"
+              max="360"
+              step="1"
+              value={Math.round(hsv.h)}
+              aria-label="Hue"
+              onChange={(e) => commit({ ...hsv, h: +e.target.value })}
             />
           </div>
 
-          <input
-            className="cpk-hue"
-            type="range"
-            min="0"
-            max="360"
-            step="1"
-            value={Math.round(hsv.h)}
-            aria-label="Hue"
-            onChange={(e) => commit({ ...hsv, h: +e.target.value })}
-          />
-
           <div className="cpk-row">
-            <span className="cpk-chip" style={{ '--cpk-chip-color': liveHex }} aria-hidden="true" />
+            {canSampleScreen && (
+              <button
+                type="button"
+                className="cpk-dropper"
+                aria-label="Pick a colour from the screen"
+                title="Pick a colour from the screen"
+                onClick={sampleScreen}
+              >
+                {/* Lucide `pipette`, at the thinner stroke #303 made meaningful. */}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m2 22 1-1h3l9-9" />
+                  <path d="M3 21v-3l9-9" />
+                  <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z" />
+                </svg>
+              </button>
+            )}
             <input
               className="cpk-hex"
               type="text"
@@ -277,53 +396,27 @@ export default function ColorPickerPop({
             </select>
           </div>
 
+          {/* Two labelled sections rather than two bare grids. Canva, Adobe
+              Express and Fiverr all head each swatch group ("Document colors",
+              "My library", "Used Colors"); an unheaded second grid is
+              indistinguishable from the first, to the eye and to a screen
+              reader alike. */}
           {recents.length > 0 && (
-            <div className="cpk-recents">
-              <p className="cpk-recents-label" id={`${recentsId}-label`}>Recent</p>
-              <div className="cpk-swatches" role="listbox" aria-labelledby={`${recentsId}-label`}>
-                {recents.map((sw) => (
-                  <button
-                    key={sw}
-                    type="button"
-                    role="option"
-                    aria-selected={sw === liveHex}
-                    className={`cpk-swatch${sw === liveHex ? ' is-active' : ''}`}
-                    style={{ background: sw }}
-                    aria-label={sw}
-                    title={sw}
-                    onClick={() => {
-                      setHsv(hexToHsv(sw))
-                      setHexText(formatColor(sw, format))
-                      onChange?.(sw)
-                      remember(sw)
-                    }}
-                  />
-                ))}
-              </div>
+            /* `.cpk-recents` is load-bearing, not decorative: it is how
+               35-colour-picker.spec.js tells the shared list apart from the
+               presets, including across two different tools. */
+            <div className="cpk-section cpk-recents">
+              <p className="cpk-section-label" id={`${ids}-recent`}>Recent</p>
+              {swatchGrid(recents, `${ids}-recent`)}
             </div>
           )}
 
-          <p className="cpk-recents-label">Presets</p>
-          <div className="cpk-swatches" role="listbox" aria-label="Preset colours">
-            {swatches.map((sw) => (
-              <button
-                key={sw}
-                type="button"
-                role="option"
-                aria-selected={sw === liveHex}
-                className={`cpk-swatch${sw === liveHex ? ' is-active' : ''}`}
-                style={{ background: sw }}
-                aria-label={sw}
-                title={sw}
-                onClick={() => {
-                  setHsv(hexToHsv(sw))
-                  setHexText(formatColor(sw, format))
-                  onChange?.(sw)
-                  remember(sw)
-                }}
-              />
-            ))}
-          </div>
+          {swatches.length > 0 && (
+            <div className="cpk-section">
+              <p className="cpk-section-label" id={`${ids}-presets`}>{swatchesLabel}</p>
+              {swatchGrid(swatches, `${ids}-presets`)}
+            </div>
+          )}
         </div>
       )}
     </div>
