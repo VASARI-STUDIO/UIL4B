@@ -34,6 +34,8 @@ import {
 import { CREATE_GROUPS, createRoutes, resolveTool } from '../../src/data/toolTree.js'
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { buildRedirects, buildRewrites, prerenderRoutes } from '../../scripts/sync-vercel-rewrites.mjs'
+import { sitemapRoutes } from '../../scripts/route-matrix.mjs'
+import { canonicalUrl } from '../../src/utils/routeMeta.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const vercel = () => JSON.parse(read('vercel.json'))
@@ -240,7 +242,7 @@ test('no path is both redirected and rewritten', async () => {
   // Vercel evaluates redirects before rewrites, so a path in both would 301 and
   // its rewrite would be dead — harmless today, but it means one of the two is
   // wrong and nothing would say which.
-  const rewrites = buildRewrites(await prerenderRoutes())
+  const rewrites = buildRewrites(prerenderRoutes())
   const explicit = new Set(rewrites.filter((r) => !r.source.includes('?!')).map((r) => r.source))
   for (const [from] of LEGACY_REDIRECTS) {
     assert.ok(!explicit.has(from),
@@ -251,7 +253,7 @@ test('no path is both redirected and rewritten', async () => {
 test('every live Create tool is advertised in the sitemap', async () => {
   // The counterpart to the redirects: a 301 into a page the sitemap never names
   // hands Google a destination it has no reason to crawl.
-  const advertised = new Set(await prerenderRoutes())
+  const advertised = new Set(await sitemapRoutes())
   for (const group of CREATE_GROUPS) {
     if (group.soon) continue
     for (const tool of group.tools) {
@@ -263,7 +265,7 @@ test('every live Create tool is advertised in the sitemap', async () => {
 })
 
 test('no still-building Create route is advertised', async () => {
-  const advertised = new Set(await prerenderRoutes())
+  const advertised = new Set(await sitemapRoutes())
   for (const group of CREATE_GROUPS) {
     for (const tool of group.tools) {
       if (!tool.soon && !group.soon) continue
@@ -275,32 +277,39 @@ test('no still-building Create route is advertised', async () => {
 
 /* ── No canonical destination serves noindex ──────────────────────────────── */
 
-test('every prerendered route is indexable and canonicalises to itself', {
+test('every prerendered route is indexable and serves the runtime\'s own canonical', {
   skip: !built && 'run `npm run build` first',
 }, async () => {
   // THE ONE THAT MATTERS for the migration. A 301 whose destination carries
   // `noindex` moves the problem rather than fixing it: the old URL stops being
   // indexed and the new one never starts. Read out of the SERVED html, because
   // that is what a crawler that runs no JavaScript actually receives.
-  for (const route of await prerenderRoutes()) {
+  //
+  // The canonical is compared against canonicalUrl() rather than against
+  // `origin + route`. Those agree on every route but one, and the exception is
+  // the point: /home is canonicalised onto `/`, so a self-canonical assertion
+  // would demand the shell contradict what App.jsx writes a moment later.
+  // Comparing against the function the runtime uses keeps this a check that the
+  // SERVED head matches the HYDRATED head, which is what it was always for.
+  for (const route of prerenderRoutes()) {
     const html = read(`dist${route}/index.html`)
     const robots = html.match(/<meta\s+name="robots"\s+content="([^"]*)"/)?.[1]
     assert.ok(robots, `dist${route}/index.html has no robots tag at all`)
     assert.ok(!robots.includes('noindex'),
       `${route} is a canonical destination but serves ${robots}`)
     const canonical = html.match(/<link\s+rel="canonical"\s+href="([^"]*)"/)?.[1]
-    assert.equal(canonical, `https://www.uil4b.com${route}`,
-      `${route} does not canonicalise to itself`)
+    assert.equal(canonical, canonicalUrl(route),
+      `dist${route}/index.html serves a canonical the runtime would not write`)
   }
 })
 
 test('every 301 destination that is prerendered is one of those indexable shells', {
   skip: !built && 'run `npm run build` first',
 }, async () => {
-  const advertised = new Set(await prerenderRoutes())
+  const prerendered = new Set(prerenderRoutes())
   for (const [from, to] of LEGACY_REDIRECTS) {
     const dest = destPath(to)
-    if (!advertised.has(dest)) continue
+    if (!prerendered.has(dest)) continue
     const html = read(`dist${dest}/index.html`)
     assert.doesNotMatch(html, /content="[^"]*noindex/,
       `${from} 301s to ${dest}, which is served noindex — the link equity goes nowhere`)

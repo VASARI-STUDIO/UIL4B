@@ -16,15 +16,21 @@
 // the head — which is all that was actually broken. Full SSR would buy little
 // here and cost a second rendering path to keep correct.
 //
-// The route list is the crawler sitemap, and the copy comes from the same
-// src/data/routeMetaMap.js the runtime imports, so the served HTML and the
-// hydrated page cannot disagree.
+// The route list is the explicit matrix in scripts/route-matrix.mjs (it used to
+// be public/sitemap.xml, which could not express a route that must be
+// prerendered but NOT advertised — see that file). The copy comes from the same
+// src/data/routeMetaMap.js the runtime imports, and the canonical and robots
+// directives come from the same src/utils/routeMeta.js functions App.jsx calls
+// on every navigation, so the served HTML and the hydrated page cannot
+// disagree — there is one implementation of each, not two.
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
+import { prerenderRoutes } from './route-matrix.mjs'
 import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -41,18 +47,6 @@ const attr = (s) => String(s)
 const text = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-/** The routes to emit: exactly what the crawler sitemap advertises. Reading it
- *  rather than keeping a second list means a route added to one is never
- *  silently missing from the other. */
-async function routesFromSitemap() {
-  const xml = await readFile(path.join(root, 'public', 'sitemap.xml'), 'utf8')
-  const out = []
-  for (const m of xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)) {
-    const url = new URL(m[1])
-    if (url.pathname !== '/') out.push(url.pathname.replace(/\/+$/, ''))
-  }
-  return [...new Set(out)]
-}
 
 /**
  * Rewrite one head. Every replacement is anchored to the exact tag the built
@@ -60,8 +54,7 @@ async function routesFromSitemap() {
  * no-op here would ship the homepage's metadata again while the build stayed
  * green, which is precisely the failure this script exists to end.
  */
-function rewriteHead(html, { route, title, description, robots = null, canonicalUrl = null }) {
-  const canonical = canonicalUrl ?? `${ORIGIN}${route}`
+function rewriteHead(html, { title, description, robots, canonical }) {
   const misses = []
   const sub = (label, re, next) => {
     if (!re.test(html)) { misses.push(label); return }
@@ -155,9 +148,9 @@ async function main() {
   }
   const shell = await readFile(path.join(dist, 'index.html'), 'utf8')
   assertPricingSubstituted(shell)
-  const routes = await routesFromSitemap()
+  const routes = prerenderRoutes()
   if (!routes.length) {
-    console.error('prerender: no routes found in public/sitemap.xml')
+    console.error('prerender: the route matrix is empty — see scripts/route-matrix.mjs')
     process.exit(1)
   }
 
@@ -172,7 +165,17 @@ async function main() {
     // than quietly written.
     if (!title) { untitled.push(route); continue }
 
-    const { html, misses } = rewriteHead(shell, { route, title, description })
+    // Canonical and robots come from the runtime's own functions rather than
+    // being rebuilt here. The old `ORIGIN + route` was right for every route
+    // this script happened to emit and WRONG for /home, which routeMeta.js
+    // canonicalises onto `/` — exactly the kind of near-miss that survives a
+    // review because it is correct on 27 of 28 rows.
+    const { html, misses } = rewriteHead(shell, {
+      title,
+      description,
+      robots: robotsFor(route),
+      canonical: canonicalUrl(route),
+    })
     misses.forEach(m => allMisses.add(m))
 
     const dir = path.join(dist, route.replace(/^\//, ''))
@@ -191,11 +194,10 @@ async function main() {
   // consolidate junk into the homepage's signals, and self-canonicalising would
   // assert the page is real. `noindex` says the true thing: don't keep this.
   const notFound = rewriteHead(shell, {
-    route: '/404',
     title: 'UI L4B | Page not found',
     description: 'That page does not exist. Browse the tools, or head back to the homepage.',
     robots: 'noindex,follow',
-    canonicalUrl: `${ORIGIN}/404`,
+    canonical: `${ORIGIN}/404`,
   })
   notFound.misses.forEach(m => allMisses.add(m))
   await writeFile(path.join(dist, '404.html'), notFound.html, 'utf8')
