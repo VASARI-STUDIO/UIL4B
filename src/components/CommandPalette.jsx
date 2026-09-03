@@ -1,6 +1,7 @@
 import { useState, useEffect, useId, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getCategory, localiseTools, localiseCategories, queryCommandIndex } from '../data/tools'
+import { getCategory, localiseTools, localiseCategories } from '../data/tools'
+import { queryCommandIndex } from '../data/toolIndex'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -28,8 +29,11 @@ export default function CommandPalette({ open, onClose }) {
   const { t } = useI18n()
 
   const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
-  // Hide alpha / not-yet-public tools from search for everyone but admins.
-  const lTools = useMemo(() => localiseTools(t).filter(tl => isAdmin || !tl.alpha), [t, isAdmin])
+  // Hide tools still in the workshop from search for everyone but admins.
+  // `soon` is toolTree.js's own flag, reaching here through the derived index
+  // — the same one the mega-menu dims and CreateTool.jsx renders the 🤫
+  // state for. It replaced a hand-set `alpha` that disagreed with all three.
+  const lTools = useMemo(() => localiseTools(t).filter(tl => isAdmin || !tl.soon), [t, isAdmin])
   const lCats = useMemo(() => localiseCategories(t), [t])
 
   const quickActions = useMemo(() => [
