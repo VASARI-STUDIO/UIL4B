@@ -167,12 +167,25 @@ export function prerenderRoutes() {
   return routeMatrix().routes.sort()
 }
 
+/**
+ * Every `<loc>` in public/sitemap.xml, verbatim and in file order.
+ *
+ * sitemapRoutes() below throws away three things before any assertion can see
+ * them — the origin, the `/` entry and any duplicate — so a sitemap advertising
+ * http://uil4b.com, or one that had lost the homepage, or one listing a URL
+ * twice, could not be caught by anything that called it. This is the unfiltered
+ * read; prerender-routes.test.js asserts those three properties on it.
+ */
+export async function sitemapUrls() {
+  const xml = await readFile(path.join(root, 'public', 'sitemap.xml'), 'utf8')
+  return [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((m) => m[1])
+}
+
 /** The routes public/sitemap.xml actually advertises. */
 export async function sitemapRoutes() {
-  const xml = await readFile(path.join(root, 'public', 'sitemap.xml'), 'utf8')
   const out = []
-  for (const m of xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)) {
-    const { pathname } = new URL(m[1])
+  for (const loc of await sitemapUrls()) {
+    const { pathname } = new URL(loc)
     if (pathname !== '/') out.push(norm(pathname))
   }
   return [...new Set(out)].sort()
