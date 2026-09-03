@@ -271,6 +271,20 @@ export async function wheelToRest(page, dy, what = 'the page') {
  * deadline is a guess about someone else's take-up: on a loaded runner the
  * guess expires first and a real scroll is recorded as none. Waiting for
  * take-up and then for rest takes the guess out of both ends of the reading.
+ *
+ * NO CALLER AS OF 2026-09-03, and that is a deliberate state rather than an
+ * oversight — read it before reaching for this. Its one caller was
+ * 28-account-menu-keyboard.spec.js, which used it to prove a popover had left
+ * an arrow key alone by watching the page scroll. That assertion failed CI
+ * twice on 2026-09-03 (runs 33715948705 attempt 1 and 33713466234) reporting no
+ * movement from a page with 7422px of room below it: this helper measured
+ * correctly and the browser simply produced no default scroll. The spec now
+ * asserts the contract — `defaultPrevented` and where focus landed — and keeps
+ * the scroll only as corroboration behind a control press.
+ *
+ * So: sound for measuring a keyboard scroll that HAS happened, and the wrong
+ * instrument for proving that a key was left alone. Nothing here needs fixing;
+ * it is kept because the measurement is still the right one for the first job.
  */
 export async function keyToRest(page, key, what = 'the page') {
   const before = await page.evaluate(() => window.scrollY)
