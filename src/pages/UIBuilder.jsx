@@ -491,7 +491,7 @@ export default function UIBuilder({ onCopy, toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">UI Builder <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', padding: '2px 8px', borderRadius: 100, background: 'var(--brand-bg)', color: 'var(--brand)', marginLeft: 6, verticalAlign: 'middle' }}>ALPHA</span></div>
+        <div className="sec-h-eyebrow">UI Builder <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', padding: '2px 8px', borderRadius: 100, background: 'var(--brand-bg)', color: 'var(--accent-strong)', marginLeft: 6, verticalAlign: 'middle' }}>ALPHA</span></div>
         <h1>Component Designer <span className="uib-alpha-tag">Alpha</span></h1>
         <p>Design dashboard components with live previews. Pick styles, tune tokens, copy CSS.</p>
       </div>
@@ -534,7 +534,7 @@ export default function UIBuilder({ onCopy, toast }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--brand)', fontFamily: 'var(--mono)' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent-strong)', fontFamily: 'var(--mono)' }}>
                 Step {guidedStep + 1} of {COMPONENT_SECTIONS.length}
               </span>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)' }}>

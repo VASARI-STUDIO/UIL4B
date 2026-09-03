@@ -643,12 +643,12 @@ export default function Projects({ toast }) {
                   another, delete one you’re finished with
                   {hasArchived ? ', including any you archived (archived projects still take a slot)' : ''}
                   , or{' '}
-                  <NavLink to="/plans" style={{ color: 'var(--accent)', fontWeight: 600 }}>go Pro for unlimited projects</NavLink>.
+                  <NavLink to="/plans" style={{ color: 'var(--accent-strong)', fontWeight: 600 }}>go Pro for unlimited projects</NavLink>.
                 </>
               ) : (
                 <>
                   {quota.remaining} more project{quota.remaining === 1 ? '' : 's'} on the free plan.{' '}
-                  <NavLink to="/plans" style={{ color: 'var(--accent)', fontWeight: 600 }}>Pro lifts the cap</NavLink>.
+                  <NavLink to="/plans" style={{ color: 'var(--accent-strong)', fontWeight: 600 }}>Pro lifts the cap</NavLink>.
                 </>
               )}
             </p>
