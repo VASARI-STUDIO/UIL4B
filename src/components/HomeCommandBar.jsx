@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getCategory, localiseCategories, localiseTools, queryCommandIndex, searchHints } from '../data/tools'
+import { getCategory, localiseCategories, localiseTools } from '../data/tools'
+import { queryCommandIndex, searchHints } from '../data/toolIndex'
 import { useI18n } from '../contexts/I18nContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 
@@ -33,8 +34,9 @@ const MAX_ROWS = 5
 // FROM THE REGISTRY rather than written out:
 //
 //   • Real tools, so a visitor who types what they just watched gets hits.
-//     PillNav keeps a hand-written SEARCH_HINTS array and that array is already
-//     one rename away from advertising a tool that no longer exists.
+//     PillNav kept a hand-written SEARCH_HINTS array until 2026-09-03; by then
+//     it had already gone wrong ("palette builder" and "contrast checker" both
+//     returned "No results"), and it now calls this same searchHints().
 //   • `/create/` only — the things you can go and make. Docs and resources are
 //     findable in the bar but they are not what the hero is selling.
 //   • Short labels only. "Aspect & Resolution Calculator" is 30 characters and
@@ -90,7 +92,11 @@ export default function HomeCommandBar({ labelledBy } = {}) {
   const [typed, setTyped] = useState(null)
   const listId = useId()
 
-  const tools = useMemo(() => localiseTools(t).filter(tl => !tl.alpha), [t])
+  // `soon` comes from toolTree.js via the derived index, so this is now the
+  // SAME flag the nav dims and the router acts on. It replaced a hand-set
+  // `alpha` that had drifted: it hid File Converter and Alt Text, both live,
+  // while leaving Box Shadow — still in the workshop — offered to everyone.
+  const tools = useMemo(() => localiseTools(t).filter(tl => !tl.soon), [t])
   const categories = useMemo(() => localiseCategories(t), [t])
 
   const hit = useMemo(

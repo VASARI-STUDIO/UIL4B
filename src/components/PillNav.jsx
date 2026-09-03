@@ -1,6 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
+import { localiseTools } from '../data/tools'
+import { searchHints } from '../data/toolIndex'
 import usePopover from '../hooks/usePopover'
 import { UIKIT_GUIDE_KEY } from './UIKitGuide'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,6 +10,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { useI18n } from '../contexts/I18nContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import NavIcon from './NavIcon'
 
@@ -191,11 +194,29 @@ function MoonIcon() {
   )
 }
 
-// The day/night segmented control, shared by the account popover (signed in) and
-// Terms the search placeholder cycles through on hover. Real tool names, not
-// invented ones — the point is to tell a first-time visitor what is in here,
-// and a term that finds nothing when typed would be a lie.
-const SEARCH_HINTS = ['palette builder', 'gradients', 'font pairing', 'contrast checker', 'type scale', 'emoji library']
+// Terms the search placeholder cycles through on hover.
+//
+// THEY ARE SELECTED FROM THE REGISTRY, never written down. This used to be a
+// hand-kept array — ['palette builder', 'gradients', 'font pairing',
+// 'contrast checker', 'type scale', 'emoji library'] — and by 2026-09-03 half
+// of it was already false: typing "palette builder" or "contrast checker" into
+// the search it advertises returned "No results", and "gradients" landed on the
+// colour sales page rather than the Gradient Generator. In the PERSISTENT NAV,
+// on EVERY page. A term that finds nothing when typed is a lie, and a list a
+// human has to remember to update is one rename away from telling it.
+//
+// searchHints() is the same rule #320 gave the homepage hero (/create/ only,
+// nothing still in the workshop, labels short enough not to truncate), reading
+// the same derived index. The two surfaces now cycle the same words because
+// they read the same source, not because someone kept two lists matching.
+//
+// The RENDER still differs, and only the render: the hero drives a real
+// <input placeholder>, while this "field" is a <button> with no placeholder to
+// animate, so the characters go into a <span>. Same data, different element.
+function useSearchHints() {
+  const { t } = useI18n()
+  return useMemo(() => searchHints(localiseTools(t).filter((tl) => !tl.soon)), [t])
+}
 
 // Milliseconds per character typed / deleted, and the hold at a completed word.
 const TYPE_MS = 55
@@ -222,6 +243,7 @@ const HOLD_MS = 1100
 // that is noise, so the animated span is aria-hidden and the static label is
 // what a screen reader gets.
 function SearchPlaceholder({ active }) {
+  const hints = useSearchHints()
   const [typed, setTyped] = useState('')
   const [term, setTerm] = useState(0)
 
@@ -231,10 +253,10 @@ function SearchPlaceholder({ active }) {
   // this off the `react-hooks/set-state-in-effect` warning count, which the
   // build gate holds at a fixed number.
   useEffect(() => {
-    if (!active) return undefined
+    if (!active || !hints.length) return undefined
     let cancelled = false
     let timer
-    const word = SEARCH_HINTS[term % SEARCH_HINTS.length]
+    const word = hints[term % hints.length]
     const step = (i, erasing) => {
       if (cancelled) return
       setTyped(word.slice(0, i))
@@ -245,7 +267,7 @@ function SearchPlaceholder({ active }) {
     }
     timer = setTimeout(() => step(0, false), TYPE_MS)
     return () => { cancelled = true; clearTimeout(timer); setTyped('') }
-  }, [active, term])
+  }, [active, term, hints])
 
   if (!active) return <span className="pnav-search-ph">Search tools&hellip;</span>
   return (
@@ -256,6 +278,7 @@ function SearchPlaceholder({ active }) {
   )
 }
 
+// The day/night segmented control, shared by the account popover (signed in) and
 // the compact menu popover (signed out) so the theme toggle reads identically in
 // both places.
 function ThemeSeg({ theme, setTheme }) {
