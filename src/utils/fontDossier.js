@@ -126,8 +126,10 @@ export function fontFacts(font) {
     rows.push({ k: 'Variable axes', v: axes.map(tag => AXIS_NAMES[tag] || tag).join(', ') })
   }
 
-  // 'menu' is Google's subsetting artefact, not a script anybody reads in.
-  const scripts = formatSubsets((font.subsets || []).filter(s => s !== 'menu'))
+  // `formatSubsets` drops the `menu` subsetting artefact for every caller —
+  // this used to filter it locally, which left the gallery's own header tags
+  // still printing "Menu" beside this row's list that did not.
+  const scripts = formatSubsets(font.subsets)
   if (scripts.length) rows.push({ k: 'Scripts', v: scripts.join(', ') })
 
   if (font.openSource === true) rows.push({ k: 'Licence', v: 'Open source' })

@@ -128,6 +128,20 @@ test('subsets become script names a reader can act on, not a count', () => {
   assert.deepEqual(formatSubsets(undefined), [])
 })
 
+test('the menu subsetting artefact is never presented as a script', () => {
+  // `menu` is Google's per-family subset holding just the glyphs to draw the
+  // family name in a font menu. It ships on nearly every family, and the
+  // specimen dialog was printing it in its header tags — so the dialog stated
+  // its script coverage twice with two different answers once the About tab
+  // started listing the same field. Dropped in formatSubsets so every caller
+  // agrees, rather than at the call sites that happened to remember.
+  assert.deepEqual(formatSubsets(['menu', 'latin', 'cyrillic']), ['Latin', 'Cyrillic'])
+  assert.deepEqual(formatSubsets(['MENU', ' menu ']), [])
+  // A family with nothing but the menu subset has no script to report, and an
+  // empty list is the honest answer rather than a fabricated "Latin".
+  assert.deepEqual(formatSubsets(['menu']), [])
+})
+
 test('weights are named the way a font menu names them', () => {
   assert.equal(weightName(400), 'Regular')
   assert.equal(weightName(600), 'SemiBold')
