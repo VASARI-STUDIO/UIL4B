@@ -6,7 +6,9 @@
 // social unfurler (Facebook, LinkedIn, Slack, X, Discord), and any crawler
 // reading raw HTML — was served dist/index.html for every URL. That meant:
 //
-//   • every shared tool link unfurled as the homepage card;
+//   • every shared tool link unfurled as the homepage card — the WORDS were
+//     fixed first and the PICTURE was not, so until og:image was written per
+//     route as well, a link to the Contrast Checker still showed the homepage;
 //   • all ~26 URLs declared `canonical = https://www.uil4b.com`, which is an
 //     explicit instruction to drop them from the index;
 //   • the <noscript> block was homepage copy on every one of them, so a non-JS
@@ -31,6 +33,8 @@ import { fileURLToPath } from 'node:url'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
 import { canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
 import { prerenderRoutes } from './route-matrix.mjs'
+import { DEFAULT_CARD, cardFor, cardUrl } from './share-cards.mjs'
+import { breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
 import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -54,7 +58,7 @@ const text = (s) => String(s)
  * no-op here would ship the homepage's metadata again while the build stayed
  * green, which is precisely the failure this script exists to end.
  */
-function rewriteHead(html, { title, description, robots, canonical }) {
+function rewriteHead(html, { title, description, robots, canonical, card, schema = '' }) {
   const misses = []
   const sub = (label, re, next) => {
     if (!re.test(html)) { misses.push(label); return }
@@ -99,6 +103,38 @@ function rewriteHead(html, { title, description, robots, canonical }) {
     `<meta name="twitter:title" content="${attr(title)}" />`)
   sub('twitter:description', /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/,
     `<meta name="twitter:description" content="${attr(description)}" />`)
+
+  // ── The share card ────────────────────────────────────────────────────────
+  //
+  // The half of the unfurl this script did not fix the first time. Titles and
+  // descriptions were already per-route; og:image was not, so every one of the
+  // shells pointed at /previews/og-image.png and a link to any tool showed the
+  // homepage picture. See scripts/share-cards.mjs for why the answer is one
+  // card per SECTION rather than 28 pieces of per-route art.
+  //
+  // og:image:alt moves with the image. An alt that still describes the homepage
+  // card while the image is the Colour card is worse than no alt: it is a wrong
+  // description read aloud to exactly the people who cannot see the picture.
+  if (card) {
+    const src = cardUrl(ORIGIN, card)
+    sub('og:image', /<meta\s+property="og:image"\s+content="[^"]*"\s*\/?>/,
+      `<meta property="og:image" content="${attr(src)}" />`)
+    sub('og:image:alt', /<meta\s+property="og:image:alt"\s+content="[^"]*"\s*\/?>/,
+      `<meta property="og:image:alt" content="${attr(card.alt)}" />`)
+    sub('twitter:image', /<meta\s+name="twitter:image"\s+content="[^"]*"\s*\/?>/,
+      `<meta name="twitter:image" content="${attr(src)}" />`)
+  }
+
+  // ── Per-route structured data ─────────────────────────────────────────────
+  //
+  // Appended as its own <script>, beside the site-level WebApplication block
+  // rather than merged into it: they describe different entities, and multiple
+  // ld+json blocks in one head is the shape every consumer expects. Inserted
+  // before </head> and asserted like every other replacement — a silent miss
+  // here would drop the schema while the build stayed green.
+  if (schema) {
+    sub('schema', /<\/head>/, `${schema}</head>`)
+  }
 
   // The <noscript> fallback was the homepage's own sales copy, repeated on
   // every URL. Replaced with something true for the page it is actually on.
@@ -175,6 +211,8 @@ async function main() {
       description,
       robots: robotsFor(route),
       canonical: canonicalUrl(route),
+      card: cardFor(route),
+      schema: breadcrumbJsonLd(route, ORIGIN),
     })
     misses.forEach(m => allMisses.add(m))
 
@@ -193,11 +231,16 @@ async function main() {
   // It carries NO canonical of its own. Pointing every unknown URL at `/` would
   // consolidate junk into the homepage's signals, and self-canonicalising would
   // assert the page is real. `noindex` says the true thing: don't keep this.
+  // No card of its own and no breadcrumb: a page that does not exist has no
+  // place in a hierarchy, and drawing it a card would be dressing up a dead
+  // end. It keeps the site card, which is the honest picture for "you are on
+  // uil4b.com, but not on a page".
   const notFound = rewriteHead(shell, {
     title: 'UI L4B | Page not found',
     description: 'That page does not exist. Browse the tools, or head back to the homepage.',
     robots: 'noindex,follow',
     canonical: `${ORIGIN}/404`,
+    card: DEFAULT_CARD,
   })
   notFound.misses.forEach(m => allMisses.add(m))
   await writeFile(path.join(dist, '404.html'), notFound.html, 'utf8')
@@ -212,7 +255,15 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`prerender: wrote ${routes.length} route shells + a noindex 404 shell.`)
+  // The counts are printed because they are the only place a human sees the
+  // matrix move. A route silently dropping out of the matrix, or a whole
+  // section of share cards going missing, changes a number here.
+  const carded = routes.filter((r) => cardFor(r).id !== DEFAULT_CARD.id).length
+  const crumbed = breadcrumbRoutes(routes, ORIGIN).length
+  console.log(
+    `prerender: wrote ${routes.length} route shells + a noindex 404 shell `
+    + `(${carded} on a section share card, ${crumbed} with a BreadcrumbList).`,
+  )
 }
 
 main().catch((err) => { console.error('prerender failed:', err); process.exit(1) })
