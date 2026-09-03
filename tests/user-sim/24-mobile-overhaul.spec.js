@@ -813,10 +813,17 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
       }
     })
     await ctx.close()
-    expect(r.cells, `${w}x${h}: expected 40 tone cells (4 ramps x 10)`).toBe(40)
+    // Derived from the ramps actually on the page, not a typed 40. This
+    // assertion was written when there were four roles and had to be edited by
+    // hand the moment a fifth arrived - the same stale-literal fault the hero
+    // strip and the handoff button both carried. What it is really guarding is
+    // "every ramp is complete", so say that.
+    const expectedCells = r.ramps * 10
+    expect(r.ramps, `${w}x${h}: no semantic ramps rendered at all`).toBeGreaterThan(0)
+    expect(r.cells, `${w}x${h}: expected ${expectedCells} tone cells (${r.ramps} ramps x 10)`).toBe(expectedCells)
     if (r.hiddenCells) damage.push(`${w}x${h}: ${r.hiddenCells} tone cell(s) outside their ramp`)
     if (r.scrollers) damage.push(`${w}x${h}: ${r.scrollers} ramp(s) are horizontal scrollers again`)
-    if (r.hexShown !== 40) damage.push(`${w}x${h}: only ${r.hexShown} of 40 hex values rendered — the tool's output is unreadable here`)
+    if (r.hexShown !== expectedCells) damage.push(`${w}x${h}: only ${r.hexShown} of ${expectedCells} hex values rendered — the tool's output is unreadable here`)
     if (r.tiny) damage.push(`${w}x${h}: ${r.tiny} tone cell(s) under 24px`)
     if (r.clipped) damage.push(`${w}x${h}: ${r.clipped} clipped label(s), e.g. ${r.sample}`)
   }

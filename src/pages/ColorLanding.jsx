@@ -19,7 +19,7 @@ const COLOUR_GROUP = CREATE_GROUPS.find((g) => g.id === 'colour')
 // renders with its tree label + a safe fallback line.
 const TOOL_COPY = {
   palette: 'Generate a full palette from one seed — harmony systems, tonal ramps and accessibility built in.',
-  semantic: 'Success, warning, error and info colours that stay legible and on-brand in light and dark.',
+  semantic: 'Success, warning, error, info and pending colours that stay legible and on-brand in light and dark.',
   tint: 'Turn any colour into a production-ready tint scale. Tune the curve, then copy swatches or CSS.',
   gradient: 'Design linear, radial and conic gradients across your palette and copy the CSS in one click.',
   contrast: 'Free WCAG checker — test any pair against AA and AAA and get one-click fixes that pass.',

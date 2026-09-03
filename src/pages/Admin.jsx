@@ -15,11 +15,20 @@ import { toCsv } from '../utils/csv'
 const ADMIN_CODE = 'uil4b-dev-2026'
 const STATUSES = ['new', 'in-progress', 'done']
 const STATUS_LABELS = { new: 'New', 'in-progress': 'In Progress', done: 'Done' }
-const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--accent)', done: 'var(--ok)' }
-const STATUS_BGS = { new: 'rgba(245,158,11,.1)', 'in-progress': 'var(--accent-bg)', done: 'rgba(16,185,129,.1)' }
-const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: '#a855f7' }
-const TYPE_BGS = { bug: 'rgba(239,68,68,.1)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'rgba(168,85,247,.1)' }
-const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', '#a855f7', 'var(--t3)']
+// 'in-progress' and 'help' used to be var(--accent) and the raw hex #a855f7
+// (with rgba(168,85,247,.1) behind it, and the same hex again as DONUT slice 5).
+// Both were the app reaching for a fifth signal colour it had no token for -
+// one borrowed the BRAND colour, the other was typed in and had no dark value at
+// all. --pending now exists and is measured in both themes; see the PENDING note
+// in ColorStudio.jsx. NOT RENDER-VERIFIED: this page is admin-only and behind
+// auth, so these are source-level swaps onto a token that is theme-aware, which
+// is strictly better than a literal, but the badge contrast here is unchecked
+// and belongs to [flair-tone-contrast]'s class of text-on-a-tint-of-itself.
+const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--pending)', done: 'var(--ok)' }
+const STATUS_BGS = { new: 'rgba(245,158,11,.1)', 'in-progress': 'color-mix(in srgb,var(--pending) 12%,transparent)', done: 'rgba(16,185,129,.1)' }
+const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--pending)' }
+const TYPE_BGS = { bug: 'rgba(239,68,68,.1)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--pending) 12%,transparent)' }
+const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', 'var(--pending)', 'var(--t3)']
 const DAY = 86400000
 const WEEK = 7 * DAY
 

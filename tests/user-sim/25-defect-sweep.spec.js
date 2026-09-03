@@ -453,10 +453,14 @@ test('S3 · every Semantic Colours role preset is inside its own row', async ({ 
           if (b.right > rb.right + 0.5 || b.left < rb.left - 0.5) outside++
         }
       }
-      return { rows: rows.length, outside, total, scrollers }
+      return { rows: rows.length, outside, total, scrollers, ramps: document.querySelectorAll('.stc-ramp').length }
     })
     await ctx.close()
-    expect(r.rows, `${w}px: expected the four role rows`).toBe(4)
+    // One preset row per role, whatever the role count is. Typed as 4 when
+    // there were four roles; the point of the check is that no role LOSES its
+    // row, which is a comparison against the ramps on the same page.
+    expect(r.rows, `${w}px: expected one preset row per role`).toBe(r.ramps)
+    expect(r.rows, `${w}px: no role rows rendered at all`).toBeGreaterThan(0)
     if (r.outside) damage.push(`${w}px: ${r.outside} of ${r.total} preset chips outside their row`)
     if (r.scrollers) damage.push(`${w}px: ${r.scrollers} preset row(s) are horizontal scrollers again`)
   }
