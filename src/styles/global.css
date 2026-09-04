@@ -10092,9 +10092,12 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    hover-only affordances on touch, and the footer attribution link settled the
    same question the same way. 70% of currentColor rather than a fixed token,
    which is what measured clear of 1.4.11 there. */
-.fdx-fiu{color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
+/* Radius at REST, not on :focus-visible — see the note on the global
+   :focus-visible rule near the top of this file. An inline link paints no box,
+   so 2px is inert here and exists only so the ring has a shape to trace. */
+.fdx-fiu{border-radius:2px;color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .fdx-fiu:hover{color:var(--t0)}
-.fdx-fiu:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:2px}
+.fdx-fiu:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
   /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
