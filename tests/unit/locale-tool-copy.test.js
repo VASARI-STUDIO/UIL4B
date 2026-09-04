@@ -61,11 +61,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   CATEGORY_ENTRIES,
+  HINT_MAX_LEN,
   TOOL_ENTRIES,
   TOOL_I18N_MAP,
   categoryPillFor,
   localiseCategoriesWith,
   localiseWith,
+  searchHints,
 } from '../../src/data/toolIndex.js'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
@@ -326,4 +328,70 @@ test('a search row takes its category badge from the same source as its own word
 
   // A row with no category is a badge with nothing to say.
   assert.equal(categoryPillFor(palette, null, translated), null)
+})
+
+
+// ── The search placeholder, in every language ──────────────────────────
+
+// WHY THIS LIVES HERE AND NOT IN search-index.test.js.
+//
+// The hint assertions over there measure `searchHints(TOOL_ENTRIES)` — the
+// REGISTRY's labels. The nav and the hero do not render those. Both call
+// `localiseTools(t)` first, so what a visitor actually sees is the LOCALE's
+// label, and the ≤ HINT_MAX_LEN cap that decides which tools are offered is
+// applied to a string those tests never look at. Confirmed in a browser at 1440
+// on 2026-09-05: the nav types “Font Pair Finder”, sixteen characters, while the
+// registry label behind it is “Font Pair”, nine.
+//
+// That gap is not theoretical today. The cap is ALREADY dropping translated
+// tools, silently and per-language: en offers 13 terms, fr offers 9 —
+// Bibliothèque d'icônes, Bibliothèque d'Emojis, Échelle typographique and
+// Recherche de paires de polices are all over the cap and simply never appear.
+// Nothing is wrong with that; a longer language gets a shorter list. What would
+// be wrong is a language quietly falling to one or two terms, which is a nav
+// that has stopped telling anyone what is in the product — in that language
+// only, on every page, with every English assertion still green.
+//
+// So the floor is the SAME 6 that search-index.test.js holds English to. Every
+// language is guaranteed what English is guaranteed. This test needs no upper
+// bound: `searchHints` filters by length, so an over-cap label is dropped rather
+// than rendered, and asserting the survivors are short would assert nothing.
+//
+// The locales are read off disk and the tools come from the registry, so no
+// tool and no language is named in the assertion.
+const HINT_FLOOR = 6
+
+/** A `t` that resolves dotted keys against one locale and, on a miss, returns
+ *  the key — which is exactly the signal localiseWith treats as “no
+ *  translation shipped, keep the registry's word”. */
+function translatorFor(json) {
+  return (key) => {
+    const value = key.split('.').reduce((node, part) => (node == null ? node : node[part]), json)
+    return typeof value === 'string' ? value : key
+  }
+}
+
+test('no language is starved of search hints by the length cap', () => {
+  const entries = locales()
+  assert.ok(entries.length >= 2, 'expected several locale files to compare')
+  const report = []
+  for (const [code, json] of entries) {
+    const localised = localiseWith(TOOL_ENTRIES, translatorFor(json), TOOL_I18N_MAP)
+    const hints = searchHints(localised.filter((tool) => !tool.soon))
+    report.push(`${code}=${hints.length}`)
+    assert.ok(
+      hints.length >= HINT_FLOOR,
+      `the ${code} search placeholder has only ${hints.length} terms to cycle `
+      + `(floor ${HINT_FLOOR}). Its translated labels are running past the `
+      + `${HINT_MAX_LEN}-character cap, so the nav has gone quiet in ${code} `
+      + `while every English assertion still passes. Hints per locale: ${report.join(', ')}`,
+    )
+    // Every term must still be a label that locale actually renders — a hint
+    // read off the registry while the row beside it is translated is the
+    // mixed-language row that us-spelling-in-default-locale closed.
+    const rendered = new Set(localised.map((tool) => tool.label))
+    for (const hint of hints) {
+      assert.ok(rendered.has(hint), `${code} advertises "${hint}", which is not a label ${code} renders`)
+    }
+  }
 })
