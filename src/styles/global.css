@@ -5981,8 +5981,8 @@ html.lenis{scroll-behavior:auto!important}
 /* ── Flat icon+label tool rows — one row per tool under a column eyebrow.
    Replaces the old group-head + sub-dot list for maximum scannable density.
    The icon tile takes its colour from the row's data-hue (falls back to accent). */
-.pnav-toollist{list-style:none;display:flex;flex-direction:column;gap:2px;margin:0;padding:0}
-.pnav-tool{display:flex;align-items:flex-start;gap:11px;min-height:50px;padding:7px 8px;border-radius:var(--radius-s);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.pnav-toollist{list-style:none;display:flex;flex-direction:column;gap:1px;margin:0;padding:0}
+.pnav-tool{display:flex;align-items:center;gap:11px;min-height:44px;padding:7px 8px;border-radius:var(--radius-s);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;color:var(--hue,var(--accent-strong));transition:transform var(--dur-2) var(--ease-out)}
 .pnav-tool:hover .pnav-tool-ico{transform:translateY(-1px)}
@@ -6000,7 +6000,12 @@ html.lenis{scroll-behavior:auto!important}
 /* One line, per the Higgsfield and Hers mega-menus — both hold their rows to a
    single line of supporting copy. Unclamped, the Discover rows ran three lines
    and made an 84px row sit beside a 54px one. */
-.pnav-tool-desc{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;line-clamp:1;overflow:hidden;font-size:var(--fs-micro);line-height:1.35;color:var(--t2)}
+/* No line clamp. The clamp is what turned "Reuse prompts proven by the community."
+   into "Reuse prompts proven by the" and "Structure production-ready image prompts."
+   into "Structure production-ready image..." -- it hid the overflow instead of
+   reporting it, so both shipped. Descriptions are now rare enough to be allowed to
+   wrap, and a wrap is visible in review where an ellipsis was not. */
+.pnav-tool-desc{font-size:var(--fs-micro);line-height:1.35;color:var(--t2)}
 /* Workshop ("soon") tools read as disabled at a glance: the whole row dims and
    the hue tile goes grey. Hover lifts them just enough to stay legible — they
    remain clickable on purpose (the route lands on the honest 🤫 state). */
