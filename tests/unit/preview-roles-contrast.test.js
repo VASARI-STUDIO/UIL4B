@@ -169,7 +169,7 @@ test('4 . the guards above are real, so this file cannot pass by being toothless
 // against the list the ENGINE declares rather than against a list copied here.
 // A scene that adds a third ground adds it there and is covered on arrival;
 // a scene that adds one WITHOUT declaring it is the defect that returns, and
-// no unit test can see that — tests/user-sim/41-palette-preview-ink.spec.js
+// no unit test can see that — tests/user-sim/50-palette-preview-ink.spec.js
 // is the half that reads the rendered page.
 // ─────────────────────────────────────────────────────────────────────────
 
