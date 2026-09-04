@@ -451,7 +451,13 @@ function PaletteStage({ swatches }) {
           {/* `primaryBorder` is the engine's own remedy for a CTA that cannot
               clear 3:1 on its card — transparent when it is not needed. */}
           <span className="hw-ui-btn" style={{ background: role.primary, color: role.onPrimary, border: `1px solid ${role.primaryBorder}` }}>Primary action</span>
-          <span className="hw-ui-btn hw-ui-btn--ghost" style={{ borderColor: role.border, color: role.text }}>Secondary</span>
+          {/* `text`, not `role.text`. This was the one label in the card still
+              reading the engine value raw while every sibling above took the
+              mutedInk guarantee, and it measured 4.39:1 (#F2F3F5 on #8B6D22)
+              in dark. It went unseen because .hw-ui-btn was missing from test
+              8c's selector list, which is the same shape of hole as the
+              rgba-only parser: not a wrong answer, an answer never attempted. */}
+          <span className="hw-ui-btn hw-ui-btn--ghost" style={{ borderColor: role.border, color: text }}>Secondary</span>
         </div>
       </div>
     </div>
