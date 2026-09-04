@@ -167,6 +167,15 @@ const READY_BACKSTOP_MS = 20000
  * RequireAuth redirect into it) is a launcher for the app-wide login popup and
  * renders a spinner in `main` on purpose, so its content genuinely lives in a
  * `[role="dialog"]` outside the shell.
+ *
+ * `crashed` is App.jsx's ErrorBoundary card. It is reported because a crashed
+ * route LOOKS rendered by every other measure here — the fallback is gone and
+ * `main` holds "Something went wrong / Reloading usually fixes it", which is
+ * comfortably over any content threshold. Nothing under tests/ referenced
+ * `.error-boundary` before this, so no spec in the suite could tell a crashed
+ * route from a working one. `watch()` does record the `ErrorBoundary caught:`
+ * console error as a finding, but findings are a printed report and the global
+ * teardown gates on One Tap only — so nothing failed.
  */
 export function renderState(page) {
   return page.evaluate(() => {
@@ -180,6 +189,7 @@ export function renderState(page) {
     return {
       mounted: !!(root && root.firstElementChild),
       loading: !!document.querySelector('.page-loading'),
+      crashed: !!document.querySelector('.error-boundary'),
       body: (document.body.innerText || '').trim().length,
       own: parts.join(' ').trim().length,
     }
@@ -239,6 +249,16 @@ export async function expectRendered(page, what) {
   const where = what || page.url()
   await ready(page, where)
   const s = await renderState(page)
+  // Before the content count, because a crash card passes a content count. Cut
+  // a route's chunk out of a deploy and this is what the visitor gets, and
+  // until this line every readiness check in the suite called it a rendered
+  // page — including the fixed one above.
+  expect(
+    s.crashed,
+    `${where}: the route rendered App.jsx's ErrorBoundary card, not the route.`
+    + ' Something inside it threw during render — the browser console carries the'
+    + ' `ErrorBoundary caught:` line with the actual error.',
+  ).toBe(false)
   expect(
     s.own,
     `${where}: the route rendered ${s.own} characters of its own content`
