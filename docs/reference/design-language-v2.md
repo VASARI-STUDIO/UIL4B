@@ -112,7 +112,10 @@ Two families, both from Google Fonts. This replaces `Outfit` in all three roles.
 | `--font` | **Manrope** | 400 / 500 / 700 / 800 | All UI and display |
 | `--mono` | **JetBrains Mono** | 400 / 500 / 700 | Eyebrows, meta, category pills, keycaps, code, footer headings, stat lines |
 
-`--serif` is retired as a distinct role — it aliases `--font`.
+There is no serif role. The token formerly called `--serif` resolved to Manrope
+and was renamed `--display` on 2026-09-04 — same face as `--font`, used at
+display sizes. Nothing in this system delivers serif/sans typographic contrast;
+contrast comes from Manrope vs JetBrains Mono, and from weight and scale.
 
 **Mono is load-bearing in V2.** It is the texture that makes the design feel like
 a tool rather than a marketing page. Eyebrows (`[ COMMUNITY ]`, `01 / COLOUR`),
