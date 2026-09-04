@@ -20,7 +20,7 @@
 // gallery ever fails to render, "no locked prompt found" would be true and
 // meaningless — which is exactly how this suite would start lying.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
 
 const ROUTE = '/discover/prompts'
@@ -61,7 +61,7 @@ async function surfaces(page) {
 test.describe('the community prompt gate holds under every control on the page', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor browsing the community prompt library')
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator('.pl-card').first()).toBeVisible()
   })
 
