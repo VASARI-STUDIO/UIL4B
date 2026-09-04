@@ -92,13 +92,66 @@ test('the blur burn-off is gone', () => {
 
 // ── The clip actually clips ─────────────────────────────────────────────────
 
+// The compensation this reads is expressed in `em` on purpose, so one number
+// holds across the whole clamp(46px, 6.6vw, 96px) hero. Parsed as a number
+// rather than matched as a string, because the VALUE is the contract — a
+// literal match would pass on `.14em`, which was measured as insufficient.
+const lineRule = /\.home-hero-line\{([^}]*)\}/.exec(css)?.[1] || ''
+const markRule = /\.home-mark\{([^}]*)\}/.exec(css)?.[1] || ''
+const emOf = (rule, ...props) => {
+  for (const p of props) {
+    const m = new RegExp(String.raw`(?:^|;)\s*${p}\s*:\s*-?([\d.]+)em`).exec(rule)
+    if (m) return Number(m[1])
+  }
+  return 0
+}
+
 test('the headline lines have a clip container, with room for descenders', () => {
-  const rule = /\.home-hero-line\{([^}]*)\}/.exec(css)?.[1] || ''
-  assert.match(rule, /overflow:\s*hidden/,
+  assert.match(lineRule, /overflow:\s*hidden/,
     'without this the clip-up does not clip and the two lines slide through each other')
   // line-height is .98, so `g` and `y` hang below the box and would be shaved.
-  assert.match(rule, /padding-bottom:/, 'descenders need room inside the clip')
-  assert.match(rule, /margin-bottom:\s*-/, 'the negative margin must cancel that padding in layout')
+  assert.match(lineRule, /padding-(?:block|bottom):/, 'descenders need room inside the clip')
+  assert.match(lineRule, /margin-(?:block|bottom):\s*-/,
+    'the negative margin must cancel that padding in layout')
+})
+
+// C5 / F-2 (founder batch 2026-08-20). `.home-hero-line` compensated at the
+// BOTTOM ONLY, so the --hi mark — which paints the full inline box, not the
+// line box — was sheared by this same overflow:hidden. Measured in Chromium at
+// a 95.04px computed hero: 19px off the top, 4.56px still off the bottom.
+//
+// The fix is a derivation, not a taste call, which is why this test reads
+// numbers. `line-height:.98` against Manrope's 1.368em content area leaves
+// (1.368 - .98) / 2 = .194em of half-leading overflowing EACH edge, and
+// `.home-mark` adds its own `padding-block` on top of that. Anything less than
+// the sum clips again — F-2 originally proposed mirroring the existing .14em,
+// which measurement showed was ~6px short at the 96px cap.
+test('the clip container leaves room on BOTH edges, sized from the font metrics', () => {
+  const HALF_LEADING = 0.194
+
+  const top = emOf(lineRule, 'padding-block', 'padding-top')
+  const bottom = emOf(lineRule, 'padding-block', 'padding-bottom')
+  assert.ok(top >= HALF_LEADING,
+    `top compensation is ${top}em; the half-leading alone needs ${HALF_LEADING}em or the mark shears`)
+  assert.ok(bottom >= HALF_LEADING,
+    `bottom compensation is ${bottom}em; .14em was measured as insufficient`)
+
+  // The mark's own padding grows its painted box on both edges, so the clip
+  // container has to carry the half-leading PLUS that padding.
+  const markPad = emOf(markRule, 'padding-block')
+  assert.ok(top >= HALF_LEADING + markPad,
+    `.home-mark adds ${markPad}em of padding-block, so the clip needs at least `
+    + `${(HALF_LEADING + markPad).toFixed(3)}em; it has ${top}em`)
+  assert.ok(bottom >= HALF_LEADING + markPad,
+    `bottom needs ${(HALF_LEADING + markPad).toFixed(3)}em; it has ${bottom}em`)
+
+  // Padding without the matching negative margin moves the headline instead of
+  // widening the mask, which is a different bug that looks like this one.
+  const mTop = emOf(lineRule, 'margin-block', 'margin-top')
+  const mBottom = emOf(lineRule, 'margin-block', 'margin-bottom')
+  assert.equal(mTop, top, 'the negative top margin must cancel the top padding exactly')
+  assert.equal(mBottom, bottom, 'the negative bottom margin must cancel the bottom padding exactly')
+  assert.match(lineRule, /margin-(?:block|top):\s*-/, 'the top margin must be negative')
 })
 
 // ── Reduced motion, both directions ─────────────────────────────────────────
