@@ -25,7 +25,7 @@
 // reverting the boot script to the shipped `t='light'` left all eight of the
 // other tests green. Only the pre-paint probe below sees it.
 import { test, expect } from './base.js'
-import { go } from './helpers.js'
+import { go, ready } from './helpers.js'
 
 const SEG = '.theme-seg'
 const btn = (v) => `${SEG} [data-theme-choice="${v}"]`
@@ -75,7 +75,6 @@ test.describe('the dark theme is reachable', () => {
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
     await go(page, '/')
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
 
     expect(await themeOf(page), 'a dark device was served the light theme').toBe('dark')
     // The page must actually be painted dark, not merely carry the attribute.
@@ -88,7 +87,6 @@ test.describe('the dark theme is reachable', () => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
     await go(page, '/')
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
     expect(await themeOf(page)).toBe('light')
     await ctx.close()
   })
@@ -97,7 +95,6 @@ test.describe('the dark theme is reachable', () => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
     await go(page, '/')
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
     expect(await themeOf(page)).toBe('light')
 
     await page.click('.pnav-more')
@@ -112,8 +109,8 @@ test.describe('the dark theme is reachable', () => {
     expect(await storedOf(page)).toBe('dark')
 
     // The half that a fabricated write breaks: does it survive the next visit?
-    await page.reload()
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+await ready(page)
     expect(await themeOf(page), 'the chosen theme did not survive a reload').toBe('dark')
     await ctx.close()
   })
@@ -125,7 +122,6 @@ test.describe('the dark theme is reachable', () => {
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
     await go(page, '/')
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
 
     await page.click('.pnav-more')
     await page.click(btn('light'))
@@ -136,8 +132,8 @@ test.describe('the dark theme is reachable', () => {
     await expect.poll(() => themeOf(page), { message: 'System did not hand the theme back to the device' }).toBe('dark')
     expect(await storedOf(page)).toBe('system')
 
-    await page.reload()
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+await ready(page)
     expect(await themeOf(page), 'System did not survive a reload').toBe('dark')
     await ctx.close()
   })
@@ -151,7 +147,6 @@ test.describe('the dark theme is reachable', () => {
     })
     const page = await ctx.newPage()
     await go(page, '/')
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
 
     expect(await page.locator('.pnav-more').isVisible().catch(() => false),
       'the meatball is visible at 390 — this test is no longer measuring the phone case').toBe(false)
@@ -162,8 +157,8 @@ test.describe('the dark theme is reachable', () => {
     await page.locator(`.pnav-sheet-theme ${btn('dark')}`).click()
     await expect.poll(() => themeOf(page), { message: 'the sheet control did not switch the theme' }).toBe('dark')
 
-    await page.reload()
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+await ready(page)
     expect(await themeOf(page)).toBe('dark')
     await ctx.close()
   })
@@ -209,7 +204,6 @@ test.describe('the dark theme is reachable', () => {
       await ctx.addInitScript(PRE_PAINT_PROBE)
       const page = await ctx.newPage()
       await go(page, '/')
-      await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
       // Long enough for hydration to have had every chance to disagree.
       await page.waitForTimeout(1200)
 
@@ -240,7 +234,6 @@ test.describe('the dark theme is reachable', () => {
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
     await go(page, '/')
-    await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
     const keys = await page.evaluate(() => {
       try { return Object.keys(localStorage) } catch { return ['THREW'] }
     })

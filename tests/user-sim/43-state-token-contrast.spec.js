@@ -137,7 +137,6 @@ const WALK = `(() => {
 // and the semantic-colour ramps (the fill mirror).
 const ROUTES = ['/sitemap', '/privacy', '/create/contrast', '/create/semantic-color',
   '/create/alt-text', '/discover', '/plans', '/']
-const READY = 'main, .landing, #root > *'
 
 // EVERY ROUTE WALKED HERE IS `lazy()`, SO `READY` MATCHES THE FALLBACK.
 // `#root > *` is satisfied by `.page-loading` - the Suspense fallback App.jsx
@@ -163,12 +162,12 @@ const READY = 'main, .landing, #root > *'
 // the guard below unfalsifiable - it would spin until it found the very thing
 // it exists to prove is there, and a genuinely empty sample would time out
 // instead of failing with a count.
-const settle = async (page) => {
-  await expect(page.locator(READY).first()).toBeVisible()
-  await page.locator('.page-loading').waitFor({ state: 'detached', timeout: 15000 })
-    .catch(() => { /* never mounted: the chunk was already cached */ })
-  await page.waitForTimeout(150)
-}
+// go() now owns readiness for every navigation in this file: it holds #root-mounted
+// AND no-.page-loading for three animation frames, which is strictly stronger than
+// the READY-plus-detach pair this used to do for itself (READY was `main, .landing,
+// #root > *`, and all three of those match the fallback). What is left here is the
+// trailing PAINT settle, which was always a separate concern from hydration.
+const settle = (page) => page.waitForTimeout(150)
 
 const report = (route, theme, vp, bad) => bad.map((b) =>
   `  ${route} [${theme}@${vp}] .${b.cls} (${b.token}, ${b.kind})\n`

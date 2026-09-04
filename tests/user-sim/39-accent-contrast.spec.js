@@ -168,7 +168,6 @@ const ROUTES = [
   '/create/semantic-color', '/discover', '/discover/gradients', '/community',
 ]
 
-const READY = 'main, .landing, #root > *'
 
 const report = (route, tag, bad) => bad
   .map((b) => `  ${route} [${tag}] .${b.cls}\n      ${b.ratio}:1 (needs ${b.floor}) `
@@ -191,7 +190,6 @@ test.describe('accent-family text clears its AA floor', () => {
       for (const route of ROUTES) {
         await go(page, route)
         await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
-        await expect(page.locator(READY).first()).toBeVisible()
         await page.waitForTimeout(150)
         const bad = await page.evaluate(INK_WALK)
         if (bad.length) failures.push(report(route, theme, bad))
@@ -212,7 +210,6 @@ test.describe('accent-family text clears its AA floor', () => {
     const failures = []
     for (const route of ['/', '/plans', '/create/gradient', '/sitemap']) {
       await go(page, route)
-      await expect(page.locator(READY).first()).toBeVisible()
       await page.waitForTimeout(150)
       const bad = await page.evaluate(INK_WALK)
       if (bad.length) failures.push(report(route, '390', bad))
@@ -226,7 +223,6 @@ test.describe('accent-family text clears its AA floor', () => {
     const failures = []
     for (const route of ['/', '/plans', '/create/gradient', '/discover']) {
       await go(page, route)
-      await expect(page.locator(READY).first()).toBeVisible()
       await page.waitForTimeout(150)
       for (const f of await page.evaluate(FILL_WALK)) {
         seen.push(f)

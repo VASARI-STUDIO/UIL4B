@@ -117,3 +117,29 @@ test('goRaw() has exactly the two callers that must read a page before its route
     + '04-premium-home reads #boot-shell before React replaces it. Any other caller is\n'
     + 'opting out of the fix:\n  ' + callers.join('\n  '))
 })
+
+/* ── The check that could not fail ───────────────────────────────────────────
+ *
+ * `main, .landing, #root > *` was the suite's idea of "the page is up", and all
+ * THREE of its parts match the Suspense fallback: App.jsx renders
+ * `<div class="page-loading">` INSIDE `<main id="main">`, so `main` is present,
+ * `#root > *` is the fallback itself, and `.landing` never mattered either way.
+ * A spec that waited on it and then measured was reading the nav and the footer.
+ *
+ * Fourteen live uses were removed with [raw-goto-bypasses-readiness]; `go()` and
+ * `ready()` now do this properly. Banning the STRING rather than enumerating the
+ * ways in is what makes this hold for `page.reload()` too - three sites in
+ * 41-theme-control paired this selector with a reload and then measured the
+ * theme, and no goto-shaped guard would ever have seen them.
+ */
+
+test('no spec uses the readiness check that the loading fallback satisfies', () => {
+  const found = SPECS.filter((f) => readStripped(path.join('tests', 'user-sim', f))
+    .includes('main, .landing, #root > *'))
+  assert.deepEqual(found, [],
+    'These specs wait on `main, .landing, #root > *` before measuring. Every part of\n'
+    + 'that selector matches the lazy-loading fallback, so it returns immediately on a\n'
+    + 'route that has not arrived and the measurement lands on the nav and footer. Use\n'
+    + '`go()` (navigate) or `ready()` (after a reload) from ./helpers.js, or wait for\n'
+    + 'something the ROUTE itself renders:\n  ' + found.join('\n  '))
+})
