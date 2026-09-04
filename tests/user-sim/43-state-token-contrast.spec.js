@@ -138,6 +138,37 @@ const ROUTES = ['/sitemap', '/privacy', '/create/contrast', '/create/semantic-co
   '/create/alt-text', '/discover', '/plans', '/']
 const READY = 'main, .landing, #root > *'
 
+// EVERY ROUTE WALKED HERE IS `lazy()`, SO `READY` MATCHES THE FALLBACK.
+// `#root > *` is satisfied by `.page-loading` - the Suspense fallback App.jsx
+// renders while the route chunk is still arriving - so pairing it with a flat
+// wait was a guess about how long someone else's dynamic import takes, and the
+// walk measured whatever had painted when the guess ran out.
+//
+// It held on an idle machine and lost under load. Re-run with Chromium's CPU
+// throttle at 16x, /privacy and /sitemap each measured ZERO state-coloured
+// nodes (/privacy alone is 37 of the 52 this walk finds in light), the light
+// total fell from 52 to 13, and the anti-vacuity guard below fired exactly as
+// designed: "no state-coloured text was found to measure in light". The app
+// was fine - /privacy was still showing 421 characters of fallback instead of
+// its 6537. The same failure reproduces on a clean main with no feature branch
+// in it, so what is wrong is the wait, not the page.
+//
+// Waiting for the fallback to go is the doctrine helpers.js already applies to
+// Lenis: wait for the thing itself to be over, never for a number of
+// milliseconds you hope covers it. The trailing settle is for paint, not for
+// hydration, which is why it can stay short.
+//
+// DELIBERATELY NOT a wait for state-coloured text to appear. That would make
+// the guard below unfalsifiable - it would spin until it found the very thing
+// it exists to prove is there, and a genuinely empty sample would time out
+// instead of failing with a count.
+const settle = async (page) => {
+  await expect(page.locator(READY).first()).toBeVisible()
+  await page.locator('.page-loading').waitFor({ state: 'detached', timeout: 15000 })
+    .catch(() => { /* never mounted: the chunk was already cached */ })
+  await page.waitForTimeout(150)
+}
+
 const report = (route, theme, vp, bad) => bad.map((b) =>
   `  ${route} [${theme}@${vp}] .${b.cls} (${b.token}, ${b.kind})\n`
   + `      ${b.ratio}:1 (needs ${b.floor}) ${b.fg} on ${b.bg} at ${b.size}px/${b.weight}`
@@ -161,8 +192,7 @@ test.describe('state-colour text clears its AA floor', () => {
       let measured = 0
       for (const route of ROUTES) {
         await page.goto(route)
-        await expect(page.locator(READY).first()).toBeVisible()
-        await page.waitForTimeout(150)
+        await settle(page)
         const res = await page.evaluate(WALK)
         measured += res.measured
         if (res.bad.length) failures.push(report(route, theme, 1280, res.bad))
@@ -186,8 +216,7 @@ test.describe('state-colour text clears its AA floor', () => {
     let measured = 0
     for (const route of ['/sitemap', '/privacy', '/create/contrast', '/create/semantic-color']) {
       await page.goto(route)
-      await expect(page.locator(READY).first()).toBeVisible()
-      await page.waitForTimeout(150)
+      await settle(page)
       const res = await page.evaluate(WALK)
       measured += res.measured
       if (res.bad.length) failures.push(report(route, 'light', 390, res.bad))
@@ -202,8 +231,7 @@ test.describe('state-colour text clears its AA floor', () => {
   // fails loudly instead of quietly making every badge look safe.
   test('a tinted state badge reports a tinted ground, not the bare card', async ({ page }) => {
     await page.goto('/sitemap')
-    await expect(page.locator(READY).first()).toBeVisible()
-    await page.waitForTimeout(150)
+    await settle(page)
     const seen = await page.evaluate(`(() => {
       ${HELPERS}
       const el = document.querySelector('.smap-stage')

@@ -613,6 +613,54 @@ test.describe('Font Gallery', () => {
     await dialog.getByRole('button', { name: 'Retry this font' }).click()
     await expect(dialog.locator('.typ-notice')).toHaveCount(0)
   })
+
+  // THE PANGRAM IS THE PAYLOAD, AND THE TABLET BAND WAS EATING IT.
+  // 721-959px is the one band where the specimen line is set `nowrap` in a box
+  // too narrow to hold it. Measured across the 77 families the catalogue serves,
+  // at 834px: 48 of them clipped, from 4px to 113px, with the WIDEST faces
+  // losing the most - so the specimen was least complete for exactly the most
+  // distinctive families. It now wraps to a reserved two-line box, as the phone
+  // layout already did.
+  //
+  // Two assertions, because either alone can pass for the wrong reason. The
+  // reserved-height one holds whether or not a webfont ever paints, so it fails
+  // the moment the rule is removed; the clipping one is the thing the reader
+  // actually loses, and only means something because the line really is long.
+  test('the specimen line is not sliced in the tablet band', async ({ page }) => {
+    watch(page, 'a designer judging typefaces on an iPad')
+    await page.setViewportSize({ width: 834, height: 1112 })
+    await go(page, '/create/font-gallery')
+    await expect(page.locator('.fg-card-pangram').first()).toBeVisible()
+    await page.evaluate(() => document.fonts.ready).catch(() => {})
+
+    const report = await page.evaluate(() => {
+      const els = [...document.querySelectorAll('.fg-card-pangram')]
+      return {
+        count: els.length,
+        sample: els[0].textContent.trim(),
+        nowrap: getComputedStyle(els[0]).whiteSpace === 'nowrap',
+        // One reserved box for every row, and it holds two lines, not one.
+        heights: [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().height)))],
+        lineHeight: Math.round(parseFloat(getComputedStyle(els[0]).lineHeight)),
+        clipped: els
+          .map((e) => ({
+            family: getComputedStyle(e).fontFamily.split(',')[0].replace(/["']/g, ''),
+            lost: e.scrollWidth - e.clientWidth,
+          }))
+          .filter((e) => e.lost > 0),
+      }
+    })
+
+    expect(report.count, 'the gallery should have specimens to measure').toBeGreaterThan(0)
+    expect(report.sample.length, 'the pangram should be the long running-text sample').toBeGreaterThan(90)
+    expect(report.nowrap, 'the specimen line must not be held on one line at 834px').toBe(false)
+    expect(report.heights, 'every row must reserve the same specimen box').toHaveLength(1)
+    expect(
+      report.heights[0],
+      `the specimen box should reserve two lines of ${report.lineHeight}px, not one`,
+    ).toBeGreaterThanOrEqual(report.lineHeight * 2)
+    expect(report.clipped, 'specimen lines sliced at the box edge').toEqual([])
+  })
 })
 
 test.describe('typography hand-offs', () => {

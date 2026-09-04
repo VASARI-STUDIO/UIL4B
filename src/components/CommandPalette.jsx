@@ -1,7 +1,7 @@
 import { useState, useEffect, useId, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCategory, localiseTools, localiseCategories } from '../data/tools'
-import { queryCommandIndex } from '../data/toolIndex'
+import { categoryPillFor, queryCommandIndex } from '../data/toolIndex'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -154,7 +154,8 @@ export default function CommandPalette({ open, onClose }) {
               {section.items.map(item => {
                 const idx = runningIdx++
                 const cat = item.kind === 'tool' ? getCategory(item.category) : null
-                const catLabel = item.kind === 'tool' && cat ? t(cat.labelKey) || cat.label : null
+                // Same rule as the homepage bar - see categoryPillFor.
+                const catLabel = item.kind === 'tool' ? categoryPillFor(item, cat, t) : null
                 const icon = item.kind === 'category' ? getCategory(item.id)?.icon : (cat?.icon || (
                   <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></>
                 ))
