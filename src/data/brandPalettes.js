@@ -1,22 +1,46 @@
 // Publicly documented brand colour palettes for the Palette Builder's "Brands"
-// panel. Every value comes from the brand's own published guidelines or press
-// kit — these are public identity colours, not proprietary data. `free` marks
+// panel. These are public identity colours, not proprietary data. `free` marks
 // the rows visible without Pro (the rest render locked). `system` is the colour
 // system a brand's palette expresses — applied wholesale when a Pro user loads
 // the brand (free users get the colours on the default free system).
+//
+// PROVENANCE. Audited 2026-09-04 against PRIMARY sources only — the brand's own
+// logo asset, design system or press site. Never a colour-aggregator site: they
+// copy each other, which is how a superseded hex outlives the rebrand that
+// retired it. Five swatches are a RECOGNISABLE SAMPLE of an identity, not a
+// brand system — the claim this file makes is "these hexes are current and the
+// brand publishes them", nothing more.
+//
+// Corrected in that pass: Material 3 surface/on-surface, Spotify green, Airbnb
+// Rausch, GitHub Primer, LEGO red/yellow/black, PayPal blues. Sources are
+// recorded per value in the PR, not per row here — a `source` + `verified`
+// field on 37 rows is maintenance surface that goes stale silently, and a date
+// nobody re-checks reads as a guarantee the file cannot keep.
+//
+// NOT VERIFIED: `pepsi`. PepsiCo's own newsroom confirms a 2023 identity change
+// (electric blue + black added), but no primary source publishes the hexes, so
+// the pre-rebrand values are LEFT IN PLACE rather than guessed from aggregators.
+// Backlog: [brand-palette-provenance].
+//
+// NAMING RULE, learned the hard way. A row named after a COMPANY must hold that
+// company's identity colours. `material` held Material 3's default purple under
+// the name "Material (Google)" — correct hexes, wrong promise, since nobody
+// reading "Google" expects purple. It is now "Material 3 Baseline" (a design
+// SYSTEM) and `google` carries the four-colour logo palette. Keep them separate.
 
 export const BRAND_PALETTES = [
   { id: 'apple', name: 'Apple', free: true, system: 'custom', colors: ['#1D1D1F', '#F5F5F7', '#0071E3', '#86868B', '#2997FF'] },
-  { id: 'material', name: 'Material (Google)', free: true, system: 'custom', colors: ['#6750A4', '#625B71', '#7D5260', '#FFFBFE', '#1C1B1F'] },
+  { id: 'material', name: 'Material 3 Baseline', free: true, system: 'custom', colors: ['#6750A4', '#625B71', '#7D5260', '#FEF7FF', '#1D1B20'] },
+  { id: 'google', name: 'Google', free: false, system: 'custom', colors: ['#4285F4', '#EA4335', '#FBBC04', '#34A853', '#202124'] },
   { id: 'netflix', name: 'Netflix', free: true, system: 'custom', colors: ['#E50914', '#221F1F', '#F5F5F1', '#B81D24', '#000000'] },
   { id: 'discord', name: 'Discord', free: true, system: 'custom', colors: ['#5865F2', '#EB459E', '#FEE75C', '#57F287', '#23272A'] },
   { id: 'stripe', name: 'Stripe', free: true, system: 'custom', colors: ['#635BFF', '#0A2540', '#00D4FF', '#F6F9FC', '#425466'] },
-  { id: 'spotify', name: 'Spotify', free: true, system: 'custom', colors: ['#1DB954', '#191414', '#FFFFFF', '#535353', '#B3B3B3'] },
+  { id: 'spotify', name: 'Spotify', free: true, system: 'custom', colors: ['#1ED760', '#191414', '#FFFFFF', '#535353', '#B3B3B3'] },
   { id: 'slack', name: 'Slack', free: false, system: 'custom', colors: ['#4A154B', '#36C5F0', '#2EB67D', '#ECB22E', '#E01E5A'] },
-  { id: 'airbnb', name: 'Airbnb', free: false, system: 'custom', colors: ['#FF5A5F', '#00A699', '#FC642D', '#484848', '#767676'] },
+  { id: 'airbnb', name: 'Airbnb', free: false, system: 'custom', colors: ['#FF385C', '#00A699', '#FC642D', '#484848', '#767676'] },
   { id: 'twitch', name: 'Twitch', free: false, system: 'custom', colors: ['#9146FF', '#772CE8', '#F0F0FF', '#18181B', '#EFEFF1'] },
   { id: 'figma', name: 'Figma', free: false, system: 'custom', colors: ['#F24E1E', '#FF7262', '#A259FF', '#1ABCFE', '#0ACF83'] },
-  { id: 'github', name: 'GitHub', free: false, system: 'custom', colors: ['#24292F', '#0969DA', '#2DA44E', '#F6F8FA', '#CF222E'] },
+  { id: 'github', name: 'GitHub', free: false, system: 'custom', colors: ['#1F2328', '#0969DA', '#1F883D', '#F6F8FA', '#CF222E'] },
   { id: 'dropbox', name: 'Dropbox', free: false, system: 'custom', colors: ['#0061FF', '#1E1919', '#F7F5F2', '#B4DC19', '#FF8C19'] },
   { id: 'duolingo', name: 'Duolingo', free: false, system: 'custom', colors: ['#58CC02', '#89E219', '#1CB0F6', '#FF9600', '#4B4B4B'] },
   { id: 'linear', name: 'Linear', free: false, system: 'custom', colors: ['#5E6AD2', '#222326', '#F4F5F8', '#8A8F98', '#26282D'] },
@@ -27,7 +51,7 @@ export const BRAND_PALETTES = [
   { id: 'tiktok', name: 'TikTok', free: false, system: 'custom', colors: ['#000000', '#FE2C55', '#25F4EE', '#FFFFFF', '#161823'] },
   { id: 'uber', name: 'Uber', free: false, system: 'custom', colors: ['#000000', '#FFFFFF', '#276EF1', '#05A357', '#E8E8E8'] },
   { id: 'ikea', name: 'IKEA', free: false, system: 'custom', colors: ['#0058A3', '#FFDB00', '#FFFFFF', '#111111', '#F5F5F5'] },
-  { id: 'lego', name: 'LEGO', free: false, system: 'custom', colors: ['#D01012', '#FFCF00', '#006CB7', '#00AF4D', '#000000'] },
+  { id: 'lego', name: 'LEGO', free: false, system: 'custom', colors: ['#E3000B', '#FFED00', '#006CB7', '#00AF4D', '#181716'] },
   { id: 'mcdonalds', name: "McDonald's", free: false, system: 'custom', colors: ['#FFC72C', '#DA291C', '#27251F', '#FFFFFF', '#264F36'] },
   { id: 'pepsi', name: 'Pepsi', free: false, system: 'custom', colors: ['#004B93', '#E32934', '#FFFFFF', '#0065C3', '#28458E'] },
   { id: 'firefox', name: 'Firefox', free: false, system: 'custom', colors: ['#FF9500', '#FF3B6B', '#9059FF', '#20123A', '#00DDFF'] },
@@ -41,5 +65,5 @@ export const BRAND_PALETTES = [
   { id: 'pinterest', name: 'Pinterest', free: false, system: 'custom', colors: ['#E60023', '#BD081C', '#FFFFFF', '#111111', '#EFEFEF'] },
   { id: 'shopify', name: 'Shopify', free: false, system: 'custom', colors: ['#95BF47', '#5E8E3E', '#004C3F', '#FFFFFF', '#212326'] },
   { id: 'adobe', name: 'Adobe', free: false, system: 'custom', colors: ['#FF0000', '#EC1C24', '#000000', '#FFFFFF', '#FA0F00'] },
-  { id: 'paypal', name: 'PayPal', free: false, system: 'custom', colors: ['#003087', '#009CDE', '#012169', '#FFFFFF', '#0070BA'] },
+  { id: 'paypal', name: 'PayPal', free: false, system: 'custom', colors: ['#003087', '#0070E0', '#012169', '#FFFFFF', '#001C64'] },
 ]
