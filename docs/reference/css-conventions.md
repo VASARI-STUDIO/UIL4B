@@ -58,7 +58,7 @@ roles, 2026-08-16 — see [`design-language-v2.md`](design-language-v2.md#type).
 | Token | Family | Weights used | Role |
 |---|---|---|---|
 | `--font` | **Manrope** | 400 / 500 / 700 / 800 | All UI and display |
-| `--serif` | **Manrope** | — | Retired as a distinct role; aliases `--font`. The name stays so existing call sites keep resolving. |
+| `--display` | **Manrope** | 500 / 600 / 700 | Display headings, hero type and wordmarks. An honest alias of `--font` — same face, display sizes. Renamed from `--serif` on 2026-09-04: it never resolved to a serif, and a token name is a claim. |
 | `--mono` | **JetBrains Mono** | 400 / 500 / 700 | Eyebrows, meta, category pills, keycaps, code, footer headings, stat lines |
 
 **Mono is load-bearing in V2** — it is the texture that makes the product read as

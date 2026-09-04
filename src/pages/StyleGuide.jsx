@@ -27,9 +27,9 @@ const TOKENS = {
   ],
   typography: {
     families: [
-      { var: '--font', label: 'Primary (UI)', value: 'Outfit' },
-      { var: '--serif', label: 'Serif (Display)', value: 'Outfit' },
-      { var: '--mono', label: 'Technical (tokens)', value: 'Outfit' },
+      { var: '--font', label: 'Primary (UI)', value: 'Manrope' },
+      { var: '--display', label: 'Display', value: 'Manrope' },
+      { var: '--mono', label: 'Technical (tokens)', value: 'JetBrains Mono' },
     ],
     scale: [
       { size: 40, weight: 800, label: 'Display', tracking: '-.04em' },

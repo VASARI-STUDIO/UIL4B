@@ -342,7 +342,7 @@ function previewFor(section) {
   if (section === 'create') {
     // The artefacts the guided flow actually produces: a real palette, and the
     // two families that are genuinely installed. A third specimen is impossible
-    // to do honestly here -- --serif resolves to 'Manrope', the same value as
+    // to do honestly here -- --display resolves to 'Manrope', the same value as
     // --font, so it would render a duplicate and pass it off as variety. That is
     // the trap the Font Gallery preview hit first; see serif-token-is-not-a-serif.
     const palette = GALLERY_PALETTES[0]
