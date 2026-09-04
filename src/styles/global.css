@@ -10286,7 +10286,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .pgl-build-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;color:#fff;background:#111113;border-radius:var(--radius-xl);font-size:11px;font-weight:700;text-decoration:none}
 .pgl-build-link:hover{background:var(--brand)}
 .pgl-page .pgal-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:34px 18px}
-.pgl-page .pgal-stripes{height:260px;border-radius:18px;box-shadow:0 8px 26px rgba(10,10,18,.06)}
+.pgl-page .pgal-stripes,.pgl-page .lockt-stripes{height:260px;border-radius:18px;box-shadow:0 8px 26px rgba(10,10,18,.06)}
 .pgl-page .pgal-card:hover .pgal-stripes{transform:translateY(-4px);box-shadow:0 22px 48px rgba(10,10,18,.14)}
 .pgl-page .lbry-card-foot{padding:4px 3px 0}
 .pgl-page .pgal-name{font-size:13px;color:var(--t0)}
@@ -10908,7 +10908,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
   .pgl-filters{overflow-x:auto}
   .pgl-filters button{flex:0 0 auto}
   .pgl-page .pgal-grid{grid-template-columns:1fr}
-  .pgl-page .pgal-stripes{height:230px}
+  .pgl-page .pgal-stripes,.pgl-page .lockt-stripes{height:230px}
   .fg-hero--premium,.fpr-hero--premium{min-height:420px;padding:26px 22px;border-radius:20px}
   .fg-hero-topline,.fpr-hero-topline{align-items:flex-start;margin-bottom:54px}
   .fg-hero--premium h1,.fpr-hero--premium h1{font-size:clamp(54px,17vw,86px)}
@@ -10988,7 +10988,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
   .fg-card-meta{flex-direction:column;align-items:flex-start;gap:4px}
 }
 @media(max-width:480px){
-  .pgl-page .pgal-stripes{height:210px}
+  .pgl-page .pgal-stripes,.pgl-page .lockt-stripes{height:210px}
   /* No 128px cap. The link is an `inline-flex` carrying its own `border-bottom`,
      so capping it made the label wrap after "Font" and left the rule sitting
      under "Gallery ↗" alone — an underline detached from most of the text it is
@@ -11893,3 +11893,80 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    both made the two read as the same kind of unavailability. ══ */
 .exp-fmt-pro{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--bg-0);background:var(--t1);border:1px solid var(--t1);border-radius:var(--radius-pill);padding:2px 8px}
 .exp-fmt.is-active .exp-fmt-pro{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ══ Locked library rows — the placeholder that stands in for a paid item, and
+   the wall that follows it (components/library/LockedTease.jsx).
+   APPENDED as a new block; nothing above is edited.
+
+   These rows never render a locked item's real values, so there is no blur
+   here and no scrim over real content — a blur is read straight through by
+   devtools and the accessibility tree, which is why the values are withheld
+   upstream instead (utils/lockedPreview.js).
+
+   The bands are stepped SURFACE tokens, identical for every locked row, so the
+   placeholder carries no colour information about the palette it stands for.
+   Both themes get the ramp from the same four tokens, so it inverts with the
+   theme rather than needing a second definition.
+
+   No animation anywhere in this block — deliberately. A locked row is not a
+   loading row, and a shimmer would promise that something is about to arrive.
+
+   ONE EDIT ABOVE, and it is deliberate: `.lockt-stripes` was added to the
+   THREE `.pgl-page .pgal-stripes` height rules (:10277, and the 720px and 480px
+   bands) rather than restated here. The placeholder has to be exactly as tall
+   as the real card it sits beside at every breakpoint, and two declarations of
+   the same height drift the moment one of them is tuned — which shows up as a
+   grid with a short row in it. The 196px below is the default for surfaces
+   that do not override it. ══ */
+.lockt-card{display:flex;flex-direction:column;gap:8px}
+.lockt-stripes{position:relative;display:flex;flex-direction:column;height:196px;border-radius:var(--radius-l);overflow:hidden;border:1px dashed var(--bh)}
+.lockt-stripe{flex:1;min-height:0}
+.lockt-stripe[data-step="0"]{background:var(--bg-2)}
+.lockt-stripe[data-step="1"]{background:var(--bg-3)}
+.lockt-stripe[data-step="2"]{background:var(--bg-4)}
+.lockt-stripe[data-step="3"]{background:var(--bg-3)}
+.lockt-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--t2)}
+.lockt-foot{display:flex;align-items:center;gap:8px}
+.lockt-name{font-size:12.5px;font-weight:600;color:var(--t1)}
+.lockt-name--muted{color:var(--t2)}
+/* --t1 on the pill ground, not --accent: this is micro text and #0F6FFF
+   measures 4.43:1 on the card in light. The pill is an unavailability marker,
+   not an action, so it takes the neutral ink rather than the accent. */
+.lockt-tag{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t1);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
+.lockt-lines{display:flex;flex-direction:column;justify-content:center;gap:9px;min-height:104px;padding:14px;border-radius:var(--radius-l);border:1px dashed var(--bh);background:var(--bg-2)}
+.lockt-line{height:8px;border-radius:var(--radius-pill);background:var(--bg-4)}
+.lockt-line[data-step="0"]{width:100%}
+.lockt-line[data-step="1"]{width:82%}
+.lockt-line[data-step="2"]{width:64%}
+.lockt-tags{display:flex;gap:4px;flex-wrap:wrap}
+.lockt-tagchip{font-size:10px;color:var(--t2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:1px 7px}
+
+/* The wall. Full width beneath the teased row (Savee), not a per-card button —
+   one focus stop for the whole locked group. */
+.lockt-cta{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:22px;padding:18px 20px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-l);background:var(--cbg)}
+.lockt-cta-copy{flex:1;min-width:220px}
+.lockt-cta-head{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--t0)}
+.lockt-cta-body{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
+.lockt-cta-btn{white-space:nowrap;flex:0 0 auto}
+@media(max-width:640px){
+  .lockt-cta{gap:12px;padding:16px}
+  .lockt-cta-btn{width:100%}
+}
+
+/* The row form of the same placeholder, for the Palette Builder's gallery
+   popup. Structural sibling of .plb-varrow at :7922 — same geometry and the
+   same slot in the list, so a locked row lines up with the free rows above it
+   rather than reading as a different list. It is a div, not a button: there is
+   nothing to load. */
+.lockt-row{padding:7px 8px}
+.lockt-rowcell{background:var(--bg-3)}
+.lockt-rowcell[data-step="1"]{background:var(--bg-4)}
+.lockt-rowcell[data-step="2"]{background:var(--bg-2)}
+.lockt-rowcell[data-step="3"]{background:var(--bg-4)}
+/* Inside the popup the wall is narrow, so the button drops below the copy
+   instead of sitting beside it — at ~300px a side-by-side row leaves the
+   sentence three words wide. */
+.plb-galpopup-body .lockt-cta{display:block;margin-top:12px;padding:12px 12px 14px}
+.plb-galpopup-body .lockt-cta-head{font-size:12.5px}
+.plb-galpopup-body .lockt-cta-body{font-size:11.5px}
+.plb-galpopup-body .lockt-cta-btn{width:100%;margin-top:10px}

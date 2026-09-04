@@ -103,6 +103,15 @@ test.describe('palette library sections', () => {
         return id ? document.getElementById(id)?.textContent?.trim() : null
       }),
     )
-    expect(labelled).toEqual(['Curated collection', 'Brand systems'])
+    // Three grids, not two: the Brand systems section is followed by the teased
+    // placeholders for the Pro rows, and that grid names itself too. A screen
+    // reader meeting three more cards after the free ones needs to know why
+    // they differ, and an unnamed second grid inside one section is exactly the
+    // unexplained repetition this test exists to prevent.
+    expect(labelled).toEqual([
+      'Curated collection',
+      'Brand systems',
+      'Brand systems included with Pro',
+    ])
   })
 })
